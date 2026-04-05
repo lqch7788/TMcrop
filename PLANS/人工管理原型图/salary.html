@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工资结算 - 鸿智云农业园区管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#9a7040',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; }
+        .sidebar-item:hover { background: rgba(34, 197, 94, 0.1); }
+        .sidebar-item.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .table-row:hover { background: rgba(34, 197, 94, 0.05); }
+        .modal { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg flex flex-col">
+            <div class="p-5 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-gray-800">鸿智云</h1>
+                        <p class="text-xs text-gray-500">农业园区管理系统</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 py-4">
+                <div class="px-3 mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">生产管理</span>
+                </div>
+                <a href="work-orders.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-tasks w-5 text-center"></i>
+                    <span>任务工单</span>
+                </a>
+                <a href="scheduling.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-calendar-alt w-5 text-center"></i>
+                    <span>排班管理</span>
+                </a>
+                <a href="worker-attendance.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-clock w-5 text-center"></i>
+                    <span>工人考勤</span>
+                </a>
+                <a href="leave-overtime.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-user-clock w-5 text-center"></i>
+                    <span>请假加班</span>
+                </a>
+                <div class="px-3 mb-2 mt-4">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">人力管理</span>
+                </div>
+                <a href="salary.html" class="sidebar-item active flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-wallet w-5 text-center"></i>
+                    <span>工资结算</span>
+                </a>
+                <a href="work-log.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-clipboard-list w-5 text-center"></i>
+                    <span>工作日志</span>
+                </a>
+                <a href="monthly-report.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-chart-bar w-5 text-center"></i>
+                    <span>工作月报</span>
+                </a>
+                <div class="px-3 mb-2 mt-4">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">系统设置</span>
+                </div>
+                <a href="skills.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-graduation-cap w-5 text-center"></i>
+                    <span>技能培训</span>
+                </a>
+                <a href="contracts.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-file-contract w-5 text-center"></i>
+                    <span>合同管理</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-primary rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-medium">李</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">李管理</p>
+                        <p class="text-xs text-gray-500">系统管理员</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1">
+            <!-- 顶部栏 -->
+            <header class="bg-white shadow-sm border-b border-gray-100 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">工资结算</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">管理工人工资发放与结算</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="openCalculateModal()" class="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-calculator mr-2"></i>工资计算
+                        </button>
+                        <button onclick="openPaymentModal()" class="bg-secondary hover:bg-amber-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-money-bill-wave mr-2"></i>发放工资
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 内容 -->
+            <div class="p-6">
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-4 gap-5 mb-6">
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-coins text-primary text-xl"></i>
+                            </div>
+                            <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">本月</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">¥128,560</p>
+                        <p class="text-sm text-gray-500 mt-1">总工资支出</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-users text-blue-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">共计</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">¥5,342</p>
+                        <p class="text-sm text-gray-500 mt-1">人均工资</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clock text-amber-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">待发放</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">¥32,400</p>
+                        <p class="text-sm text-gray-500 mt-1">待发放工资</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">已完成</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">¥96,160</p>
+                        <p class="text-sm text-gray-500 mt-1">已发放工资</p>
+                    </div>
+                </div>
+
+                <!-- 筛选搜索 -->
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex-1 min-w-[200px]">
+                            <div class="relative">
+                                <input type="text" placeholder="搜索工人姓名或工号..." class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+                            <option value="">全部班组</option>
+                            <option value="group-a">A班 - 蔬菜种植组</option>
+                            <option value="group-b">B班 - 水果采摘组</option>
+                            <option value="group-c">C班 - 大棚维护组</option>
+                            <option value="group-d">D班 - 包装运输组</option>
+                        </select>
+                        <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+                            <option value="">全部月份</option>
+                            <option value="2026-04">2026年4月</option>
+                            <option value="2026-03" selected>2026年3月</option>
+                            <option value="2026-02">2026年2月</option>
+                        </select>
+                        <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+                            <option value="">全部状态</option>
+                            <option value="pending">待发放</option>
+                            <option value="paid">已发放</option>
+                        </select>
+                        <button class="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
+                            <i class="fas fa-filter mr-2"></i>筛选
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 工资列表 -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-800">工资明细列表</h3>
+                        <div class="flex items-center gap-3">
+                            <button class="text-gray-500 hover:text-primary transition-colors">
+                                <i class="fas fa-file-export mr-1"></i>导出
+                            </button>
+                            <button class="text-gray-500 hover:text-primary transition-colors">
+                                <i class="fas fa-print mr-1"></i>打印
+                            </button>
+                        </div>
+                    </div>
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">工人信息</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">班组/岗位</th>
+                                <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">基本工资</th>
+                                <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">加班费</th>
+                                <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">奖金</th>
+                                <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">扣款</th>
+                                <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">实发工资</th>
+                                <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">状态</th>
+                                <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr class="table-row transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-primary rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm font-medium">张</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">张建国</p>
+                                            <p class="text-xs text-gray-500">#A001</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-gray-800">A班 - 蔬菜种植组</p>
+                                    <p class="text-xs text-gray-500">高级技工</p>
+                                </td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥4,500</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥800</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥500</td>
+                                <td class="px-5 py-4 text-right text-red-600">¥200</td>
+                                <td class="px-5 py-4 text-right font-bold text-gray-800">¥5,600</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">已发放</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="table-row transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm font-medium">王</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">王秀英</p>
+                                            <p class="text-xs text-gray-500">#A002</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-gray-800">A班 - 蔬菜种植组</p>
+                                    <p class="text-xs text-gray-500">普通工人</p>
+                                </td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥3,800</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥600</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥300</td>
+                                <td class="px-5 py-4 text-right text-red-600">¥0</td>
+                                <td class="px-5 py-4 text-right font-bold text-gray-800">¥4,700</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">已发放</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="table-row transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-amber-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm font-medium">李</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">李志强</p>
+                                            <p class="text-xs text-gray-500">#B001</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-gray-800">B班 - 水果采摘组</p>
+                                    <p class="text-xs text-gray-500">组长</p>
+                                </td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥5,200</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥1,200</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥800</td>
+                                <td class="px-5 py-4 text-right text-red-600">¥350</td>
+                                <td class="px-5 py-4 text-right font-bold text-gray-800">¥6,850</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">待发放</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="table-row transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-purple-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm font-medium">赵</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">赵晓敏</p>
+                                            <p class="text-xs text-gray-500">#B002</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-gray-800">B班 - 水果采摘组</p>
+                                    <p class="text-xs text-gray-500">普通工人</p>
+                                </td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥3,800</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥400</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥200</td>
+                                <td class="px-5 py-4 text-right text-red-600">¥100</td>
+                                <td class="px-5 py-4 text-right font-bold text-gray-800">¥4,300</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">待发放</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="table-row transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-teal-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm font-medium">陈</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">陈伟</p>
+                                            <p class="text-xs text-gray-500">#C001</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-gray-800">C班 - 大棚维护组</p>
+                                    <p class="text-xs text-gray-500">技术员</p>
+                                </td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥4,800</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥900</td>
+                                <td class="px-5 py-4 text-right text-gray-800">¥600</td>
+                                <td class="px-5 py-4 text-right text-red-600">¥150</td>
+                                <td class="px-5 py-4 text-right font-bold text-gray-800">¥6,150</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">已发放</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!-- 分页 -->
+                    <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+                        <p class="text-sm text-gray-500">共 24 条记录，第 1/2 页</p>
+                        <div class="flex items-center gap-2">
+                            <button class="px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
+                            <button class="px-3 py-1.5 bg-primary text-white rounded text-sm">1</button>
+                            <button class="px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">2</button>
+                            <button class="px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 工资计算弹窗 -->
+    <div id="calculateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="modal bg-white rounded-xl w-[600px] max-h-[80vh] overflow-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-lg text-gray-800">工资计算</h3>
+                <button onclick="closeCalculateModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">选择班组</label>
+                        <select class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                            <option value="">请选择班组</option>
+                            <option value="group-a">A班 - 蔬菜种植组</option>
+                            <option value="group-b">B班 - 水果采摘组</option>
+                            <option value="group-c">C班 - 大棚维护组</option>
+                            <option value="group-d">D班 - 包装运输组</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">计算月份</label>
+                        <input type="month" value="2026-03" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">基本工资基数</label>
+                        <input type="number" placeholder="如：3800" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">加班费/小时</label>
+                        <input type="number" placeholder="如：25" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">全勤奖</label>
+                        <input type="number" placeholder="如：300" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 class="font-medium text-gray-800 mb-3">考勤数据导入</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">出勤天数</label>
+                            <p class="text-lg font-bold text-gray-800">22 天</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">加班时长</label>
+                            <p class="text-lg font-bold text-gray-800">36 小时</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">请假天数</label>
+                            <p class="text-lg font-bold text-amber-600">2 天</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">旷工天数</label>
+                            <p class="text-lg font-bold text-red-600">0 天</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600">预计计算人数：</span>
+                        <span class="font-bold text-gray-800">8 人</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">预计工资总额：</span>
+                        <span class="font-bold text-primary text-lg">¥42,736</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button onclick="closeCalculateModal()" class="px-5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">取消</button>
+                <button class="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-green-600">确认计算</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发放工资弹窗 -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="modal bg-white rounded-xl w-[500px]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-lg text-gray-800">发放工资</h3>
+                <button onclick="closePaymentModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">发放月份</label>
+                    <input type="month" value="2026-03" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">选择班组</label>
+                    <select class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                        <option value="">全部班组</option>
+                        <option value="group-a">A班 - 蔬菜种植组（待发：¥18,200）</option>
+                        <option value="group-b">B班 - 水果采摘组（待发：¥14,350）</option>
+                        <option value="group-c">C班 - 大棚维护组（待发：¥12,400）</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">发放方式</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="radio" name="payment-method" value="bank" checked class="text-primary">
+                            <span class="text-sm text-gray-700">银行卡</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="radio" name="payment-method" value="cash" class="text-primary">
+                            <span class="text-sm text-gray-700">现金</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="radio" name="payment-method" value="wechat" class="text-primary">
+                            <span class="text-sm text-gray-700">微信</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-exclamation-circle text-amber-600"></i>
+                        <div>
+                            <p class="text-sm font-medium text-amber-800">发放确认</p>
+                            <p class="text-xs text-amber-600 mt-0.5">确认后将直接发放工资到工人账户</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button onclick="closePaymentModal()" class="px-5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">取消</button>
+                <button class="px-5 py-2.5 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-amber-800">确认发放</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openCalculateModal() {
+            document.getElementById('calculateModal').classList.remove('hidden');
+        }
+        function closeCalculateModal() {
+            document.getElementById('calculateModal').classList.add('hidden');
+        }
+        function openPaymentModal() {
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

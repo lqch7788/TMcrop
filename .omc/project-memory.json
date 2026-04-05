@@ -1,0 +1,466 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775391711605,
+  "projectRoot": "D:\\TMcrop\\yuanxingtu\\V1.1\\hongzhiyun",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "playwright",
+        "version": "1.58.2",
+        "category": "testing"
+      },
+      {
+        "name": "vite",
+        "version": "6.0.1",
+        "category": "build"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "pnpm build",
+    "testCommand": null,
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "build:prod": "vite build",
+      "lint": "eslint .",
+      "preview": "vite preview",
+      "install-deps": "npm install"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "public",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 2,
+      "lastAccessed": 1775391711552,
+      "keyFiles": [
+        "index.html",
+        "弘智耘LOGO.png"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 1,
+      "lastAccessed": 1775391711552,
+      "keyFiles": [
+        "弘智耘LOGO.png"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1775391711562,
+      "keyFiles": [
+        "App.css",
+        "App.tsx",
+        "index.css",
+        "main.tsx",
+        "vite-env.d.ts"
+      ]
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 2,
+      "lastAccessed": 1775391711562,
+      "keyFiles": [
+        "index-CR7ywuTP.css",
+        "index-DGE51Min.js"
+      ]
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 6,
+      "lastAccessed": 1775391711563,
+      "keyFiles": [
+        "DragContext.tsx",
+        "DraggableContainer.tsx",
+        "DraggableDialog.tsx"
+      ]
+    },
+    "src\\data": {
+      "path": "src\\data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1775391711564,
+      "keyFiles": [
+        "mockData.ts"
+      ]
+    },
+    "src\\lib": {
+      "path": "src\\lib",
+      "purpose": "Library code",
+      "fileCount": 1,
+      "lastAccessed": 1775391711564,
+      "keyFiles": [
+        "utils.ts"
+      ]
+    },
+    "src\\pages": {
+      "path": "src\\pages",
+      "purpose": "Page components",
+      "fileCount": 55,
+      "lastAccessed": 1775391711565,
+      "keyFiles": [
+        "AgricultureRecord.tsx",
+        "AlertInfo.tsx",
+        "Announcement.tsx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\pages\\MaterialReceiving.tsx",
+      "accessCount": 459,
+      "lastAccessed": 1775392959048,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\layout\\Sidebar.tsx",
+      "accessCount": 53,
+      "lastAccessed": 1775401155841,
+      "type": "file"
+    },
+    {
+      "path": "src\\App.tsx",
+      "accessCount": 29,
+      "lastAccessed": 1775401142010,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 23,
+      "lastAccessed": 1775401053804,
+      "type": "directory"
+    },
+    {
+      "path": "src\\pages\\WarehouseMaterials.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1775044281692,
+      "type": "directory"
+    },
+    {
+      "path": "src\\pages\\TaskDispatch.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1775398428326,
+      "type": "directory"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 7,
+      "lastAccessed": 1775401186678,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\MaterialReturn.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775044281817,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\labor\\tasks\\TasksPage.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775399084577,
+      "type": "file"
+    },
+    {
+      "path": "PLANS\\人工管理规划V2.0.md",
+      "accessCount": 4,
+      "lastAccessed": 1775395372363,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\SupplierManagement.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775044245891,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1775043813964,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Schedule.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775394566103,
+      "type": "directory"
+    },
+    {
+      "path": "src\\pages\\Leave.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775395040100,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\labor\\leave\\LeavePage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775395044968,
+      "type": "file"
+    },
+    {
+      "path": "E:\\V1.01（20260404备份）\\hongzhiyun\\src\\components\\layout\\Sidebar.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775396415981,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\labor\\piecework\\PieceworkPage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775397429963,
+      "type": "file"
+    },
+    {
+      "path": "PLANS\\人工管理规划V2.0（最终开发版本）.md",
+      "accessCount": 2,
+      "lastAccessed": 1775398411779,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Dashboard.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774995222542,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bd5qwgz1g.output",
+      "accessCount": 1,
+      "lastAccessed": 1774997882566,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\byk5fla2m.output",
+      "accessCount": 1,
+      "lastAccessed": 1775002214255,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bspqccv0t.output",
+      "accessCount": 1,
+      "lastAccessed": 1775002629171,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bdada52qs.output",
+      "accessCount": 1,
+      "lastAccessed": 1775002654785,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\blmun2p84.output",
+      "accessCount": 1,
+      "lastAccessed": 1775002988575,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bpz28v11p.output",
+      "accessCount": 1,
+      "lastAccessed": 1775019459173,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bd3nm5iov.output",
+      "accessCount": 1,
+      "lastAccessed": 1775019524078,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bu52q66rd.output",
+      "accessCount": 1,
+      "lastAccessed": 1775019550813,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\bp11uawql.output",
+      "accessCount": 1,
+      "lastAccessed": 1775019664077,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\AppData\\Local\\Temp\\claude\\D--TMcrop-yuanxingtu-V1-01-hongzhiyun\\b529b6f3-f6da-4d32-a83b-a2765fa11d64\\tasks\\ba7tyojuj.output",
+      "accessCount": 1,
+      "lastAccessed": 1775019738793,
+      "type": "file"
+    },
+    {
+      "path": "E:\\V1.01-20260401备份（生产物料汇总页面有bug）\\hongzhiyun\\src\\pages\\MaterialReceiving.tsx.bak",
+      "accessCount": 1,
+      "lastAccessed": 1775024725425,
+      "type": "file"
+    },
+    {
+      "path": "PROJECT_MEMO.md",
+      "accessCount": 1,
+      "lastAccessed": 1775043839195,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\.claude\\plans\\humming-puzzling-giraffe.md",
+      "accessCount": 1,
+      "lastAccessed": 1775044635032,
+      "type": "file"
+    },
+    {
+      "path": "E:\\V1.01（20260404备份）\\hongzhiyun\\src\\pages\\MaterialReceiving.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775392937823,
+      "type": "file"
+    },
+    {
+      "path": "E:\\V1.01（20260404备份）\\hongzhiyun\\src\\App.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775394004697,
+      "type": "directory"
+    },
+    {
+      "path": "E:\\V1.01（20260404备份）\\hongzhiyun\\src\\pages\\Leave.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775394542178,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\schedule\\SchedulePage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775394570925,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\leave\\hooks\\useLeave.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775395051437,
+      "type": "file"
+    },
+    {
+      "path": "E:\\V1.01（20260404备份）\\hongzhiyun\\src\\components\\labor\\leave\\LeavePage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775395379210,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Contract.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397342891,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Skill.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397343121,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Team.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397343217,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Onboarding.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397343264,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Recruitment.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397343282,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\TempWorker.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397343333,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\team\\TeamTable.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397352220,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\tempWorker\\TempWorkerPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397352357,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\salary\\SalaryPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775397352385,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\piecework\\hooks\\usePiecework.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775397368967,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\labor\\piecework",
+      "accessCount": 1,
+      "lastAccessed": 1775397385022,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\labor",
+      "accessCount": 1,
+      "lastAccessed": 1775397429899,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}
