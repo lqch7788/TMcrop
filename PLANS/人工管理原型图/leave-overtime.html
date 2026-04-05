@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请假加班管理 - 鸿智云</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#9a7040',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-item:hover { background: rgba(34, 197, 94, 0.1); }
+        .sidebar-item.active { background: rgba(34, 197, 94, 0.15); border-right: 3px solid #22c55e; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg fixed h-full z-10">
+            <div class="p-4 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-gray-800">鸿智云</h1>
+                        <p class="text-xs text-gray-500">农业园区管理系统</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="p-4 space-y-1">
+                <a href="index.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-home w-5"></i>
+                    <span>首页</span>
+                </a>
+                <a href="park-navigation.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-map-marked-alt w-5"></i>
+                    <span>园区导览</span>
+                </a>
+                <a href="environment.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-cloud-sun w-5"></i>
+                    <span>环境监控</span>
+                </a>
+                <a href="work-orders.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-tasks w-5"></i>
+                    <span>任务工单</span>
+                </a>
+                <a href="worker-attendance.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-user-check w-5"></i>
+                    <span>工人考勤</span>
+                </a>
+                <a href="work-log.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-clipboard-list w-5"></i>
+                    <span>工作日志</span>
+                </a>
+                <a href="scheduling.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-calendar-alt w-5"></i>
+                    <span>排班管理</span>
+                </a>
+                <a href="leave-overtime.html" class="sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-primary font-medium transition-all">
+                    <i class="fas fa-clock w-5"></i>
+                    <span>请假加班</span>
+                </a>
+                <a href="salary.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-yen-sign w-5"></i>
+                    <span>工资结算</span>
+                </a>
+                <a href="skills.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-graduation-cap w-5"></i>
+                    <span>技能培训</span>
+                </a>
+                <a href="contracts.html" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-all">
+                    <i class="fas fa-file-contract w-5"></i>
+                    <span>合同管理</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="flex-1 ml-64 p-6">
+            <!-- 头部 -->
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">请假加班管理</h2>
+                    <p class="text-gray-500 text-sm mt-1">管理人员请假、加班申请及审批</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="openModal('leave')" class="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md">
+                        <i class="fas fa-plus"></i>
+                        请假申请
+                    </button>
+                    <button onclick="openModal('overtime')" class="bg-secondary hover:bg-amber-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md">
+                        <i class="fas fa-clock"></i>
+                        加班申请
+                    </button>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">待审批</p>
+                            <p class="text-3xl font-bold text-gray-800 mt-1">5</p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-hourglass-half text-orange-500"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">请假中</p>
+                            <p class="text-3xl font-bold text-gray-800 mt-1">3</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-clock text-blue-500"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">加班中</p>
+                            <p class="text-3xl font-bold text-gray-800 mt-1">8</p>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-moon text-amber-500"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">本月请假天数</p>
+                            <p class="text-3xl font-bold text-gray-800 mt-1">12</p>
+                        </div>
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                            <i class="fas fa-calendar-check text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签切换 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                <div class="flex border-b border-gray-100">
+                    <button onclick="switchTab('all')" class="tab-btn active px-6 py-4 text-sm font-medium text-primary border-b-2 border-primary">全部申请</button>
+                    <button onclick="switchTab('leave')" class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-primary transition-all">请假申请</button>
+                    <button onclick="switchTab('overtime')" class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-primary transition-all">加班申请</button>
+                    <button onclick="switchTab('approved')" class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-primary transition-all">已通过</button>
+                    <button onclick="switchTab('rejected')" class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-primary transition-all">已拒绝</button>
+                </div>
+
+                <!-- 筛选 -->
+                <div class="p-4 flex gap-4 border-b border-gray-100">
+                    <select class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option>全部部门</option>
+                        <option>种植部</option>
+                        <option>采摘部</option>
+                        <option>包装部</option>
+                    </select>
+                    <select class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option>全部类型</option>
+                        <option>事假</option>
+                        <option>病假</option>
+                        <option>年假</option>
+                    </select>
+                    <input type="date" class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <input type="text" placeholder="搜索员工姓名..." class="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-primary/90 transition-all">
+                        <i class="fas fa-search mr-1"></i> 搜索
+                    </button>
+                </div>
+
+                <!-- 申请列表 -->
+                <div class="p-4">
+                    <div class="space-y-4">
+                        <!-- 申请项 -->
+                        <div class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-blue-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-medium text-gray-800">王建国</h4>
+                                            <span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">请假</span>
+                                            <span class="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">待审批</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-2">
+                                            <i class="fas fa-clock mr-1"></i> 年假 · 3天 · 2026-04-08 至 2026-04-10
+                                        </p>
+                                        <p class="text-sm text-gray-600">老家有事，需要回家处理相关事务</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="px-3 py-1.5 bg-primary text-white text-sm rounded hover:bg-primary/90 transition-all">
+                                        <i class="fas fa-check mr-1"></i> 批准
+                                    </button>
+                                    <button class="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-all">
+                                        <i class="fas fa-times mr-1"></i> 拒绝
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 申请项 -->
+                        <div class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-amber-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-medium text-gray-800">李秀英</h4>
+                                            <span class="px-2 py-0.5 bg-amber-100 text-amber-600 text-xs rounded">加班</span>
+                                            <span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded">已批准</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-2">
+                                            <i class="fas fa-clock mr-1"></i> 延时加班 · 3小时 · 2026-04-05 18:00-21:00
+                                        </p>
+                                        <p class="text-sm text-gray-600">番茄采摘高峰期，需要加班完成采摘任务</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">申请时间</p>
+                                    <p class="text-sm text-gray-700">04-03 14:30</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 申请项 -->
+                        <div class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-red-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-medium text-gray-800">张大力</h4>
+                                            <span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">请假</span>
+                                            <span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded">已拒绝</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-2">
+                                            <i class="fas fa-clock mr-1"></i> 事假 · 7天 · 2026-04-15 至 2026-04-21
+                                        </p>
+                                        <p class="text-sm text-gray-600">旅游度假</p>
+                                        <p class="text-sm text-red-500 mt-1"><i class="fas fa-info-circle mr-1"></i> 拒绝原因：农忙季节人手不足</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">申请时间</p>
+                                    <p class="text-sm text-gray-700">04-01 09:15</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 申请项 -->
+                        <div class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-purple-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-medium text-gray-800">陈美玲</h4>
+                                            <span class="px-2 py-0.5 bg-amber-100 text-amber-600 text-xs rounded">加班</span>
+                                            <span class="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">待审批</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-2">
+                                            <i class="fas fa-clock mr-1"></i> 周末加班 · 8小时 · 2026-04-12 至 2026-04-13
+                                        </p>
+                                        <p class="text-sm text-gray-600">黄瓜采摘包装需要支援</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="px-3 py-1.5 bg-primary text-white text-sm rounded hover:bg-primary/90 transition-all">
+                                        <i class="fas fa-check mr-1"></i> 批准
+                                    </button>
+                                    <button class="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-all">
+                                        <i class="fas fa-times mr-1"></i> 拒绝
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 申请项 -->
+                        <div class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-green-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-medium text-gray-800">赵小军</h4>
+                                            <span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">请假</span>
+                                            <span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded">已批准</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-2">
+                                            <i class="fas fa-clock mr-1"></i> 病假 · 1天 · 2026-04-02
+                                        </p>
+                                        <p class="text-sm text-gray-600">感冒发烧，需要休息一天</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">申请时间</p>
+                                    <p class="text-sm text-gray-700">04-02 07:30</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分页 -->
+                <div class="p-4 border-t border-gray-100 flex justify-between items-center">
+                    <p class="text-sm text-gray-500">共 28 条记录，第 1/3 页</p>
+                    <div class="flex gap-1">
+                        <button class="px-3 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50 disabled:opacity-50" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="px-3 py-1 bg-primary text-white rounded text-sm">1</button>
+                        <button class="px-3 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50">2</button>
+                        <button class="px-3 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50">3</button>
+                        <button class="px-3 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 请假申请弹窗 -->
+    <div id="leaveModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-calendar-minus mr-2 text-primary"></i>请假申请</h3>
+                <button onclick="closeModal('leave')" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+                    <i class="fas fa-times text-gray-400"></i>
+                </button>
+            </div>
+            <form class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">申请人</label>
+                        <input type="text" value="当前用户" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">所在部门</label>
+                        <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                            <option>种植部</option>
+                            <option>采摘部</option>
+                            <option>包装部</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">请假类型</label>
+                    <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option>事假</option>
+                        <option>病假</option>
+                        <option>年假</option>
+                        <option>婚假</option>
+                        <option>产假</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">开始日期</label>
+                        <input type="date" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">结束日期</label>
+                        <input type="date" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">请假天数</label>
+                    <input type="number" placeholder="请输入天数" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">请假原因</label>
+                    <textarea rows="3" placeholder="请详细描述请假原因..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">替班人员</label>
+                    <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option>请选择替班人员</option>
+                        <option>王建国</option>
+                        <option>李秀英</option>
+                        <option>张大力</option>
+                    </select>
+                </div>
+            </form>
+            <div class="p-5 border-t border-gray-100 flex justify-end gap-3">
+                <button onclick="closeModal('leave')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-all">取消</button>
+                <button class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-all">提交申请</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加班申请弹窗 -->
+    <div id="overtimeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-clock mr-2 text-secondary"></i>加班申请</h3>
+                <button onclick="closeModal('overtime')" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+                    <i class="fas fa-times text-gray-400"></i>
+                </button>
+            </div>
+            <form class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">申请人</label>
+                        <input type="text" value="当前用户" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">所在部门</label>
+                        <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                            <option>种植部</option>
+                            <option>采摘部</option>
+                            <option>包装部</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">加班类型</label>
+                    <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option>工作日延时加班</option>
+                        <option>周末加班</option>
+                        <option>节假日加班</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">加班日期</label>
+                    <input type="date" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">开始时间</label>
+                        <input type="time" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">结束时间</label>
+                        <input type="time" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">预计时长</label>
+                    <input type="number" placeholder="小时" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">加班原因</label>
+                    <textarea rows="3" placeholder="请详细描述加班原因..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"></textarea>
+                </div>
+            </form>
+            <div class="p-5 border-t border-gray-100 flex justify-end gap-3">
+                <button onclick="closeModal('overtime')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-all">取消</button>
+                <button class="px-4 py-2 bg-secondary text-white rounded-lg text-sm hover:bg-secondary/90 transition-all">提交申请</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(type) {
+            document.getElementById(type + 'Modal').classList.remove('hidden');
+            document.getElementById(type + 'Modal').classList.add('flex');
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + 'Modal').classList.add('hidden');
+            document.getElementById(type + 'Modal').classList.remove('flex');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'text-primary', 'border-b-2', 'border-primary');
+                btn.classList.add('text-gray-500');
+            });
+            event.target.classList.add('active', 'text-primary', 'border-b-2', 'border-primary');
+            event.target.classList.remove('text-gray-500');
+        }
+
+        document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技能培训 - 鸿智云农业园区管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#9a7040',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; }
+        .sidebar-item:hover { background: rgba(34, 197, 94, 0.1); }
+        .sidebar-item.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .course-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+        .modal { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg flex flex-col">
+            <div class="p-5 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-gray-800">鸿智云</h1>
+                        <p class="text-xs text-gray-500">农业园区管理系统</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 py-4">
+                <div class="px-3 mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">生产管理</span>
+                </div>
+                <a href="work-orders.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-tasks w-5 text-center"></i>
+                    <span>任务工单</span>
+                </a>
+                <a href="scheduling.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-calendar-alt w-5 text-center"></i>
+                    <span>排班管理</span>
+                </a>
+                <a href="worker-attendance.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-clock w-5 text-center"></i>
+                    <span>工人考勤</span>
+                </a>
+                <a href="leave-overtime.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-user-clock w-5 text-center"></i>
+                    <span>请假加班</span>
+                </a>
+                <div class="px-3 mb-2 mt-4">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">人力管理</span>
+                </div>
+                <a href="salary.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-wallet w-5 text-center"></i>
+                    <span>工资结算</span>
+                </a>
+                <a href="work-log.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-clipboard-list w-5 text-center"></i>
+                    <span>工作日志</span>
+                </a>
+                <a href="monthly-report.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-chart-bar w-5 text-center"></i>
+                    <span>工作月报</span>
+                </a>
+                <div class="px-3 mb-2 mt-4">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">系统设置</span>
+                </div>
+                <a href="skills.html" class="sidebar-item active flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-graduation-cap w-5 text-center"></i>
+                    <span>技能培训</span>
+                </a>
+                <a href="contracts.html" class="sidebar-item flex items-center gap-3 px-5 py-2.5 text-gray-700">
+                    <i class="fas fa-file-contract w-5 text-center"></i>
+                    <span>合同管理</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-primary rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-medium">李</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">李管理</p>
+                        <p class="text-xs text-gray-500">系统管理员</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1">
+            <!-- 顶部栏 -->
+            <header class="bg-white shadow-sm border-b border-gray-100 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">技能培训</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">管理培训课程与工人技能提升</p>
+                    </div>
+                    <button onclick="openCreateModal()" class="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i>新建培训
+                    </button>
+                </div>
+            </header>
+
+            <!-- 内容 -->
+            <div class="p-6">
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-4 gap-5 mb-6">
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-book-open text-primary text-xl"></i>
+                            </div>
+                            <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">共计</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">12</p>
+                        <p class="text-sm text-gray-500 mt-1">培训课程</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-spinner text-blue-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">进行中</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">3</p>
+                        <p class="text-sm text-gray-500 mt-1">正在进行</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-user-graduate text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">累计</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">156</p>
+                        <p class="text-sm text-gray-500 mt-1">培训人次</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-award text-amber-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">完成率</span>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">89%</p>
+                        <p class="text-sm text-gray-500 mt-1">培训完成率</p>
+                    </div>
+                </div>
+
+                <!-- 标签筛选 -->
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-sm text-gray-600 font-medium">课程类型：</span>
+                        <button class="px-4 py-1.5 bg-primary text-white rounded-full text-sm">全部</button>
+                        <button class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200">安全培训</button>
+                        <button class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200">技能培训</button>
+                        <button class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200">操作规程</button>
+                        <button class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200">新员工入职</button>
+                    </div>
+                </div>
+
+                <!-- 培训课程列表 -->
+                <div class="grid grid-cols-3 gap-5 mb-6">
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                            <i class="fas fa-shield-alt text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">安全培训</span>
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">必修</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">农业安全生产规范</h4>
+                            <p class="text-sm text-gray-500 mb-3">讲解农业生产安全操作规范...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>4课时</span>
+                                <span><i class="fas fa-users mr-1"></i>32人已报名</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：王建国</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                            <i class="fas fa-tractor text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">技能培训</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">进行中</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">农机设备操作培训</h4>
+                            <p class="text-sm text-gray-500 mb-3">培训各类农业机械的正确操作...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>8课时</span>
+                                <span><i class="fas fa-users mr-1"></i>18人学习中</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：李技术</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                            <i class="fas fa-leaf text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">技能培训</span>
+                                <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">未开始</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">蔬菜种植技术培训</h4>
+                            <p class="text-sm text-gray-500 mb-3">学习各类蔬菜的种植技术要点...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>6课时</span>
+                                <span><i class="fas fa-users mr-1"></i>24人已报名</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：张农艺</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">操作规程</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">大棚操作安全规程</h4>
+                            <p class="text-sm text-gray-500 mb-3">大棚温室操作的安全注意事项...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>3课时</span>
+                                <span><i class="fas fa-users mr-1"></i>28人已完成</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：赵安全</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+                            <i class="fas fa-users text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">新员工入职</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">已完成</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">新员工入职培训</h4>
+                            <p class="text-sm text-gray-500 mb-3">公司制度、园区概况、基本要求...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>2课时</span>
+                                <span><i class="fas fa-users mr-1"></i>45人已完成</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：人事部</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
+                        <div class="h-36 bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center">
+                            <i class="fas fa-first-aid text-white text-5xl opacity-80"></i>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">安全培训</span>
+                                <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">报名中</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">急救知识与操作</h4>
+                            <p class="text-sm text-gray-500 mb-3">农业作业中的急救知识与技能...</p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>4课时</span>
+                                <span><i class="fas fa-users mr-1"></i>15人已报名</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500">讲师：医疗部</span>
+                                <button class="text-primary text-sm hover:underline">查看详情</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 培训记录 -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-800">培训参与记录</h3>
+                        <button class="text-gray-500 hover:text-primary transition-colors text-sm">
+                            <i class="fas fa-download mr-1"></i>导出记录
+                        </button>
+                    </div>
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">培训课程</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">培训讲师</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">参与人员</th>
+                                <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">培训时间</th>
+                                <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">状态</th>
+                                <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-5 py-4">
+                                    <p class="font-medium text-gray-800">农业安全生产规范</p>
+                                    <p class="text-xs text-gray-500">安全培训</p>
+                                </td>
+                                <td class="px-5 py-4 text-gray-700">王建国</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex -space-x-2">
+                                        <div class="w-7 h-7 bg-primary rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">张</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">王</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">李</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-gray-200 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-gray-600 text-xs">+29</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4 text-center text-gray-700">2026-03-15</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">已完成</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-5 py-4">
+                                    <p class="font-medium text-gray-800">农机设备操作培训</p>
+                                    <p class="text-xs text-gray-500">技能培训</p>
+                                </td>
+                                <td class="px-5 py-4 text-gray-700">李技术</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex -space-x-2">
+                                        <div class="w-7 h-7 bg-purple-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">赵</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-teal-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">陈</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-gray-200 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-gray-600 text-xs">+16</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4 text-center text-gray-700">2026-03-20</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">进行中</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-5 py-4">
+                                    <p class="font-medium text-gray-800">新员工入职培训</p>
+                                    <p class="text-xs text-gray-500">新员工入职</p>
+                                </td>
+                                <td class="px-5 py-4 text-gray-700">人事部</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex -space-x-2">
+                                        <div class="w-7 h-7 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">孙</span>
+                                        </div>
+                                        <div class="w-7 h-7 bg-indigo-500 rounded-full border-2 border-white flex items-center justify-center">
+                                            <span class="text-white text-xs">周</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4 text-center text-gray-700">2026-03-25</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">已完成</span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <button class="text-gray-400 hover:text-primary mx-1"><i class="fas fa-eye"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!-- 分页 -->
+                    <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+                        <p class="text-sm text-gray-500">共 12 条记录，第 1/1 页</p>
+                        <div class="flex items-center gap-2">
+                            <button class="px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
+                            <button class="px-3 py-1.5 bg-primary text-white rounded text-sm">1</button>
+                            <button class="px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50" disabled>下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 新建培训弹窗 -->
+    <div id="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="modal bg-white rounded-xl w-[600px] max-h-[80vh] overflow-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-lg text-gray-800">新建培训课程</h3>
+                <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">课程名称</label>
+                    <input type="text" placeholder="请输入培训课程名称" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">课程类型</label>
+                        <select class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                            <option value="">请选择</option>
+                            <option value="safety">安全培训</option>
+                            <option value="skill">技能培训</option>
+                            <option value="operation">操作规程</option>
+                            <option value="onboarding">新员工入职</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">培训课时</label>
+                        <input type="number" placeholder="如：4" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">培训讲师</label>
+                        <input type="text" placeholder="请输入讲师姓名" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">培训形式</label>
+                        <select class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                            <option value="">请选择</option>
+                            <option value="offline">线下培训</option>
+                            <option value="online">线上培训</option>
+                            <option value="hybrid">混合培训</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">开始日期</label>
+                        <input type="date" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">结束日期</label>
+                        <input type="date" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">培训对象</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="checkbox" checked class="rounded text-primary">
+                            <span class="text-sm text-gray-700">A班 - 蔬菜种植组</span>
+                        </label>
+                        <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="checkbox" class="rounded text-primary">
+                            <span class="text-sm text-gray-700">B班 - 水果采摘组</span>
+                        </label>
+                        <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="checkbox" class="rounded text-primary">
+                            <span class="text-sm text-gray-700">C班 - 大棚维护组</span>
+                        </label>
+                        <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="checkbox" class="rounded text-primary">
+                            <span class="text-sm text-gray-700">D班 - 包装运输组</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">课程简介</label>
+                    <textarea rows="3" placeholder="请输入课程简介..." class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button onclick="closeCreateModal()" class="px-5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">取消</button>
+                <button class="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-green-600">创建培训</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openCreateModal() {
+            document.getElementById('createModal').classList.remove('hidden');
+        }
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

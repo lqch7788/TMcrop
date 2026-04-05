@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排班管理 - 人工管理原型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#9a7040',
+                        accent: '#f59e0b',
+                        danger: '#ef4444',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        info: '#3b82f6',
+                        dark: '#1f2937',
+                        light: '#f3f4f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg min-h-screen fixed left-0 top-0 overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-dark text-lg">鸿智云</h1>
+                        <p class="text-xs text-gray-500">农业园区管理系统</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="p-4">
+                <div class="mb-6">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 px-3">生产管理</p>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-home w-5"></i><span>首页概览</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-map-marked-alt w-5"></i><span>园区导览</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-seedling w-5"></i><span>种植管理</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-clipboard-list w-5"></i><span>农事任务派发</span>
+                    </a>
+                </div>
+                <div class="mb-6">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 px-3">人工管理</p>
+                    <a href="work-orders.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-tasks w-5"></i><span>任务工单</span>
+                    </a>
+                    <a href="worker-attendance.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-clock w-5"></i><span>工人考勤</span>
+                    </a>
+                    <a href="work-log.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-file-alt w-5"></i><span>工作日志</span>
+                    </a>
+                    <a href="monthly-report.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-chart-bar w-5"></i><span>工作月报</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-medium">
+                        <i class="fas fa-calendar-alt w-5"></i><span>排班管理</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-user-clock w-5"></i><span>请假加班</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-hand-holding-usd w-5"></i><span>工资结算</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-graduation-cap w-5"></i><span>技能培训</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50">
+                        <i class="fas fa-file-contract w-5"></i><span>合同管理</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 ml-64 p-8">
+            <!-- 顶部导航 -->
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-dark">排班管理</h2>
+                    <p class="text-gray-500 text-sm mt-1">管理农场工人工作排班与班次安排</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <select class="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option>2026年4月 第1周</option>
+                        <option>2026年4月 第2周</option>
+                    </select>
+                    <button class="px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                        <i class="fas fa-plus"></i><span>新建排班</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">总班组数</p>
+                            <p class="text-3xl font-bold text-dark mt-1">6</p>
+                        </div>
+                        <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users text-primary text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">今日在岗</p>
+                            <p class="text-3xl font-bold text-dark mt-1">38</p>
+                        </div>
+                        <div class="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-check text-success text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">请假人数</p>
+                            <p class="text-3xl font-bold text-warning mt-1">4</p>
+                        </div>
+                        <div class="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-times text-warning text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">待分配</p>
+                            <p class="text-3xl font-bold text-info mt-1">5</p>
+                        </div>
+                        <div class="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-plus text-info text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 排班日历 -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-medium text-dark">本周排班表</h3>
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                            <i class="fas fa-chevron-left mr-1"></i>上周
+                        </button>
+                        <button class="px-4 py-2 bg-primary text-white rounded-lg text-sm">本周</button>
+                        <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                            下周<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-4">
+                    <!-- 星期列 -->
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周一</div>
+                        <div class="text-xs text-gray-400">4/1</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周二</div>
+                        <div class="text-xs text-gray-400">4/2</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周三</div>
+                        <div class="text-xs text-gray-400">4/3</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周四</div>
+                        <div class="text-xs text-gray-400">4/4</div>
+                    </div>
+                    <div class="text-center bg-primary/5 rounded-lg p-2">
+                        <div class="text-sm text-primary font-medium mb-4">周五</div>
+                        <div class="text-xs text-primary">4/4</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周六</div>
+                        <div class="text-xs text-gray-400">4/5</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-500 mb-4">周日</div>
+                        <div class="text-xs text-gray-400">4/6</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 班组排班详情 -->
+            <div class="space-y-4">
+                <!-- 种植组 -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-seedling text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-dark">种植组</h4>
+                                <p class="text-xs text-gray-500">共8人</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors text-sm">
+                            <i class="fas fa-edit mr-1"></i>编辑
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-4">
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">张明</span>
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">王芳</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">张明</span>
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">王芳</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">张明</span>
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">王芳</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">张明</span>
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">王芳</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-lg border-2 border-amber-200">
+                            <div class="text-xs text-gray-500 mb-2">中班 14:00-22:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-amber-500 text-white rounded text-xs">李强</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg border-2 border-gray-200">
+                            <div class="text-xs text-gray-400 mb-2">休息</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-gray-400 text-white rounded text-xs">王芳</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg border-2 border-gray-200">
+                            <div class="text-xs text-gray-400 mb-2">休息</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-gray-400 text-white rounded text-xs">张明</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 采摘组 -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-shopping-basket text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-dark">采摘组</h4>
+                                <p class="text-xs text-gray-500">共10人</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors text-sm">
+                            <i class="fas fa-edit mr-1"></i>编辑
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-4">
+                        <div class="p-3 bg-amber-50 rounded-lg border-2 border-amber-200">
+                            <div class="text-xs text-gray-500 mb-2">中班 14:00-22:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-amber-500 text-white rounded text-xs">刘伟</span>
+                                <span class="px-2 py-1 bg-amber-500 text-white rounded text-xs">赵丽</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-lg border-2 border-amber-200">
+                            <div class="text-xs text-gray-500 mb-2">中班 14:00-22:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-amber-500 text-white rounded text-xs">刘伟</span>
+                                <span class="px-2 py-1 bg-amber-500 text-white rounded text-xs">赵丽</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                            <div class="text-xs text-gray-500 mb-2">晚班 22:00-6:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-purple-500 text-white rounded text-xs">陈刚</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                            <div class="text-xs text-gray-500 mb-2">晚班 22:00-6:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-purple-500 text-white rounded text-xs">陈刚</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">李强</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="text-xs text-gray-500 mb-2">早班 6:00-14:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">李强</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg border-2 border-gray-200">
+                            <div class="text-xs text-gray-400 mb-2">休息</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 包装组 -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-box text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-dark">包装组</h4>
+                                <p class="text-xs text-gray-500">共6人</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors text-sm">
+                            <i class="fas fa-edit mr-1"></i>编辑
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-4">
+                        <div class="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div class="text-xs text-gray-500 mb-2">正常班 8:00-18:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">周小红</span>
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">吴婷</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div class="text-xs text-gray-500 mb-2">正常班 8:00-18:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">周小红</span>
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">吴婷</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div class="text-xs text-gray-500 mb-2">正常班 8:00-18:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">周小红</span>
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">吴婷</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div class="text-xs text-gray-500 mb-2">正常班 8:00-18:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">周小红</span>
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">吴婷</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div class="text-xs text-gray-500 mb-2">正常班 8:00-18:00</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">周小红</span>
+                                <span class="px-2 py-1 bg-green-500 text-white rounded text-xs">吴婷</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg border-2 border-gray-200">
+                            <div class="text-xs text-gray-400 mb-2">休息</div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg border-2 border-gray-200">
+                            <div class="text-xs text-gray-400 mb-2">休息</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图例 -->
+            <div class="mt-6 flex items-center justify-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span class="text-sm text-gray-600">早班 6:00-14:00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-amber-500 rounded"></div>
+                    <span class="text-sm text-gray-600">中班 14:00-22:00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-purple-500 rounded"></div>
+                    <span class="text-sm text-gray-600">晚班 22:00-6:00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-green-500 rounded"></div>
+                    <span class="text-sm text-gray-600">正常班 8:00-18:00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-gray-400 rounded"></div>
+                    <span class="text-sm text-gray-600">休息</span>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
