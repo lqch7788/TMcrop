@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code 本地状态（重要！防止跨项目混淆）
+.omc/
+.sisyphus/
+.claude/settings.local.json
+
+# 备份目录
+src_backup_*/
+
+# 规划文件（建议每个项目独立管理）
+# PLANS/
+
+# 敏感配置
+.env
+.env.local
+.env.*.local
