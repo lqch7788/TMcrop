@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Sprout, ClipboardList, Package, Eye,
-  Warehouse, BarChart3, CheckSquare, Bell, Settings, Menu, X,
+  Warehouse, BarChart3, CheckSquare, Bell, Menu, X,
   Users, MapPin, Target, ScrollText,
   Wifi, Thermometer, Activity, Search, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
@@ -25,8 +25,6 @@ const menuItems = [
   { icon: Users, label: '人工管理', path: '/work-orders', category: 'labor' },
   { icon: BarChart3, label: '生产汇总表', path: '/reports', category: 'summary' },
   { icon: CheckSquare, label: '审批中心', path: '/approvals', category: 'workflow' },
-  { icon: Bell, label: '消息中心', path: '/messages', category: 'workflow' },
-  { icon: Settings, label: '系统设置', path: '/settings', category: 'system' },
 ];
 
 const productionSubItems = [

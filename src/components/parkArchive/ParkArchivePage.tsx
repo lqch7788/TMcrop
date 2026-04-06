@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, Eye, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
 
 // 园区/地块数据 - 真实百度地图坐标
 const initialCompanyGroups = [
@@ -8,21 +8,21 @@ const initialCompanyGroups = [
     id: 1,
     name: '宁波帮帮忙公司',
     bases: [
-      { id: 2, name: '上海松江基地', area: 300, unit: '亩', crop: '水稻', growthDay: 30, status: 'planting', statusText: '种植中', manager: '李明轩', phone: '13800138002', soilType: '沙壤土', ph: 6.8, coords: '121.2234,31.0342', city: '上海', province: '上海', lng: 121.2234, lat: 31.0342, intro: '总种植面积300亩，包含玻璃温室2个，连栋薄膜温室5个，日光拱棚10个，大田200亩。', greenhouseCount: 17, fieldArea: 200 },
-      { id: 3, name: '上海崇明基地', area: 800, unit: '亩', crop: '小麦', growthDay: 0, status: 'fallow', statusText: '休耕中', manager: '王建国', phone: '13800138003', soilType: '黏土', ph: 6.2, coords: '121.24416,31.73610', city: '上海', province: '上海', lng: 121.24416, lat: 31.73610, intro: '总种植面积800亩，包含玻璃温室3个，连栋薄膜温室8个，日光拱棚15个，大田650亩。', greenhouseCount: 26, fieldArea: 650 },
-      { id: 7, name: '上海嘉定基地', area: 350, unit: '亩', crop: '蔬菜', growthDay: 25, status: 'planting', statusText: '种植中', manager: '周志强', phone: '13800138007', soilType: '沙土', ph: 7.0, coords: '121.2654,31.3754', city: '上海', province: '上海', lng: 121.2654, lat: 31.3754, intro: '总种植面积350亩，包含玻璃温室4个，连栋薄膜温室6个，日光拱棚8个，大田200亩。', greenhouseCount: 18, fieldArea: 200 },
-      { id: 12, name: '上海奉贤基地', area: 550, unit: '亩', crop: '玉米', growthDay: 50, status: 'planting', statusText: '种植中', manager: '杨文博', phone: '13800138012', soilType: '黏土', ph: 6.8, coords: '121.4745,30.9123', city: '上海', province: '上海', lng: 121.4745, lat: 30.9123, intro: '总种植面积550亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚12个，大田450亩。', greenhouseCount: 18, fieldArea: 450 },
+      { id: 2, name: '上海松江基地', area: 300, unit: '亩', crop: '水稻', growthDay: 30, status: 'planting', statusText: '种植中', manager: '郭靖', phone: '13800138002', soilType: '沙壤土', ph: 6.8, coords: '121.2234,31.0342', city: '上海', province: '上海', lng: 121.2234, lat: 31.0342, intro: '总种植面积300亩，包含玻璃温室2个，连栋薄膜温室5个，日光拱棚10个，大田200亩。', greenhouseCount: 17, fieldArea: 200 },
+      { id: 3, name: '上海崇明基地', area: 800, unit: '亩', crop: '小麦', growthDay: 0, status: 'fallow', statusText: '休耕中', manager: '萧峰', phone: '13800138003', soilType: '黏土', ph: 6.2, coords: '121.24416,31.73610', city: '上海', province: '上海', lng: 121.24416, lat: 31.73610, intro: '总种植面积800亩，包含玻璃温室3个，连栋薄膜温室8个，日光拱棚15个，大田650亩。', greenhouseCount: 26, fieldArea: 650 },
+      { id: 7, name: '上海嘉定基地', area: 350, unit: '亩', crop: '蔬菜', growthDay: 25, status: 'planting', statusText: '种植中', manager: '杨过', phone: '13800138007', soilType: '沙土', ph: 7.0, coords: '121.2654,31.3754', city: '上海', province: '上海', lng: 121.2654, lat: 31.3754, intro: '总种植面积350亩，包含玻璃温室4个，连栋薄膜温室6个，日光拱棚8个，大田200亩。', greenhouseCount: 18, fieldArea: 200 },
+      { id: 12, name: '上海奉贤基地', area: 550, unit: '亩', crop: '玉米', growthDay: 50, status: 'planting', statusText: '种植中', manager: '张无忌', phone: '13800138012', soilType: '黏土', ph: 6.8, coords: '121.4745,30.9123', city: '上海', province: '上海', lng: 121.4745, lat: 30.9123, intro: '总种植面积550亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚12个，大田450亩。', greenhouseCount: 18, fieldArea: 450 },
     ]
   },
   {
     id: 2,
     name: '成都帮帮您公司',
     bases: [
-      { id: 1, name: '西安雁塔基地', area: 500, unit: '亩', crop: '番茄', growthDay: 45, status: 'planting', statusText: '种植中', manager: '张伟民', phone: '13800138001', soilType: '壤土', ph: 6.5, coords: '108.9470,34.2194', city: '西安', province: '陕西', lng: 108.9470, lat: 34.2194, intro: '总种植面积500亩，包含玻璃温室3个，连栋薄膜温室7个，日光拱棚12个，大田380亩。', greenhouseCount: 22, fieldArea: 380 },
-      { id: 6, name: '西安高新基地', area: 200, unit: '亩', crop: '草莓', growthDay: 55, status: 'planting', statusText: '种植中', manager: '孙晓峰', phone: '13800138006', soilType: '营养土', ph: 6.4, coords: '108.8789,34.2181', city: '西安', province: '陕西', lng: 108.8789, lat: 34.2181, intro: '总种植面积200亩，包含玻璃温室5个，连栋薄膜温室3个，日光拱棚5个，大田100亩。', greenhouseCount: 13, fieldArea: 100 },
-      { id: 4, name: '宁波北仑基地', area: 600, unit: '亩', crop: '茶叶', growthDay: 60, status: 'planting', statusText: '种植中', manager: '赵俊杰', phone: '13800138004', soilType: '壤土', ph: 6.6, coords: '121.9701,29.8947', city: '宁波', province: '浙江', lng: 121.9701, lat: 29.8947, intro: '总种植面积600亩，包含玻璃温室1个，连栋薄膜温室4个，日光拱棚8个，大田550亩。', greenhouseCount: 13, fieldArea: 550 },
-      { id: 8, name: '宁波镇海基地', area: 280, unit: '亩', crop: '水稻', growthDay: 40, status: 'planting', statusText: '种植中', manager: '吴海龙', phone: '13800138008', soilType: '壤土', ph: 6.7, coords: '121.7532,29.9543', city: '宁波', province: '浙江', lng: 121.7532, lat: 29.9543, intro: '总种植面积280亩，包含玻璃温室2个，连栋薄膜温室3个，日光拱棚6个，大田220亩。', greenhouseCount: 11, fieldArea: 220 },
-      { id: 10, name: '宁波慈溪基地', area: 420, unit: '亩', crop: '葡萄', growthDay: 75, status: 'planting', statusText: '种植中', manager: '陈思远', phone: '13800138010', soilType: '壤土', ph: 6.5, coords: '121.2678,30.1543', city: '宁波', province: '浙江', lng: 121.2678, lat: 30.1543, intro: '总种植面积420亩，包含玻璃温室3个，连栋薄膜温室5个，日光拱棚10个，大田320亩。', greenhouseCount: 18, fieldArea: 320 },
+      { id: 1, name: '西安雁塔基地', area: 500, unit: '亩', crop: '番茄', growthDay: 45, status: 'planting', statusText: '种植中', manager: '令狐冲', phone: '13800138001', soilType: '壤土', ph: 6.5, coords: '108.9470,34.2194', city: '西安', province: '陕西', lng: 108.9470, lat: 34.2194, intro: '总种植面积500亩，包含玻璃温室3个，连栋薄膜温室7个，日光拱棚12个，大田380亩。', greenhouseCount: 22, fieldArea: 380 },
+      { id: 6, name: '西安高新基地', area: 200, unit: '亩', crop: '草莓', growthDay: 55, status: 'planting', statusText: '种植中', manager: '狄云', phone: '13800138006', soilType: '营养土', ph: 6.4, coords: '108.8789,34.2181', city: '西安', province: '陕西', lng: 108.8789, lat: 34.2181, intro: '总种植面积200亩，包含玻璃温室5个，连栋薄膜温室3个，日光拱棚5个，大田100亩。', greenhouseCount: 13, fieldArea: 100 },
+      { id: 4, name: '宁波北仑基地', area: 600, unit: '亩', crop: '茶叶', growthDay: 60, status: 'planting', statusText: '种植中', manager: '石破天', phone: '13800138004', soilType: '壤土', ph: 6.6, coords: '121.9701,29.8947', city: '宁波', province: '浙江', lng: 121.9701, lat: 29.8947, intro: '总种植面积600亩，包含玻璃温室1个，连栋薄膜温室4个，日光拱棚8个，大田550亩。', greenhouseCount: 13, fieldArea: 550 },
+      { id: 8, name: '宁波镇海基地', area: 280, unit: '亩', crop: '水稻', growthDay: 40, status: 'planting', statusText: '种植中', manager: '陈家洛', phone: '13800138008', soilType: '壤土', ph: 6.7, coords: '121.7532,29.9543', city: '宁波', province: '浙江', lng: 121.7532, lat: 29.9543, intro: '总种植面积280亩，包含玻璃温室2个，连栋薄膜温室3个，日光拱棚6个，大田220亩。', greenhouseCount: 11, fieldArea: 220 },
+      { id: 10, name: '宁波慈溪基地', area: 420, unit: '亩', crop: '葡萄', growthDay: 75, status: 'planting', statusText: '种植中', manager: '袁承志', phone: '13800138010', soilType: '壤土', ph: 6.5, coords: '121.2678,30.1543', city: '宁波', province: '浙江', lng: 121.2678, lat: 30.1543, intro: '总种植面积420亩，包含玻璃温室3个，连栋薄膜温室5个，日光拱棚10个，大田320亩。', greenhouseCount: 18, fieldArea: 320 },
     ]
   },
 ];
@@ -436,12 +436,12 @@ export function ParkArchivePage() {
                         </td>
                       )}
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-2 mb-2">
                           <button onClick={() => toggleCompany(company.id)} className="p-1 hover:bg-blue-100 rounded cursor-pointer">
-                            {expandedCompanies.includes(company.id) ? <ChevronDown className="w-5 h-5 text-gray-600" /> : <ChevronRight className="w-5 h-5 text-gray-600" />}
+                            {expandedCompanies.includes(company.id) ? <ChevronDown className="w-4 h-4 text-gray-600" /> : <ChevronRight className="w-4 h-4 text-gray-600" />}
                           </button>
-                          <span className="font-bold text-lg text-gray-900">{company.name}</span>
-                          <span className="text-sm text-gray-500">({company.bases.length}个基地)</span>
+                          <span className="font-bold text-sm text-gray-900">{company.name}</span>
+                          <span className="text-xs text-gray-500">({company.bases.length}个基地)</span>
                         </div>
                         {expandedCompanies.includes(company.id) && company.bases
                           .filter(item => {
@@ -451,18 +451,23 @@ export function ParkArchivePage() {
                             return true;
                           })
                           .map((item) => (
-                            <div key={item.id} className="flex items-center gap-3 py-3 pl-8 bg-blue-50/60 hover:bg-blue-100/80 rounded-lg mb-2">
+                            <div key={item.id} className="flex flex-wrap items-center gap-2 py-2 pl-8 pr-2 bg-blue-50/60 hover:bg-blue-100/80 rounded-lg mb-2">
                               <button onClick={(e) => { e.stopPropagation(); flyToBase(item); }} className="p-1 hover:bg-blue-200/50 rounded cursor-pointer" title="定位到地图">
-                                <MapPin className="w-5 h-5 text-green-600" />
+                                <MapPin className="w-4 h-4 text-green-600" />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); navigate('/', { state: { baseId: item.id, baseName: item.name } }); }} className="text-base font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer min-w-[140px]">
+                              <button onClick={(e) => { e.stopPropagation(); navigate('/', { state: { baseId: item.id, baseName: item.name } }); }} className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                 {item.name}
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }} className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded cursor-pointer" title="查看详情">
-                                <Eye className="w-4 h-4" />
+                              <span className="text-xs text-gray-600">{item.area}{item.unit}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                item.status === 'planting' ? 'bg-green-100 text-green-700' :
+                                item.status === 'fallow' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{item.statusText}</span>
+                              <span className="text-xs text-gray-600">{item.manager}</span>
+                              <button onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }} className="ml-auto text-xs text-blue-500 hover:text-blue-700 cursor-pointer">
+                                详情&gt;&gt;
                               </button>
-                              <span className="text-base font-medium text-gray-700 min-w-[100px]">{item.area} {item.unit}</span>
-                              <span className="text-base font-medium text-gray-700">{item.manager}</span>
                             </div>
                           ))}
                       </td>
@@ -493,62 +498,62 @@ export function ParkArchivePage() {
 
       {/* 地块详情弹窗 */}
       {showDetailModal && selectedField && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999]">
-          <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto border border-cyan-500/30">
-            <div className="px-6 py-4 border-b border-cyan-500/20 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">{selectedField.name} - 地块档案</h3>
               <div className="flex items-center gap-3">
-                <button onClick={() => navigate('/')} className="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-sm font-medium hover:bg-cyan-500">进入{'>>>'}</button>
-                <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-white/10 rounded"><X className="w-5 h-5 text-gray-400" /></button>
+                <button onClick={() => navigate('/bases')} className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30">进入{'>>>'}</button>
+                <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-white/20 rounded"><X className="w-5 h-5 text-white" /></button>
               </div>
             </div>
-            <div className="p-6">
+            <div className="p-6 bg-gray-100">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-cyan-400/70">基地/区域名称</label>
-                  <p className="font-semibold text-white">{selectedField.name}</p>
+                  <label className="text-xs text-gray-500">基地/区域名称</label>
+                  <p className="font-semibold text-gray-900">{selectedField.name}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">面积</label>
-                  <p className="font-semibold text-white">{selectedField.area} {selectedField.unit}</p>
+                  <label className="text-xs text-gray-500">面积</label>
+                  <p className="font-semibold text-gray-900">{selectedField.area} {selectedField.unit}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">温室大棚数量</label>
-                  <p className="font-semibold text-white">{selectedField.greenhouseCount || '-'}</p>
+                  <label className="text-xs text-gray-500">温室大棚数量</label>
+                  <p className="font-semibold text-gray-900">{selectedField.greenhouseCount || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">大田面积</label>
-                  <p className="font-semibold text-white">{selectedField.fieldArea ? `${selectedField.fieldArea}亩` : '-'}</p>
+                  <label className="text-xs text-gray-500">大田面积</label>
+                  <p className="font-semibold text-gray-900">{selectedField.fieldArea ? `${selectedField.fieldArea}亩` : '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">地理坐标</label>
-                  <p className="font-semibold text-white text-sm">{selectedField.coords}</p>
+                  <label className="text-xs text-gray-500">地理坐标</label>
+                  <p className="font-semibold text-gray-900 text-sm">{selectedField.coords}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">负责人</label>
-                  <p className="font-semibold text-white">{selectedField.manager}</p>
+                  <label className="text-xs text-gray-500">负责人</label>
+                  <p className="font-semibold text-gray-900">{selectedField.manager}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">联系电话</label>
-                  <p className="font-semibold text-white">{selectedField.phone}</p>
+                  <label className="text-xs text-gray-500">联系电话</label>
+                  <p className="font-semibold text-gray-900">{selectedField.phone}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-cyan-400/70">当前状态</label>
+                  <label className="text-xs text-gray-500">当前状态</label>
                   <p className="font-semibold">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedField.status === 'planting' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                      selectedField.status === 'fallow' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                      'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                      selectedField.status === 'planting' ? 'bg-green-100 text-green-700 border border-green-200' :
+                      selectedField.status === 'fallow' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                      'bg-gray-100 text-gray-600 border border-gray-200'
                     }`}>{selectedField.statusText}</span>
                   </p>
                 </div>
               </div>
-              <div className="bg-cyan-500/10 rounded-lg p-4 border border-cyan-500/20 mt-4">
-                <p className="text-sm text-gray-300">{selectedField.intro || '-'}</p>
+              <div className="bg-white rounded-lg p-4 border border-gray-200 mt-4">
+                <p className="text-sm text-gray-600">{selectedField.intro || '-'}</p>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-cyan-500/20 flex justify-end">
-              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 bg-white/10 text-gray-300 rounded-lg text-sm font-medium hover:bg-white/20">关闭</button>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">关闭</button>
             </div>
           </div>
         </div>
