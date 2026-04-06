@@ -108,6 +108,54 @@ npm run build
 🧠 记忆与上下文管理
 项目文档化：每次完成一个大功能，自动更新项目根目录下的 PROJECT_MEMO.md。
 代码风格统一：保持代码格式一致（使用 Prettier/ESLint），注释使用中文，关键业务逻辑必须写注释。
+
+---
+
+## 📁 临时文件隔离规则（本项目专用）
+
+### 规则说明
+Claude Code 在执行任务时会产生临时文件（如代码审查报告、plan任务输出、错误日志、调试文件、session状态等）。**这些文件必须与项目源代码隔离**，只允许保存在项目外的 `public/temp/` 目录。
+
+### 临时文件存放位置
+```
+../public/temp/
+```
+即：`D:\TMcrop\yuanxingtu\V1.1\public\temp\`
+
+### 必须隔离的临时文件类型
+| 文件类型 | 示例 | 处理方式 |
+|---------|------|---------|
+| Claude Code 会话状态 | `.omc/` 目录 | 保存到 `../public/temp/.omc/` |
+| Agent 规划文件 | `.sisyphus/` 目录 | 保存到 `../public/temp/sisyphus/` |
+| 代码审查报告 | `*review*.md` | 保存到 `../public/temp/reviews/` |
+| Plan 任务输出 | `plans/*.md` | 保存到 `../public/temp/plans/` |
+| 错误日志 | `*.log`, `error*.txt` | 保存到 `../public/temp/logs/` |
+| 调试文件 | `debug*.json` | 保存到 `../public/temp/debug/` |
+| Session 检查点 | `checkpoint*.json` | 保存到 `../public/temp/checkpoints/` |
+
+### 禁止行为（违反将导致项目污染）
+- ❌ 禁止在项目文件夹 `src/` 内创建临时文件
+- ❌ 禁止在项目根目录创建 `.omc/`, `.sisyphus/` 等临时目录
+- ❌ 禁止提交临时文件到 Git
+- ❌ 禁止在 `components/`, `pages/` 目录创建非业务代码文件
+
+### .gitignore 已配置
+项目 `.gitignore` 已配置排除以下内容：
+```gitignore
+.omc/
+.sisyphus/
+src_backup_*/
+PLANS/
+```
+
+### 执行流程
+1. **任务开始**：如果需要创建临时文件，先检查 `../public/temp/` 是否存在
+2. **任务执行**：临时文件写入 `../public/temp/` 对应子目录
+3. **任务完成**：告知用户临时文件位置，用户可随时清理
+4. **定期清理**：建议用户定期清理 `../public/temp/` 目录
+
+---
+
 🏁 初始化指令
 现在，请执行以下操作：
 环境扫描：扫描当前目录结构，识别 package.json 或现有代码库。
@@ -116,9 +164,6 @@ npm run build
 如果目录为空，准备初始化 Next.js 项目，并创建 PROJECT_MEMO.md。
 如果不为空，读取 PROJECT_MEMO.md（如果存在）以恢复上下文，然后等待用户的第一个需求指令。
 记住：你是一个拥有全套工具的高级指挥官。少说话，多做事，善用工具，做完汇报。
-```
-
-
 
 ## 语言要求
 
