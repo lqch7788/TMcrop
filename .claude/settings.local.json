@@ -29,7 +29,13 @@
       "Bash(cp -r \"E:/V1.01（20260404备份）/hongzhiyun/src/components/common\" \"D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/\")",
       "Bash(cp -r \"E:/V1.01（20260404备份）/hongzhiyun/src/components/cost\" \"D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/\")",
       "Bash(cp \"E:/V1.01（20260404备份）/hongzhiyun/src/components/ui/checkbox.tsx\" \"D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/ui/\")",
-      "Bash(cp \"E:/V1.01（20260404备份）/hongzhiyun/src/components/ui/popover.tsx\" \"D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/ui/\")"
+      "Bash(cp \"E:/V1.01（20260404备份）/hongzhiyun/src/components/ui/popover.tsx\" \"D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/ui/\")",
+      "Bash(mkdir -p src/components/warehouseMaterials.bak)",
+      "Bash(cp src/pages/WarehouseMaterials.tsx src/pages/WarehouseMaterials.tsx.bak)",
+      "Bash(cp src/pages/SupplierManagement.tsx src/pages/SupplierManagement.tsx.bak)",
+      "Bash(cp -r src/components/warehouseMaterials/* src/components/warehouseMaterials.bak/)",
+      "Bash(cp D:/TMcrop/yuanxingtu/V1.2/hongzhiyun/src/components/supplier/*.tsx D:/TMcrop/yuanxingtu/V1.2/hongzhiyun/src/components/supplier/*.ts D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/supplier/)",
+      "Bash(cp D:/TMcrop/yuanxingtu/V1.2/hongzhiyun/src/components/supplier/* D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/supplier/)"
     ]
   }
 }
