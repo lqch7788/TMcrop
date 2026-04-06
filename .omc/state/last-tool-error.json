@@ -1,7 +1,0 @@
-{
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\hongzhiyun\\\\src\\\\pages\\\\TaskDispatch.tsx\"}",
-  "error": "File content (26579 tokens) exceeds maximum allowed tokens (25000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
-  "timestamp": "2026-04-05T13:58:50.474Z",
-  "retry_count": 1
-}
