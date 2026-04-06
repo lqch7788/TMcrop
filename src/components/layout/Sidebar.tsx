@@ -326,10 +326,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         <li>
                           <button
                             onClick={() => setLaborTaskCenterExpanded(!laborTaskCenterExpanded)}
-                            className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mt-2 flex items-center gap-1 hover:text-gray-700 w-full"
+                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-2 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
                           >
-                            <span>📋</span>
-                            <span className="flex-1 text-left">任务中心</span>
+                            <ClipboardList className="w-4 h-4 text-gray-400" />
+                            <span className="flex-1 text-left text-gray-900">任务中心</span>
                             <ChevronRight className={`w-3 h-3 transition-transform ${laborTaskCenterExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </li>
@@ -355,10 +355,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         <li>
                           <button
                             onClick={() => setLaborAttendanceExpanded(!laborAttendanceExpanded)}
-                            className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-1 hover:text-gray-700 w-full"
+                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
                           >
-                            <span>👤</span>
-                            <span className="flex-1 text-left">考勤管理</span>
+                            <Users className="w-4 h-4 text-gray-400" />
+                            <span className="flex-1 text-left text-gray-900">考勤管理</span>
                             <ChevronRight className={`w-3 h-3 transition-transform ${laborAttendanceExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </li>
@@ -384,10 +384,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         <li>
                           <button
                             onClick={() => setLaborPersonnelExpanded(!laborPersonnelExpanded)}
-                            className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-1 hover:text-gray-700 w-full"
+                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
                           >
-                            <span>👥</span>
-                            <span className="flex-1 text-left">人事管理</span>
+                            <Users className="w-4 h-4 text-gray-400" />
+                            <span className="flex-1 text-left text-gray-900">人事管理</span>
                             <ChevronRight className={`w-3 h-3 transition-transform ${laborPersonnelExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </li>
@@ -413,10 +413,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         <li>
                           <button
                             onClick={() => setLaborCompensationExpanded(!laborCompensationExpanded)}
-                            className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-1 hover:text-gray-700 w-full"
+                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
                           >
-                            <span>💰</span>
-                            <span className="flex-1 text-left">薪酬管理</span>
+                            <Banknote className="w-4 h-4 text-gray-400" />
+                            <span className="flex-1 text-left text-gray-900">薪酬管理</span>
                             <ChevronRight className={`w-3 h-3 transition-transform ${laborCompensationExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </li>
@@ -442,10 +442,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         <li>
                           <button
                             onClick={() => setLaborAnalyticsExpanded(!laborAnalyticsExpanded)}
-                            className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-1 hover:text-gray-700 w-full"
+                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
                           >
-                            <span>📊</span>
-                            <span className="flex-1 text-left">运营分析</span>
+                            <TrendingUp className="w-4 h-4 text-gray-400" />
+                            <span className="flex-1 text-left text-gray-900">运营分析</span>
                             <ChevronRight className={`w-3 h-3 transition-transform ${laborAnalyticsExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </li>
