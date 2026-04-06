@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useMaterialReceiving } from '../../hooks/materialReceiving/useMaterialReceiving';
 import { MaterialReceivingHeader } from './MaterialReceivingHeader';
-import { ApplicationTab } from './ApplicationTab';
-import { ExecuteTab } from './ExecuteTab';
-import { StatisticsTab } from './StatisticsTab';
+import ApplicationTab from './ApplicationTab';
+import ExecuteTab from './ExecuteTab';
+import StatisticsTab from './StatisticsTab';
 import { CostTabSwitcher } from '../cost/CostTabSwitcher';
 import { materialReceivingDetails, materialExecuteDetails } from '../../data/materialReceivingData';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../types/materialReceiving';
