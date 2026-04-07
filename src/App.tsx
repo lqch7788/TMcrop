@@ -31,6 +31,7 @@ import WorkerAttendance from './pages/WorkerAttendance';
 import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
 import DailyProblemSummary from './pages/DailyProblemSummary';
+import DailyWorkSummary from './pages/DailyWorkSummary';
 import PlanSummary from './pages/PlanSummary';
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
@@ -74,6 +75,11 @@ import Onboarding from './pages/Onboarding';
 import Contract from './pages/Contract';
 import Team from './pages/Team';
 import TempTask from './pages/TempTask';
+import TaskCenterPage from './pages/labor/TaskCenterPage';
+import AttendancePage from './pages/labor/AttendancePage';
+import PersonnelPage from './pages/labor/PersonnelPage';
+import CompensationPage from './pages/labor/CompensationPage';
+import AnalyticsPage from './pages/labor/AnalyticsPage';
 
 // 带侧边栏的布局组件（种植管理系统）
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -172,6 +178,14 @@ function AppContent() {
         <Route path="/production" element={<Production />} />
         <Route path="/tech-solution" element={<TechSolution />} />
         <Route path="/purchase-plan" element={<PurchasePlan />} />
+
+        {/* 人工管理聚合页面 */}
+        <Route path="/labor/task-center" element={<TaskCenterPage />} />
+        <Route path="/labor/attendance" element={<AttendancePage />} />
+        <Route path="/labor/personnel" element={<PersonnelPage />} />
+        <Route path="/labor/compensation" element={<CompensationPage />} />
+        <Route path="/labor/analytics" element={<AnalyticsPage />} />
+        <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
         <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
         <Route path="/plan-summary" element={<PlanSummary />} />
         <Route path="/worker-attendance" element={<WorkerAttendance />} />

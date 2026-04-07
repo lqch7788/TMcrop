@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap
+  Briefcase, GraduationCap, Clipboard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,7 +22,7 @@ const menuItems = [
   { icon: Sprout, label: '生产计划', path: '/production', category: 'production' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
   { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
-  { icon: Users, label: '人工管理', path: '/work-orders', category: 'labor' },
+  { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },
   { icon: BarChart3, label: '生产汇总表', path: '/reports', category: 'summary' },
   { icon: CheckSquare, label: '审批中心', path: '/approvals', category: 'workflow' },
 ];
@@ -33,42 +33,13 @@ const productionSubItems = [
   { icon: ShoppingCart, label: '采购计划列表', path: '/purchase-plan' },
 ];
 
-// V2.0规划：人工管理5合1模块结构
-const laborTaskCenter = [  // 任务中心（4项）
-  { icon: ClipboardList, label: '临时任务', path: '/temp-task' },
-  { icon: ClipboardCheck, label: '任务执行', path: '/tasks' },
-  { icon: BookMarked, label: '工作日志', path: '/work-log' },
-  { icon: Sparkles, label: '智能派工', path: '/smart-dispatch' },
-];
-
-const laborAttendance = [  // 考勤管理（4项）
-  { icon: Users, label: '工人考勤', path: '/worker-attendance' },
-  { icon: CalendarDays, label: '排班调度', path: '/schedule' },
-  { icon: CalendarDays, label: '请假管理', path: '/leave' },
-  { icon: Clock, label: '加班管理', path: '/overtime' },
-];
-
-const laborPersonnel = [  // 人事管理（7项）
-  { icon: Users, label: '员工信息', path: '/personnel/staff' },
-  { icon: UserPlus, label: '临时工入职', path: '/temp-worker' },
-  { icon: Briefcase, label: '招聘管理', path: '/recruitment' },
-  { icon: GraduationCap, label: '入职办理', path: '/onboarding' },
-  { icon: Users, label: '班组分配', path: '/team' },
-  { icon: FileSignature, label: '合同管理', path: '/contract' },
-  { icon: Award, label: '技能档案', path: '/skill' },
-];
-
-const laborCompensation = [  // 薪酬管理（3项）
-  { icon: Banknote, label: '工资管理', path: '/salary' },
-  { icon: Package, label: '计件工资', path: '/piecework' },
-  { icon: Calculator, label: '工资预算', path: '/salary-budget' },
-];
-
-const laborAnalytics = [  // 运营分析（4项）
-  { icon: TrendingUp, label: '人效分析', path: '/efficiency' },
-  { icon: Award, label: '绩效考核', path: '/performance' },
-  { icon: AlertTriangle, label: '劳动风险预警', path: '/risk' },
-  { icon: FileText, label: '工作月报', path: '/monthly-report' },
+// 人工管理5大模块（聚合页面）
+const laborSubItems = [
+  { icon: ClipboardList, label: '任务中心', path: '/labor/task-center' },
+  { icon: Users, label: '考勤管理', path: '/labor/attendance' },
+  { icon: UserPlus, label: '人事管理', path: '/labor/personnel' },
+  { icon: Banknote, label: '薪酬管理', path: '/labor/compensation' },
+  { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
 ];
 
 const summarySubItems = [
@@ -108,18 +79,12 @@ const indicatorsSubItems = [
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const [productionExpanded, setProductionExpanded] = useState(true);
-  const [laborExpanded, setLaborExpanded] = useState(true);
   const [materialsExpanded, setMaterialsExpanded] = useState(true);
+  const [laborExpanded, setLaborExpanded] = useState(true);
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [approvalExpanded, setApprovalExpanded] = useState(true);
   const [farmExpanded, setFarmExpanded] = useState(true);
   const [indicatorsExpanded, setIndicatorsExpanded] = useState(true);
-  // 人工管理5个分类的展开状态
-  const [laborTaskCenterExpanded, setLaborTaskCenterExpanded] = useState(true);
-  const [laborAttendanceExpanded, setLaborAttendanceExpanded] = useState(true);
-  const [laborPersonnelExpanded, setLaborPersonnelExpanded] = useState(true);
-  const [laborCompensationExpanded, setLaborCompensationExpanded] = useState(true);
-  const [laborAnalyticsExpanded, setLaborAnalyticsExpanded] = useState(true);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -260,7 +225,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive(item.path) || materialsSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -304,13 +269,13 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive('/labor/')
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <Users className={`flex-shrink-0 w-5 h-5 ${isActive('/labor/') ? 'text-blue-700' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -319,141 +284,14 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       )}
                     </button>
                     {laborExpanded && !collapsed && (
-                      <ul className="mt-1 space-y-2">
-                        {/* 任务中心 */}
-                        <li>
-                          <button
-                            onClick={() => setLaborTaskCenterExpanded(!laborTaskCenterExpanded)}
-                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-2 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
-                          >
-                            <ClipboardList className="w-4 h-4 text-gray-400" />
-                            <span className="flex-1 text-left text-gray-900">任务中心</span>
-                            <ChevronRight className={`w-3 h-3 transition-transform ${laborTaskCenterExpanded ? 'rotate-90' : ''}`} />
-                          </button>
-                        </li>
-                        {laborTaskCenterExpanded && laborTaskCenter.map((subItem) => (
+                      <ul className="mt-1 ml-4 space-y-1">
+                        {laborSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
                               onClick={onClose}
                               className={`
-                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2 ml-2
-                                ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
-                                  : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                                }
-                              `}
-                            >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
-                              <span className="text-sm">{subItem.label}</span>
-                            </Link>
-                          </li>
-                        ))}
-                        {/* 考勤管理 */}
-                        <li>
-                          <button
-                            onClick={() => setLaborAttendanceExpanded(!laborAttendanceExpanded)}
-                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
-                          >
-                            <Users className="w-4 h-4 text-gray-400" />
-                            <span className="flex-1 text-left text-gray-900">考勤管理</span>
-                            <ChevronRight className={`w-3 h-3 transition-transform ${laborAttendanceExpanded ? 'rotate-90' : ''}`} />
-                          </button>
-                        </li>
-                        {laborAttendanceExpanded && laborAttendance.map((subItem) => (
-                          <li key={subItem.path}>
-                            <Link
-                              to={subItem.path}
-                              onClick={onClose}
-                              className={`
-                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2 ml-2
-                                ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
-                                  : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                                }
-                              `}
-                            >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
-                              <span className="text-sm">{subItem.label}</span>
-                            </Link>
-                          </li>
-                        ))}
-                        {/* 人事管理 */}
-                        <li>
-                          <button
-                            onClick={() => setLaborPersonnelExpanded(!laborPersonnelExpanded)}
-                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
-                          >
-                            <Users className="w-4 h-4 text-gray-400" />
-                            <span className="flex-1 text-left text-gray-900">人事管理</span>
-                            <ChevronRight className={`w-3 h-3 transition-transform ${laborPersonnelExpanded ? 'rotate-90' : ''}`} />
-                          </button>
-                        </li>
-                        {laborPersonnelExpanded && laborPersonnel.map((subItem) => (
-                          <li key={subItem.path}>
-                            <Link
-                              to={subItem.path}
-                              onClick={onClose}
-                              className={`
-                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2 ml-2
-                                ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
-                                  : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                                }
-                              `}
-                            >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
-                              <span className="text-sm">{subItem.label}</span>
-                            </Link>
-                          </li>
-                        ))}
-                        {/* 薪酬管理 */}
-                        <li>
-                          <button
-                            onClick={() => setLaborCompensationExpanded(!laborCompensationExpanded)}
-                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
-                          >
-                            <Banknote className="w-4 h-4 text-gray-400" />
-                            <span className="flex-1 text-left text-gray-900">薪酬管理</span>
-                            <ChevronRight className={`w-3 h-3 transition-transform ${laborCompensationExpanded ? 'rotate-90' : ''}`} />
-                          </button>
-                        </li>
-                        {laborCompensationExpanded && laborCompensation.map((subItem) => (
-                          <li key={subItem.path}>
-                            <Link
-                              to={subItem.path}
-                              onClick={onClose}
-                              className={`
-                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2 ml-2
-                                ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
-                                  : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                                }
-                              `}
-                            >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
-                              <span className="text-sm">{subItem.label}</span>
-                            </Link>
-                          </li>
-                        ))}
-                        {/* 运营分析 */}
-                        <li>
-                          <button
-                            onClick={() => setLaborAnalyticsExpanded(!laborAnalyticsExpanded)}
-                            className="text-sm text-gray-500 uppercase px-2 py-1 mt-3 flex items-center gap-3 ml-4 hover:text-gray-700 w-full"
-                          >
-                            <TrendingUp className="w-4 h-4 text-gray-400" />
-                            <span className="flex-1 text-left text-gray-900">运营分析</span>
-                            <ChevronRight className={`w-3 h-3 transition-transform ${laborAnalyticsExpanded ? 'rotate-90' : ''}`} />
-                          </button>
-                        </li>
-                        {laborAnalyticsExpanded && laborAnalytics.map((subItem) => (
-                          <li key={subItem.path}>
-                            <Link
-                              to={subItem.path}
-                              onClick={onClose}
-                              className={`
-                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2 ml-2
+                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
                                   ? 'bg-blue-100 text-blue-700 font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
@@ -475,7 +313,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive(item.path) || summarySubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -519,7 +357,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive(item.path) || productionSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -563,7 +401,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive(item.path) || farmSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -607,7 +445,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path)
+                        ${isActive(item.path) || approvalSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
