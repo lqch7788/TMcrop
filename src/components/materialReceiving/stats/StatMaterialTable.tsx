@@ -33,21 +33,21 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
       <table className="w-full">
         <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold">物料编码</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold">物料名称</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold">物料分类</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold">规格</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold">单位</th>
-            <th className="px-4 py-3 text-right text-xs font-semibold">领料次数</th>
-            <th className="px-4 py-3 text-right text-xs font-semibold">总数量</th>
-            <th className="px-4 py-3 text-right text-xs font-semibold">总金额(元)</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold">主要仓库</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold">操作</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">物料编码</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">物料名称</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">物料分类</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">规格</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">单位</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold">领料次数</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold">总数量</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold">总金额(元)</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">主要仓库</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">操作</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {data.slice(startIdx, endIdx).map((item, idx) => (
-            <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
+            <tr key={idx} className="hover:bg-blue-100 transition-colors">
               <td className="px-4 py-3 text-sm font-mono text-blue-600">{item.materialCode}</td>
               <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.materialName}</td>
               <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>

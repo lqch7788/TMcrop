@@ -212,18 +212,18 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
         <table className="w-full text-sm min-w-[1200px]">
           <thead className="bg-blue-50">
             <tr>
-              <th className="px-2 py-2 text-left text-xs font-semibold text-blue-800 w-10">操作</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料编码</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">来源领料单号</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料名称</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">规格</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单位</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">申请数量</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">实际库存</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">本次实发</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单价(元)</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">仓库货位</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">备注</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-blue-800 w-10">操作</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">来源领料单号</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申请数量</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">实际库存</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">本次实发</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
+              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">

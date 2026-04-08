@@ -47,39 +47,39 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({ data }) => {
       {/* 表格内容 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总人数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总产出</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">人均产出</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总工时</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工时效率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">任务达成率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">出勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">人工成本率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">技能覆盖率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总人数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总产出</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人均产出</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工时</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工时效率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务达成率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出勤率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人工成本率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能覆盖率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {paginatedData.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.date}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{row.department}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{row.totalWorkers}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{row.totalOutput.toLocaleString()}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{formatValue(row.avgOutputPerWorker, 'number')}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{row.totalHours}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+              <tr key={row.id} className="hover:bg-blue-100 transition-colors">
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{row.date}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.department}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalWorkers}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalOutput.toLocaleString()}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.avgOutputPerWorker, 'number')}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalHours}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     row.avgEfficiency >= 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {formatValue(row.avgEfficiency, 'percent')}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     row.taskCompletionRate >= 0.95 ? 'bg-emerald-100 text-emerald-700' :
                     row.taskCompletionRate >= 0.90 ? 'bg-blue-100 text-blue-700' :
@@ -88,10 +88,10 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({ data }) => {
                     {formatValue(row.taskCompletionRate, 'percent')}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{formatValue(row.attendanceRate, 'percent')}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{formatValue(row.laborCostRate, 'percent')}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{formatValue(row.skillCoverage, 'percent')}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.attendanceRate, 'percent')}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.laborCostRate, 'percent')}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.skillCoverage, 'percent')}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                     title="查看详情"
@@ -105,41 +105,38 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({ data }) => {
         </table>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             >
-              {PAGE_SIZE_OPTIONS.map(size => (
-                <option key={size} value={size}>{size}</option>
-              ))}
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
             </select>
-            <span className="text-sm text-gray-500">条</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {data.length} 条</span>
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
+              &lt;
             </button>
-            <span className="text-sm">
-              {currentPage} / {totalPages || 1}
-            </span>
+            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRight className="w-4 h-4" />
+              &gt;
             </button>
           </div>
         </div>

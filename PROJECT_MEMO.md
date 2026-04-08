@@ -60,6 +60,19 @@ hongzhiyun/
 
 ## 最近更新
 
+### 2026-04-07 - Git revert操作事故教训
+**事故**：用户要求删除导致页面错乱的Git历史记录，我执行了 `git revert e70980d` 导致系统崩溃。
+
+**教训**：
+1. `git revert` 不是"删除历史"，而是"创建新提交来撤销更改"（会修改实际文件！）
+2. 任何修改 HEAD 或 branch 指向的 Git 操作，都会导致工作区文件被修改
+3. **禁止对 Git 历史执行任何修改操作**（已写入 CLAUDE.md 最高优先级规则）
+
+**Git操作安全规则**（已写入 CLAUDE.md）：
+- 禁止 `git revert`、`git reset`、`git rebase -i` 等操作
+- Git 历史操作 = 高危操作，必须向用户详细解释后果并获得书面确认
+- 操作后必须验证 `npm run build`
+
 ### 2026-03-28 - 生产领料单增加字段及拒绝原因显示
 **文件**: `src/pages/MaterialReceiving.tsx`
 

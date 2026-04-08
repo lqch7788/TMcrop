@@ -193,35 +193,35 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
     if (dimension === 'category') {
       return (
         <tr>
-          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">物料分类</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">领料次数</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">总数量</th>
-          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">总金额</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">占比</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">操作</th>
+          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">物料分类</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">领料次数</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">总数量</th>
+          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">总金额</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">占比</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
         </tr>
       );
     } else if (dimension === 'department') {
       return (
         <tr>
-          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">部门</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">领料次数</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">物料种类</th>
-          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">总金额</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">占比</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">操作</th>
+          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">部门</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">领料次数</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">物料种类</th>
+          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">总金额</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">占比</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
         </tr>
       );
     } else {
       return (
         <tr>
-          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 w-10"></th>
-          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">批次号</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">作物</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">领料次数</th>
-          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">物料种类</th>
-          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">总成本</th>
-          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">单位成本</th>
+          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-10"></th>
+          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">批次号</th>
+          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">作物</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">领料次数</th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">物料种类</th>
+          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">总成本</th>
+          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">单位成本</th>
         </tr>
       );
     }

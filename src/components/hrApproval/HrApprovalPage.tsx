@@ -139,49 +139,49 @@ export function HrApprovalPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-                {activeTab === 'leave' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">请假时间</th>}
-                {activeTab === 'leave' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">天数</th>}
-                {activeTab === 'overtime' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">加班日期</th>}
-                {activeTab === 'overtime' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">时长</th>}
-                {activeTab === 'transfer' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">现岗位</th>}
-                {activeTab === 'transfer' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标岗位</th>}
-                {activeTab === 'resign' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">岗位</th>}
-                {activeTab === 'resign' && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">离职日期</th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">原因</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+                {activeTab === 'leave' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">请假时间</th>}
+                {activeTab === 'leave' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">天数</th>}
+                {activeTab === 'overtime' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班日期</th>}
+                {activeTab === 'overtime' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时长</th>}
+                {activeTab === 'transfer' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">现岗位</th>}
+                {activeTab === 'transfer' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标岗位</th>}
+                {activeTab === 'resign' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位</th>}
+                {activeTab === 'resign' && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">离职日期</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">原因</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {paginatedData.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applicant}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.dept}</td>
-                  {activeTab === 'leave' && <td className="px-4 py-3 text-sm text-gray-600">{item.startDate} 至 {item.endDate}</td>}
-                  {activeTab === 'leave' && <td className="px-4 py-3 text-sm text-gray-600">{item.days}天</td>}
-                  {activeTab === 'overtime' && <td className="px-4 py-3 text-sm text-gray-600">{item.date}</td>}
-                  {activeTab === 'overtime' && <td className="px-4 py-3 text-sm text-gray-600">{item.hours}小时</td>}
-                  {activeTab === 'transfer' && <td className="px-4 py-3 text-sm text-gray-600">{item.currentPosition}</td>}
-                  {activeTab === 'transfer' && <td className="px-4 py-3 text-sm text-gray-600">{item.targetPosition}</td>}
-                  {activeTab === 'resign' && <td className="px-4 py-3 text-sm text-gray-600">{item.position}</td>}
-                  {activeTab === 'resign' && <td className="px-4 py-3 text-sm text-gray-600">{item.resignDate}</td>}
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applyTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{item.reason}</td>
-                  <td className="px-4 py-3">
+                <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{item.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicant}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.dept}</td>
+                  {activeTab === 'leave' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.startDate} 至 {item.endDate}</td>}
+                  {activeTab === 'leave' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.days}天</td>}
+                  {activeTab === 'overtime' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.date}</td>}
+                  {activeTab === 'overtime' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.hours}小时</td>}
+                  {activeTab === 'transfer' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.currentPosition}</td>}
+                  {activeTab === 'transfer' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.targetPosition}</td>}
+                  {activeTab === 'resign' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.position}</td>}
+                  {activeTab === 'resign' && <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.resignDate}</td>}
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applyTime}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-[150px] truncate">{item.reason}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       item.statusClass === 'success' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {item.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       {item.status === '待审批' && (
                         <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="审批">
@@ -200,35 +200,26 @@ export function HrApprovalPage() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {data.length} 条记录，第 {currentPage}/{totalPages} 页
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">每页</span>
+            <select
+              value={10}
+              onChange={(e) => setCurrentPage(1)}
+              className="px-2 py-1 border border-gray-200 rounded text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <span className="text-sm text-gray-500">共 {data.length} 条</span>
+            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <span className="text-sm font-medium text-emerald-600">{currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

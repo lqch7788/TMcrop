@@ -383,10 +383,10 @@ export default function ApplicationTab({
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 {(exportMode || batchEditMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <input
                       type="checkbox"
                       checked={selectedRows.length === filteredData.length && filteredData.length > 0}
@@ -395,24 +395,24 @@ export default function ApplicationTab({
                     />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-8"></th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">领料单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">库存地点</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料种类</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植区域/用途</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审核人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">生产计划批次号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">备注</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-8"></th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">领料单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域/用途</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-400">
+            <tbody className="divide-y divide-gray-300">
               {filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
                 <>
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                     {(exportMode || batchEditMode) && (
                       <td className="px-4 py-3">
                         <input
@@ -477,16 +477,16 @@ export default function ApplicationTab({
                             <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                               <thead className="bg-[#F2F6FA]">
                                 <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料编码</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料名称</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">规格</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单位</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">申领数量</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">当前库存</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单价(元)</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">小计(元)</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">仓库货位</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">备注</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">当前库存</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-200">

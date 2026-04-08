@@ -1,4 +1,4 @@
-import { Eye, Check, X } from 'lucide-react';
+import { Eye, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { OvertimeTableProps, OvertimeRecord, OvertimeType } from './types';
 
 /**
@@ -47,42 +47,47 @@ export function OvertimeTable({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">加班记录</h3>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">员工姓名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">加班类型</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时长(小时)</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">加班费(元)</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">原因</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时长(小时)</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班费(元)</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">原因</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="bg-white divide-y divide-gray-300">
             {data.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-900">{record.staffName}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{record.date}</td>
-                <td className="px-4 py-3">
+              <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.staffName}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeBadgeClass(record.type)}`}>
                     {record.type}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">{record.hours}</td>
-                <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.hours}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {record.totalPay ? `¥${record.totalPay.toFixed(2)}` : '-'}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(record.status)}`}>
                     {record.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{record.reason}</td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{record.reason}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onViewDetail(record)}
@@ -122,36 +127,38 @@ export function OvertimeTable({
             )}
           </tbody>
         </table>
-      </div>
+        </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="text-sm text-gray-500">
-          共 {total} 条记录，第 {currentPage} / {totalPages} 页
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>每页</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
           >
-            <option value={10}>10条/页</option>
-            <option value={20}>20条/页</option>
-            <option value={50}>50条/页</option>
+            <option value={10}>10条</option>
+            <option value={20}>20条</option>
+            <option value={50}>50条</option>
           </select>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>共 {total} 条</span>
           <button
-            onClick={() => onPageChange(currentPage - 1)}
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            上一页
+            &lt;
           </button>
+          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
           <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            下一页
+            &gt;
           </button>
         </div>
       </div>

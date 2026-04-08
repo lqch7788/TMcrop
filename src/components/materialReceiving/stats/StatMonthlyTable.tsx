@@ -144,10 +144,10 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 {exportMode && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <input
                       type="checkbox"
                       checked={selectedRows.length === getAllMonthKeys().length && getAllMonthKeys().length > 0}
@@ -157,31 +157,31 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                   </th>
                 )}
                 <th
-                  className="px-4 py-3 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
+                  className="px-4 py-3 text-left text-sm font-semibold cursor-pointer hover:bg-blue-400 whitespace-nowrap"
                   onClick={() => onSort('month')}
                 >
                   月份 {sortConfig.key === 'month' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料分类</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料分类</th>
                 <th
-                  className="px-4 py-3 text-right text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-right text-sm font-semibold cursor-pointer hover:bg-blue-400"
                   onClick={() => onSort('totalQuantity')}
                 >
                   领料数量 {sortConfig.key === 'totalQuantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th
-                  className="px-4 py-3 text-right text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-right text-sm font-semibold cursor-pointer hover:bg-blue-400"
                   onClick={() => onSort('totalAmount')}
                 >
                   领料金额 {sortConfig.key === 'totalAmount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">排名</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">占比</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">环比</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">同比</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">排名</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">占比</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">环比</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">同比</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-400">
+            <tbody className="divide-y divide-gray-300">
               {/* 单月视图：直接显示7分类 */}
               {monthFilter !== 'all' && (
                 <>

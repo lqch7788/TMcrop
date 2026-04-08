@@ -59,47 +59,51 @@ export function PerformanceTable({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      {/* 表格内容 */}
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">绩效考核记录</h3>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">任务完成率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">出勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工作质量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">安全规范</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">协作态度</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">综合得分</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">排名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务完成率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出勤率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作质量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">安全规范</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">协作态度</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">综合得分</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">排名</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="bg-white divide-y divide-gray-300">
             {records.map((record) => (
               <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.staffId}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.staffName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.department}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.month}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.taskCompletionRate}%</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.attendanceRate}%</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.workQuality}%</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.safetyCompliance}%</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{record.teamworkAttitude}%</td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffId}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.staffName}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.department}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.taskCompletionRate}%</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.attendanceRate}%</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.workQuality}%</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.safetyCompliance}%</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.teamworkAttitude}%</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold whitespace-nowrap text-gray-900">
                   <span className={getScoreColor(record.totalScore)}>{record.totalScore}</span>
                 </td>
-                <td className="px-4 py-3">{getRankBadge(record.rank)}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 whitespace-nowrap">{getRankBadge(record.rank)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <StatusBadge status={record.status} />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     onClick={() => onViewDetail(record)}
                     className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
@@ -115,41 +119,38 @@ export function PerformanceTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
+      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>每页</span>
           <select
             value={pageSize}
             onChange={(e) => {
               onPageSizeChange(Number(e.target.value));
               onPageChange(1);
             }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
+            <option value={10}>10条</option>
+            <option value={20}>20条</option>
+            <option value={50}>50条</option>
           </select>
-          <span className="text-sm text-gray-500">条</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {totalCount} 条</span>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>共 {totalCount} 条</span>
           <button
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            &lt;
           </button>
-          <span className="text-sm">
-            {currentPage} / {totalPages || 1}
-          </span>
+          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
           <button
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            &gt;
           </button>
         </div>
       </div>

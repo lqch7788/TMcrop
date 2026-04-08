@@ -678,9 +678,9 @@ export default function SupplierManagement() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full" style={{ minWidth: 'max-content' }}>
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {(exportMode || batchEditMode) && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                {(exportMode || batchEditMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === suppliers.length && suppliers.length > 0}
@@ -688,31 +688,31 @@ export default function SupplierManagement() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">所属组织</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应物资类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商属性</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">联系人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">移动电话</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工作电话</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">传真号码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">国家</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">省份</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">城市</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">详细地址</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">开户行</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">银行卡号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">创建时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">备注</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属组织</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应物资类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商属性</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">联系人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">移动电话</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作电话</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">传真号码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">国家</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">省份</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">城市</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">详细地址</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开户行</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">银行卡号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {suppliers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-50">
+                <tr key={supplier.id} className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode) && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedRows.includes(supplier.id)}
@@ -721,20 +721,20 @@ export default function SupplierManagement() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-emerald-600 hover:text-emerald-700 cursor-pointer " onClick={() => { setSelectedSupplier(supplier); setShowDetailModal(true); }}>{supplier.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.organization}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{getSupplierTypeName(supplier.supplierType)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.supplierAttribute}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.contact}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.mobilePhone}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.workPhone}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.fax}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.country}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.province}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.city}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.address}</td>
-                  <td className="px-4 py-3 ">
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline whitespace-nowrap" onClick={() => { setSelectedSupplier(supplier); setShowDetailModal(true); }}>{supplier.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.organization}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getSupplierTypeName(supplier.supplierType)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.supplierAttribute}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.contact}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.mobilePhone}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.workPhone}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.fax}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.country}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.province}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.city}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.address}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       supplier.status === '合作中' ? 'bg-green-100 text-green-700' :
                       supplier.status === '暂停' ? 'bg-amber-100 text-amber-700' :
@@ -743,10 +743,10 @@ export default function SupplierManagement() {
                       {supplier.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.bankName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.bankCardNumber}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.createDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 ">{supplier.remarks}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.bankName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.bankCardNumber}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.createDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.remarks}</td>
                 </tr>
               ))}
             </tbody>

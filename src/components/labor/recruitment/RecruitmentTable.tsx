@@ -50,24 +50,29 @@ export function RecruitmentTable({
   const paginatedData = recruitments.slice(startIndex, endIndex);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">招聘记录</h3>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1200px]">
-          <thead>
-            <tr className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <th className="px-4 py-3">招聘编号</th>
-              <th className="px-4 py-3">招聘岗位</th>
-              <th className="px-4 py-3">需求部门</th>
-              <th className="px-4 py-3">人数</th>
-              <th className="px-4 py-3">来源</th>
-              <th className="px-4 py-3">期望到岗</th>
-              <th className="px-4 py-3">状态</th>
-              <th className="px-4 py-3">申请人</th>
-              <th className="px-4 py-3">申请日期</th>
-              <th className="px-4 py-3">操作</th>
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <tr>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘岗位</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">需求部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">期望到岗</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
@@ -76,29 +81,29 @@ export function RecruitmentTable({
               </tr>
             ) : (
               paginatedData.map((rec) => (
-                <tr key={rec.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={rec.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm font-medium text-gray-900">{rec.requestCode}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-900">{rec.position}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.department}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.quantity}人</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.source}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-600">{rec.expectedDate}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={rec.status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
                         {rec.applicantName.charAt(0)}
@@ -106,10 +111,10 @@ export function RecruitmentTable({
                       <span className="text-sm text-gray-700">{rec.applicantName}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-600">{rec.applyDate}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onView(rec)}
@@ -170,37 +175,36 @@ export function RecruitmentTable({
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>每页</span>
           <select
             value={pageSize}
             onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
+            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
+            <option value={10}>10条</option>
+            <option value={20}>20条</option>
+            <option value={50}>50条</option>
           </select>
-          <span className="text-sm text-gray-500">条</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {recruitments.length} 条</span>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>共 {recruitments.length} 条</span>
           <button
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            &lt;
           </button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
+          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
           <button
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            &gt;
           </button>
         </div>
       </div>

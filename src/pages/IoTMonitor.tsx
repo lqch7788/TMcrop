@@ -67,7 +67,7 @@ export default function IoTMonitor() {
         <div className="p-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-900">传感器实时数据</h3></div>
         <table className="w-full">
           <thead className="bg-gray-50">
-            <tr><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">传感器ID</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">位置</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">温度</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">湿度</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th></tr>
+            <tr><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">传感器ID</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">位置</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">温度</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">湿度</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">状态</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.map((s) => (

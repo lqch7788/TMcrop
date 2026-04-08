@@ -1,4 +1,4 @@
-import { Eye, Calculator, Download } from 'lucide-react';
+import { Eye, Calculator, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { SalaryTableProps } from './types';
 
 /**
@@ -35,24 +35,29 @@ export function SalaryTable({
   const totalPages = Math.ceil(total / pageSize) || 1;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">工资记录</h3>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">计算方式</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">基本工资</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">加班费</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">奖金</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">扣款合计</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">实发工资</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">状态</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计算方式</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">加班费</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">奖金</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">扣款合计</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实发工资</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="bg-white divide-y divide-gray-300">
             {data.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
@@ -61,29 +66,29 @@ export function SalaryTable({
               </tr>
             ) : (
               data.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.staffName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{record.month}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{record.calcType}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffName}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.calcType}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.baseSalary.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.overtimePay.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.bonuses.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     -¥{(record.deductions + record.lateDeductions + record.absenceDeductions + record.socialSecurity + record.housingFund + record.personalTax).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-emerald-600 text-right">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600 text-right">
                     ¥{record.netSalary.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
                     <StatusBadge status={record.status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => onViewDetail(record)}
@@ -117,48 +122,41 @@ export function SalaryTable({
             )}
           </tbody>
         </table>
+        </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
             </select>
-            <span className="text-sm text-gray-500">条</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {total} 条</span>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {total} 条</span>
             <button
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              &lt;
             </button>
-            <span className="text-sm">
-              {currentPage} / {totalPages}
-            </span>
+            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
             <button
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              &gt;
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }

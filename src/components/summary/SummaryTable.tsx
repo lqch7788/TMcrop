@@ -40,10 +40,10 @@ export function SummaryTable<T extends { id: number | string }>({
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === data.length && data.length > 0}
@@ -53,18 +53,18 @@ export function SummaryTable<T extends { id: number | string }>({
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key as string} className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th key={col.key as string} className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                   {col.label}
                 </th>
               ))}
-              {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
+              {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {paginatedData.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
+              <tr key={record.id} className="hover:bg-blue-100 transition-colors">
                 {exportMode && (
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedRows.includes(record.id as number)}
@@ -74,14 +74,14 @@ export function SummaryTable<T extends { id: number | string }>({
                   </td>
                 )}
                 {columns.map((col) => (
-                  <td key={col.key as string} className="px-4 py-3 text-sm text-gray-600">
+                  <td key={col.key as string} className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {col.render
                       ? col.render((record as Record<string, unknown>)[col.key as string], record)
                       : String((record as Record<string, unknown>)[col.key as string] ?? '')}
                   </td>
                 ))}
                 {!exportMode && (
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <button
                       onClick={() => onView?.(record)}
                       className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"

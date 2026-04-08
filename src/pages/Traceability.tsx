@@ -44,7 +44,7 @@ export default function Traceability() {
         <div className="p-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-900">溯源档案列表</h3></div>
         <table className="w-full">
           <thead className="bg-gray-50">
-            <tr><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">溯源码</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">产品名称</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">批次号</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">种植区域</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">定植日期</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">预计采收</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th></tr>
+            <tr><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">溯源码</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">产品名称</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">批次号</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">种植区域</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">定植日期</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">预计采收</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">状态</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.map((item) => (

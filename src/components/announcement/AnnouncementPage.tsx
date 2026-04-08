@@ -327,27 +327,27 @@ export function AnnouncementPage() {
         <div className="p-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-900">公告列表</h3></div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50"><tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">公告标题</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">公告类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">年度/季度</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">发布日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">发布人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">阅读量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white"><tr>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">公告标题</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">公告类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">年度/季度</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">阅读量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr></thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {filteredAnnouncements.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-bold text-green-700 hover:text-green-900 cursor-pointer" onClick={() => handleTitleClick(item)}>{item.title}</td>
-                  <td className="px-4 py-3">{getTypeBadge(item.type)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.year} {item.quarter}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.publishDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.publisher}</td>
-                  <td className="px-4 py-3">{getStatusBadge(item.status, item.statusClass)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.views}</td>
-                  <td className="px-4 py-3">
+                <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-bold text-green-700 hover:text-green-900 cursor-pointer whitespace-nowrap" onClick={() => handleTitleClick(item)}>{item.title}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{getTypeBadge(item.type)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.year} {item.quarter}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.publishDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.publisher}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(item.status, item.statusClass)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.views}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <button onClick={() => handleViewClick(item)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
                       <button onClick={() => handleEditClick(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>

@@ -497,9 +497,9 @@ export default function HarvestPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 w-12">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <tr>
+                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
@@ -507,21 +507,21 @@ export default function HarvestPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">采收单号</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">批次信息</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">采收区域</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">采收量</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">品质等级</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">采收人员</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">入库仓库</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次信息</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质等级</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收人员</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库仓库</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedRows.includes(idx)}
@@ -530,28 +530,28 @@ export default function HarvestPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-medium text-gray-900">{record.harvestCode}</span>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="font-medium text-blue-600 underline cursor-pointer">{record.harvestCode}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <p className="text-sm text-gray-900">{record.cropName}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{record.batchCode}</p>
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600">{record.greenhouseName}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="font-medium text-gray-900">{record.harvestQuantity}</span>
                     <span className="text-gray-500 text-sm ml-1">{record.unit}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">{getGradeBadge(record.grade)}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 whitespace-nowrap">{getGradeBadge(record.grade)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex flex-col items-center gap-1">
                       {record.harvesterNames.map((name, i) => (
                         <span key={i} className="text-sm text-gray-900">{name}</span>
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600">{record.warehouseName}</td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(record.status)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</td>
                 </tr>
               ))}
             </tbody>

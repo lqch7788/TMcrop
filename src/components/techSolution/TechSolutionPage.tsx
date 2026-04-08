@@ -353,9 +353,9 @@ export function TechSolutionPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === techSolutions.length && techSolutions.length > 0}
@@ -363,22 +363,22 @@ export function TechSolutionPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">方案编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">方案标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">作物种类</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植模式</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">生长阶段</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">版本</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">编制人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">创建日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案标题</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物种类</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长阶段</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {techSolutions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tech) => (
-                <tr key={tech.id} className="hover:bg-gray-50">
+                <tr key={tech.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3">
                       <input
@@ -389,22 +389,22 @@ export function TechSolutionPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{tech.code}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-green-700 hover:text-green-900 cursor-pointer" onClick={() => handleTitleClick(tech)}>{tech.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.crop}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.plantingMode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.stage}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.version}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.author}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{tech.createDate}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{tech.code}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-green-700 hover:text-green-900 cursor-pointer whitespace-nowrap" onClick={() => handleTitleClick(tech)}>{tech.title}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.crop}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.plantingMode}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.stage}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       tech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {tech.approveStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       tech.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
                       tech.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :

@@ -479,9 +479,9 @@ export default function InspectionPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
@@ -489,23 +489,23 @@ export default function InspectionPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">监测人员</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">监测区域</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">作物名称</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">监测日期</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">天气</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">温度(°C)</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">湿度(%)</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">作物状态</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">发现问题</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">问题照片</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">详情</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">监测人员</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">监测区域</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物名称</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">监测日期</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">天气</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">温度(°C)</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">湿度(%)</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物状态</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">发现问题</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">详情</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3 text-center">
                       <input
@@ -516,25 +516,25 @@ export default function InspectionPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-emerald-600" />
                       <span className="font-medium text-gray-900">{record.inspectorName}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1">
                       <MapPin className="w-4 h-4 text-emerald-600" />
-                      <span className="text-sm text-gray-900">{record.greenhouseName}</span>
+                      <span className="text-gray-900">{record.greenhouseName}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.cropName}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.checkDate}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.weather}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.temperature}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.humidity}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{record.cropStatus}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.cropName}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.checkDate}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.weather}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.temperature}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.humidity}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.cropStatus}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.issues.length > 0 ? (
                       <div className="flex gap-1 justify-center flex-wrap">
                         {record.issues.slice(0, 2).map((issue, i) => (
@@ -548,7 +548,7 @@ export default function InspectionPage() {
                       <span className="text-sm text-gray-500">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     {record.images && record.images.length > 0 ? (
                       <div className="flex justify-center gap-1">
                         {record.images.slice(0, 3).map((img: string, idx: number) => (
@@ -564,8 +564,8 @@ export default function InspectionPage() {
                       <span className="text-sm text-gray-500">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(record.status)}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center whitespace-nowrap">{getStatusBadge(record.status)}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <button
                       onClick={() => handleDetailClick(record)}
                       className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"

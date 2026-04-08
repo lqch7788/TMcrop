@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRisk } from './hooks/useRisk';
 import { RiskDashboard } from './RiskDashboard';
@@ -33,11 +34,18 @@ export function RiskPage() {
   };
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">劳动风险预警</h1>
-        <p className="text-sm text-gray-500 mt-1">监控和管理劳动风险预警信息</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">劳动风险预警</h1>
+            <p className="text-xs text-gray-500">监控和管理劳动风险预警信息</p>
+          </div>
+        </div>
       </div>
 
       {/* 预警仪表盘 */}

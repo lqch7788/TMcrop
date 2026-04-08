@@ -367,7 +367,7 @@ export function ParkArchivePage() {
 
             <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm max-h-80 overflow-y-auto w-48">
               <div className="p-2">
-                <p className="text-xs font-semibold text-gray-700 mb-2 px-1">基地列表</p>
+                <p className="text-sm font-semibold text-gray-700 mb-2 px-1">基地列表</p>
                 {parkData.map(base => (
                   <button
                     key={base.id}

@@ -75,9 +75,14 @@ export function ScheduleTable({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">排班记录</h3>
+      </div>
+
       {/* 工具栏 */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-4 space-y-3">
         {/* 搜索和操作 */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-1">
@@ -180,32 +185,32 @@ export function ScheduleTable({
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 日期
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 员工
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 班次
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 工作区域
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 时间
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 状态
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 签到/签退
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
@@ -219,16 +224,16 @@ export function ScheduleTable({
                   <tr
                     key={record.id}
                     onClick={() => onScheduleClick?.(record)}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-blue-100 cursor-pointer transition-colors"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.date}</div>
                       <div className="text-xs text-gray-500">{getWeekday(record.date)}</div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.staffName}</div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded text-xs font-medium text-white
                         ${getShiftColor(record.shift, shiftConfigs)}
@@ -236,13 +241,13 @@ export function ScheduleTable({
                         {record.shift}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.workZone}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {shiftConfig?.startTime} - {shiftConfig?.endTime}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded text-xs font-medium
                         ${record.status === '已排班' ? 'bg-blue-100 text-blue-700' : ''}
@@ -252,7 +257,7 @@ export function ScheduleTable({
                         {record.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.checkIn || '-'} / {record.checkOut || '-'}
                     </td>
                   </tr>
@@ -265,48 +270,37 @@ export function ScheduleTable({
 
       {/* 分页 */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            第 {currentPage} / {totalPages} 页，共 {filteredData.length} 条
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setCurrentPage(1);
+              }}
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
+            </select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {filteredData.length} 条</span>
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
+              &lt;
             </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`
-                    w-8 h-8 rounded-lg text-sm font-medium
-                    ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'border hover:bg-gray-50'}
-                  `}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
+            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={currentPage >= totalPages}
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRight className="w-4 h-4" />
+              &gt;
             </button>
           </div>
         </div>

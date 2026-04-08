@@ -111,39 +111,39 @@ export default function Approved() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批结果</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批意见</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">标题</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">金额</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批结果</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批意见</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {paginatedList.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{item.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.submitter}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.submitTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.approveTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.amount}</td>
-                  <td className="px-4 py-3">
+                <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{item.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{item.title}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.submitter}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.submitTime}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.approveTime}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.amount}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       item.resultClass === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
                       {item.result}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[120px] truncate">{item.opinion}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[120px] truncate whitespace-nowrap">{item.opinion}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
                       <Eye className="w-4 h-4" />
                     </button>
@@ -155,35 +155,26 @@ export default function Approved() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {filteredList.length} 条记录，第 {currentPage}/{totalPages} 页
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">每页</span>
+            <select
+              value={10}
+              onChange={(e) => setCurrentPage(1)}
+              className="px-2 py-1 border border-gray-200 rounded text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <span className="text-sm text-gray-500">共 {filteredList.length} 条</span>
+            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <span className="text-sm font-medium text-emerald-600">{currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

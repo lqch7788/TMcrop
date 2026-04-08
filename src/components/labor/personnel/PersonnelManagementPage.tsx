@@ -47,9 +47,6 @@ export function PersonnelManagementPage() {
       {/* 头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
             <Users className="w-6 h-6 text-white" />
           </div>
@@ -130,44 +127,44 @@ export function PersonnelManagementPage() {
       </div>
 
       {/* 职务列表表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">职务列表</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">所属部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务级别</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">基本工资(元)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">岗位人数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职责描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务级别</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资(元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">岗位人数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职责描述</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="bg-white divide-y divide-gray-300">
               {paginatedPositions.map((pos) => (
-                <tr key={pos.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{pos.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.dept}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.level}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.salary}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.staffCount}人</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{pos.description}</td>
-                  <td className="px-4 py-3">
+                <tr key={pos.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{pos.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</td>
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{pos.salary}</td>
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{pos.staffCount}人</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       pos.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {pos.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1">
                       <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
                         <Edit className="w-4 h-4" />
                       </button>
@@ -182,15 +179,15 @@ export function PersonnelManagementPage() {
           </table>
         </div>
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
           <div className="text-sm text-gray-500">
-            共 {positions.length} 条记录，第 {currentPage}/{totalPages} 页
+            共 {positions.length} 条
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -200,7 +197,7 @@ export function PersonnelManagementPage() {
                 onClick={() => setCurrentPage(i + 1)}
                 className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
                   currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
                     : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -210,7 +207,7 @@ export function PersonnelManagementPage() {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

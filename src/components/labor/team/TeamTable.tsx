@@ -88,24 +88,24 @@ export function TeamTable() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">班组分配</h1>
-              <p className="text-gray-500">管理临时工班组分配</p>
+              <h1 className="text-lg font-bold text-gray-900">班组分配</h1>
+              <p className="text-xs text-gray-500">管理临时工班组分配</p>
             </div>
           </div>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             新建班组
           </button>
         </div>
@@ -210,23 +210,33 @@ export function TeamTable() {
 
       {/* 分页 */}
       <div className="bg-white px-4 py-3 border-t flex items-center justify-between">
-        <div className="text-sm text-gray-500">
-          共 {pagination.total} 条，第 {pagination.currentPage} / {Math.ceil(pagination.total / pagination.pageSize)} 页
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPage(pagination.currentPage - 1)}
-            disabled={pagination.currentPage === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>每页</span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
           >
-            上一页
+            <option value={10}>10条</option>
+            <option value={20}>20条</option>
+            <option value={50}>50条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}</span>
+          <button
+            onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
+            disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            &gt;
           </button>
           <button
-            onClick={() => setPage(pagination.currentPage + 1)}
+            onClick={() => setPage(Math.ceil(pagination.total / pagination.pageSize))}
             disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            下一页
+            &gt;&gt;
           </button>
         </div>
       </div>

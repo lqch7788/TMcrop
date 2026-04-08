@@ -155,17 +155,17 @@ export function EditModal({
               <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead className="bg-emerald-100">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">来源领料单号</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">物料编码</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">物料分类</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">物料名称</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">规格</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">单位</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">本次退料数量</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">单价(元)</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">仓库货位</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">退料原因</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 w-12">操作</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料分类</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">本次退料数量</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">退料原因</th>
+                    <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

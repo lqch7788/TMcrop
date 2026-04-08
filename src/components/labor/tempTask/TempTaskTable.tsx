@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, User, Clock, Eye, Edit } from 'lucide-react';
+import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
 const statusConfig = {
@@ -14,6 +14,13 @@ interface TempTaskTableProps {
   onEditTask: (task: TempTask) => void;
   onStartTask: (task: TempTask) => void;
   onCompleteTask: (task: TempTask) => void;
+  pagination?: {
+    currentPage: number;
+    pageSize: number;
+    total: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
+  };
 }
 
 export function TempTaskTable({
@@ -22,111 +29,158 @@ export function TempTaskTable({
   onEditTask,
   onStartTask,
   onCompleteTask,
+  pagination,
 }: TempTaskTableProps) {
+  const currentPage = pagination?.currentPage || 1;
+  const pageSize = pagination?.pageSize || 10;
+  const totalPages = Math.ceil((pagination?.total || tasks.length) / pageSize) || 1;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">临时任务列表</h3>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <th className="px-4 py-3">紧急程度</th>
-              <th className="px-4 py-3">任务编号</th>
-              <th className="px-4 py-3">任务名称</th>
-              <th className="px-4 py-3">类型</th>
-              <th className="px-4 py-3">工作地点</th>
-              <th className="px-4 py-3">负责人</th>
-              <th className="px-4 py-3">截止日期</th>
-              <th className="px-4 py-3">状态</th>
-              <th className="px-4 py-3">操作</th>
+        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <tr>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">紧急程度</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务名称</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作地点</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">截止日期</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-300">
+          {tasks.map((task) => (
+            <tr
+              key={task.id}
+              className={`hover:bg-blue-100 cursor-pointer transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''}`}
+              onClick={() => onViewTask(task)}
+            >
+              <td className="px-4 py-3 whitespace-nowrap">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[task.urgency].badge}`}>
+                  {TEMP_TASK_URGENCY_CONFIG[task.urgency].label}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{task.taskCode}</td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  {task.urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                  <span className="font-medium text-gray-900">{task.title}</span>
+                </div>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{task.tempTaskType}</td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  {task.workLocation}
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  {task.assigneeName}
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  {task.dueDate}
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[task.status].bg} ${statusConfig[task.status].color}`}>
+                  {statusConfig[task.status].label}
+                </span>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onViewTask(task)}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                    title="查看详情"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onEditTask(task)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="编辑"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  {task.status === 'pending' && (
+                    <button
+                      onClick={() => onStartTask(task)}
+                      className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
+                      开始
+                    </button>
+                  )}
+                  {task.status === 'in_progress' && (
+                    <button
+                      onClick={() => onCompleteTask(task)}
+                      className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
+                    >
+                      完成
+                    </button>
+                  )}
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {tasks.map((task) => (
-              <tr
-                key={task.id}
-                className={`hover:bg-gray-50 cursor-pointer transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''}`}
-                onClick={() => onViewTask(task)}
-              >
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[task.urgency].badge}`}>
-                    {TEMP_TASK_URGENCY_CONFIG[task.urgency].label}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{task.taskCode}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    {task.urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                    <span className="font-medium text-gray-900">{task.title}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{task.tempTaskType}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {task.workLocation}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {task.assigneeName}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {task.dueDate}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[task.status].bg} ${statusConfig[task.status].color}`}>
-                    {statusConfig[task.status].label}
-                  </span>
-                </td>
-                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onViewTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="查看详情"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onEditTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="编辑"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {task.status === 'pending' && (
-                      <button
-                        onClick={() => onStartTask(task)}
-                        className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      >
-                        开始
-                      </button>
-                    )}
-                    {task.status === 'in_progress' && (
-                      <button
-                        onClick={() => onCompleteTask(task)}
-                        className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
-                      >
-                        完成
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {tasks.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            没有找到符合条件的临时任务
-          </div>
-        )}
+          ))}
+        </tbody>
+      </table>
       </div>
+
+      {tasks.length === 0 && (
+        <div className="p-8 text-center text-gray-500">
+          没有找到符合条件的临时任务
+        </div>
+      )}
+
+      {/* 分页 */}
+      {pagination && (
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {pagination.total} 条</span>
+            <button
+              onClick={() => pagination.onPageChange(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              &lt;
+            </button>
+            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
+            <button
+              onClick={() => pagination.onPageChange(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage >= totalPages}
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

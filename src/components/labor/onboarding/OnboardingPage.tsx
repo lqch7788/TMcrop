@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
 import type { OnboardingRecord, OnboardingFormData, OnboardingStatus } from './types';
@@ -117,24 +117,24 @@ export function OnboardingPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-              <UserPlus className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">入职办理</h1>
-              <p className="text-gray-500">招聘→入职闭环管理</p>
+              <h1 className="text-lg font-bold text-gray-900">入职办理</h1>
+              <p className="text-xs text-gray-500">招聘→入职闭环管理</p>
             </div>
           </div>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
           >
-            <UserPlus className="w-5 h-5" />
+            <UserPlus className="w-4 h-4" />
             办理入职
           </button>
         </div>
@@ -204,100 +204,118 @@ export function OnboardingPage() {
       </div>
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">岗位</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">合同类型</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">入职日期</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {data.length === 0 ? (
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        {/* 表格标题栏 */}
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">入职记录</h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  暂无数据
-                </td>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入职日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
-            ) : (
-              data.map((record) => {
-                const StatusIcon = statusConfig[record.status].icon;
-                return (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-gray-900">{record.name}</p>
-                        <p className="text-sm text-gray-500">{record.phone}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-gray-900">{record.position}</p>
-                      <p className="text-sm text-gray-500">{record.department}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{record.contractType}</td>
-                    <td className="px-4 py-3 text-gray-600">{record.joinDate}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig[record.status].color}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openDetailModal(record)}
-                          className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded"
-                        >
-                          详情
-                        </button>
-                        {record.status === '待入职' && (
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-300">
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    暂无数据
+                  </td>
+                </tr>
+              ) : (
+                data.map((record) => {
+                  const StatusIcon = statusConfig[record.status].icon;
+                  return (
+                    <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div>
+                          <p className="font-medium text-gray-900">{record.name}</p>
+                          <p className="text-sm text-gray-500">{record.phone}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-gray-900">{record.position}</p>
+                        <p className="text-sm text-gray-500">{record.department}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{record.contractType}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{record.joinDate}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig[record.status].color}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => handleProgress(record, '办理中')}
-                            className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                            onClick={() => openDetailModal(record)}
+                            className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded"
                           >
-                            开始办理
+                            详情
                           </button>
-                        )}
-                        {record.status === '办理中' && (
-                          <button
-                            onClick={() => handleProgress(record, '已入职')}
-                            className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded"
-                          >
-                            完成入职
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                          {record.status === '待入职' && (
+                            <button
+                              onClick={() => handleProgress(record, '办理中')}
+                              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                            >
+                              开始办理
+                            </button>
+                          )}
+                          {record.status === '办理中' && (
+                            <button
+                              onClick={() => handleProgress(record, '已入职')}
+                              className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded"
+                            >
+                              完成入职
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* 分页 */}
-        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            共 {pagination.total} 条，第 {pagination.currentPage} / {Math.ceil(pagination.total / pagination.pageSize)} 页
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
+            </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {pagination.total} 条</span>
             <button
-              onClick={() => setPage(pagination.currentPage - 1)}
+              onClick={() => setPage(Math.max(1, pagination.currentPage - 1))}
               disabled={pagination.currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              上一页
+              &lt;
             </button>
+            <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}/{Math.ceil(pagination.total / pagination.pageSize)}</span>
             <button
-              onClick={() => setPage(pagination.currentPage + 1)}
+              onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
               disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              下一页
+              &gt;
             </button>
           </div>
         </div>

@@ -49,13 +49,13 @@ export const CostDetailModal: React.FC<CostDetailModalProps> = ({
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">物料编码</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">物料名称</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">规格</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">单位</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">领料数量</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">单价</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">金额</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">物料编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">物料名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">规格</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">单位</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">领料数量</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">单价</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">金额</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-400">

@@ -240,6 +240,8 @@ export default function TaskDispatchPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportRow[]>([]);
   const [importData, setImportData] = useState<ImportRow[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // 新建任务表单状态
   const [newTask, setNewTask] = useState({
@@ -1192,10 +1194,10 @@ export default function TaskDispatchPage() {
           {/* 横向滚动表格 */}
           <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
             <table className="w-full min-w-[1800px]">
-              <thead className="bg-gray-50 sticky top-0 z-10">
+              <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
                 <tr>
                   {exportMode && (
-                    <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 w-12 whitespace-nowrap">
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                       <input
                         type="checkbox"
                         checked={selectedRows.length === filteredTasks.length && filteredTasks.length > 0}
@@ -1204,28 +1206,28 @@ export default function TaskDispatchPage() {
                       />
                     </th>
                   )}
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">任务ID</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">任务类型</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">温室/大田</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">作物</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">负责人</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">计划开始</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">计划结束</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">预计天数</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">预计小时</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">工作制</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">任务工时</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">进度</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">优先级</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">状态</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">所需物资</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">所需工具</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">操作</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">温室/大田</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计天数</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计小时</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">工作制</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需物资</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需工具</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredTasks.map((task, index) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
+              <tbody className="divide-y divide-gray-300">
+                {filteredTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((task, index) => (
+                  <tr key={task.id} className="hover:bg-blue-100 transition-colors">
                     {exportMode && (
                       <td className="px-3 py-3 text-center whitespace-nowrap">
                         <input
@@ -1325,6 +1327,32 @@ export default function TaskDispatchPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">每页</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="px-2 py-1 border border-gray-200 rounded text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span className="text-sm text-gray-500">条</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">共 {filteredTasks.length} 条</span>
+              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm">{currentPage} / {Math.ceil(filteredTasks.length / pageSize) || 1}</span>
+              <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTasks.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredTasks.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           {exportMode && (
             <div className="flex items-center gap-4 px-4 py-3 border-t border-gray-100">
@@ -2271,31 +2299,31 @@ export default function TaskDispatchPage() {
                   </div>
                   <div className="overflow-x-auto border border-gray-200 rounded-lg">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">任务类型</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">温室/大田</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">作物</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">负责人</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">计划开始时间</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">任务工时</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">优先级</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">温室/大田</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">计划开始时间</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-300">
                         {importPreview.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-gray-900">{row.typeLabel}</td>
-                            <td className="px-3 py-2 text-gray-900">{row.field}</td>
-                            <td className="px-3 py-2 text-gray-900">{row.crop}</td>
-                            <td className="px-3 py-2 text-gray-900">{row.assignee}</td>
-                            <td className="px-3 py-2 text-gray-900">
+                          <tr key={idx} className="hover:bg-blue-100 transition-colors">
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.typeLabel}</td>
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.field}</td>
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.crop}</td>
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.assignee}</td>
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
                               {row.planStart?.split(' ')[0] || '-'}
                             </td>
-                            <td className="px-3 py-2 text-gray-900">
+                            <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
                               {formatWorkHours(row.estimatedDays || 0, row.estimatedHours || 0)}
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               <span className={`px-2 py-0.5 rounded text-xs ${
                                 row.priority === 'urgent'
                                   ? 'bg-red-100 text-red-700'

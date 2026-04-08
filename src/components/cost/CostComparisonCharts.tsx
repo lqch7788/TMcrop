@@ -75,11 +75,11 @@ export const CostComparisonCharts: React.FC<CostComparisonChartsProps> = ({
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">供应商</th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">物料种类</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">交易总额</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">平均单价</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">价格指数</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">供应商</th>
+                <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">物料种类</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-700">交易总额</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-700">平均单价</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-700">价格指数</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-400">

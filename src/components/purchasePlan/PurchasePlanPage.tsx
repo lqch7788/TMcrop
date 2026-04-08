@@ -319,9 +319,9 @@ export function PurchasePlanPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === purchasePlans.length && purchasePlans.length > 0}
@@ -329,22 +329,22 @@ export function PurchasePlanPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">计划编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">计划名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">交货日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">优先级</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总金额</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">交货日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {purchasePlans.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((plan) => (
-                <tr key={plan.id} className="hover:bg-gray-50">
+                <tr key={plan.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3">
                       <input
@@ -355,15 +355,15 @@ export function PurchasePlanPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{plan.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.applicant}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.applyDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.totalAmount}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.supplier}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{plan.deliveryDate}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{plan.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.applicant}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.applyDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.totalAmount}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.supplier}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.deliveryDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       plan.priority === '高' ? 'bg-red-100 text-red-700' :
                       plan.priority === '中' ? 'bg-amber-100 text-amber-700' :
@@ -372,7 +372,7 @@ export function PurchasePlanPage() {
                       {plan.priority}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       plan.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
                       'bg-amber-100 text-amber-700'

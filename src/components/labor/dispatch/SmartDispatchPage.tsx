@@ -37,10 +37,15 @@ export const SmartDispatchPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">智能派工建议</h1>
-          <p className="text-sm text-gray-500 mt-1">基于技能、位置、负荷的智能推荐算法</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">智能派工建议</h1>
+            <p className="text-xs text-gray-500">基于技能、位置、负荷的智能推荐算法</p>
+          </div>
         </div>
       </div>
 

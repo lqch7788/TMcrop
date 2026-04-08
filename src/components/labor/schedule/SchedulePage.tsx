@@ -100,14 +100,18 @@ export function SchedulePage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Calendar className="w-7 h-7 text-blue-600" />
-          排班调度中心
-        </h1>
-        <p className="text-gray-500 mt-1">管理员工排班、班次设置和调班申请</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">排班调度中心</h1>
+            <p className="text-xs text-gray-500">管理员工排班、班次设置和调班申请</p>
+          </div>
+        </div>
       </div>
 
       {/* 快捷操作栏 */}
