@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Calculator } from 'lucide-react';
 import { useBudget } from './hooks/useBudget';
 import { BudgetChart } from './BudgetChart';
 import { BudgetInputForm } from './BudgetInputForm';
@@ -31,10 +31,15 @@ export const BudgetPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">工资预算预测</h1>
-          <p className="text-sm text-gray-500 mt-1">基于种植批次计划的人工成本预算分析</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+            <Calculator className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">工资预算预测</h1>
+            <p className="text-xs text-gray-500">基于种植批次计划的人工成本预算分析</p>
+          </div>
         </div>
       </div>
 
@@ -130,49 +135,49 @@ export const BudgetPage: React.FC = () => {
       </div>
 
       {/* 月度明细表 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">月度预算明细</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-2.5 text-left font-medium text-gray-600">月份</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">总成本(万元)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">正式工(万元)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">临时工(万元)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">社保(万元)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">福利(万元)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">人数</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">采收量(万斤)</th>
-                <th className="px-3 py-2.5 text-right font-medium text-gray-600">单位成本</th>
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总成本(万元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">正式工(万元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">临时工(万元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">社保(万元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">福利(万元)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人数</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">采收量(万斤)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">单位成本</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-300">
               {output.monthlyBudget.map((month) => (
-                <tr key={month.month} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-3 py-2.5 font-medium text-gray-900">{month.month}</td>
-                  <td className="px-3 py-2.5 text-right text-emerald-600 font-medium">
+                <tr key={month.month} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{month.month}</td>
+                  <td className="px-4 py-3 text-sm text-right font-medium text-emerald-600 whitespace-nowrap">
                     {(month.laborCost / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(month.formalWorkerCost / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(month.tempWorkerCost / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(month.socialSecurity / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(month.benefits / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">{month.headcount}</td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{month.headcount}</td>
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(month.yieldPrediction / 10000).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-700">¥{month.costPerUnit.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">¥{month.costPerUnit.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

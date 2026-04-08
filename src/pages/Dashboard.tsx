@@ -744,13 +744,13 @@ export default function Dashboard() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <tr>
-                    <th className="px-2 py-2 text-center font-semibold text-gray-900">区域选择</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={4}>空气环境参数</th>
+                    <th className="px-2 py-2 text-center text-sm font-semibold whitespace-nowrap">区域选择</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap" colSpan={4}>空气环境参数</th>
                     <th className="px-1 py-3"></th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={4}>土壤环境参数</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-900">详情</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap" colSpan={4}>土壤环境参数</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">详情</th>
                   </tr>
                   <tr className="bg-gray-50">
                     <th className="px-2 py-2">
@@ -765,64 +765,64 @@ export default function Dashboard() {
                         ))}
                       </select>
                     </th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">温度(°C)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">湿度(%)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">光照度(Lux)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">CO2(ppm)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">温度(°C)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">湿度(%)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">光照度(Lux)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">CO2(ppm)</th>
                     <th className="px-1 py-2"></th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">温度(°C)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">湿度(%)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">EC值</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">PH值</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">温度(°C)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">湿度(%)</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">EC值</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold whitespace-nowrap text-gray-700">PH值</th>
                     <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-300">
                   {paginatedGreenhouseData.map((gh) => (
-                    <tr key={gh.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                    <tr key={gh.id} className="hover:bg-blue-100 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-emerald-600" />
                           <span className="font-medium text-gray-900">{gh.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.airTemp?.status === 'normal' ? 'text-gray-900' : gh.airTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.airTemp?.value ?? '-'}{gh.airTemp?.unit ? ` ${gh.airTemp.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.airHumidity?.status === 'normal' ? 'text-gray-900' : gh.airHumidity?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.airHumidity?.value ?? '-'}{gh.airHumidity?.unit ? ` ${gh.airHumidity.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.light?.status === 'normal' ? 'text-gray-900' : gh.light?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.light?.value ?? '-'}{gh.light?.unit ? ` ${gh.light.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.co2?.status === 'normal' ? 'text-gray-900' : gh.co2?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.co2?.value ?? '-'}{gh.co2?.unit ? ` ${gh.co2.unit}` : ''}
                         </span>
                       </td>
                       <td className="px-1 py-3"></td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.soilTemp?.status === 'normal' ? 'text-gray-900' : gh.soilTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.soilTemp?.value ?? '-'}{gh.soilTemp?.unit ? ` ${gh.soilTemp.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.soilMoisture?.status === 'normal' ? 'text-gray-900' : gh.soilMoisture?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.soilMoisture?.value ?? '-'}{gh.soilMoisture?.unit ? ` ${gh.soilMoisture.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.soilEc?.status === 'normal' ? 'text-gray-900' : gh.soilEc?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.soilEc?.value ?? '-'}{gh.soilEc?.unit ? ` ${gh.soilEc.unit}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-medium ${gh.soilPh?.status === 'normal' ? 'text-gray-900' : gh.soilPh?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {gh.soilPh?.value ?? '-'}{gh.soilPh?.unit ? ` ${gh.soilPh.unit}` : ''}
                         </span>
@@ -875,18 +875,18 @@ export default function Dashboard() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">任务名称</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">区域</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">优先级</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">状态</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">负责人</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">计划时长</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">截止日期</th>
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <tr className="border-b border-blue-600">
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">任务名称</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">区域</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">优先级</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">状态</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">负责人</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">计划时长</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">截止日期</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-300">
                   {todayTasks.slice(0, 4).map((task) => {
                     const getPriorityColor = (priority: string) => {
                       switch (priority) {
@@ -921,24 +921,24 @@ export default function Dashboard() {
                       }
                     };
                     return (
-                      <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4">
+                      <tr key={task.id} className="border-b border-gray-100 hover:bg-blue-100 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <span className="text-sm font-medium text-gray-900">{task.title}</span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{task.greenhouseName}</td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.greenhouseName}</td>
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(task.priority)}`}>
                             {getPriorityText(task.priority)}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
                             {getStatusText(task.status)}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{task.assigneeName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{task.workDuration}小时</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{task.dueDate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.assigneeName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.workDuration}小时</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.dueDate}</td>
                       </tr>
                     );
                   })}
@@ -957,8 +957,8 @@ export default function Dashboard() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left font-semibold text-gray-700">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <tr className="text-left text-sm font-semibold whitespace-nowrap">
                     <th className="pb-3">批次号</th>
                     <th className="pb-3">作物</th>
                     <th className="pb-3">区域</th>
@@ -967,7 +967,7 @@ export default function Dashboard() {
                     <th className="pb-3">状态</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-300">
                   {cropBatches.slice(0, 5).map((batch) => {
                     const stageProgress = {
                       seedling: 15,
@@ -977,12 +977,12 @@ export default function Dashboard() {
                       harvest: 100
                     };
                     return (
-                      <tr key={batch.id} className="hover:bg-gray-50">
-                        <td className="py-3 font-medium text-gray-900">{batch.batchCode}</td>
-                        <td className="py-3 text-gray-600">{batch.cropName}</td>
-                        <td className="py-3 text-gray-600">{batch.greenhouseName}</td>
-                        <td className="py-3 text-gray-600">{batch.stageName}</td>
-                        <td className="py-3">
+                      <tr key={batch.id} className="hover:bg-blue-100 transition-colors">
+                        <td className="py-3 font-medium text-gray-900 whitespace-nowrap">{batch.batchCode}</td>
+                        <td className="py-3 text-gray-600 whitespace-nowrap">{batch.cropName}</td>
+                        <td className="py-3 text-gray-600 whitespace-nowrap">{batch.greenhouseName}</td>
+                        <td className="py-3 text-gray-600 whitespace-nowrap">{batch.stageName}</td>
+                        <td className="py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
@@ -993,7 +993,7 @@ export default function Dashboard() {
                             <span className="text-gray-500">{stageProgress[batch.stage as keyof typeof stageProgress]}%</span>
                           </div>
                         </td>
-                        <td className="py-3">
+                        <td className="py-3 whitespace-nowrap">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">
                             进行中
                           </span>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LaborTable, Column } from '@/components/common/labor/LaborTable';
 import { StaffSkill } from './types';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,13 @@ interface SkillTableProps {
 }
 
 export function SkillTable({ data, onViewDetail, onEdit }: SkillTableProps) {
+  // 本地分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // 计算分页
+  const totalPages = Math.ceil(data.length / pageSize) || 1;
+  const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   // 状态徽章颜色
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -142,9 +149,20 @@ export function SkillTable({ data, onViewDetail, onEdit }: SkillTableProps) {
   return (
     <LaborTable
       columns={columns}
-      data={data}
+      data={paginatedData}
       rowKey="id"
       emptyText="暂无员工技能档案"
+      title="员工技能档案"
+      pagination={{
+        page: currentPage,
+        pageSize,
+        total: data.length,
+      }}
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(size) => {
+        setPageSize(size);
+        setCurrentPage(1);
+      }}
     />
   );
 }

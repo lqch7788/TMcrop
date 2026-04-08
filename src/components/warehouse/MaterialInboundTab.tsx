@@ -526,10 +526,10 @@ export function MaterialInboundTab({
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 {(editMode || deleteMode || exportMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <input
                       type="checkbox"
                       checked={isAllSelected}
@@ -538,19 +538,19 @@ export function MaterialInboundTab({
                     />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-10"></th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">入库单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">入库日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">供应商</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">操作员</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">物料数量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {displayedRecords.map((record) => (
                 <>
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr key={record.id} className="hover:bg-blue-100 transition-colors">
                     {(editMode || deleteMode || exportMode) && (
                       <td className="px-4 py-3 whitespace-nowrap">
                         {deleteMode && record.status !== 'pending' ? (

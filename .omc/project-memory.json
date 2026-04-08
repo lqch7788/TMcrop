@@ -1,0 +1,468 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775601468013,
+  "projectRoot": "D:\\TMcrop\\yuanxingtu\\V1.1\\hongzhiyun",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "playwright",
+        "version": "1.58.2",
+        "category": "testing"
+      },
+      {
+        "name": "vite",
+        "version": "6.0.1",
+        "category": "build"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "pnpm build",
+    "testCommand": null,
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "build:prod": "vite build",
+      "lint": "eslint .",
+      "preview": "vite preview",
+      "install-deps": "npm install"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "public",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 2,
+      "lastAccessed": 1775601467972,
+      "keyFiles": [
+        "index.html",
+        "弘智耘LOGO.png"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 1,
+      "lastAccessed": 1775601467973,
+      "keyFiles": [
+        "弘智耘LOGO.png"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1775601467982,
+      "keyFiles": [
+        "App.css",
+        "App.tsx",
+        "index.css",
+        "main.tsx",
+        "vite-env.d.ts"
+      ]
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 2,
+      "lastAccessed": 1775601467983,
+      "keyFiles": [
+        "index-BMh9bQPq.css",
+        "index-BnuLVmaJ.js"
+      ]
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 6,
+      "lastAccessed": 1775601467984,
+      "keyFiles": [
+        "DragContext.tsx",
+        "DraggableContainer.tsx",
+        "DraggableDialog.tsx"
+      ]
+    },
+    "src\\data": {
+      "path": "src\\data",
+      "purpose": "Data files",
+      "fileCount": 3,
+      "lastAccessed": 1775601467985,
+      "keyFiles": [
+        "costData.ts",
+        "materialReceivingData.ts",
+        "mockData.ts"
+      ]
+    },
+    "src\\lib": {
+      "path": "src\\lib",
+      "purpose": "Library code",
+      "fileCount": 1,
+      "lastAccessed": 1775601467985,
+      "keyFiles": [
+        "utils.ts"
+      ]
+    },
+    "src\\pages": {
+      "path": "src\\pages",
+      "purpose": "Page components",
+      "fileCount": 73,
+      "lastAccessed": 1775601467986,
+      "keyFiles": [
+        "AgricultureRecord.tsx",
+        "AlertInfo.tsx",
+        "Announcement.tsx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\components\\layout\\Sidebar.tsx",
+      "accessCount": 61,
+      "lastAccessed": 1775605724442,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 41,
+      "lastAccessed": 1775603994164,
+      "type": "directory"
+    },
+    {
+      "path": "src",
+      "accessCount": 22,
+      "lastAccessed": 1775601725096,
+      "type": "directory"
+    },
+    {
+      "path": "src\\pages\\WarehouseMaterials.tsx",
+      "accessCount": 21,
+      "lastAccessed": 1775521994070,
+      "type": "file"
+    },
+    {
+      "path": "src\\App.tsx",
+      "accessCount": 19,
+      "lastAccessed": 1775604534044,
+      "type": "directory"
+    },
+    {
+      "path": "src\\pages\\MaterialReceiving.tsx",
+      "accessCount": 17,
+      "lastAccessed": 1775526235074,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\SupplierManagement.tsx",
+      "accessCount": 17,
+      "lastAccessed": 1775526818412,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\MaterialReceivingPage.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1775604264988,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\ExecuteTab.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775529535680,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving",
+      "accessCount": 4,
+      "lastAccessed": 1775521340531,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\supplier\\data.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775529182057,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\ApplicationTab.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775529535594,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\types.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775529181821,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\ActionToolbar.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775529433301,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierCodeGenerator.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775529468972,
+      "type": "file"
+    },
+    {
+      "path": "src\\hooks\\materialReceiving\\useMaterialReceiving.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775529546117,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\Materials.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775441901647,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775451753469,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouse\\WarehouseMaterialsPage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775454797614,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\MaterialReturn.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775456800660,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\PageHeader.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529182102,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierFilters.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529433326,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierTable.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529452363,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierDetailModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529452422,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierAddModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529459650,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\SupplierEditModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529459673,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\supplier\\DeleteDialogs.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529468832,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\StatisticsTab.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775529546582,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\MaterialReceivingHeader.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775604273839,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\MaterialsFilters.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775441733357,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\MaterialsTable.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775441759085,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\MaterialsHeader.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775441772542,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\AddInboundModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775441807635,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\MaterialsPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775441894172,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775442445671,
+      "type": "file"
+    },
+    {
+      "path": "src\\data\\mockData.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775442463180,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\mockData.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775442547795,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\WarehouseMaterialsHeader.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442557821,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\WarehouseMaterialsFilters.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442578328,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\WarehouseMaterialsTable.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442609602,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\InboundTable.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442643796,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\AddInboundModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442679465,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\CodeGenerator.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442702921,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\warehouseMaterials\\WarehouseMaterialsPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442870937,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\materialReceiving.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775442943840,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materialReceiving\\modals\\ExportTypeModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775442966037,
+      "type": "file"
+    },
+    {
+      "path": "src/components/materialReceiving/MaterialReceivingPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775446044058,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\materialReturn\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775451753349,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\materials\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775451753393,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\lqch7\\.claude\\plans\\reflective-marinating-kurzweil.md",
+      "accessCount": 1,
+      "lastAccessed": 1775452054245,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

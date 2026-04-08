@@ -35,10 +35,10 @@ export function MaterialReturnTable({
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-gray-50">
+        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <tr>
             {showSelection && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                 <input
                   type="checkbox"
                   checked={selectedRows.length === data.length && data.length > 0}
@@ -47,24 +47,24 @@ export function MaterialReturnTable({
                 />
               </th>
             )}
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-8"></th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">退料单号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">退料日期</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">退料类型</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">退料部门</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">仓库位置</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批状态</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审核人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">备注</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-8"></th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">退料单号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">退料日期</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">退料类型</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作人</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">退料部门</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">仓库位置</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-400">
+        <tbody className="divide-y divide-gray-300">
           {data.map((item) => (
             <>
               {/* 主行 */}
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                 {showSelection && (
                   <td className="px-4 py-3">
                     <input
@@ -122,17 +122,17 @@ export function MaterialReturnTable({
                         <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                           <thead className="bg-[#F2F6FA]">
                             <tr>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">来源领料单号</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料编码</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料分类</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">物料名称</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">规格</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单位</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">本次退料数量</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">单价(元)</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">小计(元)</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">仓库货位</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800">退料原因</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">来源领料单号</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料分类</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">本次退料数量</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
+                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">退料原因</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">

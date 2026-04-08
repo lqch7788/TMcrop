@@ -16,6 +16,10 @@ export function TempTaskPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TempTask | null>(null);
 
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   // 筛选hook
   const {
     filters,
@@ -111,23 +115,23 @@ export function TempTaskPage() {
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">临时任务</h1>
-              <p className="text-gray-500">管理不在计划内的临时任务</p>
+              <h1 className="text-lg font-bold text-gray-900">临时任务</h1>
+              <p className="text-xs text-gray-500">管理不在计划内的临时任务</p>
             </div>
           </div>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
           >
-            <Plus className="w-5 h-5" />
-            新建临时任务
+            <Plus className="w-4 h-4" />
+            新建
           </button>
         </div>
       </div>
@@ -173,6 +177,16 @@ export function TempTaskPage() {
         onEditTask={openEditModal}
         onStartTask={handleStartTask}
         onCompleteTask={handleCompleteTask}
+        pagination={{
+          currentPage,
+          pageSize,
+          total: filteredTasks.length,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          },
+        }}
       />
 
       {/* 详情弹窗 */}

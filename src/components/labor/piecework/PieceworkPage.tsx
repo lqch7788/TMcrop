@@ -88,26 +88,33 @@ export const PieceworkPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">计件工资管理</h1>
-          <p className="text-sm text-gray-500 mt-1">管理临时工计件工资记录</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4" />
-            导出
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-          >
-            <Plus className="w-4 h-4" />
-            新建计件
-          </button>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">计件工资管理</h1>
+              <p className="text-xs text-gray-500">管理临时工计件工资记录</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+            >
+              <Plus className="w-4 h-4" />
+              新建
+            </button>
+          </div>
         </div>
       </div>
 

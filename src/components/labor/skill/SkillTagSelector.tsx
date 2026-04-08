@@ -132,7 +132,7 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
           <div className="p-3 space-y-4">
             {Object.entries(skillCategories).map(([category, tags]) => (
               <div key={category}>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   {category}
                 </div>
                 <div className="flex flex-wrap gap-1.5">

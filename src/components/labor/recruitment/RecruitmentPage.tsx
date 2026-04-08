@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, UserPlus } from 'lucide-react';
+import { Plus, UserPlus, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useRecruitment } from './hooks/useRecruitment';
 import { RecruitmentFilters } from './RecruitmentFilters';
@@ -176,28 +176,35 @@ export function RecruitmentPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">招聘管理</h1>
-            <p className="text-gray-500">管理招聘需求申请、审批和进度跟踪</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">招聘管理</h1>
+              <p className="text-xs text-gray-500">管理招聘需求申请、审批和进度跟踪</p>
+            </div>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-          >
-            <Plus className="w-5 h-5" />
-            新建招聘
-          </button>
-          <button
-            onClick={() => navigate('/onboarding')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            <UserPlus className="w-5 h-5" />
-            办理入职
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              新建招聘
+            </button>
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              办理入职
+            </button>
+          </div>
         </div>
       </div>
 

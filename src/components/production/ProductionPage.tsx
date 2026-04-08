@@ -443,9 +443,9 @@ export default function ProductionPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredBatches.length && filteredBatches.length > 0}
@@ -453,24 +453,24 @@ export default function ProductionPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">批次编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植模式</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">作物名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">作物品种</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植面积</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">定植日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">预计采收</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">生长阶段</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">负责人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标产量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">实际产量</th>
-                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植面积</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">定植日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计采收</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长阶段</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标产量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实际产量</th>
+                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((batch) => (
-                <tr key={batch.id} className="hover:bg-gray-50">
+                <tr key={batch.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3">
                       <input
@@ -481,24 +481,24 @@ export default function ProductionPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{batch.batchCode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.plantingMode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{batch.cropName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.variety}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.greenhouseName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.plantingArea} m²</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.startDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.expectedHarvestDate}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{batch.batchCode}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingMode}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.greenhouseName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingArea} m²</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageColors[batch.stage]}`}>
                       {batch.stageName}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{batch.responsiblePerson}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{batch.targetYield} kg</td>
-                  <td className="px-4 py-3 text-sm text-emerald-600">{batch.actualYield} kg</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.targetYield} kg</td>
+                  <td className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">{batch.actualYield} kg</td>
                   {!exportMode && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setSelectedBatch(batch)}

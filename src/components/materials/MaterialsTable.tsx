@@ -44,10 +44,10 @@ export default function MaterialsTable({
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredMaterials.length && filteredMaterials.length > 0}
@@ -56,21 +56,21 @@ export default function MaterialsTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">分类</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">库存数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">最低库存</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单价</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">存放位置</th>
-              {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">分类</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单位</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">最低库存</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单价</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">存放位置</th>
+              {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {filteredMaterials.slice(startIdx, endIdx).map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                 {exportMode && (
                   <td className="px-4 py-3">
                     <input

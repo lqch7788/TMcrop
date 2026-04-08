@@ -87,21 +87,21 @@ export function MaterialCategoryPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">分类编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">分类名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">级别</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">父级分类</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物资编码前缀</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">包含物资数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">备注</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">分类编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">分类名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">级别</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">父级分类</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物资编码前缀</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">包含物资数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {materialCategories.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((category) => (
-                <tr key={category.id} className="hover:bg-gray-50">
+                <tr key={category.id} className="hover:bg-blue-100 transition-colors">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{category.code}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{category.name}</td>
                   <td className="px-4 py-3">

@@ -40,7 +40,7 @@ export default function DeviceMonitor() {
         </div>
         <table className="w-full">
           <thead className="bg-gray-50">
-            <tr><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备ID</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备名称</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备类型</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">安装位置</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">运行状态</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">在线状态</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">最后更新</th></tr>
+            <tr><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">设备ID</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">设备名称</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">设备类型</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">安装位置</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">运行状态</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">在线状态</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">最后更新</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.map((device) => (

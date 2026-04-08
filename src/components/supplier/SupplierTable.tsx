@@ -57,10 +57,10 @@ export default function SupplierTable({
 
       <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
         <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'fixed' }}>
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {(exportMode || batchEditMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={isAllSelected}
@@ -69,24 +69,24 @@ export default function SupplierTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">供应商编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-40">供应商名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">供应类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">供应商属性</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">联系人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-28">移动电话</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">所属组织</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-20">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">所在地区</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">创建时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-40">供应商名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">供应商属性</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">联系人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">移动电话</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">所属组织</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">所在地区</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">创建时间</th>
               {!exportMode && !batchEditMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">操作</th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {displayedSuppliers.map((supplier) => (
-              <tr key={supplier.id} className="hover:bg-gray-50">
+              <tr key={supplier.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode) && (
                   <td className="px-4 py-3">
                     <input

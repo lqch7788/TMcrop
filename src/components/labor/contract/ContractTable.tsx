@@ -1,4 +1,4 @@
-import { FileText, Search, AlertTriangle, Plus } from 'lucide-react';
+import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
@@ -152,32 +152,32 @@ export function ContractTable() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">合同管理</h1>
-              <p className="text-gray-500">劳动合同模板、签订存档、到期提醒</p>
+              <h1 className="text-lg font-bold text-gray-900">合同管理</h1>
+              <p className="text-xs text-gray-500">劳动合同模板、签订存档、到期提醒</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsRemindOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors font-medium text-sm"
             >
-              <AlertTriangle className="w-5 h-5" />
+              <AlertTriangle className="w-4 h-4" />
               到期提醒 ({expiringContracts.length})
             </button>
             <button
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               新建合同
             </button>
           </div>
@@ -242,19 +242,25 @@ export function ContractTable() {
       </div>
 
       {/* 合同表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        {/* 表格标题栏 */}
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">合同记录</h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">合同编号</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">合同类型</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">合同期限</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同期限</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-gray-300">
             {contracts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
@@ -265,23 +271,23 @@ export function ContractTable() {
               contracts.map((contract) => {
                 const computedStatus = getComputedStatus(contract);
                 return (
-                  <tr key={contract.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{contract.contractCode}</td>
-                    <td className="px-4 py-3">
+                  <tr key={contract.id} className="hover:bg-blue-100 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{contract.contractCode}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <p className="text-gray-900">{contract.staffName}</p>
                       <p className="text-sm text-gray-500">{contract.idCard}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{contract.contractType}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{contract.contractType}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <p className="text-gray-900">{contract.startDate}</p>
                       <p className="text-sm text-gray-500">至 {contract.endDate}</p>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusConfig[computedStatus].bgColor} ${statusConfig[computedStatus].color}`}>
                         {computedStatus}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(contract)}
@@ -310,27 +316,39 @@ export function ContractTable() {
               })
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
 
         {/* 分页 */}
-        <div className="px-4 py-3 border-t flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            共 {pagination.total} 条，第 {pagination.currentPage} / {Math.ceil(pagination.total / pagination.pageSize)} 页
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
+            </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {pagination.total} 条</span>
             <button
-              onClick={() => setPage(pagination.currentPage - 1)}
+              onClick={() => setPage(Math.max(1, pagination.currentPage - 1))}
               disabled={pagination.currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              上一页
+              &lt;
             </button>
+            <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}/{Math.ceil(pagination.total / pagination.pageSize)}</span>
             <button
-              onClick={() => setPage(pagination.currentPage + 1)}
+              onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
               disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              下一页
+              &gt;
             </button>
           </div>
         </div>

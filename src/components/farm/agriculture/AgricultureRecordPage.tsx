@@ -449,9 +449,9 @@ export default function AgricultureRecordPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-center text-base font-bold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === operationRecords.length && operationRecords.length > 0}
@@ -459,22 +459,22 @@ export default function AgricultureRecordPage() {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作单号</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作类型</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">作物名称</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">品种</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作区域</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作人员</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作日期</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">操作面积</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">使用物料</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-center text-base font-bold text-gray-900">备注</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作单号</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作类型</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物名称</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">品种</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作区域</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作人员</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作日期</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作面积</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">使用物料</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {paginatedRecords.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
+                <tr key={r.id} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3 text-center">
                       <input
@@ -485,15 +485,15 @@ export default function AgricultureRecordPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">{r.code}</td>
-                  <td className="px-4 py-3 text-center">{getTypeBadge(r.type)}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{r.cropName}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600">{r.variety}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600">{r.greenhouse}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{r.operator}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600">{r.date}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-900">{r.workload}{r.unit}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-sm text-center font-medium text-gray-900 whitespace-nowrap">{r.code}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">{getTypeBadge(r.type)}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-900 whitespace-nowrap">{r.cropName}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{r.variety}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{r.greenhouse}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-900 whitespace-nowrap">{r.operator}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{r.date}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-900 whitespace-nowrap">{r.workload}{r.unit}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <div className="flex justify-center gap-1 flex-wrap">
                       {r.materials.length > 0 ? r.materials.slice(0, 2).map((m, i) => (
                         <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">{m}</span>
@@ -501,8 +501,8 @@ export default function AgricultureRecordPage() {
                       {r.materials.length > 2 && <span className="text-xs text-gray-400">+{r.materials.length - 2}</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(r.status)}</td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-600 max-w-[150px] truncate" title={r.remarks}>{r.remarks}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">{getStatusBadge(r.status)}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600 max-w-[150px] truncate whitespace-nowrap" title={r.remarks}>{r.remarks}</td>
                 </tr>
               ))}
             </tbody>

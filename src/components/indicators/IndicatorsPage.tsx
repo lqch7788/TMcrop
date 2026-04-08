@@ -356,37 +356,37 @@ export function IndicatorsPage() {
         <div className="p-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-900">管理目标列表</h3></div>
         <div className="overflow-x-auto" style={{ maxHeight: '500px', overflowY: 'auto' }}>
           <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植季</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标内容</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">目标值</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">完成率</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">发布人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">发布时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植季</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区域</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标内容</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标值</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成率</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {indicators.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((ind) => (
-                <tr key={ind.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{ind.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.current}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.region}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{ind.content}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.target}</td>
-                  <td className="px-4 py-3"><span className={`text-sm font-medium ${ind.rate >= 100 ? 'text-green-600' : 'text-amber-600'}`}>{ind.rate}%</span></td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.publisher}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{ind.publishDate}</td>
-                  <td className="px-4 py-3">
+                <tr key={ind.id} className="hover:bg-blue-100 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{ind.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.current}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.region}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{ind.content}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.target}</td>
+                  <td className="px-4 py-3 whitespace-nowrap"><span className={`text-sm font-medium ${ind.rate >= 100 ? 'text-green-600' : 'text-amber-600'}`}>{ind.rate}%</span></td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.publisher}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{ind.publishDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${ind.statusClass === 'normal' ? 'bg-green-100 text-green-700' : ind.statusClass === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{ind.status}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
                       <button onClick={() => handleEditClick(ind)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>

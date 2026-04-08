@@ -37,7 +37,7 @@ export default function EnvControl() {
         </div>
         <table className="w-full">
           <thead className="bg-gray-50">
-            <tr><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">策略名称</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">适用区域</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">触发条件</th><th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th></tr>
+            <tr><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">策略名称</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">适用区域</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">触发条件</th><th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">状态</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.map((s) => (

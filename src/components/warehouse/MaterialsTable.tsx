@@ -64,10 +64,10 @@ export function MaterialsTable({
 
       <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
         <table className="w-full" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {(exportMode || batchEditMode || deleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12 whitespace-nowrap">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={isAllSelected}
@@ -76,28 +76,28 @@ export function MaterialsTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">物料编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">物料名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-40">分类</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">规格型号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">条形码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-16">单位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-20">库存数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-20">最低库存</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-20">最高库存</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">单价（元）</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">存放位置</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">批次号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">生产日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-24">有效期至</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-32">最后更新时间</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 whitespace-nowrap w-20">数据状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-40">分类</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">规格型号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">条形码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-16">单位</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">库存数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最低库存</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最高库存</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">单价（元）</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">存放位置</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">生产日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
             {displayedMaterials.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode || deleteMode) && (
                   <td className="px-4 py-3 whitespace-nowrap">
                     <input

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ClipboardCheck } from 'lucide-react';
 import { tasks as initialTasks, greenhouses, cropBatches, users } from '../../../data/mockData';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
@@ -114,18 +114,23 @@ export function TasksPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">任务工单管理</h1>
-            <p className="text-gray-500">管理农事任务派发、执行和验收</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <ClipboardCheck className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">任务工单管理</h1>
+              <p className="text-xs text-gray-500">管理农事任务派发、执行和验收</p>
+            </div>
           </div>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
           >
-            <Plus className="w-5 h-5" />
-            创建任务
+            <Plus className="w-4 h-4" />
+            创建
           </button>
         </div>
       </div>

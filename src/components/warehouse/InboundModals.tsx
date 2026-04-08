@@ -67,20 +67,20 @@ export function InboundDetailModal({ record, isOpen, onClose }: InboundDetailMod
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">物料编码</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">物料名称</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">分类</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">规格</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">条形码</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">单位</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">数量</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">单价</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">供应商</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">存放位置</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">批号</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">生产日期</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">有效期至</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">备注</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">物料编码</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">物料名称</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">分类</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">规格</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">条形码</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">单位</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">数量</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">单价</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">供应商</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">存放位置</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">批号</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">生产日期</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">有效期至</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 whitespace-nowrap">备注</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">

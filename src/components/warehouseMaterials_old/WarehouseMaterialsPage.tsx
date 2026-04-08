@@ -1128,14 +1128,14 @@ export default function WarehouseMaterialsPage() {
                 <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                   <thead className="bg-[#F2F6FA]">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">物料编码</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">物料名称</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">分类</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">规格型号</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">单位</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">数量</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">单价（元）</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 whitespace-nowrap">存放位置</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">物料编码</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">物料名称</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">分类</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">规格型号</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">单位</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">数量</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">单价（元）</th>
+                      <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800 whitespace-nowrap">存放位置</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">

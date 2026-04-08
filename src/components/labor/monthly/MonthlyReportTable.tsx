@@ -73,10 +73,10 @@ export function MonthlyReportTable({
       {/* 表格内容 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === reports.length && reports.length > 0}
@@ -85,30 +85,30 @@ export function MonthlyReportTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">报表编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总工日数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总工时</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">平均人数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">完成任务</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">待办任务</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">总产量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">质量率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">人工成本</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料成本</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">考勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">报表编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工日数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工时</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">平均人数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成任务</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">待办任务</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总产量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">质量率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人工成本</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料成本</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               {!exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="bg-white divide-y divide-gray-300">
             {paginatedReports.map((report) => (
               <tr key={report.id} className="hover:bg-gray-50">
                 {exportMode && (
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedRows.includes(report.id)}
@@ -117,20 +117,20 @@ export function MonthlyReportTable({
                     />
                   </td>
                 )}
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{report.code}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.month}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.dept}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.totalWorkdays}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.totalWorkhours}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.avgDailyWorkers}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.completedTasks}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.pendingTasks}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.totalHarvest}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.qualityRate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.laborCost}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.materialCost}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{report.attendanceRate}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{report.code}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.month}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.dept}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkdays}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkhours}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.avgDailyWorkers}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.completedTasks}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.pendingTasks}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalHarvest}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.qualityRate}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.laborCost}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.materialCost}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.attendanceRate}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       report.statusClass === 'normal'
@@ -142,7 +142,7 @@ export function MonthlyReportTable({
                   </span>
                 </td>
                 {!exportMode && (
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <button
                         className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
@@ -171,41 +171,38 @@ export function MonthlyReportTable({
         )}
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
+        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>每页</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
+              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
             </select>
-            <span className="text-sm text-gray-500">条</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {reports.length} 条</span>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>共 {reports.length} 条</span>
             <button
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
+              &lt;
             </button>
-            <span className="text-sm">
-              {currentPage} / {totalPages || 1}
-            </span>
+            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
             <button
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRight className="w-4 h-4" />
+              &gt;
             </button>
           </div>
         </div>
