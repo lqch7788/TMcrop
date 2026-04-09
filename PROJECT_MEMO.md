@@ -58,7 +58,104 @@ hongzhiyun/
 
 详细操作记录请参考 `OPERATION_LOG.md`
 
+## 表格设计样式标准规范
+
+> **重要**：后续所有表格必须严格遵循此样式规范，确保全系统表格风格统一协调。
+
+### 1. 外层容器
+```html
+<div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+```
+
+### 2. 标题栏
+```html
+<div className="p-4 border-b border-gray-100 flex items-center justify-between">
+  <h3 className="text-base font-semibold text-gray-900">表格标题</h3>
+</div>
+```
+
+### 3. 表头样式（统一标准）
+```html
+<thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+  <tr className="border-b border-blue-600">
+    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">列名</th>
+    <!-- 更多 th... -->
+  </tr>
+</thead>
+```
+**要点**：
+- 背景：`bg-gradient-to-r from-blue-500 to-blue-600`（渐变蓝）
+- 文字：白色 `text-white`
+- 内边距：`py-3 px-4`
+- 字体：`text-sm font-semibold`
+- 行底部边框：`border-b border-blue-600`
+
+### 4. 表体样式
+```html
+<tbody className="divide-y divide-gray-300">
+  <tr className="hover:bg-blue-100 transition-colors">
+    <td className="px-4 py-3 text-sm text-gray-600">内容</td>
+  </tr>
+</tbody>
+```
+**要点**：
+- 行分隔：`divide-y divide-gray-300`
+- 悬停效果：`hover:bg-blue-100 transition-colors`
+- 单元格：`px-4 py-3 text-sm text-gray-600`
+
+### 5. 分页组件（统一标准）
+```html
+<div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+  {/* 左侧：每页条数选择 */}
+  <div className="flex items-center gap-2">
+    <span className="text-sm text-gray-500">每页</span>
+    <select className="h-8 px-2 border border-gray-200 rounded text-sm">
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={50}>50</option>
+    </select>
+    <span className="text-sm text-gray-500">条</span>
+  </div>
+
+  {/* 右侧：分页导航 */}
+  <div className="flex items-center gap-2">
+    <span className="text-sm text-gray-500">共 {total} 条</span>
+    <button
+      onClick={() => setPage(Math.max(1, page - 1))}
+      disabled={page === 1}
+      className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+    >
+      <ChevronRight className="w-4 h-4 rotate-180" />
+    </button>
+    <span className="text-sm">{page} / {totalPages}</span>
+    <button
+      onClick={() => setPage(Math.min(totalPages, page + 1))}
+      disabled={page >= totalPages}
+      className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+    >
+      <ChevronRight className="w-4 h-4" />
+    </button>
+  </div>
+</div>
+```
+
+### 6. 统一分页格式要点
+- **左侧**：每页 + 下拉框（10/20/50条）+ "条" + 共X条
+- **右侧**：共X条 + < 按钮 + currentPage/totalPages + > 按钮
+- 按钮使用 `ChevronRight` 图标（`<` 用 `rotate-180`）
+- 分页容器：`border-t border-gray-100`
+
+---
+
 ## 最近更新
+
+### 2026-04-09 - 基地总览页面表格样式统一
+**文件**: `src/pages/Dashboard.tsx`
+
+**修复内容**:
+1. 崇明岛基地概况 - 温室大棚表格：表头从灰色改为渐变蓝背景
+2. 崇明岛基地概况 - 大田表格：同上
+3. 活跃种植批次表格：表头padding和边框样式补全
 
 ### 2026-04-07 - Git revert操作事故教训
 **事故**：用户要求删除导致页面错乱的Git历史记录，我执行了 `git revert e70980d` 导致系统崩溃。
