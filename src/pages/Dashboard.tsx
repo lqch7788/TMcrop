@@ -31,7 +31,7 @@ function StatCard({ icon: Icon, label, value, trend, trendUp, color, small }: {
   small?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${small ? 'p-3' : 'p-6'}`}>
+    <div className={`bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow ${small ? 'p-3' : 'p-6'}`}>
       <div className="flex items-center justify-between">
         <div className={`rounded-lg ${color} ${small ? 'p-2' : 'p-3'}`}>
           <Icon className={`text-white ${small ? 'w-4 h-4' : 'w-6 h-6'}`} />
@@ -53,7 +53,7 @@ function StatCard({ icon: Icon, label, value, trend, trendUp, color, small }: {
 
 function EquipmentStatusCard() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-cyan-500 to-teal-600">
@@ -86,7 +86,7 @@ function EquipmentStatusCard() {
 
 function InventoryAlertCard() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-orange-500 to-red-600">
@@ -108,7 +108,7 @@ function InventoryAlertCard() {
 
 function ProductionProgressCard() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-violet-500 to-purple-600">
@@ -143,7 +143,7 @@ function EnergyCard() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-yellow-500 to-orange-600">
@@ -172,7 +172,7 @@ function EnergyCard() {
 
 function TodayTasksCard() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-blue-500 to-indigo-600">
@@ -218,7 +218,7 @@ function TodayTasksCard() {
 
 function AlertsCard() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-red-500 to-rose-600">
@@ -278,12 +278,12 @@ function WeatherWidget() {
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-none border border-gray-100 overflow-hidden">
       {/* Tab 选择 */}
       <div className="flex border-b border-gray-100">
         <button
           onClick={() => setWeatherTab('forecast')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 text-sm font-bold transition-colors ${
             weatherTab === 'forecast'
               ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -293,7 +293,7 @@ function WeatherWidget() {
         </button>
         <button
           onClick={() => setWeatherTab('station')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 text-sm font-bold transition-colors ${
             weatherTab === 'station'
               ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -305,53 +305,46 @@ function WeatherWidget() {
 
       {/* 天气预报内容 */}
       {weatherTab === 'forecast' && (
-        <div className="bg-[#F2F6FA] p-4 text-gray-900">
+        <div className="bg-[#F2F6FA] p-3 text-gray-900">
           {/* 当天天气 */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-3xl font-bold text-gray-900">18°</p>
-              <p className="text-gray-600 mt-1">晴转多云</p>
-              <p className="text-sm text-gray-500 mt-2">上海市崇明区 · 3月18日</p>
+              <p className="text-2xl font-bold text-gray-900">18°</p>
+              <p className="text-sm text-gray-600">晴转多云</p>
+              <p className="text-xs text-gray-500 mt-1">上海市崇明区 · 3月18日</p>
             </div>
-            <div className="flex items-start gap-2 -mt-4 -mr-2">
-              <div className="text-center">
-                <Sun className="w-12 h-12 text-yellow-500" />
-              </div>
+            <div className="flex items-start gap-2 -mt-2">
+              <Sun className="w-10 h-10 text-yellow-500" />
               <button className="p-1 hover:bg-gray-200 rounded">
-                <RefreshCw className="w-4 h-4 text-gray-600" />
+                <RefreshCw className="w-3 h-3 text-gray-600" />
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-5 gap-1 mt-4 pt-3 border-t border-gray-200">
+          <div className="grid grid-cols-5 gap-1 mt-3 pt-3 border-t border-gray-200">
             <div className="text-center">
               <p className="text-xs text-gray-500">今天</p>
-              <Sun className="w-6 h-6 mx-auto text-yellow-500 mt-1" />
+              <Sun className="w-5 h-5 mx-auto text-yellow-500 mt-1" />
               <p className="text-sm font-medium text-gray-900 mt-1">18°</p>
-              <p className="text-xs text-gray-500">晴</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-500">明天</p>
-              <CloudRain className="w-6 h-6 mx-auto text-blue-500 mt-1" />
+              <CloudRain className="w-5 h-5 mx-auto text-blue-500 mt-1" />
               <p className="text-sm font-medium text-gray-900 mt-1">15°</p>
-              <p className="text-xs text-gray-500">小雨</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-500">周四</p>
-              <CloudRain className="w-6 h-6 mx-auto text-gray-400 mt-1" />
+              <CloudRain className="w-5 h-5 mx-auto text-gray-400 mt-1" />
               <p className="text-sm font-medium text-gray-900 mt-1">12°</p>
-              <p className="text-xs text-gray-500">中雨</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-500">周五</p>
-              <Sun className="w-6 h-6 mx-auto text-yellow-500 mt-1" />
+              <Sun className="w-5 h-5 mx-auto text-yellow-500 mt-1" />
               <p className="text-sm font-medium text-gray-900 mt-1">16°</p>
-              <p className="text-xs text-gray-500">晴</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-500">周六</p>
-              <Sun className="w-6 h-6 mx-auto text-yellow-500 mt-1" />
+              <Sun className="w-5 h-5 mx-auto text-yellow-500 mt-1" />
               <p className="text-sm font-medium text-gray-900 mt-1">19°</p>
-              <p className="text-xs text-gray-500">晴</p>
             </div>
           </div>
         </div>
@@ -359,18 +352,18 @@ function WeatherWidget() {
 
       {/* 本地气象站内容 */}
       {weatherTab === 'station' && (
-        <div className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3">
+          <div className="grid grid-cols-2 gap-2">
             {stationParams.map((param) => (
-              <div key={param.id} className="bg-[#F2F6FA] rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-8 h-8 rounded-lg ${param.color} flex items-center justify-center`}>
-                    <param.icon className="w-4 h-4 text-white" />
+              <div key={param.id} className="bg-[#F2F6FA] rounded-lg p-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-6 h-6 rounded ${param.color} flex items-center justify-center`}>
+                    <param.icon className="w-3 h-3 text-white" />
                   </div>
-                  <span className="text-xs font-medium text-gray-600">{param.name}</span>
+                  <span className="text-xs text-gray-600">{param.name}</span>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-sm font-bold text-gray-900">
                     {param.value}<span className="text-xs font-normal text-gray-500 ml-1">{param.unit}</span>
                   </p>
                 </div>
@@ -405,7 +398,7 @@ function IoTSensorCard({ sensor }: { sensor: typeof iotSensors[0] }) {
   };
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-white rounded-lg text-gray-600">
           {getIcon()}
@@ -511,6 +504,7 @@ export default function Dashboard() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedGreenhouse, setSelectedGreenhouse] = useState<string | null>(null);
   const [greenhouseTableExpanded, setGreenhouseTableExpanded] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(true);
   const [fieldTableExpanded, setFieldTableExpanded] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<{type: string; data: any} | null>(null);
   const [enlargedImageIndex, setEnlargedImageIndex] = useState<number | null>(null);
@@ -606,7 +600,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
@@ -634,11 +628,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Charts */}
         <div className="lg:col-span-2 space-y-6">
-          {/* 天气预报 */}
-          <WeatherWidget />
 
           {/* 崇明岛基地概况 */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+          <div className="bg-white rounded-xl shadow-none overflow-hidden border border-gray-100">
             <div className="p-4 border-b border-gray-100">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <h3 className="text-base font-semibold text-gray-900">崇明岛基地概况</h3>
@@ -651,10 +643,150 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="p-4 space-y-6">
+              {/* 基地总览图 */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-base font-bold text-blue-600">基地总览图</p>
+                  <button
+                    onClick={() => setOverviewExpanded(!overviewExpanded)}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    <ChevronRight className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${overviewExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                </div>
+                {overviewExpanded && (
+                <div
+                  className="relative w-full h-[28rem] rounded-xl border-2 border-gray-600 overflow-hidden cursor-pointer group"
+                  onClick={() => setGreenhouseTableExpanded(true)}
+                >
+                  {/* 纯黑背景 */}
+                  <div className="absolute inset-0 bg-black" />
+
+                  {/* 平面科技风格基地总览图SVG */}
+                  <svg viewBox="0 0 400 280" className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#3b82f6"/>
+                        <stop offset="100%" stopColor="#1d4ed8"/>
+                      </linearGradient>
+                      <linearGradient id="filmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#14b8a6"/>
+                        <stop offset="100%" stopColor="#0f766e"/>
+                      </linearGradient>
+                      <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#f59e0b"/>
+                        <stop offset="100%" stopColor="#d97706"/>
+                      </linearGradient>
+                      <linearGradient id="fieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#22c55e"/>
+                        <stop offset="100%" stopColor="#16a34a"/>
+                      </linearGradient>
+                      <linearGradient id="roadGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#374151"/>
+                        <stop offset="50%" stopColor="#4b5563"/>
+                        <stop offset="100%" stopColor="#374151"/>
+                      </linearGradient>
+                      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="4" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                      </filter>
+                    </defs>
+
+                    {/* 道路 */}
+                    <g>
+                      <rect x="190" y="10" width="20" height="260" fill="url(#roadGrad)" rx="3"/>
+                      <line x1="200" y1="15" x2="200" y2="255" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10 6" opacity="0.7"/>
+                      <rect x="10" y="130" width="380" height="16" fill="url(#roadGrad)" rx="3"/>
+                      <line x1="15" y1="138" x2="385" y2="138" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10 6" opacity="0.7"/>
+                      <rect x="10" y="220" width="380" height="12" fill="url(#roadGrad)" rx="3"/>
+                      <line x1="15" y1="226" x2="385" y2="226" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10 6" opacity="0.7"/>
+                    </g>
+
+                    {/* 玻璃温室A区 */}
+                    <g>
+                      <rect x="20" y="20" width="160" height="100" fill="url(#glassGrad)" rx="6" filter="url(#glow)"/>
+                      <line x1="20" y1="65" x2="180" y2="65" stroke="#93c5fd" strokeWidth="1" opacity="0.4"/>
+                      <line x1="100" y1="20" x2="100" y2="120" stroke="#93c5fd" strokeWidth="1" opacity="0.4"/>
+                      <rect x="20" y="20" width="160" height="25" fill="#ffffff" opacity="0.15" rx="6"/>
+                      <rect x="20" y="20" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="6"/>
+                      <text x="100" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">玻璃温室A区</text>
+                      <text x="60" y="48" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
+                      <text x="140" y="48" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
+                      <text x="60" y="88" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">9-12号棚</text>
+                      <text x="140" y="88" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">13-16号棚</text>
+                    </g>
+
+                    {/* 连栋温室B区 */}
+                    <g>
+                      <rect x="220" y="20" width="160" height="100" fill="url(#filmGrad)" rx="6" filter="url(#glow)"/>
+                      <line x1="220" y1="65" x2="380" y2="65" stroke="#5eead4" strokeWidth="1" opacity="0.4"/>
+                      <line x1="300" y1="20" x2="300" y2="120" stroke="#5eead4" strokeWidth="1" opacity="0.4"/>
+                      <rect x="220" y="20" width="160" height="25" fill="#ffffff" opacity="0.15" rx="6"/>
+                      <rect x="220" y="20" width="160" height="6" fill="#2dd4bf" opacity="0.5" rx="6"/>
+                      <text x="300" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">连栋温室B区</text>
+                      <text x="260" y="48" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
+                      <text x="340" y="48" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
+                      <text x="260" y="88" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">9-12号棚</text>
+                      <text x="340" y="88" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">13-16号棚</text>
+                    </g>
+
+                    {/* 日光温室C区 */}
+                    <g>
+                      <rect x="220" y="150" width="160" height="60" fill="url(#sunGrad)" rx="6" filter="url(#glow)"/>
+                      <line x1="220" y1="180" x2="380" y2="180" stroke="#fde68a" strokeWidth="1" opacity="0.4"/>
+                      <line x1="300" y1="150" x2="300" y2="210" stroke="#fde68a" strokeWidth="1" opacity="0.4"/>
+                      <rect x="220" y="150" width="160" height="18" fill="#ffffff" opacity="0.15" rx="6"/>
+                      <rect x="220" y="150" width="160" height="5" fill="#fbbf24" opacity="0.5" rx="6"/>
+                      <text x="300" y="205" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">日光温室C区</text>
+                      <text x="260" y="168" fill="#fef3c7" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
+                      <text x="340" y="168" fill="#fef3c7" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
+                    </g>
+
+                    {/* 大田种植区 */}
+                    <g>
+                      <rect x="20" y="150" width="160" height="100" fill="url(#fieldGrad)" rx="6" filter="url(#glow)"/>
+                      <line x1="20" y1="170" x2="180" y2="170" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
+                      <line x1="20" y1="190" x2="180" y2="190" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
+                      <line x1="20" y1="210" x2="180" y2="210" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
+                      <line x1="73" y1="150" x2="73" y2="250" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
+                      <line x1="126" y1="150" x2="126" y2="250" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
+                      <rect x="20" y="150" width="160" height="22" fill="#ffffff" opacity="0.15" rx="6"/>
+                      <rect x="20" y="150" width="160" height="5" fill="#4ade80" opacity="0.5" rx="6"/>
+                      <text x="100" y="242" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">大田种植区</text>
+                      <text x="47" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">A区</text>
+                      <text x="100" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">B区</text>
+                      <text x="153" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">C区</text>
+                    </g>
+
+                    {/* 仓库 */}
+                    <rect x="240" y="235" width="40" height="25" fill="#6b7280" rx="3" opacity="0.8"/>
+                    <text x="260" y="252" fill="#ffffff" fontSize="9" fontFamily="Arial" fontWeight="bold" textAnchor="middle">仓库</text>
+
+                    {/* 中心点 */}
+                    <circle cx="200" cy="138" r="4" fill="#fbbf24" opacity="0.9"/>
+                    <circle cx="200" cy="138" r="2" fill="#ffffff"/>
+
+                    {/* 图例 */}
+                    <g transform="translate(200, 268)">
+                      <rect x="-160" y="-10" width="320" height="22" fill="#111111" fillOpacity="0.8" rx="4" stroke="#333333" strokeWidth="0.5"/>
+                      <rect x="-150" y="-5" width="12" height="12" fill="url(#glassGrad)" rx="2"/>
+                      <text x="-135" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">玻璃温室A区</text>
+                      <rect x="-55" y="-5" width="12" height="12" fill="url(#filmGrad)" rx="2"/>
+                      <text x="-40" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">连栋温室B区</text>
+                      <rect x="40" y="-5" width="12" height="12" fill="url(#sunGrad)" rx="2"/>
+                      <text x="55" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">日光温室C区</text>
+                      <rect x="115" y="-5" width="12" height="12" fill="url(#fieldGrad)" rx="2"/>
+                      <text x="130" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">大田种植区</text>
+                    </g>
+                  </svg>
+                </div>
+                )}
+              </div>
+
               {/* 温室大棚表格 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-base font-bold text-gray-900">温室大棚</p>
+                  <p className="text-base font-bold text-blue-600">温室大棚</p>
                   <button
                     onClick={() => setGreenhouseTableExpanded(!greenhouseTableExpanded)}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -665,30 +797,30 @@ export default function Dashboard() {
                 {greenhouseTableExpanded && (
                   <div className="max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                     <table className="w-full text-sm">
-                      <thead className="bg-[#F2F6FA] sticky top-0">
+                      <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0">
                         <tr>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">棚号</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">作物</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">面积(㎡)</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">温室类型</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">种植状态</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">种植时间</th>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700">详情</th>
+                          <th className="px-3 py-2 text-left font-semibold">棚号</th>
+                          <th className="px-3 py-2 text-left font-semibold">作物</th>
+                          <th className="px-3 py-2 text-left font-semibold">面积(㎡)</th>
+                          <th className="px-3 py-2 text-left font-semibold">温室类型</th>
+                          <th className="px-3 py-2 text-left font-semibold">种植状态</th>
+                          <th className="px-3 py-2 text-left font-semibold">种植时间</th>
+                          <th className="px-3 py-2 text-center font-semibold">详情</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-[#F2F6FA]">
-                        <tr><td className="px-2 py-2">1号棚</td><td className="px-2 py-2">番茄</td><td className="px-2 py-2">6500</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-01-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '1号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">2号棚</td><td className="px-2 py-2">番茄</td><td className="px-2 py-2">6500</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-01-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '2号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">3号棚</td><td className="px-2 py-2">番茄</td><td className="px-2 py-2">6500</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-01-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '3号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">4号棚</td><td className="px-2 py-2">黄瓜</td><td className="px-2 py-2">7000</td><td className="px-2 py-2">玻璃温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-02-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '4号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-01', expectedHarvest: '2024-05-15', manager: '李明轩'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">5号棚</td><td className="px-2 py-2">黄瓜</td><td className="px-2 py-2">7000</td><td className="px-2 py-2">玻璃温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-sm">育苗中</span></td><td className="px-2 py-2">2024-03-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '5号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '育苗中', plantedDate: '2024-03-01', expectedHarvest: '2024-06-01', manager: '李明轩'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">6号棚</td><td className="px-2 py-2">草莓</td><td className="px-2 py-2">6000</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2023-11-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '6号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">7号棚</td><td className="px-2 py-2">草莓</td><td className="px-2 py-2">6000</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2023-11-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '7号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">8号棚</td><td className="px-2 py-2">辣椒</td><td className="px-2 py-2">5500</td><td className="px-2 py-2">玻璃温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-02-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '8号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-15', expectedHarvest: '2024-06-30', manager: '赵俊杰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">9号棚</td><td className="px-2 py-2">辣椒</td><td className="px-2 py-2">5500</td><td className="px-2 py-2">玻璃温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-sm">待种植</span></td><td className="px-2 py-2">-</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '9号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '待种植', plantedDate: '-', expectedHarvest: '-', manager: '赵俊杰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">10号棚</td><td className="px-2 py-2">生菜</td><td className="px-2 py-2">5000</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-03-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '10号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">11号棚</td><td className="px-2 py-2">生菜</td><td className="px-2 py-2">5000</td><td className="px-2 py-2">薄膜温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-03-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '11号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">12号棚</td><td className="px-2 py-2">西瓜</td><td className="px-2 py-2">7000</td><td className="px-2 py-2">玻璃温室</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm">采收中</span></td><td className="px-2 py-2">2024-01-20</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '12号棚', crop: '西瓜', area: '7000', type: '玻璃温室', status: '采收中', plantedDate: '2024-01-20', expectedHarvest: '2024-03-18', manager: '孙晓峰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                      <tbody className="divide-y divide-gray-300">
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">1号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '1号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">2号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '2号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">3号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '3号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">4号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '4号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-01', expectedHarvest: '2024-05-15', manager: '李明轩'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">5号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-sm">育苗中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '5号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '育苗中', plantedDate: '2024-03-01', expectedHarvest: '2024-06-01', manager: '李明轩'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">6号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '6号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">7号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '7号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">8号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '8号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-15', expectedHarvest: '2024-06-30', manager: '赵俊杰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">9号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-sm">待种植</span></td><td className="px-3 py-2">-</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '9号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '待种植', plantedDate: '-', expectedHarvest: '-', manager: '赵俊杰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">10号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '10号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">11号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '11号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">12号棚</td><td className="px-3 py-2">西瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-01-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '12号棚', crop: '西瓜', area: '7000', type: '玻璃温室', status: '采收中', plantedDate: '2024-01-20', expectedHarvest: '2024-03-18', manager: '孙晓峰'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -698,7 +830,7 @@ export default function Dashboard() {
               {/* 大田表格 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-base font-bold text-gray-900">大田</p>
+                  <p className="text-base font-bold text-blue-600">大田</p>
                   <button
                     onClick={() => setFieldTableExpanded(!fieldTableExpanded)}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -709,26 +841,26 @@ export default function Dashboard() {
                 {fieldTableExpanded && (
                   <div className="max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                     <table className="w-full text-sm">
-                      <thead className="bg-[#F2F6FA] sticky top-0">
+                      <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0">
                         <tr>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">地块号</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">作物</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">面积(亩)</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">田地类型</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">种植状态</th>
-                          <th className="px-2 py-2 text-left font-semibold text-gray-700">种植时间</th>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700">详情</th>
+                          <th className="px-3 py-2 text-left font-semibold">地块号</th>
+                          <th className="px-3 py-2 text-left font-semibold">作物</th>
+                          <th className="px-3 py-2 text-left font-semibold">面积(亩)</th>
+                          <th className="px-3 py-2 text-left font-semibold">田地类型</th>
+                          <th className="px-3 py-2 text-left font-semibold">种植状态</th>
+                          <th className="px-3 py-2 text-left font-semibold">种植时间</th>
+                          <th className="px-3 py-2 text-center font-semibold">详情</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-[#F2F6FA]">
-                        <tr><td className="px-2 py-2">A1地块</td><td className="px-2 py-2">水稻</td><td className="px-2 py-2">100</td><td className="px-2 py-2">水田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-03-05</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A1地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">A2地块</td><td className="px-2 py-2">水稻</td><td className="px-2 py-2">100</td><td className="px-2 py-2">水田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-03-05</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A2地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">A3地块</td><td className="px-2 py-2">水稻</td><td className="px-2 py-2">100</td><td className="px-2 py-2">水田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2024-03-05</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A3地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">B1地块</td><td className="px-2 py-2">小麦</td><td className="px-2 py-2">100</td><td className="px-2 py-2">旱田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2023-11-20</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B1地块', crop: '小麦', area: '100', fieldType: '旱田', status: '生长中', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">B2地块</td><td className="px-2 py-2">小麦</td><td className="px-2 py-2">100</td><td className="px-2 py-2">旱田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-sm">返青期</span></td><td className="px-2 py-2">2023-11-20</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B2地块', crop: '小麦', area: '100', fieldType: '旱田', status: '返青期', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">C1地块</td><td className="px-2 py-2">油菜</td><td className="px-2 py-2">80</td><td className="px-2 py-2">旱田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2023-10-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C1地块', crop: '油菜', area: '80', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">C2地块</td><td className="px-2 py-2">油菜</td><td className="px-2 py-2">70</td><td className="px-2 py-2">旱田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-2 py-2">2023-10-15</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C2地块', crop: '油菜', area: '70', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
-                        <tr><td className="px-2 py-2">D1地块</td><td className="px-2 py-2">蔬菜</td><td className="px-2 py-2">50</td><td className="px-2 py-2">旱田</td><td className="px-2 py-2"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm">采收中</span></td><td className="px-2 py-2">2024-02-01</td><td className="px-2 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'D1地块', crop: '蔬菜', area: '50', fieldType: '旱田', status: '采收中', plantedDate: '2024-02-01', expectedHarvest: '2024-03-18', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                      <tbody className="divide-y divide-gray-300">
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">A1地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A1地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">A2地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A2地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">A3地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A3地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">B1地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B1地块', crop: '小麦', area: '100', fieldType: '旱田', status: '生长中', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">B2地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-sm">返青期</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B2地块', crop: '小麦', area: '100', fieldType: '旱田', status: '返青期', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">C1地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">80</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C1地块', crop: '油菜', area: '80', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">C2地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">70</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C2地块', crop: '油菜', area: '70', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
+                        <tr className="hover:bg-blue-100 transition-colors"><td className="px-3 py-2">D1地块</td><td className="px-3 py-2">蔬菜</td><td className="px-3 py-2">50</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'D1地块', crop: '蔬菜', area: '50', fieldType: '旱田', status: '采收中', plantedDate: '2024-02-01', expectedHarvest: '2024-03-18', manager: '郑十'}})}><Eye className="w-4 h-4 text-emerald-600" /></button></td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -737,10 +869,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 温室内环境参数表 */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+          {/* 种植区环境参数表 */}
+          <div className="bg-white rounded-xl shadow-none overflow-hidden border border-gray-100">
             <div className="p-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-900">温室内环境参数表</h3>
+              <h3 className="text-base font-semibold text-gray-900">种植区环境参数表</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -750,14 +882,14 @@ export default function Dashboard() {
                     <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap" colSpan={4}>空气环境参数</th>
                     <th className="px-1 py-3"></th>
                     <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap" colSpan={4}>土壤环境参数</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">详情</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                   <tr className="bg-gray-50">
                     <th className="px-2 py-2">
                       <select
                         value={selectedRegion}
                         onChange={(e) => { setSelectedRegion(e.target.value); setGreenhousePage(1); }}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-black bg-white"
                       >
                         <option value="">全部区域</option>
                         {greenhouseList.map(gh => (
@@ -829,7 +961,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => handleDetailClick(gh.id)} className="text-emerald-600 hover:text-emerald-700 font-medium text-sm">
-                          详情
+                          详情&gt;&gt;
                         </button>
                       </td>
                     </tr>
@@ -866,7 +998,7 @@ export default function Dashboard() {
           </div>
 
           {/* Today's Tasks Table */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-gray-900">今日任务</h3>
               <Link to="/tasks" className="text-sm text-emerald-600 hover:text-emerald-700">
@@ -948,7 +1080,7 @@ export default function Dashboard() {
           </div>
 
           {/* Active Batches */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-gray-900">活跃种植批次</h3>
               <Link to="/production" className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
@@ -958,13 +1090,13 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <tr className="text-left text-sm font-semibold whitespace-nowrap">
-                    <th className="pb-3">批次号</th>
-                    <th className="pb-3">作物</th>
-                    <th className="pb-3">区域</th>
-                    <th className="pb-3">生长阶段</th>
-                    <th className="pb-3">进度</th>
-                    <th className="pb-3">状态</th>
+                  <tr className="border-b border-blue-600">
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">批次号</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">作物</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">区域</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">生长阶段</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">进度</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">状态</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-300">
@@ -1009,8 +1141,11 @@ export default function Dashboard() {
 
         {/* Right Column - Widgets */}
         <div className="lg:col-span-1 space-y-6">
+          {/* 气象信息 */}
+          <WeatherWidget />
+
           {/* Yield Chart */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
             <h3 className="text-base font-semibold text-gray-900 mb-4">月度产量统计</h3>
             <div className="flex gap-4 mb-4">
               <select
@@ -1061,7 +1196,7 @@ export default function Dashboard() {
           </div>
 
           {/* Cost Analysis */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
             <h3 className="text-base font-semibold text-gray-900 mb-4">成本构成分析</h3>
             <div className="flex gap-4 mb-4">
               <select
@@ -1146,7 +1281,7 @@ export default function Dashboard() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         title={selectedGreenhouse ? `${greenhouseEnvData.find(g => g.id === selectedGreenhouse)?.name} - 温室内环境参数` : '温室内环境参数'}
-        size="lg"
+        size="xl"
       >
         {selectedGreenhouse && (
           <div className="space-y-6">
@@ -1158,50 +1293,102 @@ export default function Dashboard() {
             {/* 空气环境参数 */}
             <div>
               <h4 className="text-base font-semibold text-gray-900 mb-3">空气环境参数</h4>
-              <div className="grid grid-cols-2 gap-4">
-                {['air_temp', 'air_humidity', 'light', 'co2'].map(type => {
-                  const sensor = getDetailSensorData(selectedGreenhouse).find(s => s.type === type);
-                  return (
-                    <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-600">
-                        {type === 'air_temp' ? '温度' :
-                         type === 'air_humidity' ? '湿度' :
-                         type === 'light' ? '光照度' : 'CO2含量'}
-                      </span>
-                      <span className={`text-sm font-medium ${
-                        sensor?.status === 'normal' ? 'text-gray-900' :
-                        sensor?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {sensor?.value ?? '-'}{sensor?.unit ? ` ${sensor.unit}` : ''}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-4 gap-3">
+                {/* 温度 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-none">
+                    <Thermometer className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">温度</div>
+                    <div className="text-lg font-bold text-emerald-600">24.8℃</div>
+                    <div className="text-xs text-gray-400">（10-30℃）</div>
+                  </div>
+                </div>
+                {/* 湿度 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-none">
+                    <Droplets className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">湿度</div>
+                    <div className="text-lg font-bold text-emerald-600">56%</div>
+                    <div className="text-xs text-gray-400">（40-90%）</div>
+                  </div>
+                </div>
+                {/* 光照度 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-none">
+                    <Sun className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">光照度</div>
+                    <div className="text-lg font-bold text-emerald-600">25954Lux</div>
+                    <div className="text-xs text-gray-400">（10000-30000Lux）</div>
+                  </div>
+                </div>
+                {/* CO2含量 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center shadow-none">
+                    <Wind className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">CO₂</div>
+                    <div className="text-lg font-bold text-emerald-600">479ppm</div>
+                    <div className="text-xs text-gray-400">（300-900ppm）</div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* 土壤环境参数 */}
             <div>
               <h4 className="text-base font-semibold text-gray-900 mb-3">土壤环境参数</h4>
-              <div className="grid grid-cols-2 gap-4">
-                {['soil_temp', 'soil_moisture', 'soil_ec', 'soil_ph'].map(type => {
-                  const sensor = getDetailSensorData(selectedGreenhouse).find(s => s.type === type);
-                  return (
-                    <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-600">
-                        {type === 'soil_temp' ? '土壤温度' :
-                         type === 'soil_moisture' ? '土壤湿度' :
-                         type === 'soil_ec' ? '土壤EC值' : '土壤PH值'}
-                      </span>
-                      <span className={`text-sm font-medium ${
-                        sensor?.status === 'normal' ? 'text-gray-900' :
-                        sensor?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {sensor?.value ?? '-'}{sensor?.unit ? ` ${sensor.unit}` : ''}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-4 gap-3">
+                {/* 温度 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-none">
+                    <Thermometer className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">温度</div>
+                    <div className="text-lg font-bold text-emerald-600">21.6℃</div>
+                    <div className="text-xs text-gray-400">（18-30℃）</div>
+                  </div>
+                </div>
+                {/* 湿度 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-none">
+                    <Droplets className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">湿度</div>
+                    <div className="text-lg font-bold text-emerald-600">35%</div>
+                    <div className="text-xs text-gray-400">（20-60%）</div>
+                  </div>
+                </div>
+                {/* EC值 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-none">
+                    <Activity className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">EC值</div>
+                    <div className="text-lg font-bold text-emerald-600">2.5</div>
+                    <div className="text-xs text-gray-400">（0.2-1）</div>
+                  </div>
+                </div>
+                {/* PH值 */}
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-indigo-400 to-indigo-500 flex items-center justify-center shadow-none">
+                    <Gauge className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">PH值</div>
+                    <div className="text-lg font-bold text-emerald-600">6.5</div>
+                    <div className="text-xs text-gray-400">（5.5-7.5）</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1209,41 +1396,57 @@ export default function Dashboard() {
             <div>
               <h4 className="text-base font-semibold text-gray-900 mb-3">区域内作物</h4>
               {getCropInfo(selectedGreenhouse) ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                     <span className="text-sm text-gray-600">作物名称</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.cropName}</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.cropName}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">种植区域</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.greenhouseName}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">批次</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.batchCode}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                     <span className="text-sm text-gray-600">品种</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.variety}</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.variety}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">生育期</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.stageName}</span>
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                    <span className="text-sm text-gray-600">种植区域</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.greenhouseName}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                     <span className="text-sm text-gray-600">种植面积</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.plantingArea} ㎡</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.plantingArea} ㎡</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg col-span-2">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                    <span className="text-sm text-gray-600">种植时间</span>
+                    <span className="text-sm font-medium text-blue-600">2026-03-15</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                    <span className="text-sm text-gray-600">生长周期</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.stageName}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                    <span className="text-sm text-gray-600">批次</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.batchCode}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                     <span className="text-sm text-gray-600">负责人</span>
-                    <span className="text-sm font-medium text-gray-900">{getCropInfo(selectedGreenhouse)?.responsiblePerson}</span>
+                    <span className="text-sm font-medium text-blue-600">{getCropInfo(selectedGreenhouse)?.responsiblePerson}</span>
                   </div>
                 </div>
               ) : (
-                <div className="p-4 bg-gray-50 rounded-lg text-center text-sm text-gray-500">
+                <div className="p-4 bg-gray-100 rounded-lg text-center text-sm text-gray-500">
                   该区域暂无进行中的作物
                 </div>
               )}
+            </div>
+
+            {/* 作物全景图 */}
+            <div className="mt-6">
+              <h4 className="text-base font-semibold text-gray-900 mb-3">作物全景图</h4>
+              <div className="grid grid-cols-5 gap-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="aspect-video bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center">
+                    <span className="text-sm text-gray-400">图片{i}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1254,7 +1457,7 @@ export default function Dashboard() {
         isOpen={!!selectedDetail}
         onClose={() => setSelectedDetail(null)}
         title={selectedDetail?.type === 'greenhouse' ? `${selectedDetail?.data.no}详情` : `${selectedDetail?.data.no}详情`}
-        size="lg"
+        size="xl"
         headerAction={
           <button
             onClick={() => navigate('/')}
@@ -1263,76 +1466,145 @@ export default function Dashboard() {
             进入&gt;&gt;
           </button>
         }
+        showFooter={false}
       >
         {selectedDetail && (
           <div className="p-6">
             {/* 基本信息 */}
             <div className="mb-6">
               <h4 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">基本信息</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
+              <div className="grid grid-cols-4 gap-3">
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                   <span className="text-sm text-gray-600">种植状态</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.data.status}</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.status}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                   <span className="text-sm text-gray-600">作物名称</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.data.crop}</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.crop}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">种植面积</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.type === 'greenhouse' ? `${selectedDetail.data.area}㎡` : `${selectedDetail.data.area}亩`}</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">品种</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.variety || '红富士樱桃番茄'}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">种植日期</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.data.plantedDate}</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">种植区域</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.no}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">预计采收</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.data.expectedHarvest}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">负责人</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedDetail.data.manager}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 生长参数 */}
-            <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">生长参数</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                   <span className="text-sm text-gray-600">当前阶段</span>
-                  <span className="text-sm font-medium text-gray-900">开花结果期</span>
+                  <span className="text-sm font-medium text-blue-600">开花结果期</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                   <span className="text-sm text-gray-600">株龄</span>
-                  <span className="text-sm font-medium text-gray-900">78天</span>
+                  <span className="text-sm font-medium text-blue-600">78天</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">土壤湿度</span>
-                  <span className="text-sm font-medium text-gray-900">45%</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">种植面积</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.type === 'greenhouse' ? `${selectedDetail.data.area}㎡` : `${selectedDetail.data.area}亩`}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">土壤温度</span>
-                  <span className="text-sm font-medium text-gray-900">22°C</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">种植日期</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.plantedDate}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">光照强度</span>
-                  <span className="text-sm font-medium text-gray-900">45000Lux</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">预计采收</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.expectedHarvest}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                  <span className="text-sm text-gray-600">空气温度</span>
-                  <span className="text-sm font-medium text-gray-900">28°C</span>
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                  <span className="text-sm text-gray-600">负责人</span>
+                  <span className="text-sm font-medium text-blue-600">{selectedDetail.data.manager}</span>
                 </div>
               </div>
             </div>
 
-            {/* 空气湿度单独一行 */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="flex items-center justify-between p-3 bg-[#F2F6FA] rounded-lg">
-                <span className="text-sm text-gray-600">空气湿度</span>
-                <span className="text-sm font-medium text-gray-900">65%</span>
+            {/* 环境参数 */}
+            <div>
+              <h4 className="text-base font-semibold text-gray-900 mb-3">空气环境参数</h4>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-none">
+                    <Thermometer className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">温度</div>
+                    <div className="text-lg font-bold text-emerald-600">24.8℃</div>
+                    <div className="text-xs text-gray-400">（10-30℃）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-none">
+                    <Droplets className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">湿度</div>
+                    <div className="text-lg font-bold text-emerald-600">56%</div>
+                    <div className="text-xs text-gray-400">（40-90%）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-none">
+                    <Sun className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">光照度</div>
+                    <div className="text-lg font-bold text-emerald-600">25954Lux</div>
+                    <div className="text-xs text-gray-400">（10000-30000Lux）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center shadow-none">
+                    <Wind className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">CO₂</div>
+                    <div className="text-lg font-bold text-emerald-600">479ppm</div>
+                    <div className="text-xs text-gray-400">（300-900ppm）</div>
+                  </div>
+                </div>
+              </div>
+
+              <h4 className="text-base font-semibold text-gray-900 mb-3">土壤环境参数</h4>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-none">
+                    <Thermometer className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">温度</div>
+                    <div className="text-lg font-bold text-emerald-600">21.6℃</div>
+                    <div className="text-xs text-gray-400">（18-30℃）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-none">
+                    <Droplets className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">湿度</div>
+                    <div className="text-lg font-bold text-emerald-600">35%</div>
+                    <div className="text-xs text-gray-400">（20-60%）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-none">
+                    <Activity className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">EC值</div>
+                    <div className="text-lg font-bold text-emerald-600">2.5</div>
+                    <div className="text-xs text-gray-400">（0.2-1）</div>
+                  </div>
+                </div>
+                <div className="relative p-2 bg-gray-100 rounded-lg">
+                  <div className="absolute top-2 left-2 w-8 h-8 rounded bg-gradient-to-br from-indigo-400 to-indigo-500 flex items-center justify-center shadow-none">
+                    <Gauge className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="pl-10 text-center">
+                    <div className="text-sm font-medium text-gray-900">PH值</div>
+                    <div className="text-lg font-bold text-emerald-600">6.8</div>
+                    <div className="text-xs text-gray-400">（5.5-7.5）</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1355,16 +1627,6 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* 确定按钮 */}
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setSelectedDetail(null)}
-                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
-              >
-                确定
-              </button>
             </div>
           </div>
         )}

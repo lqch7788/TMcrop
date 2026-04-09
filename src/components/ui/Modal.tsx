@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { X, Maximize2, Minimize2 } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,6 +14,20 @@ interface ModalProps {
   headerAction?: React.ReactNode;
 }
 
+const sizeClasses = {
+  sm: 'max-w-md',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-4xl'
+};
+
+const sizeDefaults = {
+  sm: { width: 400, height: 300 },
+  md: { width: 500, height: 400 },
+  lg: { width: 700, height: 500 },
+  xl: { width: 900, height: 600 }
+};
+
 export function Modal({
   isOpen,
   onClose,
@@ -27,15 +41,107 @@ export function Modal({
   headerAction
 }: ModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  if (!isOpen) return null;
+  // Resize state
+  const [modalSize, setModalSize] = useState(sizeDefaults[size]);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState('');
+  const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
+  const [initialMouse, setInitialMouse] = useState({ x: 0, y: 0 });
+  const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
 
-  const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl'
-  };
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Initialize position when modal opens
+  useEffect(() => {
+    if (isOpen && !isMaximized) {
+      setModalSize(sizeDefaults[size]);
+      // Center the modal
+      const centerX = (window.innerWidth - sizeDefaults[size].width) / 2;
+      const centerY = (window.innerHeight - sizeDefaults[size].height) / 2;
+      setPosition({ x: centerX, y: centerY });
+    }
+  }, [isOpen, size, isMaximized]);
+
+  // Handle dragging
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only allow dragging from header
+    if ((e.target as HTMLElement).closest('.modal-header')) {
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  }, [position]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y
+        });
+      }
+      if (isResizing) {
+        const deltaX = e.clientX - initialMouse.x;
+        const deltaY = e.clientY - initialMouse.y;
+
+        let newWidth = initialSize.width;
+        let newHeight = initialSize.height;
+        let newX = initialPosition.x;
+        let newY = initialPosition.y;
+
+        if (resizeDirection.includes('e')) {
+          newWidth = Math.max(300, initialSize.width + deltaX);
+        }
+        if (resizeDirection.includes('s')) {
+          newHeight = Math.max(200, initialSize.height + deltaY);
+        }
+        if (resizeDirection.includes('w')) {
+          newWidth = Math.max(300, initialSize.width - deltaX);
+          newX = initialPosition.x + (initialSize.width - newWidth);
+        }
+        if (resizeDirection.includes('n')) {
+          newHeight = Math.max(200, initialSize.height - deltaY);
+          newY = initialPosition.y + (initialSize.height - newHeight);
+        }
+
+        setModalSize({ width: newWidth, height: newHeight });
+        setPosition({ x: newX, y: newY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeDirection('');
+    };
+
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragOffset, initialSize, initialMouse, initialPosition, resizeDirection]);
+
+  // Resize handle mouse down
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, direction: string) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeDirection(direction);
+    setInitialSize(modalSize);
+    setInitialMouse({ x: e.clientX, y: e.clientY });
+    setInitialPosition(position);
+  }, [modalSize, position]);
 
   const handleSubmit = async () => {
     if (onSubmit) {
@@ -45,29 +151,107 @@ export function Modal({
     }
   };
 
+  const handleMaximize = () => {
+    if (isMaximized) {
+      setIsMaximized(false);
+      setModalSize(sizeDefaults[size]);
+      setPosition({ x: (window.innerWidth - sizeDefaults[size].width) / 2, y: (window.innerHeight - sizeDefaults[size].height) / 2 });
+    } else {
+      setIsMaximized(true);
+      setPosition({ x: 0, y: 0 });
+      setModalSize({ width: window.innerWidth - 32, height: window.innerHeight - 32 });
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal Container */}
-      <div className={`relative bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}>
+      {/* Modal Container - Draggable & Resizable */}
+      <div
+        ref={modalRef}
+        className={`absolute bg-white rounded-xl shadow-xl flex flex-col ${isDragging || isResizing ? '' : 'transition-all duration-200'}`}
+        style={{
+          left: position.x,
+          top: position.y,
+          width: isMaximized ? 'calc(100vw - 32px)' : modalSize.width,
+          height: isMaximized ? 'calc(100vh - 32px)' : modalSize.height,
+          maxHeight: '90vh'
+        }}
+        onMouseDown={handleMouseDown}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <div className="flex items-center gap-3">
+        <div className="modal-header flex items-center justify-between px-6 py-3 bg-emerald-600 flex-shrink-0 rounded-t-xl cursor-move select-none">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <div className="flex items-center gap-2">
             {headerAction}
+            {/* Maximize/Restore Button */}
+            <button
+              onClick={handleMaximize}
+              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
+              title={isMaximized ? '还原' : '最大化'}
+            >
+              {isMaximized ? (
+                <Minimize2 className="w-4 h-4 text-white" />
+              ) : (
+                <Maximize2 className="w-4 h-4 text-white" />
+              )}
+            </button>
+            {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-white" />
             </button>
           </div>
         </div>
+
+        {/* Resize Handles */}
+        {!isMaximized && (
+          <>
+            {/* Corner handles */}
+            <div
+              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'nw')}
+            />
+            <div
+              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'ne')}
+            />
+            <div
+              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'sw')}
+            />
+            <div
+              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'se')}
+            />
+            {/* Edge handles */}
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-2 cursor-n-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'n')}
+            />
+            <div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-2 cursor-s-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 's')}
+            />
+            <div
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-8 cursor-w-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'w')}
+            />
+            <div
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-8 cursor-e-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, 'e')}
+            />
+          </>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -76,7 +260,7 @@ export function Modal({
 
         {/* Footer */}
         {showFooter && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
