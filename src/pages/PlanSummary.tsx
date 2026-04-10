@@ -1,5 +1,6 @@
 /**
  * 生产计划汇总表页面
+ * 使用 useBatchSummary Hook 获取动态数据
  */
 
 import { useState } from 'react';
@@ -10,171 +11,151 @@ import {
   Filters,
   SummaryTable,
   ExportModal,
-  StatCardConfig,
-  TableColumn,
   useExport,
 } from '../components/summary';
-
-interface Plan {
-  id: number;
-  code: string;
-  crop: string;
-  variety: string;
-  greenhouse: string;
-  area: number;
-  targetYield: number;
-  actualYield: number;
-  completionRate: string;
-  status: string;
-  statusClass: 'normal' | 'pending' | 'draft';
-}
-
-const planSummary: Plan[] = [
-  { id: 1, code: 'P202401', crop: '番茄', variety: '红果番茄', greenhouse: '1号棚', area: 5, targetYield: 50, actualYield: 48, completionRate: '96%', status: '已完成', statusClass: 'normal' },
-  { id: 2, code: 'P202402', crop: '黄瓜', variety: '水果黄瓜', greenhouse: '2号棚', area: 3, targetYield: 30, actualYield: 28, completionRate: '93%', status: '已完成', statusClass: 'normal' },
-  { id: 3, code: 'P202403', crop: '草莓', variety: '红颜', greenhouse: '3号棚', area: 2, targetYield: 5, actualYield: 4.5, completionRate: '90%', status: '进行中', statusClass: 'pending' },
-  { id: 4, code: 'P202404', crop: '辣椒', variety: '线椒', greenhouse: '4号棚', area: 4, targetYield: 20, actualYield: 0, completionRate: '0%', status: '待开始', statusClass: 'draft' },
-  { id: 5, code: 'P202405', crop: '番茄', variety: '樱桃番茄', greenhouse: '5号棚', area: 2, targetYield: 15, actualYield: 0, completionRate: '0%', status: '待开始', statusClass: 'draft' },
-];
+import { useBatchSummary, useBatchFilterOptions } from '../hooks';
+import type { BatchSummaryRow } from '../types/views';
 
 export default function PlanSummary() {
-  const [crop, setCrop] = useState('全部');
-  const [status, setStatus] = useState('全部');
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
-  const totalPages = Math.ceil(planSummary.length / pageSize);
+  // 筛选状态
+  const [cropFilter, setCropFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [greenhouseFilter, setGreenhouseFilter] = useState('');
 
-  const exportHook = useExport({
-    data: planSummary.map((p) => ({
-      计划编号: p.code,
-      作物: p.crop,
-      品种: p.variety,
-      温室: p.greenhouse,
-      '面积(亩)': p.area,
-      目标产量: p.targetYield,
-      实际产量: p.actualYield,
-      完成率: p.completionRate,
-      状态: p.status,
-    })),
-    headers: ['计划编号', '作物', '品种', '温室', '面积(亩)', '目标产量', '实际产量', '完成率', '状态'],
-    filenamePrefix: '计划汇总',
+  // 获取筛选选项
+  const { cropNames, statuses, greenhouses } = useBatchFilterOptions();
+
+  // 获取批次汇总数据
+  const { summaries, statCards, loading } = useBatchSummary({
+    cropName: cropFilter || undefined,
+    status: statusFilter || undefined,
+    greenhouse: greenhouseFilter || undefined,
   });
 
-  // 统计卡片配置
-  const statCards: StatCardConfig[] = [
-    {
-      label: '计划总数',
-      value: planSummary.length,
-      icon: <FileText className="w-5 h-5 text-blue-600" />,
-      iconBgColor: 'bg-blue-50',
-    },
-    {
-      label: '已完成',
-      value: planSummary.filter((p) => p.status === '已完成').length,
-      icon: <span className="text-green-600 text-lg">✓</span>,
-      iconBgColor: 'bg-green-50',
-    },
-    {
-      label: '进行中',
-      value: planSummary.filter((p) => p.status === '进行中').length,
-      icon: <span className="text-amber-600 text-lg">⟳</span>,
-      iconBgColor: 'bg-amber-50',
-    },
-    {
-      label: '待开始',
-      value: planSummary.filter((p) => p.status === '待开始').length,
-      icon: <span className="text-gray-600 text-lg">○</span>,
-      iconBgColor: 'bg-gray-50',
-    },
-  ];
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(summaries.length / pageSize);
+  const paginatedData = summaries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // 表格列配置
-  const columns: TableColumn<Plan>[] = [
-    { key: 'code', label: '计划编号' },
-    { key: 'crop', label: '作物' },
-    { key: 'variety', label: '品种' },
-    { key: 'greenhouse', label: '温室' },
-    { key: 'area', label: '种植面积(亩)' },
-    { key: 'targetYield', label: '目标产量(吨)' },
-    { key: 'actualYield', label: '实际产量(吨)' },
+  // 导出 Hook
+  const exportHook = useExport({
+    data: summaries.map((s) => ({
+      批次编号: s.batchCode,
+      作物: s.cropName,
+      品种: s.variety,
+      温室: s.greenhouse,
+      '面积(亩)': s.plantingArea,
+      目标产量: s.targetYield,
+      实际产量: s.actualYield,
+      完成率: s.completionRate,
+      状态: getStatusLabel(s.status),
+    })),
+    headers: ['批次编号', '作物', '品种', '温室', '面积(亩)', '目标产量', '实际产量', '完成率', '状态'],
+    filenamePrefix: '生产计划汇总',
+  });
+
+  // 筛选配置
+  const filterSelects = [
     {
-      key: 'completionRate',
-      label: '完成率',
-      render: (value) => {
-        const rate = value as string;
-        return (
-          <span
-            className={`font-medium ${
-              rate === '100%' || parseInt(rate) >= 90
-                ? 'text-green-600'
-                : parseInt(rate) >= 50
-                ? 'text-amber-600'
-                : 'text-gray-600'
-            }`}
-          >
-            {rate}
-          </span>
-        );
+      key: 'crop',
+      label: '作物',
+      options: cropNames,
+      value: cropFilter,
+      onChange: (value: string) => {
+        setCropFilter(value);
+        setCurrentPage(1);
       },
     },
     {
       key: 'status',
       label: '状态',
-      render: (value, record) => {
-        const statusClass = (record as Plan).statusClass;
+      options: statuses,
+      value: statusFilter,
+      onChange: (value: string) => {
+        setStatusFilter(value);
+        setCurrentPage(1);
+      },
+    },
+    {
+      key: 'greenhouse',
+      label: '温室',
+      options: greenhouses,
+      value: greenhouseFilter,
+      onChange: (value: string) => {
+        setGreenhouseFilter(value);
+        setCurrentPage(1);
+      },
+    },
+  ];
+
+  // 表格列配置
+  const columns = [
+    { key: 'batchCode', label: '计划编号', width: '120px' },
+    { key: 'cropName', label: '作物', width: '100px' },
+    { key: 'variety', label: '品种', width: '120px' },
+    { key: 'greenhouse', label: '温室', width: '100px' },
+    { key: 'plantingArea', label: '面积(亩)', width: '80px' },
+    { key: 'targetYield', label: '目标产量', width: '100px' },
+    { key: 'actualYield', label: '实际产量', width: '100px' },
+    {
+      key: 'completionRate',
+      label: '完成率',
+      width: '140px',
+      render: (value: string) => (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px]">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all"
+              style={{ width: value }}
+            />
+          </div>
+          <span className="text-sm text-gray-600">{value}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      label: '状态',
+      width: '100px',
+      render: (value: string) => {
+        const config = getStatusConfig(value);
         return (
-          <span
-            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-              statusClass === 'normal'
-                ? 'bg-green-100 text-green-700'
-                : statusClass === 'pending'
-                ? 'bg-amber-100 text-amber-700'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {value as string}
+          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+            {config.label}
           </span>
         );
       },
     },
   ];
 
+  // 加载状态
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-gray-500">加载中...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* 页面标题 */}
       <PageHeader
         icon={<FileText className="w-6 h-6 text-white" />}
-        title="生产计划汇总表"
-        description="所有生产计划执行情况汇总"
+        title="生产计划汇总"
+        description="查看所有生产批次的进度、产量和成本汇总"
       />
 
+      {/* 统计卡片 - 使用 Hook 返回的动态数据 */}
       <StatCards cards={statCards} />
 
+      {/* 筛选工具栏 */}
       <Filters
-        filters={{
-          selects: [
-            {
-              key: 'crop',
-              label: '作物',
-              options: [
-                { value: '全部', label: '全部' },
-                { value: '番茄', label: '番茄' },
-                { value: '黄瓜', label: '黄瓜' },
-                { value: '草莓', label: '草莓' },
-                { value: '辣椒', label: '辣椒' },
-              ],
-            },
-            {
-              key: 'status',
-              label: '状态',
-              options: [
-                { value: '全部', label: '全部' },
-                { value: '已完成', label: '已完成' },
-                { value: '进行中', label: '进行中' },
-                { value: '待开始', label: '待开始' },
-              ],
-            },
-          ],
-        }}
+        filters={{ selects: filterSelects }}
         showExportMode={exportHook.exportMode}
         selectedCount={exportHook.selectedRows.length}
         onExportClick={exportHook.handleExportClick}
@@ -182,19 +163,21 @@ export default function PlanSummary() {
         onCancelExport={exportHook.handleCancelExport}
       />
 
+      {/* 数据表格 */}
       <SummaryTable
         columns={columns}
-        data={planSummary}
+        data={paginatedData}
         currentPage={currentPage}
         totalPages={totalPages}
         pageSize={pageSize}
         exportMode={exportHook.exportMode}
         selectedRows={exportHook.selectedRows}
         onPageChange={setCurrentPage}
-        onSelectAll={() => exportHook.handleSelectAll(planSummary.map((p) => p.id))}
-        onSelectRow={(id) => exportHook.handleSelectRow(id as number)}
+        onSelectAll={() => exportHook.handleSelectAll(summaries.map((s) => s.id))}
+        onSelectRow={(id) => exportHook.handleSelectRow(id as string)}
       />
 
+      {/* 导出弹窗 */}
       <ExportModal
         isOpen={exportHook.showExportModal}
         selectedCount={exportHook.selectedRows.length}
@@ -205,4 +188,32 @@ export default function PlanSummary() {
       />
     </div>
   );
+}
+
+/**
+ * 获取状态标签
+ */
+function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    planned: '计划中',
+    in_progress: '进行中',
+    completed: '已完成',
+    cancelled: '已取消',
+    suspended: '已暂停',
+  };
+  return statusMap[status] || status;
+}
+
+/**
+ * 获取状态样式配置
+ */
+function getStatusConfig(status: string): { label: string; className: string } {
+  const statusMap: Record<string, { label: string; className: string }> = {
+    planned: { label: '计划中', className: 'bg-gray-100 text-gray-700' },
+    in_progress: { label: '进行中', className: 'bg-blue-100 text-blue-700' },
+    completed: { label: '已完成', className: 'bg-green-100 text-green-700' },
+    cancelled: { label: '已取消', className: 'bg-red-100 text-red-700' },
+    suspended: { label: '已暂停', className: 'bg-amber-100 text-amber-700' },
+  };
+  return statusMap[status] || { label: status, className: 'bg-gray-100 text-gray-700' };
 }

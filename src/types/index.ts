@@ -406,3 +406,18 @@ export const SKILL_TAGS = [
   '修剪整枝', '农机驾驶', '农机维修', '嫁接技术', '育苗管理',
   '温控管理', '灌溉系统操作', '质检分级', '包装发货', '基地管理'
 ] as const;
+
+// 视图类型导出（聚合数据）
+export type {
+  BatchSummaryRow,
+  SummaryStatCard,
+  CostComparison,
+  BatchDetailTab,
+  BatchFilters,
+  BatchYieldStats,
+  BatchWorkHourStats,
+  BatchCostDetail,
+  BatchFilterSelect,
+  BatchTableColumn,
+} from './views';
+

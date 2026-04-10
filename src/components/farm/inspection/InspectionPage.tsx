@@ -4,8 +4,12 @@ import {
 } from 'lucide-react';
 import { inspectionRecords as initialRecords, greenhouses, users, cropTypes } from '../../../data/mockData';
 import { Modal, FormField } from '../../ui/Modal';
+import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 
 export default function InspectionPage() {
+  // 问题记录持久化 Hook - 同步巡田监测问题到每日问题汇总
+  const { addProblem } = usePersistentProblems();
+
   // Inspection Records State
   const [inspectionRecords, setInspectionRecords] = useState([...initialRecords]);
 
@@ -240,6 +244,39 @@ export default function InspectionPage() {
     };
 
     setInspectionRecords([record, ...inspectionRecords]);
+
+    // 如果有异常问题，同步到问题记录（用于每日问题汇总）
+    if (newRecord.issueText && newRecord.issueText.trim() !== '') {
+      // 判断严重程度
+      let severity: '轻微' | '中等' | '严重' = '轻微';
+      if (newRecord.issueText.includes('严重') || newRecord.issueText.includes('灰霉') || newRecord.issueText.includes('病毒')) {
+        severity = '严重';
+      } else if (newRecord.issueText.includes('蚜虫') || newRecord.issueText.includes('病') || newRecord.issueText.includes('虫')) {
+        severity = '中等';
+      }
+
+      addProblem({
+        greenhouseId: newRecord.greenhouseId,
+        greenhouseName: selectedGreenhouse?.name || '',
+        cropName: newRecord.cropName,
+        inspectorId: newRecord.inspectorId,
+        inspectorName: selectedUser?.name || '',
+        checkDate: newRecord.checkDate,
+        checkTime: newRecord.checkTime,
+        weather: newRecord.weather,
+        temperature: newRecord.temperature,
+        humidity: newRecord.humidity,
+        cropStatus: newRecord.cropStatus,
+        plantHeight: newRecord.plantHeight || undefined,
+        leafCount: newRecord.leafCount || undefined,
+        issueText: newRecord.issueText,
+        issueSeverity: severity,
+        status: '待处理',
+        remarks: newRecord.remarks,
+        images: newRecord.newImages,
+      });
+    }
+
     setIsCreateModalOpen(false);
     setNewRecord({
       greenhouseId: '',

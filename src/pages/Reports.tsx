@@ -9,16 +9,11 @@ import {
   ReportTabs,
   ReportCharts,
   ExportModal,
+  StatCards,
   useExport,
   ExportFormat,
 } from '../components/summary';
-import { yieldStats, costAnalysis } from '../data/mockData';
-
-const monthlyLabor = [
-  { month: '1月', hours: 1250 },
-  { month: '2月', hours: 1380 },
-  { month: '3月', hours: 1520 },
-];
+import { useProductionReports } from '../hooks';
 
 const REPORT_TABS = [
   { value: 'yield', label: '产量统计' },
@@ -27,6 +22,9 @@ const REPORT_TABS = [
 ];
 
 export default function Reports() {
+  // 获取生产报表数据
+  const { loading, yieldStats, costAnalysis, monthlyLabor, statCards } = useProductionReports();
+
   const [reportType, setReportType] = useState('yield');
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -203,6 +201,18 @@ export default function Reports() {
     setSelectedRows([]);
   };
 
+  // 加载状态
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-gray-500">加载中...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -210,6 +220,9 @@ export default function Reports() {
         title="生产报表"
         description="数据统计和分析报告"
       />
+
+      {/* 统计卡片 - 使用 Hook 返回的动态数据 */}
+      {!loading && <StatCards cards={statCards} />}
 
       <div className="flex justify-end">
         {exportMode ? (
