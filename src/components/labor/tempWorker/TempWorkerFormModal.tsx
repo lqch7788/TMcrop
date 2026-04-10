@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
 import {
   TempWorkerFormModalProps,
   TempWorker,
@@ -133,272 +134,276 @@ export function TempWorkerFormModal({
     onSave(formData);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[85vh] overflow-hidden">
-        {/* 头部 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {record ? '编辑员工' : '快速入职'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
+  const content = (
+    <div className="overflow-y-auto max-h-[calc(85vh-120px)]">
+      <div className="grid grid-cols-2 gap-4">
+        {/* 姓名 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            姓名 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.name || ''}
+            onChange={(e) => handleChange('name', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入员工姓名"
+          />
         </div>
 
-        {/* 表单内容 */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[calc(85vh-120px)]">
-          <div className="grid grid-cols-2 gap-4">
-            {/* 姓名 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                姓名 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name || ''}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入员工姓名"
-              />
-            </div>
+        {/* 联系电话 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            联系电话 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            value={formData.phone || ''}
+            onChange={(e) => handleChange('phone', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入手机号"
+          />
+        </div>
 
-            {/* 联系电话 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                联系电话 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={formData.phone || ''}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入手机号"
-              />
-            </div>
+        {/* 身份证号 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            身份证号 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.idCard || ''}
+            onChange={(e) => handleChange('idCard', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入18位身份证号"
+            maxLength={18}
+          />
+        </div>
 
-            {/* 身份证号 */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                身份证号 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.idCard || ''}
-                onChange={(e) => handleChange('idCard', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入18位身份证号"
-                maxLength={18}
-              />
-            </div>
+        {/* 工人类型 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            工人类型 <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.workerType || ''}
+            onChange={(e) => handleChange('workerType', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            {workerTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
 
-            {/* 工人类型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                工人类型 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.workerType || ''}
-                onChange={(e) => handleChange('workerType', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                {workerTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+        {/* 合同类型 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            合同类型 <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.contractType || ''}
+            onChange={(e) => handleChange('contractType', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            {contractTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 日工资 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            日工资 (元/天)
+          </label>
+          <input
+            type="number"
+            value={formData.dailyWage || ''}
+            onChange={(e) =>
+              handleChange('dailyWage', e.target.value ? Number(e.target.value) : undefined)
+            }
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入日工资"
+          />
+        </div>
+
+        {/* 时工资 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            时工资 (元/时)
+          </label>
+          <input
+            type="number"
+            value={formData.hourlyWage || ''}
+            onChange={(e) =>
+              handleChange('hourlyWage', e.target.value ? Number(e.target.value) : undefined)
+            }
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入时工资"
+          />
+        </div>
+
+        {/* 保险类型 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            保险类型
+          </label>
+          <select
+            value={formData.insuranceType || ''}
+            onChange={(e) => handleChange('insuranceType', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value="">请选择</option>
+            {insuranceOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 来源 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            来源
+          </label>
+          <select
+            value={formData.source || ''}
+            onChange={(e) => handleChange('source', e.target.value)}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value="">请选择</option>
+            {sourceOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 最大用工天数 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            本批次最大用工天数
+          </label>
+          <input
+            type="number"
+            value={formData.maxWorkDays || ''}
+            onChange={(e) =>
+              handleChange('maxWorkDays', e.target.value ? Number(e.target.value) : undefined)
+            }
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            placeholder="请输入天数"
+          />
+        </div>
+
+        {/* 状态（编辑时显示） */}
+        {record && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              状态
+            </label>
+            <select
+              value={formData.status || ''}
+              onChange={(e) => handleChange('status', e.target.value)}
+              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value="在职">在职</option>
+              <option value="离职">离职</option>
+              <option value="停薪留职">停薪留职</option>
+              <option value="试用期">试用期</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* 作业区域 */}
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          作业区域 <span className="text-red-500">*</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {workZoneOptions.map((zone) => (
+            <button
+              key={zone}
+              type="button"
+              onClick={() => toggleWorkZone(zone)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                (formData.workZones || []).includes(zone)
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {zone}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 技能标签 */}
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          技能标签 <span className="text-red-500">*</span>
+        </label>
+        <div className="space-y-3">
+          {Object.entries(SKILL_TAG_GROUPS).map(([groupName, tags]) => (
+            <div key={groupName}>
+              <span className="text-xs text-gray-500 mb-1 block">{groupName}</span>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleSkillTag(tag)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      (formData.skillTags || []).includes(tag)
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
                 ))}
-              </select>
-            </div>
-
-            {/* 合同类型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                合同类型 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.contractType || ''}
-                onChange={(e) => handleChange('contractType', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                {contractTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 日工资 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                日工资 (元/天)
-              </label>
-              <input
-                type="number"
-                value={formData.dailyWage || ''}
-                onChange={(e) =>
-                  handleChange('dailyWage', e.target.value ? Number(e.target.value) : undefined)
-                }
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入日工资"
-              />
-            </div>
-
-            {/* 时工资 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                时工资 (元/时)
-              </label>
-              <input
-                type="number"
-                value={formData.hourlyWage || ''}
-                onChange={(e) =>
-                  handleChange('hourlyWage', e.target.value ? Number(e.target.value) : undefined)
-                }
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入时工资"
-              />
-            </div>
-
-            {/* 保险类型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                保险类型
-              </label>
-              <select
-                value={formData.insuranceType || ''}
-                onChange={(e) => handleChange('insuranceType', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">请选择</option>
-                {insuranceOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 来源 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                来源
-              </label>
-              <select
-                value={formData.source || ''}
-                onChange={(e) => handleChange('source', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">请选择</option>
-                {sourceOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 最大用工天数 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                本批次最大用工天数
-              </label>
-              <input
-                type="number"
-                value={formData.maxWorkDays || ''}
-                onChange={(e) =>
-                  handleChange('maxWorkDays', e.target.value ? Number(e.target.value) : undefined)
-                }
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入天数"
-              />
-            </div>
-
-            {/* 状态（编辑时显示） */}
-            {record && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  状态
-                </label>
-                <select
-                  value={formData.status || ''}
-                  onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="在职">在职</option>
-                  <option value="离职">离职</option>
-                  <option value="停薪留职">停薪留职</option>
-                  <option value="试用期">试用期</option>
-                </select>
               </div>
-            )}
-          </div>
-
-          {/* 作业区域 */}
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              作业区域 <span className="text-red-500">*</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {workZoneOptions.map((zone) => (
-                <button
-                  key={zone}
-                  type="button"
-                  onClick={() => toggleWorkZone(zone)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    (formData.workZones || []).includes(zone)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {zone}
-                </button>
-              ))}
             </div>
-          </div>
-
-          {/* 技能标签 */}
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              技能标签 <span className="text-red-500">*</span>
-            </label>
-            <div className="space-y-3">
-              {Object.entries(SKILL_TAG_GROUPS).map(([groupName, tags]) => (
-                <div key={groupName}>
-                  <span className="text-xs text-gray-500 mb-1 block">{groupName}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleSkillTag(tag)}
-                        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                          (formData.skillTags || []).includes(tag)
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 底部 */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-          >
-            保存
-          </button>
+          ))}
         </div>
       </div>
     </div>
+  );
+
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={onClose}
+        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+      >
+        取消
+      </button>
+      <button
+        onClick={handleSubmit}
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+      >
+        保存
+      </button>
+    </div>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={open}
+      onClose={onClose}
+      title={record ? '编辑员工' : '快速入职'}
+      size="lg"
+      showFooter={true}
+      headerAction={
+        <button
+          onClick={onClose}
+          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      }
+      footer={footer}
+    >
+      {content}
+    </UnifiedModal>
   );
 }

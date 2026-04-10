@@ -1,5 +1,6 @@
 import React from 'react';
 import { XCircle, Award, Calendar, Clock, BookOpen } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
 import { StaffSkill, TrainingRecord } from './types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -60,142 +61,138 @@ export function SkillDetailModal({ skill, trainingRecords, onClose }: SkillDetai
   // 筛选当前员工的培训记录
   const staffTrainingRecords = trainingRecords.filter((r) => r.staffId === skill.staffId);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <Award className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">员工技能档案详情</h3>
-              <p className="text-sm text-gray-500">{skill.staffName} - {skill.staffId}</p>
-            </div>
+  const content = (
+    <div>
+      {/* 基本信息 */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">基本信息</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <label className="text-xs text-gray-500">部门</label>
+            <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.department}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <XCircle className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* 基本信息 */}
-          <div className="mb-6">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">基本信息</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <label className="text-xs text-gray-500">部门</label>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.department}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <label className="text-xs text-gray-500">技能总数</label>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.totalSkills} 项</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <label className="text-xs text-gray-500">证书数量</label>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.certificationCount} 个</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <label className="text-xs text-gray-500">认证状态</label>
-                <div className="mt-0.5">
-                  <Badge variant="outline" className={cn('font-medium', getStatusBadgeClass(skill.status))}>
-                    {skill.status}
-                  </Badge>
-                </div>
-              </div>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <label className="text-xs text-gray-500">技能总数</label>
+            <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.totalSkills} 项</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <label className="text-xs text-gray-500">证书数量</label>
+            <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.certificationCount} 个</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <label className="text-xs text-gray-500">认证状态</label>
+            <div className="mt-0.5">
+              <Badge variant="outline" className={cn('font-medium', getStatusBadgeClass(skill.status))}>
+                {skill.status}
+              </Badge>
             </div>
           </div>
-
-          {/* 技能详情 */}
-          <div className="mb-6">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-              技能详情 ({skill.skills.length})
-            </h4>
-            <div className="space-y-3">
-              {skill.skills.map((item, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-xl hover:border-emerald-300 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-base font-semibold text-gray-900">{item.tag}</span>
-                        <Badge variant="outline" className={cn(getLevelBadgeClass(item.level))}>
-                          {item.level}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        {item.certifiedDate && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>颁证日期: {item.certifiedDate}</span>
-                          </div>
-                        )}
-                        {item.expiryDate && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>有效期至: {item.expiryDate}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 培训记录 */}
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-              培训记录 ({staffTrainingRecords.length})
-            </h4>
-            {staffTrainingRecords.length > 0 ? (
-              <div className="space-y-3">
-                {staffTrainingRecords.map((record) => (
-                  <div key={record.id} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium text-gray-900">{record.trainingContent}</span>
-                      </div>
-                      <Badge className={cn(getResultBadgeClass(record.result))}>
-                        {record.result}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
-                      <div>培训类型: {record.trainingType}</div>
-                      <div>培训日期: {record.trainingDate}</div>
-                      <div>培训师: {record.trainer}</div>
-                      {record.certificate && (
-                        <div className="col-span-2">证书: {record.certificate}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                暂无培训记录
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
-          >
-            关闭
-          </button>
         </div>
       </div>
+
+      {/* 技能详情 */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+          技能详情 ({skill.skills.length})
+        </h4>
+        <div className="space-y-3">
+          {skill.skills.map((item, index) => (
+            <div key={index} className="p-4 border border-gray-200 rounded-xl hover:border-emerald-300 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base font-semibold text-gray-900">{item.tag}</span>
+                    <Badge variant="outline" className={cn(getLevelBadgeClass(item.level))}>
+                      {item.level}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    {item.certifiedDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>颁证日期: {item.certifiedDate}</span>
+                      </div>
+                    )}
+                    {item.expiryDate && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>有效期至: {item.expiryDate}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 培训记录 */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+          培训记录 ({staffTrainingRecords.length})
+        </h4>
+        {staffTrainingRecords.length > 0 ? (
+          <div className="space-y-3">
+            {staffTrainingRecords.map((record) => (
+              <div key={record.id} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-medium text-gray-900">{record.trainingContent}</span>
+                  </div>
+                  <Badge className={cn(getResultBadgeClass(record.result))}>
+                    {record.result}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+                  <div>培训类型: {record.trainingType}</div>
+                  <div>培训日期: {record.trainingDate}</div>
+                  <div>培训师: {record.trainer}</div>
+                  {record.certificate && (
+                    <div className="col-span-2">证书: {record.certificate}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            暂无培训记录
+          </div>
+        )}
+      </div>
     </div>
+  );
+
+  const footer = (
+    <button
+      onClick={onClose}
+      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+    >
+      关闭
+    </button>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={true}
+      onClose={onClose}
+      title={`${skill.staffName} - 员工技能档案详情`}
+      size="lg"
+      showFooter={true}
+      headerAction={
+        <button
+          onClick={onClose}
+          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <XCircle className="w-5 h-5 text-gray-400" />
+        </button>
+      }
+      footer={footer}
+    >
+      {content}
+    </UnifiedModal>
   );
 }
 

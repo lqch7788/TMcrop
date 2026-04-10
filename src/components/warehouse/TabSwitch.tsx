@@ -36,20 +36,20 @@ export default function TabSwitch({ activeTab, onTabChange, codeGenExpanded, onC
       </div>
       {showCodeGen && (
         <>
-          <div className="h-6 w-px bg-gray-300"></div>
+          <div className="h-6 w-px bg-gray-500"></div>
           <button
             onClick={onCodeRuleClick}
-            className="px-3 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+            className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
           >
-            编码规则
+            编码规则 &gt;&gt;
           </button>
           <span className="text-sm font-bold text-gray-900">物料编码生成</span>
           <button
             onClick={onCodeGenToggle}
-            className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title={codeGenExpanded ? '收起' : '展开'}
           >
-            {codeGenExpanded ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            {codeGenExpanded ? '收起' : '展开'}
+            {codeGenExpanded ? <ChevronDown className="w-6 h-6 text-gray-600 font-bold" /> : <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />}
           </button>
         </>
       )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Coins } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { mockTempWorkers } from '../tempWorker/mockData';
 
@@ -88,179 +89,183 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        {/* 头部 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {record ? '编辑计件记录' : '新建计件记录'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500"
+  const content = (
+    <div className="space-y-4">
+      {/* 员工选择 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          员工姓名 <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.workerId}
+          onChange={(e) => setFormData({ ...formData, workerId: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        >
+          <option value="">请选择员工</option>
+          {mockTempWorkers
+            .filter((w) => w.status === '在职')
+            .map((worker) => (
+              <option key={worker.id} value={worker.id}>
+                {worker.name} ({worker.workerType})
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {/* 任务选择 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          任务名称 <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.taskId}
+          onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        >
+          <option value="">请选择任务</option>
+          {taskOptions.map((task) => (
+            <option key={task.id} value={task.id}>
+              {task.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 单位和数量 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            单位 <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.unit}
+            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           >
-            <X className="w-5 h-5" />
-          </button>
+            {unitOptions.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
         </div>
-
-        {/* 表单内容 */}
-        <div className="p-4 space-y-4">
-          {/* 员工选择 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              员工姓名 <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.workerId}
-              onChange={(e) => setFormData({ ...formData, workerId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">请选择员工</option>
-              {mockTempWorkers
-                .filter((w) => w.status === '在职')
-                .map((worker) => (
-                  <option key={worker.id} value={worker.id}>
-                    {worker.name} ({worker.workerType})
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          {/* 任务选择 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              任务名称 <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.taskId}
-              onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">请选择任务</option>
-              {taskOptions.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 单位和数量 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                单位 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                {unitOptions.map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                数量 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                value={formData.quantity || ''}
-                onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-          </div>
-
-          {/* 单价 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              单价(元) <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <Coins className="w-4 h-4" />
-              </span>
-              <input
-                type="number"
-                value={formData.unitPrice || ''}
-                onChange={(e) => setFormData({ ...formData, unitPrice: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-              />
-            </div>
-          </div>
-
-          {/* 工作日期 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              工作日期 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={formData.workDate}
-              onChange={(e) => setFormData({ ...formData, workDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-
-          {/* 备注 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              备注
-            </label>
-            <textarea
-              value={formData.remarks || ''}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              rows={2}
-              placeholder="可选"
-            />
-          </div>
-
-          {/* 总工资预览 */}
-          <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-emerald-700">合计工资</span>
-              <span className="text-xl font-bold text-emerald-600">
-                <span className="inline-flex items-center gap-0.5">
-                  <Coins className="w-4 h-4" />
-                  {total.toFixed(2)}
-                </span>
-              </span>
-            </div>
-            <div className="text-xs text-emerald-600 mt-1">
-              {formData.quantity} {formData.unit} × {formData.unitPrice}元
-            </div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            数量 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            value={formData.quantity || ''}
+            onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder="0"
+            min="0"
+          />
         </div>
+      </div>
 
-        {/* 底部按钮 */}
-        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-          >
-            确认
-          </button>
+      {/* 单价 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          单价(元) <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <Coins className="w-4 h-4" />
+          </span>
+          <input
+            type="number"
+            value={formData.unitPrice || ''}
+            onChange={(e) => setFormData({ ...formData, unitPrice: parseFloat(e.target.value) || 0 })}
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
+
+      {/* 工作日期 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          工作日期 <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={formData.workDate}
+          onChange={(e) => setFormData({ ...formData, workDate: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        />
+      </div>
+
+      {/* 备注 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          备注
+        </label>
+        <textarea
+          value={formData.remarks || ''}
+          onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          rows={2}
+          placeholder="可选"
+        />
+      </div>
+
+      {/* 总工资预览 */}
+      <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-emerald-700">合计工资</span>
+          <span className="text-xl font-bold text-emerald-600">
+            <span className="inline-flex items-center gap-0.5">
+              <Coins className="w-4 h-4" />
+              {total.toFixed(2)}
+            </span>
+          </span>
+        </div>
+        <div className="text-xs text-emerald-600 mt-1">
+          {formData.quantity} {formData.unit} × {formData.unitPrice}元
         </div>
       </div>
     </div>
+  );
+
+  const footer = (
+    <>
+      <button
+        onClick={onClose}
+        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+      >
+        取消
+      </button>
+      <button
+        onClick={handleSubmit}
+        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+      >
+        确认
+      </button>
+    </>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={open}
+      onClose={onClose}
+      title={record ? '编辑计件记录' : '新建计件记录'}
+      size="md"
+      showFooter={true}
+      headerAction={
+        <button
+          onClick={onClose}
+          className="p-1 rounded hover:bg-gray-100 text-gray-500"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      }
+      footer={footer}
+    >
+      {content}
+    </UnifiedModal>
   );
 };
 
