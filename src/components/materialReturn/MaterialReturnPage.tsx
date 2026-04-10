@@ -255,7 +255,7 @@ export function MaterialReturnPage() {
 
       {/* 导出类型选择弹窗 */}
       <ExportTypeModal
-        open={hook.showExportTypeModal}
+        isOpen={hook.showExportTypeModal}
         exportFileType={hook.exportFileType}
         onClose={() => hook.setShowExportTypeModal(false)}
         onConfirm={hook.confirmExport}

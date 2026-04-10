@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../components/ui/Modal';
+import { ImageEnlargementModal } from '../components/dashboard/ImageEnlargementModal';
 import { Link } from 'react-router-dom';
 import {
   Sprout, ClipboardList, CheckSquare, AlertTriangle, TrendingUp,
@@ -1703,36 +1704,11 @@ export default function Dashboard() {
       </Modal>
 
       {/* 图片放大查看弹窗 */}
-      {enlargedImageIndex !== null && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]"
-          onClick={() => setEnlargedImageIndex(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center p-4">
-            {/* 关闭按钮 */}
-            <button
-              onClick={() => setEnlargedImageIndex(null)}
-              className="absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full flex items-center justify-center text-white text-2xl z-10"
-            >
-              ×
-            </button>
-            {/* 图片显示区域 */}
-            <div className="bg-[#F2F6FA] rounded-lg w-full h-full max-h-[80vh] flex items-center justify-center">
-              <div className="text-center text-gray-400">
-                <div className="w-32 h-32 mx-auto mb-4 rounded-lg bg-gray-200 flex items-center justify-center">
-                  <span className="text-5xl">📷</span>
-                </div>
-                <p className="text-xl">图片 {enlargedImageIndex}</p>
-                <p className="text-sm mt-2">（当前为占位图片）</p>
-              </div>
-            </div>
-            {/* 图片计数器 */}
-            <div className="mt-4 text-white text-sm">
-              {enlargedImageIndex} / 5
-            </div>
-          </div>
-        </div>
-      )}
+      <ImageEnlargementModal
+        isOpen={enlargedImageIndex !== null}
+        imageIndex={enlargedImageIndex || 0}
+        onClose={() => setEnlargedImageIndex(null)}
+      />
     </div>
   );
 }

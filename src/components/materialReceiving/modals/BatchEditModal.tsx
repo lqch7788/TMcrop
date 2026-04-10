@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
 
 // 类型定义
 interface MaterialItem {
@@ -27,7 +28,7 @@ interface RecordType {
 }
 
 interface BatchEditModalProps {
-  show: boolean;
+  isOpen: boolean;
   selectedRows: number[];
   batchEditedRecords: Record<number, RecordType>;
   currentBatchEditIndex: number;
@@ -43,7 +44,7 @@ interface BatchEditModalProps {
 }
 
 export const BatchEditModal: React.FC<BatchEditModalProps> = ({
-  show,
+  isOpen,
   selectedRows,
   batchEditedRecords,
   currentBatchEditIndex,
@@ -57,8 +58,6 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   onVoidApply,
   onSaveAll,
 }) => {
-  if (!show) return null;
-
   const currentRecordId = selectedRows[currentBatchEditIndex];
   const currentRecord = recordsList.find(r => r.id === currentRecordId);
   const currentEditedData = batchEditedRecords[currentRecordId] || currentRecord || {};
@@ -72,163 +71,157 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   const statusOptions = ['待审批', '已审批', '已拒绝', '已取消'];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-6xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-        {/* 头部 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
-          <h3 className="text-lg font-semibold text-white">批量编辑领料记录</h3>
-          <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="批量编辑领料记录"
+      size="xl"
+      showFooter={false}
+    >
+      {/* 提示信息 */}
+      <div className="bg-blue-50 rounded-lg p-4 mb-4">
+        <p className="text-sm text-blue-800">
+          已选择 <strong>{selectedRows.length}</strong> 条领料记录进行批量编辑，已编辑 <strong>{editedCount}</strong> 条
+        </p>
+      </div>
+
+      {/* 领料单选择下拉 + 领料单号 */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</label>
+          <select
+            value={currentRecordId || ''}
+            onChange={(e) => {
+              const idx = selectedRows.indexOf(Number(e.target.value));
+              onRecordChange(idx >= 0 ? idx : 0);
+            }}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          >
+            {recordsList.map((record) => (
+              <option key={record.id} value={record.id}>
+                {record.code} ({record.applicant}) {batchEditedRecords[record.id] ? '已编辑' : ''}
+              </option>
+            ))}
+          </select>
         </div>
-
-        <div className="p-6">
-          {/* 提示信息 */}
-          <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">
-              已选择 <strong>{selectedRows.length}</strong> 条领料记录进行批量编辑，已编辑 <strong>{editedCount}</strong> 条
-            </p>
-          </div>
-
-          {/* 领料单选择下拉 + 领料单号 */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</label>
-              <select
-                value={currentRecordId || ''}
-                onChange={(e) => {
-                  const idx = selectedRows.indexOf(Number(e.target.value));
-                  onRecordChange(idx >= 0 ? idx : 0);
-                }}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              >
-                {recordsList.map((record) => (
-                  <option key={record.id} value={record.id}>
-                    {record.code} ({record.applicant}) {batchEditedRecords[record.id] ? '✅ 已编辑' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* 领料单号 - 只读 */}
-            <div className="bg-gray-100 rounded-lg p-3">
-              <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
-              <div className="text-sm font-medium text-gray-900">{currentEditedData.code}</div>
-            </div>
-          </div>
-
-          {/* 编辑表单 - 3列布局 */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* 日期 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">日期</label>
-              <input
-                type="date"
-                value={currentEditedData.date || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'date', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            {/* 申领人 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">申领人</label>
-              <input
-                type="text"
-                value={currentEditedData.applicant || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            {/* 仓库地点 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</label>
-              <select
-                value={currentEditedData.warehouseLocation || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'warehouseLocation', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="">请选择</option>
-                {warehouseOptions.map(w => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
-            </div>
-            {/* 生产批次号 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</label>
-              <input
-                type="text"
-                value={currentEditedData.productionBatchCode || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            {/* 状态 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">状态</label>
-              <select
-                value={currentEditedData.status || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'status', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="">请选择</option>
-                {statusOptions.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            {/* 审核人 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">审核人</label>
-              <input
-                type="text"
-                value={currentEditedData.reviewer || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'reviewer', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* 物料明细表格 - 带横向滚动 */}
-          <MaterialEditTable
-            materials={currentRecordData.materials || []}
-            onMaterialChange={(idx, field, value) => onMaterialChange(currentRecordId, idx, field, value)}
-            onMaterialDelete={(idx) => onMaterialDelete(currentRecordId, idx)}
-          />
-
-          {/* 操作按钮 */}
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              onClick={onNextRecord}
-              className="w-36 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
-            </button>
-            {/* 作废申请按钮 */}
-            {isVoidable ? (
-              <button
-                onClick={onVoidApply}
-                className="w-36 h-10 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
-              >
-                作废申请
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-36 h-10 bg-gray-200 text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed"
-              >
-                作废申请
-              </button>
-            )}
-            <button
-              onClick={onSaveAll}
-              className="w-36 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              保存全部 ({editedCount} 个)
-            </button>
-          </div>
+        {/* 领料单号 - 只读 */}
+        <div className="bg-gray-100 rounded-lg p-3">
+          <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
+          <div className="text-sm font-medium text-gray-900">{currentEditedData.code}</div>
         </div>
       </div>
-    </div>
+
+      {/* 编辑表单 - 3列布局 */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* 日期 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">日期</label>
+          <input
+            type="date"
+            value={currentEditedData.date || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'date', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        {/* 申领人 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">申领人</label>
+          <input
+            type="text"
+            value={currentEditedData.applicant || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        {/* 仓库地点 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</label>
+          <select
+            value={currentEditedData.warehouseLocation || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'warehouseLocation', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="">请选择</option>
+            {warehouseOptions.map(w => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+        </div>
+        {/* 生产批次号 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</label>
+          <input
+            type="text"
+            value={currentEditedData.productionBatchCode || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        {/* 状态 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">状态</label>
+          <select
+            value={currentEditedData.status || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'status', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="">请选择</option>
+            {statusOptions.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        {/* 审核人 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-900 mb-1">审核人</label>
+          <input
+            type="text"
+            value={currentEditedData.reviewer || ''}
+            onChange={(e) => onFieldChange(currentRecordId, 'reviewer', e.target.value)}
+            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* 物料明细表格 - 带横向滚动 */}
+      <MaterialEditTable
+        materials={currentRecordData.materials || []}
+        onMaterialChange={(idx, field, value) => onMaterialChange(currentRecordId, idx, field, value)}
+        onMaterialDelete={(idx) => onMaterialDelete(currentRecordId, idx)}
+      />
+
+      {/* 操作按钮 */}
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={onNextRecord}
+          className="w-36 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+        >
+          确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
+        </button>
+        {/* 作废申请按钮 */}
+        {isVoidable ? (
+          <button
+            onClick={onVoidApply}
+            className="w-36 h-10 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
+          >
+            作废申请
+          </button>
+        ) : (
+          <button
+            disabled
+            className="w-36 h-10 bg-gray-200 text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed"
+          >
+            作废申请
+          </button>
+        )}
+        <button
+          onClick={onSaveAll}
+          className="w-36 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+        >
+          保存全部 ({editedCount} 个)
+        </button>
+      </div>
+    </UnifiedModal>
   );
 };
 

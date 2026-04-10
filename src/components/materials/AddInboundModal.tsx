@@ -1,6 +1,6 @@
 // 新增入库弹窗组件
-import { useState } from 'react';
-import { X, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { Modal } from '../ui/Modal';
 import { NewInboundForm } from './types';
 import { categoryConfig, warehouseMaterials, unitOptions } from './mockData';
 
@@ -113,18 +113,23 @@ export default function AddInboundModal({
 
   if (!show) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-        {/* 标题栏 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-          <h3 className="text-lg font-semibold text-white">新增入库</h3>
-          <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  const handleClose = () => {
+    onClose();
+  };
 
-        <div className="p-6">
+  const isValid = !codeError && !nameError && newInbound.materialCode && newInbound.materialName && newInbound.quantity;
+
+  return (
+    <Modal
+      isOpen={show}
+      onClose={handleClose}
+      title="新增入库"
+      size="lg"
+      showFooter={true}
+      onSubmit={isValid ? onSave : undefined}
+      submitText="保存"
+      cancelText="取消"
+    >
           {/* 入库单号 */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">入库单号</label>
@@ -321,25 +326,6 @@ export default function AddInboundModal({
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
             />
           </div>
-        </div>
-
-        {/* 底部按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            取消
-          </button>
-          <button
-            onClick={onSave}
-            disabled={!!codeError || !!nameError || !newInbound.materialCode || !newInbound.materialName || !newInbound.quantity}
-            className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

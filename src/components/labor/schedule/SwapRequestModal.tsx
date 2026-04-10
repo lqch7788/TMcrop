@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
-import type { Staff, SwapRequest } from './types';
+import { X, Calendar, User, MessageSquare, Send } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
+import type { Staff } from './types';
 
 interface SwapRequestModalProps {
   staffList: Staff[];
@@ -64,128 +65,134 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-        {/* 头部 */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-medium text-gray-800">调班申请</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+  const content = (
+    <div className="space-y-4">
+      {/* 申请人 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-600 mb-1">
+          申请人
+        </label>
+        <select
+          value={formData.requesterId}
+          onChange={e => handleRequesterChange(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">选择申请人</option>
+          {staffList.map(staff => (
+            <option key={staff.id} value={staff.id}>
+              {staff.name} - {staff.workZone}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 原排班日期 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-600 mb-1">
+          原排班日期
+        </label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="date"
+            value={formData.originalDate}
+            onChange={e => setFormData(prev => ({ ...prev, originalDate: e.target.value }))}
+            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+      </div>
 
-        {/* 表单 */}
-        <div className="p-4 space-y-4">
-          {/* 申请人 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              申请人
-            </label>
-            <select
-              value={formData.requesterId}
-              onChange={e => handleRequesterChange(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">选择申请人</option>
-              {staffList.map(staff => (
-                <option key={staff.id} value={staff.id}>
-                  {staff.name} - {staff.workZone}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* 目标员工 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-600 mb-1">
+          调班对象
+        </label>
+        <select
+          value={formData.targetId}
+          onChange={e => handleTargetChange(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">选择调班对象</option>
+          {staffList.filter(s => s.id !== formData.requesterId).map(staff => (
+            <option key={staff.id} value={staff.id}>
+              {staff.name} - {staff.workZone}
+            </option>
+          ))}
+        </select>
+      </div>
 
-          {/* 原排班日期 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              原排班日期
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                value={formData.originalDate}
-                onChange={e => setFormData(prev => ({ ...prev, originalDate: e.target.value }))}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* 目标员工 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              调班对象
-            </label>
-            <select
-              value={formData.targetId}
-              onChange={e => handleTargetChange(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">选择调班对象</option>
-              {staffList.filter(s => s.id !== formData.requesterId).map(staff => (
-                <option key={staff.id} value={staff.id}>
-                  {staff.name} - {staff.workZone}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 目标日期 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              目标日期
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                value={formData.targetDate}
-                onChange={e => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* 调班原因 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              调班原因
-            </label>
-            <div className="relative">
-              <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <textarea
-                value={formData.reason}
-                onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="请输入调班原因..."
-                rows={3}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
-          </div>
+      {/* 目标日期 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-600 mb-1">
+          目标日期
+        </label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="date"
+            value={formData.targetDate}
+            onChange={e => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
+            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+      </div>
 
-        {/* 操作 */}
-        <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            提交申请
-          </button>
+      {/* 调班原因 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-600 mb-1">
+          调班原因
+        </label>
+        <div className="relative">
+          <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+          <textarea
+            value={formData.reason}
+            onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+            placeholder="请输入调班原因..."
+            rows={3}
+            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
         </div>
       </div>
     </div>
+  );
+
+  const footer = (
+    <>
+      <button
+        onClick={onClose}
+        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+      >
+        取消
+      </button>
+      <button
+        onClick={handleSubmit}
+        className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors flex items-center gap-2"
+      >
+        <Send className="w-4 h-4" />
+        提交申请
+      </button>
+    </>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={true}
+      onClose={onClose}
+      title="调班申请"
+      size="md"
+      showFooter={true}
+      headerAction={
+        <button
+          onClick={onClose}
+          className="p-1 rounded hover:bg-gray-100 transition-colors"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
+      }
+      footer={footer}
+    >
+      {content}
+    </UnifiedModal>
   );
 }
 

@@ -1,8 +1,8 @@
 // 供应商编辑弹窗组件
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { Supplier, EditFormData } from './types';
 import { supplierCategories, getSupplierTypeName } from './data';
+import { UnifiedModal } from '../ui/UnifiedModal';
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -76,19 +76,17 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
   if (!isOpen || !supplier) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between p-4 border-b bg-blue-600">
-          <h3 className="text-lg font-semibold text-white">编辑供应商</h3>
-          <button onClick={onClose} className="p-1 hover:bg-blue-700 rounded">
-            <X className="w-5 h-5 text-white" />
-          </button>
-        </div>
-
-        {/* 表单 */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="grid grid-cols-2 gap-4">
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="编辑供应商"
+      size="lg"
+      showFooter={true}
+      onSubmit={handleSubmit}
+      submitText="保存"
+      cancelText="取消"
+    >
+      <div className="grid grid-cols-2 gap-4">
             {/* 供应商编号（只读） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</label>
@@ -138,6 +136,10 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 <option value="企业">企业</option>
                 <option value="个体户">个体户</option>
                 <option value="事业单位">事业单位</option>
+                <option value="个人">个人</option>
+                <option value="网络平台">网络平台</option>
+                <option value="代理机构">代理机构</option>
+                <option value="其他">其他</option>
               </select>
             </div>
 
@@ -303,16 +305,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
           </div>
         </div>
 
-        {/* 底部按钮 */}
-        <div className="flex justify-end gap-2 p-4 border-t">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-            取消
-          </button>
-          <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            保存
-          </button>
         </div>
-      </div>
-    </div>
+    </UnifiedModal>
   );
 }

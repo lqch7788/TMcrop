@@ -49,6 +49,8 @@ import { ExecuteEditWarningModal } from '../components/materialReceiving/modals/
 import { ExecuteDeleteWarningModal } from '../components/materialReceiving/modals/ExecuteDeleteWarningModal';
 import { ExecuteBatchDeleteConfirmModal } from '../components/materialReceiving/modals/ExecuteBatchDeleteConfirmModal';
 import { ExecuteDetailModal } from '../components/materialReceiving/modals/ExecuteDetailModal';
+import { ExecuteAddModal } from '../components/materialReceiving/modals/ExecuteAddModal';
+import { ExecuteEditModal } from '../components/materialReceiving/modals/ExecuteEditModal';
 import { StatDetailModal } from '../components/materialReceiving/modals/StatDetailModal';
 import { StatSearchBar } from '../components/materialReceiving/stats/StatSearchBar';
 
@@ -1282,6 +1284,7 @@ export default function MaterialReceiving() {
     plantArea: '',
     reviewer: '王志刚',
     productionBatchCode: '',
+    batchRemark: '',
     materials: [] as MaterialItem[]
   });
 
@@ -1614,6 +1617,12 @@ export default function MaterialReceiving() {
     setAddForm({ ...addForm, materials: newMaterials });
   };
 
+  // 生成领料单号
+  const handleGenerateAddCode = () => {
+    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialReceivingDetails.length + 1).padStart(3, '0')}`;
+    setAddForm({ ...addForm, code: newCode });
+  };
+
   // 保存新增
   const handleSaveAdd = () => {
     const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialReceivingDetails.length + 1).padStart(3, '0')}`;
@@ -1641,6 +1650,7 @@ export default function MaterialReceiving() {
       plantArea: '',
       reviewer: '王志刚',
       productionBatchCode: '',
+      batchRemark: '',
       materials: []
     });
   };
@@ -1657,6 +1667,7 @@ export default function MaterialReceiving() {
       plantArea: '',
       reviewer: '王志刚',
       productionBatchCode: '',
+      batchRemark: '',
       materials: []
     });
   };
@@ -2480,254 +2491,17 @@ export default function MaterialReceiving() {
 
       {/* 新增领料单弹窗 */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-[66vw] mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">新增领料单</h3>
-              <button onClick={handleCancelAdd} className="p-1 hover:bg-gray-100 rounded">
-                <span className="text-2xl text-gray-400">&times;</span>
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">领料单号</label>
-                  <input
-                    type="text"
-                    value={addForm.code}
-                    readOnly
-                    placeholder="系统自动生成"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">申请日期</label>
-                  <input
-                    type="date"
-                    value={addForm.date}
-                    onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">申请人</label>
-                  <input
-                    type="text"
-                    value={addForm.applicant}
-                    onChange={(e) => setAddForm({ ...addForm, applicant: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">部门</label>
-                  <select
-                    value={addForm.department}
-                    onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">请选择部门</option>
-                    <option value="生产部">生产部</option>
-                    <option value="后勤部">后勤部</option>
-                    <option value="设备部">设备部</option>
-                    <option value="技术部">技术部</option>
-                    <option value="采后处理部">采后处理部</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">库存地点</label>
-                  <select
-                    value={addForm.warehouseLocation}
-                    onChange={(e) => setAddForm({ ...addForm, warehouseLocation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="仓库A区">仓库A区</option>
-                    <option value="仓库B区">仓库B区</option>
-                    <option value="仓库C区">仓库C区</option>
-                    <option value="仓库D区">仓库D区</option>
-                    <option value="仓库E区">仓库E区</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">种植区域/用途</label>
-                  <input
-                    type="text"
-                    value={addForm.plantArea}
-                    onChange={(e) => setAddForm({ ...addForm, plantArea: e.target.value })}
-                    placeholder="如：1号棚-叶菜区"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">审核人</label>
-                  <select
-                    value={addForm.reviewer}
-                    onChange={(e) => setAddForm({ ...addForm, reviewer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="王经理">王经理</option>
-                    <option value="李经理">李经理</option>
-                    <option value="张经理">张经理</option>
-                    <option value="陈经理">陈经理</option>
-                    <option value="赵经理">赵经理</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
-                  <input
-                    type="text"
-                    value={addForm.productionBatchCode}
-                    onChange={(e) => setAddForm({ ...addForm, productionBatchCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              {/* 物料明细 */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">物料明细</label>
-                  <button
-                    onClick={handleAddMaterial}
-                    className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    添加物料
-                  </button>
-                </div>
-                {addForm.materials.length > 0 ? (
-                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-emerald-100">
-                      <tr>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
-                        <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {addForm.materials.map((material, idx) => {
-                        const subtotal = material.requestedQuantity * (material.unitPrice || 0);
-                        const isStockWarning = material.requestedQuantity > (material.stockQuantity || 0);
-                        return (
-                          <tr key={idx}>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.materialCode}
-                                onChange={(e) => handleMaterialChange(idx, 'materialCode', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.materialName}
-                                onChange={(e) => handleMaterialChange(idx, 'materialName', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.spec}
-                                onChange={(e) => handleMaterialChange(idx, 'spec', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.unit}
-                                onChange={(e) => handleMaterialChange(idx, 'unit', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="number"
-                                value={material.requestedQuantity}
-                                onChange={(e) => handleMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                                className={`w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="number"
-                                value={material.stockQuantity || ''}
-                                onChange={(e) => handleMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="number"
-                                value={material.unitPrice || ''}
-                                onChange={(e) => handleMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50">
-                              {subtotal.toFixed(2)}
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.warehousePosition || ''}
-                                onChange={(e) => handleMaterialChange(idx, 'warehousePosition', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                value={material.remark}
-                                onChange={(e) => handleMaterialChange(idx, 'remark', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <button
-                                onClick={() => handleRemoveMaterial(idx)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
-                    暂无物料明细，请点击"添加物料"按钮添加
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleCancelAdd}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSaveAdd}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddModal
+          isOpen={showAddModal}
+          addForm={addForm}
+          onChange={(field, value) => setAddForm({ ...addForm, [field]: value })}
+          onSave={handleSaveAdd}
+          onClose={handleCancelAdd}
+          onAddMaterial={handleAddMaterial}
+          onRemoveMaterial={handleRemoveMaterial}
+          onMaterialChange={handleMaterialChange}
+          onGenerateCode={handleGenerateAddCode}
+        />
       )}
 
       {/* 导出文件类型选择弹窗 */}
@@ -3124,494 +2898,45 @@ export default function MaterialReceiving() {
 
       {/* 查看详情弹窗 */}
       <ExecuteDetailModal
-        show={executeShowDetailModal}
+        isOpen={executeShowDetailModal}
         record={executeSelectedRecord}
         onClose={() => setExecuteShowDetailModal(false)}
       />
 
-      {/* 新增弹窗 */}
-      {executeShowAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 sticky top-0">
-              <h3 className="text-lg font-semibold text-white">新增领料出库单</h3>
-              <button onClick={() => setExecuteShowAddModal(false)} className="text-white hover:bg-emerald-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-100 rounded-lg p-3">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">出库单号</label>
-                  <div className="text-sm font-medium text-gray-900">{executeAddForm.code || '系统自动生成'}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">关联领料单号</label>
-                  <select
-                    value={executeSelectedApplicationCode}
-                    onChange={(e) => {
-                      setExecuteSelectedApplicationCode(e.target.value);
-                      setExecuteSelectedMaterialIndices(new Set());
-                      setExecuteMaterialActualQuantities({});
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">请选择领料单</option>
-                    {materialReceivingDetails
-                      .filter(app => app.status === '已审批' && app.materials.length > 0)
-                      .map(app => (
-                        <option key={app.id} value={app.code}>
-                          {app.code} - {app.applicant}
-                        </option>
-                      ))
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">申请日期</label>
-                  <input
-                    type="date"
-                    value={executeAddForm.date}
-                    onChange={(e) => setExecuteAddForm({ ...executeAddForm, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">库存地点</label>
-                  <select
-                    value={executeAddForm.warehouseLocation}
-                    onChange={(e) => setExecuteAddForm({ ...executeAddForm, warehouseLocation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="仓库A区">仓库A区</option>
-                    <option value="仓库B区">仓库B区</option>
-                    <option value="仓库C区">仓库C区</option>
-                    <option value="仓库D区">仓库D区</option>
-                    <option value="仓库E区">仓库E区</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
-                  <input
-                    type="text"
-                    value={executeAddForm.reviewer}
-                    onChange={(e) => setExecuteAddForm({ ...executeAddForm, reviewer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
+      {/* 新增领料出库弹窗 */}
+      <ExecuteAddModal
+        isOpen={executeShowAddModal}
+        addForm={executeAddForm}
+        selectedApplicationCode={executeSelectedApplicationCode}
+        selectedMaterialIndices={executeSelectedMaterialIndices}
+        materialActualQuantities={executeMaterialActualQuantities}
+        materialPool={executeMaterialPool}
+        materialReceivingDetails={materialReceivingDetails}
+        onClose={() => setExecuteShowAddModal(false)}
+        onAddFormChange={(field, value) => setExecuteAddForm({ ...executeAddForm, [field]: value })}
+        onSelectedApplicationCodeChange={setExecuteSelectedApplicationCode}
+        onSelectedMaterialIndicesChange={setExecuteSelectedMaterialIndices}
+        onMaterialActualQuantitiesChange={setExecuteMaterialActualQuantities}
+        onAddToMaterialPool={handleAddToMaterialPool}
+        onRemoveFromMaterialPool={handleRemoveFromMaterialPool}
+        onUpdateMaterialPoolQuantity={handleUpdateMaterialPoolQuantity}
+        onCancel={handleExecuteCancelAdd}
+        onSave={handleExecuteSaveAdd}
+      />
 
-              {executeSelectedApplicationCode && (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">选择物料（勾选要出库的物料并填写实发数量）</label>
-                    <button
-                      onClick={handleAddToMaterialPool}
-                      disabled={executeSelectedMaterialIndices.size === 0}
-                      className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      添加到物料池 ({executeSelectedMaterialIndices.size})
-                    </button>
-                  </div>
-                  {(() => {
-                    const selectedApp = materialReceivingDetails.find(app => app.code === executeSelectedApplicationCode);
-                    if (!selectedApp) return null;
-                    return (
-                      <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-10">选择</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实发数量</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {selectedApp.materials.map((material, idx) => (
-                            <tr key={idx} className={executeSelectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
-                              <td className="px-3 py-2">
-                                <input
-                                  type="checkbox"
-                                  checked={executeSelectedMaterialIndices.has(idx)}
-                                  onChange={(e) => {
-                                    const newSelected = new Set(executeSelectedMaterialIndices);
-                                    if (e.target.checked) {
-                                      newSelected.add(idx);
-                                      setExecuteMaterialActualQuantities({
-                                        ...executeMaterialActualQuantities,
-                                        [idx]: material.requestedQuantity
-                                      });
-                                    } else {
-                                      newSelected.delete(idx);
-                                      const newQuantities = { ...executeMaterialActualQuantities };
-                                      delete newQuantities[idx];
-                                      setExecuteMaterialActualQuantities(newQuantities);
-                                    }
-                                    setExecuteSelectedMaterialIndices(newSelected);
-                                  }}
-                                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.materialName}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.spec}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.unit}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.stockQuantity}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
-                              <td className="px-3 py-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={material.requestedQuantity}
-                                  value={executeMaterialActualQuantities[idx] ?? material.requestedQuantity}
-                                  onChange={(e) => {
-                                    setExecuteMaterialActualQuantities({
-                                      ...executeMaterialActualQuantities,
-                                      [idx]: Number(e.target.value)
-                                    });
-                                  }}
-                                  disabled={!executeSelectedMaterialIndices.has(idx)}
-                                  className="w-20 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {executeMaterialPool.length > 0 && (
-                <div className="mt-6">
-                  <label className="text-sm font-medium text-gray-700 mb-2">物料池（可修改实发数量或移除）</label>
-                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
-                    <thead className="bg-emerald-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-16">操作</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {executeMaterialPool.map((material, idx) => {
-                        const subtotal = (material.requestedQuantity || 0) * (material.unitPrice || 0);
-                        const isQuantityDifferent = material.actualQuantity < material.requestedQuantity;
-                        return (
-                          <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
-                            <td className="px-3 py-2">
-                              <button
-                                onClick={() => handleRemoveFromMaterialPool(idx)}
-                                className="text-red-600 hover:text-red-800 text-sm"
-                              >
-                                移除
-                              </button>
-                            </td>
-                            <td className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{material.materialName}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{material.spec}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{material.unit}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{subtotal.toFixed(2)}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max={material.requestedQuantity}
-                                value={material.actualQuantity}
-                                onChange={(e) => handleUpdateMaterialPoolQuantity(idx, Number(e.target.value))}
-                                className={`w-20 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleExecuteCancelAdd}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleExecuteSaveAdd}
-                disabled={executeMaterialPool.length === 0}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 编辑弹窗 */}
-      {executeShowEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
-              <h3 className="text-lg font-semibold text-white">编辑领料出库单</h3>
-              <button onClick={() => setExecuteShowEditModal(false)} className="text-white hover:bg-blue-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-100 rounded-lg p-3">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
-                  <div className="text-sm font-medium text-gray-900">{executeSelectedRecord?.code}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">申请日期</label>
-                  <input
-                    type="date"
-                    value={executeEditForm.date}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">申请人</label>
-                  <input
-                    type="text"
-                    value={executeEditForm.applicant}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, applicant: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">库存地点</label>
-                  <select
-                    value={executeEditForm.warehouseLocation}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, warehouseLocation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="仓库A区">仓库A区</option>
-                    <option value="仓库B区">仓库B区</option>
-                    <option value="仓库C区">仓库C区</option>
-                    <option value="仓库D区">仓库D区</option>
-                    <option value="仓库E区">仓库E区</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">审核人</label>
-                  <input
-                    type="text"
-                    value={executeEditForm.reviewer}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, reviewer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">生产计划批次号</label>
-                  <input
-                    type="text"
-                    value={executeEditForm.productionBatchCode}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, productionBatchCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-1">执行状态</label>
-                  <select
-                    value={executeEditForm.executeStatus}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, executeStatus: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="待出库">待出库</option>
-                    <option value="部分出库">部分出库</option>
-                    <option value="已出库">已出库</option>
-                    <option value="已取消">已取消</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">物料明细</label>
-                  <button
-                    onClick={handleExecuteEditAddMaterial}
-                    className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    添加物料
-                  </button>
-                </div>
-                {executeEditForm.materials.length > 0 && (
-                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实际库存</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
-                        <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {executeEditForm.materials.map((material, idx) => {
-                        const subtotal = (material.requestedQuantity || 0) * (material.unitPrice || 0);
-                        const isQuantityDifferent = material.actualQuantity < material.requestedQuantity;
-                        return (
-                          <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.applicationCode || ''}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'applicationCode', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono bg-gray-50"
-                                readOnly
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.materialCode}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialCode', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.materialName}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialName', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.spec}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'spec', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.unit}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'unit', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={material.requestedQuantity}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={material.stockQuantity}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={material.actualQuantity}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
-                                className={`w-full px-2 py-1 border border-gray-200 rounded text-sm ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={material.unitPrice || ''}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-sm text-blue-700 bg-gray-50">
-                              {subtotal.toFixed(2)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.warehousePosition || ''}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'warehousePosition', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={material.remark}
-                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'remark', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                onClick={() => handleExecuteEditRemoveMaterial(idx)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleExecuteCancelEdit}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleExecuteSaveEdit}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 编辑领料出库弹窗 */}
+      <ExecuteEditModal
+        isOpen={executeShowEditModal}
+        record={executeSelectedRecord}
+        editForm={executeEditForm}
+        onClose={() => setExecuteShowEditModal(false)}
+        onEditFormChange={(field, value) => setExecuteEditForm({ ...executeEditForm, [field]: value })}
+        onMaterialChange={handleExecuteEditMaterialChange}
+        onAddMaterial={handleExecuteEditAddMaterial}
+        onRemoveMaterial={handleExecuteEditRemoveMaterial}
+        onCancel={handleExecuteCancelEdit}
+        onSave={handleExecuteSaveEdit}
+      />
 
       {/* 删除确认弹窗 */}
       {executeShowDeleteConfirm && (
@@ -4626,7 +3951,7 @@ export default function MaterialReceiving() {
 
         {/* 详情查看弹窗 */}
         <StatDetailModal
-          show={statShowDetailModal}
+          isOpen={statShowDetailModal}
           record={statSelectedRecord}
           onClose={() => setStatShowDetailModal(false)}
         />

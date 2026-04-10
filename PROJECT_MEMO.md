@@ -10,6 +10,13 @@
 | 技术栈 | React 18 + Vite + TypeScript + Tailwind CSS + Radix UI |
 | 端口 | 5188 |
 
+## 远程仓库
+
+| 项目 | 内容 |
+|------|------|
+| 仓库地址 | https://github.com/lqch7788/TMcrop |
+| 分支 | planting-management |
+
 ## 项目结构
 
 ```

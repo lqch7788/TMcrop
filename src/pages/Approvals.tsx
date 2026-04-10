@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, ChevronRight, Filter, AlertTriangle, X } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, ChevronRight, Filter, AlertTriangle } from 'lucide-react';
 import { approvals } from '../data/mockData';
+import { PartialApprovalModal } from '../components/approvals/PartialApprovalModal';
 
 export default function Approvals() {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
@@ -187,100 +188,14 @@ export default function Approvals() {
       </div>
 
       {/* 部分通过弹窗 */}
-      {showPartialModal && partialApproval && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
-              <h3 className="text-lg font-semibold text-white">部分通过审批</h3>
-              <button onClick={() => setShowPartialModal(false)} className="text-white hover:bg-blue-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <div className="text-sm text-gray-500 mb-1">领料单号</div>
-                <div className="font-medium text-gray-900">{partialApproval.code}</div>
-              </div>
-              <div className="mb-4">
-                <div className="text-sm text-gray-500 mb-1">标题</div>
-                <div className="font-medium text-gray-900">{partialApproval.title}</div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium text-gray-700 mb-2">物料明细 - 请填写实际发放数量</div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料编码</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">申请数量</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">实际发放</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {(partialApproval.materials || []).map((mat: any) => {
-                        const insufficient = (partialQuantities[mat.materialCode] || 0) < mat.requestedQuantity;
-                        return (
-                          <tr key={mat.materialCode}>
-                            <td className="px-3 py-2 text-gray-900">{mat.materialCode}</td>
-                            <td className="px-3 py-2 text-gray-900">{mat.materialName}</td>
-                            <td className="px-3 py-2 text-right text-gray-900">{mat.requestedQuantity}</td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max={mat.requestedQuantity}
-                                value={partialQuantities[mat.materialCode] || 0}
-                                onChange={(e) => setPartialQuantities({
-                                  ...partialQuantities,
-                                  [mat.materialCode]: Number(e.target.value)
-                                })}
-                                className={`w-20 h-8 px-2 border rounded text-right text-sm focus:outline-none focus:border-blue-500 ${insufficient ? 'border-amber-400 bg-amber-50' : 'border-gray-200'}`}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 提示信息 */}
-              {Object.keys(partialQuantities).some(code => {
-                const mat = partialApproval.materials?.find((m: any) => m.materialCode === code);
-                return mat && (partialQuantities[code] || 0) < mat.requestedQuantity;
-              }) && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium">部分物料数量不足</p>
-                      <p className="mt-1">系统将自动生成新的待审批领料单，包含不足数量的物料。</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowPartialModal(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={confirmPartialApprove}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                >
-                  确认部分通过
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <PartialApprovalModal
+        isOpen={showPartialModal}
+        onClose={() => setShowPartialModal(false)}
+        partialApproval={partialApproval}
+        partialQuantities={partialQuantities}
+        onQuantityChange={setPartialQuantities}
+        onConfirm={confirmPartialApprove}
+      />
     </div>
   );
 }

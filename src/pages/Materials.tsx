@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Package, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Plus, X, RefreshCw } from 'lucide-react';
+import { Package, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
+import AddInboundModal from '../components/materials/AddInboundModal';
+import { ExportFormatModal } from '../components/materials/ExportFormatModal';
 
 const warehouseMaterials = [
   { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, price: '30元', supplier: '金种子业公司', location: 'A区-01' },
@@ -286,6 +288,7 @@ export default function Materials() {
   const [codeGenError, setCodeGenError] = useState('');
   const [codeGenSuccess, setCodeGenSuccess] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [codeGenCollapsed, setCodeGenCollapsed] = useState(true); // 默认折叠
 
   // 编码生成器 - 分类变化
   const handleCodeGenCategoryChange = (field: string, value: string) => {
@@ -915,109 +918,129 @@ export default function Materials() {
 
       {activeTab === 'inbound' && (
         <>
-          {/* 编码规则生成器 */}
-          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">物料编码生成</h3>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">资材编码规则：大类(2位) + 中类(2位) + 小类(2位) + 序号(3位)</span>
+          {/* 供应商编码生成器 */}
+          {codeGenCollapsed ? (
+            <div className="bg-white rounded-xl shadow-sm p-3 inline-flex items-center gap-2">
+              <button
+                onClick={() => setCodeGenCollapsed(!codeGenCollapsed)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                title={codeGenCollapsed ? '展开' : '收起'}
+              >
+                <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
+              </button>
+              <h3 className="text-sm font-semibold text-gray-900">物料编码生成</h3>
             </div>
+          ) : (
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => setCodeGenCollapsed(!codeGenCollapsed)}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  title={codeGenCollapsed ? '展开' : '收起'}
+                >
+                  <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
+                </button>
+                <h3 className="text-lg font-semibold text-gray-900">物料编码生成</h3>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">资材编码规则：大类(2位) + 中类(2位) + 小类(2位) + 序号(3位)</span>
+              </div>
 
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-                <select
-                  value={codeGen.bigCategory}
-                  onChange={(e) => handleCodeGenCategoryChange('bigCategory', e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">请选择大类</option>
-                  {bigCategories.map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
-                <select
-                  value={codeGen.midCategory}
-                  onChange={(e) => handleCodeGenCategoryChange('midCategory', e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                  disabled={!codeGen.bigCategory}
-                >
-                  <option value="">请选择中类</option>
-                  {getCodeGenMidCategories().map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
-                <select
-                  value={codeGen.subCategory}
-                  onChange={(e) => handleCodeGenCategoryChange('subCategory', e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                  disabled={!codeGen.midCategory}
-                >
-                  <option value="">请选择小类</option>
-                  {getCodeGenSubCategories().map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">生成编码</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={codeGen.generatedCode}
-                    placeholder="点击生成"
-                    className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
-                    readOnly
-                  />
-                  <button
-                    onClick={handleCodeGen}
-                    disabled={!codeGen.subCategory}
-                    className="px-3 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
+                  <select
+                    value={codeGen.bigCategory}
+                    onChange={(e) => handleCodeGenCategoryChange('bigCategory', e.target.value)}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
                   >
-                    生成
-                  </button>
+                    <option value="">请选择大类</option>
+                    {bigCategories.map(cat => (
+                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
+                  <select
+                    value={codeGen.midCategory}
+                    onChange={(e) => handleCodeGenCategoryChange('midCategory', e.target.value)}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    disabled={!codeGen.bigCategory}
+                  >
+                    <option value="">请选择中类</option>
+                    {getCodeGenMidCategories().map(cat => (
+                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
+                  <select
+                    value={codeGen.subCategory}
+                    onChange={(e) => handleCodeGenCategoryChange('subCategory', e.target.value)}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    disabled={!codeGen.midCategory}
+                  >
+                    <option value="">请选择小类</option>
+                    {getCodeGenSubCategories().map(cat => (
+                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">生成编码</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={codeGen.generatedCode}
+                      placeholder="点击生成"
+                      className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+                      readOnly
+                    />
+                    <button
+                      onClick={handleCodeGen}
+                      disabled={!codeGen.subCategory}
+                      className="px-3 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      生成
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 操作按钮 */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleVerifyCode}
-                disabled={!codeGen.generatedCode}
-                className="px-4 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <Search className="w-4 h-4" />
-                验证重码
-              </button>
-              <button
-                onClick={handleCopyCode}
-                disabled={!codeGen.generatedCode}
-                className="px-4 h-9 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                {copySuccess ? '已复制!' : '复制编码'}
-              </button>
-              <span className="text-xs text-gray-500">生成的编码可复制后用于新增物料</span>
-            </div>
+              {/* 操作按钮 */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleVerifyCode}
+                  disabled={!codeGen.generatedCode}
+                  className="px-4 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <Search className="w-4 h-4" />
+                  验证重码
+                </button>
+                <button
+                  onClick={handleCopyCode}
+                  disabled={!codeGen.generatedCode}
+                  className="px-4 h-9 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  {copySuccess ? '已复制!' : '复制编码'}
+                </button>
+                <span className="text-xs text-gray-500">生成的编码可复制后用于新增物料</span>
+              </div>
 
-            {/* 提示信息 */}
-            {codeGenError && (
-              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{codeGenError}</p>
-              </div>
-            )}
-            {codeGenSuccess && !codeGenError && (
-              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-600">{codeGenSuccess}</p>
-              </div>
-            )}
-          </div>
+              {/* 提示信息 */}
+              {codeGenError && (
+                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{codeGenError}</p>
+                </div>
+              )}
+              {codeGenSuccess && !codeGenError && (
+                <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-600">{codeGenSuccess}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -1124,179 +1147,30 @@ export default function Materials() {
         </>
       )}
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-              <h3 className="text-lg font-semibold text-white">新增入库</h3>
-              <button onClick={handleCloseModal} className="text-white hover:bg-emerald-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              {/* 入库单号 */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">入库单号</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newInbound.orderCode}
-                    onChange={(e) => setNewInbound({ ...newInbound, orderCode: e.target.value })}
-                    placeholder="点击自动生成"
-                    className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 bg-gray-50"
-                    readOnly
-                  />
-                  <button
-                    type="button"
-                    onClick={generateOrderCode}
-                    className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    自动生成
-                  </button>
-                </div>
-              </div>
-
-              {/* 物料编码 */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">物料编码 <span className="text-red-500">*</span></label>
-                <div className="flex gap-2">
-                  <input type="text" value={newInbound.materialCode} onChange={(e) => { setNewInbound({ ...newInbound, materialCode: e.target.value }); checkCodeDuplicate(e.target.value); }} placeholder="请输入物料编码（可从上方编码生成器复制）" className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">提示：可在"物料编码生成"区域生成并验证编码后复制到此</p>
-                {codeError && <p className="text-xs text-red-500 mt-1">{codeError}</p>}
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">物料名称 <span className="text-red-500">*</span></label>
-                <input type="text" value={newInbound.materialName} onChange={(e) => handleMaterialNameChange(e.target.value)} placeholder="请输入物料名称" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-                {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">入库数量 <span className="text-red-500">*</span></label>
-                  <input type="number" value={newInbound.quantity} onChange={(e) => setNewInbound({ ...newInbound, quantity: e.target.value })} placeholder="请输入数量" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
-                  <select value={newInbound.unit} onChange={(e) => setNewInbound({ ...newInbound, unit: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                    <option value="袋">袋</option>
-                    <option value="箱">箱</option>
-                    <option value="公斤">公斤</option>
-                    <option value="克">克</option>
-                    <option value="吨">吨</option>
-                    <option value="升">升</option>
-                    <option value="毫升">毫升</option>
-                    <option value="米">米</option>
-                    <option value="厘米">厘米</option>
-                    <option value="㎡">㎡</option>
-                    <option value="亩">亩</option>
-                    <option value="个">个</option>
-                    <option value="台">台</option>
-                    <option value="套">套</option>
-                    <option value="卷">卷</option>
-                    <option value="把">把</option>
-                    <option value="双">双</option>
-                    <option value="件">件</option>
-                    <option value="瓶">瓶</option>
-                    <option value="桶">桶</option>
-                    <option value="盒">盒</option>
-                    <option value="支">支</option>
-                    <option value="棵">棵</option>
-                    <option value="株">株</option>
-                    <option value="盘">盘</option>
-                    <option value="篮">篮</option>
-                    <option value="筐">筐</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-                <input type="text" value={newInbound.supplier} onChange={(e) => setNewInbound({ ...newInbound, supplier: e.target.value })} placeholder="请输入供应商" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">入库日期</label>
-                  <input type="date" value={newInbound.inboundDate} onChange={(e) => setNewInbound({ ...newInbound, inboundDate: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">操作员</label>
-                  <input type="text" value={newInbound.operator} onChange={(e) => setNewInbound({ ...newInbound, operator: e.target.value })} placeholder="请输入操作员" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <textarea value={newInbound.remarks} onChange={(e) => setNewInbound({ ...newInbound, remarks: e.target.value })} placeholder="请输入备注" rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none" />
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-              <button onClick={handleCloseModal} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
-              <button onClick={handleSaveInbound} disabled={!!codeError || !!nameError || !newInbound.materialCode || !newInbound.materialName || !newInbound.quantity} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 新增入库弹窗 */}
+      <AddInboundModal
+        show={showAddModal}
+        newInbound={newInbound}
+        codeError={codeError}
+        nameError={nameError}
+        inboundRecords={inboundRecords}
+        onClose={handleCloseModal}
+        onSave={handleSaveInbound}
+        onNewInboundChange={(field: string, value: string) => setNewInbound({ ...newInbound, [field]: value })}
+        onGenerateOrderCode={generateOrderCode}
+        onCheckCodeDuplicate={checkCodeDuplicate}
+        onCheckNameDuplicate={checkNameDuplicate}
+      />
 
       {/* 导出格式选择弹窗 */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-              <button onClick={() => setShowExportModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-gray-500 mb-4">已选择 {selectedRows.length} 条数据</p>
-              <div className="space-y-3">
-                {[
-                  { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
-                  { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
-                  { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
-                ].map((format) => (
-                  <label
-                    key={format.value}
-                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                      exportFormat === format.value
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="exportFormat"
-                      value={format.value}
-                      checked={exportFormat === format.value}
-                      onChange={(e) => setExportFormat(e.target.value)}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                    />
-                    <div className="ml-3">
-                      <span className="block text-sm font-medium text-gray-900">{format.label}</span>
-                      <span className="block text-xs text-gray-500">{format.desc}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              <button
-                onClick={handleDoExport}
-                disabled={selectedRows.length === 0}
-                className="w-full mt-6 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                导出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        exportFormat={exportFormat}
+        selectedRowsCount={selectedRows.length}
+        onExportFormatChange={setExportFormat}
+        onDoExport={handleDoExport}
+      />
     </div>
   );
 }

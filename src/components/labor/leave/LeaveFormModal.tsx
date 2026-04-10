@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { LeaveFormModalProps, LeaveRecord, LeaveType } from './types';
 
 /**
@@ -69,137 +70,139 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
     onSave(formData);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
-        {/* 头部 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {record ? '编辑请假' : '新建请假'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  const content = (
+    <div className="grid grid-cols-2 gap-4">
+      {/* 员工姓名 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          员工姓名 <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.staffName || ''}
+          onChange={(e) => handleChange('staffName', e.target.value)}
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          placeholder="请输入员工姓名"
+        />
+      </div>
 
-        {/* 表单内容 */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[calc(80vh-120px)]">
-          <div className="grid grid-cols-2 gap-4">
-            {/* 员工姓名 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                员工姓名 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.staffName || ''}
-                onChange={(e) => handleChange('staffName', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入员工姓名"
-              />
-            </div>
+      {/* 请假类型 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          请假类型 <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.leaveType || ''}
+          onChange={(e) => handleChange('leaveType', e.target.value)}
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        >
+          {leaveTypes.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+      </div>
 
-            {/* 请假类型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                请假类型 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.leaveType || ''}
-                onChange={(e) => handleChange('leaveType', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                {leaveTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
+      {/* 开始日期 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          开始日期 <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={formData.startDate || ''}
+          onChange={(e) => handleDateChange('startDate', e.target.value)}
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        />
+      </div>
 
-            {/* 开始日期 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                开始日期 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.startDate || ''}
-                onChange={(e) => handleDateChange('startDate', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
+      {/* 结束日期 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          结束日期 <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={formData.endDate || ''}
+          onChange={(e) => handleDateChange('endDate', e.target.value)}
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        />
+      </div>
 
-            {/* 结束日期 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                结束日期 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.endDate || ''}
-                onChange={(e) => handleDateChange('endDate', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
+      {/* 请假天数 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">请假天数</label>
+        <input
+          type="text"
+          value={formData.days ? `${formData.days} 天` : ''}
+          readOnly
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+          placeholder="自动计算"
+        />
+      </div>
 
-            {/* 请假天数 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">请假天数</label>
-              <input
-                type="text"
-                value={formData.days ? `${formData.days} 天` : ''}
-                readOnly
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
-                placeholder="自动计算"
-              />
-            </div>
+      {/* 请假原因 */}
+      <div className="col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          请假原因 <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={formData.reason || ''}
+          onChange={(e) => handleChange('reason', e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          placeholder="请输入请假原因"
+        />
+      </div>
 
-            {/* 请假原因 */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                请假原因 <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.reason || ''}
-                onChange={(e) => handleChange('reason', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入请假原因"
-              />
-            </div>
-
-            {/* 备注 */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <textarea
-                value={formData.remarks || ''}
-                onChange={(e) => handleChange('remarks', e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                placeholder="请输入备注信息（可选）"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 底部 */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-          >
-            保存
-          </button>
-        </div>
+      {/* 备注 */}
+      <div className="col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+        <textarea
+          value={formData.remarks || ''}
+          onChange={(e) => handleChange('remarks', e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          placeholder="请输入备注信息（可选）"
+        />
       </div>
     </div>
+  );
+
+  const footer = (
+    <>
+      <button
+        onClick={onClose}
+        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+      >
+        取消
+      </button>
+      <button
+        onClick={handleSubmit}
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+      >
+        保存
+      </button>
+    </>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={open}
+      onClose={onClose}
+      title={record ? '编辑请假' : '新建请假'}
+      size="lg"
+      showFooter={true}
+      headerAction={
+        <button
+          onClick={onClose}
+          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      }
+      footer={footer}
+    >
+      {content}
+    </UnifiedModal>
   );
 }

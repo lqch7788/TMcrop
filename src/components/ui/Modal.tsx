@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
   onSubmit?: () => void;
   submitText?: string;
   cancelText?: string;
@@ -18,14 +18,16 @@ const sizeClasses = {
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
-  xl: 'max-w-4xl'
+  xl: 'max-w-4xl',
+  xxl: 'max-w-5xl'
 };
 
 const sizeDefaults = {
   sm: { width: 400, height: 300 },
   md: { width: 500, height: 400 },
   lg: { width: 700, height: 500 },
-  xl: { width: 900, height: 600 }
+  xl: { width: 900, height: 600 },
+  xxl: { width: 1080, height: 650 }
 };
 
 export function Modal({
@@ -55,6 +57,19 @@ export function Modal({
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
 
   const modalRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const BOUNDARY_PADDING = 30;
+
+  // ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Initialize position when modal opens
   useEffect(() => {
@@ -81,42 +96,60 @@ export function Modal({
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y
-        });
+      // Cancel previous RAF if exists
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
       }
-      if (isResizing) {
-        const deltaX = e.clientX - initialMouse.x;
-        const deltaY = e.clientY - initialMouse.y;
 
-        let newWidth = initialSize.width;
-        let newHeight = initialSize.height;
-        let newX = initialPosition.x;
-        let newY = initialPosition.y;
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (isDragging) {
+          // Calculate new position with boundary constraints
+          const rawX = e.clientX - dragOffset.x;
+          const rawY = e.clientY - dragOffset.y;
+          const clampedX = Math.max(BOUNDARY_PADDING, Math.min(rawX, window.innerWidth - modalSize.width - BOUNDARY_PADDING));
+          const clampedY = Math.max(BOUNDARY_PADDING, Math.min(rawY, window.innerHeight - modalSize.height - BOUNDARY_PADDING));
 
-        if (resizeDirection.includes('e')) {
-          newWidth = Math.max(300, initialSize.width + deltaX);
+          setPosition({
+            x: clampedX,
+            y: clampedY
+          });
         }
-        if (resizeDirection.includes('s')) {
-          newHeight = Math.max(200, initialSize.height + deltaY);
-        }
-        if (resizeDirection.includes('w')) {
-          newWidth = Math.max(300, initialSize.width - deltaX);
-          newX = initialPosition.x + (initialSize.width - newWidth);
-        }
-        if (resizeDirection.includes('n')) {
-          newHeight = Math.max(200, initialSize.height - deltaY);
-          newY = initialPosition.y + (initialSize.height - newHeight);
-        }
+        if (isResizing) {
+          const deltaX = e.clientX - initialMouse.x;
+          const deltaY = e.clientY - initialMouse.y;
 
-        setModalSize({ width: newWidth, height: newHeight });
-        setPosition({ x: newX, y: newY });
-      }
+          let newWidth = initialSize.width;
+          let newHeight = initialSize.height;
+          let newX = initialPosition.x;
+          let newY = initialPosition.y;
+
+          if (resizeDirection.includes('e')) {
+            newWidth = Math.max(300, initialSize.width + deltaX);
+          }
+          if (resizeDirection.includes('s')) {
+            newHeight = Math.max(200, initialSize.height + deltaY);
+          }
+          if (resizeDirection.includes('w')) {
+            newWidth = Math.max(300, initialSize.width - deltaX);
+            newX = initialPosition.x + (initialSize.width - newWidth);
+          }
+          if (resizeDirection.includes('n')) {
+            newHeight = Math.max(200, initialSize.height - deltaY);
+            newY = initialPosition.y + (initialSize.height - newHeight);
+          }
+
+          setModalSize({ width: newWidth, height: newHeight });
+          setPosition({ x: newX, y: newY });
+        }
+      });
     };
 
     const handleMouseUp = () => {
+      // Cancel any pending RAF
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
       setIsDragging(false);
       setIsResizing(false);
       setResizeDirection('');
@@ -186,22 +219,29 @@ export function Modal({
         }}
         onMouseDown={handleMouseDown}
       >
-        {/* Header */}
-        <div className="modal-header flex items-center justify-between px-6 py-3 bg-emerald-600 flex-shrink-0 rounded-t-xl cursor-move select-none">
+        {/* Header - Double click to maximize */}
+        <div
+          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl cursor-move select-none ${isDragging ? 'ring-2 ring-white/30 shadow-lg' : ''}`}
+          onDoubleClick={handleMaximize}
+        >
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <div className="flex items-center gap-2">
             {headerAction}
             {/* Maximize/Restore Button */}
             <button
               onClick={handleMaximize}
-              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
-              title={isMaximized ? '还原' : '最大化'}
+              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors group relative"
+              title={isMaximized ? '还原窗口' : '最大化窗口'}
             >
               {isMaximized ? (
                 <Minimize2 className="w-4 h-4 text-white" />
               ) : (
                 <Maximize2 className="w-4 h-4 text-white" />
               )}
+              {/* Tooltip */}
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                {isMaximized ? '还原窗口' : '最大化窗口'}
+              </span>
             </button>
             {/* Close Button */}
             <button
@@ -216,21 +256,21 @@ export function Modal({
         {/* Resize Handles */}
         {!isMaximized && (
           <>
-            {/* Corner handles */}
+            {/* Corner handles - Enhanced visibility */}
             <div
-              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
+              className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'nw')}
             />
             <div
-              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
+              className="absolute top-0 right-0 w-2 h-2 cursor-ne-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'ne')}
             />
             <div
-              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
+              className="absolute bottom-0 left-0 w-2 h-2 cursor-sw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'sw')}
             />
             <div
-              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+              className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'se')}
             />
             {/* Edge handles */}
@@ -253,8 +293,8 @@ export function Modal({
           </>
         )}
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        {/* Body - Responsive grid layout */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           {children}
         </div>
 

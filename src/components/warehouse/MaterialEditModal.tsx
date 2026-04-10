@@ -1,5 +1,6 @@
-import { X, Barcode, Package } from 'lucide-react';
+import { Barcode, Package } from 'lucide-react';
 import { Material } from './MaterialFilters';
+import { UnifiedModal } from '../ui/UnifiedModal';
 
 interface MaterialEditModalProps {
   material: Material | null;
@@ -12,82 +13,67 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
   if (!isOpen || !material) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-7xl shadow-xl max-h-[90vh] flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 flex-shrink-0">
-          <h3 className="text-lg font-semibold text-white">编辑物料库存</h3>
-          <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-6 overflow-y-auto flex-1">
-          <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs text-blue-600 block font-medium">条形码</span>
-                <span className="text-2xl font-mono font-bold text-blue-700">{material.barcode}</span>
-              </div>
-              <Barcode className="w-12 h-12 text-blue-600" />
-            </div>
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="编辑物料库存"
+      size="xl"
+      showFooter={true}
+      onSubmit={() => onSave(material)}
+      submitText="保存"
+      cancelText="取消"
+    >
+      <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-xs text-blue-600 block font-medium">条形码</span>
+            <span className="text-2xl font-mono font-bold text-blue-700">{material.barcode}</span>
           </div>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <span className="text-xs text-gray-500 block">物料编码</span>
-                <span className="text-sm font-medium text-gray-900">{material.code}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">物料名称</span>
-                <span className="text-sm font-medium text-gray-900">{material.name}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">物料分类</span>
-                <span className="text-sm font-medium text-gray-900">{material.category}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">规格型号</span>
-                <span className="text-sm font-medium text-gray-900">{material.specification}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">单位</span>
-                <span className="text-sm font-medium text-gray-900">{material.unit}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">当前库存</span>
-                <span className="text-sm font-medium text-gray-900">{material.quantity} {material.unit}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">单价</span>
-                <span className="text-sm font-medium text-gray-900">{material.price}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">供应商</span>
-                <span className="text-sm font-medium text-gray-900">{material.supplier}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center text-sm text-gray-500 py-4">
-            完整编辑功能待实现
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            取消
-          </button>
-          <button
-            onClick={() => onSave(material)}
-            className="h-10 px-6 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
-            保存
-          </button>
+          <Barcode className="w-12 h-12 text-blue-600" />
         </div>
       </div>
-    </div>
+
+      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <span className="text-xs text-gray-500 block">物料编码</span>
+            <span className="text-sm font-medium text-gray-900">{material.code}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">物料名称</span>
+            <span className="text-sm font-medium text-gray-900">{material.name}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">物料分类</span>
+            <span className="text-sm font-medium text-gray-900">{material.category}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">规格型号</span>
+            <span className="text-sm font-medium text-gray-900">{material.specification}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">单位</span>
+            <span className="text-sm font-medium text-gray-900">{material.unit}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">当前库存</span>
+            <span className="text-sm font-medium text-gray-900">{material.quantity} {material.unit}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">单价</span>
+            <span className="text-sm font-medium text-gray-900">{material.price}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 block">供应商</span>
+            <span className="text-sm font-medium text-gray-900">{material.supplier}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center text-sm text-gray-500 py-4">
+        完整编辑功能待实现
+      </div>
+    </UnifiedModal>
   );
 }
 

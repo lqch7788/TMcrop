@@ -585,43 +585,77 @@ export default function CodeRule() {
       )}
 
       {/* 分类表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden w-[60%]">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-emerald-600">
             <tr>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-20">大类代码</th>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-40">大类名称</th>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-20">中类代码</th>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-40">中类名称</th>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-20">小类代码</th>
-              <th className="px-2 py-3 text-left text-sm font-semibold text-gray-700 w-40">小类名称</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white w-24">大类代码</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white">大类名称</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white w-24">中类代码</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white w-48">中类名称</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white w-24">小类代码</th>
+              <th className="px-2 py-3 text-left text-sm font-semibold text-white w-48">小类名称</th>
             </tr>
+            {/* 添加大类按钮 - 表格顶部 */}
+            {isEditing && (
+              <tr className="bg-white">
+                <td colSpan={6} className="px-2 py-2">
+                  {showAddBig ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newBigCode}
+                        onChange={(e) => setNewBigCode(e.target.value)}
+                        placeholder="代码(如:AB)"
+                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={newBigName}
+                        onChange={(e) => setNewBigName(e.target.value)}
+                        placeholder="大类名称"
+                        className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                      <button onClick={addBigCategory} className="px-3 py-1 bg-emerald-600 text-white rounded text-sm">添加</button>
+                      <button onClick={() => setShowAddBig(false)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">取消</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowAddBig(true)}
+                      className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700"
+                    >
+                      <Plus className="w-4 h-4" /> 添加大类
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )}
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {/* 渲染大类标题行（始终可见） */}
             {categories.map((big, bigIdx) => {
               return (
                 <>
                   {/* 大类标题行 - 始终显示 */}
-                  <tr key={`big-${big.code}`} className="bg-gray-100 hover:bg-gray-200">
+                  <tr key={`big-${big.code}`} className="bg-white hover:bg-gray-50">
                     <td className="px-2 py-3">
                       <div className="flex items-center gap-2">
                         <button onClick={() => toggleBig(big.code)} className="p-1 hover:bg-gray-300 rounded">
                           {expandedBig.has(big.code) ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                         </button>
-                        <span className="font-mono font-bold text-gray-700 text-lg">{big.code}</span>
+                        <span className="font-mono font-bold text-blue-600 text-sm">{big.code}</span>
                       </div>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className="px-2 py-3 whitespace-nowrap">
                       {isEditing ? (
-                        <div>
+                        <div className="flex items-center">
                           {renderEditCell('big', big.code, undefined, undefined, big.name)}
-                          <span className="block text-xs text-gray-400">({big.nameEn})</span>
+                          <span className="text-xs text-gray-400 ml-1">({big.nameEn})</span>
                         </div>
                       ) : (
-                        <div>
-                          <span className="font-semibold text-gray-800">{big.name}</span>
-                          <span className="block text-xs text-gray-400">({big.nameEn})</span>
+                        <div className="flex items-center">
+                          <span className="font-semibold text-gray-800 text-sm">{big.name}</span>
+                          <span className="text-xs text-gray-400 ml-1">({big.nameEn})</span>
                         </div>
                       )}
                     </td>
@@ -639,7 +673,7 @@ export default function CodeRule() {
                     // 渲染中类标题行
                     return (
                       <>
-                        <tr key={`mid-${big.code}-${mid.code}`} className="bg-gray-100 hover:bg-gray-200">
+                        <tr key={`mid-${big.code}-${mid.code}`} className="bg-white hover:bg-gray-50">
                           <td className="px-2 py-2"></td>
                           <td className="px-2 py-2"></td>
                           <td className="px-2 py-2">
@@ -647,12 +681,12 @@ export default function CodeRule() {
                               <button onClick={() => toggleMid(big.code, mid.code)} className="p-1 hover:bg-gray-300 rounded">
                                 {isMidExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </button>
-                              <span className="font-mono text-blue-600 font-medium">{mid.code}</span>
+                              <span className="font-mono text-blue-600 font-medium text-sm">{mid.code}</span>
                             </div>
                           </td>
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-2 whitespace-nowrap">
                             <div className="flex items-center gap-4">
-                              {isEditing ? renderEditCell('mid', big.code, mid.code, undefined, mid.name) : <span className="font-medium text-gray-800">{mid.name}</span>}
+                              {isEditing ? renderEditCell('mid', big.code, mid.code, undefined, mid.name) : <span className="font-medium text-gray-800 text-sm">{mid.name}</span>}
                               {isEditing && (
                                 <button
                                 onClick={() => setShowAddSub(`${big.code}${mid.code}`)}
@@ -669,16 +703,16 @@ export default function CodeRule() {
 
                         {/* 如果中类已展开，渲染小类 */}
                         {isMidExpanded && mid.subCategories.map((sub, subIdx) => (
-                          <tr key={`${big.code}${mid.code}${sub.code}`} className="hover:bg-gray-50">
+                          <tr key={`${big.code}${mid.code}${sub.code}`} className="bg-white hover:bg-gray-50">
                             <td className="px-2 py-2"></td>
                             <td className="px-2 py-2"></td>
                             <td className="px-2 py-2"></td>
                             <td className="px-2 py-2"></td>
                             <td className="px-2 py-2">
-                              <span className="font-mono text-purple-600">{sub.code}</span>
+                              <span className="font-mono text-blue-600 text-sm">{sub.code}</span>
                             </td>
-                            <td className="px-2 py-2">
-                              {isEditing ? renderEditCell('sub', big.code, mid.code, sub.code, sub.name) : sub.name}
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              {isEditing ? renderEditCell('sub', big.code, mid.code, sub.code, sub.name) : <span className="text-sm text-gray-700">{sub.name}</span>}
                             </td>
                           </tr>
                         ))}
@@ -688,7 +722,7 @@ export default function CodeRule() {
 
                   {/* 添加中类按钮 - 在大类的最后 */}
                   {isEditing && (
-                    <tr key={`add-mid-${big.code}`} className="bg-gray-50 hover:bg-gray-100">
+                    <tr key={`add-mid-${big.code}`} className="bg-white hover:bg-gray-50">
                       <td className="px-2 py-2"></td>
                       <td className="px-2 py-2">
                         <button
@@ -707,40 +741,6 @@ export default function CodeRule() {
                 </>
               );
             })}
-            {/* 添加大类按钮 */}
-            {isEditing && (
-            <tr className="bg-gray-50">
-              <td colSpan={6} className="px-2 py-3">
-                {showAddBig ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newBigCode}
-                      onChange={(e) => setNewBigCode(e.target.value)}
-                      placeholder="代码(如:AB)"
-                      className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={newBigName}
-                      onChange={(e) => setNewBigName(e.target.value)}
-                      placeholder="大类名称"
-                      className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
-                    />
-                    <button onClick={addBigCategory} className="px-3 py-1 bg-emerald-600 text-white rounded text-sm">添加</button>
-                    <button onClick={() => setShowAddBig(false)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">取消</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowAddBig(true)}
-                    className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700"
-                  >
-                    <Plus className="w-4 h-4" /> 添加大类
-                  </button>
-                )}
-              </td>
-            </tr>
-            )}
           </tbody>
         </table>
       </div>
