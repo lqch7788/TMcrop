@@ -13,7 +13,7 @@ interface SummaryTableProps<T extends { id: number | string }> {
   totalPages: number;
   pageSize: number;
   exportMode: boolean;
-  selectedRows: number[];
+  selectedRows: (number | string)[];
   onPageChange: (page: number) => void;
   onSelectAll: () => void;
   onSelectRow: (id: number | string) => void;
@@ -67,7 +67,7 @@ export function SummaryTable<T extends { id: number | string }>({
                   <td className="px-4 py-3 whitespace-nowrap">
                     <input
                       type="checkbox"
-                      checked={selectedRows.includes(record.id as number)}
+                      checked={selectedRows.includes(record.id)}
                       onChange={() => onSelectRow(record.id)}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />

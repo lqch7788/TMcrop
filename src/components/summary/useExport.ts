@@ -13,7 +13,7 @@ interface UseExportOptions {
 
 export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<(number | string)[]>([]);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
@@ -22,7 +22,7 @@ export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
     setSelectedRows([]);
   };
 
-  const handleSelectAll = (allIds: number[]) => {
+  const handleSelectAll = (allIds: (number | string)[]) => {
     if (selectedRows.length === allIds.length) {
       setSelectedRows([]);
     } else {
@@ -30,7 +30,7 @@ export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: number | string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
     } else {

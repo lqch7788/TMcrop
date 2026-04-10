@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sprout, Droplets, Leaf, AlertTriangle, ChevronLeft, ChevronRight, Search, Plus, Download, Calendar, MapPin, User, Package, X } from 'lucide-react';
+import { usePersistentWorkLogs } from '../../../hooks/usePersistentWorkLogs';
 
 const operationRecords = [
   { id: 1, code: 'OP20260315-001', type: '定植', cropName: '番茄', variety: '红果', greenhouse: '玻璃温室A区', area: 500, operator: '张建国', operatorId: 'U001', date: '2026-03-15', startTime: '09:00', endTime: '11:30', duration: 150, workload: 500, unit: '株', materials: ['番茄苗', '生根剂'], status: 'completed', remarks: '定植完成，苗情良好，浇足定根水' },
@@ -13,6 +14,9 @@ const operationRecords = [
 ];
 
 export default function AgricultureRecordPage() {
+  // 持久化工单 Hook - 同步农事操作到工作日志
+  const { addWorkLog } = usePersistentWorkLogs();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchFilters, setSearchFilters] = useState({
@@ -85,7 +89,36 @@ export default function AgricultureRecordPage() {
   };
 
   const handleSaveRecord = () => {
-    console.log('Saving new record:', newRecord);
+    // 计算工作时长
+    let workHours = 0;
+    if (newRecord.startTime && newRecord.endTime) {
+      const [sh, sm] = newRecord.startTime.split(':').map(Number);
+      const [eh, em] = newRecord.endTime.split(':').map(Number);
+      workHours = (eh * 60 + em - sh * 60 - sm) / 60;
+    }
+
+    // 判断是否有问题（备注中包含关键词）
+    const hasProblems = newRecord.remarks.includes('问题') || newRecord.remarks.includes('异常') || newRecord.remarks.includes('发现');
+
+    // 同步到工作日志（用于每日工单汇总）
+    addWorkLog({
+      code: `WL${newRecord.date.replace(/-/g, '')}${String(Date.now()).slice(-3)}`,
+      date: newRecord.date,
+      worker: newRecord.operator,
+      weather: '晴', // 默认值
+      temperature: '25°C', // 默认值
+      crop: newRecord.cropName,
+      greenhouse: newRecord.greenhouse,
+      growthStatus: '良好',
+      tasks: newRecord.type + (newRecord.remarks ? ` - ${newRecord.remarks.slice(0, 20)}` : ''),
+      problems: hasProblems ? newRecord.remarks : '无',
+      solutions: hasProblems ? '已记录' : '-',
+      batchId: undefined,
+      taskId: undefined,
+      batchCode: undefined,
+    });
+
+    console.log('Saving new record and syncing to work log:', newRecord);
     setShowAddModal(false);
   };
 

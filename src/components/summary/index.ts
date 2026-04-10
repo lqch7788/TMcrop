@@ -14,6 +14,7 @@ export { Pagination } from './Pagination';
 export { ExportModal } from './ExportModal';
 export { ReportTabs } from './ReportTabs';
 export { ReportCharts } from './ReportCharts';
+export { DataResetButton } from './DataResetButton';
 
 // Hooks
 export { useExport } from './useExport';
