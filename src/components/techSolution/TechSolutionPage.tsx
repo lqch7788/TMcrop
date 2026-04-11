@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { FileCode, Plus, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
+import { DeleteWarningModal } from './DeleteWarningModal';
 
 // 技术方案类型定义
 export interface TechSolution {
@@ -46,6 +48,10 @@ export function TechSolutionPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [exportMode, setExportMode] = useState(false);
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
@@ -58,6 +64,10 @@ export function TechSolutionPage() {
     version: '',
     content: '',
   });
+  // 批量编辑相关状态
+  const [editedTechCodes, setEditedTechCodes] = useState<string[]>([]);
+  const [editedTechs, setEditedTechs] = useState<Record<string, Partial<TechSolution>>>({});
+  const [selectedTechCode, setSelectedTechCode] = useState('');
   const [newPlanForm, setNewPlanForm] = useState({
     code: '',
     title: '',
@@ -221,6 +231,23 @@ export function TechSolutionPage() {
     setSelectedRows([]);
   };
 
+  const handleDeleteClick = () => {
+    if (selectedRows.length === 0) {
+      alert('请先选择要删除的数据');
+      return;
+    }
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    // 实际应用中这里会调用API删除数据
+    console.log('删除选中的方案:', selectedRows);
+    setShowDeleteModal(false);
+    setBatchDeleteMode(false);
+    setSelectedRows([]);
+    alert(`已删除 ${selectedRows.length} 个技术方案`);
+  };
+
   const handleOpenCreateModal = () => {
     setNewPlanForm({
       code: generateCode(),
@@ -316,16 +343,16 @@ export function TechSolutionPage() {
             />
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <button className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
               <Search className="w-4 h-4" />
               搜索
             </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <button className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
               重置
             </button>
-            <button onClick={handleOpenCreateModal} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
               <Plus className="w-4 h-4" />
-              新增方案
+              新增
             </button>
           </div>
         </div>
@@ -334,28 +361,118 @@ export function TechSolutionPage() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">技术方案列表</h3>
-          {exportMode ? (
+          {exportMode || batchEditMode || batchDeleteMode ? (
             <div className="flex gap-2">
-              <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
+              {batchEditMode && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (selectedRows.length === 0) {
+                        alert('请先选择要编辑的数据');
+                        return;
+                      }
+                      // 初始化批量编辑状态
+                      const selectedTechsData = techSolutions.filter(t => selectedRows.includes(t.id));
+                      if (selectedTechsData.length > 0) {
+                        setSelectedTechCode(selectedTechsData[0].code);
+                      }
+                      setEditedTechCodes([]);
+                      setEditedTechs({});
+                      setShowBatchEditModal(true);
+                    }}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                  >
+                    <Edit className="w-4 h-4" />
+                    编辑
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBatchEditMode(false);
+                      setSelectedRows([]);
+                    }}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (selectedRows.length === 0) {
+                        alert('请先选择要删除的数据');
+                        return;
+                      }
+                      setShowDeleteModal(true);
+                    }}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    删除
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBatchDeleteMode(false);
+                      setSelectedRows([]);
+                    }}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {exportMode && (
+                <>
+                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
             </div>
           ) : (
-            <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Plus className="w-4 h-4" />
+                新增
+              </button>
+              <button
+                onClick={() => {
+                  setBatchEditMode(true);
+                  setSelectedRows([]);
+                }}
+                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+              >
+                <Edit className="w-4 h-4" />
+                编辑
+              </button>
+              <button
+                onClick={() => {
+                  setBatchDeleteMode(true);
+                  setSelectedRows([]);
+                }}
+                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
           )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === techSolutions.length && techSolutions.length > 0}
@@ -373,13 +490,13 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
+                {!(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {techSolutions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tech) => (
                 <tr key={tech.id} className="hover:bg-blue-100 transition-colors">
-                  {exportMode && (
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
@@ -413,7 +530,7 @@ export function TechSolutionPage() {
                       {tech.status}
                     </span>
                   </td>
-                  {!exportMode && (
+                  {!(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => handleViewClick(tech)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
@@ -421,6 +538,9 @@ export function TechSolutionPage() {
                         </button>
                         <button onClick={() => handleEditClick(tech)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
                           <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => { setSelectedRows([tech.id]); setShowDeleteModal(true); }} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -472,425 +592,573 @@ export function TechSolutionPage() {
       </div>
 
       {/* View Modal */}
-      {viewModalOpen && selectedTech && (
-        <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setViewModalOpen(false)}></div>
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">方案详情</h2>
-                <button onClick={() => setViewModalOpen(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
+      <Modal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        title="方案详情"
+        size="lg"
+        showFooter={false}
+      >
+        {selectedTech && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">方案编号</label>
+                <p className="text-gray-900 font-medium">{selectedTech.code}</p>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">方案编号</label>
-                      <p className="text-gray-900 font-medium">{selectedTech.code}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">版本</label>
-                      <p className="text-gray-900">{selectedTech.version}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">方案标题</label>
-                    <p className="text-gray-900 font-medium">{selectedTech.title}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">作物种类</label>
-                      <p className="text-gray-900">{selectedTech.crop}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">种植模式</label>
-                      <p className="text-gray-900">{selectedTech.plantingMode}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">生长阶段</label>
-                      <p className="text-gray-900">{selectedTech.stage}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">编制人</label>
-                      <p className="text-gray-900">{selectedTech.author}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">创建日期</label>
-                      <p className="text-gray-900">{selectedTech.createDate}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">审批状态</label>
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        selectedTech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {selectedTech.approveStatus}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">状态</label>
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        selectedTech.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
-                        selectedTech.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {selectedTech.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">审批人</label>
-                      <p className="text-gray-900">{selectedTech.approver}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">审批日期</label>
-                      <p className="text-gray-900">{selectedTech.approvalDate}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">方案内容</label>
-                    <div className="mt-2 p-4 bg-gray-50 rounded-lg text-gray-700 text-sm leading-relaxed">
-                      {selectedTech.content}
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">版本</label>
+                <p className="text-gray-900">{selectedTech.version}</p>
               </div>
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-                <button onClick={() => setViewModalOpen(false)} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-                  关闭
-                </button>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">方案标题</label>
+              <p className="text-gray-900 font-medium">{selectedTech.title}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">作物种类</label>
+                <p className="text-gray-900">{selectedTech.crop}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">种植模式</label>
+                <p className="text-gray-900">{selectedTech.plantingMode}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">生长阶段</label>
+                <p className="text-gray-900">{selectedTech.stage}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">编制人</label>
+                <p className="text-gray-900">{selectedTech.author}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">创建日期</label>
+                <p className="text-gray-900">{selectedTech.createDate}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">审批状态</label>
+                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                  selectedTech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {selectedTech.approveStatus}
+                </span>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">状态</label>
+                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                  selectedTech.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
+                  selectedTech.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedTech.status}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">审批人</label>
+                <p className="text-gray-900">{selectedTech.approver}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">审批日期</label>
+                <p className="text-gray-900">{selectedTech.approvalDate}</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">方案内容</label>
+              <div className="mt-2 p-4 bg-gray-50 rounded-lg text-gray-700 text-sm leading-relaxed">
+                {selectedTech.content}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Edit Modal */}
-      {editModalOpen && selectedTech && (
-        <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setEditModalOpen(false)}></div>
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">编辑方案</h2>
-                <button onClick={() => setEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">方案编号</label>
-                      <input
-                        type="text"
-                        value={selectedTech.code}
-                        disabled
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">版本</label>
-                      <input
-                        type="text"
-                        value={editForm.version}
-                        onChange={(e) => setEditForm({...editForm, version: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">方案标题</label>
-                    <input
-                      type="text"
-                      value={editForm.title}
-                      onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">作物种类</label>
-                      <select
-                        value={editForm.crop}
-                        onChange={(e) => setEditForm({...editForm, crop: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      >
-                        <option>番茄</option>
-                        <option>黄瓜</option>
-                        <option>草莓</option>
-                        <option>辣椒</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">种植模式</label>
-                      <select
-                        value={editForm.plantingMode}
-                        onChange={(e) => setEditForm({...editForm, plantingMode: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      >
-                        {plantingModes.map(mode => (
-                          <option key={mode} value={mode}>{mode}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">生长阶段</label>
-                      <input
-                        type="text"
-                        value={editForm.stage}
-                        onChange={(e) => setEditForm({...editForm, stage: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">编制人</label>
-                      <input
-                        type="text"
-                        value={selectedTech.author}
-                        disabled
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">创建日期</label>
-                      <input
-                        type="text"
-                        value={selectedTech.createDate}
-                        disabled
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">方案内容</label>
-                    <textarea
-                      value={editForm.content}
-                      onChange={(e) => setEditForm({...editForm, content: e.target.value})}
-                      rows={6}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setEditModalOpen(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                  取消
-                </button>
-                <button onClick={handleEditSubmit} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-                  保存
-                </button>
-              </div>
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="编辑方案"
+        size="lg"
+        onSubmit={handleEditSubmit}
+        submitText="保存"
+        cancelText="取消"
+      >
+        {selectedTech && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="方案编号">
+                <Input value={selectedTech.code} disabled className="bg-gray-50" />
+              </FormField>
+              <FormField label="版本">
+                <Input
+                  value={editForm.version}
+                  onChange={(e) => setEditForm({...editForm, version: e.target.value})}
+                />
+              </FormField>
             </div>
+            <FormField label="方案标题">
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="作物种类">
+                <Select
+                  value={editForm.crop}
+                  onChange={(e) => setEditForm({...editForm, crop: e.target.value})}
+                  options={[
+                    { value: '番茄', label: '番茄' },
+                    { value: '黄瓜', label: '黄瓜' },
+                    { value: '草莓', label: '草莓' },
+                    { value: '辣椒', label: '辣椒' },
+                  ]}
+                />
+              </FormField>
+              <FormField label="种植模式">
+                <Select
+                  value={editForm.plantingMode}
+                  onChange={(e) => setEditForm({...editForm, plantingMode: e.target.value})}
+                  options={plantingModes.map(mode => ({ value: mode, label: mode }))}
+                />
+              </FormField>
+            </div>
+            <FormField label="生长阶段">
+              <Input
+                value={editForm.stage}
+                onChange={(e) => setEditForm({...editForm, stage: e.target.value})}
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="编制人">
+                <Input value={selectedTech.author} disabled className="bg-gray-50" />
+              </FormField>
+              <FormField label="创建日期">
+                <Input value={selectedTech.createDate} disabled className="bg-gray-50" />
+              </FormField>
+            </div>
+            <FormField label="方案内容">
+              <Textarea
+                value={editForm.content}
+                onChange={(e) => setEditForm({...editForm, content: e.target.value})}
+                rows={6}
+              />
+            </FormField>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Create Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setCreateModalOpen(false)}></div>
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">新增方案</h2>
-                <button onClick={() => setCreateModalOpen(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5 text-gray-500" />
+      <Modal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="新增方案"
+        size="xxxl"
+        onSubmit={handleCreateSubmit}
+        submitText="提交"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="方案编号">
+              <div className="flex gap-2">
+                <Input
+                  value={newPlanForm.code}
+                  onChange={(e) => setNewPlanForm({...newPlanForm, code: e.target.value})}
+                  placeholder="请输入方案编号"
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewPlanForm({...newPlanForm, code: generateCode()})}
+                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
+                >
+                  生成
                 </button>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">方案编号</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newPlanForm.code}
-                          onChange={(e) => setNewPlanForm({...newPlanForm, code: e.target.value})}
-                          placeholder="请输入方案编号"
-                          className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setNewPlanForm({...newPlanForm, code: generateCode()})}
-                          className="h-10 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-                        >
-                          生成
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">版本</label>
-                      <input
-                        type="text"
-                        value={newPlanForm.version}
-                        onChange={(e) => setNewPlanForm({...newPlanForm, version: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">方案标题 <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      value={newPlanForm.title}
-                      onChange={(e) => setNewPlanForm({...newPlanForm, title: e.target.value})}
-                      placeholder="请输入方案标题"
-                      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">作物种类</label>
-                      <select
-                        value={newPlanForm.crop}
-                        onChange={(e) => setNewPlanForm({...newPlanForm, crop: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      >
-                        <option>番茄</option>
-                        <option>黄瓜</option>
-                        <option>草莓</option>
-                        <option>辣椒</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">种植模式</label>
-                      <select
-                        value={newPlanForm.plantingMode}
-                        onChange={(e) => setNewPlanForm({...newPlanForm, plantingMode: e.target.value})}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      >
-                        {plantingModes.map(mode => (
-                          <option key={mode} value={mode}>{mode}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">生长阶段</label>
-                      <input
-                        type="text"
-                        value={newPlanForm.stage}
-                        onChange={(e) => setNewPlanForm({...newPlanForm, stage: e.target.value})}
-                        placeholder="请输入生长阶段"
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">编制人</label>
-                      <input
-                        type="text"
-                        placeholder="请输入编制人"
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">创建日期</label>
-                      <input
-                        type="text"
-                        value={new Date().toISOString().split('T')[0]}
-                        disabled
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">方案内容</label>
-                    <textarea
-                      value={newPlanForm.content}
-                      onChange={(e) => setNewPlanForm({...newPlanForm, content: e.target.value})}
-                      placeholder="请输入方案内容"
-                      rows={6}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setCreateModalOpen(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                  取消
-                </button>
-                <button onClick={handleCreateSubmit} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-                  提交
-                </button>
-              </div>
+            </FormField>
+            <FormField label="版本">
+              <Input
+                value={newPlanForm.version}
+                onChange={(e) => setNewPlanForm({...newPlanForm, version: e.target.value})}
+              />
+            </FormField>
+          </div>
+          <FormField label="方案标题" required>
+            <Input
+              value={newPlanForm.title}
+              onChange={(e) => setNewPlanForm({...newPlanForm, title: e.target.value})}
+              placeholder="请输入方案标题"
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="作物种类">
+              <Select
+                value={newPlanForm.crop}
+                onChange={(e) => setNewPlanForm({...newPlanForm, crop: e.target.value})}
+                options={[
+                  { value: '番茄', label: '番茄' },
+                  { value: '黄瓜', label: '黄瓜' },
+                  { value: '草莓', label: '草莓' },
+                  { value: '辣椒', label: '辣椒' },
+                ]}
+              />
+            </FormField>
+            <FormField label="种植模式">
+              <Select
+                value={newPlanForm.plantingMode}
+                onChange={(e) => setNewPlanForm({...newPlanForm, plantingMode: e.target.value})}
+                options={plantingModes.map(mode => ({ value: mode, label: mode }))}
+              />
+            </FormField>
+          </div>
+          <FormField label="生长阶段">
+            <Input
+              value={newPlanForm.stage}
+              onChange={(e) => setNewPlanForm({...newPlanForm, stage: e.target.value})}
+              placeholder="请输入生长阶段"
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="编制人">
+              <Input placeholder="请输入编制人" />
+            </FormField>
+            <FormField label="创建日期">
+              <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
+            </FormField>
+          </div>
+          <FormField label="方案内容">
+            <Textarea
+              value={newPlanForm.content}
+              onChange={(e) => setNewPlanForm({...newPlanForm, content: e.target.value})}
+              placeholder="请输入方案内容"
+              rows={6}
+            />
+          </FormField>
+        </div>
+      </Modal>
+
+      {/* Delete Warning Modal */}
+      <DeleteWarningModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Batch Edit Modal */}
+      <Modal
+        isOpen={showBatchEditModal}
+        onClose={() => {
+          setShowBatchEditModal(false);
+          setBatchEditMode(false);
+          setSelectedRows([]);
+        }}
+        title="批量编辑技术方案"
+        size="xxl"
+        showFooter={false}
+      >
+        <div className="space-y-4">
+          {/* Info Banner */}
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              已选择 <strong>{selectedRows.length}</strong> 个技术方案进行批量编辑，
+              已编辑 <strong>{editedTechCodes.length}</strong> 个
+            </p>
+          </div>
+
+          {/* Batch Selector */}
+          <div className="flex items-center gap-4 mb-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">选择技术方案编号</label>
+              <select
+                value={selectedTechCode}
+                onChange={(e) => setSelectedTechCode(e.target.value)}
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">请选择方案编号</option>
+                {techSolutions.filter(t => selectedRows.includes(t.id)).map(tech => (
+                  <option key={tech.id} value={tech.code}>
+                    {tech.code} - {tech.title}{' '}
+                    {editedTechCodes.includes(tech.code) && (
+                      <span className="bg-green-100 text-green-700">✅ 已编辑</span>
+                    )}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+
+          {/* Edit Form */}
+          {selectedTechCode && (() => {
+            const currentTech = techSolutions.find(t => t.code === selectedTechCode);
+            if (!currentTech) return null;
+            const editedData = editedTechs[selectedTechCode] || {};
+            return (
+              <div className="grid grid-cols-4 gap-3">
+                {/* 方案编号 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">方案编号</div>
+                  <div className="text-sm font-medium text-gray-900">{currentTech.code}</div>
+                </div>
+
+                {/* 版本 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">版本</div>
+                  <input
+                    type="text"
+                    value={editedData.version ?? currentTech.version}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], version: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* 方案标题 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+                  <div className="text-xs text-gray-500 mb-1">方案标题</div>
+                  <input
+                    type="text"
+                    value={editedData.title ?? currentTech.title}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], title: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* 作物种类 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">作物种类</div>
+                  <select
+                    value={editedData.crop ?? currentTech.crop}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], crop: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  >
+                    <option>番茄</option>
+                    <option>黄瓜</option>
+                    <option>草莓</option>
+                    <option>辣椒</option>
+                  </select>
+                </div>
+
+                {/* 种植模式 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">种植模式</div>
+                  <select
+                    value={editedData.plantingMode ?? currentTech.plantingMode}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], plantingMode: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  >
+                    {plantingModes.map(mode => (
+                      <option key={mode} value={mode}>{mode}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 生长阶段 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">生长阶段</div>
+                  <input
+                    type="text"
+                    value={editedData.stage ?? currentTech.stage}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], stage: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* 编制人 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">编制人</div>
+                  <div className="text-sm text-gray-700">{currentTech.author}</div>
+                </div>
+
+                {/* 创建日期 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">创建日期</div>
+                  <div className="text-sm text-gray-700">{currentTech.createDate}</div>
+                </div>
+
+                {/* 审批状态 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">审批状态</div>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                    currentTech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {currentTech.approveStatus}
+                  </span>
+                </div>
+
+                {/* 状态 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">状态</div>
+                  <select
+                    value={editedData.status ?? currentTech.status}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], status: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  >
+                    <option>已发布</option>
+                    <option>审核中</option>
+                    <option>草稿</option>
+                  </select>
+                </div>
+
+                {/* 方案内容 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2 col-span-4">
+                  <div className="text-xs text-gray-500 mb-1">方案内容</div>
+                  <textarea
+                    value={editedData.content ?? currentTech.content}
+                    onChange={(e) => {
+                      const updated = {
+                        ...editedTechs,
+                        [selectedTechCode]: { ...editedTechs[selectedTechCode], content: e.target.value },
+                      };
+                      setEditedTechs(updated);
+                      if (!editedTechCodes.includes(selectedTechCode)) {
+                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                      }
+                    }}
+                    rows={4}
+                    className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 resize-none"
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Footer Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              onClick={() => {
+                setShowBatchEditModal(false);
+                setBatchEditMode(false);
+                setSelectedRows([]);
+                setEditedTechCodes([]);
+                setEditedTechs({});
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+            >
+              取消
+            </button>
+            <button
+              onClick={() => {
+                console.log('保存编辑:', editedTechs);
+                setShowBatchEditModal(false);
+                setBatchEditMode(false);
+                setSelectedRows([]);
+                setEditedTechCodes([]);
+                setEditedTechs({});
+                alert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
+              }}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+            >
+              保存
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Export Format Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowExportModal(false)}></div>
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-                <button onClick={() => setShowExportModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="p-6">
-                <p className="text-sm text-gray-500 mb-4">已选择 {selectedRows.length} 条数据</p>
-                <div className="space-y-3">
-                  {[
-                    { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
-                    { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
-                    { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
-                  ].map((format) => (
-                    <label
-                      key={format.value}
-                      className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                        exportFormat === format.value
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="exportFormat"
-                        value={format.value}
-                        checked={exportFormat === format.value}
-                        onChange={(e) => setExportFormat(e.target.value)}
-                        className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                      />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                        <p className="text-xs text-gray-500">{format.desc}</p>
-                      </div>
-                    </label>
-                  ))}
+      <Modal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="选择导出格式"
+        size="sm"
+        onSubmit={handleConfirmExport}
+        submitText="导出"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">已选择 {selectedRows.length} 条数据</p>
+          <div className="space-y-3">
+            {[
+              { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
+              { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
+              { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+            ].map((format) => (
+              <label
+                key={format.value}
+                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                  exportFormat === format.value
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  value={format.value}
+                  checked={exportFormat === format.value}
+                  onChange={(e) => setExportFormat(e.target.value)}
+                  className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900">{format.label}</p>
+                  <p className="text-xs text-gray-500">{format.desc}</p>
                 </div>
-              </div>
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setShowExportModal(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                  取消
-                </button>
-                <button onClick={handleConfirmExport} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-                  导出
-                </button>
-              </div>
-            </div>
+              </label>
+            ))}
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

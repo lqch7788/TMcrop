@@ -33,6 +33,7 @@ import MonthlyReport from './pages/MonthlyReport';
 import DailyProblemSummary from './pages/DailyProblemSummary';
 import DailyWorkSummary from './pages/DailyWorkSummary';
 import PlanSummary from './pages/PlanSummary';
+import ProblemDispatch from './pages/ProblemDispatch';
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
 import MaterialCategory from './pages/MaterialCategory';
@@ -187,6 +188,7 @@ function AppContent() {
         <Route path="/labor/analytics" element={<AnalyticsPage />} />
         <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
         <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
+        <Route path="/problem-dispatch" element={<ProblemDispatch />} />
         <Route path="/plan-summary" element={<PlanSummary />} />
         <Route path="/worker-attendance" element={<WorkerAttendance />} />
         <Route path="/work-log" element={<WorkLog />} />

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
-  Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download
+  Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { harvestRecords as initialRecords, cropBatches, greenhouses, users } from '../../../data/mockData';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
+import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
 export default function HarvestPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +32,17 @@ export default function HarvestPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Batch Edit state
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, any>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
+
+  // Batch Delete state
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
 
   // Filter records based on search
   const filteredRecords = harvestRecords.filter(record => {
@@ -160,6 +172,88 @@ export default function HarvestPage() {
 
   const handleCancelExport = () => {
     setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // Batch Edit handlers
+  const handleBatchEditClick = () => {
+    setBatchEditMode(true);
+  };
+
+  const handleCancelBatchEdit = () => {
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  const handleConfirmBatchEdit = () => {
+    // Apply all edits
+    const updatedRecords = [...harvestRecords];
+    editedRecordIds.forEach(id => {
+      const index = updatedRecords.findIndex(r => r.id.toString() === id);
+      if (index !== -1 && editedRecords[id]) {
+        const record = updatedRecords[index];
+        // Find greenhouse name if greenhouseId changed
+        if (editedRecords[id].greenhouseId && editedRecords[id].greenhouseId !== record.greenhouseId) {
+          const gh = greenhouses.find(g => g.id === editedRecords[id].greenhouseId);
+          updatedRecords[index] = {
+            ...record,
+            ...editedRecords[id],
+            greenhouseName: gh?.name || record.greenhouseName,
+          };
+        } else {
+          updatedRecords[index] = { ...record, ...editedRecords[id] };
+        }
+        // Find warehouse name if warehouseId changed
+        if (editedRecords[id].warehouseId && editedRecords[id].warehouseId !== record.warehouseId) {
+          const wh = warehouses.find(w => w.id === editedRecords[id].warehouseId);
+          updatedRecords[index] = {
+            ...updatedRecords[index],
+            warehouseName: wh?.name || record.warehouseName,
+          };
+        }
+        // Find batch cropName if batchCode changed
+        if (editedRecords[id].batchCode && editedRecords[id].batchCode !== record.batchCode) {
+          const batch = cropBatches.find(b => b.batchCode === editedRecords[id].batchCode);
+          updatedRecords[index] = {
+            ...updatedRecords[index],
+            cropName: batch?.cropName || record.cropName,
+          };
+        }
+      }
+    });
+    setHarvestRecords(updatedRecords);
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  // Batch Delete handlers
+  const handleBatchDeleteClick = () => {
+    setBatchDeleteMode(true);
+  };
+
+  const handleCancelBatchDelete = () => {
+    setBatchDeleteMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleConfirmBatchDelete = () => {
+    // Delete selected records (using index from filtered records)
+    const indicesToDelete = new Set(selectedRows);
+    const remainingRecords = harvestRecords.filter((_, index) => {
+      // Map filtered index back to original records index
+      const filteredIndex = filteredRecords.findIndex(r => r.id === harvestRecords[index].id);
+      return !indicesToDelete.has(filteredIndex);
+    });
+    setHarvestRecords(remainingRecords);
+    setShowDeleteWarning(false);
+    setBatchDeleteMode(false);
     setSelectedRows([]);
   };
 
@@ -478,28 +572,64 @@ export default function HarvestPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">采收入库记录表</h3>
-          {exportMode ? (
+          {(exportMode || batchEditMode || batchDeleteMode) ? (
             <div className="flex gap-2">
-              <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
+              {exportMode && (
+                <>
+                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchEditMode && (
+                <>
+                  <button onClick={() => setShowBatchEditModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Pencil className="w-4 h-4" />
+                    确认编辑
+                  </button>
+                  <button onClick={handleCancelBatchEdit} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button onClick={() => setShowDeleteWarning(true)} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button onClick={handleCancelBatchDelete} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
             </div>
           ) : (
-            <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleBatchEditClick} className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                <Pencil className="w-4 h-4" />
+                编辑
+              </button>
+              <button onClick={handleBatchDeleteClick} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
           )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
@@ -520,7 +650,7 @@ export default function HarvestPage() {
             <tbody className="divide-y divide-gray-300">
               {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
                 <tr key={record.id} className="hover:bg-blue-100 transition-colors">
-                  {exportMode && (
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -556,7 +686,7 @@ export default function HarvestPage() {
               ))}
             </tbody>
           </table>
-          {exportMode && (
+          {(exportMode || batchEditMode || batchDeleteMode) && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
                 <button
@@ -731,54 +861,41 @@ export default function HarvestPage() {
       </Modal>
 
       {/* Export Format Modal */}
-      {showExportModal && (
-        <>
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowExportModal(false)}></div>
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 w-full max-w-md z-50">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-              <button onClick={() => setShowExportModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="space-y-3 mb-6">
-              {[
-                { value: 'excel', label: 'Excel 文件 (.xlsx)', icon: '📊' },
-                { value: 'csv', label: 'CSV 文件 (.csv)', icon: '📄' },
-                { value: 'word', label: 'Word 文件 (.docx)', icon: '📝' },
-              ].map((format) => (
-                <label
-                  key={format.value}
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    exportFormat === format.value
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-emerald-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={format.value}
-                    checked={exportFormat === format.value}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-lg">{format.icon}</span>
-                  <span className="text-sm font-medium text-gray-900">{format.label}</span>
-                </label>
-              ))}
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowExportModal(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
-              <button onClick={handleConfirmExport} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-                导出
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleConfirmExport}
+      />
+
+      {/* Batch Edit Modal */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={filteredRecords}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleConfirmBatchEdit}
+        greenhouses={greenhouses}
+        warehouses={warehouses}
+        users={users}
+        cropBatches={cropBatches}
+      />
+
+      {/* Delete Warning Modal */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleConfirmBatchDelete}
+      />
     </div>
   );
 }

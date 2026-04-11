@@ -25,3 +25,6 @@ export { usePersistentAttendance, INITIAL_ATTENDANCE } from './usePersistentAtte
 
 // 问题记录持久化
 export { usePersistentProblems, INITIAL_PROBLEMS, type ProblemEntry } from './usePersistentProblems';
+
+// 问题分派
+export { useProblemDispatch } from './useProblemDispatch';

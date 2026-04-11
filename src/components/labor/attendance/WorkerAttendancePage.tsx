@@ -3,7 +3,7 @@
  * 负责组合所有子组件，提供统一的页面结构
  */
 import { useState } from 'react';
-import { Users, Edit, Trash2, Download } from 'lucide-react';
+import { Users, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { useWorkerAttendance } from './hooks/useWorkerAttendance';
 import { WorkerAttendanceFilters } from './WorkerAttendanceFilters';
 import { WorkerAttendanceTable } from './WorkerAttendanceTable';
@@ -213,12 +213,14 @@ export function WorkerAttendancePage() {
         }}
         onExportClick={() => {
           if (exportMode) {
-            // 在导出模式下，显示导出格式选择弹窗
+            // 在导出模式下
             if (selectedRows.length === 0) {
-              alert('请先选择要导出的数据');
-              return;
+              // 没有选中时，取消导出模式
+              handleCancelBatch();
+            } else {
+              // 有选中时，显示导出格式选择弹窗
+              setShowExportModal(true);
             }
-            setShowExportModal(true);
           } else {
             // 进入导出模式
             handleExportClick();

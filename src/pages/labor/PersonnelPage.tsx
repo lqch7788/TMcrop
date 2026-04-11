@@ -44,7 +44,7 @@ export default function PersonnelPage() {
         {activeTab === 'temp-worker' && <TempWorkerPage />}
         {activeTab === 'recruitment' && <RecruitmentPage />}
         {activeTab === 'onboarding' && <OnboardingPage />}
-        {activeTab === 'team' && <TeamTable />}
+        {activeTab === 'team' && <TeamTable onBack={() => setActiveTab('staff')} />}
         {activeTab === 'contract' && <ContractTable />}
         {activeTab === 'skill' && <SkillPage />}
       </div>

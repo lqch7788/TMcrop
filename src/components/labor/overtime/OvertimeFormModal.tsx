@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { OvertimeFormModalProps, OvertimeType, OvertimeFormData } from './types';
 
@@ -187,14 +186,6 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
       title={record ? '编辑加班' : '申请加班'}
       size="md"
       showFooter={true}
-      headerAction={
-        <button
-          onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      }
       footer={footer}
     >
       {content}

@@ -1,7 +1,8 @@
 /**
  * 工人考勤 - 考勤记录表格组件
  */
-import { Eye, ChevronLeft, ChevronRight, Edit, Trash2, Download, Plus } from 'lucide-react';
+import { useRef } from 'react';
+import { Eye, ChevronLeft, ChevronRight, Edit, Trash2, Download, Plus, Upload } from 'lucide-react';
 import { AttendanceRecord, PAGE_SIZE_OPTIONS } from './types';
 
 interface WorkerAttendanceTableProps {
@@ -51,9 +52,31 @@ export function WorkerAttendanceTable({
 }: WorkerAttendanceTableProps) {
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
   const allSelected = data.length > 0 && selectedRows.length === totalCount;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 隐藏的文件输入 */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".xlsx,.xls,.csv"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            console.log('导入文件:', file.name);
+            // 这里可以添加文件处理逻辑
+            alert(`已选择文件: ${file.name}`);
+          }
+          // 重置input以允许重复选择同一文件
+          e.target.value = '';
+        }}
+      />
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">考勤记录</h3>
@@ -126,6 +149,13 @@ export function WorkerAttendanceTable({
                   新增
                 </button>
               )}
+              <button
+                onClick={handleImportClick}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              >
+                <Upload className="w-4 h-4" />
+                导入
+              </button>
               {onBatchEditClick && (
                 <button
                   onClick={onBatchEditClick}

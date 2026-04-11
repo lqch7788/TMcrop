@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Calendar, User, MessageSquare, Send } from 'lucide-react';
+import { X, Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
-import type { Staff } from './types';
+import type { Staff, SwapRequest } from './types';
 
 interface SwapRequestModalProps {
   staffList: Staff[];

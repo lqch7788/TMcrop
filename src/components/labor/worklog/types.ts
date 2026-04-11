@@ -16,6 +16,10 @@ export interface WorkLog {
   tasks: string;
   problems: string;
   solutions: string;
+  // 【新增】关联字段（可选，保持向后兼容）
+  taskId?: string;           // 关联任务ID
+  batchId?: string;         // 关联批次ID
+  batchCode?: string;        // 批次编号（冗余便于显示）
 }
 
 // 筛选条件
@@ -37,7 +41,6 @@ export interface WorkLogFiltersProps {
   filters: WorkLogFilters;
   onFiltersChange: (filters: WorkLogFilters) => void;
   onSearch: () => void;
-  onAdd: () => void;
 }
 
 export interface WorkLogTableProps {

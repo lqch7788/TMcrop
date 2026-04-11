@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
-  Search, Plus, Eye, AlertTriangle, MapPin, Calendar, User, Camera, X, ChevronLeft, ChevronRight, Download
+  Search, Plus, Eye, AlertTriangle, MapPin, Calendar, User, Camera, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { inspectionRecords as initialRecords, greenhouses, users, cropTypes } from '../../../data/mockData';
 import { Modal, FormField } from '../../ui/Modal';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { BatchEditModal, DeleteWarningModal } from './modals';
 
 export default function InspectionPage() {
   // 问题记录持久化 Hook - 同步巡田监测问题到每日问题汇总
@@ -32,6 +33,17 @@ export default function InspectionPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Batch Edit state
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, any>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
+
+  // Batch Delete state
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
 
   // Create Inspection Record Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -185,6 +197,80 @@ export default function InspectionPage() {
 
   const handleCancelExport = () => {
     setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // Batch Edit handlers
+  const handleBatchEditClick = () => {
+    setBatchEditMode(true);
+  };
+
+  const handleCancelBatchEdit = () => {
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  const handleConfirmBatchEdit = () => {
+    // Apply all edits
+    const updatedRecords = [...inspectionRecords];
+    editedRecordIds.forEach(id => {
+      const index = updatedRecords.findIndex(r => r.id.toString() === id);
+      if (index !== -1 && editedRecords[id]) {
+        const record = updatedRecords[index];
+        // Find greenhouse name if greenhouseId changed
+        if (editedRecords[id].greenhouseId && editedRecords[id].greenhouseId !== record.greenhouseId) {
+          const gh = greenhouses.find(g => g.id === editedRecords[id].greenhouseId);
+          updatedRecords[index] = {
+            ...record,
+            ...editedRecords[id],
+            greenhouseName: gh?.name || record.greenhouseName,
+          };
+        } else {
+          updatedRecords[index] = { ...record, ...editedRecords[id] };
+        }
+        // Find inspector name if inspectorId changed
+        if (editedRecords[id].inspectorId && editedRecords[id].inspectorId !== record.inspectorId) {
+          const user = users.find(u => u.id === editedRecords[id].inspectorId);
+          updatedRecords[index] = {
+            ...updatedRecords[index],
+            inspectorName: user?.name || record.inspectorName,
+          };
+        }
+      }
+    });
+    setInspectionRecords(updatedRecords);
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  // Batch Delete handlers
+  const handleBatchDeleteClick = () => {
+    setBatchDeleteMode(true);
+  };
+
+  const handleCancelBatchDelete = () => {
+    setBatchDeleteMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleConfirmBatchDelete = () => {
+    // Delete selected records (using index from filtered records)
+    const indicesToDelete = new Set(selectedRows);
+    const remainingRecords = inspectionRecords.filter((_, index) => {
+      // Map filtered index back to original records index
+      const filteredIndex = filteredRecords.findIndex(r => r.id === inspectionRecords[index].id);
+      return !indicesToDelete.has(filteredIndex);
+    });
+    setInspectionRecords(remainingRecords);
+    setShowDeleteWarning(false);
+    setBatchDeleteMode(false);
     setSelectedRows([]);
   };
 
@@ -497,28 +583,64 @@ export default function InspectionPage() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">巡田记录列表</h3>
-          {exportMode ? (
+          {(exportMode || batchEditMode || batchDeleteMode) ? (
             <div className="flex gap-2">
-              <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
+              {exportMode && (
+                <>
+                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchEditMode && (
+                <>
+                  <button onClick={() => setShowBatchEditModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Pencil className="w-4 h-4" />
+                    确认编辑
+                  </button>
+                  <button onClick={handleCancelBatchEdit} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button onClick={() => setShowDeleteWarning(true)} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button onClick={handleCancelBatchDelete} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
             </div>
           ) : (
-            <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleBatchEditClick} className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                <Pencil className="w-4 h-4" />
+                编辑
+              </button>
+              <button onClick={handleBatchDeleteClick} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
           )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
+                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
@@ -543,7 +665,7 @@ export default function InspectionPage() {
             <tbody className="divide-y divide-gray-300">
               {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
                 <tr key={record.id} className="hover:bg-blue-100 transition-colors">
-                  {exportMode && (
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
@@ -614,7 +736,7 @@ export default function InspectionPage() {
               ))}
             </tbody>
           </table>
-          {exportMode && (
+          {(exportMode || batchEditMode || batchDeleteMode) && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
                 <button
@@ -1127,6 +1249,32 @@ export default function InspectionPage() {
           </div>
         </>
       )}
+
+      {/* Batch Edit Modal */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={filteredRecords}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleConfirmBatchEdit}
+        greenhouses={greenhouses}
+        users={users}
+        cropTypes={cropTypes}
+      />
+
+      {/* Delete Warning Modal */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleConfirmBatchDelete}
+      />
     </div>
   );
 }

@@ -63,6 +63,8 @@ export const STORAGE_KEYS = {
   INSPECTION_RECORDS: 'yuanxingtu_inspections',
   ATTENDANCE: 'yuanxingtu_attendance',
   DAILY_PROBLEMS: 'yuanxingtu_daily_problems',
+  TASKS: 'yuanxingtu_tasks',
+  DISPATCH_RECORDS: 'yuanxingtu_dispatch_records',
 } as const;
 
 /**

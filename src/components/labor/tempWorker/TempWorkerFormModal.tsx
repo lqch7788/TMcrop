@@ -393,14 +393,6 @@ export function TempWorkerFormModal({
       title={record ? '编辑员工' : '快速入职'}
       size="lg"
       showFooter={true}
-      headerAction={
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      }
       footer={footer}
     >
       {content}

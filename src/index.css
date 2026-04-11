@@ -341,3 +341,10 @@ img {
 .animate-leaf {
   animation: leafSway 3s ease-in-out infinite;
 }
+
+/* 弹窗表单输入框字体缩小 */
+.modal-form-inputs input,
+.modal-form-inputs select,
+.modal-form-inputs textarea {
+  font-size: 0.75rem;
+}

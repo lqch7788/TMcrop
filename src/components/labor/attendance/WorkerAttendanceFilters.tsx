@@ -1,23 +1,17 @@
 /**
  * 工人考勤 - 筛选栏组件
  */
-import { Search, Download } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { AttendanceFilters, DEPT_OPTIONS } from './types';
 
 interface WorkerAttendanceFiltersProps {
   filters: AttendanceFilters;
-  exportMode: boolean;
   onFiltersChange: (filters: Partial<AttendanceFilters>) => void;
-  onExportClick: () => void;
-  onCancelExport: () => void;
 }
 
 export function WorkerAttendanceFilters({
   filters,
-  exportMode,
   onFiltersChange,
-  onExportClick,
-  onCancelExport,
 }: WorkerAttendanceFiltersProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
@@ -76,34 +70,6 @@ export function WorkerAttendanceFilters({
             <Search className="w-4 h-4" />
             搜索
           </button>
-          <button className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-            导入
-          </button>
-          {exportMode ? (
-            <>
-              <button
-                onClick={onExportClick}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button
-                onClick={onCancelExport}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={onExportClick}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
-          )}
         </div>
       </div>
     </div>

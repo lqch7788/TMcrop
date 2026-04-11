@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: Sprout, label: '生产计划', path: '/production', category: 'production' },
+  { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
   { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
   { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },
@@ -28,9 +28,9 @@ const menuItems = [
 ];
 
 const productionSubItems = [
-  { icon: FileText, label: '生产计划管理', path: '/production' },
-  { icon: FileCode, label: '技术方案列表', path: '/tech-solution' },
-  { icon: ShoppingCart, label: '采购计划列表', path: '/purchase-plan' },
+  { icon: FileText, label: '生产计划', path: '/production' },
+  { icon: FileCode, label: '技术方案', path: '/tech-solution' },
+  { icon: ShoppingCart, label: '采购计划', path: '/purchase-plan' },
 ];
 
 // 人工管理5大模块（聚合页面）
@@ -45,6 +45,7 @@ const laborSubItems = [
 const summarySubItems = [
   { icon: Calendar, label: '每日工单汇总表', path: '/daily-work-summary' },
   { icon: AlertTriangle, label: '每日问题汇总表', path: '/daily-problem-summary' },
+  { icon: Send, label: '问题分派', path: '/problem-dispatch' },
   { icon: FileText, label: '生产计划汇总表', path: '/plan-summary' },
   { icon: BarChart3, label: '生产报表', path: '/reports' },
 ];
@@ -350,7 +351,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
-                ) : item.label === '生产计划' ? (
+                ) : item.label === '计划管理' ? (
                   <>
                     <button
                       onClick={() => setProductionExpanded(!productionExpanded)}

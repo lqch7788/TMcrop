@@ -39,7 +39,7 @@ const monthOptions = [
 ];
 
 /**
- * 工资筛选栏Props
+ * 工资筛选栏 Props
  */
 export interface SalaryFiltersProps {
   filters: SalaryFiltersType;
@@ -50,109 +50,115 @@ export interface SalaryFiltersProps {
 /**
  * 工资筛选栏组件
  */
-export function SalaryFilters({ filters, onFilterChange, onReset }: SalaryFiltersProps) {
+export function SalaryFilters({
+  filters,
+  onFilterChange,
+  onReset,
+}: SalaryFiltersProps) {
   // 是否有筛选条件
   const hasFilters = filters.month || filters.staffName || filters.calcType || filters.status;
 
   return (
-    <div className="flex flex-wrap items-end gap-3 p-4 bg-gray-50 rounded-lg">
-      {/* 姓名搜索 */}
-      <div className="flex-1 min-w-[200px]">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="搜索员工姓名..."
-            value={filters.staffName || ''}
-            onChange={(e) => onFilterChange({ staffName: e.target.value || undefined })}
-            className="pl-9"
-          />
-          {filters.staffName && (
-            <button
-              onClick={() => onFilterChange({ staffName: undefined })}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+      <div className="flex flex-wrap gap-4 items-end">
+        {/* 姓名搜索 */}
+        <div className="flex-1 min-w-[200px]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="搜索员工姓名..."
+              value={filters.staffName || ''}
+              onChange={(e) => onFilterChange({ staffName: e.target.value || undefined })}
+              className="pl-9"
+            />
+            {filters.staffName && (
+              <button
+                onClick={() => onFilterChange({ staffName: undefined })}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 月份筛选 */}
-      <div className="w-40">
-        <Select
-          value={filters.month || '__all__'}
-          onValueChange={(value) => onFilterChange({ month: value === '__all__' ? '' : value })}
-        >
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="选择月份" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">全部月份</SelectItem>
-            {monthOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 计算类型筛选 */}
-      <div className="w-36">
-        <Select
-          value={filters.calcType || '__all__'}
-          onValueChange={(value) => onFilterChange({ calcType: value === '__all__' ? '' : value as SalaryCalcType })}
-        >
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="计算方式" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">全部方式</SelectItem>
-            {calcTypeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 状态筛选 */}
-      <div className="w-36">
-        <Select
-          value={filters.status || '__all__'}
-          onValueChange={(value) => onFilterChange({ status: value === '__all__' ? '' : value as SalaryStatus })}
-        >
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="选择状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">全部状态</SelectItem>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex items-center gap-2">
-                  {option.color && (
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: option.color }}
-                    />
-                  )}
+        {/* 月份筛选 */}
+        <div className="w-40">
+          <Select
+            value={filters.month || '__all__'}
+            onValueChange={(value) => onFilterChange({ month: value === '__all__' ? '' : value })}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="选择月份" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">全部月份</SelectItem>
+              {monthOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
                   {option.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* 重置按钮 */}
-      {hasFilters && (
-        <Button variant="ghost" onClick={onReset} className="text-gray-500">
-          <X className="h-4 w-4 mr-1" />
-          重置
-        </Button>
-      )}
+        {/* 计算类型筛选 */}
+        <div className="w-36">
+          <Select
+            value={filters.calcType || '__all__'}
+            onValueChange={(value) => onFilterChange({ calcType: value === '__all__' ? '' : value as SalaryCalcType })}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="计算方式" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">全部方式</SelectItem>
+              {calcTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 状态筛选 */}
+        <div className="w-36">
+          <Select
+            value={filters.status || '__all__'}
+            onValueChange={(value) => onFilterChange({ status: value === '__all__' ? '' : value as SalaryStatus })}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="选择状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">全部状态</SelectItem>
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex items-center gap-2">
+                    {option.color && (
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: option.color }}
+                      />
+                    )}
+                    {option.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 重置按钮 */}
+        {hasFilters && (
+          <Button variant="ghost" onClick={onReset} className="text-gray-500">
+            <X className="h-4 w-4 mr-1" />
+            重置
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

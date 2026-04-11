@@ -49,11 +49,26 @@ export interface SalaryPagination {
 export interface SalaryTableProps {
   data: SalaryRecord[];
   pagination: SalaryPagination;
+  showCheckbox?: boolean;
+  exportMode?: boolean;
+  batchEditMode?: boolean;
+  batchDeleteMode?: boolean;
+  selectedRows: string[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onViewDetail: (record: SalaryRecord) => void;
   onCalculate?: (record: SalaryRecord) => void;
   onExport?: (record: SalaryRecord) => void;
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
+  onShowExportModal?: () => void;
+  onAddClick?: () => void;
+  onBatchEditClick?: () => void;
+  onBatchDeleteClick?: () => void;
+  onBatchEditConfirm?: () => void;
+  onConfirmDelete?: () => void;
+  onCancelBatch?: () => void;
+  onExportClick?: () => void;
 }
 
 /**

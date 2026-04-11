@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Sprout, Droplets, Leaf, AlertTriangle, ChevronLeft, ChevronRight, Search, Plus, Download, Calendar, MapPin, User, Package, X } from 'lucide-react';
+import { Sprout, Droplets, Leaf, AlertTriangle, ChevronLeft, ChevronRight, Search, Plus, Download, Calendar, MapPin, User, Package, X, Pencil, Trash2 } from 'lucide-react';
 import { usePersistentWorkLogs } from '../../../hooks/usePersistentWorkLogs';
+import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
-const operationRecords = [
+const initialRecords = [
   { id: 1, code: 'OP20260315-001', type: '定植', cropName: '番茄', variety: '红果', greenhouse: '玻璃温室A区', area: 500, operator: '张建国', operatorId: 'U001', date: '2026-03-15', startTime: '09:00', endTime: '11:30', duration: 150, workload: 500, unit: '株', materials: ['番茄苗', '生根剂'], status: 'completed', remarks: '定植完成，苗情良好，浇足定根水' },
   { id: 2, code: 'OP20260315-002', type: '灌溉', cropName: '黄瓜', variety: '翠绿', greenhouse: '日光温室1号', area: 800, operator: '李明辉', operatorId: 'U002', date: '2026-03-15', startTime: '07:00', endTime: '08:30', duration: 90, workload: 800, unit: '㎡', materials: ['水溶肥'], status: 'completed', remarks: '灌溉正常，土壤湿度达标' },
   { id: 3, code: 'OP20260314-003', type: '施肥', cropName: '草莓', variety: '红颜', greenhouse: '日光温室2号', area: 600, operator: '王建国', operatorId: 'U003', date: '2026-03-14', startTime: '14:00', endTime: '16:00', duration: 120, workload: 50, unit: '公斤', materials: ['有机肥', '复合肥'], status: 'completed', remarks: '施肥完成，草莓进入膨果期，需要增加钾肥' },
@@ -17,6 +18,9 @@ export default function AgricultureRecordPage() {
   // 持久化工单 Hook - 同步农事操作到工作日志
   const { addWorkLog } = usePersistentWorkLogs();
 
+  // 农事操作记录状态
+  const [operationRecords, setOperationRecords] = useState([...initialRecords]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchFilters, setSearchFilters] = useState({
@@ -30,7 +34,18 @@ export default function AgricultureRecordPage() {
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState('xlsx');
+  const [exportFormat, setExportFormat] = useState('excel');
+
+  // Batch Edit state
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, any>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
+
+  // Batch Delete state
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [materialDropdownOpen, setMaterialDropdownOpen] = useState(false);
   const [otherMaterial, setOtherMaterial] = useState('');
@@ -128,10 +143,10 @@ export default function AgricultureRecordPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedRows.length === operationRecords.length) {
+    if (selectedRows.length === filteredRecords.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(operationRecords.map(r => r.id));
+      setSelectedRows(filteredRecords.map(r => r.id));
     }
   };
 
@@ -148,11 +163,65 @@ export default function AgricultureRecordPage() {
       alert('请先选择要导出的数据');
       return;
     }
-    setShowExportModal(true);
+    handleActualExport();
   };
 
   const handleCancelExport = () => {
     setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // Batch Edit handlers
+  const handleBatchEditClick = () => {
+    setBatchEditMode(true);
+  };
+
+  const handleCancelBatchEdit = () => {
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  const handleConfirmBatchEdit = () => {
+    // Apply all edits
+    const updatedRecords = [...operationRecords];
+    editedRecordIds.forEach(id => {
+      const index = updatedRecords.findIndex(r => r.id.toString() === id);
+      if (index !== -1 && editedRecords[id]) {
+        updatedRecords[index] = { ...updatedRecords[index], ...editedRecords[id] };
+      }
+    });
+    setOperationRecords(updatedRecords);
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  // Batch Delete handlers
+  const handleBatchDeleteClick = () => {
+    setBatchDeleteMode(true);
+  };
+
+  const handleCancelBatchDelete = () => {
+    setBatchDeleteMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleConfirmBatchDelete = () => {
+    // Delete selected records
+    const indicesToDelete = new Set(selectedRows);
+    const remainingRecords = operationRecords.filter((_, index) => {
+      const filteredIndex = filteredRecords.findIndex(r => r.id === operationRecords[index].id);
+      return !indicesToDelete.has(filteredIndex);
+    });
+    setOperationRecords(remainingRecords);
+    setShowDeleteWarning(false);
+    setBatchDeleteMode(false);
     setSelectedRows([]);
   };
 
@@ -463,31 +532,67 @@ export default function AgricultureRecordPage() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">农事操作记录表</h3>
-          {exportMode ? (
+          {(exportMode || batchEditMode || batchDeleteMode) ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleConfirmExport} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                取消
-              </button>
+              {exportMode && (
+                <>
+                  <button onClick={handleConfirmExport} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchEditMode && (
+                <>
+                  <button onClick={() => setShowBatchEditModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                    <Pencil className="w-4 h-4" />
+                    确认编辑
+                  </button>
+                  <button onClick={handleCancelBatchEdit} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button onClick={() => setShowDeleteWarning(true)} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button onClick={handleCancelBatchDelete} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                    取消
+                  </button>
+                </>
+              )}
             </div>
           ) : (
-            <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleBatchEditClick} className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                <Pencil className="w-4 h-4" />
+                编辑
+              </button>
+              <button onClick={handleBatchDeleteClick} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
           )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
+                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
-                    checked={selectedRows.length === operationRecords.length && operationRecords.length > 0}
+                    checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
@@ -508,7 +613,7 @@ export default function AgricultureRecordPage() {
             <tbody className="divide-y divide-gray-300">
               {paginatedRecords.map((r) => (
                 <tr key={r.id} className="hover:bg-blue-100 transition-colors">
-                  {exportMode && (
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
@@ -541,9 +646,14 @@ export default function AgricultureRecordPage() {
             </tbody>
           </table>
         </div>
-        {exportMode && (
-          <div className="flex items-center gap-4 px-4 py-3 border-t border-gray-100">
-            <span className="text-sm text-gray-500">{selectedRows.length === operationRecords.length ? '全不选' : '全选'}</span>
+        {(exportMode || batchEditMode || batchDeleteMode) && (
+          <div className="flex items-center gap-4 px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <button
+              onClick={handleSelectAll}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              {selectedRows.length === filteredRecords.length ? '全不选' : '全选'}
+            </button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
@@ -773,70 +883,42 @@ export default function AgricultureRecordPage() {
       )}
 
       {/* 导出格式选择弹窗 */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-              <h3 className="text-lg font-semibold text-white">导出格式选择</h3>
-              <button onClick={handleCloseExportModal} className="text-white hover:bg-emerald-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-gray-500 mb-4">已选择 {selectedRows.length} 条数据</p>
-              <div className="space-y-3">
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="xlsx"
-                    checked={exportFormat === 'xlsx'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">Excel (.xlsx)</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="csv"
-                    checked={exportFormat === 'csv'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">CSV (.csv)</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="word"
-                    checked={exportFormat === 'word'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">Word (.docx)</span>
-                </label>
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                onClick={handleCloseExportModal}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleActualExport}
-                className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
-                导出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleActualExport}
+      />
+
+      {/* Batch Edit Modal */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={filteredRecords}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleConfirmBatchEdit}
+        typeOptions={typeOptions}
+        statusOptions={statusOptions}
+        greenhouseOptions={greenhouseOptions}
+        operatorOptions={operatorOptions}
+        unitOptions={unitOptions}
+      />
+
+      {/* Delete Warning Modal */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleConfirmBatchDelete}
+      />
     </div>
   );
 }

@@ -245,6 +245,17 @@ export function useSalary() {
     }
   };
 
+  // 添加工资记录
+  const addSalaryRecord = (data: Omit<SalaryRecord, 'id'>) => {
+    const newId = `SAL${String(mockSalaryData.length + 1).padStart(3, '0')}`;
+    const newRecord: SalaryRecord = {
+      ...data,
+      id: newId,
+    };
+    mockSalaryData.unshift(newRecord);
+    setPagination((prev) => ({ ...prev, total: mockSalaryData.length }));
+  };
+
   return {
     data: paginatedData,
     total: filteredData.length,
@@ -256,5 +267,6 @@ export function useSalary() {
     handlePageSizeChange,
     calculateSalary,
     updateRecordStatus,
+    addSalaryRecord,
   };
 }

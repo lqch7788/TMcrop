@@ -1,10 +1,10 @@
-import { Search, Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { WorkLogFiltersProps } from './types';
 
 /**
  * 工作日志筛选栏组件
  */
-export function WorkLogFilters({ filters, onFiltersChange, onSearch, onAdd }: WorkLogFiltersProps) {
+export function WorkLogFilters({ filters, onFiltersChange, onSearch }: WorkLogFiltersProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
@@ -57,13 +57,6 @@ export function WorkLogFilters({ filters, onFiltersChange, onSearch, onAdd }: Wo
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
-          <button
-            onClick={onAdd}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新建日志
           </button>
         </div>
       </div>

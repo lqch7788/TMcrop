@@ -6,8 +6,9 @@ interface UnifiedModalProps {
   title: string;
   children: React.ReactNode;
   headerAction?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';
   showFooter?: boolean;
+  footer?: React.ReactNode;
   onSubmit?: () => void;
   submitText?: string;
   cancelText?: string;
@@ -25,6 +26,7 @@ export function UnifiedModal({
   headerAction,
   size = 'md',
   showFooter = false,
+  footer,
   onSubmit,
   submitText = '保存',
   cancelText = '取消',
@@ -36,6 +38,7 @@ export function UnifiedModal({
       title={title}
       size={size}
       showFooter={showFooter}
+      footer={footer}
       onSubmit={onSubmit}
       submitText={submitText}
       cancelText={cancelText}

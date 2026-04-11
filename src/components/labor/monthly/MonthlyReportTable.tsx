@@ -1,8 +1,8 @@
 /**
- * 月报表格组件
+ * 月报表格组件 - 支持批量操作
  */
 
-import { Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Download, ChevronLeft, ChevronRight, Edit2, Trash2, Plus, CheckSquare, Square, X } from 'lucide-react';
 import { MonthlyReport } from './types';
 
 interface MonthlyReportTableProps {
@@ -12,14 +12,24 @@ interface MonthlyReportTableProps {
   totalPages: number;
   pageSize: number;
   exportMode: boolean;
-  selectedRows: number[];
+  batchEditMode: boolean;
+  batchDeleteMode: boolean;
+  selectedRows: string[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSelectAll: () => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string) => void;
   onExportClick: () => void;
   onCancelExport: () => void;
   onShowExportModal: () => void;
+  onBatchEditClick?: () => void;
+  onBatchDeleteClick?: () => void;
+  onBatchExportClick?: () => void;
+  onCancelBatch?: () => void;
+  onAddClick?: () => void;
+  onEdit?: (report: MonthlyReport) => void;
+  onDelete?: (report: MonthlyReport) => void;
+  onViewDetail?: (report: MonthlyReport) => void;
 }
 
 export function MonthlyReportTable({
@@ -29,6 +39,8 @@ export function MonthlyReportTable({
   totalPages,
   pageSize,
   exportMode,
+  batchEditMode,
+  batchDeleteMode,
   selectedRows,
   onPageChange,
   onPageSizeChange,
@@ -37,36 +49,100 @@ export function MonthlyReportTable({
   onExportClick,
   onCancelExport,
   onShowExportModal,
+  onBatchEditClick,
+  onBatchDeleteClick,
+  onBatchExportClick,
+  onCancelBatch,
+  onAddClick,
+  onEdit,
+  onDelete,
+  onViewDetail,
 }: MonthlyReportTableProps) {
+  const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
+  const isAllSelected = selectedRows.length === paginatedReports.length && paginatedReports.length > 0;
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* 表格头部 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">月度工作报告</h3>
-        {exportMode ? (
+        {/* 批量操作按钮 */}
+        {showCheckbox ? (
           <div className="flex gap-2">
+            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             <button
-              onClick={onShowExportModal}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              onClick={onCancelBatch}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <Download className="w-4 h-4" />
-              确认导出
-            </button>
-            <button
-              onClick={onCancelExport}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+              <X className="w-4 h-4" />
               取消
             </button>
+            {batchEditMode && (
+              <button
+                onClick={onBatchEditClick}
+                disabled={selectedRows.length === 0}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                批量编辑
+              </button>
+            )}
+            {batchDeleteMode && (
+              <button
+                onClick={onBatchDeleteClick}
+                disabled={selectedRows.length === 0}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                批量删除
+              </button>
+            )}
+            {exportMode && (
+              <button
+                onClick={onBatchExportClick}
+                disabled={selectedRows.length === 0}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
           </div>
         ) : (
-          <button
-            onClick={onExportClick}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
-            <Download className="w-4 h-4" />
-            导出
-          </button>
+          <div className="flex gap-2">
+            {onAddClick && (
+              <button
+                onClick={onAddClick}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                <Plus className="w-4 h-4" />
+                新增
+              </button>
+            )}
+            {onBatchEditClick && (
+              <button
+                onClick={onBatchEditClick}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                <Edit2 className="w-4 h-4" />
+                编辑
+              </button>
+            )}
+            {onBatchDeleteClick && (
+              <button
+                onClick={onBatchDeleteClick}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+            )}
+            <button
+              onClick={onExportClick}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+          </div>
         )}
       </div>
 
@@ -75,14 +151,11 @@ export function MonthlyReportTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              {exportMode && (
+              {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedRows.length === reports.length && reports.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                  />
+                  <button onClick={onSelectAll} className="text-white hover:text-blue-200">
+                    {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                  </button>
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">报表编号</th>
@@ -99,22 +172,17 @@ export function MonthlyReportTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料成本</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤率</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              {!exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-              )}
+              {!showCheckbox && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-300">
             {paginatedReports.map((report) => (
-              <tr key={report.id} className="hover:bg-gray-50">
-                {exportMode && (
+              <tr key={report.id} className={`hover:bg-gray-50 ${selectedRows.includes(report.id.toString()) ? 'bg-emerald-50' : ''}`}>
+                {showCheckbox && (
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.includes(report.id)}
-                      onChange={() => onSelectRow(report.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
+                    <button onClick={() => onSelectRow(report.id.toString())} className="text-gray-500 hover:text-emerald-600">
+                      {selectedRows.includes(report.id.toString()) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
+                    </button>
                   </td>
                 )}
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{report.code}</td>
@@ -141,15 +209,36 @@ export function MonthlyReportTable({
                     {report.status}
                   </span>
                 </td>
-                {!exportMode && (
+                {!showCheckbox && (
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="查看"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      {onViewDetail && (
+                        <button
+                          onClick={() => onViewDetail(report)}
+                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                          title="查看"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(report)}
+                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          title="编辑"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(report)}
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                          title="删除"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 )}
@@ -159,7 +248,7 @@ export function MonthlyReportTable({
         </table>
 
         {/* 导出模式下的选中信息 */}
-        {exportMode && (
+        {showCheckbox && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
               <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
