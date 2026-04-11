@@ -8,6 +8,12 @@ import {
 } from 'lucide-react';
 import { format, isSameDay, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameMonth, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import {
+  CreateTaskModal,
+  BatchEditModal,
+  DeleteWarningModal,
+  ExportFormatModal,
+} from './modals';
 
 // 任务类型定义
 const taskTypes = [
@@ -171,6 +177,15 @@ export default function TaskDispatchPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
+
+  // 批量编辑模式状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [editedTaskIds, setEditedTaskIds] = useState<string[]>([]);
+  const [editedTasks, setEditedTasks] = useState<Record<string, Partial<typeof mockTasks[0]>>>({});
 
   // 智能推荐相关状态
   const [showRecommendModal, setShowRecommendModal] = useState(false);
@@ -1175,19 +1190,53 @@ export default function TaskDispatchPage() {
             <div className="flex items-center gap-2">
               {exportMode ? (
                 <>
-                  <button onClick={handleConfirmExport} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                  <button onClick={handleConfirmExport} className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
                     <Download className="w-4 h-4" />
                     确认导出
                   </button>
-                  <button onClick={handleCancelExport} className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                  <button onClick={handleCancelExport} className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                    取消
+                  </button>
+                </>
+              ) : batchEditMode ? (
+                <>
+                  <button onClick={() => setShowBatchEditModal(true)} disabled={selectedRows.length === 0} className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Edit className="w-4 h-4" />
+                    批量编辑
+                  </button>
+                  <button onClick={() => { setBatchEditMode(false); setSelectedRows([]); }} className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                    取消
+                  </button>
+                </>
+              ) : batchDeleteMode ? (
+                <>
+                  <button onClick={() => setShowDeleteWarning(true)} disabled={selectedRows.length === 0} className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button onClick={() => { setBatchDeleteMode(false); setSelectedRows([]); }} className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
                     取消
                   </button>
                 </>
               ) : (
-                <button onClick={handleExportClick} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
+                <>
+                  <button onClick={() => setShowCreateModal(true)} className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                    <Plus className="w-4 h-4" />
+                    新增
+                  </button>
+                  <button onClick={() => { setBatchEditMode(true); setSelectedRows([]); }} className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    <Edit className="w-4 h-4" />
+                    编辑
+                  </button>
+                  <button onClick={() => { setBatchDeleteMode(true); setSelectedRows([]); }} className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                    删除
+                  </button>
+                  <button onClick={handleExportClick} className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                    <Download className="w-4 h-4" />
+                    导出
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -1196,7 +1245,7 @@ export default function TaskDispatchPage() {
             <table className="w-full min-w-[1800px]">
               <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
                 <tr>
-                  {exportMode && (
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
                     <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                       <input
                         type="checkbox"
@@ -1228,7 +1277,7 @@ export default function TaskDispatchPage() {
               <tbody className="divide-y divide-gray-300">
                 {filteredTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((task, index) => (
                   <tr key={task.id} className="hover:bg-blue-100 transition-colors">
-                    {exportMode && (
+                    {(exportMode || batchEditMode || batchDeleteMode) && (
                       <td className="px-3 py-3 text-center whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -2366,6 +2415,82 @@ export default function TaskDispatchPage() {
           </div>
         </div>
       )}
+
+      {/* 新增任务弹窗 */}
+      <CreateTaskModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateTask}
+        formData={newTask}
+        errors={{}}
+        onFormChange={(field, value) => setNewTask(prev => ({ ...prev, [field]: value }))}
+        fields={fields}
+        staff={staff}
+        taskTypes={taskTypes.map(t => ({ value: t.value, label: t.label }))}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        tasks={filteredTasks}
+        editedTaskIds={editedTaskIds}
+        editedTasks={editedTasks}
+        selectedTaskId={selectedTaskId}
+        onSelectedTaskIdChange={setSelectedTaskId}
+        onEditedTasksChange={setEditedTasks}
+        onEditedTaskIdsChange={setEditedTaskIds}
+        onClose={() => {
+          setShowBatchEditModal(false);
+          setEditedTasks({});
+          setEditedTaskIds([]);
+          setSelectedRows([]);
+          setSelectedTaskId('');
+        }}
+        onConfirm={() => {
+          // 应用编辑
+          if (Object.keys(editedTasks).length > 0) {
+            setMockTasks(prev => prev.map(task => {
+              const edited = editedTasks[task.id];
+              return edited ? { ...task, ...edited } : task;
+            }));
+          }
+          setShowBatchEditModal(false);
+          setBatchEditMode(false);
+          setEditedTasks({});
+          setEditedTaskIds([]);
+          setSelectedRows([]);
+          setSelectedTaskId('');
+        }}
+        fields={fields}
+        staff={staff}
+        taskTypes={taskTypes.map(t => ({ value: t.value, label: t.label }))}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={() => {
+          // 删除选中的任务
+          const indicesToDelete = [...selectedRows].sort((a, b) => b - a);
+          setMockTasks(prev => prev.filter((_, index) => !indicesToDelete.includes(index)));
+          setShowDeleteWarning(false);
+          setBatchDeleteMode(false);
+          setSelectedRows([]);
+        }}
+      />
+
+      {/* 导出格式弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleActualExport}
+      />
     </div>
   );
 }

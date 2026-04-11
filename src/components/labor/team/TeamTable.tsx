@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { Users, Plus, Search, Trash2, UserPlus, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Plus, Search, Trash2, UserPlus, Settings, ChevronLeft } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import type { Team } from './types';
 
-export function TeamTable() {
+interface TeamTableProps {
+  onBack?: () => void;
+}
+
+export function TeamTable({ onBack }: TeamTableProps) {
+  const navigate = useNavigate();
   const {
     teams,
     unassignedWorkers,
@@ -93,6 +99,9 @@ export function TeamTable() {
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <button onClick={onBack || (() => navigate(-1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
               <Users className="w-5 h-5 text-white" />
             </div>

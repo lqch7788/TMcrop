@@ -17,7 +17,7 @@ interface TempTaskFormData {
 interface UseTempTaskFormProps {
   initialData?: TempTask | null;
   users: Array<{ id: string; name: string }>;
-  onSubmit: (task: Partial<TempTask>) => void;
+  onSubmit: (task: Partial<TempTask>, status: 'draft' | 'pending') => void;
 }
 
 export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFormProps) {
@@ -59,7 +59,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback((status: 'draft' | 'pending' = 'pending') => {
     if (!validate()) return;
 
     onSubmit({
@@ -74,8 +74,12 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
       dueDate: formData.dueDate,
       description: formData.description,
       notes: formData.notes,
-    });
+    }, status);
   }, [formData, initialData, onSubmit, validate]);
+
+  const handleSubmitDraft = useCallback(() => {
+    handleSubmit('draft');
+  }, [handleSubmit]);
 
   const handleReset = useCallback(() => {
     setFormData({
@@ -98,6 +102,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
     errors,
     updateFormData,
     handleSubmit,
+    handleSubmitDraft,
     handleReset,
     tempTaskTypes: TEMP_TASK_TYPES,
     workerUsers: users,

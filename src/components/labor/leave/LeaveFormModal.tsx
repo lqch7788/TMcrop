@@ -192,14 +192,6 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
       title={record ? '编辑请假' : '新建请假'}
       size="lg"
       showFooter={true}
-      headerAction={
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      }
       footer={footer}
     >
       {content}

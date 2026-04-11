@@ -14,6 +14,9 @@ export interface AttendanceRecord {
   hours: number;
   status: string;
   statusClass: 'normal' | 'warning' | 'draft';
+  // 【新增】关联字段（可选，保持向后兼容）
+  taskId?: string;          // 关联任务ID
+  batchId?: string;         // 关联批次ID
 }
 
 // 筛选条件

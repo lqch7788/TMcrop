@@ -6,12 +6,14 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';
   onSubmit?: () => void;
   submitText?: string;
   cancelText?: string;
   showFooter?: boolean;
+  footer?: React.ReactNode;
   headerAction?: React.ReactNode;
+  bodyClassName?: string;
 }
 
 const sizeClasses = {
@@ -19,7 +21,8 @@ const sizeClasses = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
-  xxl: 'max-w-5xl'
+  xxl: 'max-w-5xl',
+  xxxl: 'max-w-6xl'
 };
 
 const sizeDefaults = {
@@ -27,7 +30,8 @@ const sizeDefaults = {
   md: { width: 500, height: 400 },
   lg: { width: 700, height: 500 },
   xl: { width: 900, height: 600 },
-  xxl: { width: 1080, height: 650 }
+  xxl: { width: 1080, height: 650 },
+  xxxl: { width: 1350, height: 700 }
 };
 
 export function Modal({
@@ -40,7 +44,9 @@ export function Modal({
   submitText = '保存',
   cancelText = '取消',
   showFooter = true,
-  headerAction
+  footer,
+  headerAction,
+  bodyClassName = ''
 }: ModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -294,27 +300,31 @@ export function Modal({
         )}
 
         {/* Body - Responsive grid layout */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+        <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-4 ${bodyClassName}`}>
           {children}
         </div>
 
         {/* Footer */}
         {showFooter && (
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
-            >
-              {cancelText}
-            </button>
-            {onSubmit && (
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? '保存中...' : submitText}
-              </button>
+            {footer ? footer : (
+              <>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                >
+                  {cancelText}
+                </button>
+                {onSubmit && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? '保存中...' : submitText}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

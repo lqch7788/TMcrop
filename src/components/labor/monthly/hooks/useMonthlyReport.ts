@@ -42,7 +42,7 @@ export interface UseMonthlyReportReturn {
   setShowExportModal: (show: boolean) => void;
   // 导出相关方法
   handleSelectAll: () => void;
-  handleSelectRow: (id: number) => void;
+  handleSelectRow: (id: string) => void;
   handleConfirmExport: () => void;
   handleCancelExport: () => void;
   // 计算属性
@@ -67,25 +67,32 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
 
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
   const reports = mockMonthlyReports;
 
-  // 全选/取消全选
+  // 全选/取消全选 - 基于分页数据
   const handleSelectAll = useCallback(() => {
-    if (selectedRows.length === reports.length) {
-      setSelectedRows([]);
+    const paginatedIds = reports.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => String(r.id));
+    const allPaginatedSelected = paginatedIds.every((id) => selectedRows.includes(id));
+
+    if (allPaginatedSelected) {
+      // 取消当前页全选
+      setSelectedRows(selectedRows.filter((id) => !paginatedIds.includes(id)));
     } else {
-      setSelectedRows(reports.map((r) => r.id));
+      // 全选当前页
+      const newSelected = [...new Set([...selectedRows, ...paginatedIds])];
+      setSelectedRows(newSelected);
     }
-  }, [selectedRows.length, reports]);
+  }, [selectedRows, currentPage, pageSize, reports]);
 
   // 选择/取消选择单行
-  const handleSelectRow = useCallback((id: number) => {
+  const handleSelectRow = useCallback((id: string) => {
+    const numId = Number(id);
     setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
+      prev.includes(numId) ? prev.filter((rowId) => rowId !== numId) : [...prev, numId]
     );
   }, []);
 
@@ -100,7 +107,7 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
 
   // 执行导出
   const handleDoExport = useCallback(async () => {
-    const selectedData = reports.filter((r) => selectedRows.includes(r.id));
+    const selectedData = reports.filter((r) => selectedRows.includes(String(r.id)));
     const headers = [
       '报表编号', '月份', '部门', '总工日', '总工时', '日均人数',
       '已完成任务', '待处理任务', '总产量', '品质率', '人工成本',

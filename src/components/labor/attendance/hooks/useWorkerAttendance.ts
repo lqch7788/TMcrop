@@ -28,16 +28,16 @@ declare global {
   }
 }
 
-// 模拟考勤数据 - 扩展到8条，覆盖不同部门、状态
+// 模拟考勤数据 - 扩展到8条，覆盖不同部门、状态，关联批次
 const attendanceData: AttendanceRecord[] = [
-  { id: 1, workerId: 'W001', name: '郭靖', dept: '生产部', date: '2024-03-14', checkIn: '07:50', checkOut: '18:10', hours: 10, status: '正常', statusClass: 'normal' },
-  { id: 2, workerId: 'W002', name: '杨过', dept: '生产部', date: '2024-03-14', checkIn: '08:00', checkOut: '18:00', hours: 10, status: '正常', statusClass: 'normal' },
-  { id: 3, workerId: 'W003', name: '张无忌', dept: '生产部', date: '2024-03-14', checkIn: '07:45', checkOut: '17:50', hours: 10, status: '正常', statusClass: 'normal' },
-  { id: 4, workerId: 'W004', name: '令狐冲', dept: '技术部', date: '2024-03-14', checkIn: '08:10', checkOut: '18:00', hours: 9.5, status: '迟到', statusClass: 'warning' },
-  { id: 5, workerId: 'W005', name: '段誉', dept: '生产部', date: '2024-03-14', checkIn: '-', checkOut: '-', hours: 0, status: '请假', statusClass: 'draft' },
-  { id: 6, workerId: 'W006', name: '黄蓉', dept: '仓储部', date: '2024-03-14', checkIn: '08:05', checkOut: '17:55', hours: 9.8, status: '正常', statusClass: 'normal' },
-  { id: 7, workerId: 'W007', name: '陈家洛', dept: '生产部', date: '2024-03-14', checkIn: '07:30', checkOut: '18:30', hours: 11, status: '加班', statusClass: 'info' },
-  { id: 8, workerId: 'W008', name: '任盈盈', dept: '生产部', date: '2024-03-14', checkIn: '08:20', checkOut: '18:00', hours: 9.7, status: '早退', statusClass: 'warning' },
+  { id: 1, workerId: 'W001', name: '郭靖', dept: '生产部', date: '2024-03-14', checkIn: '07:50', checkOut: '18:10', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T001', batchId: 'B001' },
+  { id: 2, workerId: 'W002', name: '杨过', dept: '生产部', date: '2024-03-14', checkIn: '08:00', checkOut: '18:00', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T002', batchId: 'B002' },
+  { id: 3, workerId: 'W003', name: '张无忌', dept: '生产部', date: '2024-03-14', checkIn: '07:45', checkOut: '17:50', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T003', batchId: 'B003' },
+  { id: 4, workerId: 'W004', name: '令狐冲', dept: '技术部', date: '2024-03-14', checkIn: '08:10', checkOut: '18:00', hours: 9.5, status: '迟到', statusClass: 'warning', taskId: 'T004', batchId: 'B004' },
+  { id: 5, workerId: 'W005', name: '段誉', dept: '生产部', date: '2024-03-14', checkIn: '-', checkOut: '-', hours: 0, status: '请假', statusClass: 'draft', taskId: undefined, batchId: 'B005' },
+  { id: 6, workerId: 'W006', name: '黄蓉', dept: '仓储部', date: '2024-03-14', checkIn: '08:05', checkOut: '17:55', hours: 9.8, status: '正常', statusClass: 'normal', taskId: 'T004', batchId: 'B004' },
+  { id: 7, workerId: 'W007', name: '陈家洛', dept: '生产部', date: '2024-03-14', checkIn: '07:30', checkOut: '18:30', hours: 11, status: '加班', statusClass: 'info', taskId: 'T006', batchId: 'B007' },
+  { id: 8, workerId: 'W008', name: '任盈盈', dept: '生产部', date: '2024-03-14', checkIn: '08:20', checkOut: '18:00', hours: 9.7, status: '早退', statusClass: 'warning', taskId: 'T001', batchId: 'B001' },
 ];
 
 export interface UseWorkerAttendanceReturn {

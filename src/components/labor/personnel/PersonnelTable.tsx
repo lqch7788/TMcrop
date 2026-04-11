@@ -6,6 +6,11 @@ interface PersonnelTableProps {
   onViewWorker: (worker: Worker) => void;
   onEditWorker: (worker: Worker) => void;
   onDeleteWorker: (worker: Worker) => void;
+  // Batch selection props
+  showBatchSelect?: boolean;
+  selectedRows?: number[];
+  onSelectAll?: () => void;
+  onSelectRow?: (index: number) => void;
 }
 
 export function PersonnelTable({
@@ -13,18 +18,43 @@ export function PersonnelTable({
   onViewWorker,
   onEditWorker,
   onDeleteWorker,
+  showBatchSelect = false,
+  selectedRows = [],
+  onSelectAll,
+  onSelectRow,
 }: PersonnelTableProps) {
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">员工信息</h3>
+        {showBatchSelect && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onSelectAll}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              {selectedRows.length === workers.length ? '全不选' : '全选'}
+            </button>
+            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1600px]">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
+              {showBatchSelect && (
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.length === workers.length && workers.length > 0}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
@@ -39,8 +69,18 @@ export function PersonnelTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-300">
-            {workers.map((worker) => (
+            {workers.map((worker, index) => (
               <tr key={worker.id} className="hover:bg-blue-100 transition-colors">
+                {showBatchSelect && (
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(index)}
+                      onChange={() => onSelectRow?.(index)}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{worker.workerId}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">

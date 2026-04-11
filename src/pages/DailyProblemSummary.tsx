@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Send } from 'lucide-react';
 import {
   PageHeader,
   StatCards,
@@ -13,7 +13,7 @@ import {
   ExportModal,
   useExport,
 } from '../components/summary';
-import { useDailyProblemSummary } from '../hooks';
+import { useDailyProblemSummary, useProblemDispatch } from '../hooks';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
 
 export default function DailyProblemSummary() {
@@ -26,6 +26,21 @@ export default function DailyProblemSummary() {
     date: dateFilter || undefined,
     greenhouse: greenhouseFilter || undefined,
   });
+
+  // 问题分派 Hook
+  const { dispatchProblem, workerList } = useProblemDispatch();
+
+  // 分派弹窗状态
+  const [dispatchModal, setDispatchModal] = useState<{
+    isOpen: boolean;
+    problem: ProblemEntry | null;
+  }>({ isOpen: false, problem: null });
+
+  // 选中的执行人
+  const [selectedWorker, setSelectedWorker] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -340,6 +355,135 @@ export default function DailyProblemSummary() {
                   </div>
                 </div>
               )}
+
+              {/* 分派操作 - 仅待处理状态显示 */}
+              {detailModal.data.status === '待处理' && !detailModal.data.sourceTaskId && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => {
+                      setSelectedWorker(null);
+                      setDispatchModal({ isOpen: true, problem: detailModal.data });
+                    }}
+                    className="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    分派问题给员工处理
+                  </button>
+                </div>
+              )}
+
+              {/* 已分派提示 */}
+              {detailModal.data.sourceTaskId && (
+                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm text-blue-800">
+                    此问题已分派给 <span className="font-medium">{detailModal.data.handler}</span> 处理
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 分派弹窗 */}
+      {dispatchModal.isOpen && dispatchModal.problem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            {/* 弹窗头部 */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800">分派问题</h3>
+              <button
+                onClick={() => {
+                  setDispatchModal({ isOpen: false, problem: null });
+                  setSelectedWorker(null);
+                }}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* 弹窗内容 */}
+            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+              {/* 问题信息 */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-500 mb-1">问题描述</div>
+                <div className="text-sm font-medium text-gray-800 mb-2">
+                  {dispatchModal.problem.issueText}
+                </div>
+                <div className="flex gap-4 text-xs text-gray-500">
+                  <span>温室：{dispatchModal.problem.greenhouseName}</span>
+                  <span>严重程度：{dispatchModal.problem.issueSeverity}</span>
+                </div>
+              </div>
+
+              {/* 执行人选择 */}
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">选择执行人</div>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {workerList.map(worker => (
+                    <div
+                      key={worker.id}
+                      onClick={() => setSelectedWorker({ id: worker.id, name: worker.name })}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedWorker?.id === worker.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">{worker.name}</div>
+                          <div className="text-xs text-gray-500">{worker.position}</div>
+                        </div>
+                        <div className="flex gap-1">
+                          {worker.skillTags.slice(0, 3).map(tag => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 弹窗底部 */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+              <button
+                onClick={() => {
+                  setDispatchModal({ isOpen: false, problem: null });
+                  setSelectedWorker(null);
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedWorker && dispatchModal.problem) {
+                    dispatchProblem(
+                      dispatchModal.problem.id,
+                      selectedWorker.id,
+                      selectedWorker.name
+                    );
+                    setDispatchModal({ isOpen: false, problem: null });
+                    setSelectedWorker(null);
+                    // 刷新详情
+                    setDetailModal({ isOpen: false, data: null });
+                  }
+                }}
+                disabled={!selectedWorker}
+                className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                确认分派
+              </button>
             </div>
           </div>
         </div>

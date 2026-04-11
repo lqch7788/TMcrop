@@ -31,6 +31,8 @@ export interface ProblemEntry {
   handler?: string;
   handleDate?: string;
   handleResult?: string;
+  // 关联的任务ID
+  sourceTaskId?: string;
   // 其他
   remarks?: string;
   images?: string[];

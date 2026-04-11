@@ -1,4 +1,3 @@
-import { X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
@@ -21,6 +20,7 @@ interface TempTaskFormModalProps {
   errors: Partial<Record<string, string>>;
   workerUsers: Array<{ id: string; name: string }>;
   onClose: () => void;
+  onSubmitDraft: () => void;
   onSubmit: () => void;
   onChange: <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => void;
 }
@@ -33,6 +33,7 @@ export function TempTaskFormModal({
   errors,
   workerUsers,
   onClose,
+  onSubmitDraft,
   onSubmit,
   onChange,
 }: TempTaskFormModalProps) {
@@ -49,7 +50,7 @@ export function TempTaskFormModal({
           type="text"
           value={formData.title}
           onChange={(e) => onChange('title', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
             errors.title ? 'border-red-500' : 'border-gray-200'
           }`}
           placeholder="请输入任务名称"
@@ -64,7 +65,7 @@ export function TempTaskFormModal({
           <select
             value={formData.urgency}
             onChange={(e) => onChange('urgency', e.target.value as TempTaskUrgency)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="normal">普通</option>
             <option value="urgent">紧急</option>
@@ -76,7 +77,7 @@ export function TempTaskFormModal({
           <select
             value={formData.tempTaskType}
             onChange={(e) => onChange('tempTaskType', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             {TEMP_TASK_TYPES.map((type) => (
               <option key={type} value={type}>{type}</option>
@@ -95,7 +96,7 @@ export function TempTaskFormModal({
             type="text"
             value={formData.workLocation}
             onChange={(e) => onChange('workLocation', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
               errors.workLocation ? 'border-red-500' : 'border-gray-200'
             }`}
             placeholder="如：大棚A区"
@@ -110,7 +111,7 @@ export function TempTaskFormModal({
             step="0.5"
             value={formData.estimatedHours}
             onChange={(e) => onChange('estimatedHours', Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>
@@ -126,7 +127,7 @@ export function TempTaskFormModal({
               onChange('assigneeId', e.target.value);
               onChange('assigneeName', user?.name || '待分配');
             }}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">待分配</option>
             {workerUsers.map((user) => (
@@ -140,7 +141,7 @@ export function TempTaskFormModal({
             type="date"
             value={formData.dueDate}
             onChange={(e) => onChange('dueDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>
@@ -151,7 +152,7 @@ export function TempTaskFormModal({
         <textarea
           value={formData.description}
           onChange={(e) => onChange('description', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           rows={3}
           placeholder="请输入任务描述"
         />
@@ -163,7 +164,7 @@ export function TempTaskFormModal({
         <textarea
           value={formData.notes}
           onChange={(e) => onChange('notes', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           rows={2}
           placeholder="备注信息"
         />
@@ -172,20 +173,20 @@ export function TempTaskFormModal({
   );
 
   const footer = (
-    <>
+    <div className="flex gap-3">
       <button
-        onClick={onClose}
+        onClick={onSubmitDraft}
         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
       >
-        取消
+        存为草稿
       </button>
       <button
         onClick={onSubmit}
-        className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
       >
         保存
       </button>
-    </>
+    </div>
   );
 
   return (
@@ -193,13 +194,8 @@ export function TempTaskFormModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      size="md"
+      size="xxxl"
       showFooter={true}
-      headerAction={
-        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-      }
       footer={footer}
     >
       {content}

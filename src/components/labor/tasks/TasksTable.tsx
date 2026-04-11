@@ -8,39 +8,93 @@ interface TasksTableProps {
   tasks: Task[];
   currentPage: number;
   pageSize: number;
+  showCheckbox?: boolean;
+  exportMode?: boolean;
+  batchEditMode?: boolean;
+  batchDeleteMode?: boolean;
+  selectedRows: string[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onViewTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
 }
 
 export function TasksTable({
   tasks,
   currentPage,
   pageSize,
+  showCheckbox = false,
+  exportMode = false,
+  batchEditMode = false,
+  batchDeleteMode = false,
+  selectedRows = [],
   onPageChange,
   onPageSizeChange,
   onViewTask,
   onEditTask,
   onDeleteTask,
+  onSelectAll,
+  onSelectRow,
 }: TasksTableProps) {
   const totalPages = Math.ceil(tasks.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, tasks.length);
   const paginatedTasks = tasks.slice(startIndex, endIndex);
 
+  const allSelected = selectedRows.length === tasks.length && tasks.length > 0;
+
+  // Get selectable rows count based on mode
+  const getSelectableCount = () => {
+    if (batchEditMode) {
+      return tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length;
+    }
+    if (batchDeleteMode) {
+      return tasks.filter(t => t.status === 'pending').length;
+    }
+    return tasks.length;
+  };
+
+  const getAllSelectedForMode = () => {
+    if (batchEditMode) {
+      const selectable = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
+      return selectedRows.length === selectable.length && selectable.length > 0;
+    }
+    if (batchDeleteMode) {
+      const selectable = tasks.filter(t => t.status === 'pending');
+      return selectedRows.length === selectable.length && selectable.length > 0;
+    }
+    return allSelected;
+  };
+
+  const getRowSelectable = (task: Task) => {
+    if (batchEditMode) {
+      return task.status !== 'completed' && task.status !== 'cancelled';
+    }
+    if (batchDeleteMode) {
+      return task.status === 'pending';
+    }
+    return true;
+  };
+
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      {/* 表格标题栏 */}
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">任务列表</h3>
-      </div>
-
       <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
         <table className="w-full min-w-[1400px]">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
+              {showCheckbox && (
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={getAllSelectedForMode()}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
+              )}
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务标题</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
@@ -63,9 +117,33 @@ export function TasksTable({
           </thead>
           <tbody className="bg-white divide-y divide-gray-300">
             {paginatedTasks.map((task) => (
-              <tr key={task.id} className="hover:bg-blue-100 transition-colors">
+              <tr
+                key={task.id}
+                className={`hover:bg-blue-100 transition-colors ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''}`}
+              >
+                {showCheckbox && (
+                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(task.id)}
+                      onChange={() => {
+                        if (getRowSelectable(task)) {
+                          onSelectRow?.(task.id);
+                        }
+                      }}
+                      disabled={!getRowSelectable(task)}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                    />
+                  </td>
+                )}
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{task.taskCode}</span>
+                  <button
+                    onClick={() => onViewTask(task)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                    title="点击查看详情"
+                  >
+                    {task.taskCode}
+                  </button>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-start gap-2">
@@ -136,15 +214,8 @@ export function TasksTable({
                       : '-'}
                   </span>
                 </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => onViewTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="查看详情"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
                     <button
                       onClick={() => onEditTask(task)}
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -167,8 +238,31 @@ export function TasksTable({
         </table>
       </div>
 
+      {/* 空状态 */}
+      {tasks.length === 0 && (
+        <div className="p-8 text-center text-gray-500">
+          没有找到符合条件的任务
+        </div>
+      )}
+
+      {/* Selection footer */}
+      {showCheckbox && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-4">
+            <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              {getAllSelectedForMode() ? '全不选' : '全选'}
+            </button>
+            <span className="text-sm text-gray-500">
+              已选择 {selectedRows.length} 项
+              {batchEditMode && '（进行中/已完成状态不可编辑）'}
+              {batchDeleteMode && '（仅待执行状态可删除）'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 分页 */}
-      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>每页</span>
           <select

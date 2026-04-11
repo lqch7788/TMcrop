@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Coins } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { mockTempWorkers } from '../tempWorker/mockData';
@@ -252,16 +252,8 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
       isOpen={open}
       onClose={onClose}
       title={record ? '编辑计件记录' : '新建计件记录'}
-      size="md"
+      size="xl"
       showFooter={true}
-      headerAction={
-        <button
-          onClick={onClose}
-          className="p-1 rounded hover:bg-gray-100 text-gray-500"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      }
       footer={footer}
     >
       {content}

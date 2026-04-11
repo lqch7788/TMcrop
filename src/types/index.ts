@@ -27,6 +27,11 @@ export interface CropBatch {
   status: 'planned' | 'in_progress' | 'suspended' | 'completed';
   plantingMode: string;
   responsiblePerson: string;
+  // 新增字段
+  publisher?: string; // 发布人
+  publishDate?: string; // 初次发布时间
+  lastModifyDate?: string; // 最后修改时间
+  batchStatus?: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
 }
 
 export interface Task {
@@ -55,6 +60,8 @@ export interface Task {
   actualWorkload: number;
   notes?: string;
   images?: string[];
+  // 问题来源关联
+  sourceProblemId?: number;
 }
 
 // 临时任务类型
@@ -65,7 +72,7 @@ export interface TempTask {
   taskCode: string;
   title: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'draft' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
   assigneeId: string;
   assigneeName: string;
   assignerId: string;

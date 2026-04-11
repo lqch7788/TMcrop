@@ -22,19 +22,25 @@ export function LeaveTable({
   onAddClick,
   onBatchEditClick,
   onBatchDeleteClick,
-  onExportClick,
+  onBatchExportClick,
+  onCancelBatchEdit,
+  onCancelBatchDelete,
+  onCancelExport,
 }: LeaveTableProps & {
   showCheckbox?: boolean;
   exportMode?: boolean;
   batchEditMode?: boolean;
   batchDeleteMode?: boolean;
-  selectedRows?: number[];
+  selectedRows?: (string | number)[];
   onSelectAll?: () => void;
-  onSelectRow?: (id: number) => void;
+  onSelectRow?: (id: string | number) => void;
   onAddClick?: () => void;
   onBatchEditClick?: () => void;
   onBatchDeleteClick?: () => void;
-  onExportClick?: () => void;
+  onBatchExportClick?: () => void;
+  onCancelBatchEdit?: () => void;
+  onCancelBatchDelete?: () => void;
+  onCancelExport?: () => void;
 }) {
   const { currentPage, pageSize, total } = pagination;
   const totalPages = Math.ceil(total / pageSize) || 1;
@@ -75,7 +81,7 @@ export function LeaveTable({
                     批量编辑
                   </button>
                   <button
-                    onClick={onBatchDeleteClick}
+                    onClick={onCancelBatchEdit}
                     className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
@@ -93,7 +99,7 @@ export function LeaveTable({
                     确认删除
                   </button>
                   <button
-                    onClick={onBatchDeleteClick}
+                    onClick={onCancelBatchDelete}
                     className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
@@ -103,7 +109,7 @@ export function LeaveTable({
               {exportMode && (
                 <>
                   <button
-                    onClick={onExportClick}
+                    onClick={onBatchExportClick}
                     disabled={selectedRows.length === 0}
                     className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -111,7 +117,7 @@ export function LeaveTable({
                     确认导出
                   </button>
                   <button
-                    onClick={onExportClick}
+                    onClick={onCancelExport}
                     className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
@@ -148,9 +154,9 @@ export function LeaveTable({
                   删除
                 </button>
               )}
-              {onExportClick && (
+              {onBatchExportClick && (
                 <button
-                  onClick={onExportClick}
+                  onClick={onBatchExportClick}
                   className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Download className="w-4 h-4" />

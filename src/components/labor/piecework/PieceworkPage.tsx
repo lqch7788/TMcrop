@@ -1,11 +1,115 @@
 import React, { useState } from 'react';
-import { Plus, Download, Filter, RefreshCw, Users, Package, Coins } from 'lucide-react';
+import { Plus, Download, Filter, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload } from 'lucide-react';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
 import { PieceworkFormModal } from './PieceworkFormModal';
+import { PieceworkBatchEditModal } from './PieceworkBatchEditModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { mockTempWorkers } from '../tempWorker/mockData';
 import { taskOptions } from './hooks/usePiecework';
+
+// 导出格式弹窗
+interface ExportFormatModalProps {
+  isOpen: boolean;
+  exportFormat: string;
+  selectedCount: number;
+  onFormatChange: (format: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange, onClose, onConfirm }: ExportFormatModalProps) {
+  if (!isOpen) return null;
+
+  const exportFormats = [
+    { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
+    { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
+    { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+              ×
+            </button>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
+            <div className="space-y-3">
+              {exportFormats.map((format) => (
+                <label
+                  key={format.value}
+                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                    exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="exportFormat"
+                    value={format.value}
+                    checked={exportFormat === format.value}
+                    onChange={(e) => onFormatChange(e.target.value)}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
+                    <p className="text-xs text-gray-500">{format.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+            <button onClick={onClose} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
+            <button onClick={onConfirm} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">导出</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 删除确认弹窗
+interface DeleteWarningModalProps {
+  isOpen: boolean;
+  selectedCount: number;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">删除计件工资记录</h3>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600 space-y-3 mb-6">
+            <p>确定要删除选中的 <strong>{selectedCount}</strong> 条计件工资记录吗？</p>
+            <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
+            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export const PieceworkPage: React.FC = () => {
   const {
@@ -22,11 +126,53 @@ export const PieceworkPage: React.FC = () => {
     updateRecordStatus,
   } = usePiecework();
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<PieceRate | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  // 批量操作状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('excel');
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<PieceRate>>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
 
-  // 处理新增/编辑确认
+  // 弹窗状态
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<PieceRate | null>(null);
+
+  // 打开详情弹窗
+  const handleViewDetail = (record: PieceRate) => {
+    setSelectedRecord(record);
+    setShowDetailModal(true);
+  };
+
+  // 打开编辑弹窗
+  const handleEdit = (record: PieceRate) => {
+    setSelectedRecord(record);
+    setShowEditModal(true);
+  };
+
+  // 删除记录
+  const handleDelete = (record: PieceRate) => {
+    if (window.confirm(`确定要删除计件记录 "${record.workerName} - ${record.taskName}" 吗？`)) {
+      // 删除逻辑
+    }
+  };
+
+  // 关闭所有弹窗
+  const handleCloseModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setShowDetailModal(false);
+    setSelectedRecord(null);
+  };
+
+  // 提交新增
   const handleFormConfirm = (formData: PieceworkFormData) => {
     const worker = mockTempWorkers.find((w) => w.id === formData.workerId);
     const task = taskOptions.find((t) => t.id === formData.taskId);
@@ -56,33 +202,111 @@ export const PieceworkPage: React.FC = () => {
     updateRecordStatus(record.id, '已确认');
   };
 
-  // 查看详情
-  const handleViewDetail = (record: PieceRate) => {
-    setSelectedRecord(record);
-    setShowDetailModal(true);
+  // 批量选择操作
+  const handleSelectAll = () => {
+    if (selectedRows.length === data.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(data.map(r => r.id));
+    }
   };
 
-  // 导出计件工资记录
-  const handleExport = () => {
+  const handleSelectRow = (id: string) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
+    } else {
+      setSelectedRows([...selectedRows, id]);
+    }
+  };
+
+  // 批量删除
+  const handleBatchDelete = () => {
+    setShowDeleteWarning(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    // 执行批量删除
+    setSelectedRows([]);
+    setShowDeleteWarning(false);
+    setBatchDeleteMode(false);
+  };
+
+  // 导出
+  const handleExportClick = () => {
+    setExportMode(true);
+    setSelectedRows([]);
+  };
+
+  const handleCancelExport = () => {
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleConfirmExport = () => {
+    if (selectedRows.length === 0) {
+      alert('请先选择要导出的数据');
+      return;
+    }
+    setShowExportModal(true);
+  };
+
+  const handleDoExport = () => {
+    const selectedData = data.filter(r => selectedRows.includes(r.id));
     const headers = ['日期', '员工', '任务', '单位', '数量', '单价', '合计', '状态'];
-    const rows = data.map(item => [
-      item.workDate,
-      item.workerName,
-      item.taskName,
-      item.unit,
-      item.quantity.toString(),
-      item.unitPrice.toFixed(2),
-      item.total.toFixed(2),
-      item.status
-    ]);
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const exportData = selectedData.map(row => ({
+      '日期': row.workDate,
+      '员工': row.workerName,
+      '任务': row.taskName,
+      '单位': row.unit,
+      '数量': row.quantity,
+      '单价': row.unitPrice.toFixed(2),
+      '合计': row.total.toFixed(2),
+      '状态': row.status,
+    }));
+
+    let content = '';
+    let mimeType = '';
+    let extension = '';
+
+    if (exportFormat === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+      extension = 'csv';
+    } else if (exportFormat === 'excel') {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    } else if (exportFormat === 'word') {
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-word;charset=utf-8';
+      extension = 'doc';
+    }
+
+    const fileName = `计件工资_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `计件工资_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
     URL.revokeObjectURL(url);
+
+    setExportMode(false);
+    setSelectedRows([]);
+    setShowExportModal(false);
+  };
+
+  // 取消批量操作
+  const handleCancelBatch = () => {
+    setBatchEditMode(false);
+    setBatchDeleteMode(false);
+    setExportMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
   };
 
   return (
@@ -101,7 +325,14 @@ export const PieceworkPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExport}
+              onClick={() => {}}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Upload className="w-4 h-4" />
+              导入
+            </button>
+            <button
+              onClick={handleExportClick}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <Download className="w-4 h-4" />
@@ -205,8 +436,22 @@ export const PieceworkPage: React.FC = () => {
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <PieceworkTable
           data={data}
+          showCheckbox={exportMode || batchEditMode || batchDeleteMode}
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          selectedRows={selectedRows}
           onViewDetail={handleViewDetail}
+          onEdit={handleEdit}
           onConfirm={handleConfirm}
+          onDelete={handleDelete}
+          onSelectAll={handleSelectAll}
+          onSelectRow={handleSelectRow}
+          onBatchEditClick={batchEditMode ? () => setShowBatchEditModal(true) : () => setBatchEditMode(true)}
+          onBatchDeleteClick={batchDeleteMode ? handleBatchDelete : () => setBatchDeleteMode(true)}
+          onBatchExportClick={exportMode ? handleConfirmExport : () => setExportMode(true)}
+          onCancelBatch={handleCancelBatch}
+          onAddClick={exportMode || batchEditMode || batchDeleteMode ? undefined : () => setShowAddModal(true)}
         />
 
         {/* 分页 */}
@@ -289,6 +534,55 @@ export const PieceworkPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* 导出格式选择弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleDoExport}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <PieceworkBatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={data}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={() => {
+          setShowBatchEditModal(false);
+          handleCancelBatch();
+        }}
+        onConfirmNext={() => {
+          if (selectedRecordId && !editedRecordIds.includes(selectedRecordId)) {
+            setEditedRecordIds([...editedRecordIds, selectedRecordId]);
+          }
+          const currentIndex = selectedRows.findIndex(r => r === selectedRecordId);
+          const nextRecord = selectedRows[currentIndex + 1];
+          if (nextRecord) {
+            setSelectedRecordId(nextRecord);
+          } else {
+            setShowBatchEditModal(false);
+            handleCancelBatch();
+          }
+        }}
+      />
     </div>
   );
 };

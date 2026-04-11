@@ -1,18 +1,148 @@
-import { useState } from 'react';
-import { Plus, ClipboardCheck } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
 import { tasks as initialTasks, greenhouses, cropBatches, users } from '../../../data/mockData';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
 import { TasksTable } from './TasksTable';
 import { TaskDetailModal } from './TaskDetailModal';
 import { TaskFormModal } from './TaskFormModal';
+import { BatchEditModal } from './BatchEditModal';
 import { useTasksFilters } from './hooks/useTasksFilters';
 import { useTaskForm } from './hooks/useTaskForm';
+import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+
+// 导出格式弹窗
+interface ExportFormatModalProps {
+  isOpen: boolean;
+  exportFormat: string;
+  selectedCount: number;
+  onFormatChange: (format: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange, onClose, onConfirm }: ExportFormatModalProps) {
+  if (!isOpen) return null;
+
+  const exportFormats = [
+    { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
+    { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
+    { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">×</button>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
+            <div className="space-y-3">
+              {exportFormats.map((format) => (
+                <label
+                  key={format.value}
+                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                    exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="exportFormat"
+                    value={format.value}
+                    checked={exportFormat === format.value}
+                    onChange={(e) => onFormatChange(e.target.value)}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
+                    <p className="text-xs text-gray-500">{format.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+            <button onClick={onClose} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
+            <button onClick={onConfirm} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">导出</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 删除确认弹窗
+interface DeleteWarningModalProps {
+  isOpen: boolean;
+  selectedCount: number;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">删除任务警告</h3>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600 space-y-3 mb-6">
+            <p>确定要删除选中的 <strong>{selectedCount}</strong> 个任务吗？</p>
+            <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
+            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function TasksPage() {
-  const [taskList, setTaskList] = useState<Task[]>([...initialTasks]);
+  // 优先从 localStorage 读取任务（问题分派创建的任务）
+  const [localTasks, setLocalTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
+  const [taskList, setTaskList] = useState<Task[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // 批量操作状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('excel');
+
+  // 合并 localStorage 任务和 mockData 任务
+  useEffect(() => {
+    const merged = [...localTasks];
+    initialTasks.forEach(task => {
+      if (!merged.find(t => t.id === task.id)) {
+        merged.push(task);
+      }
+    });
+    setTaskList(merged);
+  }, [localTasks]);
+
+  // 问题记录更新
+  const { updateProblem } = usePersistentProblems();
 
   // 详情弹窗状态
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -64,8 +194,17 @@ export function TasksPage() {
     onSubmit: (task) => {
       if (editingTask) {
         setTaskList(prev => prev.map(t => t.id === task.id ? task : t));
+        // 如果是 localStorage 中的任务，同步更新
+        const localTask = localTasks.find(t => t.id === task.id);
+        if (localTask) {
+          setLocalTasks(prev => prev.map(t => t.id === task.id ? task : t));
+        }
       } else {
         setTaskList(prev => [task, ...prev]);
+        // 新创建的任务，如果有 sourceProblemId 也保存到 localStorage
+        if (task.sourceProblemId) {
+          setLocalTasks(prev => [task, ...prev]);
+        }
       }
       closeFormModal();
     },
@@ -97,18 +236,171 @@ export function TasksPage() {
   // 删除任务
   const handleDeleteTask = (task: Task) => {
     if (window.confirm(`确定要删除任务 "${task.title}" 吗？`)) {
+      // 如果是 localStorage 中的任务，同步删除
+      const localTask = localTasks.find(t => t.id === task.id);
+      if (localTask) {
+        setLocalTasks(prev => prev.filter(t => t.id !== task.id));
+      }
+      // 从列表移除
       setTaskList(prev => prev.filter(t => t.id !== task.id));
     }
   };
 
   // 确认完成
   const handleConfirmComplete = (task: Task) => {
+    // 更新任务列表中的状态
     setTaskList(prev => prev.map(t =>
       t.id === task.id
         ? { ...t, status: 'completed' as const }
         : t
     ));
+
+    // 如果是 localStorage 中的任务（问题分派创建的），同步更新
+    const localTask = localTasks.find(t => t.id === task.id);
+    if (localTask) {
+      setLocalTasks(prev => prev.map(t =>
+        t.id === task.id
+          ? { ...t, status: 'completed' as const }
+          : t
+      ));
+    }
+
+    // 如果是问题来源的任务，自动更新问题的处理结果
+    if (task.sourceProblemId) {
+      updateProblem(task.sourceProblemId, {
+        status: '已处理',
+        handleDate: new Date().toISOString().slice(0, 10),
+        handleResult: `任务已完成：${task.title}`,
+      });
+    }
+
     closeDetailModal();
+  };
+
+  // 批量选择操作
+  const handleSelectAll = () => {
+    if (selectedRows.length === filteredTasks.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(filteredTasks.map(t => t.id));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
+    } else {
+      setSelectedRows([...selectedRows, id]);
+    }
+  };
+
+  // 批量删除
+  const handleBatchDelete = () => {
+    setBatchDeleteMode(false);
+    setShowDeleteWarning(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    // 如果是 localStorage 中的任务，同步删除
+    const localTaskIds = localTasks.filter(t => selectedRows.includes(t.id)).map(t => t.id);
+    if (localTaskIds.length > 0) {
+      setLocalTasks(prev => prev.filter(t => !localTaskIds.includes(t.id)));
+    }
+    // 从列表移除
+    setTaskList(prev => prev.filter(t => !selectedRows.includes(t.id)));
+    setSelectedRows([]);
+    setShowDeleteWarning(false);
+    setBatchDeleteMode(false);
+  };
+
+  // 批量编辑确认
+  const handleBatchEditConfirm = (editedTasks: Record<string, Partial<Task>>) => {
+    if (Object.keys(editedTasks).length === 0) return;
+    setTaskList(prev => prev.map(task => {
+      const edited = editedTasks[task.taskCode];
+      if (edited) {
+        return { ...task, ...edited };
+      }
+      return task;
+    }));
+    setSelectedRows([]);
+    setBatchEditMode(false);
+  };
+
+  // 导出
+  const handleExportClick = () => {
+    setExportMode(true);
+    setSelectedRows([]);
+  };
+
+  const handleCancelExport = () => {
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleConfirmExport = () => {
+    if (selectedRows.length === 0) {
+      alert('请先选择要导出的数据');
+      return;
+    }
+    setShowExportModal(true);
+  };
+
+  const handleDoExport = () => {
+    const selectedData = taskList.filter(t => selectedRows.includes(t.id));
+    const headers = ['任务编号', '任务标题', '任务类型', '作业区域', '执行人', '计划开始', '计划结束', '优先级', '状态'];
+    const exportData = selectedData.map(row => ({
+      '任务编号': row.taskCode,
+      '任务标题': row.title,
+      '任务类型': row.typeName,
+      '作业区域': row.greenhouseName,
+      '执行人': row.assigneeName,
+      '计划开始': (row as any).planStart || '-',
+      '计划结束': row.dueDate,
+      '优先级': row.priority,
+      '状态': row.status,
+    }));
+
+    let content = '';
+    let mimeType = '';
+    let extension = '';
+
+    if (exportFormat === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+      extension = 'csv';
+    } else if (exportFormat === 'excel') {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    } else if (exportFormat === 'word') {
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-word;charset=utf-8';
+      extension = 'doc';
+    }
+
+    const fileName = `任务工单_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setExportMode(false);
+    setSelectedRows([]);
+    setShowExportModal(false);
+  };
+
+  // 取消批量操作
+  const handleCancelBatch = () => {
+    setBatchEditMode(false);
+    setBatchDeleteMode(false);
+    setExportMode(false);
+    setSelectedRows([]);
   };
 
   return (
@@ -125,13 +417,6 @@ export function TasksPage() {
               <p className="text-xs text-gray-500">管理农事任务派发、执行和验收</p>
             </div>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            创建
-          </button>
         </div>
       </div>
 
@@ -148,16 +433,118 @@ export function TasksPage() {
       />
 
       {/* 任务列表表格 */}
-      <TasksTable
-        tasks={filteredTasks}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-        onViewTask={openDetailModal}
-        onEditTask={openEditModal}
-        onDeleteTask={handleDeleteTask}
-      />
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">任务列表</h3>
+          {exportMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={selectedRows.length === 0}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                确认导出
+              </button>
+              <button
+                onClick={handleCancelExport}
+                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+            </div>
+          ) : batchEditMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBatchEditModal(true)}
+                disabled={selectedRows.length === 0}
+                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Edit className="w-4 h-4" />
+                批量编辑
+              </button>
+              <button
+                onClick={handleCancelBatch}
+                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+            </div>
+          ) : batchDeleteMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleBatchDelete}
+                disabled={selectedRows.length === 0}
+                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+                确认删除
+              </button>
+              <button
+                onClick={handleCancelBatch}
+                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={openCreateModal}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                新增
+              </button>
+              <button
+                onClick={() => {
+                  setBatchEditMode(true);
+                  setSelectedRows([]);
+                }}
+                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+              >
+                <Edit className="w-4 h-4" />
+                编辑
+              </button>
+              <button
+                onClick={() => {
+                  setBatchDeleteMode(true);
+                  setSelectedRows([]);
+                }}
+                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+              <button
+                onClick={handleExportClick}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
+          )}
+        </div>
+
+        <TasksTable
+          tasks={filteredTasks}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          showCheckbox={exportMode || batchEditMode || batchDeleteMode}
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          selectedRows={selectedRows}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          onViewTask={openDetailModal}
+          onEditTask={openEditModal}
+          onDeleteTask={handleDeleteTask}
+          onSelectAll={handleSelectAll}
+          onSelectRow={handleSelectRow}
+        />
+      </div>
 
       {/* 详情弹窗 */}
       <TaskDetailModal
@@ -179,6 +566,35 @@ export function TasksPage() {
         filteredBatches={filteredBatches}
         workerUsers={workerUsers}
         onFormChange={updateFormData}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* 导出格式选择弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleDoExport}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        tasks={taskList}
+        users={users.map(u => ({ id: u.id, name: u.name }))}
+        greenhouses={greenhouses.map(g => ({ id: g.id, name: g.name }))}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleBatchEditConfirm}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Pencil, Download } from 'lucide-react';
 import {
   TempWorkerTableProps,
   TempWorker,
@@ -23,6 +23,23 @@ function getStatusClass(status: StaffStatus): string {
   }
 }
 
+interface ExtendedTempWorkerTableProps extends TempWorkerTableProps {
+  showCheckbox?: boolean;
+  exportMode?: boolean;
+  batchEditMode?: boolean;
+  batchDeleteMode?: boolean;
+  selectedRows?: string[];
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
+  onAddClick?: () => void;
+  onBatchEditClick?: () => void;
+  onBatchDeleteClick?: () => void;
+  onBatchExportClick?: () => void;
+  onCancelBatchEdit?: () => void;
+  onCancelBatchDelete?: () => void;
+  onCancelExport?: () => void;
+}
+
 /**
  * 临时工列表表格组件
  */
@@ -34,9 +51,24 @@ export function TempWorkerTable({
   onViewDetail,
   onEdit,
   onDelete,
-}: TempWorkerTableProps) {
+  showCheckbox = false,
+  exportMode = false,
+  batchEditMode = false,
+  batchDeleteMode = false,
+  selectedRows = [],
+  onSelectAll,
+  onSelectRow,
+  onAddClick,
+  onBatchEditClick,
+  onBatchDeleteClick,
+  onBatchExportClick,
+  onCancelBatchEdit,
+  onCancelBatchDelete,
+  onCancelExport,
+}: ExtendedTempWorkerTableProps) {
   const { currentPage, pageSize, total } = pagination;
   const totalPages = Math.ceil(total / pageSize);
+  const allSelected = selectedRows.length === data.length && data.length > 0;
 
   // 处理删除确认
   const handleDelete = (record: TempWorker) => {
@@ -50,6 +82,105 @@ export function TempWorkerTable({
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">临时工列表</h3>
+        <div className="flex gap-2">
+          {(batchEditMode || batchDeleteMode || exportMode) ? (
+            <>
+              {batchEditMode && (
+                <>
+                  <button
+                    onClick={onBatchEditClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    批量编辑
+                  </button>
+                  <button
+                    onClick={onCancelBatchEdit}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button
+                    onClick={onBatchDeleteClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button
+                    onClick={onCancelBatchDelete}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {exportMode && (
+                <>
+                  <button
+                    onClick={onBatchExportClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button
+                    onClick={onCancelExport}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {onAddClick && (
+                <button
+                  onClick={onAddClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {onBatchEditClick && (
+                <button
+                  onClick={onBatchEditClick}
+                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {onBatchDeleteClick && (
+                <button
+                  onClick={onBatchDeleteClick}
+                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {onBatchExportClick && (
+                <button
+                  onClick={onBatchExportClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* 表格 */}
@@ -57,6 +188,16 @@ export function TempWorkerTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
+              {(exportMode || batchEditMode || batchDeleteMode) && (
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 工号
               </th>
@@ -86,7 +227,7 @@ export function TempWorkerTable({
           <tbody className="bg-white divide-y divide-gray-300">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
                 </td>
               </tr>
@@ -96,6 +237,16 @@ export function TempWorkerTable({
                   key={record.id}
                   className="hover:bg-blue-100 transition-colors"
                 >
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.includes(record.id)}
+                        onChange={() => onSelectRow?.(record.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
                     {record.employeeCode}
                   </td>
