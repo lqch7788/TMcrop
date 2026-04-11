@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Download, ChevronLeft, ChevronRight, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
 
 interface ScheduleTableProps {
@@ -7,6 +7,19 @@ interface ScheduleTableProps {
   shiftConfigs: ShiftConfig[];
   onScheduleClick?: (record: ScheduleRecord) => void;
   onExport?: () => void;
+  onAddClick?: () => void;
+  showCheckbox?: boolean;
+  exportMode?: boolean;
+  batchEditMode?: boolean;
+  batchDeleteMode?: boolean;
+  selectedRows?: string[];
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
+  onBatchEditClick?: () => void;
+  onBatchDeleteClick?: () => void;
+  onBatchExportClick?: () => void;
+  onCancelBatchEdit?: () => void;
+  onCancelBatchDelete?: () => void;
 }
 
 // 获取班次颜色
@@ -20,6 +33,19 @@ export function ScheduleTable({
   shiftConfigs,
   onScheduleClick,
   onExport,
+  onAddClick,
+  showCheckbox = false,
+  exportMode = false,
+  batchEditMode = false,
+  batchDeleteMode = false,
+  selectedRows = [],
+  onSelectAll,
+  onSelectRow,
+  onBatchEditClick,
+  onBatchDeleteClick,
+  onBatchExportClick,
+  onCancelBatchEdit,
+  onCancelBatchDelete,
 }: ScheduleTableProps) {
   // 筛选状态
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,6 +92,7 @@ export function ScheduleTable({
   }, [filteredData, currentPage]);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
+  const allSelected = paginatedData.length > 0 && paginatedData.every(r => selectedRows.includes(r.id));
 
   // 星期几
   const getWeekday = (dateStr: string) => {
@@ -79,6 +106,105 @@ export function ScheduleTable({
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">排班记录</h3>
+        <div className="flex gap-2">
+          {(batchEditMode || batchDeleteMode || exportMode) ? (
+            <>
+              {batchEditMode && (
+                <>
+                  <button
+                    onClick={onBatchEditClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Edit className="w-4 h-4" />
+                    批量编辑
+                  </button>
+                  <button
+                    onClick={onCancelBatchEdit}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button
+                    onClick={onBatchDeleteClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button
+                    onClick={onCancelBatchDelete}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {exportMode && (
+                <>
+                  <button
+                    onClick={onBatchExportClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button
+                    onClick={onBatchExportClick}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {onAddClick && (
+                <button
+                  onClick={onAddClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {onBatchEditClick && (
+                <button
+                  onClick={onBatchEditClick}
+                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Edit className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {onBatchDeleteClick && (
+                <button
+                  onClick={onBatchDeleteClick}
+                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {onExport && (
+                <button
+                  onClick={onExport}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* 工具栏 */}
@@ -187,6 +313,16 @@ export function ScheduleTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
+              {(exportMode || batchEditMode || batchDeleteMode) && (
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
                 日期
               </th>
@@ -213,7 +349,7 @@ export function ScheduleTable({
           <tbody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={showCheckbox ? 8 : 7} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
                 </td>
               </tr>
@@ -223,9 +359,20 @@ export function ScheduleTable({
                 return (
                   <tr
                     key={record.id}
-                    onClick={() => onScheduleClick?.(record)}
-                    className="hover:bg-blue-100 cursor-pointer transition-colors"
+                    onClick={() => (exportMode || batchEditMode || batchDeleteMode) ? onSelectRow?.(record.id) : onScheduleClick?.(record)}
+                    className={`hover:bg-blue-100 cursor-pointer transition-colors ${(exportMode || batchEditMode || batchDeleteMode) ? '' : ''}`}
                   >
+                    {(exportMode || batchEditMode || batchDeleteMode) && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(record.id)}
+                          onChange={() => onSelectRow?.(record.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.date}</div>
                       <div className="text-xs text-gray-500">{getWeekday(record.date)}</div>

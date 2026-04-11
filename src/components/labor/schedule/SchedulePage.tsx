@@ -14,6 +14,7 @@ import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
+import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ShiftType, Staff } from './types';
 
 // 模拟员工列表
@@ -53,11 +54,29 @@ export function SchedulePage() {
   const [displayMode, setDisplayMode] = useState<'calendar' | 'table'>('calendar');
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleRecord | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+
+  // 批量操作状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  // 批量编辑状态
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<ScheduleRecord>>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
+
+  // 导出状态
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('excel');
 
   // 新排班表单状态
   const [newSchedule, setNewSchedule] = useState({
     staffId: '',
     staffName: '',
+    date: '',
     shift: '早班' as ShiftType,
     workZone: '',
   });
@@ -78,11 +97,10 @@ export function SchedulePage() {
       addSchedule({
         ...newSchedule,
         staffName: staff.name,
-        date: selectedDate,
         status: '已排班',
       });
       setShowAddModal(false);
-      setNewSchedule({ staffId: '', staffName: '', shift: '早班', workZone: '' });
+      setNewSchedule({ staffId: '', staffName: '', date: '', shift: '早班', workZone: '' });
     }
   };
 
@@ -97,6 +115,174 @@ export function SchedulePage() {
     reason: string;
   }) => {
     submitSwapRequest(data);
+  };
+
+  // 批量选择操作
+  const handleSelectAll = () => {
+    if (selectedRows.length === scheduleList.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(scheduleList.map(r => r.id));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
+    } else {
+      setSelectedRows([...selectedRows, id]);
+    }
+  };
+
+  // 取消批量操作
+  const handleCancelBatch = () => {
+    setBatchEditMode(false);
+    setBatchDeleteMode(false);
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // 确认删除
+  const handleConfirmDelete = () => {
+    if (selectedRows.length === 0) return;
+    // 删除选中项
+    selectedRows.forEach(id => {
+      cancelSchedule(id);
+    });
+    handleCancelBatch();
+  };
+
+  // 批量编辑相关处理
+  const handleBatchEditClick = () => {
+    if (batchEditMode) {
+      // 已经在批量编辑模式，打开批量编辑弹窗
+      setShowBatchEditModal(true);
+    } else {
+      // 进入批量编辑模式
+      setBatchEditMode(true);
+    }
+  };
+
+  const handleConfirmBatchEdit = () => {
+    // 保存编辑结果
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  // 确认（下一个）- 保存当前记录并选择下一条
+  const handleConfirmNext = () => {
+    // 将当前记录标记为已编辑
+    if (selectedRecordId && !editedRecordIds.includes(selectedRecordId)) {
+      setEditedRecordIds([...editedRecordIds, selectedRecordId]);
+    }
+
+    // 找到下一条未编辑的记录
+    const selectedRecords = selectedRows.map(id => scheduleList.find(r => r.id === id)).filter(Boolean) as ScheduleRecord[];
+    const currentIndex = selectedRecords.findIndex(r => r.id.toString() === selectedRecordId);
+    const nextUneditedRecord = selectedRecords.find((r, idx) => {
+      return idx > currentIndex && !editedRecordIds.includes(r.id.toString());
+    });
+
+    if (nextUneditedRecord) {
+      // 选择下一条未编辑的记录
+      setSelectedRecordId(nextUneditedRecord.id.toString());
+    } else {
+      // 如果没有更多未编辑的记录，关闭弹窗
+      setShowBatchEditModal(false);
+      setBatchEditMode(false);
+      setSelectedRows([]);
+      setEditedRecordIds([]);
+      setEditedRecords({});
+      setSelectedRecordId('');
+    }
+  };
+
+  // 确认导出
+  const handleConfirmExport = () => {
+    if (selectedRows.length === 0) return;
+    handleDoExport();
+  };
+
+  // 执行导出
+  const handleDoExport = async () => {
+    const selectedData = scheduleList.filter(s => selectedRows.includes(s.id));
+    const headers = ['日期', '员工', '班次', '工作区域', '开始时间', '结束时间', '状态', '签到时间', '签退时间'];
+
+    const exportData = selectedData.map(row => {
+      const shiftConfig = shiftConfigs.find(c => c.name === row.shift);
+      return {
+        '日期': row.date,
+        '员工': row.staffName,
+        '班次': row.shift,
+        '工作区域': row.workZone,
+        '开始时间': shiftConfig?.startTime || '',
+        '结束时间': shiftConfig?.endTime || '',
+        '状态': row.status,
+        '签到时间': row.checkIn || '-',
+        '签退时间': row.checkOut || '-',
+      };
+    });
+
+    let content = '';
+    let mimeType = '';
+    let extension = '';
+
+    if (exportFormat === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+      extension = 'csv';
+    } else if (exportFormat === 'excel') {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    } else if (exportFormat === 'word') {
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-word;charset=utf-8';
+      extension = 'doc';
+    }
+
+    const fileName = `排班记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+    try {
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: exportFormat.toUpperCase() + ' Files',
+            accept: { [mimeType]: ['.' + extension] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      } else {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    setShowExportModal(false);
+    handleCancelBatch();
   };
 
   return (
@@ -245,11 +431,63 @@ export function SchedulePage() {
               onScheduleClick={handleScheduleClick}
             />
           ) : (
-            <ScheduleTable
-              scheduleList={scheduleList}
-              shiftConfigs={shiftConfigs}
-              onScheduleClick={handleScheduleClick}
-            />
+            <>
+              <ScheduleTable
+                scheduleList={scheduleList}
+                shiftConfigs={shiftConfigs}
+                onScheduleClick={handleScheduleClick}
+                showCheckbox={exportMode || batchEditMode || batchDeleteMode}
+                exportMode={exportMode}
+                batchEditMode={batchEditMode}
+                batchDeleteMode={batchDeleteMode}
+                selectedRows={selectedRows}
+                onSelectAll={handleSelectAll}
+                onSelectRow={handleSelectRow}
+                onAddClick={() => setShowAddModal(true)}
+                onBatchEditClick={handleBatchEditClick}
+                onBatchDeleteClick={() => {
+                  if (batchDeleteMode) {
+                    // 在批量删除模式下，显示确认删除弹窗
+                    setShowDeleteWarning(true);
+                  } else {
+                    // 进入批量删除模式
+                    setBatchDeleteMode(true);
+                  }
+                }}
+                onBatchExportClick={() => {
+                  if (exportMode) {
+                    // 在导出模式下，显示导出格式选择弹窗
+                    if (selectedRows.length === 0) {
+                      alert('请先选择要导出的数据');
+                      return;
+                    }
+                    setShowExportModal(true);
+                  } else {
+                    // 进入导出模式
+                    setExportMode(true);
+                  }
+                }}
+                onCancelBatchEdit={handleCancelBatch}
+                onCancelBatchDelete={handleCancelBatch}
+              />
+
+              {/* 批量操作提示栏 */}
+              {(batchEditMode || batchDeleteMode || exportMode) && (
+                <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                    已选择 <strong className="text-emerald-600">{selectedRows.length}</strong> 项
+                    {batchEditMode && '（点击批量编辑进入编辑模式）'}
+                    {batchDeleteMode && '（确认删除选中的记录）'}
+                  </div>
+                  <button
+                    onClick={handleCancelBatch}
+                    className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -364,83 +602,54 @@ export function SchedulePage() {
         />
       )}
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-medium text-gray-800">新增排班</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded hover:bg-gray-100"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">选择员工</label>
-                <select
-                  value={newSchedule.staffId}
-                  onChange={e => {
-                    const staff = MOCK_STAFF.find(s => s.id === e.target.value);
-                    setNewSchedule({
-                      ...newSchedule,
-                      staffId: e.target.value,
-                      staffName: staff?.name || '',
-                      workZone: staff?.workZone || '',
-                    });
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">选择员工</option>
-                  {MOCK_STAFF.map(staff => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name} - {staff.workZone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">选择班次</label>
-                <select
-                  value={newSchedule.shift}
-                  onChange={e => setNewSchedule({ ...newSchedule, shift: e.target.value as ShiftType })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {shiftConfigs.map(config => (
-                    <option key={config.name} value={config.name}>
-                      {config.name} ({config.startTime}-{config.endTime})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">排班日期</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleAddSchedule}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
-              >
-                确认添加
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 新增排班弹窗 */}
+      <ScheduleAddModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddSchedule}
+        formData={newSchedule}
+        staffList={MOCK_STAFF}
+        shiftConfigs={shiftConfigs}
+        onFormChange={(field, value) => setNewSchedule(prev => ({ ...prev, [field]: value }))}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <ScheduleBatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={scheduleList}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleConfirmBatchEdit}
+        onConfirmNext={handleConfirmNext}
+        shiftConfigs={shiftConfigs}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={() => {
+          handleConfirmDelete();
+          setShowDeleteWarning(false);
+        }}
+      />
+
+      {/* 导出格式选择弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFormat={exportFormat}
+        selectedCount={selectedRows.length}
+        onFormatChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleConfirmExport}
+      />
     </div>
   );
 }
