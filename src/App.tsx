@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { ApprovalProvider } from './contexts/ApprovalContext';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +14,9 @@ import EnvironmentMonitor from './pages/EnvironmentMonitor';
 import Harvest from './pages/Harvest';
 import Reports from './pages/Reports';
 import Approvals from './pages/Approvals';
+import MaterialApproval from './pages/MaterialApproval';
+import ProductionApproval from './pages/ProductionApproval';
+import ApprovalDemo from './pages/ApprovalDemo';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import BaseSettings from './pages/BaseSettings';
@@ -232,6 +236,9 @@ function AppContent() {
         <Route path="/announcement" element={<Announcement />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/approval-demo" element={<ApprovalDemo />} />
+        <Route path="/material-approval" element={<MaterialApproval />} />
+        <Route path="/production-approval" element={<ProductionApproval />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/approved" element={<Approved />} />
         <Route path="/my-approval" element={<MyApproval />} />
@@ -247,7 +254,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <ApprovalProvider>
+        <AppContent />
+      </ApprovalProvider>
     </BrowserRouter>
   );
 }

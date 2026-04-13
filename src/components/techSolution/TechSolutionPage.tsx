@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 
@@ -20,15 +20,17 @@ export interface TechSolution {
   content: string;
   approvalDate: string;
   approver: string;
+  relatedBatchCode?: string;
+  planDetailFileName?: string;
 }
 
 // 模拟数据
 const techSolutions: TechSolution[] = [
-  { id: 1, code: 'T202401', title: '番茄春季高产栽培技术方案', crop: '番茄', plantingMode: '水培', stage: '生长全周期', author: '李建国', createDate: '2024-01-10', status: '已发布', statusClass: 'normal', version: 'V2.1', approveStatus: '已审批', content: '本方案针对春季番茄栽培，从品种选择、育苗、定植、田间管理、病虫害防治等方面进行详细介绍，旨在提高番茄产量和品质。', approvalDate: '2024-01-12', approver: '张志远' },
-  { id: 2, code: 'T202402', title: '黄瓜设施栽培技术方案', crop: '黄瓜', plantingMode: '土培', stage: '设施栽培', author: '王建华', createDate: '2024-01-15', status: '已发布', statusClass: 'normal', version: 'V1.5', approveStatus: '已审批', content: '本方案介绍黄瓜设施栽培的关键技术，包括温室环境调控、水肥管理、植株调整等内容，适用于温室大棚种植。', approvalDate: '2024-01-18', approver: '张志远' },
-  { id: 3, code: 'T202403', title: '草莓冬季促成栽培技术方案', crop: '草莓', plantingMode: '基质培', stage: '冬季促成', author: '李建国', createDate: '2024-02-01', status: '审核中', statusClass: 'pending', version: 'V1.0', approveStatus: '审核中', content: '本方案针对草莓冬季促成栽培技术，包括保温措施、光照调控、肥水管理等进行详细说明。', approvalDate: '-', approver: '-' },
-  { id: 4, code: 'T202404', title: '辣椒越夏栽培技术方案', crop: '辣椒', plantingMode: '土培', stage: '越夏管理', author: '王建华', createDate: '2024-02-20', status: '已发布', statusClass: 'normal', version: 'V1.2', approveStatus: '已审批', content: '本方案介绍辣椒越夏栽培技术，重点解决夏季高温对辣椒生长的影响，确保高产稳产。', approvalDate: '2024-02-25', approver: '张志远' },
-  { id: 5, code: 'T202405', title: '番茄灰霉病防治方案', crop: '番茄', plantingMode: '水培', stage: '病虫害防治', author: '张技术', createDate: '2024-03-01', status: '草稿', statusClass: 'draft', version: 'V1.0', approveStatus: '未提交', content: '本方案针对番茄灰霉病的预防和治理措施，包括农业防治、化学防治等技术要点。', approvalDate: '-', approver: '-' },
+  { id: 1, code: 'T202601001', title: '番茄春季高产栽培技术方案', crop: '番茄', plantingMode: '水培', stage: '生长全周期', author: '李建国', createDate: '2026-01-10', status: '已发布', statusClass: 'normal', version: 'V2.1', approveStatus: '已审批', content: '本方案针对春季番茄栽培，从品种选择、育苗、定植、田间管理、病虫害防治等方面进行详细介绍，旨在提高番茄产量和品质。', approvalDate: '2026-01-12', approver: 'Susan', relatedBatchCode: 'FQ2026-001', planDetailFileName: '番茄春季高产栽培技术方案-T202601001.md' },
+  { id: 2, code: 'T202601002', title: '黄瓜设施栽培技术方案', crop: '黄瓜', plantingMode: '土培', stage: '设施栽培', author: '王建华', createDate: '2026-01-15', status: '已发布', statusClass: 'normal', version: 'V1.5', approveStatus: '已审批', content: '本方案介绍黄瓜设施栽培的关键技术，包括温室环境调控、水肥管理、植株调整等内容，适用于温室大棚种植。', approvalDate: '2026-01-18', approver: 'Susan', relatedBatchCode: 'FQ2026-002', planDetailFileName: '黄瓜设施栽培技术方案-T202601002.docx' },
+  { id: 3, code: 'T202602001', title: '草莓冬季促成栽培技术方案', crop: '草莓', plantingMode: '基质培', stage: '冬季促成', author: '李建国', createDate: '2026-02-01', status: '审核中', statusClass: 'pending', version: 'V1.0', approveStatus: '审核中', content: '本方案针对草莓冬季促成栽培技术，包括保温措施、光照调控、肥水管理等进行详细说明。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'FQ2026-003', planDetailFileName: '草莓冬季促成栽培技术方案-T202602001.md' },
+  { id: 4, code: 'T202602002', title: '辣椒越夏栽培技术方案', crop: '辣椒', plantingMode: '土培', stage: '越夏管理', author: '王建华', createDate: '2026-02-20', status: '已发布', statusClass: 'normal', version: 'V1.2', approveStatus: '已审批', content: '本方案介绍辣椒越夏栽培技术，重点解决夏季高温对辣椒生长的影响，确保高产稳产。', approvalDate: '2026-02-25', approver: 'Susan', relatedBatchCode: 'FQ2026-005', planDetailFileName: '辣椒越夏栽培技术方案-T202602002.docx' },
+  { id: 5, code: 'T202603001', title: '番茄灰霉病防治方案', crop: '番茄', plantingMode: '水培', stage: '病虫害防治', author: '张技术', createDate: '2026-03-01', status: '草稿', statusClass: 'draft', version: 'V1.0', approveStatus: '未提交', content: '本方案针对番茄灰霉病的预防和治理措施，包括农业防治、化学防治等技术要点。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'FQ2026-001', planDetailFileName: '番茄灰霉病防治方案-T202603001.md' },
 ];
 
 const plantingModes = ['水培', '土培', '基质培', '雾培'];
@@ -42,6 +44,51 @@ export function TechSolutionPage() {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // 过滤后的技术方案数据
+  const filteredTechSolutions = techSolutions.filter(tech => {
+    // 方案编号过滤
+    if (code && !tech.code.toLowerCase().includes(code.toLowerCase())) {
+      return false;
+    }
+    // 作物种类过滤
+    if (crop && crop !== '全部' && tech.crop !== crop) {
+      return false;
+    }
+    // 编制人过滤
+    if (author && !tech.author.toLowerCase().includes(author.toLowerCase())) {
+      return false;
+    }
+    // 状态过滤
+    if (status && status !== '全部' && tech.status !== status) {
+      return false;
+    }
+    // 开始日期过滤
+    if (startDate && tech.createDate < startDate) {
+      return false;
+    }
+    // 结束日期过滤
+    if (endDate && tech.createDate > endDate) {
+      return false;
+    }
+    return true;
+  });
+
+  // 搜索处理函数
+  const handleSearch = () => {
+    setCurrentPage(1); // 重置到第一页
+  };
+
+  // 重置处理函数
+  const handleReset = () => {
+    setCode('');
+    setCrop('全部');
+    setAuthor('');
+    setStatus('全部');
+    setStartDate('');
+    setEndDate('');
+    setCurrentPage(1);
+  };
 
   // Modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -76,6 +123,7 @@ export function TechSolutionPage() {
     stage: '',
     version: 'V1.0',
     content: '',
+    planDetailFileName: '',
   });
 
   const generateCode = () => {
@@ -154,9 +202,10 @@ export function TechSolutionPage() {
   // 导出数据处理
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
-    const headers = ['方案编号', '方案标题', '作物种类', '种植模式', '生长阶段', '版本', '编制人', '创建日期', '审批状态', '状态'];
+    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物种类', '种植模式', '生长阶段', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
     const exportData = selectedData.map(row => ({
       '方案编号': row.code,
+      '关联生产计划批次': row.relatedBatchCode || '-',
       '方案标题': row.title,
       '作物种类': row.crop,
       '种植模式': row.plantingMode,
@@ -164,6 +213,7 @@ export function TechSolutionPage() {
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
+      '审核人': row.approver,
       '审批状态': row.approveStatus,
       '状态': row.status
     }));
@@ -343,16 +393,18 @@ export function TechSolutionPage() {
             />
           </div>
           <div className="flex gap-2">
-            <button className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+            <button
+              onClick={handleSearch}
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            >
               <Search className="w-4 h-4" />
               搜索
             </button>
-            <button className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+            <button
+              onClick={handleReset}
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+            >
               重置
-            </button>
-            <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-              <Plus className="w-4 h-4" />
-              新增
             </button>
           </div>
         </div>
@@ -475,12 +527,13 @@ export function TechSolutionPage() {
                 {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
-                    checked={selectedRows.length === techSolutions.length && techSolutions.length > 0}
+                    checked={selectedRows.length === filteredTechSolutions.length && filteredTechSolutions.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">关联生产计划批次</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案标题</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物种类</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
@@ -488,13 +541,14 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                {!(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案详情文件</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
-              {techSolutions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tech) => (
+              {filteredTechSolutions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tech) => (
                 <tr key={tech.id} className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3">
@@ -506,7 +560,8 @@ export function TechSolutionPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{tech.code}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" onClick={() => handleViewClick(tech)}>{tech.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{tech.relatedBatchCode || '-'}</td>
                   <td className="px-4 py-3 text-sm font-medium text-green-700 hover:text-green-900 cursor-pointer whitespace-nowrap" onClick={() => handleTitleClick(tech)}>{tech.title}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.crop}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.plantingMode}</td>
@@ -514,6 +569,7 @@ export function TechSolutionPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.approver}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       tech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
@@ -530,21 +586,35 @@ export function TechSolutionPage() {
                       {tech.status}
                     </span>
                   </td>
-                  {!(exportMode || batchEditMode || batchDeleteMode) && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => handleViewClick(tech)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleEditClick(tech)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => { setSelectedRows([tech.id]); setShowDeleteModal(true); }} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {tech.planDetailFileName ? (
+                      <button
+                        onClick={() => {
+                          // 下载方案详情文件
+                          const fileName = tech.planDetailFileName!;
+                          const isDocx = fileName.endsWith('.docx');
+                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物种类：${tech.crop}\n种植模式：${tech.plantingMode}\n生长阶段：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
+                          const blob = new Blob([content], {
+                            type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
+                          });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = fileName;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                        title="点击下载方案详情"
+                      >
+                        {tech.planDetailFileName}
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -562,32 +632,33 @@ export function TechSolutionPage() {
               </div>
             </div>
           )}
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="px-2 py-1 border border-gray-200 rounded text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-sm text-gray-500">条</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">共 {techSolutions.length} 条</span>
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-sm">{currentPage} / {Math.ceil(techSolutions.length / pageSize) || 1}</span>
-              <button onClick={() => setCurrentPage(Math.min(Math.ceil(techSolutions.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(techSolutions.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        </div>
+      </div>
+
+      {/* Pagination - 固定在表格外部底部 */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">每页</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-500">条</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">共 {filteredTechSolutions.length} 条</span>
+          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm">{currentPage} / {Math.ceil(filteredTechSolutions.length / pageSize) || 1}</span>
+          <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTechSolutions.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredTechSolutions.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -642,6 +713,10 @@ export function TechSolutionPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">审核人</label>
+                <p className="text-gray-900">{selectedTech.approver}</p>
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">审批状态</label>
                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
@@ -834,13 +909,41 @@ export function TechSolutionPage() {
               <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
             </FormField>
           </div>
-          <FormField label="方案内容">
-            <Textarea
-              value={newPlanForm.content}
-              onChange={(e) => setNewPlanForm({...newPlanForm, content: e.target.value})}
-              placeholder="请输入方案内容"
-              rows={6}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="审核人">
+              <Input value="Susan" disabled className="bg-gray-50" />
+            </FormField>
+          </div>
+          <FormField label="方案详细">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.txt,.md,.docx';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setNewPlanForm({...newPlanForm, content: event.target?.result as string});
+                        // 从文件名生成方案文件名
+                        const fileName = file.name;
+                        setNewPlanForm({...newPlanForm, planDetailFileName: fileName});
+                      };
+                      reader.readAsText(file);
+                    }
+                  };
+                  input.click();
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+              >
+                <Upload className="w-3 h-3" />
+                导入文件
+              </button>
+              <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式文件</span>
+            </div>
           </FormField>
         </div>
       </Modal>
@@ -1028,6 +1131,12 @@ export function TechSolutionPage() {
                   <div className="text-sm text-gray-700">{currentTech.createDate}</div>
                 </div>
 
+                {/* 审核人 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">审核人</div>
+                  <div className="text-sm text-gray-700">{currentTech.approver}</div>
+                </div>
+
                 {/* 审批状态 - 不可编辑 */}
                 <div className="bg-gray-100 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">审批状态</div>
@@ -1061,24 +1170,104 @@ export function TechSolutionPage() {
                   </select>
                 </div>
 
-                {/* 方案内容 - 可编辑 */}
+                {/* 方案详情文件 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2 col-span-4">
-                  <div className="text-xs text-gray-500 mb-1">方案内容</div>
-                  <textarea
-                    value={editedData.content ?? currentTech.content}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], content: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    rows={4}
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 resize-none"
-                  />
+                  <div className="text-xs text-gray-500 mb-1">方案详情文件</div>
+                  <div className="flex items-center gap-4">
+                    {editedData.planDetailFileName ?? currentTech.planDetailFileName ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700">
+                          {editedData.planDetailFileName ?? currentTech.planDetailFileName}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = '.md,.docx,.txt';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) {
+                                // 更新文件名
+                                const updated = {
+                                  ...editedTechs,
+                                  [selectedTechCode]: {
+                                    ...editedTechs[selectedTechCode],
+                                    planDetailFileName: file.name
+                                  },
+                                };
+                                setEditedTechs(updated);
+                                // 读取文件内容
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const updatedWithContent = {
+                                    ...editedTechs,
+                                    [selectedTechCode]: {
+                                      ...editedTechs[selectedTechCode],
+                                      planDetailFileName: file.name,
+                                      content: event.target?.result as string
+                                    },
+                                  };
+                                  setEditedTechs(updatedWithContent);
+                                };
+                                reader.readAsText(file);
+                                if (!editedTechCodes.includes(selectedTechCode)) {
+                                  setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                                }
+                              }
+                            };
+                            input.click();
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1"
+                        >
+                          <Upload className="w-3 h-3" />
+                          重新上传
+                        </button>
+                        <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = '.md,.docx,.txt';
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              const updated = {
+                                ...editedTechs,
+                                [selectedTechCode]: {
+                                  ...editedTechs[selectedTechCode],
+                                  planDetailFileName: file.name
+                                },
+                              };
+                              setEditedTechs(updated);
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const updatedWithContent = {
+                                  ...editedTechs,
+                                  [selectedTechCode]: {
+                                    ...editedTechs[selectedTechCode],
+                                    planDetailFileName: file.name,
+                                    content: event.target?.result as string
+                                  },
+                                };
+                                setEditedTechs(updatedWithContent);
+                              };
+                              reader.readAsText(file);
+                              if (!editedTechCodes.includes(selectedTechCode)) {
+                                setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                              }
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 flex items-center gap-1"
+                      >
+                        <Upload className="w-3 h-3" />
+                        上传方案文件
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

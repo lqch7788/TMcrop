@@ -43,7 +43,7 @@ export default function ProductionPage() {
   const [greenhouseSearch, setGreenhouseSearch] = useState('');
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     batchCode: '',
     cropName: '',
     variety: '',
@@ -54,10 +54,11 @@ export default function ProductionPage() {
     targetYield: '',
     plantingMode: '',
     responsiblePerson: '',
-    publisher: '陆启闯',
+    publisher: localStorage.getItem('username') || '陆启闯',
     batchStatus: 'draft' as const,
-    description: ''
-  });
+    description: '',
+    planDetail: ''
+  }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [exportMode, setExportMode] = useState(false);
@@ -164,7 +165,10 @@ export default function ProductionPage() {
       targetYield: '',
       plantingMode: '',
       responsiblePerson: '',
-      description: ''
+      publisher: localStorage.getItem('username') || '陆启闯',
+      batchStatus: 'draft',
+      description: '',
+      planDetail: ''
     });
     setErrors({});
   };
@@ -288,7 +292,8 @@ export default function ProductionPage() {
   const generateBatchCode = () => {
     const year = new Date().getFullYear();
     const num = batches.length + 1;
-    return `FQ${year}-${String(num).padStart(3, '0')}`;
+    const code = `FQ${year}-${String(num).padStart(3, '0')}`;
+    setFormData({ ...formData, batchCode: code });
   };
 
   const handleBatchSelectAll = () => {

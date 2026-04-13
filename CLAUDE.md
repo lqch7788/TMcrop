@@ -43,6 +43,105 @@
 
 ---
 
+# 🚨🚨🚨 最高优先级原则：组件式编码禁令（强制执行！）
+
+## ⚠️ 组件式编码 - 不可违背的铁律
+
+**核心原则**：本系统所有页面编码必须采用组件式开发模式，**严禁硬编码**！
+
+### 硬编码示例（❌ 禁止）
+
+```tsx
+// 错误示例：直接在组件中写死数据
+function PurchasePlanPage() {
+  return (
+    <select>
+      <option value="李建国">李建国</option>  // ❌ 硬编码
+      <option value="王建华">王建华</option>  // ❌ 硬编码
+    </select>
+  );
+}
+```
+
+```tsx
+// 错误示例：直接在组件中写死枚举值
+const status = ['pending', 'approved', 'completed'];  // ❌ 硬编码
+```
+
+### 组件式示例（✅ 正确）
+
+```tsx
+// 正确示例：从types导入类型，从mockData导入数据
+import { PurchasePlan } from '../../types/purchase';
+import { APPLICANTS, DEPARTMENTS } from '../../data/mockData';
+
+function PurchasePlanPage() {
+  return (
+    <select>
+      {APPLICANTS.map(person => (
+        <option key={person.value} value={person.value}>{person.label}</option>
+      ))}
+    </select>
+  );
+}
+```
+
+### 强制执行清单
+
+**每次修改页面之前，必须检查：**
+
+1. **数据来源检查**
+   - [ ] 所有下拉选项是否从 `mockData/` 导入？
+   - [ ] 所有枚举值（状态、类型、类别）是否从 `types/` 导入？
+   - [ ] 是否有任何直接在代码中写死的 `文字`、`数字`、`数组`？
+
+2. **硬编码类型识别**
+   - [ ] 人员姓名列表 → 必须从 `mockData` 导入
+   - [ ] 部门列表 → 必须从 `mockData` 导入
+   - [ ] 状态值（pending/approved/completed）→ 必须从 `types` 导入
+   - [ ] 类型值（production/urgent/routine）→ 必须从 `types` 导入
+   - [ ] 批次号选项 → 必须从 `mockData` 导入
+   - [ ] 任何业务相关的固定值 → 必须从配置/类型导入
+
+3. **违规处理流程**
+   ```
+   检测到硬编码 → 立即组件化重构 → 验证构建 → 再执行原任务
+   ```
+
+### 典型硬编码场景与解决方案
+
+| 场景 | 错误做法 | 正确做法 |
+|------|---------|---------|
+| 申请人下拉 | `value="李建国"` | `APPLICANTS` from mockData |
+| 部门下拉 | `value="生产部"` | `DEPARTMENTS` from mockData |
+| 状态显示 | `status === 'pending'` | `StatusEnum.PENDING` from types |
+| 采购类型 | `value="production"` | `PurchaseTypeEnum.PRODUCTION` from types |
+| 批次号列表 | `value="SC202603001"` | `batchCodes` from mockData |
+
+### 数据文件位置
+
+```
+src/
+├── types/           # 类型定义和枚举
+│   ├── purchase.ts  # 采购相关类型和枚举
+│   ├── production.ts # 生产相关类型和枚举
+│   └── ...
+├── data/            # 模拟数据和配置
+│   ├── mockData.ts  # 通用模拟数据
+│   └── ...
+└── components/      # 组件（只能使用导入的数据，不能自己写死）
+```
+
+### 违规处罚
+
+**任何时候**：如果发现页面存在硬编码，必须：
+1. 立即停止当前任务
+2. 将硬编码重构为组件式代码
+3. 验证构建通过
+4. 恢复原任务
+
+---
+
 #🚀 核心身份：全栈架构师与技术指挥官
 角色：你是本项目的唯一技术负责人（CTO + 首席架构师 + 运维总监）。
 目标：从0到1构建、部署并维护一个生产级的Web系统。

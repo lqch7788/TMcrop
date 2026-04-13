@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import { CropBatch, Greenhouse, CropType } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS } from '../constants';
 
@@ -129,141 +129,220 @@ export function BatchEditModal({
         {/* Content */}
         <div className="flex-1 overflow-hidden p-4 flex flex-col">
           {selectedBatchCode && currentBatch && (
-            <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-              {/* 批次号 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">生产计划批次号</div>
-                <div className="text-sm font-medium text-gray-900">{currentBatch.batchCode}</div>
+            <>
+              {/* 第一行：基本信息 */}
+              <div className="grid grid-cols-4 gap-3 flex-shrink-0 mb-3">
+                {/* 批次号 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">生产计划批次号</div>
+                  <div className="text-sm font-medium text-gray-900">{currentBatch.batchCode}</div>
+                </div>
+
+                {/* 种植模式 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">种植模式</div>
+                  <select
+                    value={editedData.plantingMode ?? currentBatch.plantingMode}
+                    onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {plantingModes.map(m => (
+                      <option key={m.id} value={m.name}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 作物名称 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">作物名称</div>
+                  <select
+                    value={editedData.cropName ?? currentBatch.cropName}
+                    onChange={(e) => handleCropChange(e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {cropTypes.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 作物品种 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">作物品种</div>
+                  <select
+                    value={editedData.variety ?? currentBatch.variety}
+                    onChange={(e) => handleFieldChange('variety', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {(cropTypes.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 种植区域 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">种植区域</div>
+                  <select
+                    value={editedData.greenhouseId ?? currentBatch.greenhouseId}
+                    onChange={(e) => handleGreenhouseChange(e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {greenhouses.filter(g => g.status === 'active').map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 种植面积 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">种植面积</div>
+                  <input
+                    type="text"
+                    value={editedData.plantingArea ?? currentBatch.plantingArea}
+                    onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 开始时间 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">开始时间</div>
+                  <input
+                    type="date"
+                    value={editedData.startDate ?? currentBatch.startDate}
+                    onChange={(e) => handleFieldChange('startDate', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 预计结束时间 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">预计结束时间</div>
+                  <input
+                    type="date"
+                    value={editedData.expectedHarvestDate ?? currentBatch.expectedHarvestDate}
+                    onChange={(e) => handleFieldChange('expectedHarvestDate', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 负责人 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">负责人</div>
+                  <select
+                    value={editedData.responsiblePerson ?? currentBatch.responsiblePerson}
+                    onChange={(e) => handleFieldChange('responsiblePerson', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {RESPONSIBLE_PERSONS.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 目标产量 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">目标产量</div>
+                  <input
+                    type="text"
+                    value={editedData.targetYield ?? currentBatch.targetYield}
+                    onChange={(e) => handleFieldChange('targetYield', e.target.value)}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 发布人 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">发布人</div>
+                  <div className="text-sm text-gray-700">{currentBatch.publisher || '-'}</div>
+                </div>
+
+                {/* 初次发布时间 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">初次发布时间</div>
+                  <div className="text-sm text-gray-700">{currentBatch.publishDate || '-'}</div>
+                </div>
+
+                {/* 最后修改时间 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">最后修改时间</div>
+                  <div className="text-sm text-gray-700">{currentBatch.lastModifyDate || '-'}</div>
+                </div>
+
+                {/* 当前状态 - 不可编辑 */}
+                <div className="bg-gray-100 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">当前状态</div>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${batchStatusColors[currentBatch.batchStatus || 'draft']}`}>
+                    {batchStatusLabels[currentBatch.batchStatus || 'draft']}
+                  </span>
+                </div>
               </div>
 
-              {/* 种植模式 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">种植模式</div>
-                <select
-                  value={editedData.plantingMode ?? currentBatch.plantingMode}
-                  onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {plantingModes.map(m => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
+              {/* 第二行：计划详情文件上传 */}
+              <div className="bg-gray-50 rounded-lg p-3 flex-shrink-0">
+                <div className="text-xs text-gray-500 mb-2">计划详情文件</div>
+                <div className="flex items-center gap-4">
+                  {editedData.planDetailFileName ?? currentBatch.planDetailFileName ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">
+                        {editedData.planDetailFileName ?? currentBatch.planDetailFileName}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = '.md,.docx,.txt';
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              handleFieldChange('planDetailFileName', file.name);
+                              // 读取文件内容
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                handleFieldChange('planDetail', event.target?.result as string);
+                              };
+                              reader.readAsText(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1"
+                      >
+                        <Upload className="w-3 h-3" />
+                        重新上传
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.md,.docx,.txt';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) {
+                            handleFieldChange('planDetailFileName', file.name);
+                            // 读取文件内容
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              handleFieldChange('planDetail', event.target?.result as string);
+                            };
+                            reader.readAsText(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 flex items-center gap-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      上传计划文件
+                    </button>
+                  )}
+                  <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
+                </div>
               </div>
-
-              {/* 作物名称 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">作物名称</div>
-                <select
-                  value={editedData.cropName ?? currentBatch.cropName}
-                  onChange={(e) => handleCropChange(e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {cropTypes.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 作物品种 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                <select
-                  value={editedData.variety ?? currentBatch.variety}
-                  onChange={(e) => handleFieldChange('variety', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {(cropTypes.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 种植区域 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">种植区域</div>
-                <select
-                  value={editedData.greenhouseId ?? currentBatch.greenhouseId}
-                  onChange={(e) => handleGreenhouseChange(e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {greenhouses.filter(g => g.status === 'active').map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 种植面积 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">种植面积</div>
-                <input
-                  type="text"
-                  value={editedData.plantingArea ?? currentBatch.plantingArea}
-                  onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 开始时间 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">开始时间</div>
-                <input
-                  type="date"
-                  value={editedData.startDate ?? currentBatch.startDate}
-                  onChange={(e) => handleFieldChange('startDate', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 预计结束时间 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">预计结束时间</div>
-                <input
-                  type="date"
-                  value={editedData.expectedHarvestDate ?? currentBatch.expectedHarvestDate}
-                  onChange={(e) => handleFieldChange('expectedHarvestDate', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 负责人 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">负责人</div>
-                <select
-                  value={editedData.responsiblePerson ?? currentBatch.responsiblePerson}
-                  onChange={(e) => handleFieldChange('responsiblePerson', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {RESPONSIBLE_PERSONS.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 目标产量 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">目标产量</div>
-                <input
-                  type="text"
-                  value={editedData.targetYield ?? currentBatch.targetYield}
-                  onChange={(e) => handleFieldChange('targetYield', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 发布人 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">发布人</div>
-                <div className="text-sm text-gray-700">{currentBatch.publisher || '-'}</div>
-              </div>
-
-              {/* 当前状态 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">当前状态</div>
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${batchStatusColors[currentBatch.batchStatus || 'draft']}`}>
-                  {batchStatusLabels[currentBatch.batchStatus || 'draft']}
-                </span>
-              </div>
-            </div>
+            </>
           )}
         </div>
 

@@ -1,6 +1,8 @@
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { CropBatch, Greenhouse, CropType } from '../../../types';
 import { RESPONSIBLE_PERSONS, batchStatusLabels } from '../constants';
+import { useRef } from 'react';
+import { Upload } from 'lucide-react';
 
 interface CreateBatchModalProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ interface CreateBatchModalProps {
     publisher: string;
     batchStatus: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled';
     description: string;
+    planDetail: string;
   };
   errors: Record<string, string>;
   greenhouses: Greenhouse[];
@@ -51,7 +54,7 @@ export function CreateBatchModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="创建种植批次"
+      title="新增生产计划批次"
       size="xl"
       onSubmit={onSubmit}
     >
@@ -185,6 +188,38 @@ export function CreateBatchModal({
               onChange={(e) => onFormChange('description', e.target.value)}
               placeholder="输入相关的备注信息..."
             />
+          </FormField>
+
+          <FormField label="计划详细说明">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.txt,.md,.docx';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        onFormChange('planDetail', event.target?.result as string);
+                        // 从文件名生成计划详情文件名
+                        const fileName = file.name;
+                        onFormChange('planDetailFileName', fileName);
+                      };
+                      reader.readAsText(file);
+                    }
+                  };
+                  input.click();
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+              >
+                <Upload className="w-3 h-3" />
+                导入文件
+              </button>
+              <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式文件</span>
+            </div>
           </FormField>
         </div>
       </div>

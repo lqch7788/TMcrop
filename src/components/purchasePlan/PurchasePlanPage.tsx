@@ -5,6 +5,7 @@ import { DeleteWarningModal } from './DeleteWarningModal';
 import { getPurchasePlansWithStatus, subscribeToStatusChanges } from '../../hooks/usePurchasePlanStore';
 import * as XLSX from 'xlsx';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
+import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
 
 export function PurchasePlanPage() {
   // 采购计划数据状态（支持审批联动更新）
@@ -22,6 +23,7 @@ export function PurchasePlanPage() {
   const [relatedBatchCode, setRelatedBatchCode] = useState('');
   const [purchaseType, setPurchaseType] = useState('全部');
   const [status, setStatus] = useState('全部');
+  const [alertFilter, setAlertFilter] = useState('全部'); // 预警筛选：全部/逾期/将到期
   const [applicant, setApplicant] = useState('');
   const [applicantDepartment, setApplicantDepartment] = useState('');
   const [priority, setPriority] = useState('全部');
@@ -83,13 +85,14 @@ export function PurchasePlanPage() {
     purchaseApplicationCode: '',
     relatedBatchCode: '',
     purchaseType: '生产物资采购',
-    applicant: '',
-    applicantDepartment: '',
+    applicant: '陆启闯',  // 默认当前登录用户
+    applicantDepartment: '生产部',  // 默认当前用户部门
     applyDate: new Date().toISOString().split('T')[0],
     requiredDate: '',
     priority: '中',
     remark: '',
     otherBatchReason: '',  // 当批次号选择"其他"时的说明
+    approvalPerson: '',  // 审批人
   });
   // 新增弹窗中的物料明细
   const [createItems, setCreateItems] = useState<PurchasePlanItem[]>([]);
@@ -105,6 +108,8 @@ export function PurchasePlanPage() {
     requiredDate: '',
     remark: '',
   });
+  // 批量编辑弹窗中的物料明细（支持编辑和删除）
+  const [batchEditItems, setBatchEditItems] = useState<PurchasePlanItem[]>([]);
 
   // 展开/折叠行切换
   const toggleExpandRow = (id: string) => {
@@ -118,6 +123,19 @@ export function PurchasePlanPage() {
       return next;
     });
   };
+
+  // 监听物料明细变化，标记批次号为已编辑
+  useEffect(() => {
+    // 当选择了批次号且物料明细有变化时，标记为已编辑
+    if (selectedPlanCode && batchEditItems.length > 0) {
+      // 比较原始物料明细和当前编辑的物料明细是否有变化
+      const originalItems = currentEditingPlan?.items || [];
+      const isItemsChanged = JSON.stringify(batchEditItems) !== JSON.stringify(originalItems);
+      if (isItemsChanged) {
+        setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), items: batchEditItems } }));
+      }
+    }
+  }, [batchEditItems, selectedPlanCode, currentEditingPlan]);
 
   // 排序状态
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
@@ -152,6 +170,12 @@ export function PurchasePlanPage() {
       if (priority !== '全部' && plan.priorityText !== priority) return false;
       if (requiredStartDate && plan.requiredDate < requiredStartDate) return false;
       if (requiredEndDate && plan.requiredDate > requiredEndDate) return false;
+      // 预警筛选
+      if (alertFilter !== '全部') {
+        const alert = calculateOverdueAlert(plan);
+        if (alertFilter === '已逾期' && alert.level !== 'overdue') return false;
+        if (alertFilter === '即将到期' && alert.level !== 'warning') return false;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -173,13 +197,14 @@ export function PurchasePlanPage() {
       purchaseApplicationCode: `PA${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
       relatedBatchCode: '',
       purchaseType: '生产物资采购',
-      applicant: '',
-      applicantDepartment: '',
+      applicant: localStorage.getItem('username') || '陆启闯',
+      applicantDepartment: '生产部',
       applyDate: new Date().toISOString().split('T')[0],
       requiredDate: '',
       priority: '中',
       remark: '',
       otherBatchReason: '',
+      approvalPerson: '',
     });
     setCreateItems([]);
     setShowCreateModal(true);
@@ -291,11 +316,17 @@ export function PurchasePlanPage() {
     setRelatedBatchCode('');
     setPurchaseType('全部');
     setStatus('全部');
+    setAlertFilter('全部');
     setApplicant('');
     setApplicantDepartment('');
     setPriority('全部');
     setRequiredStartDate('');
     setRequiredEndDate('');
+    setCurrentPage(1);
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
   };
 
   const handleExportClick = () => {
@@ -444,6 +475,44 @@ export function PurchasePlanPage() {
             <h1 className="text-2xl font-bold text-gray-900">采购计划</h1>
             <p className="text-gray-500">物资采购计划的管理与审批</p>
           </div>
+          {/* 逾期预警统计 */}
+          <div className="ml-auto flex items-center gap-4">
+            {(() => {
+              const overdueCount = purchasePlansData.filter(p => calculateOverdueAlert(p).level === 'overdue').length;
+              const warningCount = purchasePlansData.filter(p => calculateOverdueAlert(p).level === 'warning').length;
+              return (
+                <>
+                  {overdueCount > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+                      <span className="text-red-500 text-lg">🔴</span>
+                      <div>
+                        <div className="text-xs text-red-500">已逾期</div>
+                        <div className="text-lg font-bold text-red-600">{overdueCount} 项</div>
+                      </div>
+                    </div>
+                  )}
+                  {warningCount > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
+                      <span className="text-orange-500 text-lg">⚠️</span>
+                      <div>
+                        <div className="text-xs text-orange-500">即将到期</div>
+                        <div className="text-lg font-bold text-orange-600">{warningCount} 项</div>
+                      </div>
+                    </div>
+                  )}
+                  {overdueCount === 0 && warningCount === 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <div>
+                        <div className="text-xs text-green-500">暂无预警</div>
+                        <div className="text-lg font-bold text-green-600">0 项</div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
@@ -458,22 +527,6 @@ export function PurchasePlanPage() {
               placeholder="请输入"
               className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
-          </div>
-          <div className="min-w-[100px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">采购类型</label>
-            <select
-              value={purchaseType}
-              onChange={(e) => setPurchaseType(e.target.value)}
-              className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>生产物资采购</option>
-              <option>紧急采购</option>
-              <option>常规采购</option>
-              <option>通用物资</option>
-              <option>设备采购</option>
-              <option>其他</option>
-            </select>
           </div>
           <div className="min-w-[90px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">申请人</label>
@@ -525,6 +578,18 @@ export function PurchasePlanPage() {
               <option>已取消</option>
             </select>
           </div>
+          <div className="min-w-[100px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">预警状态</label>
+            <select
+              value={alertFilter}
+              onChange={(e) => setAlertFilter(e.target.value)}
+              className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option>全部</option>
+              <option>已逾期</option>
+              <option>即将到期</option>
+            </select>
+          </div>
           <div className="min-w-[110px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">需求开始日期</label>
             <input
@@ -543,12 +608,11 @@ export function PurchasePlanPage() {
               className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
-          {/* 重置和搜索按钮靠右 */}
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 items-end ml-auto">
             <button onClick={handleReset} className="h-9 px-4 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600">
               重置
             </button>
-            <button className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+            <button onClick={handleSearch} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
               <Search className="w-4 h-4" />
               搜索
             </button>
@@ -580,6 +644,8 @@ export function PurchasePlanPage() {
                           requiredDate: selectedPlansData[0].requiredDate || '',
                           remark: selectedPlansData[0].remark || '',
                         });
+                        // 初始化物料明细编辑数据
+                        setBatchEditItems(selectedPlansData[0].items || []);
                       }
                       setEditedPlanCodes([]);
                       setEditedPlans({});
@@ -700,13 +766,17 @@ export function PurchasePlanPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => handleSortChange('requiredDate')}>需求日期{sortConfig?.field === 'requiredDate' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => handleSortChange('priority')}>优先级{sortConfig?.field === 'priority' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => handleSortChange('status')}>状态{sortConfig?.field === 'status' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
-                {!(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批人</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {filteredAndSortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((plan) => (
                 <React.Fragment key={plan.id}>
-                  <tr className="hover:bg-blue-50 transition-colors">
+                  <tr className={`transition-colors ${
+                    (batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')
+                      ? 'bg-gray-100 hover:bg-gray-100'
+                      : 'hover:bg-blue-50'
+                  }`}>
                     {/* 展开/折叠按钮 - 非导出模式时显示 */}
                     {!(exportMode || batchEditMode || batchDeleteMode) && (
                       <td className="px-2 py-3 w-10">
@@ -730,7 +800,12 @@ export function PurchasePlanPage() {
                           type="checkbox"
                           checked={selectedRows.includes(plan.purchaseApplicationCode)}
                           onChange={() => handleSelectRow(plan.purchaseApplicationCode)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          disabled={(batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')}
+                          className={`w-4 h-4 rounded border-gray-300 focus:ring-emerald-500 ${
+                            (batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'text-emerald-600'
+                          }`}
                         />
                       </td>
                     )}
@@ -772,19 +847,23 @@ export function PurchasePlanPage() {
                       }`}>
                         {plan.statusText}
                       </span>
+                      {/* 逾期预警标记 */}
+                      {(() => {
+                        const alert = calculateOverdueAlert(plan);
+                        if (alert.level === 'normal') return null;
+                        return (
+                          <span className={`inline-flex items-center ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${OVERDUE_ALERT_STYLE[alert.level].bg} ${OVERDUE_ALERT_STYLE[alert.level].text}`}>
+                            {alert.level === 'overdue' ? '🔴逾期' : '⚠️将到期'}
+                          </span>
+                        );
+                      })()}
                     </td>
-                    {!(exportMode || batchEditMode || batchDeleteMode) && (
-                      <td className="px-4 py-3">
-                        <button onClick={() => { setSelectedRows([plan.purchaseApplicationCode]); setShowDeleteModal(true); }} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    )}
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.approvalPerson || '-'}</td>
                   </tr>
                   {/* 展开的物料明细行 - 对齐仓库物料字段结构 */}
                   {expandedRows.has(plan.id) && (
                     <tr key={`${plan.id}-expanded`} className="bg-blue-50/50">
-                      <td colSpan={exportMode || batchEditMode || batchDeleteMode ? 9 : 10} className="px-4 py-4">
+                      <td colSpan={11} className="px-4 py-4">
                         <div className="text-sm font-medium text-gray-700 mb-3">物料明细（共 {plan.items?.length || 0} 项）</div>
                         <table className="w-full bg-white rounded-lg overflow-hidden">
                           <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -840,31 +919,32 @@ export function PurchasePlanPage() {
               </div>
             </div>
           )}
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="px-2 py-1 border border-gray-200 rounded text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-sm text-gray-500">条</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">共 {filteredAndSortedData.length} 条</span>
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-sm">{currentPage} / {Math.ceil(filteredAndSortedData.length / pageSize) || 1}</span>
-              <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAndSortedData.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredAndSortedData.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+        </div>
+
+        {/* Pagination - 固定在表格外部底部 */}
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="text-sm text-gray-500">条</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">共 {filteredAndSortedData.length} 条</span>
+            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm">{currentPage} / {Math.ceil(filteredAndSortedData.length / pageSize) || 1}</span>
+            <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAndSortedData.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredAndSortedData.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -960,45 +1040,17 @@ export function PurchasePlanPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="申请人">
-              <Select
+              <Input
                 value={createForm.applicant}
-                onChange={(e) => {
-                  setCreateForm({...createForm, applicant: e.target.value});
-                }}
-                options={[
-                  { value: '', label: '请选择' },
-                  { value: '郭靖', label: '郭靖' },
-                  { value: '黄蓉', label: '黄蓉' },
-                  { value: '杨过', label: '杨过' },
-                  { value: '小龙女', label: '小龙女' },
-                  { value: '张无忌', label: '张无忌' },
-                  { value: '赵敏', label: '赵敏' },
-                  { value: '周芷若', label: '周芷若' },
-                  { value: '令狐冲', label: '令狐冲' },
-                  { value: '任盈盈', label: '任盈盈' },
-                  { value: '萧峰', label: '萧峰' },
-                  { value: '段誉', label: '段誉' },
-                  { value: '虚竹', label: '虚竹' },
-                  { value: '韦小宝', label: '韦小宝' },
-                  { value: '陈家洛', label: '陈家洛' },
-                  { value: '袁承志', label: '袁承志' },
-                ]}
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
             </FormField>
             <FormField label="申请部门">
-              <Select
+              <Input
                 value={createForm.applicantDepartment}
-                onChange={(e) => setCreateForm({...createForm, applicantDepartment: e.target.value})}
-                options={[
-                  { value: '', label: '请选择' },
-                  { value: '生产部', label: '生产部' },
-                  { value: '技术部', label: '技术部' },
-                  { value: '后勤部', label: '后勤部' },
-                  { value: '财务部', label: '财务部' },
-                  { value: '采购部', label: '采购部' },
-                  { value: '仓储部', label: '仓储部' },
-                  { value: '销售部', label: '销售部' },
-                ]}
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
             </FormField>
           </div>
@@ -1031,6 +1083,19 @@ export function PurchasePlanPage() {
                 ]}
               />
             </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="审批人">
+              <Select
+                value={createForm.approvalPerson || ''}
+                onChange={(e) => setCreateForm({...createForm, approvalPerson: e.target.value})}
+                options={[
+                  { value: '', label: '请选择' },
+                  { value: '周总', label: '周总' },
+                  { value: 'Susan', label: 'Susan' },
+                ]}
+              />
+            </FormField>
             <FormField label="备注">
               <Input
                 value={createForm.remark || ''}
@@ -1044,20 +1109,22 @@ export function PurchasePlanPage() {
           <div className="border-t border-gray-200 pt-4 mt-4">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold text-gray-800">物料明细（{createItems.length}种物料）</h4>
-              <button
-                onClick={handleAddCreateItem}
-                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700"
-              >
-                <Plus className="w-3 h-3" />
-                添加物料
-              </button>
-              <button
-                onClick={handleImportClick}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
-              >
-                <Upload className="w-3 h-3" />
-                导入物料
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleImportClick}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                >
+                  <Upload className="w-3 h-3" />
+                  导入物料
+                </button>
+                <button
+                  onClick={handleAddCreateItem}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700"
+                >
+                  <Plus className="w-3 h-3" />
+                  添加物料
+                </button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1375,356 +1442,456 @@ export function PurchasePlanPage() {
       />
 
 
-      {/* Batch Edit Modal - 完全参照供应商管理编辑功能结构 */}
-      {showBatchEditModal && (() => {
-        const selectedPlansList = purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode));
+      {/* Batch Edit Modal - 使用Modal组件，支持拖动、缩放、最大化 */}
+      <Modal
+        isOpen={showBatchEditModal}
+        onClose={() => { setShowBatchEditModal(false); setBatchEditMode(false); setSelectedRows([]); setEditedPlanCodes([]); setEditedPlans({}); setSelectedPlanCode(''); setCurrentEditingPlan(null); setBatchEditItems([]); }}
+        title="编辑采购申请单"
+        size="xxl"
+        showFooter={false}
+      >
+        {/* 使用 relative 容器包裹内容，按钮使用 absolute 固定在右下角 */}
+        <div className="relative pb-20">
+          <div className="space-y-4">
+            {/* 提示信息 */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="text-sm text-blue-800">已选择 <strong>{selectedRows.length}</strong> 个采购计划进行编辑</p>
+            </div>
 
-        return (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
-              {/* 标题栏 - 蓝色背景 sticky */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
-                <h3 className="text-lg font-semibold text-white">编辑采购申请单</h3>
-                <button onClick={() => { setShowBatchEditModal(false); setBatchEditMode(false); setSelectedRows([]); setEditedPlanCodes([]); setEditedPlans({}); setSelectedPlanCode(''); setCurrentEditingPlan(null); }} className="text-white hover:bg-blue-700 p-1 rounded">
-                  <X className="w-5 h-5" />
-                </button>
+            {/* 采购申请批次号选择下拉 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">选择采购申请批次号</label>
+              <div className="relative" ref={batchSelectRef}>
+                <div
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg bg-white flex items-center justify-between cursor-pointer hover:border-blue-400"
+                  onClick={() => setBatchSelectOpen(!batchSelectOpen)}
+                >
+                  <span className={selectedPlanCode ? "text-sm text-gray-900" : "text-sm text-gray-400"}>
+                    {selectedPlanCode || '-- 请选择 --'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${batchSelectOpen ? 'rotate-180' : ''}`} />
+                </div>
+                {batchSelectOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {selectedRows.length > 0 ? (
+                      purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode)).map((plan) => {
+                        const isEdited = editedPlans[plan.purchaseApplicationCode] !== undefined;
+                        return (
+                          <div
+                            key={plan.purchaseApplicationCode}
+                            className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center gap-2 ${
+                              selectedPlanCode === plan.purchaseApplicationCode ? 'bg-blue-100' : ''
+                            }`}
+                            onClick={() => {
+                              setSelectedPlanCode(plan.purchaseApplicationCode);
+                              setCurrentEditingPlan(plan);
+                              setBatchEditData({
+                                purchaseType: plan.purchaseType,
+                                priority: plan.priority,
+                                requiredDate: plan.requiredDate,
+                                remark: plan.remark || '',
+                              });
+                              // 初始化物料明细编辑数据
+                              setBatchEditItems(plan.items || []);
+                              setBatchSelectOpen(false);
+                            }}
+                          >
+                            <span className="text-sm flex items-center gap-1">
+                              {plan.purchaseApplicationCode}
+                              {isEdited && (
+                                <span className="text-blue-600 font-bold">✓已编辑</span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-400">-- 请先选择要编辑的数据 --</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 编辑表单 - 紧凑布局 2-3列 */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* 第1行：采购申请批次号（只读）+ 采购类型 + 关联生产批次号 */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">采购申请批次号</div>
+                <div className="text-sm font-medium text-gray-900">{currentEditingPlan?.purchaseApplicationCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">采购类型</label>
+                <select
+                  value={batchEditData.purchaseType}
+                  onChange={(e) => {
+                    setBatchEditData({...batchEditData, purchaseType: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), purchaseType: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                >
+                  <option value="production">生产物资采购</option>
+                  <option value="urgent">紧急采购</option>
+                  <option value="routine">常规采购</option>
+                  <option value="material">通用物资</option>
+                  <option value="safety">劳保用品</option>
+                  <option value="equipment">设备采购</option>
+                  <option value="other">其他</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">关联生产批次号</label>
+                <select
+                  value={currentEditingPlan?.relatedBatchCode || ''}
+                  onChange={(e) => {
+                    setCurrentEditingPlan({...currentEditingPlan!, relatedBatchCode: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), relatedBatchCode: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                >
+                  <option value="">不关联批次</option>
+                  <option value="SC202603001">SC202603001 - 番茄种植批次</option>
+                  <option value="SC202603002">SC202603002 - 黄瓜种植批次</option>
+                  <option value="SC202603003">SC202603003 - 茄子种植批次</option>
+                  <option value="SC202604001">SC202604001 - 辣椒种植批次</option>
+                </select>
               </div>
 
-              <div className="p-6">
-                {/* 提示信息 */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-blue-800">已选择 <strong>{selectedRows.length}</strong> 个采购计划进行编辑</p>
-                </div>
+              {/* 第2行：申请人 + 申请部门 + 需求日期 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">申请人</label>
+                <select
+                  value={currentEditingPlan?.applicant || ''}
+                  onChange={(e) => {
+                    setCurrentEditingPlan({...currentEditingPlan!, applicant: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicant: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                >
+                  <option value="">请选择</option>
+                  <option value="李建国">李建国</option>
+                  <option value="王建华">王建华</option>
+                  <option value="张建华">张建华</option>
+                  <option value="刘小燕">刘小燕</option>
+                  <option value="刘大海">刘大海</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">申请部门</label>
+                <select
+                  value={currentEditingPlan?.applicantDepartment || ''}
+                  onChange={(e) => {
+                    setCurrentEditingPlan({...currentEditingPlan!, applicantDepartment: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicantDepartment: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                >
+                  <option value="">请选择</option>
+                  <option value="生产部">生产部</option>
+                  <option value="技术部">技术部</option>
+                  <option value="后勤部">后勤部</option>
+                  <option value="办公室">办公室</option>
+                  <option value="财务部">财务部</option>
+                  <option value="采购部">采购部</option>
+                  <option value="仓储部">仓储部</option>
+                  <option value="销售部">销售部</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">需求日期</label>
+                <input
+                  type="date"
+                  value={batchEditData.requiredDate}
+                  onChange={(e) => {
+                    setBatchEditData({...batchEditData, requiredDate: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), requiredDate: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                />
+              </div>
 
-                {/* 采购申请批次号选择下拉 */}
-                {/* 选择采购申请批次号 - 自定义下拉框 */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">选择采购申请批次号</label>
-                  <div className="relative" ref={batchSelectRef}>
-                    <div
-                      className="w-full h-10 px-3 border border-gray-200 rounded-lg bg-white flex items-center justify-between cursor-pointer"
-                      onClick={() => setBatchSelectOpen(!batchSelectOpen)}
-                    >
-                      <span className={selectedPlanCode ? "text-sm text-gray-900" : "text-sm text-gray-400"}>
-                        {selectedPlanCode || '-- 请选择 --'}
-                      </span>
-                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${batchSelectOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                    {batchSelectOpen && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {selectedRows.length > 0 ? (
-                          selectedPlansList.map((plan) => {
-                            const isEdited = editedPlans[plan.purchaseApplicationCode] !== undefined;
-                            return (
-                              <div
-                                key={plan.purchaseApplicationCode}
-                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center gap-2 ${
-                                  selectedPlanCode === plan.purchaseApplicationCode ? 'bg-blue-100' : ''
-                                }`}
+              {/* 第3行：优先级 + 状态（只读不可编辑）+ 备注 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">优先级</label>
+                <select
+                  value={batchEditData.priority}
+                  onChange={(e) => {
+                    setBatchEditData({...batchEditData, priority: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), priority: e.target.value } }));
+                    }
+                  }}
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                >
+                  <option value="urgent">紧急</option>
+                  <option value="high">高</option>
+                  <option value="normal">中</option>
+                  <option value="low">低</option>
+                </select>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">状态</div>
+                <div className={`text-sm font-medium ${
+                  currentEditingPlan?.status === 'completed' ? 'text-green-600' :
+                  currentEditingPlan?.status === 'purchasing' ? 'text-purple-600' :
+                  currentEditingPlan?.status === 'pending' ? 'text-amber-600' :
+                  currentEditingPlan?.status === 'approved' ? 'text-blue-600' :
+                  currentEditingPlan?.status === 'cancelled' ? 'text-red-600' :
+                  'text-gray-600'
+                }`}>
+                  {currentEditingPlan?.statusText || '-'}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
+                <input
+                  type="text"
+                  value={batchEditData.remark}
+                  onChange={(e) => {
+                    setBatchEditData({...batchEditData, remark: e.target.value});
+                    if (selectedPlanCode) {
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), remark: e.target.value } }));
+                    }
+                  }}
+                  placeholder="输入备注"
+                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              {/* 第4行：物料明细（展开显示） */}
+              <div className="md:col-span-3 border-t border-gray-200 pt-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditItemsExpanded(!showEditItemsExpanded)}
+                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showEditItemsExpanded ? 'rotate-180' : ''}`} />
+                  物料明细（{batchEditItems.length || 0}种物料）
+                </button>
+
+                {showEditItemsExpanded && batchEditItems.length > 0 && (
+                  <div className="mt-3 overflow-auto rounded-lg border border-gray-200 bg-white">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold w-10">操作</th>
+                          <th className="px-2 py-2 text-left font-semibold">物料编码</th>
+                          <th className="px-2 py-2 text-left font-semibold">物料名称</th>
+                          <th className="px-2 py-2 text-left font-semibold">分类</th>
+                          <th className="px-2 py-2 text-left font-semibold">规格型号</th>
+                          <th className="px-2 py-2 text-center font-semibold w-16">单位</th>
+                          <th className="px-2 py-2 text-center font-semibold w-24">数量</th>
+                          <th className="px-2 py-2 text-center font-semibold w-28">预估单价</th>
+                          <th className="px-2 py-2 text-left font-semibold">供应商</th>
+                          <th className="px-2 py-2 text-left font-semibold">用途说明</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {batchEditItems.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            {/* 删除按钮 */}
+                            <td className="px-2 py-2 text-center">
+                              <button
+                                type="button"
                                 onClick={() => {
-                                  setSelectedPlanCode(plan.purchaseApplicationCode);
-                                  setCurrentEditingPlan(plan);
-                                  setBatchEditData({
-                                    purchaseType: plan.purchaseType,
-                                    priority: plan.priority,
-                                    requiredDate: plan.requiredDate,
-                                    remark: plan.remark || '',
-                                  });
-                                  setBatchSelectOpen(false);
+                                  setBatchEditItems(prev => prev.filter((_, i) => i !== idx));
                                 }}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                title="删除此行"
                               >
-                                <span className="text-sm flex items-center gap-1">
-                                  {plan.purchaseApplicationCode}
-                                  {isEdited && (
-                                    <span className="text-blue-600 font-bold">✓已编辑</span>
-                                  )}
-                                </span>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-400">-- 请先选择要编辑的数据 --</div>
-                        )}
-                      </div>
-                    )}
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                            {/* 物料编码 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.materialCode || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, materialCode: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs font-mono focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 物料名称 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.materialName || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, materialName: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs font-medium focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 分类 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.category || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, category: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 规格型号 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.specification || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, specification: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 单位 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.unit || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, unit: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-center focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 数量 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                value={item.quantity || 0}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, quantity: Number(e.target.value) } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-right focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 预估单价 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.estimatedPrice || 0}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, estimatedPrice: Number(e.target.value) } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-right focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 供应商 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.supplier || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, supplier: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                            {/* 用途说明 - 可编辑 */}
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={item.purpose || ''}
+                                onChange={(e) => {
+                                  setBatchEditItems(prev => prev.map((i, j) => j === idx ? { ...i, purpose: e.target.value } : i));
+                                }}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </div>
+                )}
 
-                {/* 编辑表单 - 紧凑布局 2-3列 */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {/* 第1行：采购申请批次号（只读）+ 采购类型 + 关联生产批次号 */}
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-500 mb-1">采购申请批次号</div>
-                    <div className="text-sm font-medium text-gray-900">{currentEditingPlan?.purchaseApplicationCode || '-'}</div>
+                {showEditItemsExpanded && batchEditItems.length === 0 && (
+                  <div className="mt-3 text-center py-4 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
+                    暂无物料明细
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">采购类型</label>
-                    <select
-                      value={batchEditData.purchaseType}
-                      onChange={(e) => {
-                        setBatchEditData({...batchEditData, purchaseType: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), purchaseType: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="production">生产物资采购</option>
-                      <option value="urgent">紧急采购</option>
-                      <option value="routine">常规采购</option>
-                      <option value="material">通用物资</option>
-                      <option value="safety">劳保用品</option>
-                      <option value="equipment">设备采购</option>
-                      <option value="other">其他</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">关联生产批次号</label>
-                    <select
-                      value={currentEditingPlan?.relatedBatchCode || ''}
-                      onChange={(e) => {
-                        setCurrentEditingPlan({...currentEditingPlan!, relatedBatchCode: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), relatedBatchCode: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">不关联批次</option>
-                      <option value="SC202603001">SC202603001 - 番茄种植批次</option>
-                      <option value="SC202603002">SC202603002 - 黄瓜种植批次</option>
-                      <option value="SC202603003">SC202603003 - 茄子种植批次</option>
-                      <option value="SC202604001">SC202604001 - 辣椒种植批次</option>
-                    </select>
-                  </div>
-
-                  {/* 第2行：申请人 + 申请部门 + 需求日期 */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">申请人</label>
-                    <select
-                      value={currentEditingPlan?.applicant || ''}
-                      onChange={(e) => {
-                        setCurrentEditingPlan({...currentEditingPlan!, applicant: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicant: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">请选择</option>
-                      <option value="李建国">李建国</option>
-                      <option value="王建华">王建华</option>
-                      <option value="张建华">张建华</option>
-                      <option value="刘小燕">刘小燕</option>
-                      <option value="刘大海">刘大海</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">申请部门</label>
-                    <select
-                      value={currentEditingPlan?.applicantDepartment || ''}
-                      onChange={(e) => {
-                        setCurrentEditingPlan({...currentEditingPlan!, applicantDepartment: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicantDepartment: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">请选择</option>
-                      <option value="生产部">生产部</option>
-                      <option value="技术部">技术部</option>
-                      <option value="后勤部">后勤部</option>
-                      <option value="办公室">办公室</option>
-                      <option value="财务部">财务部</option>
-                      <option value="采购部">采购部</option>
-                      <option value="仓储部">仓储部</option>
-                      <option value="销售部">销售部</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">需求日期</label>
-                    <input
-                      type="date"
-                      value={batchEditData.requiredDate}
-                      onChange={(e) => {
-                        setBatchEditData({...batchEditData, requiredDate: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), requiredDate: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  {/* 第3行：优先级 + 状态（只读不可编辑）+ 备注 */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">优先级</label>
-                    <select
-                      value={batchEditData.priority}
-                      onChange={(e) => {
-                        setBatchEditData({...batchEditData, priority: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), priority: e.target.value } }));
-                        }
-                      }}
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="urgent">紧急</option>
-                      <option value="high">高</option>
-                      <option value="normal">中</option>
-                      <option value="low">低</option>
-                    </select>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-500 mb-1">状态</div>
-                    <div className={`text-sm font-medium ${
-                      currentEditingPlan?.status === 'completed' ? 'text-green-600' :
-                      currentEditingPlan?.status === 'purchasing' ? 'text-purple-600' :
-                      currentEditingPlan?.status === 'pending' ? 'text-amber-600' :
-                      currentEditingPlan?.status === 'approved' ? 'text-blue-600' :
-                      currentEditingPlan?.status === 'cancelled' ? 'text-red-600' :
-                      'text-gray-600'
-                    }`}>
-                      {currentEditingPlan?.statusText || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
-                    <input
-                      type="text"
-                      value={batchEditData.remark}
-                      onChange={(e) => {
-                        setBatchEditData({...batchEditData, remark: e.target.value});
-                        if (selectedPlanCode) {
-                          setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), remark: e.target.value } }));
-                        }
-                      }}
-                      placeholder="输入备注"
-                      className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  {/* 第4行：物料明细（展开显示） */}
-                  <div className="md:col-span-3 border-t border-gray-200 pt-3 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowEditItemsExpanded(!showEditItemsExpanded)}
-                      className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      <ChevronDown className={`w-4 h-4 transition-transform ${showEditItemsExpanded ? 'rotate-180' : ''}`} />
-                      物料明细（{currentEditingPlan?.items?.length || 0}种物料）
-                    </button>
-
-                    {showEditItemsExpanded && currentEditingPlan?.items && currentEditingPlan.items.length > 0 && (
-                      <div className="mt-3 overflow-auto rounded-lg border border-gray-200 bg-white">
-                        <table className="w-full text-xs">
-                          <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
-                            <tr>
-                              <th className="px-2 py-2 text-left font-semibold">物料编码</th>
-                              <th className="px-2 py-2 text-left font-semibold">物料名称</th>
-                              <th className="px-2 py-2 text-left font-semibold">分类</th>
-                              <th className="px-2 py-2 text-left font-semibold">规格型号</th>
-                              <th className="px-2 py-2 text-center font-semibold">单位</th>
-                              <th className="px-2 py-2 text-right font-semibold">数量</th>
-                              <th className="px-2 py-2 text-right font-semibold">预估单价</th>
-                              <th className="px-2 py-2 text-left font-semibold">供应商</th>
-                              <th className="px-2 py-2 text-left font-semibold">用途说明</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {currentEditingPlan.items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-2 py-2 font-mono">{item.materialCode}</td>
-                                <td className="px-2 py-2 font-medium">{item.materialName}</td>
-                                <td className="px-2 py-2">{item.category || '-'}</td>
-                                <td className="px-2 py-2">{item.specification}</td>
-                                <td className="px-2 py-2 text-center">{item.unit}</td>
-                                <td className="px-2 py-2 text-right font-medium">{item.quantity}</td>
-                                <td className="px-2 py-2 text-right">¥{item.estimatedPrice.toFixed(2)}</td>
-                                <td className="px-2 py-2">{item.supplier || '-'}</td>
-                                <td className="px-2 py-2">{item.purpose || '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {showEditItemsExpanded && (!currentEditingPlan?.items || currentEditingPlan.items.length === 0) && (
-                      <div className="mt-3 text-center py-4 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
-                        暂无物料明细
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 底部按钮 */}
-                <div className="flex gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => { setShowBatchEditModal(false); setBatchEditMode(false); setSelectedRows([]); setEditedPlanCodes([]); setEditedPlans({}); setSelectedPlanCode(''); setCurrentEditingPlan(null); }}
-                    className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!currentEditingPlan) return;
-                      // 保存编辑内容
-                      console.log('保存采购申请单编辑:', {
-                        purchaseApplicationCode: currentEditingPlan.purchaseApplicationCode,
-                        relatedBatchCode: currentEditingPlan.relatedBatchCode,
-                        purchaseType: batchEditData.purchaseType,
-                        priority: batchEditData.priority,
-                        requiredDate: batchEditData.requiredDate,
-                        remark: batchEditData.remark,
-                        // 状态保持不变，由业务流程自动生成
-                        status: currentEditingPlan.status,
-                        items: currentEditingPlan.items,
-                      });
-                      // 更新数据
-                      setPurchasePlansData(prev => prev.map(plan => {
-                        if (plan.purchaseApplicationCode === currentEditingPlan.purchaseApplicationCode) {
-                          return {
-                            ...plan,
-                            relatedBatchCode: currentEditingPlan.relatedBatchCode,
-                            purchaseType: batchEditData.purchaseType,
-                            purchaseTypeName: batchEditData.purchaseType === 'production' ? '生产物资采购' :
-                                             batchEditData.purchaseType === 'urgent' ? '紧急采购' :
-                                             batchEditData.purchaseType === 'routine' ? '常规采购' :
-                                             batchEditData.purchaseType === 'material' ? '通用物资' :
-                                             batchEditData.purchaseType === 'safety' ? '劳保用品' :
-                                             batchEditData.purchaseType === 'equipment' ? '设备采购' : '其他',
-                            applicant: currentEditingPlan.applicant,
-                            applicantDepartment: currentEditingPlan.applicantDepartment,
-                            requiredDate: batchEditData.requiredDate,
-                            priority: batchEditData.priority,
-                            priorityText: batchEditData.priority === 'urgent' ? '紧急' :
-                                         batchEditData.priority === 'high' ? '高' :
-                                         batchEditData.priority === 'normal' ? '中' : '低',
-                            remark: batchEditData.remark,
-                            items: currentEditingPlan.items,
-                          };
-                        }
-                        return plan;
-                      }));
-                      setShowBatchEditModal(false);
-                      setBatchEditMode(false);
-                      setSelectedRows([]);
-                      alert('保存成功');
-                    }}
-                    className="flex-1 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                  >
-                    保存
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
-        );
-      })()}
+
+          {/* 底部按钮 - 固定在弹窗右下角，不随弹窗缩放变化 */}
+          <div className="absolute bottom-0 right-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => { setShowBatchEditModal(false); setBatchEditMode(false); setSelectedRows([]); setEditedPlanCodes([]); setEditedPlans({}); setSelectedPlanCode(''); setCurrentEditingPlan(null); }}
+              className="px-6 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!currentEditingPlan) return;
+                // 保存编辑内容
+                console.log('保存采购申请单编辑:', {
+                  purchaseApplicationCode: currentEditingPlan.purchaseApplicationCode,
+                  relatedBatchCode: currentEditingPlan.relatedBatchCode,
+                  purchaseType: batchEditData.purchaseType,
+                  priority: batchEditData.priority,
+                  requiredDate: batchEditData.requiredDate,
+                  remark: batchEditData.remark,
+                  // 状态保持不变，由业务流程自动生成
+                  status: currentEditingPlan.status,
+                  items: batchEditItems, // 使用编辑后的物料明细
+                });
+                // 更新数据
+                setPurchasePlansData(prev => prev.map(plan => {
+                  if (plan.purchaseApplicationCode === currentEditingPlan.purchaseApplicationCode) {
+                    return {
+                      ...plan,
+                      relatedBatchCode: currentEditingPlan.relatedBatchCode,
+                      purchaseType: batchEditData.purchaseType,
+                      purchaseTypeName: batchEditData.purchaseType === 'production' ? '生产物资采购' :
+                                       batchEditData.purchaseType === 'urgent' ? '紧急采购' :
+                                       batchEditData.purchaseType === 'routine' ? '常规采购' :
+                                       batchEditData.purchaseType === 'material' ? '通用物资' :
+                                       batchEditData.purchaseType === 'safety' ? '劳保用品' :
+                                       batchEditData.purchaseType === 'equipment' ? '设备采购' : '其他',
+                      applicant: currentEditingPlan.applicant,
+                      applicantDepartment: currentEditingPlan.applicantDepartment,
+                      requiredDate: batchEditData.requiredDate,
+                      priority: batchEditData.priority,
+                      priorityText: batchEditData.priority === 'urgent' ? '紧急' :
+                                   batchEditData.priority === 'high' ? '高' :
+                                   batchEditData.priority === 'normal' ? '中' : '低',
+                      remark: batchEditData.remark,
+                      items: batchEditItems, // 使用编辑后的物料明细
+                    };
+                  }
+                  return plan;
+                }));
+                setShowBatchEditModal(false);
+                setBatchEditMode(false);
+                setSelectedRows([]);
+                setBatchEditItems([]); // 清理物料明细
+                alert('保存成功');
+              }}
+              className="px-6 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Export Format Modal */}
       <Modal

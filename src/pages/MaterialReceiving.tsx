@@ -4,7 +4,9 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import * as XLSX from 'xlsx';
 
 // 类型导入
-import { MaterialItem, ExecuteMaterialItem } from '../types/materialReceiving';
+import { MaterialItem, ExecuteMaterialItem, MaterialReceivingRecord } from '../types/materialReceiving';
+import { Approval, ApprovalType, ApprovalStatus } from '../types/approval';
+import { useApprovalContext } from '../contexts/ApprovalContext';
 
 // 从数据文件导入所有Mock数据
 import {
@@ -79,6 +81,12 @@ import {
 } from '../data/costData';
 
 export default function MaterialReceiving() {
+  // 领料申请数据状态化（支持 CRUD 操作）
+  const [materialData, setMaterialData] = useState<MaterialReceivingRecord[]>(materialReceivingDetails);
+
+  // 获取审批上下文（用于联动）
+  const approvalContext = useApprovalContext();
+
   const [activeTab, setActiveTab] = useState('application');
   const [searchCode, setSearchCode] = useState('');
   const [searchApplicant, setSearchApplicant] = useState('');
@@ -1289,7 +1297,7 @@ export default function MaterialReceiving() {
   });
 
   // 过滤后的数据
-  const filteredData = materialReceivingDetails.filter(item => {
+  const filteredData = materialData.filter(item => {
     if (searchCode && !item.code.toLowerCase().includes(searchCode.toLowerCase())) return false;
     if (searchApplicant && !item.applicant.toLowerCase().includes(searchApplicant.toLowerCase())) return false;
     if (searchBatchCode && !item.productionBatchCode.toLowerCase().includes(searchBatchCode.toLowerCase())) return false;
@@ -1557,9 +1565,30 @@ export default function MaterialReceiving() {
 
   // 保存编辑（重新提交）
   const handleSaveEdit = () => {
-    // 编辑后状态改为待审批（重新提交）
+    if (!selectedRecord) return;
+
+    // 查找当前编辑的记录
+    const currentRecord = materialData.find(r => r.id === selectedRecord.id);
+    if (!currentRecord) return;
+
+    const updatedRecord: MaterialReceivingRecord = {
+      ...currentRecord,
+      date: editForm.date,
+      applicant: editForm.applicant,
+      department: editForm.department,
+      warehouseLocation: editForm.warehouseLocation,
+      plantArea: editForm.plantArea,
+      reviewer: editForm.reviewer,
+      productionBatchCode: editForm.productionBatchCode,
+      status: '待审批',
+      statusClass: 'pending',
+      materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 }))
+    };
+
+    // 使用不可变方式更新
+    setMaterialData(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+
     setShowEditModal(false);
-    // 可以这里添加更新本地数据的逻辑
     alert('编辑已保存，领料单已重新提交，等待审批');
   };
 
@@ -1576,12 +1605,15 @@ export default function MaterialReceiving() {
       alert('请填写作废原因');
       return;
     }
-    // 更新本地数据状态为已作废
-    const recordIndex = materialReceivingDetails.findIndex(r => r.id === selectedRecord?.id);
-    if (recordIndex !== -1) {
-      materialReceivingDetails[recordIndex].status = '已作废';
-      materialReceivingDetails[recordIndex].statusClass = 'voided';
-    }
+    if (!selectedRecord) return;
+
+    // 使用不可变方式更新
+    setMaterialData(prev => prev.map(r =>
+      r.id === selectedRecord.id
+        ? { ...r, status: '已作废', statusClass: 'voided' }
+        : r
+    ));
+
     setShowVoidModal(false);
     setShowEditModal(false);
   };
@@ -1619,15 +1651,29 @@ export default function MaterialReceiving() {
 
   // 生成领料单号
   const handleGenerateAddCode = () => {
-    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialReceivingDetails.length + 1).padStart(3, '0')}`;
+    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialData.length + 1).padStart(3, '0')}`;
     setAddForm({ ...addForm, code: newCode });
   };
 
   // 保存新增
   const handleSaveAdd = () => {
-    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialReceivingDetails.length + 1).padStart(3, '0')}`;
-    const newRecord = {
-      id: materialReceivingDetails.length + 1,
+    // 1. 验证表单
+    if (!addForm.applicant) {
+      alert('请选择申请人');
+      return;
+    }
+    if (addForm.materials.length === 0) {
+      alert('请添加至少一个物料');
+      return;
+    }
+
+    // 2. 生成单号
+    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialData.length + 1).padStart(3, '0')}`;
+    const now = new Date().toISOString();
+
+    // 3. 创建领料记录
+    const newRecord: MaterialReceivingRecord = {
+      id: materialData.length + 1,
       code: newCode,
       date: addForm.date,
       applicant: addForm.applicant,
@@ -1640,6 +1686,68 @@ export default function MaterialReceiving() {
       statusClass: 'pending',
       materials: addForm.materials.map(m => ({ ...m, actualQuantity: 0 }))
     };
+
+    // 4. 写入领料数据
+    setMaterialData(prev => [newRecord, ...prev]);
+
+    // 5. 同步创建审批记录（核心联动功能）
+    if (approvalContext) {
+      const approval: Approval = {
+        id: `MAT-AP-${Date.now()}`,
+        code: newRecord.code,
+        type: ApprovalType.MATERIAL_REQUEST,
+        typeName: '领料单',
+        category: 'business',
+        title: `${newRecord.applicant}的领料申请`,
+        description: `申请从${newRecord.warehouseLocation}领取物料，用于${newRecord.plantArea}`,
+        applicantId: `user_${newRecord.applicant}`,
+        applicantName: newRecord.applicant,
+        applicantDepartment: newRecord.department,
+        applyDate: newRecord.date,
+        applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+        currentStep: 1,
+        totalSteps: 1,
+        approvers: [{
+          userId: `user_${newRecord.reviewer}`,
+          userName: newRecord.reviewer,
+          role: '审批人',
+          order: 1,
+          status: 'pending'
+        }],
+        records: [],
+        status: ApprovalStatus.PENDING,
+        priority: 'normal',
+        reminderCount: 0,
+        createdAt: now,
+        updatedAt: now,
+        notificationSent: false,
+        materials: addForm.materials.map(m => ({
+          materialId: m.materialCode,
+          materialCode: m.materialCode,
+          materialName: m.materialName,
+          requestedQuantity: m.requestedQuantity,
+          unit: m.unit
+        })),
+        businessLink: {
+          type: 'material',
+          requestId: String(newRecord.id),
+          requestCode: newRecord.code,
+          plantArea: addForm.plantArea,
+          warehouseLocation: addForm.warehouseLocation,
+          batchCode: addForm.productionBatchCode,
+          materials: addForm.materials.map(m => ({
+            materialId: m.materialCode,
+            materialCode: m.materialCode,
+            materialName: m.materialName,
+            requestedQuantity: m.requestedQuantity,
+            unit: m.unit
+          }))
+        }
+      };
+      approvalContext.addApproval(approval);
+    }
+
+    // 6. 关闭弹窗，重置表单
     setShowAddModal(false);
     setAddForm({
       code: '',

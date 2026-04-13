@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap, Clipboard
+  Briefcase, GraduationCap, Clipboard, Play
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -52,6 +52,9 @@ const summarySubItems = [
 
 const approvalSubItems = [
   { icon: CheckSquare, label: '审批中心', path: '/approvals' },
+  { icon: Play, label: '演示流程', path: '/approval-demo' },
+  { icon: Package, label: '物料审批', path: '/material-approval' },
+  { icon: Sprout, label: '生产审批', path: '/production-approval' },
   { icon: ClipboardCheck, label: '待办审批', path: '/pending-approval' },
   { icon: FileText, label: '已办审批', path: '/approved' },
   { icon: Calendar, label: '我提交的审批', path: '/my-approval' },
