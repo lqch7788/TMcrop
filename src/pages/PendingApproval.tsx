@@ -1,28 +1,41 @@
-import { useState } from 'react';
-import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+// ============================================================
+// 待办审批页面 - 重构版本
+// 文件路径：src/pages/PendingApproval.tsx
+// 使用统一数据层：ApprovalContext
+// ============================================================
 
-const pendingApprovals = [
-  { id: 1, code: 'A2024032', type: '领料单', title: '1号棚有机肥领用申请', submitter: '张伟民', dept: '生产部', submitTime: '2024-03-15 10:30', amount: '5000元', status: '待审批', statusClass: 'pending' },
-  { id: 2, code: 'A2024033', type: '采购申请', title: '夏季种植用肥采购计划', submitter: '李建国', dept: '技术部', submitTime: '2024-03-14 15:20', amount: '8.5万元', status: '待审批', statusClass: 'pending' },
-  { id: 3, code: 'A2024034', type: '退料单', title: '3号棚农药退料申请', submitter: '王建国', dept: '生产部', submitTime: '2024-03-13 09:15', amount: '1500元', status: '待审批', statusClass: 'pending' },
-  { id: 4, code: 'A2024035', type: '采购申请', title: '病虫害防治药剂采购', submitter: '王建华', dept: '技术部', submitTime: '2024-03-12 14:00', amount: '6.3万元', status: '待审批', statusClass: 'pending' },
-  { id: 5, code: 'A2024036', type: '领料单', title: '2号棚复合肥领用申请', submitter: '李明轩', dept: '生产部', submitTime: '2024-03-11 16:45', amount: '3200元', status: '待审批', statusClass: 'pending' },
-];
+import { useState, useMemo } from 'react';
+import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useApproval, usePendingApprovals } from '../hooks/useApproval';
+import { ApprovalStatus } from '../types/approval';
 
 export default function PendingApproval() {
+  const { approve, reject } = useApproval();
+  const { pendingApprovals } = usePendingApprovals();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  const filteredApprovals = pendingApprovals.filter(a => {
-    const matchSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) || a.submitter.includes(searchTerm);
-    const matchType = typeFilter === '全部' || a.type === typeFilter;
-    return matchSearch && matchType;
-  });
+  // 筛选
+  const filteredApprovals = useMemo(() => {
+    return pendingApprovals.filter(a => {
+      const matchSearch =
+        a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.applicantName.includes(searchTerm);
+      const matchType = typeFilter === '全部' || a.typeName === typeFilter;
+      return matchSearch && matchType;
+    });
+  }, [pendingApprovals, searchTerm, typeFilter]);
 
   const totalPages = Math.ceil(filteredApprovals.length / pageSize);
   const paginatedApprovals = filteredApprovals.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 统计
+  const urgentCount = useMemo(() => {
+    return pendingApprovals.filter(a => a.priority === 'urgent').length;
+  }, [pendingApprovals]);
 
   return (
     <div className="space-y-6">
@@ -52,23 +65,12 @@ export default function PendingApproval() {
         </div>
         <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <span className="text-blue-600 text-lg">!</span>
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+              <span className="text-red-600 text-lg">!</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">2</p>
+              <p className="text-2xl font-bold text-gray-900">{urgentCount}</p>
               <p className="text-xs text-gray-500">加急</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <span className="text-purple-600 text-lg">⏱</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">3</p>
-              <p className="text-xs text-gray-500">即将超时</p>
             </div>
           </div>
         </div>
@@ -112,38 +114,49 @@ export default function PendingApproval() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">标题</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">金额</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-300">
+            <tbody className="divide-y divide-gray-100">
               {paginatedApprovals.map((approval) => (
-                <tr key={approval.id} className="hover:bg-blue-100 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{approval.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{approval.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate whitespace-nowrap">{approval.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{approval.submitter}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{approval.dept}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{approval.submitTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{approval.amount}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                <tr key={approval.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{approval.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{approval.typeName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">{approval.title}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applicantName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applicantDepartment}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applyDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{approval.amount || '-'}</td>
+                  <td className="px-4 py-3">
                     <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                      {approval.status}
+                      {approval.status === ApprovalStatus.PENDING ? '待审批' : approval.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="审批">
-                        <ClipboardCheck className="w-4 h-4" />
+                      <button
+                        onClick={() => approve(approval.id)}
+                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                        title="通过"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => reject(approval.id, '审批拒绝')}
+                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                        title="拒绝"
+                      >
+                        <XCircle className="w-4 h-4" />
                       </button>
                       <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="查看">
                         <Eye className="w-4 h-4" />
@@ -155,28 +168,40 @@ export default function PendingApproval() {
             </tbody>
           </table>
         </div>
+        {filteredApprovals.length === 0 && (
+          <div className="p-8 text-center text-gray-500">暂无待审批单据</div>
+        )}
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={10}
-              onChange={(e) => setCurrentPage(1)}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-500">条</span>
+          <div className="text-sm text-gray-500">
+            共 {filteredApprovals.length} 条记录，第 {currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {filteredApprovals.length} 条</span>
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-emerald-600">{currentPage} / {totalPages}</span>
-            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            {[...Array(totalPages || 1)].map((_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === i + 1
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
+              disabled={currentPage === (totalPages || 1)}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

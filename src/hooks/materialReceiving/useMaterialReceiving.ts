@@ -8,6 +8,8 @@ import {
   materialReceivingDetails,
   materialExecuteDetails,
 } from '../../data/materialReceivingData';
+import { useApprovalContext } from '../../contexts/ApprovalContext';
+import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
 
 // 领料申请表单类型
 interface EditFormState {
@@ -214,6 +216,13 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   // ============================================
   // 领料申请页面状态
   // ============================================
+
+  // 领料申请数据状态化（支持 CRUD 操作）
+  const [materialData, setMaterialData] = useState<MaterialReceivingRecord[]>(materialReceivingDetails);
+
+  // 获取审批上下文（用于联动）
+  const approvalContext = useApprovalContext();
+
   const [searchCode, setSearchCode] = useState('');
   const [searchApplicant, setSearchApplicant] = useState('');
   const [searchBatchCode, setSearchBatchCode] = useState('');
@@ -325,7 +334,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   // 过滤后的数据
   // ============================================
   const filteredData = useMemo(() => {
-    return materialReceivingDetails.filter((item) => {
+    return materialData.filter((item) => {
       if (searchCode && !item.code.toLowerCase().includes(searchCode.toLowerCase())) return false;
       if (searchApplicant && !item.applicant.toLowerCase().includes(searchApplicant.toLowerCase())) return false;
       if (searchBatchCode && !item.productionBatchCode.toLowerCase().includes(searchBatchCode.toLowerCase())) return false;
@@ -333,7 +342,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
     });
-  }, [searchCode, searchApplicant, searchBatchCode, searchWarehouse, statusFilter]);
+  }, [materialData, searchCode, searchApplicant, searchBatchCode, searchWarehouse, statusFilter]);
 
   const totalPages = useMemo(() => {
     return Math.ceil(filteredData.length / pageSize);
@@ -430,9 +439,28 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   }, []);
 
   const handleSaveEdit = useCallback(() => {
+    if (!selectedRecord) return;
+
+    const updatedRecord: MaterialReceivingRecord = {
+      ...selectedRecord,
+      date: editForm.date,
+      applicant: editForm.applicant,
+      department: editForm.department,
+      warehouseLocation: editForm.warehouseLocation,
+      plantArea: editForm.plantArea,
+      reviewer: editForm.reviewer,
+      productionBatchCode: editForm.productionBatchCode,
+      status: '待审批',
+      statusClass: 'pending',
+      materials: editForm.materials.map((m) => ({ ...m, actualQuantity: 0 })),
+    };
+
+    // 修复：使用不可变方式更新
+    setMaterialData((prev) => prev.map((r) => r.id === selectedRecord.id ? updatedRecord : r));
+
     setShowEditModal(false);
     alert('编辑已保存，领料单已重新提交，等待审批');
-  }, []);
+  }, [selectedRecord, editForm]);
 
   const handleVoidApply = useCallback(() => {
     if (!selectedRecord) return;
@@ -445,13 +473,18 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       alert('请填写作废原因');
       return;
     }
-    const recordIndex = materialReceivingDetails.findIndex((r) => r.id === selectedRecord?.id);
-    if (recordIndex !== -1) {
-      materialReceivingDetails[recordIndex].status = '已作废';
-      materialReceivingDetails[recordIndex].statusClass = 'voided';
-    }
+    if (!selectedRecord) return;
+
+    // 修复：使用不可变方式更新
+    setMaterialData((prev) => prev.map((r) =>
+      r.id === selectedRecord.id
+        ? { ...r, status: '已作废', statusClass: 'voided' }
+        : r
+    ));
+
     setShowVoidModal(false);
     setShowEditModal(false);
+    setVoidReason('');
   }, [voidReason, selectedRecord]);
 
   const handleAddMaterial = useCallback(() => {
@@ -489,9 +522,23 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   );
 
   const handleSaveAdd = useCallback(() => {
-    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialReceivingDetails.length + 1).padStart(3, '0')}`;
-    const newRecord = {
-      id: materialReceivingDetails.length + 1,
+    // 1. 验证表单
+    if (!addForm.applicant) {
+      alert('请选择申请人');
+      return;
+    }
+    if (addForm.materials.length === 0) {
+      alert('请添加至少一个物料');
+      return;
+    }
+
+    // 2. 生成单号
+    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialData.length + 1).padStart(3, '0')}`;
+    const now = new Date().toISOString();
+
+    // 3. 创建领料记录
+    const newRecord: MaterialReceivingRecord = {
+      id: materialData.length + 1,
       code: newCode,
       date: addForm.date,
       applicant: addForm.applicant,
@@ -504,6 +551,65 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       statusClass: 'pending',
       materials: addForm.materials.map((m) => ({ ...m, actualQuantity: 0 })),
     };
+
+    // 4. 写入领料数据（修复 bug）
+    setMaterialData((prev) => [newRecord, ...prev]);
+
+    // 5. 同步创建审批记录（核心联动功能）
+    if (approvalContext) {
+      const approval: Approval = {
+        id: `MAT-AP-${Date.now()}`,
+        code: newRecord.code,
+        type: ApprovalType.MATERIAL_REQUEST,
+        typeName: '领料单',
+        category: 'business',
+        title: `${newRecord.applicant}的领料申请`,
+        description: `申请从${newRecord.warehouseLocation}领取物料，用于${newRecord.plantArea}`,
+        applicantId: `user_${newRecord.applicant}`,
+        applicantName: newRecord.applicant,
+        applicantDepartment: newRecord.department,
+        applyDate: newRecord.date,
+        applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+        currentStep: 1,
+        totalSteps: 1,
+        approvers: [{
+          userId: `user_${newRecord.reviewer}`,
+          userName: newRecord.reviewer,
+          role: '审批人',
+          order: 1,
+          status: 'pending'
+        }],
+        records: [],
+        status: ApprovalStatus.PENDING,
+        priority: 'normal',
+        reminderCount: 0,
+        createdAt: now,
+        updatedAt: now,
+        notificationSent: false,
+        materials: addForm.materials.map((m) => ({
+          materialId: m.materialCode,
+          materialCode: m.materialCode,
+          materialName: m.materialName,
+          requestedQuantity: m.requestedQuantity,
+          unit: m.unit
+        })),
+        businessLink: {
+          type: 'material',
+          requestId: String(newRecord.id),
+          requestCode: newRecord.code,
+          materials: addForm.materials.map((m) => ({
+            materialId: m.materialCode,
+            materialCode: m.materialCode,
+            materialName: m.materialName,
+            requestedQuantity: m.requestedQuantity,
+            unit: m.unit
+          }))
+        }
+      };
+      approvalContext.addApproval(approval);
+    }
+
+    // 6. 关闭弹窗，重置表单
     setShowAddModal(false);
     setAddForm({
       code: '',
@@ -516,7 +622,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       productionBatchCode: '',
       materials: [],
     });
-  }, [addForm]);
+  }, [addForm, materialData.length, approvalContext]);
 
   const handleCancelAdd = useCallback(() => {
     setShowAddModal(false);
@@ -693,7 +799,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     setExecuteMaterialPool,
 
     // 数据
-    data: materialReceivingDetails,
+    data: materialData,
     filteredData,
     totalPages,
 

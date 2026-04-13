@@ -32,6 +32,8 @@ export interface CropBatch {
   publishDate?: string; // 初次发布时间
   lastModifyDate?: string; // 最后修改时间
   batchStatus?: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
+  planDetailFileName?: string; // 计划详情文件名
+  planDetail?: string; // 计划详情内容
 }
 
 export interface Task {
@@ -427,4 +429,25 @@ export type {
   BatchFilterSelect,
   BatchTableColumn,
 } from './views';
+
+// 采购计划类型导出
+export type {
+  PurchasePlan,
+  PurchasePlanItem,
+  PurchasePlanStatus,
+  PurchasePlanPriority,
+  PurchasePlanType,
+  PurchasePlanSortField,
+  SortDirection,
+  SortConfig,
+  PurchasePlanFilters,
+} from './purchase';
+
+export {
+  PURCHASE_PLAN_STATUS_TEXT,
+  PURCHASE_PLAN_PRIORITY_TEXT,
+  PURCHASE_PLAN_TYPE_TEXT,
+  PURCHASE_PLAN_STATUS_STYLE,
+  PURCHASE_PLAN_PRIORITY_STYLE,
+} from './purchase';
 

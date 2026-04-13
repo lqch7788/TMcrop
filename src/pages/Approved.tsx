@@ -1,28 +1,48 @@
-import { useState } from 'react';
-import { CheckCircle, Search, FileCheck, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+// ============================================================
+// 已办审批页面 - 重构版本
+// 文件路径：src/pages/Approved.tsx
+// 使用统一数据层：ApprovalContext
+// ============================================================
 
-const approvedList = [
-  { id: 1, code: 'A2024025', type: '领料单', title: '1号棚有机肥领用申请', submitter: '张伟民', dept: '生产部', submitTime: '2024-03-10 10:30', approveTime: '2024-03-11 14:20', amount: '5000元', result: '已通过', resultClass: 'success', opinion: '同意采购' },
-  { id: 2, code: 'A2024026', type: '采购申请', title: '春季肥料采购计划', submitter: '李建国', dept: '技术部', submitTime: '2024-03-08 15:20', approveTime: '2024-03-09 09:15', amount: '15.8万元', result: '已通过', resultClass: 'success', opinion: '符合生产需求，同意采购' },
-  { id: 3, code: 'A2024027', type: '退料单', title: '2号棚复合肥退料申请', submitter: '王建国', dept: '生产部', submitTime: '2024-03-05 11:00', approveTime: '2024-03-06 10:30', amount: '2400元', result: '已通过', resultClass: 'success', opinion: '情况属实，同意退料' },
-  { id: 4, code: 'A2024028', type: '采购申请', title: '农业工具采购计划', submitter: '张建华', dept: '生产部', submitTime: '2024-03-01 09:00', approveTime: '2024-03-02 16:45', amount: '2.1万元', result: '已拒绝', resultClass: 'danger', opinion: '库存充足，暂不采购' },
-  { id: 5, code: 'A2024029', type: '领料单', title: '3号棚农药领用申请', submitter: '赵俊杰', dept: '生产部', submitTime: '2024-02-28 14:30', approveTime: '2024-02-29 11:20', amount: '3200元', result: '已通过', resultClass: 'success', opinion: '同意领取' },
-];
+import { useState, useMemo } from 'react';
+import { CheckCircle, Search, FileCheck, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useApproval, useApprovedApprovals } from '../hooks/useApproval';
+import { ApprovalStatus } from '../types/approval';
 
 export default function Approved() {
+  const { getApprovalById } = useApproval();
+  const { approvedApprovals } = useApprovedApprovals();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [resultFilter, setResultFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  const filteredList = approvedList.filter(a => {
-    const matchSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) || a.submitter.includes(searchTerm);
-    const matchResult = resultFilter === '全部' || a.result === resultFilter;
-    return matchSearch && matchResult;
-  });
+  // 筛选
+  const filteredList = useMemo(() => {
+    return approvedApprovals.filter(a => {
+      const matchSearch =
+        a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.applicantName.includes(searchTerm);
+      const matchResult =
+        resultFilter === '全部' ||
+        (resultFilter === '已通过' && a.status === ApprovalStatus.APPROVED) ||
+        (resultFilter === '已拒绝' && a.status === ApprovalStatus.REJECTED);
+      return matchSearch && matchResult;
+    });
+  }, [approvedApprovals, searchTerm, resultFilter]);
 
   const totalPages = Math.ceil(filteredList.length / pageSize);
   const paginatedList = filteredList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 统计
+  const approvedCount = useMemo(() => {
+    return approvedApprovals.filter(a => a.status === ApprovalStatus.APPROVED).length;
+  }, [approvedApprovals]);
+
+  const rejectedCount = useMemo(() => {
+    return approvedApprovals.filter(a => a.status === ApprovalStatus.REJECTED).length;
+  }, [approvedApprovals]);
 
   return (
     <div className="space-y-6">
@@ -45,7 +65,7 @@ export default function Approved() {
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{approvedList.filter(a => a.result === '已通过').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{approvedCount}</p>
               <p className="text-xs text-gray-500">已通过</p>
             </div>
           </div>
@@ -56,7 +76,7 @@ export default function Approved() {
               <XCircle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{approvedList.filter(a => a.result === '已拒绝').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{rejectedCount}</p>
               <p className="text-xs text-gray-500">已拒绝</p>
             </div>
           </div>
@@ -67,7 +87,7 @@ export default function Approved() {
               <span className="text-blue-600 text-lg">📊</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{approvedList.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{approvedApprovals.length}</p>
               <p className="text-xs text-gray-500">审批总数</p>
             </div>
           </div>
@@ -111,39 +131,39 @@ export default function Approved() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批结果</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批意见</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批单号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">标题</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">金额</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批结果</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-300">
+            <tbody className="divide-y divide-gray-100">
               {paginatedList.map((item) => (
-                <tr key={item.id} className="hover:bg-blue-100 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{item.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.submitter}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.submitTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.approveTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.amount}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.typeName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{item.title}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.applyDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.updatedAt?.substring(0, 10) || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.amount || '-'}</td>
+                  <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      item.resultClass === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      item.status === ApprovalStatus.APPROVED
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
                     }`}>
-                      {item.result}
+                      {item.status === ApprovalStatus.APPROVED ? '已通过' : '已拒绝'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[120px] truncate whitespace-nowrap">{item.opinion}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
                       <Eye className="w-4 h-4" />
                     </button>
@@ -153,28 +173,40 @@ export default function Approved() {
             </tbody>
           </table>
         </div>
+        {filteredList.length === 0 && (
+          <div className="p-8 text-center text-gray-500">暂无已审批记录</div>
+        )}
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={10}
-              onChange={(e) => setCurrentPage(1)}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-500">条</span>
+          <div className="text-sm text-gray-500">
+            共 {filteredList.length} 条记录，第 {currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {filteredList.length} 条</span>
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-emerald-600">{currentPage} / {totalPages}</span>
-            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+            {[...Array(totalPages || 1)].map((_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === i + 1
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
+              disabled={currentPage === (totalPages || 1)}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

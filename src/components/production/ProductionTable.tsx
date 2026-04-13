@@ -57,168 +57,200 @@ export function ProductionTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <tr>
-            {exportMode && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                <input
-                  type="checkbox"
-                  checked={allSelectedForExport}
-                  onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-              </th>
-            )}
-            {batchEditMode && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                <input
-                  type="checkbox"
-                  checked={allSelectedForBatchEdit}
-                  onChange={onBatchSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-              </th>
-            )}
-            {batchDeleteMode && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                <input
-                  type="checkbox"
-                  checked={allSelectedForBatchDelete}
-                  onChange={onBatchDeleteSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-              </th>
-            )}
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植面积</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标产量</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">初次发布时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">最后修改时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-300">
-          {displayedBatches.map((batch) => (
-            <tr key={batch.id} className={getRowClassName(batch)}>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <tr>
               {exportMode && (
-                <td className="px-4 py-3">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
-                    checked={selectedRows.includes(batch.id)}
-                    onChange={() => onSelectRow(batch.id)}
+                    checked={allSelectedForExport}
+                    onChange={onSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </td>
+                </th>
               )}
               {batchEditMode && (
-                <td className="px-4 py-3">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
-                    checked={selectedRows.includes(batch.id)}
-                    onChange={() => {
-                      if (batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled') {
-                        onSelectRow(batch.id);
-                      }
-                    }}
-                    disabled={batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled'}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                    checked={allSelectedForBatchEdit}
+                    onChange={onBatchSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </td>
+                </th>
               )}
               {batchDeleteMode && (
-                <td className="px-4 py-3">
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
-                    checked={selectedRows.includes(batch.id)}
-                    onChange={() => {
-                      if (batch.batchStatus === 'draft') {
-                        onSelectRow(batch.id);
-                      }
-                    }}
-                    disabled={batch.batchStatus !== 'draft'}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                    checked={allSelectedForBatchDelete}
+                    onChange={onBatchDeleteSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </td>
+                </th>
               )}
-              <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                <button
-                  onClick={() => onBatchCodeClick(batch)}
-                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                  title="点击查看详情"
-                >
-                  {batch.batchCode}
-                </button>
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingMode}</td>
-              <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.greenhouseName}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingArea} m²</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
-              <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.targetYield} kg</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.lastModifyDate || '-'}</td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
-                  {batchStatusLabels[batch.batchStatus || 'draft']}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">V1.0</td>
-              <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">-</td>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植面积</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标产量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">初次发布时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">最后修改时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划文件</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
+            {displayedBatches.map((batch) => (
+              <tr key={batch.id} className={getRowClassName(batch)}>
+                {exportMode && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(batch.id)}
+                      onChange={() => onSelectRow(batch.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </td>
+                )}
+                {batchEditMode && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(batch.id)}
+                      onChange={() => {
+                        if (batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled') {
+                          onSelectRow(batch.id);
+                        }
+                      }}
+                      disabled={batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled'}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                    />
+                  </td>
+                )}
+                {batchDeleteMode && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(batch.id)}
+                      onChange={() => {
+                        if (batch.batchStatus === 'draft') {
+                          onSelectRow(batch.id);
+                        }
+                      }}
+                      disabled={batch.batchStatus !== 'draft'}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                    />
+                  </td>
+                )}
+                <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                  <button
+                    onClick={() => onBatchCodeClick(batch)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                    title="点击查看详情"
+                  >
+                    {batch.batchCode}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingMode}</td>
+                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.greenhouseName}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingArea} m²</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
+                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.targetYield} kg</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.lastModifyDate || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
+                    {batchStatusLabels[batch.batchStatus || 'draft']}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">V1.0</td>
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">-</td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  {batch.planDetailFileName ? (
+                    <button
+                      onClick={() => {
+                        // 下载生产计划文件
+                        const fileName = batch.planDetailFileName!;
+                        const isDocx = fileName.endsWith('.docx');
+                        const content = batch.planDetail || `# ${batch.batchCode}\n\n批次号：${batch.batchCode}\n作物名称：${batch.cropName}\n作物品种：${batch.variety}\n种植区域：${batch.greenhouseName}\n种植面积：${batch.plantingArea} m²\n种植模式：${batch.plantingMode}\n负责人：${batch.responsiblePerson}\n开始时间：${batch.startDate}\n预计结束时间：${batch.expectedHarvestDate}\n目标产量：${batch.targetYield} kg\n当前状态：${batchStatusLabels[batch.batchStatus || 'draft']}`;
+                        const blob = new Blob([content], {
+                          type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
+                        });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                      title="点击下载生产计划文件"
+                    >
+                      {batch.planDetailFileName}
+                    </button>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      {/* Selection footer */}
-      {exportMode && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-4">
-            <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              {allSelectedForExport ? '全不选' : '全选'}
-            </button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+        {/* Selection footer */}
+        {exportMode && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center gap-4">
+              <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                {allSelectedForExport ? '全不选' : '全选'}
+              </button>
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+            </div>
           </div>
-        </div>
-      )}
-      {batchEditMode && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-4">
-            <button onClick={onBatchSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              {allSelectedForBatchEdit ? '全不选' : '全选'}
-            </button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+        )}
+        {batchEditMode && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center gap-4">
+              <button onClick={onBatchSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                {allSelectedForBatchEdit ? '全不选' : '全选'}
+              </button>
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+            </div>
           </div>
-        </div>
-      )}
-      {batchDeleteMode && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-4">
-            <button onClick={onBatchDeleteSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              {allSelectedForBatchDelete ? '全不选' : '全选'}
-            </button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（仅草稿状态可删除）</span>
+        )}
+        {batchDeleteMode && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center gap-4">
+              <button onClick={onBatchDeleteSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                {allSelectedForBatchDelete ? '全不选' : '全选'}
+              </button>
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（仅草稿状态可删除）</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      {/* Pagination - 固定在表格外部底部 */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
           <select
