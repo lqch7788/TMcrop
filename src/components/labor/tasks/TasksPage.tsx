@@ -132,7 +132,9 @@ export function TasksPage() {
 
   // 合并 localStorage 任务和 mockData 任务
   useEffect(() => {
-    const merged = [...localTasks];
+    // 清理 localStorage 中错误的数据类型（TaskDispatchTask 没有 taskCode 字段）
+    const validLocalTasks = localTasks.filter(t => t.taskCode && t.title);
+    const merged = [...validLocalTasks];
     initialTasks.forEach(task => {
       if (!merged.find(t => t.id === task.id)) {
         merged.push(task);

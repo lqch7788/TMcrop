@@ -1,106 +1,76 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Plus, Upload, Sparkles, Filter, List, Calendar as CalendarIcon,
   MapPin, User, Clock, CheckCircle, XCircle, AlertTriangle, Eye, Edit, Trash2,
   ChevronRight, ChevronDown, Package, Camera, Mic, Navigation, ArrowRight, X,
   Leaf, Droplets, Scissors, Bug, ShoppingBasket, Trees, Wheat, Thermometer, Sun, CloudRain, Download,
-  ChevronLeft, ChevronRight as ChevronRightIcon
+  ChevronLeft, ChevronRight as ChevronRightIcon, Square, Minimize2, Move, RefreshCw, GripVertical,
+  FileText
 } from 'lucide-react';
 import { format, isSameDay, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameMonth, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import {
-  CreateTaskModal,
   BatchEditModal,
   DeleteWarningModal,
   ExportFormatModal,
 } from './modals';
+import { Modal } from '../../ui/Modal';
+import { TaskTypeConfigPanel } from './components/TaskTypeConfigPanel';
+import { TaskTypeConfigDisplay } from './components/TaskTypeConfigDisplay';
+import { TaskConfigValues } from './hooks/useTaskTypeConfig';
 
-// 任务类型定义
+// 从 farmMockData 导入数据（消除硬编码）
+import {
+  taskDispatchTasks,
+  taskDispatchFields,
+  taskDispatchStaff,
+  TASK_DISPATCH_BASE,
+  SOP_TEMPLATES,
+  TASK_STATUS_MAP,
+  TASK_PRIORITY_MAP,
+  cropStages,
+  weekDaysZh,
+  farmInspectionRecords,
+  farmOperationRecords,
+  farmHarvestRecords,
+} from '../../../data/farmMockData';
+
+// 导入智能推荐 Hook
+import { useSmartRecommendation } from '../../../hooks/farm';
+
+// 任务类型定义（保留图标组件，这些不能放在 mockData 中）
 const taskTypes = [
   { value: 'fertilization', label: '施肥', icon: Leaf, color: 'bg-green-500' },
   { value: 'irrigation', label: '灌溉', icon: Droplets, color: 'bg-blue-500' },
   { value: 'pruning', label: '修剪', icon: Scissors, color: 'bg-purple-500' },
   { value: 'pesticide', label: '植保', icon: Bug, color: 'bg-red-500' },
+  { value: 'rootIrrigation', label: '灌根', icon: Droplets, color: 'bg-cyan-500' },
+  { value: 'planting', label: '定植', icon: Trees, color: 'bg-lime-500' },
   { value: 'harvest', label: '采收', icon: ShoppingBasket, color: 'bg-orange-500' },
   { value: 'weeding', label: '除草', icon: Trees, color: 'bg-emerald-500' },
   { value: 'other', label: '其他', icon: Edit, color: 'bg-gray-500' },
 ];
 
-// 模拟任务数据
-const initialMockTasks = [
-  { id: '20260317-001', types: ['fertilization'], typeLabel: '施肥', field: '1号棚', crop: '番茄', assignee: '张伟民', planStart: '2026-03-17 08:00', planEnd: '2026-03-17 12:00', progress: 100, status: 'completed', priority: 'normal', estimatedDays: 0, estimatedHours: 4 },
-  { id: '20260317-002', types: ['irrigation', 'fertilization'], typeLabel: '灌溉,施肥', field: '4号棚', crop: '黄瓜', assignee: '李明轩', planStart: '2026-03-17 09:00', planEnd: '2026-03-17 11:00', progress: 60, status: 'in_progress', priority: 'high', estimatedDays: 0, estimatedHours: 2 },
-  { id: '20260317-003', types: ['pesticide', 'weeding'], typeLabel: '植保,除草', field: '6号棚', crop: '草莓', assignee: '王建国', planStart: '2026-03-17 14:00', planEnd: '2026-03-17 18:00', progress: 0, status: 'pending', priority: 'urgent', estimatedDays: 0, estimatedHours: 4 },
-  { id: '20260318-001', types: ['pruning', 'harvest'], typeLabel: '修剪,采收', field: '8号棚', crop: '辣椒', assignee: '赵俊杰', planStart: '2026-03-18 08:00', planEnd: '2026-03-20 17:00', progress: 0, status: 'pending', priority: 'normal', estimatedDays: 2, estimatedHours: 4 },
-  { id: '20260316-001', types: ['harvest', 'fertilization', 'weeding'], typeLabel: '采收,施肥,除草', field: 'A1地块', crop: '水稻', assignee: '钱文涛', planStart: '2026-03-16 08:00', planEnd: '2026-03-18 18:00', progress: 100, status: 'waiting_acceptance', priority: 'normal', estimatedDays: 2, estimatedHours: 10 },
-  { id: '20260317-004', types: ['weeding'], typeLabel: '除草', field: 'B1地块', crop: '小麦', assignee: '孙晓峰', planStart: '2026-03-17 10:00', planEnd: '2026-03-17 14:00', progress: 30, status: 'in_progress', priority: 'normal', estimatedDays: 0, estimatedHours: 4 },
-  { id: '20260317-005', types: ['fertilization', 'irrigation'], typeLabel: '施肥,灌溉', field: 'C1地块', crop: '油菜', assignee: '周志强', planStart: '2026-03-17 13:00', planEnd: '2026-03-17 17:00', progress: 0, status: 'rejected', priority: 'normal', estimatedDays: 0, estimatedHours: 4 },
-  { id: '20260317-006', types: ['irrigation'], typeLabel: '灌溉', field: 'D1地块', crop: '蔬菜', assignee: '吴海龙', planStart: '2026-03-17 06:00', planEnd: '2026-03-17 08:00', progress: 100, status: 'completed', priority: 'urgent', estimatedDays: 0, estimatedHours: 2 },
-  { id: '20260319-001', types: ['harvest', 'weeding', 'pruning'], typeLabel: '采收,除草,修剪', field: 'A2地块', crop: '水稻', assignee: '钱文涛', planStart: '2026-03-19 08:00', planEnd: '2026-03-23 18:00', progress: 0, status: 'pending', priority: 'normal', estimatedDays: 4, estimatedHours: 2 },
-];
+// 模拟任务数据 - 从 farmMockData 导入
+const initialMockTasks = taskDispatchTasks;
 
-// 温室/大田列表 (崇明岛基地)
-const fields = [
-  // 温室大棚 (12个)
-  { id: 1, name: '1号棚', type: '温室', crop: '番茄', area: 6500 },
-  { id: 2, name: '2号棚', type: '温室', crop: '番茄', area: 6500 },
-  { id: 3, name: '3号棚', type: '温室', crop: '番茄', area: 6500 },
-  { id: 4, name: '4号棚', type: '温室', crop: '黄瓜', area: 7000 },
-  { id: 5, name: '5号棚', type: '温室', crop: '黄瓜', area: 7000 },
-  { id: 6, name: '6号棚', type: '温室', crop: '草莓', area: 6000 },
-  { id: 7, name: '7号棚', type: '温室', crop: '草莓', area: 6000 },
-  { id: 8, name: '8号棚', type: '温室', crop: '辣椒', area: 5500 },
-  { id: 9, name: '9号棚', type: '温室', crop: '辣椒', area: 5500 },
-  { id: 10, name: '10号棚', type: '温室', crop: '生菜', area: 5000 },
-  { id: 11, name: '11号棚', type: '温室', crop: '生菜', area: 5000 },
-  { id: 12, name: '12号棚', type: '温室', crop: '西瓜', area: 7000 },
-  // 大田 (8个)
-  { id: 13, name: 'A1地块', type: '大田', crop: '水稻', area: 100 },
-  { id: 14, name: 'A2地块', type: '大田', crop: '水稻', area: 100 },
-  { id: 15, name: 'A3地块', type: '大田', crop: '水稻', area: 100 },
-  { id: 16, name: 'B1地块', type: '大田', crop: '小麦', area: 100 },
-  { id: 17, name: 'B2地块', type: '大田', crop: '小麦', area: 100 },
-  { id: 18, name: 'C1地块', type: '大田', crop: '油菜', area: 80 },
-  { id: 19, name: 'C2地块', type: '大田', crop: '油菜', area: 70 },
-  { id: 20, name: 'D1地块', type: '大田', crop: '蔬菜', area: 50 },
-];
+// 任务区域列表 - 从 farmMockData 导入
+const fields = taskDispatchFields;
 
-// 崇明岛基地
-const base = '崇明岛基地';
+// 崇明岛基地 - 从 farmMockData 导入
+const base = TASK_DISPATCH_BASE;
 
-// 员工列表
-const staff = [
-  { id: 1, name: '张伟民', status: 'busy' },
-  { id: 2, name: '李明轩', status: 'available' },
-  { id: 3, name: '王建国', status: 'available' },
-  { id: 4, name: '赵俊杰', status: 'off' },
-  { id: 5, name: '钱文涛', status: 'available' },
-  { id: 6, name: '孙晓峰', status: 'busy' },
-];
+// 员工列表 - 从 farmMockData 导入
+const staff = taskDispatchStaff;
 
-// SOP模板
-const sopTemplates: Record<string, string> = {
-  fertilization: '尿素用量：20kg/亩\n稀释倍数：500倍\n注意事项：避免雨前4小时施用',
-  irrigation: '灌溉方式：滴灌\n灌溉时长：30分钟/亩\n注意事项：确保灌溉均匀',
-  pesticide: '农药名称：多菌灵\n用量：1000倍稀释\n注意事项：佩戴防护装备',
-  pruning: '修剪标准：保留主干，去除侧枝\n工具：专业修枝剪\n注意事项：剪口要平整',
-  harvest: '采收标准：果实成熟度达90%\n工具：采摘篮\n注意事项：轻拿轻放',
-  weeding: '除草方式：人工除草\n深度：3-5cm\n注意事项：除根除尽',
-};
+// SOP模板 - 从 farmMockData 导入
+const sopTemplates = SOP_TEMPLATES;
 
-const statusMap: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: '待执行', color: 'text-gray-600', bg: 'bg-gray-100' },
-  in_progress: { label: '进行中', color: 'text-blue-600', bg: 'bg-blue-100' },
-  waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-100' },
-  completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-100' },
-  rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-100' },
-};
+// 状态映射 - 从 farmMockData 导入
+const statusMap = TASK_STATUS_MAP;
 
-const priorityMap: Record<string, { label: string; color: string }> = {
-  urgent: { label: '紧急', color: 'text-red-500' },
-  high: { label: '高', color: 'text-orange-500' },
-  normal: { label: '普通', color: 'text-gray-500' },
-};
+// 优先级映射 - 从 farmMockData 导入
+const priorityMap = TASK_PRIORITY_MAP;
 
 // 格式化任务工时（按8小时=1天计算）
 const formatWorkHours = (days: number, hours: number): string => {
@@ -113,31 +83,28 @@ const formatWorkHours = (days: number, hours: number): string => {
   return result || '0小时';
 };
 
-// 作物生长阶段数据
-const cropStages: Record<string, { stage: string; tasks: string[]; priority: 'high' | 'medium' | 'low' }> = {
-  '番茄': { stage: '开花结果期', tasks: ['人工授粉', '疏果', '浇水', '施肥'], priority: 'high' },
-  '黄瓜': { stage: '生长期', tasks: ['施肥', '除草', '浇水', '防病虫'], priority: 'medium' },
-  '草莓': { stage: '开花结果期', tasks: ['人工授粉', '疏果', '浇水'], priority: 'high' },
-  '辣椒': { stage: '生长期', tasks: ['施肥', '除草', '浇水'], priority: 'medium' },
-  '生菜': { stage: '生长期', tasks: ['浇水', '施肥', '除草'], priority: 'low' },
-  '西瓜': { stage: '开花结果期', tasks: ['人工授粉', '浇水', '施肥'], priority: 'high' },
-  '水稻': { stage: '成熟期', tasks: ['及时采收', '晾晒'], priority: 'high' },
-  '小麦': { stage: '成熟期', tasks: ['及时采收', '晾晒'], priority: 'high' },
-  '油菜': { stage: '成熟期', tasks: ['及时采收', '晾晒'], priority: 'high' },
-  '蔬菜': { stage: '生长期', tasks: ['浇水', '施肥', '除草', '采收'], priority: 'medium' },
-};
 
-// 智能推荐结果类型
+// 智能推荐结果类型 - 完整字段
 interface Recommendation {
   id: string;
-  greenhouse: string;
-  crop: string;
-  stage: string;
-  recommendedTasks: string[];
-  reason: string;
-  priority: 'high' | 'medium' | 'low';
-  assignee: string;
-  suggestedDate: string;
+  recommendId: string;           // 推荐编号
+  greenhouse: string;             // 任务区域
+  crop: string;                  // 作物
+  stage: string;                  // 生长阶段
+  sourceType: 'env_alert' | 'pest_alert' | 'stage_task' | 'periodic';  // 推荐来源
+  sourceDescription: string;      // 来源描述
+  recommendedTasks: string[];     // 推荐任务类型标签
+  reason: string;                 // 主要原因
+  reasonSecondary: string[];      // 次要原因
+  evidence: { type: string; label: string; value: string }[];  // 证据
+  priority: 'high' | 'medium' | 'low';  // 优先级
+  priorityScore: number;          // 优先级评分 (0-100)
+  assignee: string;                // 推荐人员
+  matchScore: number;             // 匹配评分 (0-100)
+  alternatives: { name: string; score: number }[];  // 备选人员
+  suggestedDate: string;           // 建议执行日期
+  latestDate: string;             // 最晚执行日期
+  batchCode: string;              // 批次编号
 }
 
 // 批量导入行数据类型
@@ -170,9 +137,14 @@ export default function TaskDispatchPage() {
   const [fieldFilter, setFieldFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTaskTypeDropdown, setShowTaskTypeDropdown] = useState(false);
+  const [showFieldDropdown, setShowFieldDropdown] = useState(false);
+  const [showCropDropdown, setShowCropDropdown] = useState(false);
   const [createStep, setCreateStep] = useState(1);
   const [selectedTask, setSelectedTask] = useState<typeof mockTasks[0] | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSopModal, setShowSopModal] = useState(false);
+  const [selectedSopTask, setSelectedSopTask] = useState<typeof mockTasks[0] | null>(null);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -189,13 +161,108 @@ export default function TaskDispatchPage() {
 
   // 智能推荐相关状态
   const [showRecommendModal, setShowRecommendModal] = useState(false);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [selectedRecommendations, setSelectedRecommendations] = useState<string[]>([]);
+
+  // 智能推荐弹窗拖动和缩放状态
+  const [recommendModalMaximized, setRecommendModalMaximized] = useState(false);
+  const [recommendModalPosition, setRecommendModalPosition] = useState({ x: 0, y: 0 });
+  const [recommendModalSize, setRecommendModalSize] = useState({ width: 1200, height: 700 });
+  const recommendModalRef = useRef<HTMLDivElement>(null);
+  const recommendDragStart = useRef({ x: 0, y: 0, positionX: 0, positionY: 0, isDragging: false });
+
+  // 智能推荐弹窗拖动开始
+  const handleRecommendModalDragStart = useCallback((e: React.MouseEvent) => {
+    if (recommendModalMaximized) return; // 最大化时不允许拖动
+    recommendDragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      positionX: recommendModalPosition.x,
+      positionY: recommendModalPosition.y,
+      isDragging: true,
+    };
+    document.addEventListener('mousemove', handleRecommendModalDrag);
+    document.addEventListener('mouseup', handleRecommendModalDragEnd);
+  }, [recommendModalMaximized, recommendModalPosition]);
+
+  const handleRecommendModalDrag = useCallback((e: MouseEvent) => {
+    if (!recommendDragStart.current.isDragging) return;
+    const deltaX = e.clientX - recommendDragStart.current.x;
+    const deltaY = e.clientY - recommendDragStart.current.y;
+    setRecommendModalPosition({
+      x: recommendDragStart.current.positionX + deltaX,
+      y: recommendDragStart.current.positionY + deltaY,
+    });
+  }, []);
+
+  const handleRecommendModalDragEnd = useCallback(() => {
+    recommendDragStart.current.isDragging = false;
+    document.removeEventListener('mousemove', handleRecommendModalDrag);
+    document.removeEventListener('mouseup', handleRecommendModalDragEnd);
+  }, []);
+
+  // 智能推荐弹窗最大化/还原
+  const toggleRecommendModalMaximize = useCallback(() => {
+    setRecommendModalMaximized(prev => !prev);
+    if (recommendModalMaximized) {
+      // 还原时恢复之前的大小和位置
+      setRecommendModalSize({ width: 1200, height: 700 });
+      setRecommendModalPosition({ x: 0, y: 0 });
+    } else {
+      // 最大化时保存当前大小
+      setRecommendModalSize({ width: window.innerWidth - 40, height: window.innerHeight - 40 });
+    }
+  }, [recommendModalMaximized]);
+
+  // 清理事件监听
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleRecommendModalDrag);
+      document.removeEventListener('mouseup', handleRecommendModalDragEnd);
+    };
+  }, [handleRecommendModalDrag, handleRecommendModalDragEnd]);
+
+  // 使用智能推荐 Hook
+  const {
+    recommendations: smartRecommendations,
+    stats: recommendationStats,
+    isLoading: isRecommendationLoading,
+    acceptRecommendation,
+    rejectRecommendation,
+    refresh: refreshRecommendations,
+    generateAllRecommendations,
+  } = useSmartRecommendation();
+
+  // 兼容旧接口：将 SmartRecommendation 转换为旧的 Recommendation 格式
+  const recommendations: Recommendation[] = smartRecommendations.map(rec => ({
+    id: rec.id,
+    recommendId: rec.recommendId,
+    greenhouse: rec.task.field,
+    crop: rec.task.crop,
+    stage: '', // 旧接口没有此字段
+    sourceType: rec.source.type,
+    sourceDescription: rec.source.description,
+    recommendedTasks: rec.task.typeLabels,
+    reason: rec.reason.primary,
+    reasonSecondary: rec.reason.secondary,
+    evidence: rec.reason.evidence,
+    priority: rec.priority.level === 'urgent' ? 'high' : rec.priority.level === 'high' ? 'high' : rec.priority.level === 'medium' ? 'medium' : 'low',
+    priorityScore: rec.priority.score,
+    assignee: rec.assignment.recommendedWorkerName,
+    matchScore: rec.assignment.matchScore,
+    alternatives: rec.assignment.alternatives.map(alt => ({ name: alt.workerName, score: alt.matchScore })),
+    suggestedDate: rec.task.suggestedDate,
+    latestDate: rec.task.latestDate || rec.task.suggestedDate,
+    batchCode: rec.task.batchCode || '',
+  }));
 
   // 日历视图相关状态
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarViewType, setCalendarViewType] = useState<'day' | 'week' | 'month'>('week');
+
+  // 日历拖拽状态
+  const [draggedTask, setDraggedTask] = useState<typeof mockTasks[0] | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
 
   // 智能推荐表格选择处理函数
   const handleSelectAllRecommendations = () => {
@@ -246,7 +313,8 @@ export default function TaskDispatchPage() {
     });
 
     setMockTasks(prev => [...prev, ...newTasks]);
-    setRecommendations(prev => prev.filter(rec => !selectedRecommendations.includes(rec.id)));
+    // 使用 Hook 标记推荐为已接受
+    selectedRecommendations.forEach(id => acceptRecommendation(id));
     setSelectedRecommendations([]);
   };
 
@@ -259,25 +327,40 @@ export default function TaskDispatchPage() {
   const [pageSize, setPageSize] = useState(10);
 
   // 新建任务表单状态
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<{
+    taskId: string;
+    types: string[];
+    typeRemarks: string;
+    fields: string[];
+    crops: string[];
+    areaRemarks: string;
+    assignee: string;
+    planStart: string;
+    planEnd: string;
+    sopContent: string;
+    materials: { name: string; qty: number; unit: string }[];
+    requiredFeedback: string[];
+    priority: string;
+    estimatedDays: number;
+    estimatedHours: number;
+    typeConfig: TaskConfigValues;  // 任务类型配置
+  }>({
     taskId: '',
-    types: [] as string[],
-    typeRemarks: '',  // 其他任务备注
-    field: '',
-    crop: '',
-    cropRemarks: '',  // 其他作物备注
+    types: [],
+    typeRemarks: '',
+    fields: [],
+    crops: [],
     areaRemarks: '',
     assignee: '',
     planStart: '',
     planEnd: '',
     sopContent: '',
-    materials: [] as { name: string; qty: number; unit: string }[],
-    tools: [] as { name: string; qty: number; unit: string }[],  // 所需工具
-    requiredFeedback: [] as string[],
+    materials: [],
+    requiredFeedback: [],
     priority: 'normal',
     estimatedDays: 0,
     estimatedHours: 1,
-    workHoursPerDay: 8,  // 每天工作时间（小时）
+    typeConfig: {},
   });
 
   // 自动生成任务ID（检查重复）
@@ -302,8 +385,8 @@ export default function TaskDispatchPage() {
     setNewTask({
       taskId,
       types: [],
-      field: '',
-      crop: '',
+      fields: [],
+      crops: [],
       areaRemarks: '',
       assignee: '',
       planStart: '',
@@ -314,9 +397,21 @@ export default function TaskDispatchPage() {
       priority: 'normal',
       estimatedDays: 0,
       estimatedHours: 1,
+      typeConfig: {},
     });
     setCreateStep(1);
     setShowCreateModal(true);
+  };
+
+  // 处理任务类型配置变化
+  const handleTypeConfigChange = (key: string, value: string | number | boolean | string[]) => {
+    setNewTask(prev => ({
+      ...prev,
+      typeConfig: {
+        ...prev.typeConfig,
+        [key]: value,
+      },
+    }));
   };
 
   // 过滤任务
@@ -337,113 +432,10 @@ export default function TaskDispatchPage() {
     setAssigneeFilter('all');
   };
 
-  // 智能推荐算法
+  // 智能推荐算法（使用 Hook）
   const generateRecommendations = () => {
-    const results: Recommendation[] = [];
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-
-    // 获取当前空闲的温室/大田
-    const occupiedFields = new Set(
-      mockTasks
-        .filter(t => t.status === 'in_progress' || t.status === 'pending')
-        .map(t => t.field)
-    );
-
-    // 获取可用员工
-    const availableStaff = staff.filter(s => s.status === 'available');
-
-    fields.forEach(field => {
-      const isOccupied = occupiedFields.has(field.name);
-      const cropInfo = cropStages[field.crop];
-
-      if (!cropInfo) return;
-
-      // 检查是否需要推荐
-      let reason = '';
-      let needsRecommendation = false;
-
-      // 检查是否有进行中或待执行的任务
-      const fieldTasks = mockTasks.filter(t => t.field === field.name);
-      const hasActiveTasks = fieldTasks.some(t =>
-        t.status === 'in_progress' || t.status === 'pending'
-      );
-
-      if (!isOccupied && !hasActiveTasks) {
-        // 温室空闲，推荐任务
-        reason = `${field.name}当前空闲，${field.crop}处于${cropInfo.stage}，建议安排以下任务`;
-        needsRecommendation = true;
-      } else if (hasActiveTasks) {
-        // 有任务但可能是例行任务
-        const lastCompletedTask = fieldTasks
-          .filter(t => t.status === 'completed')
-          .sort((a, b) => new Date(b.planEnd).getTime() - new Date(a.planEnd).getTime())[0];
-
-        if (lastCompletedTask) {
-          const daysSinceLastTask = Math.floor(
-            (today.getTime() - new Date(lastCompletedTask.planEnd).getTime()) / (1000 * 60 * 60 * 24)
-          );
-
-          if (daysSinceLastTask >= 3) {
-            reason = `${field.name}上次任务完成于${daysSinceLastTask}天前，${field.crop}需要维护`;
-            needsRecommendation = true;
-          }
-        }
-      }
-
-      if (needsRecommendation) {
-        // 根据作物类型确定具体任务
-        const taskTypeMap: Record<string, string> = {
-          '人工授粉': 'pruning',
-          '疏果': 'pruning',
-          '浇水': 'irrigation',
-          '施肥': 'fertilization',
-          '除草': 'weeding',
-          '防病虫': 'pesticide',
-          '采收': 'harvest',
-          '及时采收': 'harvest',
-          '晾晒': 'harvest',
-        };
-
-        const recommendedTaskTypes = cropInfo.tasks.map(taskName => {
-          const typeValue = taskTypeMap[taskName] || 'irrigation';
-          const taskType = taskTypes.find(t => t.value === typeValue);
-          return {
-            name: taskName,
-            type: typeValue,
-            label: taskType?.label || taskName
-          };
-        });
-
-        // 去除重复任务类型
-        const uniqueTasks = recommendedTaskTypes.reduce((acc, task) => {
-          if (!acc.find(t => t.type === task.type)) {
-            acc.push(task);
-          }
-          return acc;
-        }, [] as typeof recommendedTaskTypes);
-
-        results.push({
-          id: `REC${results.length + 1}`.padStart(5, '0'),
-          greenhouse: field.name,
-          crop: field.crop,
-          stage: cropInfo.stage,
-          recommendedTasks: uniqueTasks.map(t => t.label),
-          reason,
-          priority: cropInfo.priority,
-          assignee: availableStaff.length > 0
-            ? availableStaff[results.length % availableStaff.length].name
-            : '待分配',
-          suggestedDate: todayStr,
-        });
-      }
-    });
-
-    // 按优先级排序
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
-    results.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-
-    setRecommendations(results);
+    // 使用 Hook 生成推荐
+    generateAllRecommendations();
     setSelectedRecommendations([]);
     setShowRecommendModal(true);
   };
@@ -707,6 +699,68 @@ export default function TaskDispatchPage() {
     );
   };
 
+  // ============================================
+  // 日历拖拽处理函数
+  // ============================================
+
+  // 开始拖拽任务
+  const handleDragStart = (e: React.DragEvent, task: typeof mockTasks[0]) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+    setDraggedTask(task);
+  };
+
+  // 拖拽经过日期格子
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverDate(date);
+  };
+
+  // 拖拽离开日期格子
+  const handleDragLeave = () => {
+    setDragOverDate(null);
+  };
+
+  // 放下任务到新日期
+  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    if (!draggedTask) return;
+
+    // 解析原任务的日期和时间
+    const [oldDatePart, oldTimePart] = draggedTask.planStart.split(' ');
+    const [endDatePart, endTimePart] = draggedTask.planEnd.split(' ');
+
+    // 计算日期差异
+    const oldDate = parseISO(oldDatePart);
+    const dayDiff = Math.floor((targetDate.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 计算新的开始和结束日期
+    const newStartDate = addDays(targetDate, 0);
+    const newEndDate = addDays(targetDate, dayDiff >= 0 ? dayDiff : 0);
+
+    // 格式化日期字符串
+    const formatDateStr = (date: Date) => format(date, 'yyyy-MM-dd');
+    const newPlanStart = `${formatDateStr(newStartDate)} ${oldTimePart || '08:00'}`;
+    const newPlanEnd = `${formatDateStr(newEndDate)} ${endTimePart || '18:00'}`;
+
+    // 更新任务
+    setMockTasks(prev => prev.map(t =>
+      t.id === draggedTask.id
+        ? { ...t, planStart: newPlanStart, planEnd: newPlanEnd }
+        : t
+    ));
+
+    setDraggedTask(null);
+    setDragOverDate(null);
+  };
+
+  // 取消拖拽
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDragOverDate(null);
+  };
+
   // 周视图组件
   const WeekView: React.FC<{
     month: Date;
@@ -716,7 +770,6 @@ export default function TaskDispatchPage() {
   }> = ({ month, tasks, onSelectTask, onSelectDate }) => {
     const weekStart = startOfWeek(month, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    const weekDaysZh = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
     return (
       <div className="overflow-x-auto">
@@ -736,11 +789,16 @@ export default function TaskDispatchPage() {
           <div className="grid grid-cols-7 gap-2 min-h-[400px]">
             {weekDays.map((day, dayIndex) => {
               const dayTasks = getTasksForDate(day, tasks);
+              const isDragOver = dragOverDate && isSameDay(day, dragOverDate);
               return (
                 <div
                   key={dayIndex}
                   onClick={() => onSelectDate(day)}
+                  onDragOver={(e) => handleDragOver(e, day)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, day)}
                   className={`rounded-lg p-2 min-h-[400px] cursor-pointer transition-colors ${
+                    isDragOver ? 'bg-blue-100 border-2 border-blue-300 border-dashed' :
                     isToday(day) ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
@@ -751,11 +809,14 @@ export default function TaskDispatchPage() {
                       dayTasks.slice(0, 5).map(task => (
                         <div
                           key={task.id}
-                          onClick={(e) => { e.stopPropagation(); onSelectTask(task); }}
-                          className={`px-2 py-1 rounded text-xs text-white truncate cursor-pointer hover:opacity-80 ${getTypeColor(task.types[0])}`}
-                          title={`${task.typeLabel} - ${task.field}`}
+                          draggable="true"
+                          onDragStart={(e) => { handleDragStart(e, task); }}
+                          onDragEnd={handleDragEnd}
+                          className={`px-2 py-1 rounded text-xs text-white truncate cursor-grab active:cursor-grabbing flex items-center gap-1 group ${getTypeColor(task.types[0])}`}
+                          title={`${task.typeLabel} - ${task.field}（拖拽可调整日期）`}
                         >
-                          {task.typeLabel}
+                          <GripVertical className="w-3 h-3 flex-shrink-0 opacity-50 group-hover:opacity-100" />
+                          <span className="truncate">{task.typeLabel}</span>
                         </div>
                       ))
                     )}
@@ -783,7 +844,6 @@ export default function TaskDispatchPage() {
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-    const weekDaysZh = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
     return (
       <div>
@@ -798,11 +858,16 @@ export default function TaskDispatchPage() {
           {days.map((day, i) => {
             const dayTasks = getTasksForDate(day, tasks);
             const isCurrentMonth = isSameMonth(day, month);
+            const isDragOver = dragOverDate && isSameDay(day, dragOverDate);
             return (
               <div
                 key={i}
                 onClick={() => onSelectDate(day)}
+                onDragOver={(e) => handleDragOver(e, day)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, day)}
                 className={`min-h-[80px] p-2 rounded-lg cursor-pointer transition-colors ${
+                  isDragOver ? 'bg-blue-100 border-2 border-blue-300 border-dashed' :
                   !isCurrentMonth ? 'bg-gray-50 text-gray-300' :
                   isToday(day) ? 'bg-emerald-100 hover:bg-emerald-200' :
                   'bg-gray-50 hover:bg-gray-100'
@@ -815,9 +880,14 @@ export default function TaskDispatchPage() {
                   {dayTasks.slice(0, 3).map(task => (
                     <div
                       key={task.id}
-                      className={`px-1 py-0.5 rounded text-xs text-white truncate ${getTypeColor(task.types[0])}`}
+                      draggable="true"
+                      onDragStart={(e) => { handleDragStart(e, task); }}
+                      onDragEnd={handleDragEnd}
+                      className={`px-1 py-0.5 rounded text-xs text-white truncate cursor-grab active:cursor-grabbing flex items-center gap-0.5 group ${getTypeColor(task.types[0])}`}
+                      title={`${task.typeLabel} - ${task.field}（拖拽可调整日期）`}
                     >
-                      {task.typeLabel}
+                      <GripVertical className="w-2.5 h-2.5 flex-shrink-0 opacity-50 group-hover:opacity-100" />
+                      <span className="truncate">{task.typeLabel}</span>
                     </div>
                   ))}
                   {dayTasks.length > 3 && (
@@ -835,11 +905,19 @@ export default function TaskDispatchPage() {
   // 处理创建任务
   const handleCreateTask = () => {
     const typeLabels = newTask.types.map(t => getTypeLabel(t)).join(',');
+    // 处理任务区域：如果是"其他"则使用备注，否则使用选择的区域
+    const fieldValue = newTask.fields?.includes('other')
+      ? newTask.areaRemarks
+      : (newTask.fields?.join(',') || '');
+    // 处理作物：如果是"其他"则使用备注，否则使用选择的作物
+    const cropValue = newTask.crops?.includes('other')
+      ? newTask.cropRemarks
+      : (newTask.crops?.join(',') || '');
     const newTaskData = {
       id: newTask.taskId,
       types: newTask.types,
-      field: newTask.field === 'other' ? newTask.areaRemarks : newTask.field,
-      crop: newTask.crop,
+      field: fieldValue,
+      crop: cropValue,
       assignee: newTask.assignee,
       planStart: newTask.planStart,
       planEnd: newTask.planEnd,
@@ -855,8 +933,8 @@ export default function TaskDispatchPage() {
       taskId: '',
       types: [],
       typeRemarks: '',
-      field: '',
-      crop: '',
+      fields: [],
+      crops: [],
       cropRemarks: '',
       areaRemarks: '',
       assignee: '',
@@ -919,11 +997,11 @@ export default function TaskDispatchPage() {
 
   const handleDoExport = async () => {
     const selectedData = filteredTasks.filter((_, index) => selectedRows.includes(index));
-    const headers = ['任务ID', '任务类型', '温室/大田编号', '作物', '负责人', '计划开始时间', '计划结束时间', '进度', '状态', '优先级'];
+    const headers = ['任务ID', '任务类型', '任务区域编号', '作物', '负责人', '计划开始时间', '计划结束时间', '进度', '状态', '优先级'];
     const exportData = selectedData.map(task => ({
       '任务ID': task.id,
       '任务类型': task.typeLabel,
-      '温室/大田编号': task.field,
+      '任务区域编号': task.field,
       '作物': task.crop,
       '负责人': task.assignee,
       '计划开始时间': task.planStart,
@@ -1073,7 +1151,7 @@ export default function TaskDispatchPage() {
                 value={taskIdSearch}
                 onChange={(e) => setTaskIdSearch(e.target.value)}
                 placeholder="搜索任务ID"
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -1081,7 +1159,7 @@ export default function TaskDispatchPage() {
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">全部时间</option>
                 <option value="today">今日</option>
@@ -1090,13 +1168,13 @@ export default function TaskDispatchPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">温室/大田编号</label>
+              <label className="block text-xs text-gray-500 mb-1">任务区域编号</label>
               <select
                 value={fieldFilter}
                 onChange={(e) => setFieldFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="all">全部温室/大田</option>
+                <option value="all">全部任务区域</option>
                 {fields.map(f => (
                   <option key={f.id} value={f.name}>{f.name} ({f.crop})</option>
                 ))}
@@ -1107,7 +1185,7 @@ export default function TaskDispatchPage() {
               <select
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">全部人员</option>
                 {staff.map(s => (
@@ -1120,7 +1198,7 @@ export default function TaskDispatchPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">全部状态</option>
                 <option value="pending">待执行</option>
@@ -1136,29 +1214,22 @@ export default function TaskDispatchPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleResetFilters}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
             >
               重置
             </button>
             <button
-              onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              新建
-            </button>
-            <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
             >
               <Upload className="w-4 h-4" />
               批量导入
             </button>
             <button
               onClick={generateRecommendations}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white text-sm rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 transition-all duration-300 animate-pulse-subtle"
             >
-              <Sparkles className="w-4 h-4 text-purple-500" />
+              <Sparkles className="w-4 h-4" />
               智能推荐
             </button>
             <div className="flex border border-gray-200 rounded-lg overflow-hidden ml-2">
@@ -1222,7 +1293,7 @@ export default function TaskDispatchPage() {
                 <>
                   <button onClick={() => setShowCreateModal(true)} className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
                     <Plus className="w-4 h-4" />
-                    新增
+                    新建
                   </button>
                   <button onClick={() => { setBatchEditMode(true); setSelectedRows([]); }} className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                     <Edit className="w-4 h-4" />
@@ -1257,21 +1328,17 @@ export default function TaskDispatchPage() {
                   )}
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">温室/大田</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计天数</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计小时</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">工作制</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需物资</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需工具</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-300">
@@ -1287,19 +1354,30 @@ export default function TaskDispatchPage() {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{task.id}</td>
+                    <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
+                      <button
+                        onClick={() => { setSelectedTask(task); setShowDetailModal(true); }}
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        title="点击查看详情"
+                      >
+                        {task.id}
+                      </button>
+                    </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        {(task.types || (task.type ? [task.type] : [])).map((typeValue: string, idx: number) => {
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {(task.types || []).slice(0, 2).map((typeValue: string, idx: number) => {
                           const typeLabel = getTypeLabel(typeValue);
                           return typeLabel === '其他' ? (
-                            <span key={idx} className="text-orange-500 text-xs">其他（{(task as any).typeRemarks || ''}）</span>
+                            <span key={idx} className="text-orange-500 text-xs">其他</span>
                           ) : (
                             <span key={idx} className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(typeValue)}`}>
                               {typeLabel}
                             </span>
                           );
                         })}
+                        {(task.types || []).length > 2 && (
+                          <span className="text-xs text-gray-500">+{(task.types || []).length - 2}</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.field}</td>
@@ -1311,18 +1389,10 @@ export default function TaskDispatchPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-3 h-3 text-emerald-600" />
-                        </div>
-                        <span className="text-sm text-gray-600">{task.assignee}</span>
-                      </div>
+                      <span className="text-sm text-gray-600">{task.assignee}</span>
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</td>
                     <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</td>
-                    <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as any).estimatedDays || 0}天</td>
-                    <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as any).estimatedHours || 0}小时</td>
-                    <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as any).workHoursPerDay || 8}时/天</td>
                     <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
                     </td>
@@ -1347,30 +1417,24 @@ export default function TaskDispatchPage() {
                         {statusMap[task.status].label}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}>
-                      {(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-600 max-w-[120px] truncate" title={(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}>
-                      {(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}
+                    <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
+                      {(task as any).remarks || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      {task.types.length >= 2 && (task as any).sopContent ? (
                         <button
-                          onClick={() => { setSelectedTask(task); setShowDetailModal(true); }}
-                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                          title="查看详情"
+                          onClick={() => {
+                            setSelectedSopTask(task);
+                            setShowSopModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
                         >
-                          <Eye className="w-4 h-4" />
+                          <FileText className="w-3 h-3" />
+                          SOP文件
                         </button>
-                        <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {task.status === 'waiting_acceptance' && (
-                          <button className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded" title="验收">
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1503,34 +1567,51 @@ export default function TaskDispatchPage() {
       )}
 
       {/* 新建任务模态框 */}
-
-      {/* 新建任务模态框 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">新建任务</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 text-gray-400" />
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="新建任务"
+        size="xl"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-between">
+            {createStep > 1 && (
+              <button
+                onClick={() => setCreateStep(createStep - 1)}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600"
+              >
+                上一步
               </button>
+            )}
+            <button
+              onClick={() => createStep < 3 ? setCreateStep(createStep + 1) : handleCreateTask()}
+              className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2 ml-auto"
+            >
+              {createStep < 3 ? (
+                <>下一步 <ChevronRight className="w-4 h-4" /></>
+              ) : (
+                '创建任务'
+              )}
+            </button>
+          </div>
+        }
+      >
+        {/* 步骤指示器 */}
+        <div className="px-6 py-4 border-b border-gray-100 -mx-6">
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center gap-2 ${createStep >= 1 ? 'text-emerald-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>1</div>
+              <span className="text-sm font-medium">任务定义</span>
             </div>
-
-            {/* 步骤指示器 */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className={`flex items-center gap-2 ${createStep >= 1 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>1</div>
-                  <span className="text-sm font-medium">任务定义</span>
-                </div>
-                <div className="flex-1 h-0.5 bg-gray-200 mx-4">
-                  <div className={`h-full bg-emerald-500 transition-all ${createStep >= 2 ? 'w-full' : 'w-0'}`} />
-                </div>
-                <div className={`flex items-center gap-2 ${createStep >= 2 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>2</div>
-                  <span className="text-sm font-medium">资源与人员</span>
-                </div>
-                <div className="flex-1 h-0.5 bg-gray-200 mx-4">
-                  <div className={`h-full bg-emerald-500 transition-all ${createStep >= 3 ? 'w-full' : 'w-0'}`} />
+            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
+              <div className={`h-full bg-emerald-500 transition-all ${createStep >= 2 ? 'w-full' : 'w-0'}`} />
+            </div>
+            <div className={`flex items-center gap-2 ${createStep >= 2 ? 'text-emerald-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>2</div>
+              <span className="text-sm font-medium">资源与人员</span>
+            </div>
+            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
+              <div className={`h-full bg-emerald-500 transition-all ${createStep >= 3 ? 'w-full' : 'w-0'}`} />
                 </div>
                 <div className={`flex items-center gap-2 ${createStep >= 3 ? 'text-emerald-600' : 'text-gray-400'}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 3 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>3</div>
@@ -1543,31 +1624,304 @@ export default function TaskDispatchPage() {
               {/* Step 1: 任务定义 */}
               {createStep === 1 && (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">任务编号</label>
-                    <div className="text-lg font-semibold text-gray-900">{newTask.taskId || '自动生成中...'}</div>
-                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">任务类型 <span className="text-red-500">*</span></label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {taskTypes.map(t => (
-                        <label key={t.value} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={newTask.types.includes(t.value)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewTask({ ...newTask, types: [...newTask.types, t.value] });
-                              } else {
-                                setNewTask({ ...newTask, types: newTask.types.filter(v => v !== t.value) });
-                              }
-                            }}
-                            className="w-4 h-4 text-emerald-600 rounded"
-                          />
-                          <span className="text-sm text-gray-700">{t.label}</span>
-                        </label>
-                      ))}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newTask.taskId || ''}
+                        onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="点击生成获取任务编号"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskId() })}
+                        className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                      >
+                        生成
+                      </button>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <div
+                          className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
+                          onClick={() => setShowFieldDropdown(!showFieldDropdown)}
+                        >
+                          {(!newTask.fields || newTask.fields.length === 0) && (
+                            <span className="text-gray-400 text-sm">请选择任务区域</span>
+                          )}
+                          {(newTask.fields || []).map((fieldValue: string) => {
+                            const field = fields.find(f => f.name === fieldValue);
+                            return (
+                              <span
+                                key={fieldValue}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm"
+                              >
+                                {field?.name || fieldValue}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== fieldValue) });
+                                  }}
+                                  className="hover:text-red-500"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {showFieldDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {['1号棚', '2号棚', '3号棚', '4号棚', '5号棚', '6号棚'].map(name => (
+                              <label
+                                key={name}
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={(newTask.fields || []).includes(name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setNewTask({ ...newTask, fields: [...(newTask.fields || []), name] });
+                                    } else {
+                                      setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== name) });
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-emerald-600 rounded"
+                                />
+                                <span className="text-sm text-gray-700">{name}</span>
+                              </label>
+                            ))}
+                            <label
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={(newTask.fields || []).includes('other')}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewTask({ ...newTask, fields: [...(newTask.fields || []), 'other'] });
+                                  } else {
+                                    setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== 'other') });
+                                  }
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded"
+                              />
+                              <span className="text-sm text-gray-700">其他</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      {showFieldDropdown && (
+                        <div
+                          className="fixed inset-0 z-0"
+                          onClick={() => setShowFieldDropdown(false)}
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        作物 <span className="text-red-500">*</span>
+                        {newTask.fields && newTask.fields.length > 0 && !newTask.fields.includes('other') && (
+                          <span className="ml-2 text-xs text-emerald-600 font-normal">
+                            （根据 {newTask.fields.join(', ')} 自动获取）
+                          </span>
+                        )}
+                      </label>
+                      <div className="relative">
+                        <div
+                          className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
+                          onClick={() => setShowCropDropdown(!showCropDropdown)}
+                        >
+                          {(!newTask.crops || newTask.crops.length === 0) && (
+                            <span className="text-gray-400 text-sm">
+                              {newTask.fields && newTask.fields.length > 0 && !newTask.fields.includes('other')
+                                ? '请选择作物'
+                                : '请先选择任务区域'}
+                            </span>
+                          )}
+                          {(newTask.crops || []).map((cropValue: string) => (
+                            <span
+                              key={cropValue}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
+                            >
+                              {cropValue}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== cropValue) });
+                                }}
+                                className="hover:text-red-500"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        {showCropDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {/* 显示作物来源提示 */}
+                            {newTask.fields && newTask.fields.length > 0 && !newTask.fields.includes('other') && (
+                              <div className="px-3 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-700">
+                                基于区域 [{newTask.fields.join(', ')}] 的作物选项
+                              </div>
+                            )}
+                            {/* 根据选择的区域获取作物 */}
+                            {(() => {
+                              // 根据选择的区域获取作物列表
+                              const selectedFields = newTask.fields?.filter(f => f !== 'other') || [];
+                              const availableCrops = selectedFields.length > 0
+                                ? [...new Set(fields.filter(f => selectedFields.includes(f.name)).map(f => f.crop))]
+                                : Object.keys(cropStages);
+                              return availableCrops.map(crop => (
+                                <label
+                                  key={crop}
+                                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={(newTask.crops || []).includes(crop)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setNewTask({ ...newTask, crops: [...(newTask.crops || []), crop] });
+                                      } else {
+                                        setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== crop) });
+                                      }
+                                    }}
+                                    className="w-4 h-4 text-emerald-600 rounded"
+                                  />
+                                  <span className="text-sm text-gray-700">{crop}</span>
+                                </label>
+                              ));
+                            })()}
+                            <label
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={(newTask.crops || []).includes('other')}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewTask({ ...newTask, crops: [...(newTask.crops || []), 'other'] });
+                                  } else {
+                                    setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== 'other') });
+                                  }
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded"
+                              />
+                              <span className="text-sm text-gray-700">其他</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      {showCropDropdown && (
+                        <div
+                          className="fixed inset-0 z-0"
+                          onClick={() => setShowCropDropdown(false)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {newTask.fields?.includes('other') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">区域备注 <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={newTask.areaRemarks || ''}
+                        onChange={(e) => setNewTask({ ...newTask, areaRemarks: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="请输入工作区域说明"
+                      />
+                    </div>
+                  )}
+                  {newTask.crops?.includes('other') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={newTask.cropRemarks || ''}
+                        onChange={(e) => setNewTask({ ...newTask, cropRemarks: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="请输入作物说明"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <div
+                        className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
+                        onClick={() => setShowTaskTypeDropdown(!showTaskTypeDropdown)}
+                      >
+                        {newTask.types.length === 0 && (
+                          <span className="text-gray-400 text-sm">请选择任务类型</span>
+                        )}
+                        {newTask.types.map(typeValue => {
+                          const type = taskTypes.find(t => t.value === typeValue);
+                          return (
+                            <span
+                              key={typeValue}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm"
+                            >
+                              {type?.label || typeValue}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewTask({ ...newTask, types: newTask.types.filter(v => v !== typeValue) });
+                                }}
+                                className="hover:text-red-500"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                      {showTaskTypeDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {taskTypes.map(t => (
+                            <label
+                              key={t.value}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={newTask.types.includes(t.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewTask({ ...newTask, types: [...newTask.types, t.value] });
+                                  } else {
+                                    setNewTask({ ...newTask, types: newTask.types.filter(v => v !== t.value) });
+                                  }
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded"
+                              />
+                              <span className="text-sm text-gray-700">{t.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* 点击空白处关闭下拉框 */}
+                    {showTaskTypeDropdown && (
+                      <div
+                        className="fixed inset-0 z-0"
+                        onClick={() => setShowTaskTypeDropdown(false)}
+                      />
+                    )}
                   </div>
                   {newTask.types.includes('other') && (
                     <div>
@@ -1576,72 +1930,54 @@ export default function TaskDispatchPage() {
                         type="text"
                         value={newTask.typeRemarks || ''}
                         onChange={(e) => setNewTask({ ...newTask, typeRemarks: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="请输入其他任务说明"
                       />
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></label>
-                    <select
-                      value={newTask.field}
-                      onChange={(e) => setNewTask({ ...newTask, field: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">请选择任务区域</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.name}>{f.name}</option>
-                      ))}
-                      <option value="other">其他</option>
-                    </select>
-                  </div>
-                  {newTask.field === 'other' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">区域备注 <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        value={newTask.areaRemarks}
-                        onChange={(e) => setNewTask({ ...newTask, areaRemarks: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="请输入工作区域说明"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">作物 <span className="text-red-500">*</span></label>
-                    <select
-                      value={newTask.crop}
-                      onChange={(e) => setNewTask({ ...newTask, crop: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">请选择作物</option>
-                      {Object.keys(cropStages).map(crop => (
-                        <option key={crop} value={crop}>{crop}</option>
-                      ))}
-                      <option value="other">其他</option>
-                    </select>
-                  </div>
-                  {newTask.crop === 'other' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        value={newTask.cropRemarks || ''}
-                        onChange={(e) => setNewTask({ ...newTask, cropRemarks: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="请输入作物说明"
-                      />
-                    </div>
-                  )}
+                  {/* 任务类型配置面板 */}
+                  <TaskTypeConfigPanel
+                    taskTypes={newTask.types}
+                    configValues={newTask.typeConfig}
+                    onConfigChange={handleTypeConfigChange}
+                  />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">作业标准 (SOP)</label>
                     <textarea
                       value={newTask.sopContent}
                       onChange={(e) => setNewTask({ ...newTask, sopContent: e.target.value })}
                       rows={4}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="请输入作业标准..."
+                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="请输入作业标准...（简单任务可在此直接输入，复杂任务可点击导入文件）"
                     />
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // 创建隐藏的文件输入框
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = '.txt,.doc,.docx,.pdf';
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const content = event.target?.result as string;
+                                setNewTask({ ...newTask, sopContent: content });
+                              };
+                              reader.readAsText(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        导入文件
+                      </button>
+                      <span className="text-xs text-gray-500">支持 .txt, .doc, .docx, .pdf 格式</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1654,7 +1990,7 @@ export default function TaskDispatchPage() {
                     <select
                       value={newTask.assignee}
                       onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="">请选择执行人</option>
                       {staff.map(s => (
@@ -1682,13 +2018,23 @@ export default function TaskDispatchPage() {
                               placeholder="物资名称"
                             />
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               value={m.qty}
-                              min="1"
                               onChange={(e) => {
-                                const newMaterials = [...(newTask.materials || [])];
-                                newMaterials[i].qty = Number(e.target.value);
-                                setNewTask({ ...newTask, materials: newMaterials });
+                                const raw = e.target.value.replace(/[^\d.]/g, '');
+                                if (raw === '' || raw === '-') {
+                                  const newMaterials = [...(newTask.materials || [])];
+                                  newMaterials[i].qty = 0;
+                                  setNewTask({ ...newTask, materials: newMaterials });
+                                  return;
+                                }
+                                const val = parseFloat(raw);
+                                if (!isNaN(val)) {
+                                  const newMaterials = [...(newTask.materials || [])];
+                                  newMaterials[i].qty = Math.round(val * 100) / 100;
+                                  setNewTask({ ...newTask, materials: newMaterials });
+                                }
                               }}
                               className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
                             />
@@ -1750,13 +2096,23 @@ export default function TaskDispatchPage() {
                               placeholder="工具名称"
                             />
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               value={t.qty}
-                              min="1"
                               onChange={(e) => {
-                                const newTools = [...(newTask.tools || [])];
-                                newTools[i].qty = Number(e.target.value);
-                                setNewTask({ ...newTask, tools: newTools });
+                                const raw = e.target.value.replace(/[^\d.]/g, '');
+                                if (raw === '' || raw === '-') {
+                                  const newTools = [...(newTask.tools || [])];
+                                  newTools[i].qty = 0;
+                                  setNewTask({ ...newTask, tools: newTools });
+                                  return;
+                                }
+                                const val = parseFloat(raw);
+                                if (!isNaN(val)) {
+                                  const newTools = [...(newTask.tools || [])];
+                                  newTools[i].qty = Math.round(val * 100) / 100;
+                                  setNewTask({ ...newTask, tools: newTools });
+                                }
                               }}
                               className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
                             />
@@ -1814,7 +2170,7 @@ export default function TaskDispatchPage() {
                             setNewTask({ ...newTask, workHoursPerDay: newWorkHours, estimatedHours: newWorkHours - 1 });
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value={4}>4小时/天</option>
                         <option value={6}>6小时/天</option>
@@ -1829,36 +2185,40 @@ export default function TaskDispatchPage() {
                         type="date"
                         value={newTask.planStart?.split(' ')[0] || ''}
                         onChange={(e) => setNewTask({ ...newTask, planStart: e.target.value + ' 00:00' })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">天数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={newTask.estimatedDays || 0}
-                        onChange={(e) => setNewTask({ ...newTask, estimatedDays: Number(e.target.value) })}
-                        min="0"
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
+                          setNewTask({ ...newTask, estimatedDays: isNaN(val) ? 0 : val });
+                        }}
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={newTask.estimatedHours || 0}
                         onChange={(e) => {
-                          const val = Number(e.target.value);
+                          const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
                           const maxHours = (newTask.workHoursPerDay || 8) - 1;
-                          if (val <= maxHours) {
+                          if (!isNaN(val) && val >= 0 && val <= maxHours) {
                             setNewTask({ ...newTask, estimatedHours: val });
+                          } else if (isNaN(val) || val === 0) {
+                            setNewTask({ ...newTask, estimatedHours: 0 });
                           }
                         }}
-                        min="0"
-                        max={(newTask.workHoursPerDay || 8) - 1}
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                   </div>
@@ -1882,7 +2242,7 @@ export default function TaskDispatchPage() {
                     <select
                       value={newTask.priority}
                       onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="normal">普通</option>
                       <option value="high">高</option>
@@ -1921,227 +2281,374 @@ export default function TaskDispatchPage() {
                 </div>
               )}
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-between">
-              <button
-                onClick={() => createStep > 1 ? setCreateStep(createStep - 1) : setShowCreateModal(false)}
-                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-              >
-                {createStep > 1 ? '上一步' : '取消'}
-              </button>
-              <button
-                onClick={() => createStep < 3 ? setCreateStep(createStep + 1) : handleCreateTask()}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2"
-              >
-                {createStep < 3 ? (
-                  <>下一步 <ChevronRight className="w-4 h-4" /></>
-                ) : (
-                  '创建任务'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* 任务详情弹窗 */}
-      {showDetailModal && selectedTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">任务详情 - {selectedTask.id}</h3>
-              <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 text-gray-400" />
+      <Modal
+        isOpen={showDetailModal && !!selectedTask}
+        onClose={() => setShowDetailModal(false)}
+        title={`任务详情 - ${selectedTask?.id || ''}`}
+        size="xl"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-end">
+            {selectedTask?.status === 'waiting_acceptance' && (
+              <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
+                验收通过
               </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* 基本信息 */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">任务类型</label>
-                    <p className="font-semibold text-gray-900 flex items-center gap-2">
-                      <span className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs ${getTypeColor(selectedTask.type)}`}>
-                        {getTypeIcon(selectedTask.type)}
-                      </span>
-                      {selectedTask.typeLabel}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">温室/大田编号</label>
-                    <p className="font-semibold text-gray-900">{selectedTask.field}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">作物</label>
-                    <p className="font-semibold text-gray-900">{selectedTask.crop}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">负责人</label>
-                    <p className="font-semibold text-gray-900">{selectedTask.assignee}</p>
-                  </div>
+            )}
+          </div>
+        }
+      >
+        {selectedTask && (
+          <div className="space-y-6">
+            {/* 基本信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">任务区域</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.field}</p>
                 </div>
-              </div>
-
-              {/* 时间信息 */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">计划开始</label>
-                    <p className="font-semibold text-gray-900">{selectedTask.planStart}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">计划结束</label>
-                    <p className="font-semibold text-gray-900">{selectedTask.planEnd}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">状态</label>
-                    <p>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status].bg} ${statusMap[selectedTask.status].color}`}>
-                        {statusMap[selectedTask.status].label}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">优先级</label>
-                    <p className={`font-semibold ${priorityMap[selectedTask.priority].color}`}>
-                      {priorityMap[selectedTask.priority].label}
-                    </p>
-                  </div>
+                <div>
+                  <label className="text-xs text-gray-500">作物</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.crop}</p>
                 </div>
-              </div>
-
-              {/* 进度 */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${selectedTask.progress === 100 ? 'bg-green-500' : selectedTask.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
-                      style={{ width: `${selectedTask.progress}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{selectedTask.progress}%</span>
+                <div>
+                  <label className="text-xs text-gray-500">负责人</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.assignee}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">优先级</label>
+                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
+                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-              >
-                关闭
-              </button>
-              {selectedTask.status === 'waiting_acceptance' && (
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
-                  验收通过
-                </button>
+            {/* 任务类型 - 单一类型显示详细信息，多类型显示SOP下载 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>
+              {selectedTask.types.length === 1 ? (
+                // 单一任务类型 - 显示详细配置（只读）
+                <TaskTypeConfigDisplay
+                  taskType={selectedTask.types[0]}
+                  configValues={selectedTask.typeConfig || {}}
+                />
+              ) : (
+                // 多任务类型 - 显示SOP信息
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm font-medium text-gray-700">作业标准文件</span>
+                  </div>
+                  {selectedTask.sopContent ? (
+                    <div className="bg-white rounded-lg p-3 border border-blue-100">
+                      <p className="text-sm text-gray-600 mb-2">已导入SOP文档</p>
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // 创建Blob下载
+                          const blob = new Blob([selectedTask.sopContent || ''], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `任务SOP_${selectedTask.id}.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-1"
+                      >
+                        <Download className="w-4 h-4" />
+                        下载SOP文件
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">暂无SOP文件</p>
+                  )}
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-2">已选择的操作类型：</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTask.types.map(t => {
+                        const typeInfo = taskTypes.find(tt => tt.value === t);
+                        return (
+                          <span
+                            key={t}
+                            className={`px-2 py-1 rounded text-xs text-white ${typeInfo?.color || 'bg-gray-500'}`}
+                          >
+                            {typeInfo?.label || t}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* 导出格式选择弹窗 */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-              <h3 className="text-lg font-semibold text-white">导出格式选择</h3>
-              <button onClick={handleCloseExportModal} className="text-white hover:bg-emerald-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-gray-500 mb-4">已选择 {selectedRows.length} 条数据</p>
-              <div className="space-y-3">
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="xlsx"
-                    checked={exportFormat === 'xlsx'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">Excel (.xlsx)</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="csv"
-                    checked={exportFormat === 'csv'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">CSV (.csv)</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value="word"
-                    checked={exportFormat === 'word'}
-                    onChange={(e) => setExportFormat(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">Word (.doc)</span>
-                </label>
+            {/* 所需物资 */}
+            {selectedTask.materials && selectedTask.materials.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-200">
+                        <th className="text-left pb-2">物资名称</th>
+                        <th className="text-right pb-2">数量</th>
+                        <th className="text-right pb-2">单位</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTask.materials.map((m, i) => (
+                        <tr key={i} className="border-b border-gray-100 last:border-0">
+                          <td className="py-2 text-gray-900">{m.name}</td>
+                          <td className="py-2 text-gray-900 text-right">{m.qty}</td>
+                          <td className="py-2 text-gray-500 text-right">{m.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 所需工具 */}
+            {selectedTask.tools && selectedTask.tools.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需工具</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-200">
+                        <th className="text-left pb-2">工具名称</th>
+                        <th className="text-right pb-2">数量</th>
+                        <th className="text-right pb-2">单位</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTask.tools.map((t, i) => (
+                        <tr key={i} className="border-b border-gray-100 last:border-0">
+                          <td className="py-2 text-gray-900">{t.name}</td>
+                          <td className="py-2 text-gray-900 text-right">{t.qty}</td>
+                          <td className="py-2 text-gray-500 text-right">{t.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 时间信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">计划开始</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.planStart}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">计划结束</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.planEnd}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">状态</label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || ''} ${statusMap[selectedTask.status]?.color || ''}`}>
+                      {statusMap[selectedTask.status]?.label || selectedTask.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">预计时长</label>
+                  <p className="font-semibold text-gray-900">
+                    {selectedTask.estimatedDays > 0 ? `${selectedTask.estimatedDays}天` : ''}
+                    {selectedTask.estimatedHours > 0 ? `${selectedTask.estimatedHours}小时` : ''}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                onClick={handleCloseExportModal}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleActualExport}
-                className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
-                导出
-              </button>
+
+            {/* 必填反馈 */}
+            {selectedTask.requiredFeedback && selectedTask.requiredFeedback.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">必填反馈</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTask.requiredFeedback.map(fb => (
+                    <span key={fb} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                      {fb === 'gps' && '位置打卡'}
+                      {fb === 'material' && '物资扫码'}
+                      {fb === 'photo_before' && '作业前照片'}
+                      {fb === 'photo_after' && '作业后照片'}
+                      {fb === 'voice' && '语音备注'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 进度 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${selectedTask.progress === 100 ? 'bg-green-500' : selectedTask.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    style={{ width: `${selectedTask.progress}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-900">{selectedTask.progress}%</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* SOP文件查看弹窗 */}
+      <Modal
+        isOpen={showSopModal}
+        onClose={() => setShowSopModal(false)}
+        title={`作业标准文件 - ${selectedSopTask?.id || ''}`}
+        size="lg"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-between">
+            <button
+              onClick={() => {
+                if (selectedSopTask?.sopContent) {
+                  const blob = new Blob([selectedSopTask.sopContent], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `任务SOP_${selectedSopTask.id}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              下载文件
+            </button>
+            <button
+              onClick={() => setShowSopModal(false)}
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              关闭
+            </button>
+          </div>
+        }
+      >
+        {selectedSopTask && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="mb-3">
+              <span className="text-sm font-medium text-gray-700">任务类型：</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {selectedSopTask.types.map(t => {
+                  const typeInfo = taskTypes.find(tt => tt.value === t);
+                  return (
+                    <span
+                      key={t}
+                      className={`px-2 py-1 rounded text-xs text-white ${typeInfo?.color || 'bg-gray-500'}`}
+                    >
+                      {typeInfo?.label || t}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{selectedSopTask.sopContent || '暂无SOP内容'}</pre>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* 智能推荐模态框 */}
       {showRecommendModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style={{ transform: recommendModalMaximized ? 'none' : undefined }}>
+          <div
+            ref={recommendModalRef}
+            className="bg-white rounded-xl shadow-2xl flex flex-col"
+            style={{
+              position: recommendModalMaximized ? 'fixed' : 'relative',
+              left: recommendModalMaximized ? 20 : undefined,
+              top: recommendModalMaximized ? 20 : undefined,
+              width: recommendModalMaximized ? `calc(100vw - 40px)` : recommendModalSize.width,
+              height: recommendModalMaximized ? `calc(100vh - 40px)` : recommendModalSize.height,
+              maxWidth: 'none',
+              transform: recommendModalMaximized ? 'none' : `translate(${recommendModalPosition.x}px, ${recommendModalPosition.y}px)`,
+              minWidth: 800,
+              minHeight: 500,
+            }}
+          >
+            {/* 顶部标题栏 - emerald配色，可拖动 */}
+            <div
+              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-t-xl flex items-center justify-between cursor-move flex-shrink-0"
+              onMouseDown={handleRecommendModalDragStart}
+            >
               <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-purple-500" />
-                <h3 className="text-lg font-semibold text-gray-900">智能推荐结果</h3>
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                  {recommendations.length} 条推荐
+                <Sparkles className="w-5 h-5 text-white" />
+                <h3 className="text-lg font-semibold text-white">智能推荐结果</h3>
+                <span className="px-2 py-0.5 bg-white/20 text-white text-xs rounded-full">
+                  {recommendationStats.total} 条推荐
                 </span>
+                {recommendationStats.urgent > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full animate-pulse">
+                    {recommendationStats.urgent} 条紧急
+                  </span>
+                )}
               </div>
-              <button onClick={() => setShowRecommendModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleRecommendModalMaximize}
+                  className="p-1.5 hover:bg-white/20 rounded text-white/90 hover:text-white transition-colors"
+                  title={recommendModalMaximized ? '还原' : '最大化'}
+                >
+                  {recommendModalMaximized ? <Minimize2 className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedRecommendations([]);
+                    setShowRecommendModal(false);
+                    setRecommendModalMaximized(false);
+                  }}
+                  className="p-1.5 hover:bg-white/20 rounded text-white/90 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6">
+            {/* 内容区域 */}
+            <div className="flex-1 overflow-y-auto p-6">
               {recommendations.length === 0 ? (
                 <div className="text-center py-12">
                   <Sparkles className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">暂无推荐任务</p>
-                  <p className="text-gray-400 text-sm mt-1">所有温室/大田任务安排合理，无需额外推荐</p>
+                  <p className="text-gray-400 text-sm mt-1">所有任务区域任务安排合理，无需额外推荐</p>
                 </div>
               ) : (
                 <>
+                  {/* 刷新推荐按钮 */}
+                  <div className="mb-4 flex items-center">
+                    <button
+                      onClick={refreshRecommendations}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      刷新推荐
+                    </button>
+                  </div>
+
                   {/* 表格 */}
                   <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="px-4 py-3 text-left" onClick={(e) => e.stopPropagation()}>
+                    <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-sm font-semibold w-12" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedRecommendations.length === recommendations.length && recommendations.length > 0}
@@ -2149,29 +2656,31 @@ export default function TaskDispatchPage() {
                               e.stopPropagation();
                               e.target.checked ? handleSelectAllRecommendations() : handleSelectNoneRecommendations();
                             }}
-                            className="w-4 h-4 text-purple-600 rounded cursor-pointer"
+                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                           />
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">温室/大田</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作物</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">推荐任务</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">推荐人</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">建议日期</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">优先级</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">批次</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">推荐任务</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">推荐人</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">匹配度</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">建议日期</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">评分</th>
+                        <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-300">
                       {recommendations.map(rec => (
                         <tr
                           key={rec.id}
                           onClick={() => handleToggleRecommendation(rec.id)}
-                          className={`border-b border-gray-100 cursor-pointer ${
-                            selectedRecommendations.includes(rec.id) ? 'bg-purple-50' : 'hover:bg-gray-50'
-                          } ${
+                          className={`hover:bg-blue-100 cursor-pointer transition-colors ${
                             rec.priority === 'high' ? 'bg-red-50' : rec.priority === 'medium' ? 'bg-yellow-50' : ''
                           }`}
                         >
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={selectedRecommendations.includes(rec.id)}
@@ -2179,12 +2688,36 @@ export default function TaskDispatchPage() {
                                 e.stopPropagation();
                                 handleToggleRecommendation(rec.id);
                               }}
-                              className="w-4 h-4 text-purple-600 rounded cursor-pointer"
+                              className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                             />
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{rec.greenhouse}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{rec.crop}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-3">
+                            {/* 来源类型标签 */}
+                            {rec.sourceType === 'env_alert' && (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded" title={rec.sourceDescription}>
+                                🔥环境
+                              </span>
+                            )}
+                            {rec.sourceType === 'pest_alert' && (
+                              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded" title={rec.sourceDescription}>
+                                🐛病虫害
+                              </span>
+                            )}
+                            {rec.sourceType === 'stage_task' && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded" title={rec.sourceDescription}>
+                                🌱阶段
+                              </span>
+                            )}
+                            {rec.sourceType === 'periodic' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded" title={rec.sourceDescription}>
+                                📅周期
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm font-medium text-gray-900">{rec.greenhouse}</td>
+                          <td className="px-3 py-3 text-sm text-gray-600">{rec.crop}</td>
+                          <td className="px-3 py-3 text-xs text-gray-500">{rec.batchCode || '-'}</td>
+                          <td className="px-3 py-3">
                             <div className="flex flex-wrap gap-1">
                               {rec.recommendedTasks.map((task, idx) => (
                                 <span
@@ -2196,9 +2729,39 @@ export default function TaskDispatchPage() {
                               ))}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{rec.assignee}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{rec.suggestedDate}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-sm text-gray-600">
+                            <div>{rec.assignee}</div>
+                            {rec.alternatives.length > 0 && (
+                              <div className="text-xs text-gray-400">
+                                备选: {rec.alternatives.slice(0, 2).map(a => a.name).join(', ')}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm">
+                            <span className={`font-medium ${
+                              rec.matchScore >= 80 ? 'text-green-600' :
+                              rec.matchScore >= 60 ? 'text-yellow-600' : 'text-gray-600'
+                            }`}>
+                              {rec.matchScore}分
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600">
+                            <div>{rec.suggestedDate}</div>
+                            {rec.latestDate !== rec.suggestedDate && (
+                              <div className="text-xs text-red-500">
+                                最晚: {rec.latestDate}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm">
+                            <span className={`font-medium ${
+                              rec.priorityScore >= 80 ? 'text-red-600' :
+                              rec.priorityScore >= 60 ? 'text-orange-600' : 'text-gray-600'
+                            }`}>
+                              {rec.priorityScore}分
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
                             {rec.priority === 'high' && (
                               <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">
                                 高
@@ -2219,21 +2782,57 @@ export default function TaskDispatchPage() {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* 详细原因展示 */}
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">推荐详情</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {recommendations.filter(rec => selectedRecommendations.includes(rec.id)).map(rec => (
+                        <div key={rec.id} className="bg-emerald-50 rounded-lg p-3 text-sm border border-emerald-100">
+                          <div className="font-medium text-emerald-800 mb-1">
+                            {rec.greenhouse} - {rec.crop}
+                          </div>
+                          <div className="text-emerald-600 text-xs mb-2">{rec.sourceDescription}</div>
+                          <div className="space-y-1">
+                            <div className="flex items-start">
+                              <span className="text-emerald-600 w-16 flex-shrink-0">原因:</span>
+                              <span className="text-gray-700">{rec.reason}</span>
+                            </div>
+                            {rec.reasonSecondary.map((reason, idx) => (
+                              <div key={idx} className="flex items-start">
+                                <span className="text-emerald-600 w-16 flex-shrink-0"></span>
+                                <span className="text-gray-600 text-xs">{reason}</span>
+                              </div>
+                            ))}
+                            {rec.evidence.length > 0 && (
+                              <div className="flex items-start">
+                                <span className="text-emerald-600 w-16 flex-shrink-0">依据:</span>
+                                <span className="text-gray-600 text-xs">
+                                  {rec.evidence.map(e => `${e.label}:${e.value}`).join(', ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 flex justify-between">
+            {/* 底部操作栏 */}
+            <div className="p-4 border-t border-gray-200 flex justify-between bg-gray-50 rounded-b-xl flex-shrink-0">
               <div className="flex gap-2">
                 <button
                   onClick={handleSelectAllRecommendations}
-                  className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  className="h-10 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
                 >
                   全选
                 </button>
                 <button
                   onClick={handleSelectNoneRecommendations}
-                  className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  className="h-10 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
                 >
                   全不选
                 </button>
@@ -2243,8 +2842,9 @@ export default function TaskDispatchPage() {
                   onClick={() => {
                     setSelectedRecommendations([]);
                     setShowRecommendModal(false);
+                    setRecommendModalMaximized(false);
                   }}
-                  className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  className="h-10 px-6 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
                 >
                   取消
                 </button>
@@ -2261,6 +2861,41 @@ export default function TaskDispatchPage() {
                 </button>
               </div>
             </div>
+
+            {/* 右下角缩放拖动把手 */}
+            {!recommendModalMaximized && (
+              <div
+                className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-center justify-center text-gray-400 hover:text-gray-600"
+                style={{ resize: 'both' }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const startX = e.clientX;
+                  const startY = e.clientY;
+                  const startWidth = recommendModalSize.width;
+                  const startHeight = recommendModalSize.height;
+
+                  const handleResize = (moveEvent: MouseEvent) => {
+                    const deltaX = moveEvent.clientX - startX;
+                    const deltaY = moveEvent.clientY - startY;
+                    setRecommendModalSize({
+                      width: Math.max(800, startWidth + deltaX),
+                      height: Math.max(500, startHeight + deltaY),
+                    });
+                  };
+
+                  const handleResizeEnd = () => {
+                    document.removeEventListener('mousemove', handleResize);
+                    document.removeEventListener('mouseup', handleResizeEnd);
+                  };
+
+                  document.addEventListener('mousemove', handleResize);
+                  document.addEventListener('mouseup', handleResizeEnd);
+                }}
+              >
+                <Move className="w-3 h-3" />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2329,7 +2964,7 @@ export default function TaskDispatchPage() {
                     请确保CSV文件包含以下列（按顺序）：
                   </p>
                   <code className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                    任务类型,温室/大田,作物,负责人,计划开始时间,计划结束时间,优先级
+                    任务类型,任务区域,作物,负责人,计划开始时间,计划结束时间,优先级
                   </code>
                   <p className="text-xs text-gray-500 mt-2">
                     示例：irrigation,1号棚,番茄,张三,2024-03-20 08:00,2024-03-20 12:00,normal
@@ -2351,7 +2986,7 @@ export default function TaskDispatchPage() {
                       <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                         <tr>
                           <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">温室/大田</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
                           <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">作物</th>
                           <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
                           <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">计划开始时间</th>
@@ -2415,19 +3050,6 @@ export default function TaskDispatchPage() {
           </div>
         </div>
       )}
-
-      {/* 新增任务弹窗 */}
-      <CreateTaskModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateTask}
-        formData={newTask}
-        errors={{}}
-        onFormChange={(field, value) => setNewTask(prev => ({ ...prev, [field]: value }))}
-        fields={fields}
-        staff={staff}
-        taskTypes={taskTypes.map(t => ({ value: t.value, label: t.label }))}
-      />
 
       {/* 批量编辑弹窗 */}
       <BatchEditModal

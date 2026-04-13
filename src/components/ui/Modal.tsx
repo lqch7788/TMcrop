@@ -14,6 +14,10 @@ interface ModalProps {
   footer?: React.ReactNode;
   headerAction?: React.ReactNode;
   bodyClassName?: string;
+  showMaximize?: boolean;
+  enableDrag?: boolean;
+  enableResize?: boolean;
+  bottomContent?: React.ReactNode;
 }
 
 const sizeClasses = {
@@ -46,7 +50,11 @@ export function Modal({
   showFooter = true,
   footer,
   headerAction,
-  bodyClassName = ''
+  bodyClassName = '',
+  showMaximize = true,
+  enableDrag = true,
+  enableResize = true,
+  bottomContent
 }: ModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -90,15 +98,15 @@ export function Modal({
 
   // Handle dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only allow dragging from header
-    if ((e.target as HTMLElement).closest('.modal-header')) {
+    // Only allow dragging from header when enableDrag is true
+    if (enableDrag && (e.target as HTMLElement).closest('.modal-header')) {
       setIsDragging(true);
       setDragOffset({
         x: e.clientX - position.x,
         y: e.clientY - position.y
       });
     }
-  }, [position]);
+  }, [position, enableDrag]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -174,13 +182,14 @@ export function Modal({
 
   // Resize handle mouse down
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, direction: string) => {
+    if (!enableResize) return;
     e.stopPropagation();
     setIsResizing(true);
     setResizeDirection(direction);
     setInitialSize(modalSize);
     setInitialMouse({ x: e.clientX, y: e.clientY });
     setInitialPosition(position);
-  }, [modalSize, position]);
+  }, [modalSize, position, enableResize]);
 
   const handleSubmit = async () => {
     if (onSubmit) {
@@ -204,51 +213,61 @@ export function Modal({
 
   if (!isOpen) return null;
 
+  // 当拖动和调整大小都禁用时，使用居中布局
+  const useCenteredLayout = !enableDrag && !enableResize && !isMaximized;
+
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className={`absolute inset-0 bg-black/50 ${useCenteredLayout ? '' : 'backdrop-blur-sm'}`}
         onClick={onClose}
       />
 
       {/* Modal Container - Draggable & Resizable */}
       <div
         ref={modalRef}
-        className={`absolute bg-white rounded-xl shadow-xl flex flex-col ${isDragging || isResizing ? '' : 'transition-all duration-200'}`}
-        style={{
+        className={`bg-white rounded-xl shadow-xl flex flex-col ${useCenteredLayout ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'absolute'} ${isDragging || isResizing ? '' : 'transition-all duration-200'}`}
+        style={useCenteredLayout ? {
+          width: modalSize.width,
+          maxHeight: '90vh'
+        } : {
           left: position.x,
           top: position.y,
           width: isMaximized ? 'calc(100vw - 32px)' : modalSize.width,
           height: isMaximized ? 'calc(100vh - 32px)' : modalSize.height,
           maxHeight: '90vh'
         }}
-        onMouseDown={handleMouseDown}
+        onMouseDown={useCenteredLayout ? undefined : handleMouseDown}
       >
         {/* Header - Double click to maximize */}
         <div
-          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl cursor-move select-none ${isDragging ? 'ring-2 ring-white/30 shadow-lg' : ''}`}
+          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl ${enableDrag ? 'cursor-move' : 'cursor-default'} select-none ${isDragging ? 'ring-2 ring-white/30 shadow-lg' : ''}`}
           onDoubleClick={handleMaximize}
         >
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <div className="flex items-center gap-2">
             {headerAction}
-            {/* Maximize/Restore Button */}
-            <button
-              onClick={handleMaximize}
-              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors group relative"
-              title={isMaximized ? '还原窗口' : '最大化窗口'}
-            >
-              {isMaximized ? (
-                <Minimize2 className="w-4 h-4 text-white" />
-              ) : (
-                <Maximize2 className="w-4 h-4 text-white" />
-              )}
-              {/* Tooltip */}
-              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                {isMaximized ? '还原窗口' : '最大化窗口'}
-              </span>
-            </button>
+            {showMaximize && (
+              <>
+                {/* Maximize/Restore Button */}
+                <button
+                  onClick={handleMaximize}
+                  className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors group relative"
+                  title={isMaximized ? '还原窗口' : '最大化窗口'}
+                >
+                  {isMaximized ? (
+                    <Minimize2 className="w-4 h-4 text-white" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4 text-white" />
+                  )}
+                  {/* Tooltip */}
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    {isMaximized ? '还原窗口' : '最大化窗口'}
+                  </span>
+                </button>
+              </>
+            )}
             {/* Close Button */}
             <button
               onClick={onClose}
@@ -260,7 +279,7 @@ export function Modal({
         </div>
 
         {/* Resize Handles */}
-        {!isMaximized && (
+        {!isMaximized && enableResize && (
           <>
             {/* Corner handles - Enhanced visibility */}
             <div
@@ -300,9 +319,16 @@ export function Modal({
         )}
 
         {/* Body - Responsive grid layout */}
-        <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-4 ${bodyClassName}`}>
+        <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-4 flex flex-col ${bodyClassName}`}>
           {children}
         </div>
+
+        {/* Fixed Bottom Content */}
+        {bottomContent && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
+            {bottomContent}
+          </div>
+        )}
 
         {/* Footer */}
         {showFooter && (

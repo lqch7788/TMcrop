@@ -171,9 +171,9 @@ export function TasksTable({
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
-                      {task.assigneeName.charAt(0)}
+                      {(task.assigneeName || task.assignee || '-').charAt(0)}
                     </div>
-                    <span className="text-sm text-gray-700">{task.assigneeName}</span>
+                    <span className="text-sm text-gray-700">{task.assigneeName || task.assignee || '-'}</span>
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">

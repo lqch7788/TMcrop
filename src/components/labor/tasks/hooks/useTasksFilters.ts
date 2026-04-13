@@ -49,9 +49,12 @@ export function useTasksFilters({ tasks }: UseTasksFiltersProps) {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
+      // 添加空值保护，确保 title 和 taskCode 存在
+      const title = task.title || '';
+      const taskCode = task.taskCode || '';
       const matchSearch =
-        task.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        task.taskCode.toLowerCase().includes(filters.searchTerm.toLowerCase());
+        title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        taskCode.toLowerCase().includes(filters.searchTerm.toLowerCase());
       const matchType = filters.typeFilter === 'all' || task.type === filters.typeFilter;
       const matchStatus = filters.statusFilter === 'all' || task.status === filters.statusFilter;
       const matchMode = filters.modeFilter === 'all' || task.mode === filters.modeFilter;
