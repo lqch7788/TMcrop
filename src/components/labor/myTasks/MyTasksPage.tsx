@@ -3,381 +3,148 @@
  * 员工查看自己被分派的任务，并完成任务
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { Eye, CheckCircle, Download } from 'lucide-react';
-import { Task } from '../../../types';
+import { useState, useEffect } from 'react';
+import { Edit, FileText, CheckCircle } from 'lucide-react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
-import { TaskStatusBadge } from '../tasks/TaskStatusBadge';
-import { TaskPriorityBadge } from '../tasks/TaskPriorityBadge';
-import { TaskModeBadge } from '../tasks/TaskModeBadge';
+import { Modal } from '../../ui/Modal';
+import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
+import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData';
 
-// 模拟任务数据（分配给陆启闯的任务）
-const INITIAL_MY_TASKS: Task[] = [
-  {
-    id: 'MYTASK-001',
-    taskCode: 'TK20260408-001',
-    title: '【问题处理】番茄叶片发黄，可能是缺氮肥',
-    type: 'scouting',
-    typeName: '问题处理',
-    priority: 'high',
-    status: 'pending',
-    batchId: '',
-    batchCode: '',
-    greenhouseId: 'G001',
-    greenhouseName: '玻璃温室A区',
-    mode: 'glass',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U002',
-    assignerName: '李明辉',
-    dueDate: '2026-04-12',
-    workDuration: 2,
-    requiredMaterials: [],
-    description: '问题描述：部分叶片发黄，可能是缺氮肥\n严重程度：严重\n巡检时间：2026-04-08 09:00\n温室：玻璃温室A区\n作物：番茄',
-    actualWorkload: 0,
-    sourceProblemId: 1,
-  },
-  {
-    id: 'MYTASK-002',
-    taskCode: 'TK20260409-002',
-    title: '【问题处理】黄瓜叶片发现少量蚜虫',
-    type: 'spraying',
-    typeName: '问题处理',
-    priority: 'medium',
-    status: 'pending',
-    batchId: '',
-    batchCode: '',
-    greenhouseId: 'G002',
-    greenhouseName: '日光温室1号',
-    mode: 'solar',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U003',
-    assignerName: '王建国',
-    dueDate: '2026-04-14',
-    workDuration: 1.5,
-    requiredMaterials: [],
-    description: '问题描述：黄瓜叶片发现少量蚜虫\n严重程度：轻微\n巡检时间：2026-04-09 14:00\n温室：日光温室1号\n作物：黄瓜',
-    actualWorkload: 0,
-    sourceProblemId: 2,
-  },
-  {
-    id: 'MYTASK-003',
-    taskCode: 'TK20260410-003',
-    title: '【例行巡田】玻璃温室A区番茄生长检查',
-    type: 'scouting',
-    typeName: '巡田',
-    priority: 'medium',
-    status: 'in_progress',
-    batchId: 'B001',
-    batchCode: 'FQ2026-001',
-    greenhouseId: 'G001',
-    greenhouseName: '玻璃温室A区',
-    mode: 'glass',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U002',
-    assignerName: '李明辉',
-    dueDate: '2026-04-10',
-    workDuration: 1,
-    requiredMaterials: [],
-    description: '对玻璃温室A区的番茄进行例行生长检查，记录株高、叶片数，病虫害情况',
-    actualWorkload: 0,
-  },
-  {
-    id: 'MYTASK-004',
-    taskCode: 'TK20260410-004',
-    title: '【采收任务】日光温室2号草莓采收',
-    type: 'harvest',
-    typeName: '采收',
-    priority: 'high',
-    status: 'pending',
-    batchId: 'B003',
-    batchCode: 'FQ2026-003',
-    greenhouseId: 'G003',
-    greenhouseName: '日光温室2号',
-    mode: 'solar',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U003',
-    assignerName: '王建国',
-    dueDate: '2026-04-11',
-    workDuration: 3,
-    requiredMaterials: [],
-    description: '日光温室2号草莓已达采收标准，预计产量200公斤，需按时完成采收',
-    actualWorkload: 0,
-  },
-  {
-    id: 'MYTASK-005',
-    taskCode: 'TK20260409-005',
-    title: '【浇水任务】大田A区小麦灌溉',
-    type: 'irrigation',
-    typeName: '浇水',
-    priority: 'low',
-    status: 'completed',
-    batchId: 'B005',
-    batchCode: 'FQ2026-005',
-    greenhouseId: 'G011',
-    greenhouseName: '大田A区',
-    mode: 'field',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U004',
-    assignerName: '赵文静',
-    dueDate: '2026-04-09',
-    workDuration: 2,
-    requiredMaterials: [],
-    description: '大田A区小麦需要灌溉，保持土壤湿润',
-    actualWorkload: 2,
-  },
-  {
-    id: 'MYTASK-006',
-    taskCode: 'TK20260407-006',
-    title: '【施肥任务】玻璃温室B区番茄追肥',
-    type: 'fertilization',
-    typeName: '施肥',
-    priority: 'medium',
-    status: 'completed',
-    batchId: 'B002',
-    batchCode: 'FQ2026-002',
-    greenhouseId: 'G002',
-    greenhouseName: '玻璃温室B区',
-    mode: 'glass',
-    assigneeId: 'U001',
-    assigneeName: '陆启闯',
-    assignerId: 'U002',
-    assignerName: '李明辉',
-    dueDate: '2026-04-07',
-    workDuration: 1.5,
-    requiredMaterials: [{ materialId: 'MT001', materialName: '水溶肥', requiredQuantity: 5, unit: '袋' }],
-    description: '玻璃温室B区番茄进入结果期，需要追施高钾复合肥',
-    actualWorkload: 1.5,
-  },
+// 任务类型定义
+const taskTypes = [
+  { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
+  { value: 'irrigation', label: '灌溉', color: 'bg-blue-500' },
+  { value: 'pruning', label: '修剪', color: 'bg-purple-500' },
+  { value: 'pesticide', label: '植保', color: 'bg-red-500' },
+  { value: 'rootIrrigation', label: '灌根', color: 'bg-cyan-500' },
+  { value: 'planting', label: '定植', color: 'bg-lime-500' },
+  { value: 'harvest', label: '采收', color: 'bg-orange-500' },
+  { value: 'weeding', label: '除草', color: 'bg-emerald-500' },
+  { value: 'other', label: '其他', color: 'bg-gray-500' },
 ];
 
-// 导出格式弹窗
-interface ExportFormatModalProps {
-  isOpen: boolean;
-  exportFormat: string;
-  selectedCount: number;
-  onFormatChange: (format: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-}
+// 状态映射
+const statusMap: Record<string, { bg: string; color: string; label: string }> = {
+  pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待开始' },
+  in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
+  completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
+  waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
+  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已驳回' },
+};
 
-function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange, onClose, onConfirm }: ExportFormatModalProps) {
-  if (!isOpen) return null;
+// 优先级映射
+const priorityMap: Record<string, { color: string; label: string }> = {
+  urgent: { color: 'text-red-500', label: '紧急' },
+  high: { color: 'text-orange-500', label: '高' },
+  normal: { color: 'text-gray-500', label: '普通' },
+};
 
-  const exportFormats = [
-    { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
-    { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
-    { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
-  ];
+// 获取任务类型颜色
+const getTypeColor = (type: string): string => {
+  const taskType = taskTypes.find(t => t.value === type);
+  return taskType?.color || 'bg-gray-500';
+};
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">×</button>
-          </div>
-          <div className="p-6">
-            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
-            <div className="space-y-3">
-              {exportFormats.map((format) => (
-                <label
-                  key={format.value}
-                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                    exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={format.value}
-                    checked={exportFormat === format.value}
-                    onChange={(e) => onFormatChange(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                    <p className="text-xs text-gray-500">{format.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button onClick={onClose} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-            <button onClick={onConfirm} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">导出</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// 获取任务类型标签
+const getTypeLabel = (type: string): string => {
+  const taskType = taskTypes.find(t => t.value === type);
+  return taskType?.label || type;
+};
 
 export function MyTasksPage() {
-  // 从 localStorage 读取任务
-  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
+  // 从 localStorage 读取任务（用于进度更新等操作）
+  const [tasks, setTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.MY_TASKS, []);
 
   // 获取当前用户名
-  const currentUserName = localStorage.getItem('username') || '陆启闯';
+  const currentUserName = localStorage.getItem('username') || '虚竹';
 
-  // 问题更新 hook
-  const { updateProblem } = usePersistentProblems();
-
-  // 导出状态
-  const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState('excel');
-
-  // 初始化模拟数据（仅在没有数据时）
-  useEffect(() => {
-    if (tasks.length === 0) {
-      setTasks(INITIAL_MY_TASKS);
-    }
-  }, [tasks.length, setTasks]);
-
-  // 筛选当前用户的任务
-  const myTasks = useMemo(() => {
-    return tasks.filter(task => task.assigneeName === currentUserName);
-  }, [tasks, currentUserName]);
+  // 使用任务数据（优先从 localStorage 读取，如果没有则使用 taskDispatchTasks）
+  const myTasks = tasks.length > 0 ? tasks : taskDispatchTasks;
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
+
+  // 初始化数据到 localStorage
+  useEffect(() => {
+    // 如果 localStorage 为空，则使用 taskDispatchTasks 初始化
+    if (tasks.length === 0) {
+      setTasks(taskDispatchTasks);
+    }
+  }, [tasks.length, setTasks]);
+
+  // 计算分页
   const totalPages = Math.ceil(myTasks.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, myTasks.length);
   const paginatedTasks = myTasks.slice(startIndex, endIndex);
 
   // 详情弹窗状态
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskDispatchTask | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSopModal, setShowSopModal] = useState(false);
+  const [selectedSopTask, setSelectedSopTask] = useState<TaskDispatchTask | null>(null);
 
-  // 打开详情弹窗
-  const openDetailModal = (task: Task) => {
+  // 详情弹窗引用（用于传递正确的数据）
+  const openDetailModal = (task: TaskDispatchTask) => {
     setSelectedTask(task);
-    setIsDetailModalOpen(true);
+    setShowDetailModal(true);
   };
 
-  // 关闭详情弹窗
-  const closeDetailModal = () => {
-    setIsDetailModalOpen(false);
-    setSelectedTask(null);
+  // 打开SOP弹窗
+  const openSopModal = (task: TaskDispatchTask, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedSopTask(task);
+    setShowSopModal(true);
+  };
+
+  // 更新任务进度
+  const handleProgressChange = (taskId: string, progress: number) => {
+    setTasks(prev => prev.map(t =>
+      t.id === taskId ? { ...t, progress } : t
+    ));
+    // 更新当前选中的任务显示
+    if (selectedTask && selectedTask.id === taskId) {
+      setSelectedTask(prev => prev ? { ...prev, progress } : null);
+    }
+    // 如果进度100%，自动更新状态为已完成
+    if (progress === 100) {
+      setTasks(prev => prev.map(t =>
+        t.id === taskId ? { ...t, status: 'completed' } : t
+      ));
+    }
   };
 
   // 确认完成
-  const handleConfirmComplete = (task: Task) => {
-    // 更新任务状态
+  const handleConfirmComplete = (task: TaskDispatchTask) => {
     setTasks(prev => prev.map(t =>
-      t.id === task.id
-        ? { ...t, status: 'completed' as const }
-        : t
+      t.id === task.id ? { ...t, status: 'completed', progress: 100 } : t
     ));
-
-    // 如果是问题来源的任务，自动更新问题的处理结果
-    if (task.sourceProblemId) {
-      updateProblem(task.sourceProblemId, {
-        status: '已处理',
-        handleDate: new Date().toISOString().slice(0, 10),
-        handleResult: `任务已完成：${task.title}`,
-      });
-    }
-
-    closeDetailModal();
+    setShowDetailModal(false);
+    setSelectedTask(null);
   };
 
-  // 导出相关操作
-  const handleExportClick = () => {
-    setExportMode(true);
-    setSelectedRows([]);
+  // 渲染任务类型单元格
+  const renderTypeCell = (task: TaskDispatchTask) => {
+    const types = task.types || [];
+    return (
+      <div className="flex flex-wrap gap-1 items-center">
+        {types.slice(0, 2).map((typeValue: string, idx: number) => {
+          const typeLabel = getTypeLabel(typeValue);
+          return typeLabel === '其他' ? (
+            <span key={idx} className="text-orange-500 text-xs">其他</span>
+          ) : (
+            <span key={idx} className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(typeValue)}`}>
+              {typeLabel}
+            </span>
+          );
+        })}
+        {types.length > 2 && (
+          <span className="text-xs text-gray-500">+{types.length - 2}</span>
+        )}
+      </div>
+    );
   };
-
-  const handleCancelExport = () => {
-    setExportMode(false);
-    setSelectedRows([]);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedRows.length === myTasks.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(myTasks.map(t => t.id));
-    }
-  };
-
-  const handleSelectRow = (id: string) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-    } else {
-      setSelectedRows([...selectedRows, id]);
-    }
-  };
-
-  const handleConfirmExport = () => {
-    if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
-      return;
-    }
-    setShowExportModal(true);
-  };
-
-  const handleDoExport = () => {
-    const selectedData = myTasks.filter(t => selectedRows.includes(t.id));
-    const headers = ['任务编号', '任务标题', '任务类型', '作业区域', '执行人', '派单人', '截止日期', '优先级', '状态'];
-    const exportData = selectedData.map(row => ({
-      '任务编号': row.taskCode,
-      '任务标题': row.title,
-      '任务类型': row.typeName,
-      '作业区域': row.greenhouseName,
-      '执行人': row.assigneeName,
-      '派单人': row.assignerName,
-      '截止日期': row.dueDate,
-      '优先级': row.priority,
-      '状态': row.status,
-    }));
-
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else if (exportFormat === 'excel') {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    } else if (exportFormat === 'word') {
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-word;charset=utf-8';
-      extension = 'doc';
-    }
-
-    const fileName = `我的任务_${new Date().toISOString().slice(0, 10)}.${extension}`;
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    setExportMode(false);
-    setSelectedRows([]);
-    setShowExportModal(false);
-  };
-
-  const allSelected = selectedRows.length === myTasks.length && myTasks.length > 0;
 
   return (
     <div className="space-y-4">
@@ -388,177 +155,141 @@ export function MyTasksPage() {
           <div>
             <div className="text-sm font-medium text-blue-800">我的任务</div>
             <div className="text-sm text-blue-600 mt-1">
-              这里显示所有分配给您的任务。完成任务后，问题状态会自动更新。
+              这里显示所有分配给您的任务。完成任务后，可通过进度滑块更新任务进度。
             </div>
           </div>
         </div>
       </div>
 
       {/* 任务列表 */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">我的任务列表</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={handleExportClick}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
-          <table className="w-full min-w-[1400px]">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1200px]">
+            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
               <tr>
-                {exportMode && (
-                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                  </th>
-                )}
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务标题</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">类型备注</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业区域</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物备注</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">执行人</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计天数</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计小时</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">工作制</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需物资</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需工具</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-300">
-              {paginatedTasks.length === 0 ? (
+            <tbody className="divide-y divide-gray-300">
+              {myTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={exportMode ? 19 : 18} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
                   </td>
                 </tr>
               ) : (
-                paginatedTasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-blue-100 transition-colors">
-                    {exportMode && (
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(task.id)}
-                          onChange={() => handleSelectRow(task.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                      </td>
-                    )}
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{task.taskCode}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-start gap-2">
-                        <TaskModeBadge mode={task.mode} />
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{task.title}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.typeName}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-500">{(task as any).typeRemarks || '-'}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.greenhouseName}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{(task as any).crop || '-'}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-500">{(task as any).cropRemarks || '-'}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
-                          {task.assigneeName.charAt(0)}
-                        </div>
-                        <span className="text-sm text-gray-700">{task.assigneeName}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{(task as any).planStart || '-'}</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        {task.dueDate}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{(task as any).estimatedDays || 0}天</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{(task as any).estimatedHours || task.workDuration}小时</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{(task as any).workHoursPerDay || 8}时/天</span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <TaskPriorityBadge priority={task.priority} />
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <TaskStatusBadge status={task.status} />
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
-                        {(task as any).materials?.length > 0
-                          ? (task as any).materials.map((m: any) => m.name).join(', ')
-                          : '-'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
-                        {(task as any).tools?.length > 0
-                          ? (task as any).tools.map((t: any) => t.name).join(', ')
-                          : '-'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                paginatedTasks.map((task) => {
+                  const types = task.types || [];
+                  return (
+                    <tr key={task.id} className="hover:bg-blue-50 transition-colors">
+                      <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
                         <button
                           onClick={() => openDetailModal(task)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          title="查看详情"
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                          title="点击查看详情"
                         >
-                          <Eye className="w-4 h-4" />
+                          {task.id}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {renderTypeCell(task)}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {task.field || '-'}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {task.crop || '-'}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className="text-sm text-gray-700">陆启闯</span>
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {task.planStart?.split(' ')[0] || '-'}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {task.planEnd || '-'}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) || 0}小时
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : (task.progress || 0) > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                              style={{ width: `${task.progress || 0}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500">{task.progress || 0}%</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className={`text-xs font-medium ${priorityMap[task.priority]?.color || 'text-gray-500'}`}>
+                          {priorityMap[task.priority]?.label || task.priority}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
+                          {statusMap[task.status]?.label || task.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={task.typeLabel || '-'}>
+                        {task.typeLabel || '-'}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {types.length >= 2 && task.sopContent ? (
+                          <button
+                            onClick={(e) => openSopModal(task, e)}
+                            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
+                          >
+                            <FileText className="w-3 h-3" />
+                            SOP文件
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <button
+                          onClick={() => openDetailModal(task)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+                          title="点击提交进度"
+                        >
+                          <Edit className="w-4 h-4" />
+                          提交进度
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>每页</span>
             <select
               value={pageSize}
-              onChange={(e) => setCurrentPage(1)}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
               className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value={10}>10条</option>
@@ -587,149 +318,260 @@ export function MyTasksPage() {
         </div>
       </div>
 
-      {/* 导出操作按钮栏 */}
-      {exportMode && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-3 flex items-center gap-4 z-40">
-          <span className="text-sm text-gray-600">
-            已选择 <strong className="text-emerald-600">{selectedRows.length}</strong> 项
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handleConfirmExport}
-              disabled={selectedRows.length === 0}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
-            >
-              确认导出
-            </button>
-            <button
-              onClick={handleCancelExport}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 详情弹窗 */}
-      {isDetailModalOpen && selectedTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
-            {/* 弹窗头部 */}
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-800">任务详情</h3>
+      <Modal
+        isOpen={showDetailModal && !!selectedTask}
+        onClose={() => { setShowDetailModal(false); setSelectedTask(null); }}
+        title={`任务详情 - ${selectedTask?.id || ''}`}
+        size="xl"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                // 提交当前进度并关闭弹窗
+                if (selectedTask) {
+                  handleProgressChange(selectedTask.id, selectedTask.progress || 0);
+                }
+                setShowDetailModal(false);
+                setSelectedTask(null);
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
+            >
+              提交
+            </button>
+            {selectedTask?.progress === 100 && (
               <button
-                onClick={closeDetailModal}
-                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                onClick={() => handleConfirmComplete(selectedTask!)}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600"
               >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                确认完成
               </button>
-            </div>
-
-            {/* 弹窗内容 */}
-            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
-              <div className="grid grid-cols-2 gap-6">
-                {/* 任务编号 */}
+            )}
+          </div>
+        }
+      >
+        {selectedTask && (
+          <div className="space-y-6">
+            {/* 基本信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">任务编号</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.taskCode}</p>
+                  <label className="text-xs text-gray-500">任务区域</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.field || '-'}</p>
                 </div>
-
-                {/* 任务类型 */}
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">任务类型</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.typeName}</p>
+                  <label className="text-xs text-gray-500">作物</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.crop || '-'}</p>
                 </div>
-
-                {/* 任务标题 */}
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">任务标题</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <TaskModeBadge mode={selectedTask.mode} />
-                    <p className="text-sm font-medium text-gray-900">{selectedTask.title}</p>
-                  </div>
-                </div>
-
-                {/* 作业区域 */}
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">作业区域</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.greenhouseName}</p>
+                  <label className="text-xs text-gray-500">负责人</label>
+                  <p className="font-semibold text-gray-900">陆启闯</p>
                 </div>
-
-                {/* 执行人 */}
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">执行人</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.assigneeName}</p>
-                </div>
-
-                {/* 派单人 */}
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">派单人</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.assignerName}</p>
-                </div>
-
-                {/* 截止时间 */}
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">截止时间</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{selectedTask.dueDate}</p>
-                </div>
-
-                {/* 优先级 */}
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">优先级</label>
-                  <div className="mt-1">
-                    <TaskPriorityBadge priority={selectedTask.priority} />
-                  </div>
-                </div>
-
-                {/* 状态 */}
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">状态</label>
-                  <div className="mt-1">
-                    <TaskStatusBadge status={selectedTask.status} />
-                  </div>
-                </div>
-
-                {/* 任务描述 */}
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">任务描述</label>
-                  <p className="text-sm text-gray-700 mt-1">{selectedTask.description || '-'}</p>
+                  <label className="text-xs text-gray-500">优先级</label>
+                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
+                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* 弹窗底部 */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
-              <button
-                onClick={closeDetailModal}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                关闭
-              </button>
-              {selectedTask.status !== 'completed' && (
-                <button
-                  onClick={() => handleConfirmComplete(selectedTask)}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  确认完成
-                </button>
+            {/* 任务类型 - 单一类型显示详细信息，多类型显示SOP下载 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>
+              {(selectedTask.types || []).length === 1 ? (
+                <TaskTypeConfigDisplay
+                  taskType={selectedTask.types[0]}
+                  configValues={selectedTask.typeConfig || {}}
+                />
+              ) : (
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm font-medium text-gray-700">作业标准文件</span>
+                  </div>
+                  {selectedTask.sopContent ? (
+                    <div className="bg-white rounded-lg p-3 border border-blue-100">
+                      <p className="text-sm text-gray-600 mb-2">已导入SOP文档</p>
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([selectedTask.sopContent || ''], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `任务SOP_${selectedTask.id}.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-1"
+                      >
+                        <FileText className="w-4 h-4" />
+                        下载SOP文件
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">暂无SOP文件</p>
+                  )}
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-2">已选择的操作类型：</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedTask.types || []).map((t: string) => {
+                        return (
+                          <span
+                            key={t}
+                            className={`px-2 py-1 rounded text-xs text-white ${getTypeColor(t)}`}
+                          >
+                            {getTypeLabel(t)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* 导出格式选择弹窗 */}
-      <ExportFormatModal
-        isOpen={showExportModal}
-        exportFormat={exportFormat}
-        selectedCount={selectedRows.length}
-        onFormatChange={setExportFormat}
-        onClose={() => setShowExportModal(false)}
-        onConfirm={handleDoExport}
-      />
+            {/* 所需物资 */}
+            {selectedTask.materials && selectedTask.materials.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-gray-200">
+                        <th className="text-left pb-2">物资名称</th>
+                        <th className="text-right pb-2">数量</th>
+                        <th className="text-right pb-2">单位</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTask.materials.map((m: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-100 last:border-0">
+                          <td className="py-2 text-gray-900">{m.name}</td>
+                          <td className="py-2 text-gray-900 text-right">{m.qty}</td>
+                          <td className="py-2 text-gray-500 text-right">{m.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 时间信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">计划开始</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.planStart || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">计划结束</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.planEnd || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">状态</label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || ''} ${statusMap[selectedTask.status]?.color || ''}`}>
+                      {statusMap[selectedTask.status]?.label || selectedTask.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">预计时长</label>
+                  <p className="font-semibold text-gray-900">
+                    {selectedTask.estimatedDays > 0 ? `${selectedTask.estimatedDays}天` : ''}
+                    {selectedTask.estimatedHours > 0 ? `${selectedTask.estimatedHours}小时` : ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 必填反馈 */}
+            {selectedTask.requiredFeedback && selectedTask.requiredFeedback.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">必填反馈</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTask.requiredFeedback.map((fb: string) => (
+                    <span key={fb} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                      {fb === 'gps' && '位置打卡'}
+                      {fb === 'material' && '物资扫码'}
+                      {fb === 'photo_before' && '作业前照片'}
+                      {fb === 'photo_after' && '作业后照片'}
+                      {fb === 'voice' && '语音备注'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 进度 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={selectedTask.progress || 0}
+                  onChange={(e) => handleProgressChange(selectedTask.id, parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                />
+                <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
+                  {selectedTask.progress || 0}%
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* SOP文件查看弹窗 */}
+      <Modal
+        isOpen={showSopModal}
+        onClose={() => { setShowSopModal(false); setSelectedSopTask(null); }}
+        title={`作业标准文件 - ${selectedSopTask?.id || ''}`}
+        size="lg"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowSopModal(false)}
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              关闭
+            </button>
+          </div>
+        }
+      >
+        {selectedSopTask && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="mb-3">
+              <span className="text-sm font-medium text-gray-700">任务类型：</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(selectedSopTask.types || []).map((t: string) => (
+                  <span
+                    key={t}
+                    className={`px-2 py-1 rounded text-xs text-white ${getTypeColor(t)}`}
+                  >
+                    {getTypeLabel(t)}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{selectedSopTask.sopContent || '暂无SOP内容'}</pre>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
