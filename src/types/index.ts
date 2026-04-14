@@ -64,6 +64,8 @@ export interface Task {
   images?: string[];
   // 问题来源关联
   sourceProblemId?: number;
+  // 任务进度（0-100）
+  progress?: number;
 }
 
 // 临时任务类型
@@ -167,6 +169,30 @@ export interface IoTSensor {
   lastUpdate: string;
 }
 
+// 设备数据（用于设备保养巡查）
+export interface Equipment {
+  id: string;
+  code: string;           // 设备编号 E001
+  name: string;            // 设备名称
+  type: string;            // 设备类型：水泵/电机/通风扇/卷帘机等
+  location: string;         // 安装位置
+  greenhouseId?: string;   // 所属温室
+  status: 'normal' | 'maintenance' | 'broken';
+  lastMaintenanceDate?: string;
+  nextMaintenanceDate?: string;
+}
+
+// 基础设施数据（用于基础设施巡检）
+export interface Infrastructure {
+  id: string;
+  code: string;           // 设施编号 I001
+  name: string;            // 设施名称
+  type: string;            // 类型：灌溉/排水/供电/房屋/道路
+  location: string;         // 位置描述
+  greenhouseId?: string;   // 所属温室
+  status: 'normal' | 'warning' | 'damaged';
+}
+
 export interface InspectionRecord {
   id: string;
   recordCode: string;
@@ -176,6 +202,7 @@ export interface InspectionRecord {
   greenhouseName: string;
   cropName: string;
   checkDate: string;
+  checkTime?: string;        // 监测时间
   cropStatus: string;
   plantHeight?: number;
   leafCount?: number;
@@ -186,6 +213,10 @@ export interface InspectionRecord {
   humidity: number;
   remarks: string;
   status: 'normal' | 'attention' | 'critical';
+  // 问题处理状态
+  issueStatus?: 'pending' | 'processing' | 'resolved';
+  // 巡田时长（分钟）
+  duration?: number;
   // 环境参数
   airTemperature?: number;
   airHumidity?: number;
@@ -195,6 +226,35 @@ export interface InspectionRecord {
   soilMoisture?: number;
   soilEc?: number;
   soilPh?: number;
+  // 数据闭环关联字段
+  relatedTaskId?: string;   // 关联任务ID
+  relatedTaskCode?: string; // 关联任务编号
+  // 关联批次
+  batchId?: string;
+  batchCode?: string;
+  // 巡查类型（扩展字段）
+  inspectionType?: 'farm' | 'equipment' | 'infrastructure' | 'other';
+  // 位置信息（二维码扫描）
+  locationCode?: string;
+  locationName?: string;
+  // 设备保养专用
+  equipmentId?: string;
+  equipmentName?: string;
+  // 基础设施巡检专用
+  infrastructureId?: string;
+  infrastructureName?: string;
+  // 问题分类（多选）
+  issueCategories?: string[];
+  // 快速勾选的问题
+  issuePresets?: string[];
+  // 问题描述
+  issueText?: string;
+  // 问题照片
+  issuePhotos?: string[];
+  // 反馈人员ID列表
+  feedbackUsers?: string[];
+  // 期望完成时间
+  expectedCompletion?: string;
 }
 
 export interface HarvestRecord {
@@ -216,6 +276,9 @@ export interface HarvestRecord {
   warehouseId: string;
   warehouseName: string;
   status: 'harvested' | 'graded' | 'stored';
+  // 数据闭环关联字段
+  relatedTaskId?: string;   // 关联任务ID
+  relatedTaskCode?: string; // 关联任务编号
 }
 
 export interface Approval {
@@ -450,4 +513,10 @@ export {
   PURCHASE_PLAN_STATUS_STYLE,
   PURCHASE_PLAN_PRIORITY_STYLE,
 } from './purchase';
+
+// 巡查管理模块类型导出
+export type {
+  Equipment,
+  Infrastructure,
+} from './index';
 

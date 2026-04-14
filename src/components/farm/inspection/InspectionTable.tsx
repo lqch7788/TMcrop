@@ -14,9 +14,17 @@ interface InspectionRecord {
   weather: string;
   temperature: number;
   humidity: number;
+  // 新增字段
+  status: string; // normal/critical
+  issueCategories?: string[]; // 问题分类列表
+  issuePresets?: string[]; // 快速勾选的问题
+  issueText?: string;
+  issuePhotos?: string[];
+  feedbackUsers?: string[]; // 反馈人员
+  expectedCompletion?: string; // 期望完成时间
+  // 原有字段保留
   issues: string[];
   images?: string[];
-  status: string;
   issueStatus?: 'pending' | 'processing' | 'resolved';
 }
 
@@ -90,16 +98,17 @@ export function InspectionTable({
               )}
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查编号</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查类型</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查人员</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">提交人</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">位置/对象</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查日期</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">天气</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">温度(°C)</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">湿度(%)</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">发现问题</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查结果</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题处理</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -159,14 +168,42 @@ export function InspectionTable({
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.weather}</td>
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.temperature}</td>
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.humidity}</td>
+                <td className="px-4 py-3 text-center">
+                  {record.status === 'normal' ? (
+                    <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
+                  ) : (
+                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">异常</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {record.issues && record.issues.length > 0 ? (
+                  {record.issueCategories && record.issueCategories.length > 0 ? (
                     <div className="flex gap-1 justify-center flex-wrap">
-                      {record.issues.slice(0, 2).map((issue, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">{issue}</span>
+                      {record.issueCategories.slice(0, 2).map((cat, i) => {
+                        const categoryLabels: Record<string, string> = {
+                          disease: '病害',
+                          pest: '虫害',
+                          environment: '环境',
+                          growth: '长势',
+                          equipment: '设备',
+                          other: '其他'
+                        };
+                        return (
+                          <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
+                            {categoryLabels[cat] || cat}
+                          </span>
+                        );
+                      })}
+                      {record.issueCategories.length > 2 && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{record.issueCategories.length - 2}</span>
+                      )}
+                    </div>
+                  ) : record.issuePresets && record.issuePresets.length > 0 ? (
+                    <div className="flex gap-1 justify-center flex-wrap">
+                      {record.issuePresets.slice(0, 2).map((preset, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded-full">{preset}</span>
                       ))}
-                      {record.issues.length > 2 && (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{record.issues.length - 2}</span>
+                      {record.issuePresets.length > 2 && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{record.issuePresets.length - 2}</span>
                       )}
                     </div>
                   ) : (
@@ -174,35 +211,30 @@ export function InspectionTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-center whitespace-nowrap">
-                  {record.images && record.images.length > 0 ? (
+                  {record.issuePhotos && record.issuePhotos.length > 0 ? (
                     <div className="flex justify-center gap-1">
-                      {record.images.slice(0, 3).map((img: string, imgIdx: number) => (
+                      {record.issuePhotos.slice(0, 3).map((img: string, imgIdx: number) => (
                         <div key={imgIdx} className="w-8 h-8 rounded overflow-hidden bg-gray-100">
                           <img src={img} alt="" className="w-full h-full object-cover" />
                         </div>
                       ))}
-                      {record.images.length > 3 && (
-                        <span className="flex items-center justify-center w-8 h-8 text-xs text-gray-500">+{record.images.length - 3}</span>
+                      {record.issuePhotos.length > 3 && (
+                        <span className="flex items-center justify-center w-8 h-8 text-xs text-gray-500">+{record.issuePhotos.length - 3}</span>
                       )}
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-center whitespace-nowrap">{getStatusBadge(record.status)}</td>
-                <td className="px-4 py-3 text-center whitespace-nowrap">
-                  {record.issueStatus ? (
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      record.issueStatus === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
-                      record.issueStatus === 'processing' ? 'bg-blue-100 text-blue-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {record.issueStatus === 'resolved' ? '已解决' :
-                       record.issueStatus === 'processing' ? '处理中' : '待处理'}
-                    </span>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.feedbackUsers && record.feedbackUsers.length > 0 ? (
+                    <span className="text-red-600">{record.feedbackUsers.length}人</span>
                   ) : (
-                    <span className="text-sm text-gray-400">-</span>
+                    <span className="text-gray-400">-</span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate">
+                  {record.remarks || <span className="text-gray-400">-</span>}
                 </td>
               </tr>
             ))}

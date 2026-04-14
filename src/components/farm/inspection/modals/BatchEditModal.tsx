@@ -1,24 +1,41 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { NumberInput } from '../../../ui/NumberInput';
+import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
 interface InspectionRecord {
-  id: number;
+  id: string;
+  recordCode: string;
+  inspectionType: 'farm' | 'equipment' | 'infrastructure' | 'other';
   greenhouseId: string;
   greenhouseName: string;
   cropName: string;
+  equipmentId?: string;
+  equipmentName?: string;
+  infrastructureId?: string;
+  infrastructureName?: string;
   inspectorId: string;
   inspectorName: string;
   checkDate: string;
-  checkTime: string;
+  checkTime?: string;
   weather: string;
   temperature: number;
   humidity: number;
-  cropStatus: string;
+  cropStatus?: string;
   plantHeight?: number;
   leafCount?: number;
   status: string;
   issues: string[];
   images: string[];
-  remarks: string;
+  remarks?: string;
+  issueStatus?: 'pending' | 'processing' | 'resolved';
+  duration?: number;
+  // 新增字段
+  issueCategories?: string[];
+  issuePresets?: string[];
+  issueText?: string;
+  issuePhotos?: string[];
+  feedbackUsers?: string[];
+  expectedCompletion?: string;
 }
 
 interface BatchEditModalProps {
@@ -35,11 +52,19 @@ interface BatchEditModalProps {
   onConfirm: () => void;
   greenhouses: { id: string; name: string }[];
   users: { id: string; name: string; role: string; roleName: string }[];
-  cropTypes: { id: number; name: string }[];
+  equipmentRecords: { id: string; name: string }[];
+  infrastructureRecords: { id: string; name: string; type: string }[];
 }
 
-const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '雾'];
-const cropStatusOptions = ['良好', '一般', '较差', '有病虫害'];
+const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '雾', '大风'];
+const inspectionTypeOptions = [
+  { value: 'farm', label: '种植区域巡查' },
+  { value: 'equipment', label: '设备保养巡查' },
+  { value: 'infrastructure', label: '基础设施巡检' },
+  { value: 'other', label: '其他' },
+];
+const issueCategoryOptions = ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label }));
+const completionTimeOptions = COMPLETION_TIME_OPTIONS.map(t => ({ value: t.value, label: t.label }));
 
 export function BatchEditModal({
   isOpen,
@@ -55,7 +80,8 @@ export function BatchEditModal({
   onConfirm,
   greenhouses,
   users,
-  cropTypes,
+  equipmentRecords,
+  infrastructureRecords,
 }: BatchEditModalProps) {
   const selectedRecords = selectedRows.map(index => records[index]).filter(Boolean) as InspectionRecord[];
   const currentRecord = selectedRecordId ? records.find(r => r.id.toString() === selectedRecordId) : null;
@@ -77,7 +103,7 @@ export function BatchEditModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="批量编辑巡田记录"
+      title="批量编辑巡查记录"
       size="xxl"
       onSubmit={onConfirm}
       submitText="保存修改"
@@ -101,7 +127,7 @@ export function BatchEditModal({
               { value: '', label: '请选择记录编号' },
               ...selectedRecords.map(r => ({
                 value: r.id.toString(),
-                label: `${r.id} - ${r.greenhouseName} - ${r.checkDate} ${
+                label: `${r.recordCode} - ${r.inspectorName} ${
                   editedRecordIds.includes(r.id.toString()) ? '✅ 已编辑' : ''
                 }`,
               })),
@@ -111,33 +137,24 @@ export function BatchEditModal({
 
         {/* 编辑区域 */}
         {selectedRecordId && currentRecord && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* 记录ID - 不可编辑 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* 巡查编号 - 不可编辑 */}
             <div className="bg-gray-100 rounded-lg p-3">
-              <div className="text-xs text-gray-500 mb-1">记录编号</div>
-              <div className="text-sm font-medium text-gray-900">{currentRecord.id}</div>
+              <div className="text-xs text-gray-500 mb-1">巡查编号</div>
+              <div className="text-sm font-medium text-blue-600">{currentRecord.recordCode}</div>
             </div>
 
-            {/* 巡田区域 - 可编辑 */}
-            <FormField label="巡田区域">
+            {/* 巡查类型 - 可编辑 */}
+            <FormField label="巡查类型">
               <Select
-                value={editedData.greenhouseId ?? currentRecord.greenhouseId}
-                onChange={(e) => handleFieldChange('greenhouseId', e.target.value)}
-                options={greenhouses.map(g => ({ value: g.id, label: g.name }))}
+                value={editedData.inspectionType ?? currentRecord.inspectionType}
+                onChange={(e) => handleFieldChange('inspectionType', e.target.value)}
+                options={inspectionTypeOptions}
               />
             </FormField>
 
-            {/* 作物名称 - 可编辑 */}
-            <FormField label="作物名称">
-              <Select
-                value={editedData.cropName ?? currentRecord.cropName}
-                onChange={(e) => handleFieldChange('cropName', e.target.value)}
-                options={cropTypes.map(c => ({ value: c.name, label: c.name }))}
-              />
-            </FormField>
-
-            {/* 巡田人员 - 可编辑 */}
-            <FormField label="巡田人员">
+            {/* 巡查人员 - 可编辑 */}
+            <FormField label="巡查人员">
               <Select
                 value={editedData.inspectorId ?? currentRecord.inspectorId}
                 onChange={(e) => handleFieldChange('inspectorId', e.target.value)}
@@ -148,21 +165,12 @@ export function BatchEditModal({
               />
             </FormField>
 
-            {/* 巡田日期 - 可编辑 */}
-            <FormField label="巡田日期">
+            {/* 巡查日期 - 可编辑 */}
+            <FormField label="巡查日期">
               <Input
                 type="date"
                 value={editedData.checkDate ?? currentRecord.checkDate}
                 onChange={(e) => handleFieldChange('checkDate', e.target.value)}
-              />
-            </FormField>
-
-            {/* 巡田时间 - 可编辑 */}
-            <FormField label="巡田时间">
-              <Input
-                type="time"
-                value={editedData.checkTime ?? currentRecord.checkTime}
-                onChange={(e) => handleFieldChange('checkTime', e.target.value)}
               />
             </FormField>
 
@@ -177,65 +185,88 @@ export function BatchEditModal({
 
             {/* 温度 - 可编辑 */}
             <FormField label="温度(°C)">
-              <Input
-                type="number"
-                step="0.1"
-                value={editedData.temperature ?? currentRecord.temperature ?? 0}
-                onChange={(e) => handleFieldChange('temperature', parseFloat(e.target.value) || 0)}
+              <NumberInput
+                value={editedData.temperature ?? currentRecord.temperature ?? ''}
+                onChange={(val) => handleFieldChange('temperature', val)}
+                onBlur={(val) => handleFieldChange('temperature', val)}
+                placeholder="0.00"
               />
             </FormField>
 
             {/* 湿度 - 可编辑 */}
             <FormField label="湿度(%)">
-              <Input
-                type="number"
-                step="0.1"
-                value={editedData.humidity ?? currentRecord.humidity ?? 0}
-                onChange={(e) => handleFieldChange('humidity', parseFloat(e.target.value) || 0)}
+              <NumberInput
+                value={editedData.humidity ?? currentRecord.humidity ?? ''}
+                onChange={(val) => handleFieldChange('humidity', val)}
+                onBlur={(val) => handleFieldChange('humidity', val)}
+                placeholder="0.00"
               />
             </FormField>
 
-            {/* 作物状态 - 可编辑 */}
-            <FormField label="作物状态">
-              <Select
-                value={editedData.cropStatus ?? currentRecord.cropStatus}
-                onChange={(e) => handleFieldChange('cropStatus', e.target.value)}
-                options={cropStatusOptions.map(s => ({ value: s, label: s }))}
-              />
-            </FormField>
-
-            {/* 株高 - 可编辑 */}
-            <FormField label="株高(cm)">
-              <Input
-                type="number"
-                step="0.1"
-                value={editedData.plantHeight ?? currentRecord.plantHeight ?? ''}
-                onChange={(e) => handleFieldChange('plantHeight', parseFloat(e.target.value) || 0)}
-              />
-            </FormField>
-
-            {/* 叶片数 - 可编辑 */}
-            <FormField label="叶片数">
-              <Input
-                type="number"
-                value={editedData.leafCount ?? currentRecord.leafCount ?? ''}
-                onChange={(e) => handleFieldChange('leafCount', parseInt(e.target.value) || 0)}
-              />
-            </FormField>
-
-            {/* 状态 - 不可编辑 */}
+            {/* 巡查结果 - 不可编辑 */}
             <div className="bg-gray-100 rounded-lg p-3">
-              <div className="text-xs text-gray-500 mb-1">状态</div>
+              <div className="text-xs text-gray-500 mb-1">巡查结果</div>
               <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                 currentRecord.status === 'normal' ? 'bg-emerald-100 text-emerald-700' :
-                currentRecord.status === 'attention' ? 'bg-yellow-100 text-yellow-700' :
-                currentRecord.status === 'critical' ? 'bg-red-100 text-red-700' :
-                'bg-gray-100 text-gray-700'
+                'bg-red-100 text-red-700'
               }`}>
-                {currentRecord.status === 'normal' ? '正常' :
-                 currentRecord.status === 'attention' ? '需关注' :
-                 currentRecord.status === 'critical' ? '异常' : currentRecord.status}
+                {currentRecord.status === 'normal' ? '正常' : '异常'}
               </span>
+            </div>
+
+            {/* 问题分类 - 可编辑 */}
+            <FormField label="问题分类">
+              <Select
+                value={(editedData.issueCategories ?? currentRecord.issueCategories ?? [''])[0] || ''}
+                onChange={(e) => handleFieldChange('issueCategories', e.target.value ? [e.target.value] : [])}
+                options={[{ value: '', label: '请选择' }, ...issueCategoryOptions]}
+              />
+            </FormField>
+
+            {/* 期望完成 - 可编辑 */}
+            <FormField label="期望完成">
+              <Select
+                value={editedData.expectedCompletion ?? currentRecord.expectedCompletion ?? ''}
+                onChange={(e) => handleFieldChange('expectedCompletion', e.target.value)}
+                options={[{ value: '', label: '请选择' }, ...completionTimeOptions]}
+              />
+            </FormField>
+
+            {/* 反馈人员 - 可编辑 */}
+            <FormField label="反馈人员">
+              <Select
+                value={(editedData.feedbackUsers ?? currentRecord.feedbackUsers ?? [''])[0] || ''}
+                onChange={(e) => handleFieldChange('feedbackUsers', e.target.value ? [e.target.value] : [])}
+                options={[
+                  { value: '', label: '请选择' },
+                  ...users.filter(u => u.role === 'technician' || u.role === 'supervisor' || u.role === 'manager').map(u => ({
+                    value: u.id,
+                    label: u.name,
+                  }))
+                ]}
+              />
+            </FormField>
+
+            {/* 问题描述 - 可编辑 */}
+            <div className="col-span-2">
+              <FormField label="问题描述">
+                <Input
+                  value={editedData.issueText ?? currentRecord.issueText ?? ''}
+                  onChange={(e) => handleFieldChange('issueText', e.target.value)}
+                  placeholder="请输入问题描述"
+                />
+              </FormField>
+            </div>
+
+            {/* 备注 - 可编辑 */}
+            <div className="col-span-2">
+              <FormField label="备注">
+                <Input
+                  value={editedData.remarks ?? currentRecord.remarks ?? ''}
+                  onChange={(e) => handleFieldChange('remarks', e.target.value)}
+                  placeholder="请输入备注"
+                />
+              </FormField>
             </div>
           </div>
         )}

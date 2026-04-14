@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
-  Plus, Eye, Download, Pencil, Trash2, Scan
+  Plus, Eye, Download, Pencil, Trash2, Scan, X
 } from 'lucide-react';
-import { inspectionRecords as initialRecords, greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords } from '../../../data/mockData';
+import { inspectionRecords as initialRecords, greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords, iotSensors } from '../../../data/mockData';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { BatchEditModal, DeleteWarningModal, DetailInspectionModal } from './modals';
@@ -69,9 +69,15 @@ export default function InspectionPage() {
     cropStatus: '良好',
     plantHeight: 0,
     leafCount: 0,
+    // 新增巡查结果字段
+    inspectionResult: 'normal' as 'normal' | 'abnormal',
+    feedbackRequired: false,
+    issueCategories: [] as string[],
+    issuePresets: [] as string[],
     issueText: '',
-    issueStatus: 'pending' as 'pending' | 'processing' | 'resolved',
-    newImages: [] as string[],
+    issuePhotos: [] as string[],
+    feedbackUsers: [] as string[],
+    expectedCompletion: '',
     remarks: '',
     // 设备保养专用
     equipmentId: '',
@@ -126,6 +132,19 @@ export default function InspectionPage() {
 
   // QR扫描成功处理
   const handleQRScanSuccess = (data: QRData) => {
+    // 获取该温室的传感器数据用于自动填充环境参数
+    const sensors = iotSensors.filter(s => s.greenhouseId === data.code);
+    const envParams = {
+      airTemperature: sensors.find(s => s.type === 'air_temp')?.value || 0,
+      airHumidity: sensors.find(s => s.type === 'air_humidity')?.value || 0,
+      soilTemperature: sensors.find(s => s.type === 'soil_temp')?.value || 0,
+      soilMoisture: sensors.find(s => s.type === 'soil_moisture')?.value || 0,
+      lightIntensity: sensors.find(s => s.type === 'light')?.value || 0,
+      co2Concentration: sensors.find(s => s.type === 'co2')?.value || 0,
+      soilEc: sensors.find(s => s.type === 'soil_ec')?.value || 0,
+      soilPh: sensors.find(s => s.type === 'soil_ph')?.value || 0,
+    };
+
     if (data.type === 'farm') {
       const greenhouse = greenhouses.find(g => g.id === data.code);
       setNewRecord(prev => ({
@@ -137,6 +156,7 @@ export default function InspectionPage() {
         equipmentName: '',
         infrastructureId: '',
         infrastructureName: '',
+        ...envParams,
       }));
     } else if (data.type === 'equipment') {
       const equipment = equipmentRecords.find(e => e.id === data.code);
@@ -148,6 +168,7 @@ export default function InspectionPage() {
         equipmentName: data.name,
         infrastructureId: '',
         infrastructureName: '',
+        ...envParams,
       }));
     } else if (data.type === 'infrastructure') {
       const infrastructure = infrastructureRecords.find(i => i.id === data.code);
@@ -159,6 +180,7 @@ export default function InspectionPage() {
         equipmentName: '',
         infrastructureId: data.code,
         infrastructureName: data.name,
+        ...envParams,
       }));
     }
     setIsQRScannerOpen(false);
@@ -211,17 +233,21 @@ export default function InspectionPage() {
   const handleDoExport = async () => {
     // Get selected data - use index-based selection from filtered records
     const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
-    const headers = ['巡检单号', '巡检人员', '巡检区域', '作物名称', '巡检日期', '作物状态', '天气', '温度', '湿度'];
+    // 导出字段与表格显示列保持一致
+    const headers = ['巡查编号', '巡查类型', '巡查人员', '位置/对象', '巡查日期', '天气', '温度(°C)', '湿度(%)', '发现问题', '问题照片', '问题处理', '状态'];
     const exportData = selectedData.map(row => ({
-      '巡检单号': row.recordCode,
-      '巡检人员': row.inspectorName,
-      '巡检区域': row.greenhouseName,
-      '作物名称': row.cropName,
-      '巡检日期': row.checkDate,
-      '作物状态': row.cropStatus,
+      '巡查编号': row.recordCode,
+      '巡查类型': row.inspectionType === 'farm' ? '种植' : row.inspectionType === 'equipment' ? '设备' : row.inspectionType === 'infrastructure' ? '设施' : row.inspectionType === 'other' ? '其他' : '-',
+      '巡查人员': row.inspectorName,
+      '位置/对象': row.inspectionType === 'farm' ? row.greenhouseName : row.inspectionType === 'equipment' ? row.equipmentName : row.inspectionType === 'infrastructure' ? row.infrastructureName : row.remarks || '-',
+      '巡查日期': row.checkDate,
       '天气': row.weather,
-      '温度': row.temperature,
-      '湿度': row.humidity
+      '温度(°C)': row.temperature,
+      '湿度(%)': row.humidity,
+      '发现问题': (row.issues && row.issues.length > 0) ? row.issues.join('; ') : '-',
+      '问题照片': (row.images && row.images.length > 0) ? `有${row.images.length}张照片` : '-',
+      '问题处理': row.issueStatus === 'resolved' ? '已解决' : row.issueStatus === 'processing' ? '处理中' : row.issueStatus === 'pending' ? '待处理' : '-',
+      '状态': row.status === 'normal' ? '正常' : row.status === 'warning' ? '注意' : row.status === 'critical' ? '异常' : row.status === 'attention' ? '需关注' : '-'
     }));
 
     // Create content based on format
@@ -464,10 +490,15 @@ export default function InspectionPage() {
       cropStatus: newRecord.cropStatus,
       plantHeight: newRecord.plantHeight || undefined,
       leafCount: newRecord.leafCount || undefined,
-      status: 'normal' as const,
-      issueStatus: newRecord.issueStatus,
-      issues: newRecord.issueText ? [newRecord.issueText] : [],
-      images: newRecord.newImages,
+      // 根据巡查结果设置状态
+      status: newRecord.inspectionResult === 'normal' ? 'normal' : 'critical',
+      // 问题相关字段更新
+      issueCategories: newRecord.issueCategories || [],
+      issuePresets: newRecord.issuePresets || [],
+      issueText: newRecord.issueText || '',
+      issuePhotos: newRecord.issuePhotos || [],
+      feedbackUsers: newRecord.feedbackUsers || [],
+      expectedCompletion: newRecord.expectedCompletion || undefined,
       remarks: newRecord.remarks,
       equipmentId: equipmentId || undefined,
       equipmentName: equipmentName || undefined,
@@ -477,20 +508,30 @@ export default function InspectionPage() {
 
     setInspectionRecords([record, ...inspectionRecords]);
 
-    // 如果有异常问题，同步到问题记录（用于每日问题汇总）
-    if (newRecord.issueText && newRecord.issueText.trim() !== '') {
+    // 如果需要反馈，同步到问题记录（用于每日问题汇总）
+    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0) {
+      // 合并预设问题 + 文本描述
+      const presetIssues = newRecord.issuePresets?.join('、') || '';
+      const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
+
+      // 获取反馈人员姓名
+      const feedbackUserNames = newRecord.feedbackUsers
+        .map(id => users.find(u => u.id === id)?.name || id)
+        .join('、');
+
       // 判断严重程度
       let severity: '轻微' | '中等' | '严重' = '轻微';
-      if (newRecord.issueText.includes('严重') || newRecord.issueText.includes('灰霉') || newRecord.issueText.includes('病毒')) {
+      const allIssueText = issueText + newRecord.issueText;
+      if (allIssueText.includes('严重') || allIssueText.includes('灰霉') || allIssueText.includes('病毒')) {
         severity = '严重';
-      } else if (newRecord.issueText.includes('蚜虫') || newRecord.issueText.includes('病') || newRecord.issueText.includes('虫')) {
+      } else if (allIssueText.includes('蚜虫') || allIssueText.includes('病') || allIssueText.includes('虫')) {
         severity = '中等';
       }
 
       addProblem({
         greenhouseId: newRecord.greenhouseId,
-        greenhouseName: selectedGreenhouse?.name || '',
-        cropName: newRecord.cropName,
+        greenhouseName: greenhouseName,
+        cropName: cropName,
         inspectorId: newRecord.inspectorId,
         inspectorName: selectedUser?.name || '',
         checkDate: newRecord.checkDate,
@@ -501,30 +542,53 @@ export default function InspectionPage() {
         cropStatus: newRecord.cropStatus,
         plantHeight: newRecord.plantHeight || undefined,
         leafCount: newRecord.leafCount || undefined,
-        issueText: newRecord.issueText,
+        issueText: issueText || newRecord.issueText || '未描述具体问题',
         issueSeverity: severity,
         status: '待处理',
-        remarks: newRecord.remarks,
-        images: newRecord.newImages,
+        remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
+        images: newRecord.issuePhotos || [],
       });
     }
 
     setIsCreateModalOpen(false);
     setNewRecord({
+      recordCode: '',
+      inspectionType: 'farm',
       greenhouseId: '',
       cropName: '',
       inspectorId: '',
+      batchId: '',
+      batchCode: '',
       checkDate: new Date().toISOString().split('T')[0],
       checkTime: new Date().toTimeString().slice(0, 5),
+      duration: 0,
       weather: '晴',
       temperature: 0,
       humidity: 0,
       cropStatus: '良好',
       plantHeight: 0,
       leafCount: 0,
+      inspectionResult: 'normal',
+      feedbackRequired: false,
+      issueCategories: [] as string[],
+      issuePresets: [] as string[],
       issueText: '',
-      newImages: [],
+      issuePhotos: [],
+      feedbackUsers: [],
+      expectedCompletion: '',
       remarks: '',
+      equipmentId: '',
+      equipmentName: '',
+      infrastructureId: '',
+      infrastructureName: '',
+      airTemperature: 0,
+      airHumidity: 0,
+      lightIntensity: 0,
+      co2Concentration: 0,
+      soilTemperature: 0,
+      soilMoisture: 0,
+      soilEc: 0,
+      soilPh: 0,
     });
     setErrors({});
   };
@@ -588,10 +652,18 @@ export default function InspectionPage() {
       cropStatus: '良好',
       plantHeight: 0,
       leafCount: 0,
+      // 巡查结果字段 - 修复：关闭弹窗时正确重置
+      inspectionResult: 'normal' as 'normal' | 'abnormal',
+      feedbackRequired: false,
+      issueCategories: [] as string[],
+      issuePresets: [] as string[],
       issueText: '',
+      issuePhotos: [] as string[],
+      feedbackUsers: [] as string[],
+      expectedCompletion: '',
+      remarks: '',
       issueStatus: 'pending',
       newImages: [],
-      remarks: '',
       equipmentId: '',
       equipmentName: '',
       infrastructureId: '',
@@ -720,10 +792,12 @@ export default function InspectionPage() {
           batchEditMode={batchEditMode}
           batchDeleteMode={batchDeleteMode}
           onSelectRow={(idx) => {
-            if (!selectedRows.includes(idx)) {
-              setSelectedRows([...selectedRows, idx]);
+            // 将当前页索引转换为 filteredRecords 的真实索引
+            const realIndex = (currentPage - 1) * pageSize + idx;
+            if (!selectedRows.includes(realIndex)) {
+              setSelectedRows([...selectedRows, realIndex]);
             } else {
-              setSelectedRows(selectedRows.filter(i => i !== idx));
+              setSelectedRows(selectedRows.filter(i => i !== realIndex));
             }
           }}
           onSelectAll={() => {
