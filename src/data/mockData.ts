@@ -3,7 +3,8 @@
 import {
   User, CropBatch, Task, Material, MaterialRequest, Greenhouse,
   IoTSensor, InspectionRecord, HarvestRecord, Message,
-  DashboardStats, CropType, Process, Department, TempTask, Worker
+  DashboardStats, CropType, Process, Department, TempTask, Worker,
+  Equipment, Infrastructure
 } from '../types';
 import { Approval } from '../types/approval';
 
@@ -21,6 +22,7 @@ export const users: User[] = [
   { id: 'U010', name: '孙丽娜', avatar: 'SLN', role: 'storekeeper', department: '仓储部', position: '库管员' },
   { id: 'U011', name: '马超', avatar: 'MC', role: 'worker', department: '生产部', position: '临时工' },
   { id: 'U012', name: '黄敏', avatar: 'HM', role: 'supervisor', department: '生产部', position: '生产组长' },
+  { id: 'U013', name: '陆启闯', avatar: 'LQC', role: 'technician', department: '生产部', position: '农技员' },
   { id: 'V001', name: '访客用户', avatar: 'FK', role: 'visitor', department: '演示部', position: '演示员' },
 ];
 
@@ -195,11 +197,66 @@ const pepperImages = [
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff3333"%3E🌶️%3C/text%3E%3C/svg%3E',
 ];
 
+// 生菜图片（绿色系）
+const lettuceImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300cc00"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300dd00"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
+// 菠菜图片（深绿色系）
+const spinachImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23006600"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23008800"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
+// 茄子图片（紫色系）
+const eggplantImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%238B00FF"%3E🍆%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%239900FF"%3E🍆%3C/text%3E%3C/svg%3E',
+];
+
+// 白菜图片（浅绿色系）
+const cabbageImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2399ff00"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2388ee00"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
 export const inspectionRecords: InspectionRecord[] = [
-  { id: 'IR001', recordCode: 'INS20240315-001', inspectorId: 'U004', inspectorName: '赵文静', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', cropName: '番茄', checkDate: '2024-03-15 09:00:00', cropStatus: '生长正常', plantHeight: 145, leafCount: 12, issues: [], images: tomatoImages, weather: '晴', temperature: 24, humidity: 65, remarks: '番茄植株长势良好，果实发育正常', status: 'normal', airTemperature: 24.5, airHumidity: 65, lightIntensity: 35000, co2Concentration: 450, soilTemperature: 22.3, soilMoisture: 55, soilEc: 1.2, soilPh: 6.5 },
-  { id: 'IR002', recordCode: 'INS20240315-002', inspectorId: 'U004', inspectorName: '赵文静', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', cropName: '黄瓜', checkDate: '2024-03-15 09:30:00', cropStatus: '轻微萎蔫', plantHeight: 85, leafCount: 8, issues: ['轻微缺水', '温度偏高'], images: cucumberImages, weather: '晴', temperature: 28, humidity: 55, remarks: '黄瓜有轻微缺水现象，需要及时浇水', status: 'attention', airTemperature: 28.2, airHumidity: 55, lightIntensity: 42000, co2Concentration: 380, soilTemperature: 24.1, soilMoisture: 42, soilEc: 1.5, soilPh: 6.8 },
-  { id: 'IR003', recordCode: 'INS20240314-001', inspectorId: 'U005', inspectorName: '刘大海', greenhouseId: 'G004', greenhouseName: '日光温室1号', cropName: '草莓', checkDate: '2024-03-14 14:00:00', cropStatus: '生长正常', plantHeight: 25, leafCount: 6, issues: ['白粉虱'], images: strawberryImages, weather: '多云', temperature: 22, humidity: 70, remarks: '发现少量白粉虱，建议近期安排打药', status: 'attention', airTemperature: 22.1, airHumidity: 70, lightIntensity: 28000, co2Concentration: 520, soilTemperature: 20.5, soilMoisture: 65, soilEc: 1.0, soilPh: 6.2 },
-  { id: 'IR004', recordCode: 'INS20240314-002', inspectorId: 'U004', inspectorName: '赵文静', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', cropName: '辣椒', checkDate: '2024-03-14 15:00:00', cropStatus: '生长正常', plantHeight: 120, leafCount: 14, issues: [], images: pepperImages, weather: '多云', temperature: 26, humidity: 60, remarks: '辣椒正处于开花期，长势良好', status: 'normal', airTemperature: 26.3, airHumidity: 60, lightIntensity: 38000, co2Concentration: 480, soilTemperature: 23.5, soilMoisture: 58, soilEc: 1.3, soilPh: 6.7 },
+  { id: 'IR002', recordCode: 'XT20260316-001', inspectorId: 'U004', inspectorName: '黄蓉', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', cropName: '黄瓜', checkDate: '2026-03-16 09:30:00', cropStatus: '轻微萎蔫', plantHeight: 85, leafCount: 8, issues: ['轻微缺水', '温度偏高'], images: cucumberImages, weather: '晴', temperature: 28, humidity: 55, remarks: '黄瓜有轻微缺水现象，需要及时浇水', status: 'attention', airTemperature: 28.2, airHumidity: 55, lightIntensity: 42000, co2Concentration: 380, soilTemperature: 24.1, soilMoisture: 42, soilEc: 1.5, soilPh: 6.8, inspectionType: 'farm', issueCategories: ['environment'], issuePresets: ['温度过高', '湿度过大'], issueText: '黄瓜叶片出现轻微萎蔫，大棚内温度偏高导致', issuePhotos: cucumberImages.slice(0, 2), feedbackUsers: ['U003', 'U004'], expectedCompletion: 'today' },
+  { id: 'IR003', recordCode: 'XT20260314-001', inspectorId: 'U005', inspectorName: '杨过', greenhouseId: 'G004', greenhouseName: '日光温室1号', cropName: '草莓', checkDate: '2026-03-14 14:00:00', cropStatus: '生长正常', plantHeight: 25, leafCount: 6, issues: ['白粉虱'], images: strawberryImages, weather: '多云', temperature: 22, humidity: 70, remarks: '发现少量白粉虱，建议近期安排打药', status: 'attention', airTemperature: 22.1, airHumidity: 70, lightIntensity: 28000, co2Concentration: 520, soilTemperature: 20.5, soilMoisture: 65, soilEc: 1.0, soilPh: 6.2, inspectionType: 'farm', issueCategories: ['pest'], issuePresets: ['白粉虱'], issueText: '草莓叶片发现白粉虱成虫，数量较少但需密切关注', issuePhotos: strawberryImages.slice(0, 3), feedbackUsers: ['U003'], expectedCompletion: 'tomorrow' },
+  { id: 'IR006', recordCode: 'XT20260318-002', inspectorId: 'U007', inspectorName: '任盈盈', greenhouseId: 'G006', greenhouseName: '日光温室3号', cropName: '菠菜', checkDate: '2026-03-18 10:00:00', cropStatus: '轻微萎蔫', plantHeight: 28, leafCount: 8, issues: ['土壤偏干'], images: spinachImages, weather: '阴', temperature: 18, humidity: 58, remarks: '菠菜需要尽快浇水', status: 'attention', airTemperature: 18.2, airHumidity: 58, lightIntensity: 22000, co2Concentration: 400, soilTemperature: 18.5, soilMoisture: 38, soilEc: 1.1, soilPh: 6.4, inspectionType: 'farm', issueCategories: ['environment', 'growth'], issuePresets: [], issueText: '菠菜出现轻微萎蔫，土壤湿度偏低，需要立即灌溉', issuePhotos: spinachImages.slice(0, 2), feedbackUsers: ['U002', 'U003'], expectedCompletion: 'today' },
+  { id: 'IR007', recordCode: 'XT20260319-001', inspectorId: 'U008', inspectorName: '乔峰', greenhouseId: 'G007', greenhouseName: '塑料大棚2号', cropName: '茄子', checkDate: '2026-03-19 14:30:00', cropStatus: '生长正常', plantHeight: 95, leafCount: 12, issues: [], images: eggplantImages, weather: '晴', temperature: 25, humidity: 62, remarks: '茄子生长良好，无病虫害', status: 'normal', airTemperature: 25.3, airHumidity: 62, lightIntensity: 40000, co2Concentration: 460, soilTemperature: 23.2, soilMoisture: 55, soilEc: 1.4, soilPh: 6.6, inspectionType: 'farm' },
+  { id: 'IR008', recordCode: 'XT20260320-001', inspectorId: 'U009', inspectorName: '段誉', greenhouseId: 'G008', greenhouseName: '塑料大棚1号', cropName: '白菜', checkDate: '2026-03-20 09:00:00', cropStatus: '生长正常', plantHeight: 35, leafCount: 9, issues: ['少量菜青虫'], images: cabbageImages, weather: '多云', temperature: 19, humidity: 72, remarks: '发现少量菜青虫，已做记录', status: 'attention', airTemperature: 19.2, airHumidity: 72, lightIntensity: 26000, co2Concentration: 410, soilTemperature: 18.8, soilMoisture: 62, soilEc: 0.8, soilPh: 6.2, inspectionType: 'farm', issueCategories: ['pest'], issuePresets: ['菜青虫'], issueText: '大白菜叶片发现菜青虫虫害', issuePhotos: cabbageImages.slice(0, 2), feedbackUsers: ['U003'], expectedCompletion: 'tomorrow' },
+  // 设备保养巡查记录
+  { id: 'IR009', recordCode: 'XT20260321-001', inspectorId: 'U004', inspectorName: '郭靖', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', cropName: '', checkDate: '2026-03-21 10:00:00', cropStatus: '', issues: ['水泵轴承磨损'], images: [], weather: '晴', temperature: 22, humidity: 60, remarks: '1号水泵需要更换轴承', status: 'attention', inspectionType: 'equipment', equipmentId: 'EQ001', equipmentName: '1号灌溉水泵', duration: 45, issueCategories: ['equipment'], issuePresets: ['滴灌异常'], issueText: '1号灌溉水泵运行时异响，拆检发现轴承磨损严重', issuePhotos: [], feedbackUsers: ['U003'], expectedCompletion: 'three_days' },
+  { id: 'IR010', recordCode: 'XT20260321-002', inspectorId: 'U005', inspectorName: '杨过', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', cropName: '', checkDate: '2026-03-21 14:30:00', cropStatus: '', issues: [], images: [], weather: '多云', temperature: 24, humidity: 65, remarks: '通风扇保养正常', status: 'normal', inspectionType: 'equipment', equipmentId: 'EQ003', equipmentName: '1号通风扇', duration: 30 },
+  // 基础设施巡检记录
+  { id: 'IR011', recordCode: 'XT20260322-001', inspectorId: 'U006', inspectorName: '令狐冲', greenhouseId: 'G005', greenhouseName: '日光温室2号', cropName: '', checkDate: '2026-03-22 09:00:00', cropStatus: '', issues: ['滴灌主管道漏水'], images: [], weather: '晴', temperature: 20, humidity: 70, remarks: '滴灌系统主管道接头处漏水，已临时封堵', status: 'critical', inspectionType: 'infrastructure', infrastructureId: 'INF001', infrastructureName: '2号温室滴灌系统', duration: 60, issueCategories: ['equipment'], issuePresets: ['滴灌异常'], issueText: '2号温室滴灌系统主供水管道接头处严重漏水，已用胶带临时封堵', issuePhotos: [], feedbackUsers: ['U002', 'U003'], expectedCompletion: 'today' },
+  { id: 'IR012', recordCode: 'XT20260322-002', inspectorId: 'U008', inspectorName: '乔峰', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', cropName: '', checkDate: '2026-03-22 15:00:00', cropStatus: '', issues: [], images: [], weather: '阴', temperature: 18, humidity: 75, remarks: '排水沟渠畅通，无异常', status: 'normal', inspectionType: 'infrastructure', infrastructureId: 'INF003', infrastructureName: 'A区排水沟渠', duration: 25 },
+];
+
+// 设备数据（用于设备保养巡查）
+export const equipmentRecords: Equipment[] = [
+  { id: 'EQ001', code: 'EQ001', name: '1号灌溉水泵', type: '水泵', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal', lastMaintenanceDate: '2026-01-15', nextMaintenanceDate: '2026-04-15' },
+  { id: 'EQ002', code: 'EQ002', name: '2号灌溉水泵', type: '水泵', location: '玻璃温室B区', greenhouseId: 'G002', status: 'normal', lastMaintenanceDate: '2026-01-20', nextMaintenanceDate: '2026-04-20' },
+  { id: 'EQ003', code: 'EQ003', name: '1号通风扇', type: '通风设备', location: '玻璃温室C区', greenhouseId: 'G003', status: 'normal', lastMaintenanceDate: '2026-02-10', nextMaintenanceDate: '2026-05-10' },
+  { id: 'EQ004', code: 'EQ004', name: '2号通风扇', type: '通风设备', location: '日光温室1号', greenhouseId: 'G004', status: 'maintenance', lastMaintenanceDate: '2025-12-01', nextMaintenanceDate: '2026-03-01' },
+  { id: 'EQ005', code: 'EQ005', name: '1号卷帘机', type: '卷帘设备', location: '日光温室2号', greenhouseId: 'G005', status: 'normal', lastMaintenanceDate: '2026-02-28', nextMaintenanceDate: '2026-05-28' },
+  { id: 'EQ006', code: 'EQ006', name: '自动施肥机', type: '施肥设备', location: '塑料大棚1号', greenhouseId: 'G008', status: 'normal', lastMaintenanceDate: '2026-03-01', nextMaintenanceDate: '2026-06-01' },
+  { id: 'EQ007', code: 'EQ007', name: '滴灌控制系统', type: '灌溉设备', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal', lastMaintenanceDate: '2026-01-10', nextMaintenanceDate: '2026-04-10' },
+  { id: 'EQ008', code: 'EQ008', name: '温室监控摄像头', type: '监控设备', location: '玻璃温室A区', greenhouseId: 'G001', status: 'broken', lastMaintenanceDate: '2025-11-20', nextMaintenanceDate: '2026-02-20' },
+];
+
+// 基础设施数据（用于基础设施巡检）
+export const infrastructureRecords: Infrastructure[] = [
+  { id: 'INF001', code: 'INF001', name: '2号温室滴灌系统', type: '灌溉', location: '日光温室2号', greenhouseId: 'G005', status: 'warning' },
+  { id: 'INF002', code: 'INF002', name: '1号温室滴灌系统', type: '灌溉', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal' },
+  { id: 'INF003', code: 'INF003', name: 'A区排水沟渠', type: '排水', location: '园区A区', status: 'normal' },
+  { id: 'INF004', code: 'INF004', name: 'B区排水沟渠', type: '排水', location: '园区B区', status: 'normal' },
+  { id: 'INF005', code: 'INF005', name: '供电线路A', type: '供电', location: '园区主干道', status: 'normal' },
+  { id: 'INF006', code: 'INF006', name: '管理房仓库', type: '房屋', location: '园区入口', status: 'normal' },
+  { id: 'INF007', code: 'INF007', name: '生产资料仓库', type: '房屋', location: '园区中部', status: 'warning' },
+  { id: 'INF008', code: 'INF008', name: '园区主干道', type: '道路', location: '园区环形通道', status: 'normal' },
 ];
 
 // 采收记录数据
