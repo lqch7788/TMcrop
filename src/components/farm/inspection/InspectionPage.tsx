@@ -1,23 +1,44 @@
 import { useState } from 'react';
 import {
-  Plus, Eye, Download, Pencil, Trash2, Scan, X
+  Plus, Eye, Download, Pencil, Trash2, Scan, X, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { inspectionRecords as initialRecords, greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords, iotSensors } from '../../../data/mockData';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
+import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { BatchEditModal, DeleteWarningModal, DetailInspectionModal } from './modals';
 import { InspectionSearch } from './InspectionSearch';
 import { InspectionTable } from './InspectionTable';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
+import { Modal } from '../../ui/Modal';
 // 导入农事管理类型定义（消除硬编码）
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS } from '../../../types/farm/common';
 
 export default function InspectionPage() {
   // 问题记录持久化 Hook - 同步巡查管理问题到每日问题汇总
-  const { addProblem } = usePersistentProblems();
+  const { problems, addProblem, forceRefresh } = usePersistentProblems();
+  // 问题流转操作 Hook
+  const { approveProblemCompletion, rejectAcceptance, getTaskForProblem, getProblemFlowRecords } = useProblemDispatch();
+  // 任务数据（用于获取实际处理进度）
+  const [tasks] = useLocalStorage<any[]>(STORAGE_KEYS.TASKS, []);
 
-  // Inspection Records State
-  const [inspectionRecords, setInspectionRecords] = useState([...initialRecords]);
+  // 验收弹窗状态 - 只存 problemId，实时获取最新数据
+  const [acceptanceModal, setAcceptanceModal] = useState({
+    isOpen: false,
+    problemId: null as number | null,
+  });
+  const [acceptanceComment, setAcceptanceComment] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  // 强制刷新状态 - 用于刷新 problems 数据
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Inspection Records State - 使用 localStorage 持久化
+  const [inspectionRecords, setInspectionRecords] = useLocalStorage(
+    STORAGE_KEYS.INSPECTION_RECORDS,
+    initialRecords
+  );
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,6 +96,7 @@ export default function InspectionPage() {
     issueCategories: [] as string[],
     issuePresets: [] as string[],
     issueText: '',
+    issueSeverity: '中等' as '轻微' | '中等' | '严重',
     issuePhotos: [] as string[],
     feedbackUsers: [] as string[],
     expectedCompletion: '',
@@ -396,6 +418,36 @@ export default function InspectionPage() {
     setSelectedRows([]);
   };
 
+  // 验收通过
+  const handleApproveAcceptance = () => {
+    if (!acceptanceModal.problemId) return;
+    approveProblemCompletion(
+      acceptanceModal.problemId,
+      'U001',
+      '系统管理员',
+      acceptanceComment || '验收通过'
+    );
+    // 刷新问题数据并关闭弹窗
+    forceRefresh();
+    setAcceptanceModal({ isOpen: false, problemId: null });
+    setAcceptanceComment('');
+  };
+
+  // 返工（退回问题分派）
+  const handleRejectToDispatch = (reason: string) => {
+    if (!acceptanceModal.problemId) return;
+    rejectAcceptance(
+      acceptanceModal.problemId,
+      'U001',
+      '系统管理员',
+      reason
+    );
+    // 刷新问题数据并关闭弹窗
+    forceRefresh();
+    setAcceptanceModal({ isOpen: false, problemId: null });
+    setRejectionReason('');
+  };
+
   const handleSelectAll = () => {
     if (selectedRows.length === filteredRecords.length) {
       setSelectedRows([]);
@@ -428,8 +480,6 @@ export default function InspectionPage() {
       if (!newRecord.remarks) newErrors.remarks = '请输入其他说明';
     }
 
-    if (newRecord.temperature < -50 || newRecord.temperature > 100) newErrors.temperature = '温度数值不合理';
-    if (newRecord.humidity < 0 || newRecord.humidity > 100) newErrors.humidity = '湿度数值不合理';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -470,6 +520,55 @@ export default function InspectionPage() {
       // 其他类型不需要关联温室/设备
     }
 
+    // 如果需要反馈，同步到问题记录（用于每日问题汇总）
+    let newProblemId: number | undefined;
+    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0) {
+      // 合并预设问题 + 文本描述
+      const presetIssues = newRecord.issuePresets?.join('、') || '';
+      const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
+
+      // 获取反馈人员姓名
+      const feedbackUserNames = newRecord.feedbackUsers
+        .map(id => users.find(u => u.id === id)?.name || id)
+        .join('、');
+
+      // 判断严重程度（优先使用表单选择，否则根据问题文本自动推导）
+      let severity: '轻微' | '中等' | '严重' = newRecord.issueSeverity || '中等';
+      if (!newRecord.issueSeverity) {
+        const allIssueText = issueText + newRecord.issueText;
+        if (allIssueText.includes('严重') || allIssueText.includes('灰霉') || allIssueText.includes('病毒')) {
+          severity = '严重';
+        } else if (allIssueText.includes('蚜虫') || allIssueText.includes('病') || allIssueText.includes('虫')) {
+          severity = '中等';
+        }
+      }
+
+      // 添加问题并获取返回的 problemId
+      newProblemId = addProblem({
+        greenhouseId: newRecord.greenhouseId,
+        greenhouseName: greenhouseName,
+        cropName: cropName,
+        inspectorId: newRecord.inspectorId,
+        inspectorName: selectedUser?.name || '',
+        checkDate: newRecord.checkDate,
+        checkTime: newRecord.checkTime,
+        weather: newRecord.weather,
+        temperature: newRecord.temperature,
+        humidity: newRecord.humidity,
+        cropStatus: newRecord.cropStatus,
+        plantHeight: newRecord.plantHeight || undefined,
+        leafCount: newRecord.leafCount || undefined,
+        issueText: issueText || newRecord.issueText || '未描述具体问题',
+        issueSeverity: severity,
+        status: '待处理',
+        remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
+        images: newRecord.issuePhotos || [],
+        // 来源追踪字段
+        sourceModule: 'inspection',
+        sourceId: newRecord.recordCode,
+      });
+    }
+
     const record = {
       id: inspectionRecords.length + 1,
       recordCode: newRecord.recordCode,
@@ -496,6 +595,7 @@ export default function InspectionPage() {
       issueCategories: newRecord.issueCategories || [],
       issuePresets: newRecord.issuePresets || [],
       issueText: newRecord.issueText || '',
+      issueSeverity: newRecord.issueSeverity || '中等',
       issuePhotos: newRecord.issuePhotos || [],
       feedbackUsers: newRecord.feedbackUsers || [],
       expectedCompletion: newRecord.expectedCompletion || undefined,
@@ -504,51 +604,11 @@ export default function InspectionPage() {
       equipmentName: equipmentName || undefined,
       infrastructureId: infrastructureId || undefined,
       infrastructureName: infrastructureName || undefined,
+      // 关联问题ID
+      problemId: newProblemId,
     };
 
     setInspectionRecords([record, ...inspectionRecords]);
-
-    // 如果需要反馈，同步到问题记录（用于每日问题汇总）
-    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0) {
-      // 合并预设问题 + 文本描述
-      const presetIssues = newRecord.issuePresets?.join('、') || '';
-      const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
-
-      // 获取反馈人员姓名
-      const feedbackUserNames = newRecord.feedbackUsers
-        .map(id => users.find(u => u.id === id)?.name || id)
-        .join('、');
-
-      // 判断严重程度
-      let severity: '轻微' | '中等' | '严重' = '轻微';
-      const allIssueText = issueText + newRecord.issueText;
-      if (allIssueText.includes('严重') || allIssueText.includes('灰霉') || allIssueText.includes('病毒')) {
-        severity = '严重';
-      } else if (allIssueText.includes('蚜虫') || allIssueText.includes('病') || allIssueText.includes('虫')) {
-        severity = '中等';
-      }
-
-      addProblem({
-        greenhouseId: newRecord.greenhouseId,
-        greenhouseName: greenhouseName,
-        cropName: cropName,
-        inspectorId: newRecord.inspectorId,
-        inspectorName: selectedUser?.name || '',
-        checkDate: newRecord.checkDate,
-        checkTime: newRecord.checkTime,
-        weather: newRecord.weather,
-        temperature: newRecord.temperature,
-        humidity: newRecord.humidity,
-        cropStatus: newRecord.cropStatus,
-        plantHeight: newRecord.plantHeight || undefined,
-        leafCount: newRecord.leafCount || undefined,
-        issueText: issueText || newRecord.issueText || '未描述具体问题',
-        issueSeverity: severity,
-        status: '待处理',
-        remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
-        images: newRecord.issuePhotos || [],
-      });
-    }
 
     setIsCreateModalOpen(false);
     setNewRecord({
@@ -658,6 +718,7 @@ export default function InspectionPage() {
       issueCategories: [] as string[],
       issuePresets: [] as string[],
       issueText: '',
+      issueSeverity: '中等' as '轻微' | '中等' | '严重',
       issuePhotos: [] as string[],
       feedbackUsers: [] as string[],
       expectedCompletion: '',
@@ -810,6 +871,9 @@ export default function InspectionPage() {
           onViewDetail={(record) => { setSelectedRecord(record); setIsDetailModalOpen(true); }}
           onPageChange={setCurrentPage}
           onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          problems={problems}
+          tasks={tasks}
+          onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
         />
       </div>
 
@@ -922,6 +986,118 @@ export default function InspectionPage() {
         onClose={() => setShowDeleteWarning(false)}
         onConfirm={handleConfirmBatchDelete}
       />
+
+      {/* 问题验收弹窗 */}
+      <Modal
+        isOpen={acceptanceModal.isOpen}
+        onClose={() => {
+          setAcceptanceModal({ isOpen: false, problemId: null });
+          setAcceptanceComment('');
+          setRejectionReason('');
+        }}
+        title="问题验收"
+        size="lg"
+      >
+        {acceptanceModal.problemId && (
+          <div className="space-y-4">
+            {/* 实时获取最新问题数据 */}
+            {(() => {
+              const problem = problems.find(p => p.id === acceptanceModal.problemId);
+              if (!problem) return null;
+              return (
+                <>
+                  {/* 处理结果信息 */}
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理人</span>
+                      <span className="text-sm font-medium">{problem.handler || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理日期</span>
+                      <span className="text-sm font-medium">{problem.handleDate || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理结果</span>
+                    </div>
+                    <div className="bg-white rounded p-3 text-sm">
+                      {problem.handleResult || '无处理结果'}
+                    </div>
+                  </div>
+
+                  {/* 返工次数提示 */}
+                  {(problem.reworkCount ?? 0) > 0 && (
+                    <div className={`text-sm p-3 rounded-lg border ${
+                      (problem.reworkCount ?? 0) >= 2
+                        ? 'bg-red-50 text-red-700 border-red-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      <div className="font-medium">
+                        {(problem.reworkCount ?? 0) >= 2
+                          ? '⚠️ 已返工多次，将退回问题分派页面重新分派'
+                          : `已返工${problem.reworkCount}次，再次返工将退回问题分派`
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 流转记录 */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">处理流转记录</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {(problem.flowRecords || []).map((record: any) => (
+                        <div key={record.id} className="flex gap-3 text-xs">
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {new Date(record.actionTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="font-medium text-gray-700">{record.operatorName}</span>
+                          <span className="text-gray-500">
+                            {record.action === 'report' && '上报问题'}
+                            {record.action === 'dispatch' && '分派任务'}
+                            {record.action === 'accept' && '接单'}
+                            {record.action === 'reject' && '拒绝'}
+                            {record.action === 'submit' && '提交反馈'}
+                            {record.action === 'approve' && '验收通过'}
+                            {record.action === 'reject_acceptance' && '验收返工'}
+                          </span>
+                          {record.comment && <span className="text-gray-400">- {record.comment}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 验收操作 */}
+                  <div className="border-t pt-4">
+                    <div className="flex gap-3 mb-4">
+                      <button
+                        onClick={() => handleApproveAcceptance()}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                        验收通过
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('请输入返工原因：');
+                          if (reason) {
+                            handleRejectToDispatch(reason);
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                        返工
+                      </button>
+                    </div>
+                    <div className="text-xs text-gray-500 text-center">
+                      通过：问题关闭，流转结束 | 返工：第1次给原执行人，第2次退分派重分
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
