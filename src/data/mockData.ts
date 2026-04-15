@@ -1409,6 +1409,28 @@ export const tempTasks: TempTask[] = [
 // 员工数据 - 农业种植管理系统
 export const workers: Worker[] = [
   {
+    id: 'W011', workerId: 'EMP20240011', name: '陆启闯', gender: '男', age: 32,
+    birthDate: '1994-05-10', idCard: '320105199405101234', phone: '13811112222',
+    email: 'luqc@example.com', wechat: 'luqichuang2024',
+    address: '江苏省南京市江宁区科学园街道1号', residenceAddress: '江苏省南京市江宁区百家湖花园1栋101室',
+    emergencyContact: '陆明', emergencyRelation: '父亲', emergencyPhone: '13911112222',
+    department: '生产部', team: 'A班', position: '农技员', workArea: '全部生产区域',
+    skillLevel: '高级', skillTags: ['浇水灌溉', '施肥作业', '病虫害防治', '温控管理'],
+    workYears: 6, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2020-03-01', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2027-02-28', contractNo: 'HT-2020-008',
+    education: '本科', major: '农学', trainingRecords: [
+      { id: 'TR011', trainingDate: '2024-06-15', trainingType: '技能培训', trainingContent: '设施农业技术', trainingHours: 24, trainer: '张博士', certificate: '高级农技师证书', score: 92 }
+    ],
+    workExperiences: [
+      { id: 'WE011', company: '南京绿野农场', position: '农技员', startDate: '2018-07-01', endDate: '2020-02-28', workContent: '温室作物管理', leavingReason: '个人发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS011', year: 2024, assessmentDate: '2024-12-20', assessor: '王建国', rating: '优秀', score: 95, strengths: '技术全面，能独立解决生产问题', weaknesses: '对新品种接受较慢', goals: '成为技术带头人' }
+    ],
+    status: '在职', remarks: '技术骨干，农技方面的带头人'
+  },
+  {
     id: 'W001', workerId: 'EMP20240001', name: '张伟民', gender: '男', age: 35,
     birthDate: '1991-01-01', idCard: '320105199101011234', phone: '13812345678',
     email: 'zhangwm@example.com', wechat: 'zhangweimin2024',

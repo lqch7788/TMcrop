@@ -11,11 +11,15 @@ import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import type { ProblemEntry } from '../../../hooks/usePersistentProblems';
 import type { Task } from '../../../types';
 import {
-  CreateProblemModal,
-  BatchEditModal,
   DeleteWarningModal,
   ExportFormatModal,
 } from './modals';
+import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
+import type { ProblemFlowRecord } from '../../../hooks/useProblemDispatch';
+import { SourceFilter } from './components/SourceFilter';
+import { SourceCell } from './components/SourceCell';
+import { SourceBadge } from './components/SourceBadge';
+import type { SourceModuleType } from './constants/sourceConfig';
 
 export function ProblemDispatchPage() {
   const {
@@ -35,26 +39,19 @@ export function ProblemDispatchPage() {
   const [tasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
 
   // 按钮模式状态
-  const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [batchDispatchMode, setBatchDispatchMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
 
   // 选中行
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
   // 弹窗状态
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   // 导出格式
   const [exportFormat, setExportFormat] = useState('excel');
-
-  // 批量编辑状态
-  const [selectedProblemId, setSelectedProblemId] = useState<number | null>(null);
-  const [editedProblemCodes, setEditedProblemCodes] = useState<number[]>([]);
-  const [editedProblems, setEditedProblems] = useState<Record<number, Partial<ProblemEntry>>>({});
 
   // 新增表单数据
   const [formData, setFormData] = useState({
@@ -76,8 +73,10 @@ export function ProblemDispatchPage() {
 
   // 筛选状态
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'handled'>('all');
-  const [greenhouseFilter, setGreenhouseFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState<'all' | '轻微' | '中等' | '严重'>('all');
+  const [sourceModuleFilter, setSourceModuleFilter] = useState<SourceModuleType | 'all'>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month' | 'year' | 'custom'>('all');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
   // 批量选择
   const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
@@ -88,6 +87,12 @@ export function ProblemDispatchPage() {
     problem: ProblemEntry | null;
     batchMode: boolean;
   }>({ isOpen: false, problem: null, batchMode: false });
+
+  // 问题详情弹窗状态
+  const [detailModal, setDetailModal] = useState<{
+    isOpen: boolean;
+    problem: ProblemEntry | null;
+  }>({ isOpen: false, problem: null });
 
   // 选中的执行人
   const [selectedWorker, setSelectedWorker] = useState<{
@@ -113,29 +118,51 @@ export function ProblemDispatchPage() {
         list = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
     }
 
-    if (greenhouseFilter) {
-      list = list.filter(p => p.greenhouseName.includes(greenhouseFilter));
-    }
-
     if (severityFilter !== 'all') {
       list = list.filter(p => p.issueSeverity === severityFilter);
     }
 
-    return list;
-  }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, greenhouseFilter, severityFilter]);
+    if (sourceModuleFilter !== 'all') {
+      list = list.filter(p => p.sourceModule === sourceModuleFilter);
+    }
 
-  // 温室选项
-  const greenhouseOptions = useMemo(() => {
-    const greenhouses = [...new Set([
-      ...pendingProblems.map(p => p.greenhouseName),
-      ...dispatchedProblems.map(p => p.greenhouseName),
-      ...handledProblems.map(p => p.greenhouseName),
-    ])];
-    return [
-      { value: '', label: '全部温室' },
-      ...greenhouses.map(g => ({ value: g, label: g })),
-    ];
-  }, [pendingProblems, dispatchedProblems, handledProblems]);
+    // 时间筛选
+    if (timeFilter !== 'all') {
+      const now = new Date();
+      let startDate: Date | null = null;
+      let endDate: Date | null = null;
+
+      if (timeFilter === 'week') {
+        // 本周一
+        const day = now.getDay() || 7;
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - day + 1);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (timeFilter === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (timeFilter === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      } else if (timeFilter === 'custom' && dateRange.start) {
+        startDate = new Date(dateRange.start);
+        if (dateRange.end) {
+          endDate = new Date(dateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+        }
+      }
+
+      if (startDate) {
+        list = list.filter(p => {
+          const checkDate = new Date(p.checkDate);
+          if (endDate) {
+            return checkDate >= startDate! && checkDate <= endDate;
+          }
+          return checkDate >= startDate!;
+        });
+      }
+    }
+
+    return list;
+  }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
 
   // 处理单选分派
   const handleDispatch = () => {
@@ -217,6 +244,8 @@ export function ProblemDispatchPage() {
       issueText: formData.issueText,
       issueSeverity: formData.issueSeverity,
       status: '待处理',
+      // 来源追踪字段
+      sourceModule: 'manual',
     });
 
     setShowCreateModal(false);
@@ -249,22 +278,6 @@ export function ProblemDispatchPage() {
       issueSeverity: '中等',
     });
     setErrors({});
-  };
-
-  // 处理编辑提交
-  const handleEditSubmit = () => {
-    // 应用所有编辑
-    if (Object.keys(editedProblems).length > 0) {
-      Object.entries(editedProblems).forEach(([id, edits]) => {
-        // 这里需要调用 updateProblem 方法
-        // 由于 useProblemDispatch 没有导出 updateProblem，需要从 usePersistentProblems 获取
-      });
-    }
-    setShowBatchEditModal(false);
-    setEditedProblems({});
-    setEditedProblemCodes([]);
-    setSelectedRows([]);
-    setSelectedProblemId(null);
   };
 
   // 处理删除确认
@@ -372,9 +385,13 @@ export function ProblemDispatchPage() {
     setSelectedRows([]);
   };
 
-  // 切换全选（编辑/删除模式）
+  // 切换全选（编辑/删除/导出模式）
   const handleBatchSelectAll = () => {
-    const selectable = filteredProblems.filter(p => p.status === '待处理' && !p.sourceTaskId);
+    // 批量分派模式：只选择待处理且没有sourceTaskId的问题
+    // 导出/删除模式：选择所有已筛选的问题
+    const selectable = batchDispatchMode
+      ? filteredProblems.filter(p => p.status === '待处理' && !p.sourceTaskId)
+      : filteredProblems;
     if (selectedRows.length === selectable.length) {
       setSelectedRows([]);
     } else {
@@ -497,6 +514,50 @@ export function ProblemDispatchPage() {
       {/* 筛选工具栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex items-center gap-4 flex-wrap">
+          {/* 时间筛选 */}
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg overflow-hidden border border-gray-200">
+              {[
+                { value: 'all', label: '全部' },
+                { value: 'week', label: '本周' },
+                { value: 'month', label: '本月' },
+                { value: 'year', label: '本年' },
+                { value: 'custom', label: '时间段' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTimeFilter(opt.value as typeof timeFilter)}
+                  className={`px-3 py-1.5 text-sm ${
+                    timeFilter === opt.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 自定义时间段筛选 */}
+          {timeFilter === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-400">至</span>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
           {/* 状态筛选 */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">状态：</span>
@@ -522,20 +583,6 @@ export function ProblemDispatchPage() {
             </div>
           </div>
 
-          {/* 温室筛选 */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">温室：</span>
-            <select
-              value={greenhouseFilter}
-              onChange={e => setGreenhouseFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {greenhouseOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
           {/* 严重程度筛选 */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">严重程度：</span>
@@ -551,6 +598,12 @@ export function ProblemDispatchPage() {
             </select>
           </div>
 
+          {/* 来源模块筛选 */}
+          <SourceFilter
+            value={sourceModuleFilter}
+            onChange={setSourceModuleFilter}
+          />
+
           {/* 操作按钮 */}
           {exportMode ? (
             <div className="flex gap-2 ml-auto">
@@ -563,26 +616,6 @@ export function ProblemDispatchPage() {
               </button>
               <button
                 onClick={handleCancelExport}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </div>
-          ) : batchEditMode ? (
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => setShowBatchEditModal(true)}
-                disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Edit className="w-4 h-4" />
-                批量编辑
-              </button>
-              <button
-                onClick={() => {
-                  setBatchEditMode(false);
-                  setSelectedRows([]);
-                }}
                 className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
               >
                 取消
@@ -608,34 +641,38 @@ export function ProblemDispatchPage() {
                 取消
               </button>
             </div>
+          ) : batchDispatchMode ? (
+            <div className="flex gap-2 ml-auto">
+              <button
+                onClick={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
+                disabled={selectedProblems.length === 0}
+                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+                确认分派
+              </button>
+              <button
+                onClick={() => {
+                  setBatchDispatchMode(false);
+                  setSelectedProblems([]);
+                }}
+                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+            </div>
           ) : (
             <div className="flex gap-2 ml-auto">
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              <button
                 onClick={() => {
-                  setBatchEditMode(true);
-                  setSelectedRows([]);
+                  setBatchDispatchMode(true);
+                  setSelectedProblems([]); // 清空已选
+                  setStatusFilter('pending'); // 自动切换到待分派筛选
                 }}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
               >
-                <Edit className="w-4 h-4" />
-                编辑
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDeleteMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
+                <Send className="w-4 h-4" />
+                批量分派
               </button>
               <button
                 onClick={() => {
@@ -649,17 +686,6 @@ export function ProblemDispatchPage() {
               </button>
             </div>
           )}
-
-          {/* 批量分派按钮 */}
-          {selectedProblems.length > 0 && !batchEditMode && !batchDeleteMode && !exportMode && (
-            <button
-              onClick={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
-              className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
-            >
-              <Send className="w-4 h-4" />
-              批量分派 ({selectedProblems.length})
-            </button>
-          )}
         </div>
       </div>
 
@@ -670,29 +696,21 @@ export function ProblemDispatchPage() {
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold w-12">
-                  {(batchEditMode || batchDeleteMode || exportMode) ? (
-                    filteredProblems.length > 0 && (
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.length === filteredProblems.length && filteredProblems.length > 0}
-                        onChange={handleBatchSelectAll}
-                        className="w-4 h-4 rounded border-white/30 bg-white/20"
-                      />
-                    )
-                  ) : (
-                    statusFilter === 'pending' && pendingProblems.length > 0 && (
-                      <input
-                        type="checkbox"
-                        checked={selectedProblems.length === pendingProblems.length && pendingProblems.length > 0}
-                        onChange={toggleSelectAll}
-                        className="w-4 h-4 rounded border-white/30 bg-white/20"
-                      />
-                    )
+                  {(batchDeleteMode || exportMode || batchDispatchMode) && filteredProblems.length > 0 && (
+                    <input
+                      type="checkbox"
+                      checked={
+                        batchDispatchMode
+                          ? selectedProblems.length === pendingProblems.length && pendingProblems.length > 0
+                          : selectedRows.length === filteredProblems.length
+                      }
+                      onChange={batchDispatchMode ? toggleSelectAll : handleBatchSelectAll}
+                      className="w-4 h-4 rounded border-white/30 bg-white/20"
+                    />
                   )}
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">温室</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">作物</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">来源</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">问题描述</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">严重程度</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
@@ -703,7 +721,7 @@ export function ProblemDispatchPage() {
             <tbody className="divide-y divide-gray-100">
               {filteredProblems.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
                     暂无问题数据
                   </td>
                 </tr>
@@ -711,34 +729,38 @@ export function ProblemDispatchPage() {
                 filteredProblems.map(problem => (
                   <tr key={problem.id} className="hover:bg-blue-50 transition-colors">
                     <td className="px-4 py-3">
-                      {(batchEditMode || batchDeleteMode || exportMode) ? (
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(problem.id)}
-                          onChange={() => handleBatchSelectRow(problem.id)}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                      ) : (
-                        problem.status === '待处理' && !problem.sourceTaskId && (
+                      {batchDispatchMode ? (
+                        problem.status === '待处理' && !problem.sourceTaskId ? (
                           <input
                             type="checkbox"
                             checked={selectedProblems.includes(problem.id)}
                             onChange={() => toggleSelect(problem.id)}
                             className="w-4 h-4 rounded border-gray-300"
                           />
-                        )
-                      )}
+                        ) : null
+                      ) : (batchDeleteMode || exportMode) ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(problem.id)}
+                          onChange={() => handleBatchSelectRow(problem.id)}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {problem.checkDate}
+                      <button
+                        onClick={() => setDetailModal({ isOpen: true, problem })}
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
+                        title="点击查看详情"
+                      >
+                        {problem.problemCode}
+                      </button>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {problem.greenhouseName}
+                    {/* 来源列 */}
+                    <td className="px-4 py-3">
+                      <SourceCell problem={problem} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {problem.cropName}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[300px] truncate">
                       {problem.issueText}
                     </td>
                     <td className="px-4 py-3">
@@ -1005,37 +1027,6 @@ export function ProblemDispatchPage() {
         </div>
       )}
 
-      {/* 新增问题弹窗 */}
-      <CreateProblemModal
-        isOpen={showCreateModal}
-        onClose={handleCreateClose}
-        onSubmit={handleCreateSubmit}
-        formData={formData}
-        errors={errors}
-        onFormChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-      />
-
-      {/* 批量编辑弹窗 */}
-      <BatchEditModal
-        isOpen={showBatchEditModal}
-        selectedRows={selectedRows}
-        problems={[...pendingProblems, ...dispatchedProblems, ...handledProblems]}
-        editedProblemCodes={editedProblemCodes}
-        editedProblems={editedProblems}
-        selectedProblemId={selectedProblemId}
-        onSelectedProblemIdChange={setSelectedProblemId}
-        onEditedProblemsChange={setEditedProblems}
-        onEditedProblemCodesChange={setEditedProblemCodes}
-        onClose={() => {
-          setShowBatchEditModal(false);
-          setEditedProblems({});
-          setEditedProblemCodes([]);
-          setSelectedRows([]);
-          setSelectedProblemId(null);
-        }}
-        onConfirm={handleEditSubmit}
-      />
-
       {/* 删除警告弹窗 */}
       <DeleteWarningModal
         isOpen={showDeleteWarning}
@@ -1053,6 +1044,141 @@ export function ProblemDispatchPage() {
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
       />
+
+      {/* 问题详情弹窗 */}
+      {detailModal.isOpen && detailModal.problem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+            {/* 弹窗头部 */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                问题详情 {detailModal.problem.problemCode}
+              </h3>
+              <button
+                onClick={() => setDetailModal({ isOpen: false, problem: null })}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* 弹窗内容 */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {/* 来源信息 */}
+              <SourceBadge problem={detailModal.problem} />
+
+              {/* 基本信息 */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">温室区域</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.greenhouseName}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">作物名称</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.cropName}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">巡查人员</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.inspectorName}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">巡查时间</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.checkDate} {detailModal.problem.checkTime}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">天气</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.weather}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">温湿度</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.temperature}°C / {detailModal.problem.humidity}%</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">作物状态</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.cropStatus}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">严重程度</div>
+                    <div className="text-sm font-medium">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        detailModal.problem.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
+                        detailModal.problem.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {detailModal.problem.issueSeverity}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 问题描述 */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">问题描述</h4>
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-800">
+                  {detailModal.problem.issueText}
+                </div>
+              </div>
+
+              {/* 处理信息 */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">处理信息</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">当前状态</div>
+                    <div className="text-sm font-medium">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        detailModal.problem.status === '已处理' ? 'bg-green-100 text-green-700' :
+                        detailModal.problem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
+                        detailModal.problem.status === '待验收' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {detailModal.problem.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">处理人</div>
+                    <div className="text-sm font-medium text-gray-800">{detailModal.problem.handler || '-'}</div>
+                  </div>
+                  {detailModal.problem.handleDate && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">处理日期</div>
+                      <div className="text-sm font-medium text-gray-800">{detailModal.problem.handleDate}</div>
+                    </div>
+                  )}
+                  {detailModal.problem.handleResult && (
+                    <div className="col-span-2">
+                      <div className="text-xs text-gray-500 mb-1">处理结果</div>
+                      <div className="text-sm font-medium text-gray-800">{detailModal.problem.handleResult}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 流转记录 */}
+              <div>
+                <TaskFlowTimeline
+                  records={detailModal.problem.flowRecords || []}
+                  showStatusChange={true}
+                />
+              </div>
+            </div>
+
+            {/* 弹窗底部 */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+              <button
+                onClick={() => setDetailModal({ isOpen: false, problem: null })}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

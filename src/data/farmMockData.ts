@@ -52,7 +52,7 @@ export interface FarmOperationRecord {
 }
 
 // ============================================
-// 巡田监测记录类型
+// 巡查记录类型
 // ============================================
 export interface FarmInspectionRecord {
   id: string;
@@ -398,7 +398,7 @@ export const farmOperationRecords: FarmOperationRecord[] = [
 ];
 
 // ============================================
-// Mock数据 - 巡田监测记录
+// Mock数据 - 巡查记录
 // ============================================
 const tomatoImages = ['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='];
 
@@ -813,7 +813,7 @@ export interface TaskDispatchTask {
   requiredFeedback?: string[];
 
   // 关联记录（数据闭环关键）
-  relatedInspectionIds?: string[];   // 关联的巡田监测记录ID
+  relatedInspectionIds?: string[];   // 关联的巡查记录ID
   relatedOperationIds?: string[];     // 关联的农事操作记录ID
   relatedHarvestIds?: string[];       // 关联的采收记录ID
 }

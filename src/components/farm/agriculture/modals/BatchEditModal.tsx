@@ -23,7 +23,7 @@ interface OperationRecord {
 
 interface BatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
+  selectedRows: string[];
   records: OperationRecord[];
   editedRecordIds: string[];
   editedRecords: Record<string, Partial<OperationRecord>>;
@@ -58,7 +58,7 @@ export function BatchEditModal({
   operatorOptions,
   unitOptions,
 }: BatchEditModalProps) {
-  const selectedRecords = selectedRows.map(index => records[index]).filter(Boolean) as OperationRecord[];
+  const selectedRecords = selectedRows.map(id => records.find(r => r.id.toString() === id)).filter(Boolean) as OperationRecord[];
   const currentRecord = selectedRecordId ? records.find(r => r.id.toString() === selectedRecordId) : null;
   const editedData = selectedRecordId ? editedRecords[selectedRecordId] || {} : {};
 
