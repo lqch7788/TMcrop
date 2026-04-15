@@ -76,7 +76,7 @@ export interface TempTask {
   taskCode: string;
   title: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'draft' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'cancelled' | 'rejected' | 'pending_reassign';
   assigneeId: string;
   assigneeName: string;
   assignerId: string;
@@ -89,6 +89,7 @@ export interface TempTask {
   tempTaskType: string;
   workLocation: string;
   estimatedHours: number;
+  rejectCount?: number;
 }
 
 // 临时任务配置

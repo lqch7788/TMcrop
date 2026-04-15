@@ -1,12 +1,16 @@
 import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 
 const statusConfig = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-50' },
   pending: { label: '待执行', color: 'text-amber-600', bg: 'bg-amber-50' },
   in_progress: { label: '进行中', color: 'text-blue-600', bg: 'bg-blue-50' },
+  waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-50' },
   completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-50' },
   cancelled: { label: '已取消', color: 'text-gray-600', bg: 'bg-gray-50' },
+  rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-50' },
+  pending_reassign: { label: '待重新派发', color: 'text-purple-600', bg: 'bg-purple-50' },
 };
 
 interface TempTaskTableProps {
@@ -19,7 +23,9 @@ interface TempTaskTableProps {
   onViewTask: (task: TempTask) => void;
   onEditTask: (task: TempTask) => void;
   onStartTask: (task: TempTask) => void;
-  onCompleteTask: (task: TempTask) => void;
+  onSubmitComplete: (task: TempTask) => void;
+  onAcceptComplete?: (task: TempTask) => void;
+  onRejectComplete?: (task: TempTask, reason: string) => void;
   onSelectAll?: () => void;
   onSelectRow?: (id: string) => void;
   pagination?: {
@@ -41,7 +47,7 @@ export function TempTaskTable({
   onViewTask,
   onEditTask,
   onStartTask,
-  onCompleteTask,
+  onSubmitComplete,
   onSelectAll,
   onSelectRow,
   pagination,
@@ -109,14 +115,17 @@ export function TempTaskTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">截止日期</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">紧急程度</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">超时</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-300">
-            {tasks.map((task) => (
+            {tasks.map((task) => {
+              const overdueStatus = getTaskOverdueStatus(task);
+              return (
               <tr
                 key={task.id}
-                className={`hover:bg-blue-100 transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''} ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''}`}
+                className={`hover:bg-blue-100 transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''} ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''} ${overdueStatus === 'overdue' ? 'bg-red-50' : ''} ${overdueStatus === 'warning' ? 'bg-orange-50' : ''}`}
                 onClick={() => onViewTask(task)}
               >
                 {showCheckbox && (
@@ -178,6 +187,22 @@ export function TempTaskTable({
                     {TEMP_TASK_URGENCY_CONFIG[task.urgency].label}
                   </span>
                 </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {overdueStatus === 'overdue' && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      {getTaskOverdueDesc(task)}
+                    </span>
+                  )}
+                  {overdueStatus === 'warning' && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                      即将到期
+                    </span>
+                  )}
+                  {overdueStatus === 'normal' && (
+                    <span className="text-xs text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <button
@@ -197,16 +222,25 @@ export function TempTaskTable({
                     )}
                     {task.status === 'in_progress' && (
                       <button
-                        onClick={() => onCompleteTask(task)}
+                        onClick={() => onSubmitComplete(task)}
                         className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
                       >
-                        完成
+                        提交完成
+                      </button>
+                    )}
+                    {task.status === 'waiting_acceptance' && onAcceptComplete && (
+                      <button
+                        onClick={() => onAcceptComplete(task)}
+                        className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
+                      >
+                        审核通过
                       </button>
                     )}
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
