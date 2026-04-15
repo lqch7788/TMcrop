@@ -249,6 +249,8 @@ export interface InspectionRecord {
   issuePresets?: string[];
   // 问题描述
   issueText?: string;
+  // 问题严重程度
+  issueSeverity?: '轻微' | '中等' | '严重';
   // 问题照片
   issuePhotos?: string[];
   // 反馈人员ID列表

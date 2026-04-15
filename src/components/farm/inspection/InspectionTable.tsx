@@ -11,14 +11,12 @@ interface InspectionRecord {
   infrastructureName?: string;
   remarks?: string;
   checkDate: string;
-  weather: string;
-  temperature: number;
-  humidity: number;
   // 新增字段
   status: string; // normal/critical
   issueCategories?: string[]; // 问题分类列表
   issuePresets?: string[]; // 快速勾选的问题
   issueText?: string;
+  issueSeverity?: '轻微' | '中等' | '严重';
   issuePhotos?: string[];
   feedbackUsers?: string[]; // 反馈人员
   expectedCompletion?: string; // 期望完成时间
@@ -26,6 +24,32 @@ interface InspectionRecord {
   issues: string[];
   images?: string[];
   issueStatus?: 'pending' | 'processing' | 'resolved';
+  // 关联的问题ID（用于匹配问题数据）
+  problemId?: number;
+}
+
+// 问题记录类型（用于流转进度展示）
+interface ProblemEntry {
+  id: number;
+  status: '待处理' | '处理中' | '待验收' | '已处理';
+  handler?: string;
+  handleResult?: string;
+  sourceTaskId?: string;
+  flowRecords?: Array<{
+    id: string;
+    action: string;
+    operatorName: string;
+    actionTime: string;
+    comment?: string;
+  }>;
+}
+
+// 任务类型（用于获取实际进度）
+interface TaskDispatchTask {
+  id: string;
+  status: string;
+  progress?: number;
+  sourceProblemId?: number;
 }
 
 interface InspectionTableProps {
@@ -41,6 +65,10 @@ interface InspectionTableProps {
   onViewDetail: (record: InspectionRecord) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  // 新增：问题数据和操作
+  problems?: ProblemEntry[];
+  tasks?: TaskDispatchTask[];  // 任务列表，用于获取实际进度
+  onAcceptance?: (problem: ProblemEntry) => void;
 }
 
 // 获取状态标签组件
@@ -76,9 +104,55 @@ export function InspectionTable({
   onViewDetail,
   onPageChange,
   onPageSizeChange,
+  problems = [],
+  tasks = [],
+  onAcceptance,
 }: InspectionTableProps) {
   const totalPages = Math.ceil(records.length / pageSize) || 1;
   const showSelection = exportMode || batchEditMode || batchDeleteMode;
+
+  // 根据 record 查找关联的问题
+  const getProblemForRecord = (record: InspectionRecord): ProblemEntry | undefined => {
+    // 优先通过 problemId 匹配
+    if (record.problemId) {
+      return problems.find(p => p.id === record.problemId);
+    }
+    // 通过温室名称和巡查日期匹配（没有 problemId 时使用）
+    return problems.find(p =>
+      record.checkDate === p.checkDate &&
+      record.greenhouseName &&
+      (record.greenhouseName.includes(p.greenhouseName || '') || (p.greenhouseName && p.greenhouseName.includes(record.greenhouseName)))
+    );
+  };
+
+  // 根据问题获取关联的任务
+  const getTaskForProblem = (problem: ProblemEntry): TaskDispatchTask | undefined => {
+    if (!problem?.sourceTaskId) return undefined;
+    return tasks.find(t => t.id === problem.sourceTaskId);
+  };
+
+  // 获取问题处理进度（优先使用任务的实际进度）
+  const getProblemProgress = (problem: ProblemEntry): number => {
+    if (!problem) return 0;
+    // 优先获取关联任务的实际进度
+    const task = getTaskForProblem(problem);
+    if (task && task.progress !== undefined) {
+      return task.progress;
+    }
+    // 如果没有任务，使用问题状态估算进度
+    switch (problem.status) {
+      case '待处理': return 0;
+      case '处理中': return 50;
+      case '待验收': return 100; // 待验收说明已提交完成
+      case '已处理': return 100;
+      default: return 0;
+    }
+  };
+
+  // 是否显示验收按钮（待验收状态才显示）
+  const canAccept = (problem: ProblemEntry | undefined): boolean => {
+    return problem?.status === '待验收';
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
@@ -101,13 +175,13 @@ export function InspectionTable({
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">提交人</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">位置/对象</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查日期</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">天气</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">温度(°C)</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">湿度(%)</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查结果</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">严重程度</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">处理进度</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
             </tr>
           </thead>
@@ -165,9 +239,6 @@ export function InspectionTable({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.checkDate}</td>
-                <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.weather}</td>
-                <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.temperature}</td>
-                <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.humidity}</td>
                 <td className="px-4 py-3 text-center">
                   {record.status === 'normal' ? (
                     <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
@@ -210,6 +281,19 @@ export function InspectionTable({
                     <span className="text-sm text-gray-500">-</span>
                   )}
                 </td>
+                <td className="px-4 py-3 text-center">
+                  {record.issueSeverity ? (
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      record.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
+                      record.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {record.issueSeverity}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-500">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-center whitespace-nowrap">
                   {record.issuePhotos && record.issuePhotos.length > 0 ? (
                     <div className="flex justify-center gap-1">
@@ -232,6 +316,56 @@ export function InspectionTable({
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
+                </td>
+                {/* 处理进度列 */}
+                <td className="px-4 py-3 text-center">
+                  {(() => {
+                    const problem = getProblemForRecord(record);
+                    if (!problem) {
+                      return <span className="text-gray-400 text-xs">-</span>;
+                    }
+                    const progress = getProblemProgress(problem);
+                    const statusColors: Record<string, string> = {
+                      '待处理': 'bg-gray-400',
+                      '处理中': 'bg-blue-500',
+                      '待验收': 'bg-amber-500',
+                      '已处理': 'bg-green-500',
+                    };
+                    return (
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-full ${statusColors[problem.status] || 'bg-gray-400'} rounded-full`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500">{progress}%</span>
+                      </div>
+                    );
+                  })()}
+                </td>
+                {/* 操作列 */}
+                <td className="px-4 py-3 text-center">
+                  {(() => {
+                    const problem = getProblemForRecord(record);
+                    if (canAccept(problem)) {
+                      return (
+                        <button
+                          onClick={() => onAcceptance?.(problem!)}
+                          className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded font-medium transition-colors"
+                        >
+                          验收
+                        </button>
+                      );
+                    }
+                    if (problem && problem.status !== '已处理') {
+                      return <span className="text-xs text-gray-400">处理中</span>;
+                    }
+                    if (problem?.status === '已处理') {
+                      return <span className="text-xs text-green-500">已完成</span>;
+                    }
+                    return <span className="text-gray-400 text-xs">-</span>;
+                  })()}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate">
                   {record.remarks || <span className="text-gray-400">-</span>}

@@ -29,6 +29,7 @@ interface InspectionRecordFormData {
   issueCategories: string[]; // 问题分类（多选）
   issuePresets: string[]; // 快速勾选的问题
   issueText: string; // 问题描述
+  issueSeverity?: '轻微' | '中等' | '严重'; // 问题严重程度
   issuePhotos: string[]; // 问题照片（改名避免混淆）
   feedbackUsers: string[]; // 反馈人员（多选）
   expectedCompletion: string; // 期望完成时间
@@ -219,9 +220,13 @@ export function CreateInspectionModal({
               <select
                 value={newRecord.equipmentId}
                 onChange={(e) => {
-                  const eq = equipmentRecords.find(x => x.id === e.target.value);
-                  updateField('equipmentId', e.target.value);
-                  updateField('equipmentName', eq?.name || '');
+                  const selectedId = e.target.value;
+                  const eq = equipmentRecords.find(x => x.id === selectedId);
+                  onNewRecordChange(prev => ({
+                    ...prev,
+                    equipmentId: selectedId,
+                    equipmentName: eq?.name || ''
+                  }));
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -249,9 +254,14 @@ export function CreateInspectionModal({
               <select
                 value={newRecord.infrastructureId}
                 onChange={(e) => {
-                  const inf = infrastructureRecords.find(x => x.id === e.target.value);
-                  updateField('infrastructureId', e.target.value);
-                  updateField('infrastructureName', inf?.name || '');
+                  const selectedId = e.target.value;
+                  const inf = infrastructureRecords.find(x => x.id === selectedId);
+                  // 使用函数式更新确保两个字段同步更新
+                  onNewRecordChange(prev => ({
+                    ...prev,
+                    infrastructureId: selectedId,
+                    infrastructureName: inf?.name || ''
+                  }));
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
@@ -332,35 +342,6 @@ export function CreateInspectionModal({
               value={newRecord.duration}
               onChange={(val) => updateField('duration', val)}
               placeholder="选填"
-            />
-          </FormField>
-        </div>
-
-        {/* 天气、温度、湿度 */}
-        <div className="grid grid-cols-3 gap-4">
-          <FormField label="天气">
-            <select
-              value={newRecord.weather}
-              onChange={(e) => updateField('weather', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {weatherOptions.map(w => (
-                <option key={w} value={w}>{w}</option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="温度(°C)" required error={errors.temperature}>
-            <NumberInput
-              value={newRecord.temperature}
-              onChange={(val) => updateField('temperature', val)}
-              placeholder="0.00"
-            />
-          </FormField>
-          <FormField label="湿度(%)" required error={errors.humidity}>
-            <NumberInput
-              value={newRecord.humidity}
-              onChange={(val) => updateField('humidity', val)}
-              placeholder="0.00"
             />
           </FormField>
         </div>
@@ -579,6 +560,36 @@ export function CreateInspectionModal({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
               />
+            </FormField>
+
+            {/* 严重程度 */}
+            <FormField label="严重程度">
+              <div className="flex gap-4">
+                {(['轻微', '中等', '严重'] as const).map((level) => (
+                  <label
+                    key={level}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                      newRecord.issueSeverity === level
+                        ? level === '严重'
+                          ? 'border-red-500 bg-red-50 text-red-700'
+                          : level === '中等'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-gray-500 bg-gray-100 text-gray-700'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="issueSeverity"
+                      value={level}
+                      checked={newRecord.issueSeverity === level}
+                      onChange={() => updateField('issueSeverity', level)}
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium">{level}</span>
+                  </label>
+                ))}
+              </div>
             </FormField>
 
             {/* 问题照片 */}

@@ -3,12 +3,15 @@
  * 员工查看自己被分派的任务，并完成任务
  */
 
-import { useState, useEffect } from 'react';
-import { Edit, FileText, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Edit, FileText, CheckCircle, XCircle, Play, Upload, Eye, Clock } from 'lucide-react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { Modal } from '../../ui/Modal';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData';
+import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
+import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
+import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 
 // 任务类型定义
 const taskTypes = [
@@ -23,19 +26,22 @@ const taskTypes = [
   { value: 'other', label: '其他', color: 'bg-gray-500' },
 ];
 
-// 状态映射
+// 状态映射（扩展支持问题处理流程）
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
-  pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待开始' },
+  pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待接受' },
+  accepted: { bg: 'bg-blue-100', color: 'text-blue-600', label: '已接受' },
   in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
   completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
   waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
-  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已驳回' },
+  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已拒绝' },
 };
 
 // 优先级映射
 const priorityMap: Record<string, { color: string; label: string }> = {
   urgent: { color: 'text-red-500', label: '紧急' },
   high: { color: 'text-orange-500', label: '高' },
+  medium: { color: 'text-yellow-500', label: '中' },
+  low: { color: 'text-green-500', label: '低' },
   normal: { color: 'text-gray-500', label: '普通' },
 };
 
@@ -53,13 +59,17 @@ const getTypeLabel = (type: string): string => {
 
 export function MyTasksPage() {
   // 从 localStorage 读取任务（用于进度更新等操作）
-  const [tasks, setTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.MY_TASKS, []);
+  // 注意：问题分派的任务存储在 TASKS key 下
+  const [tasks, setTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.TASKS, []);
 
-  // 获取当前用户名
-  const currentUserName = localStorage.getItem('username') || '虚竹';
+  // 获取当前用户名（原型阶段默认使用陆启闯）
+  const currentUserName = localStorage.getItem('username') || '陆启闯';
 
   // 使用任务数据（优先从 localStorage 读取，如果没有则使用 taskDispatchTasks）
   const myTasks = tasks.length > 0 ? tasks : taskDispatchTasks;
+
+  // 任务筛选状态：全部 / 问题处理 / 生产任务
+  const [taskFilter, setTaskFilter] = useState<'all' | 'problem' | 'production'>('all');
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,11 +83,49 @@ export function MyTasksPage() {
     }
   }, [tasks.length, setTasks]);
 
+  // 监听 localStorage 变化（其他页面更新后同步）
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEYS.TASKS && e.newValue) {
+        try {
+          const newTasks = JSON.parse(e.newValue);
+          // 强制更新组件状态
+          setTasks(newTasks);
+        } catch (err) {
+          console.warn('Failed to parse tasks from storage:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [setTasks]);
+
+  // 根据筛选过滤任务
+  const filteredTasks = useMemo(() => {
+    switch (taskFilter) {
+      case 'problem':
+        // 问题处理任务：有 sourceProblemId 的任务
+        return myTasks.filter(task => task.sourceProblemId !== undefined);
+      case 'production':
+        // 生产任务：没有 sourceProblemId 的任务
+        return myTasks.filter(task => !task.sourceProblemId);
+      default:
+        return myTasks;
+    }
+  }, [myTasks, taskFilter]);
+
   // 计算分页
-  const totalPages = Math.ceil(myTasks.length / pageSize) || 1;
+  const totalPages = Math.ceil(filteredTasks.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, myTasks.length);
-  const paginatedTasks = myTasks.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + pageSize, filteredTasks.length);
+  const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
+
+  // 统计各类型任务数量
+  const taskCounts = useMemo(() => ({
+    all: myTasks.length,
+    problem: myTasks.filter(t => t.sourceProblemId !== undefined).length,
+    production: myTasks.filter(t => !t.sourceProblemId).length,
+  }), [myTasks]);
 
   // 详情弹窗状态
   const [selectedTask, setSelectedTask] = useState<TaskDispatchTask | null>(null);
@@ -89,6 +137,114 @@ export function MyTasksPage() {
   const openDetailModal = (task: TaskDispatchTask) => {
     setSelectedTask(task);
     setShowDetailModal(true);
+  };
+
+  // 使用 useProblemDispatch 获取流转方法
+  const { acceptProblem, rejectProblem, submitProblemFeedback, addProgressRecord, approveProblemCompletion, getProblemFlowRecords } = useProblemDispatch();
+  const { problems } = usePersistentProblems();
+
+  // 反馈表单状态
+  const [feedbackModal, setFeedbackModal] = useState<{
+    isOpen: boolean;
+    task: TaskDispatchTask | null;
+  }>({ isOpen: false, task: null });
+
+  const [feedbackForm, setFeedbackForm] = useState({
+    resultText: '',
+    progressText: '',
+    workloadDays: '',
+    workloadHours: '',
+    photosBefore: [] as string[],
+    photosAfter: [] as string[],
+  });
+
+  // 拒绝原因弹窗
+  const [rejectModal, setRejectModal] = useState<{
+    isOpen: boolean;
+    task: TaskDispatchTask | null;
+  }>({ isOpen: false, task: null });
+
+  const [rejectReason, setRejectReason] = useState('');
+
+  // 处理接单
+  const handleAccept = (task: TaskDispatchTask) => {
+    if (task.sourceProblemId) {
+      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
+    }
+    setTasks(prev => prev.map(t =>
+      t.id === task.id ? { ...t, status: 'accepted' } : t
+    ));
+    setShowDetailModal(false);
+  };
+
+  // 打开拒绝弹窗
+  const openRejectModal = (task: TaskDispatchTask) => {
+    setRejectModal({ isOpen: true, task });
+    setRejectReason('');
+  };
+
+  // 处理拒绝
+  const handleReject = () => {
+    if (!rejectModal.task || !rejectReason.trim()) return;
+    const task = rejectModal.task;
+    if (task.sourceProblemId) {
+      rejectProblem(task.sourceProblemId, 'U013', '陆启闯', rejectReason);
+    }
+    setTasks(prev => prev.filter(t => t.id !== task.id));
+    setRejectModal({ isOpen: false, task: null });
+    setRejectReason('');
+    setShowDetailModal(false);
+  };
+
+  // 开始处理
+  const handleStartProcessing = (task: TaskDispatchTask) => {
+    setTasks(prev => prev.map(t =>
+      t.id === task.id ? { ...t, status: 'in_progress' } : t
+    ));
+    setShowDetailModal(false);
+  };
+
+  // 打开反馈弹窗
+  const openFeedbackModal = (task: TaskDispatchTask) => {
+    setFeedbackModal({ isOpen: true, task });
+    setFeedbackForm({
+      resultText: '',
+      actualWorkload: '',
+      photosBefore: [],
+      photosAfter: [],
+    });
+    setShowDetailModal(false);
+  };
+
+  // 提交反馈
+  const handleSubmitFeedback = () => {
+    if (!feedbackModal.task) return;
+    const task = feedbackModal.task;
+    if (task.sourceProblemId) {
+      // 先记录进度流转
+      addProgressRecord(task.sourceProblemId, 'U013', '陆启闯', task.progress || 0, feedbackForm.resultText);
+      // 进度100%时提交验收，否则只是进度反馈
+      if (task.progress === 100) {
+        submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
+          resultText: feedbackForm.resultText,
+          actualWorkload: feedbackForm.workloadDays || feedbackForm.workloadHours
+            ? (parseFloat(feedbackForm.workloadDays || '0') * 24 + parseFloat(feedbackForm.workloadHours || '0'))
+            : undefined,
+        });
+      }
+    }
+    // 进度100%时进入待验收，否则继续进行中
+    const newStatus = task.progress === 100 ? 'waiting_acceptance' : 'in_progress';
+    setTasks(prev => prev.map(t =>
+      t.id === task.id ? { ...t, status: newStatus, progress: task.progress } : t
+    ));
+    setFeedbackModal({ isOpen: false, task: null });
+  };
+
+  // 获取当前任务关联的问题流转记录
+  const getCurrentProblemFlowRecords = () => {
+    if (!selectedTask?.sourceProblemId) return [];
+    return getProblemFlowRecords(selectedTask.sourceProblemId);
   };
 
   // 打开SOP弹窗
@@ -107,12 +263,7 @@ export function MyTasksPage() {
     if (selectedTask && selectedTask.id === taskId) {
       setSelectedTask(prev => prev ? { ...prev, progress } : null);
     }
-    // 如果进度100%，自动更新状态为已完成
-    if (progress === 100) {
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, status: 'completed' } : t
-      ));
-    }
+    // 注意：进度100%时不自动改变状态，用户需要通过提交反馈来确认完成
   };
 
   // 确认完成
@@ -161,6 +312,51 @@ export function MyTasksPage() {
         </div>
       </div>
 
+      {/* 任务类型标签页筛选 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => { setTaskFilter('all'); setCurrentPage(1); }}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              taskFilter === 'all'
+                ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            全部任务
+            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
+              {taskCounts.all}
+            </span>
+          </button>
+          <button
+            onClick={() => { setTaskFilter('problem'); setCurrentPage(1); }}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              taskFilter === 'problem'
+                ? 'border-orange-500 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            问题处理
+            <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
+              {taskCounts.problem}
+            </span>
+          </button>
+          <button
+            onClick={() => { setTaskFilter('production'); setCurrentPage(1); }}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              taskFilter === 'production'
+                ? 'border-blue-500 text-blue-600 bg-blue-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            生产任务
+            <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
+              {taskCounts.production}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* 任务列表 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
@@ -184,7 +380,7 @@ export function MyTasksPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
-              {myTasks.length === 0 ? (
+              {filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan={14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
@@ -263,14 +459,49 @@ export function MyTasksPage() {
                         )}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <button
-                          onClick={() => openDetailModal(task)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
-                          title="点击提交进度"
-                        >
-                          <Edit className="w-4 h-4" />
-                          提交进度
-                        </button>
+                        {task.status === 'pending' && (
+                          // 待接受状态：显示接受和拒绝按钮
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleAccept(task)}
+                              className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
+                              title="接受任务"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              接受
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(task)}
+                              className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
+                              title="拒绝任务"
+                            >
+                              <XCircle className="w-3 h-3" />
+                              拒绝
+                            </button>
+                          </div>
+                        )}
+                        {(task.status === 'accepted' || task.status === 'in_progress') && (
+                          // 已接受/进行中状态：显示提交进度按钮
+                          <button
+                            onClick={() => openFeedbackModal(task)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+                            title="点击提交进度"
+                          >
+                            <Edit className="w-4 h-4" />
+                            提交进度
+                          </button>
+                        )}
+                        {(task.status === 'waiting_acceptance' || task.status === 'completed' || task.status === 'rejected') && (
+                          // 待验收/已完成/已拒绝状态：只显示查看详情按钮
+                          <button
+                            onClick={() => openDetailModal(task)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                            title="点击查看详情"
+                          >
+                            <Eye className="w-4 h-4" />
+                            查看
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -298,7 +529,7 @@ export function MyTasksPage() {
             </select>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>共 {myTasks.length} 条</span>
+            <span>共 {filteredTasks.length} 条</span>
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
@@ -325,31 +556,6 @@ export function MyTasksPage() {
         title={`任务详情 - ${selectedTask?.id || ''}`}
         size="xl"
         showFooter={false}
-        bottomContent={
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => {
-                // 提交当前进度并关闭弹窗
-                if (selectedTask) {
-                  handleProgressChange(selectedTask.id, selectedTask.progress || 0);
-                }
-                setShowDetailModal(false);
-                setSelectedTask(null);
-              }}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
-            >
-              提交
-            </button>
-            {selectedTask?.progress === 100 && (
-              <button
-                onClick={() => handleConfirmComplete(selectedTask!)}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600"
-              >
-                确认完成
-              </button>
-            )}
-          </div>
-        }
       >
         {selectedTask && (
           <div className="space-y-6">
@@ -508,7 +714,128 @@ export function MyTasksPage() {
               </div>
             )}
 
-            {/* 进度 */}
+            {/* 流转记录 */}
+            {selectedTask.sourceProblemId && getCurrentProblemFlowRecords().length > 0 && (
+              <div>
+                <TaskFlowTimeline records={getCurrentProblemFlowRecords()} />
+              </div>
+            )}
+
+            {/* 进度（只读） */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all"
+                    style={{ width: `${selectedTask.progress || 0}%` }}
+                  />
+                </div>
+                <span className="w-14 text-sm font-medium text-gray-700 text-center">
+                  {selectedTask.progress || 0}%
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 反馈表单弹窗 */}
+      <Modal
+        isOpen={feedbackModal.isOpen}
+        onClose={() => { setFeedbackModal({ isOpen: false, task: null }); }}
+        title="任务处理"
+        size="xl"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => { setFeedbackModal({ isOpen: false, task: null }); }}
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSubmitFeedback}
+              disabled={
+                !feedbackModal.task ||
+                (feedbackModal.task.progress === 100
+                  ? !(feedbackForm?.resultText || '').trim()
+                  : !(feedbackForm?.progressText || '').trim())
+              }
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              提交反馈
+            </button>
+          </div>
+        }
+      >
+        {feedbackModal.task && (
+          <div className="space-y-6">
+            {/* 基本信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">任务区域</label>
+                  <p className="font-semibold text-gray-900">{feedbackModal.task.field || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">作物</label>
+                  <p className="font-semibold text-gray-900">{feedbackModal.task.crop || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">负责人</label>
+                  <p className="font-semibold text-gray-900">陆启闯</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">优先级</label>
+                  <p className={`font-semibold ${priorityMap[feedbackModal.task.priority]?.color || ''}`}>
+                    {priorityMap[feedbackModal.task.priority]?.label || feedbackModal.task.priority}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 时间信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">计划开始</label>
+                  <p className="font-semibold text-gray-900">{feedbackModal.task.planStart || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">计划结束</label>
+                  <p className="font-semibold text-gray-900">{feedbackModal.task.planEnd || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">状态</label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[feedbackModal.task.status]?.bg || ''} ${statusMap[feedbackModal.task.status]?.color || ''}`}>
+                      {statusMap[feedbackModal.task.status]?.label || feedbackModal.task.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">任务类型</label>
+                  <p className="font-semibold text-gray-900">{getTypeLabel(feedbackModal.task.types?.[0] || '')}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 流转记录 */}
+            {feedbackModal.task.sourceProblemId && getProblemFlowRecords(feedbackModal.task.sourceProblemId).length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">流转记录</h4>
+                <TaskFlowTimeline records={getProblemFlowRecords(feedbackModal.task.sourceProblemId)} />
+              </div>
+            )}
+
+            {/* 执行进度（可操作） */}
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
               <div className="flex items-center gap-4">
@@ -517,17 +844,166 @@ export function MyTasksPage() {
                   min="0"
                   max="100"
                   step="5"
-                  value={selectedTask.progress || 0}
-                  onChange={(e) => handleProgressChange(selectedTask.id, parseInt(e.target.value))}
+                  value={feedbackModal.task.progress || 0}
+                  onChange={(e) => {
+                    const newProgress = parseInt(e.target.value);
+                    setTasks(prev => prev.map(t =>
+                      t.id === feedbackModal.task!.id ? { ...t, progress: newProgress } : t
+                    ));
+                    setFeedbackModal(prev => ({
+                      ...prev,
+                      task: prev.task ? { ...prev.task, progress: newProgress } : null
+                    }));
+                  }}
                   className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
                 <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
-                  {selectedTask.progress || 0}%
+                  {feedbackModal.task.progress || 0}%
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
+                {feedbackModal.task.progress === 100 ? '已完成，可提交反馈' :
+                 feedbackModal.task.progress === 0 ? '未开始' : '进行中'}
               </p>
+            </div>
+
+            {/* 必填反馈提醒 */}
+            {feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <label className="block text-sm font-medium text-amber-800 mb-2">
+                  必填反馈项
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {feedbackModal.task.requiredFeedback.map((fb: string) => (
+                    <span key={fb} className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs">
+                      {fb === 'gps' && '位置打卡'}
+                      {fb === 'material' && '物资扫码'}
+                      {fb === 'photo_before' && '作业前照片'}
+                      {fb === 'photo_after' && '作业后照片'}
+                      {fb === 'voice' && '语音备注'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 反馈表单（任何进度都可以提交） */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="text-sm text-amber-800">
+                {feedbackModal.task.progress === 100
+                  ? '提交反馈后，任务将进入"待验收"状态，等待管理者确认完成。'
+                  : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
+              </div>
+            </div>
+
+            {/* 100%时显示处理结果和工作量 */}
+            {feedbackModal.task.progress === 100 ? (
+              <>
+                {/* 处理结果 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    处理结果 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={feedbackForm.resultText}
+                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
+                    placeholder="请描述处理过程和结果..."
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                {/* 实际工作量 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    实际工作量
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={feedbackForm.workloadDays}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, workloadDays: e.target.value }))}
+                      placeholder="0"
+                      min="0"
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-gray-600">天</span>
+                    <input
+                      type="number"
+                      value={feedbackForm.workloadHours}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, workloadHours: e.target.value }))}
+                      placeholder="0"
+                      min="0"
+                      max="23"
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-gray-600">小时</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* 小于100%时显示进展情况 */
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  进展情况 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={feedbackForm.progressText}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, progressText: e.target.value }))}
+                  placeholder="请描述当前处理进度和下一步计划..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* 拒绝原因弹窗 */}
+      <Modal
+        isOpen={rejectModal.isOpen}
+        onClose={() => { setRejectModal({ isOpen: false, task: null }); setRejectReason(''); }}
+        title="拒绝任务"
+        size="md"
+        showFooter={false}
+        bottomContent={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => { setRejectModal({ isOpen: false, task: null }); setRejectReason(''); }}
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={!rejectReason.trim()}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              确认拒绝
+            </button>
+          </div>
+        }
+      >
+        {rejectModal.task && (
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="text-sm text-red-800">
+                拒绝任务后，该问题将重新回到"待分派"状态。
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                拒绝原因 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="请输入拒绝原因..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
             </div>
           </div>
         )}

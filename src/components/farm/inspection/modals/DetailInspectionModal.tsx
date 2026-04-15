@@ -12,11 +12,11 @@ interface InspectionRecord {
   infrastructureName?: string;
   remarks?: string;
   checkDate: string;
-  weather: string;
-  temperature: number;
-  humidity: number;
   issues: string[];
+  issueText?: string;
+  issueSeverity?: '轻微' | '中等' | '严重';
   images?: string[];
+  feedbackUsers?: string[];
   status: string;
   issueStatus?: 'pending' | 'processing' | 'resolved';
   cropStatus?: string;
@@ -62,7 +62,7 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
   if (!record) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="记录详情" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="记录详情" size="xxxl">
       <div className="space-y-6">
         {/* 巡查类型标签 */}
         <div className="flex items-center gap-2">
@@ -136,18 +136,6 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm text-gray-600">巡查日期</span>
             <span className="text-sm font-medium text-gray-900">{record.checkDate}</span>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">天气</span>
-            <span className="text-sm font-medium text-gray-900">{record.weather}</span>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">温度</span>
-            <span className="text-sm font-medium text-gray-900">{record.temperature}°C</span>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">湿度</span>
-            <span className="text-sm font-medium text-gray-900">{record.humidity}%</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm text-gray-600">状态</span>
@@ -313,12 +301,42 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
           </div>
         )}
 
+        {/* 问题描述 */}
+        {record.issueText && (
+          <div>
+            <h4 className="text-base font-semibold text-gray-900 mb-2">问题描述</h4>
+            <p className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">{record.issueText}</p>
+          </div>
+        )}
+
+        {/* 严重程度 */}
+        {record.issueSeverity && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">严重程度：</span>
+            <span className={`px-3 py-1 text-sm rounded-full ${
+              record.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
+              record.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {record.issueSeverity}
+            </span>
+          </div>
+        )}
+
+        {/* 反馈人员 */}
+        {record.feedbackUsers && record.feedbackUsers.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">反馈人员：</span>
+            <span className="text-sm text-red-600">{record.feedbackUsers.length}人</span>
+          </div>
+        )}
+
         {/* 问题照片 */}
-        {record.images && record.images.length > 0 && (
+        {record.issuePhotos && record.issuePhotos.length > 0 && (
           <div>
             <h4 className="text-base font-semibold text-gray-900 mb-3">问题照片 (最多6张)</h4>
             <div className="grid grid-cols-3 gap-3">
-              {record.images.slice(0, 6).map((img: string, idx: number) => (
+              {record.issuePhotos.slice(0, 6).map((img: string, idx: number) => (
                 <div key={idx} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                   <img src={img} alt={`问题照片${idx + 1}`} className="w-full h-full object-cover" />
                 </div>
