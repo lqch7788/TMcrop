@@ -28,11 +28,13 @@ export function ExportFormatModal({
       isOpen={isOpen}
       onClose={onClose}
       title="选择导出格式"
-      size="sm"
-      bodyClassName="min-h-[280px]"
+      size="md"
       onSubmit={onConfirm}
       submitText="导出"
       cancelText="取消"
+      showMaximize={false}
+      enableDrag={false}
+      enableResize={false}
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-500">已选择 {selectedCount} 条数据</p>

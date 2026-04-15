@@ -2,24 +2,74 @@ import { useState } from 'react';
 import { Sprout, Droplets, Leaf, AlertTriangle, ChevronLeft, ChevronRight, Search, Plus, Download, Calendar, MapPin, User, Package, X, Pencil, Trash2 } from 'lucide-react';
 import { usePersistentWorkLogs } from '../../../hooks/usePersistentWorkLogs';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
+// 导入农事管理 Mock 数据（消除硬编码）
+import { farmOperationRecords, greenhouseOptions, operatorOptions, materialOptions, workloadUnitOptions } from '../../../data/farmMockData';
+import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
+import type { FarmOperationRecord } from '../../../data/farmMockData';
 
-const initialRecords = [
-  { id: 1, code: 'OP20260315-001', type: '定植', cropName: '番茄', variety: '红果', greenhouse: '玻璃温室A区', area: 500, operator: '张建国', operatorId: 'U001', date: '2026-03-15', startTime: '09:00', endTime: '11:30', duration: 150, workload: 500, unit: '株', materials: ['番茄苗', '生根剂'], status: 'completed', remarks: '定植完成，苗情良好，浇足定根水' },
-  { id: 2, code: 'OP20260315-002', type: '灌溉', cropName: '黄瓜', variety: '翠绿', greenhouse: '日光温室1号', area: 800, operator: '李明辉', operatorId: 'U002', date: '2026-03-15', startTime: '07:00', endTime: '08:30', duration: 90, workload: 800, unit: '㎡', materials: ['水溶肥'], status: 'completed', remarks: '灌溉正常，土壤湿度达标' },
-  { id: 3, code: 'OP20260314-003', type: '施肥', cropName: '草莓', variety: '红颜', greenhouse: '日光温室2号', area: 600, operator: '王建国', operatorId: 'U003', date: '2026-03-14', startTime: '14:00', endTime: '16:00', duration: 120, workload: 50, unit: '公斤', materials: ['有机肥', '复合肥'], status: 'completed', remarks: '施肥完成，草莓进入膨果期，需要增加钾肥' },
-  { id: 4, code: 'OP20260314-004', type: '病虫害防治', cropName: '番茄', variety: '粉果', greenhouse: '玻璃温室B区', area: 400, operator: '赵文静', operatorId: 'U004', date: '2026-03-14', startTime: '10:00', endTime: '12:00', duration: 120, workload: 400, unit: '㎡', materials: ['多菌灵', '吡虫啉'], status: 'completed', remarks: '预防性喷药，发现少量白粉虱，已打药' },
-  { id: 5, code: 'OP20260313-005', type: '修剪', cropName: '黄瓜', variety: '翠绿', greenhouse: '日光温室1号', area: 600, operator: '刘大海', operatorId: 'U005', date: '2026-03-13', startTime: '08:00', endTime: '10:00', duration: 120, workload: 600, unit: '㎡', materials: [], status: 'completed', remarks: '侧枝修剪完成，植株通风良好' },
-  { id: 6, code: 'OP20260313-006', type: '采收', cropName: '生菜', variety: '奶油生菜', greenhouse: '日光温室3号', area: 300, operator: '陈小芳', operatorId: 'U006', date: '2026-03-13', startTime: '06:00', endTime: '09:00', duration: 180, workload: 200, unit: '公斤', materials: ['周转箱'], status: 'completed', remarks: '生菜采收完成，品质良好，A级果占80%' },
-  { id: 7, code: 'OP20260312-007', type: '中耕除草', cropName: '菠菜', variety: '大叶菠菜', greenhouse: '塑料大棚1号', area: 500, operator: '周志强', operatorId: 'U007', date: '2026-03-12', startTime: '07:30', endTime: '10:30', duration: 180, workload: 500, unit: '㎡', materials: [], status: 'completed', remarks: '除草完成，土壤松土有利于根系生长' },
-  { id: 8, code: 'OP20260312-008', type: '灌溉', cropName: '辣椒', variety: '线椒', greenhouse: '玻璃温室C区', area: 350, operator: '吴美丽', operatorId: 'U008', date: '2026-03-12', startTime: '15:00', endTime: '16:30', duration: 90, workload: 350, unit: '㎡', materials: [], status: 'completed', remarks: '滴灌浇水，辣椒正处于花果期' },
-];
+// FarmOperationRecord 转换为组件内部使用的记录格式
+interface OperationRecord {
+  id: string;
+  code: string;
+  type: string;
+  cropName: string;
+  variety: string;
+  greenhouse: string;
+  greenhouseId: string;
+  area: number;
+  operator: string;
+  operatorId: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  workload: number;
+  unit: string;
+  materials: string[];
+  status: string;
+  remarks: string;
+  // 数据闭环关联字段
+  relatedTaskId?: string;
+  relatedTaskCode?: string;
+  batchId?: string;
+  batchCode?: string;
+}
+
+// 将 Mock 数据格式转换为组件内部格式
+const convertToOperationRecord = (record: FarmOperationRecord): OperationRecord => ({
+  id: record.id,
+  code: record.recordCode,
+  type: record.operationTypeName,
+  cropName: record.cropName,
+  variety: record.variety || '',
+  greenhouse: record.greenhouseName,
+  greenhouseId: record.greenhouseId,
+  area: 0, // 原数据结构无此字段
+  operator: record.operatorName,
+  operatorId: record.operatorId,
+  date: record.operationDate,
+  startTime: record.startTime,
+  endTime: record.endTime,
+  duration: record.duration,
+  workload: record.workload,
+  unit: record.unit,
+  materials: record.materials || [],
+  status: record.status,
+  remarks: record.remarks || '',
+  relatedTaskId: record.relatedTaskId,
+  relatedTaskCode: record.relatedTaskCode,
+  batchId: record.batchId,
+  batchCode: record.batchCode,
+});
 
 export default function AgricultureRecordPage() {
   // 持久化工单 Hook - 同步农事操作到工作日志
   const { addWorkLog } = usePersistentWorkLogs();
 
-  // 农事操作记录状态
-  const [operationRecords, setOperationRecords] = useState([...initialRecords]);
+  // 农事操作记录状态 - 从 Mock 数据导入
+  const [operationRecords, setOperationRecords] = useState<OperationRecord[]>(
+    farmOperationRecords.map(convertToOperationRecord)
+  );
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -32,7 +82,7 @@ export default function AgricultureRecordPage() {
     status: '',
   });
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
 
@@ -65,10 +115,20 @@ export default function AgricultureRecordPage() {
     remarks: '',
   });
 
-  const greenhouseOptions = ['玻璃温室A区', '玻璃温室B区', '玻璃温室C区', '日光温室1号', '日光温室2号', '日光温室3号', '塑料大棚1号'];
-  const operatorOptions = ['张建国', '李明辉', '王建国', '赵文静', '刘大海', '陈小芳', '周志强', '吴美丽'];
-  const materialOptions = ['番茄苗', '黄瓜苗', '草莓苗', '生根剂', '水溶肥', '有机肥', '复合肥', '多菌灵', '吡虫啉', '周转箱', '滴灌带', '其他'];
-  const unitOptions = ['株', '㎡', '公斤', '米', '袋', '箱'];
+  // 从 Mock 数据导入的选项配置（消除硬编码）
+  // greenhouseOptions: { value, label, type, area }[]
+  // operatorOptions: { value, label, role, roleName }[]
+  // materialOptions: string[]
+  // workloadUnitOptions: { value, label }[]
+
+  // 转换 workloadUnitOptions 为字符串数组（兼容原有组件接口）
+  const unitOptions = workloadUnitOptions.map(u => u.label);
+
+  // 转换 greenhouseOptions 为字符串数组（兼容原有组件接口）
+  const greenhouseOptionsStr = greenhouseOptions.map(g => g.label);
+
+  // 转换 operatorOptions 为字符串数组（兼容原有组件接口）
+  const operatorOptionsStr = operatorOptions.map(o => o.label);
 
   const handleAddClick = () => {
     setShowAddModal(true);
@@ -150,7 +210,7 @@ export default function AgricultureRecordPage() {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -318,7 +378,10 @@ export default function AgricultureRecordPage() {
     setShowExportModal(false);
   };
 
-  const typeOptions = ['定植', '灌溉', '施肥', '病虫害防治', '修剪', '采收', '中耕除草', '其他'];
+  // 从类型定义导入操作类型选项（消除硬编码）
+  const typeOptions = FARM_OPERATION_TYPES.map(t => t.label);
+
+  // 从类型定义导入状态选项（消除硬编码）
   const statusOptions = [
     { value: '', label: '全部' },
     { value: 'pending', label: '待执行' },
@@ -331,7 +394,7 @@ export default function AgricultureRecordPage() {
     if (searchFilters.code && !record.code.includes(searchFilters.code)) return false;
     if (searchFilters.type && record.type !== searchFilters.type) return false;
     if (searchFilters.cropName && !record.cropName.includes(searchFilters.cropName)) return false;
-    if (searchFilters.greenhouseId && record.greenhouse !== searchFilters.greenhouseId) return false;
+    if (searchFilters.greenhouseId && record.greenhouseId !== searchFilters.greenhouseId) return false;
     if (searchFilters.operatorName && !record.operator.includes(searchFilters.operatorName)) return false;
     if (searchFilters.status && record.status !== searchFilters.status) return false;
     return true;
@@ -739,7 +802,7 @@ export default function AgricultureRecordPage() {
                   >
                     <option value="">请选择</option>
                     {greenhouseOptions.map(g => (
-                      <option key={g} value={g}>{g}</option>
+                      <option key={g.value} value={g.value}>{g.label}</option>
                     ))}
                   </select>
                 </div>
@@ -752,7 +815,7 @@ export default function AgricultureRecordPage() {
                   >
                     <option value="">请选择</option>
                     {operatorOptions.map(o => (
-                      <option key={o} value={o}>{o}</option>
+                      <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </div>
@@ -798,8 +861,8 @@ export default function AgricultureRecordPage() {
                       onChange={(e) => setNewRecord({ ...newRecord, unit: e.target.value })}
                       className="w-20 h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
                     >
-                      {unitOptions.map(u => (
-                        <option key={u} value={u}>{u}</option>
+                      {workloadUnitOptions.map(u => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
                       ))}
                     </select>
                   </div>
@@ -907,8 +970,8 @@ export default function AgricultureRecordPage() {
         onConfirm={handleConfirmBatchEdit}
         typeOptions={typeOptions}
         statusOptions={statusOptions}
-        greenhouseOptions={greenhouseOptions}
-        operatorOptions={operatorOptions}
+        greenhouseOptions={greenhouseOptionsStr}
+        operatorOptions={operatorOptionsStr}
         unitOptions={unitOptions}
       />
 

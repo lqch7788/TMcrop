@@ -70,7 +70,7 @@ const materialsSubItems = [
 
 const farmSubItems = [
   { icon: Send, label: '农事任务派发', path: '/task-dispatch' },
-  { icon: Eye, label: '巡田监测', path: '/inspection' },
+  { icon: Eye, label: '巡查管理', path: '/inspection' },
   { icon: Warehouse, label: '采收入库', path: '/harvest' },
   { icon: Activity, label: '农事操作记录', path: '/agriculture-record' },
 ];

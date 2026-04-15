@@ -3,6 +3,7 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { harvestRecords as initialRecords, cropBatches, greenhouses, users } from '../../../data/mockData';
+import { warehouseOptions } from '../../../data/farmMockData';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
@@ -208,10 +209,10 @@ export default function HarvestPage() {
         }
         // Find warehouse name if warehouseId changed
         if (editedRecords[id].warehouseId && editedRecords[id].warehouseId !== record.warehouseId) {
-          const wh = warehouses.find(w => w.id === editedRecords[id].warehouseId);
+          const wh = warehouseOptions.find(w => w.value === editedRecords[id].warehouseId);
           updatedRecords[index] = {
             ...updatedRecords[index],
-            warehouseName: wh?.name || record.warehouseName,
+            warehouseName: wh?.label || record.warehouseName,
           };
         }
         // Find batch cropName if batchCode changed
@@ -287,11 +288,8 @@ export default function HarvestPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const warehouses = [
-    { id: 'W001', name: '冷藏库A区' },
-    { id: 'W002', name: '冷藏库B区' },
-    { id: 'W003', name: '常温库' },
-  ];
+  // 转换 warehouseOptions 为 BatchEditModal 期望的格式 { id, name }[]
+  const warehousesForModal = warehouseOptions.map(w => ({ id: w.value, name: w.label }));
 
   const generateHarvestCode = () => {
     const date = new Date();
@@ -315,7 +313,7 @@ export default function HarvestPage() {
 
     const selectedBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
     const selectedGreenhouse = greenhouses.find(g => g.id === newRecord.greenhouseId);
-    const selectedWarehouse = warehouses.find(w => w.id === newRecord.warehouseId);
+    const selectedWarehouse = warehouseOptions.find(w => w.value === newRecord.warehouseId);
     const selectedHarvesters = users.filter(u => newRecord.harvesterIds.includes(u.id));
 
     const record = {
@@ -521,8 +519,8 @@ export default function HarvestPage() {
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="">全部</option>
-              {warehouses.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
+              {warehouseOptions.map(w => (
+                <option key={w.value} value={w.value}>{w.label}</option>
               ))}
             </select>
           </div>
@@ -806,8 +804,8 @@ export default function HarvestPage() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">请选择仓库</option>
-                {warehouses.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
+                {warehouseOptions.map(w => (
+                  <option key={w.value} value={w.value}>{w.label}</option>
                 ))}
               </select>
             </FormField>
@@ -884,7 +882,7 @@ export default function HarvestPage() {
         onClose={() => setShowBatchEditModal(false)}
         onConfirm={handleConfirmBatchEdit}
         greenhouses={greenhouses}
-        warehouses={warehouses}
+        warehouses={warehousesForModal}
         users={users}
         cropBatches={cropBatches}
       />
