@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"ls -la D:/TMcrop/yuanxingtu/V1.1/src/\"}",
-  "error": "Exit code 2\nls: cannot access 'D:/TMcrop/yuanxingtu/V1.1/src/': No such file or directory",
-  "timestamp": "2026-04-08T00:31:58.991Z",
-  "retry_count": 1
-}
