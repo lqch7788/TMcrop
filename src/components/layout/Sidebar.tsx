@@ -33,19 +33,17 @@ const productionSubItems = [
   { icon: ShoppingCart, label: '采购计划', path: '/purchase-plan' },
 ];
 
-// 人工管理5大模块（聚合页面）
+// 人工管理5大模块（任务中心已移出到农事管理）
 const laborSubItems = [
-  { icon: ClipboardList, label: '任务中心', path: '/labor/task-center' },
   { icon: Users, label: '考勤管理', path: '/labor/attendance' },
   { icon: UserPlus, label: '人事管理', path: '/labor/personnel' },
   { icon: Banknote, label: '薪酬管理', path: '/labor/compensation' },
   { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
 ];
 
+// 生产汇总表（问题分派、每日工单汇总已移出到农事管理）
 const summarySubItems = [
-  { icon: Calendar, label: '每日工单汇总表', path: '/daily-work-summary' },
   { icon: AlertTriangle, label: '每日问题汇总表', path: '/daily-problem-summary' },
-  { icon: Send, label: '问题分派', path: '/problem-dispatch' },
   { icon: FileText, label: '生产计划汇总表', path: '/plan-summary' },
   { icon: BarChart3, label: '生产报表', path: '/reports' },
 ];
@@ -61,18 +59,24 @@ const approvalSubItems = [
   { icon: Users, label: 'HR审批单', path: '/hr-approval' },
 ];
 
+// 库存管理子菜单（仓库物料拆分为物料总览和物料入库，采收入库从农事管理移入）
 const materialsSubItems = [
-  { icon: Archive, label: '仓库物料', path: '/warehouse-materials' },
+  { icon: Archive, label: '物料总览', path: '/warehouse-overview' },
+  { icon: Warehouse, label: '物料入库', path: '/warehouse-inbound' },
+  { icon: Box, label: '采收入库', path: '/harvest' },
   { icon: Truck, label: '供应商管理', path: '/supplier-management' },
   { icon: ClipboardList, label: '生产领料', path: '/material-receiving' },
   { icon: ArrowLeftRight, label: '生产退料', path: '/material-return' },
 ];
 
+// 农事管理子菜单（扩充：任务中心、问题分派、每日工单汇总从其他模块移入，采收入库移出到库存管理）
 const farmSubItems = [
-  { icon: Send, label: '农事任务派发', path: '/task-dispatch' },
+  { icon: ClipboardList, label: '任务中心', path: '/task-center' },
+  { icon: Send, label: '问题分派', path: '/problem-dispatch' },
+  { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
+  { icon: FileText, label: '农事操作记录', path: '/agriculture-record' },
+  { icon: Truck, label: '农事任务派发', path: '/task-dispatch' },
   { icon: Eye, label: '巡查管理', path: '/inspection' },
-  { icon: Warehouse, label: '采收入库', path: '/harvest' },
-  { icon: Activity, label: '农事操作记录', path: '/agriculture-record' },
 ];
 
 const indicatorsSubItems = [

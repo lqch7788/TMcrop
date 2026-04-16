@@ -35,7 +35,7 @@ import WorkerAttendance from './pages/WorkerAttendance';
 import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
 import DailyProblemSummary from './pages/DailyProblemSummary';
-import DailyWorkSummary from './pages/DailyWorkSummary';
+import DailyWorkSummary from './pages/farm/DailyWorkSummary';
 import PlanSummary from './pages/PlanSummary';
 import ProblemDispatch from './pages/ProblemDispatch';
 import SupplierManagement from './pages/SupplierManagement';
@@ -44,6 +44,8 @@ import MaterialCategory from './pages/MaterialCategory';
 import MaterialReceiving from './pages/MaterialReceiving';
 import MaterialReturn from './pages/MaterialReturn';
 import WarehouseMaterials from './pages/WarehouseMaterials';
+import WarehouseOverviewPage from './pages/warehouse/WarehouseOverviewPage';
+import WarehouseInboundPage from './pages/warehouse/WarehouseInboundPage';
 import PendingApproval from './pages/PendingApproval';
 import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
@@ -80,7 +82,7 @@ import Onboarding from './pages/Onboarding';
 import Contract from './pages/Contract';
 import Team from './pages/Team';
 import TempTask from './pages/TempTask';
-import TaskCenterPage from './pages/labor/TaskCenterPage';
+import TaskCenterPage from './pages/farm/TaskCenterPage';
 import AttendancePage from './pages/labor/AttendancePage';
 import PersonnelPage from './pages/labor/PersonnelPage';
 import CompensationPage from './pages/labor/CompensationPage';
@@ -185,14 +187,16 @@ function AppContent() {
         <Route path="/purchase-plan" element={<PurchasePlan />} />
 
         {/* 人工管理聚合页面 */}
-        <Route path="/labor/task-center" element={<TaskCenterPage />} />
         <Route path="/labor/attendance" element={<AttendancePage />} />
         <Route path="/labor/personnel" element={<PersonnelPage />} />
         <Route path="/labor/compensation" element={<CompensationPage />} />
         <Route path="/labor/analytics" element={<AnalyticsPage />} />
+
+        {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
+        <Route path="/task-center" element={<TaskCenterPage />} />
+        <Route path="/problem-dispatch" element={<ProblemDispatch />} />
         <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
         <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
-        <Route path="/problem-dispatch" element={<ProblemDispatch />} />
         <Route path="/plan-summary" element={<PlanSummary />} />
         <Route path="/worker-attendance" element={<WorkerAttendance />} />
         <Route path="/work-log" element={<WorkLog />} />
@@ -202,6 +206,8 @@ function AppContent() {
         <Route path="/material-receiving" element={<MaterialReceiving />} />
         <Route path="/material-return" element={<MaterialReturn />} />
         <Route path="/warehouse-materials" element={<WarehouseMaterials />} />
+        <Route path="/warehouse-overview" element={<WarehouseOverviewPage />} />
+        <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/temp-task" element={<TempTask />} />
         <Route path="/personnel/staff" element={<StaffManagement />} />
