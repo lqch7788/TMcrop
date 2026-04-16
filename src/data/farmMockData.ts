@@ -204,7 +204,7 @@ export const farmOperationRecords: FarmOperationRecord[] = [
     operationTypeName: '定植',
     status: COMMON_STATUS.COMPLETED,
     relatedTaskId: 'TASK001',
-    relatedTaskCode: 'NT20260315-001',
+    relatedTaskCode: 'NS20260315-001',
     batchId: 'BATCH001',
     batchCode: 'SC202603001',
     greenhouseId: 'GH001',
@@ -230,7 +230,7 @@ export const farmOperationRecords: FarmOperationRecord[] = [
     operationTypeName: '灌溉',
     status: COMMON_STATUS.COMPLETED,
     relatedTaskId: 'TASK002',
-    relatedTaskCode: 'NT20260315-002',
+    relatedTaskCode: 'NS20260315-002',
     batchId: 'BATCH002',
     batchCode: 'SC202603002',
     greenhouseId: 'GH002',
@@ -280,7 +280,7 @@ export const farmOperationRecords: FarmOperationRecord[] = [
     operationTypeName: '病虫害防治',
     status: COMMON_STATUS.COMPLETED,
     relatedTaskId: 'TASK003',
-    relatedTaskCode: 'NT20260314-001',
+    relatedTaskCode: 'NS20260314-001',
     batchId: 'BATCH004',
     batchCode: 'SC202603004',
     greenhouseId: 'GH004',
@@ -422,7 +422,7 @@ export const farmInspectionRecords: FarmInspectionRecord[] = [
     plantHeight: 145,
     leafCount: 12,
     relatedTaskId: 'TASK001',
-    relatedTaskCode: 'NT20260315-001',
+    relatedTaskCode: 'NS20260315-001',
     issues: [],
     status: INSPECTION_STATUS.NORMAL,
     images: tomatoImages,
@@ -559,7 +559,7 @@ export const farmHarvestRecords: FarmHarvestRecord[] = [
     warehouseName: '冷库A区',
     status: HARVEST_STATUS.STORED,
     relatedTaskId: 'TASK010',
-    relatedTaskCode: 'NT20260310-001',
+    relatedTaskCode: 'NS20260310-001',
     remarks: '草莓采收完成，品质良好',
     createdAt: '2026-03-14 18:00:00',
   },
@@ -593,7 +593,7 @@ export const farmHarvestRecords: FarmHarvestRecord[] = [
 export const farmTasks: FarmTask[] = [
   {
     id: 'TASK001',
-    taskCode: 'NT20260315-001',
+    taskCode: 'NS20260315-001',
     title: '番茄定植',
     type: 'planting',
     typeName: '定植',
@@ -619,7 +619,7 @@ export const farmTasks: FarmTask[] = [
   },
   {
     id: 'TASK002',
-    taskCode: 'NT20260315-002',
+    taskCode: 'NS20260315-002',
     title: '黄瓜灌溉',
     type: 'irrigation',
     typeName: '灌溉',
@@ -644,7 +644,7 @@ export const farmTasks: FarmTask[] = [
   },
   {
     id: 'TASK003',
-    taskCode: 'NT20260314-001',
+    taskCode: 'NS20260314-001',
     title: '番茄病虫害防治',
     type: 'pest_control',
     typeName: '病虫害防治',
@@ -842,7 +842,7 @@ export interface TaskDispatchStaff {
 export const taskDispatchTasks: TaskDispatchTask[] = [
   // 单一任务类型 - 施肥（完整配置）
   {
-    id: '20260317-001',
+    id: 'NS20260317-001',
     types: ['fertilization'],
     typeLabel: '施肥',
     field: '1号棚',
@@ -875,7 +875,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 灌溉+施肥
   {
-    id: '20260317-002',
+    id: 'NS20260317-002',
     types: ['irrigation', 'fertilization'],
     typeLabel: '灌溉,施肥',
     field: '4号棚',
@@ -911,7 +911,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 植保+除草
   {
-    id: '20260317-003',
+    id: 'NS20260317-003',
     types: ['pesticide', 'weeding'],
     typeLabel: '植保,除草',
     field: '6号棚',
@@ -953,7 +953,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 修剪+采收
   {
-    id: '20260318-001',
+    id: 'NS20260318-001',
     types: ['pruning', 'harvest'],
     typeLabel: '修剪,采收',
     field: '8号棚',
@@ -995,7 +995,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 采收+施肥+除草（3种）
   {
-    id: '20260316-001',
+    id: 'NS20260316-001',
     types: ['harvest', 'fertilization', 'weeding'],
     typeLabel: '采收,施肥,除草',
     field: 'A1地块',
@@ -1036,7 +1036,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 单一任务类型 - 除草（完整配置）
   {
-    id: '20260317-004',
+    id: 'NS20260317-004',
     types: ['weeding'],
     typeLabel: '除草',
     field: 'B1地块',
@@ -1063,7 +1063,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 施肥+灌溉
   {
-    id: '20260317-005',
+    id: 'NS20260317-005',
     types: ['fertilization', 'irrigation'],
     typeLabel: '施肥,灌溉',
     field: 'C1地块',
@@ -1095,7 +1095,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 单一任务类型 - 灌溉（完整配置）
   {
-    id: '20260317-006',
+    id: 'NS20260317-006',
     types: ['irrigation'],
     typeLabel: '灌溉',
     field: 'D1地块',
@@ -1123,7 +1123,7 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
   },
   // 多任务类型 - 采收+除草+修剪（3种）
   {
-    id: '20260319-001',
+    id: 'NS20260319-001',
     types: ['harvest', 'weeding', 'pruning'],
     typeLabel: '采收,除草,修剪',
     field: 'A2地块',
@@ -1211,13 +1211,18 @@ export const SOP_TEMPLATES: Record<string, string> = {
   weeding: '除草方式：人工除草\n深度：3-5cm\n注意事项：除根除尽',
 };
 
-// 状态映射
+// 状态映射 - 支持10种任务状态
 export const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: '待执行', color: 'text-gray-600', bg: 'bg-gray-100' },
-  in_progress: { label: '进行中', color: 'text-blue-600', bg: 'bg-blue-100' },
+  draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-100' },
+  pending: { label: '待接受', color: 'text-gray-600', bg: 'bg-gray-100' },
+  accepted: { label: '已接受', color: 'text-blue-600', bg: 'bg-blue-100' },
+  in_progress: { label: '处理中', color: 'text-blue-600', bg: 'bg-blue-100' },
   waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-100' },
   completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-100' },
-  rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-100' },
+  rejected: { label: '返工中', color: 'text-red-600', bg: 'bg-red-100' },
+  failed: { label: '任务失败', color: 'text-purple-600', bg: 'bg-purple-100' },
+  cancelled: { label: '已取消', color: 'text-gray-500', bg: 'bg-gray-50' },
+  abandoned: { label: '已放弃', color: 'text-red-400', bg: 'bg-red-50' },
 };
 
 // 优先级映射

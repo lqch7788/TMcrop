@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronDown, Package, Camera, Mic, Navigation, ArrowRight, X,
   Leaf, Droplets, Scissors, Bug, ShoppingBasket, Trees, Wheat, Thermometer, Sun, CloudRain, Download,
   ChevronLeft, ChevronRight as ChevronRightIcon, Square, Minimize2, Move, RefreshCw, GripVertical,
-  FileText
+  FileText, Bell
 } from 'lucide-react';
 import { format, isSameDay, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameMonth, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -18,6 +18,7 @@ import {
   WithdrawCancelModal,
 } from './modals';
 import { TaskProgressTimeline } from './components/TaskProgressTimeline';
+import { OvertimeBadge } from './components/OvertimeBadge';
 import { Modal } from '../../ui/Modal';
 import { TaskTypeConfigPanel } from './components/TaskTypeConfigPanel';
 import { TaskTypeConfigDisplay } from './components/TaskTypeConfigDisplay';
@@ -40,8 +41,8 @@ import {
   greenhouseOptions,  // 用于查找 greenhouseId
 } from '../../../data/farmMockData';
 
-// 导入用户数据（用于获取派发人信息）
-import { users } from '../../../data/mockData';
+// 导入用户数据（用于获取派发人信息）和生产批次数据
+import { users, cropBatches } from '../../../data/mockData';
 
 // 导入智能推荐 Hook
 import { useSmartRecommendation } from '../../../hooks/farm';
@@ -49,6 +50,7 @@ import { useSmartRecommendation } from '../../../hooks/farm';
 // 导入统一任务管理 Hook（数据闭环核心）
 import { useTasks, Task, TaskStatus } from '../../../hooks/useTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
+import { useReminder } from '../../../hooks/useReminder';
 
 // 任务类型定义（保留图标组件，这些不能放在 mockData 中）
 const taskTypes = [
@@ -63,17 +65,17 @@ const taskTypes = [
   { value: 'other', label: '其他', icon: Edit, color: 'bg-gray-500' },
 ];
 
-// 模拟任务数据 - 从 farmMockData 导入
-const initialMockTasks = taskDispatchTasks;
+// 模拟任务数据 - 从 farmMockData 导入（防御性：确保有默认值）
+const initialMockTasks = taskDispatchTasks || [];
 
-// 任务区域列表 - 从 farmMockData 导入
-const fields = taskDispatchFields;
+// 任务区域列表 - 从 farmMockData 导入（防御性：确保有默认值）
+const fields = taskDispatchFields || [];
 
 // 崇明岛基地 - 从 farmMockData 导入
 const base = TASK_DISPATCH_BASE;
 
-// 员工列表 - 从 farmMockData 导入
-const staff = taskDispatchStaff;
+// 员工列表 - 从 farmMockData 导入（防御性：确保有默认值）
+const staff: Array<{id: number; name: string; status: string}> = taskDispatchStaff || [];
 
 // SOP模板 - 从 farmMockData 导入
 const sopTemplates = SOP_TEMPLATES;
@@ -159,6 +161,8 @@ export default function TaskDispatchPage() {
     detectOvertime,
   } = useTasks();
   const { addTaskRecord } = useOperationRecords();
+  // 催办管理 Hook
+  const { canRemind, sendReminder, getCooldownRemaining, getTodayReminderCount } = useReminder();
 
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   // 合并：优先显示 useTasks 的数据，但也保留本地 mockTasks 用于兼容旧逻辑
@@ -172,6 +176,7 @@ export default function TaskDispatchPage() {
   const [showTaskTypeDropdown, setShowTaskTypeDropdown] = useState(false);
   const [showFieldDropdown, setShowFieldDropdown] = useState(false);
   const [showCropDropdown, setShowCropDropdown] = useState(false);
+  const [showBatchDropdown, setShowBatchDropdown] = useState(false);
   const [createStep, setCreateStep] = useState(1);
   const [selectedTask, setSelectedTask] = useState<typeof mockTasks[0] | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -425,6 +430,9 @@ export default function TaskDispatchPage() {
     estimatedDays: number;
     estimatedHours: number;
     typeConfig: TaskConfigValues;  // 任务类型配置
+    batchId: string;  // 关联生产批次ID
+    batchCode: string;  // 关联生产批次编号
+    batchSearch: string;  // 批次搜索关键词
   }>({
     taskId: '',
     types: [],
@@ -442,29 +450,42 @@ export default function TaskDispatchPage() {
     estimatedDays: 0,
     estimatedHours: 1,
     typeConfig: {},
+    batchId: '',
+    batchCode: '',
+    batchSearch: '',
   });
 
-  // 自动生成任务ID（检查重复）
-  const autoGenerateTaskId = () => {
+  // 自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
+  const autoGenerateTaskCode = () => {
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
-    const datePrefix = dateStr.replace(/-/g, '');
+    // 年月日：20260416
+    const datePrefix = today.getFullYear().toString() +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      today.getDate().toString().padStart(2, '0');
 
-    // 检查是否存在，不存在则返回
-    let sequence = 1;
-    let newId = `${datePrefix}-${String(sequence).padStart(3, '0')}`;
-    while (mockTasks.some(t => t.id === newId)) {
-      sequence++;
-      newId = `${datePrefix}-${String(sequence).padStart(3, '0')}`;
-    }
-    return newId;
+    // 查找当天的最大流水号
+    let maxSequence = 0;
+    mockTasks.forEach(t => {
+      // 匹配格式：NS20260416-xxx
+      if (t.taskCode && t.taskCode.startsWith('NS' + datePrefix + '-')) {
+        const seqStr = t.taskCode.slice(-3);
+        const seq = parseInt(seqStr, 10);
+        if (!isNaN(seq) && seq > maxSequence) {
+          maxSequence = seq;
+        }
+      }
+    });
+
+    // 生成新的流水号
+    const newSequence = maxSequence + 1;
+    return `NS${datePrefix}-${String(newSequence).padStart(3, '0')}`;
   };
 
   // 打开新建任务弹窗
   const handleOpenCreateModal = () => {
-    const taskId = autoGenerateTaskId();
+    const taskCode = autoGenerateTaskCode();
     setNewTask({
-      taskId,
+      taskId: taskCode,
       types: [],
       fields: [],
       crops: [],
@@ -479,6 +500,9 @@ export default function TaskDispatchPage() {
       estimatedDays: 0,
       estimatedHours: 1,
       typeConfig: {},
+      batchId: '',
+      batchCode: '',
+      batchSearch: '',
     });
     setCreateStep(1);
     setShowCreateModal(true);
@@ -495,12 +519,19 @@ export default function TaskDispatchPage() {
     }));
   };
 
-  // 过滤任务
-  const filteredTasks = mockTasks.filter(task => {
+  // 过滤任务 - 优先使用 useTasks 的数据（包含兼容字段），fallback 到 mockTasks
+  const taskDataSource = tasks.length > 0 ? tasks : mockTasks;
+  const filteredTasks = taskDataSource.filter((task: any) => {
     if (taskIdSearch && !task.id.toLowerCase().includes(taskIdSearch.toLowerCase())) return false;
     if (statusFilter !== 'all' && task.status !== statusFilter) return false;
-    if (fieldFilter !== 'all' && task.field !== fieldFilter) return false;
-    if (assigneeFilter !== 'all' && task.assignee !== assigneeFilter) return false;
+    if (fieldFilter !== 'all') {
+      const taskField = task.greenhouseId || task.field || '';
+      if (taskField !== fieldFilter) return false;
+    }
+    if (assigneeFilter !== 'all') {
+      const taskAssignee = task.assigneeId || task.assignee || '';
+      if (taskAssignee !== assigneeFilter) return false;
+    }
     return true;
   });
 
@@ -660,14 +691,15 @@ export default function TaskDispatchPage() {
     setImportData([]);
   };
 
-  // 统计
+  // 统计 - 使用统一数据源
+  const statsDataSource = tasks.length > 0 ? tasks : mockTasks;
   const stats = {
-    total: mockTasks.length,
-    pending: mockTasks.filter(t => t.status === 'pending').length,
-    inProgress: mockTasks.filter(t => t.status === 'in_progress').length,
-    completed: mockTasks.filter(t => t.status === 'completed').length,
-    waitingAcceptance: mockTasks.filter(t => t.status === 'waiting_acceptance').length,
-    warning: mockTasks.filter(t => t.status === 'rejected').length,
+    total: statsDataSource.length,
+    pending: statsDataSource.filter((t: any) => t.status === 'pending').length,
+    inProgress: statsDataSource.filter((t: any) => t.status === 'in_progress').length,
+    completed: statsDataSource.filter((t: any) => t.status === 'completed').length,
+    waitingAcceptance: statsDataSource.filter((t: any) => t.status === 'waiting_acceptance').length,
+    warning: statsDataSource.filter((t: any) => t.status === 'rejected').length,
   };
 
   // 获取任务类型图标
@@ -1015,8 +1047,8 @@ export default function TaskDispatchPage() {
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
       typeName: typeLabels,
-      batchId: '',  // 农事任务可不关联批次
-      batchCode: '',  // 农事任务可不关联批次
+      batchId: newTask.batchId,  // 关联生产批次
+      batchCode: newTask.batchCode,  // 关联生产批次编号
       greenhouseId: greenhouseId,
       greenhouseName: fieldValue,
       cropName: cropValue,
@@ -1342,11 +1374,16 @@ export default function TaskDispatchPage() {
                 className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">全部状态</option>
-                <option value="pending">待执行</option>
-                <option value="in_progress">进行中</option>
+                <option value="draft">草稿</option>
+                <option value="pending">待接受</option>
+                <option value="accepted">已接受</option>
+                <option value="in_progress">处理中</option>
                 <option value="waiting_acceptance">待验收</option>
                 <option value="completed">已完成</option>
-                <option value="rejected">已驳回</option>
+                <option value="rejected">返工中</option>
+                <option value="failed">任务失败</option>
+                <option value="cancelled">已取消</option>
+                <option value="abandoned">已放弃</option>
               </select>
             </div>
           </div>
@@ -1448,6 +1485,46 @@ export default function TaskDispatchPage() {
                     <Download className="w-4 h-4" />
                     导出
                   </button>
+                  <button
+                    onClick={() => {
+                      // 批量验收：选择所有待验收任务
+                      const waitingTasks = filteredTasks.filter((t: any) => t.status === 'waiting_acceptance');
+                      if (waitingTasks.length === 0) {
+                        alert('没有待验收的任务');
+                        return;
+                      }
+                      if (confirm(`确认批量验收 ${waitingTasks.length} 个任务？`)) {
+                        waitingTasks.forEach((task: any) => {
+                          acceptCompletion(task.id, '批量验收通过');
+                        });
+                        setSelectedRows([]);
+                      }
+                    }}
+                    className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    批量验收
+                  </button>
+                  <button
+                    onClick={() => {
+                      // 批量派发：选择所有草稿任务
+                      const draftTasks = filteredTasks.filter((t: any) => t.status === 'draft');
+                      if (draftTasks.length === 0) {
+                        alert('没有草稿任务可派发');
+                        return;
+                      }
+                      if (confirm(`确认批量派发 ${draftTasks.length} 个任务？`)) {
+                        draftTasks.forEach((task: any) => {
+                          updateTaskStatus(task.id, 'pending');
+                        });
+                        setSelectedRows([]);
+                      }
+                    }}
+                    className="h-8 px-3 flex items-center gap-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                    批量派发
+                  </button>
                 </>
               )}
             </div>
@@ -1471,6 +1548,7 @@ export default function TaskDispatchPage() {
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">批次</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
@@ -1480,6 +1558,7 @@ export default function TaskDispatchPage() {
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-300">
@@ -1529,6 +1608,9 @@ export default function TaskDispatchPage() {
                         <span className="text-sm text-gray-600">{task.crop}</span>
                       )}
                     </td>
+                    <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
+                      {(task as any).batchCode || '-'}
+                    </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className="text-sm text-gray-600">{task.assignee}</span>
                     </td>
@@ -1554,15 +1636,21 @@ export default function TaskDispatchPage() {
                       </span>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status].bg} ${statusMap[task.status].color}`}>
-                        {statusMap[task.status].label}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status].bg} ${statusMap[task.status].color}`}>
+                          {statusMap[task.status].label}
+                        </span>
+                        {/* 超时警示徽章 */}
+                        {(task as any).timeout && (
+                          <OvertimeBadge timeout={(task as any).timeout} size="sm" showLabel={true} />
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
                       {(task as any).remarks || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      {task.types.length >= 2 && (task as any).sopContent ? (
+                      {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
                         <button
                           onClick={() => {
                             setSelectedSopTask(task);
@@ -1576,6 +1664,106 @@ export default function TaskDispatchPage() {
                       ) : (
                         <span className="text-gray-400 text-xs">-</span>
                       )}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {/* 待验收状态 - 显示验收按钮 */}
+                        {task.status === 'waiting_acceptance' && (
+                          <button
+                            onClick={() => {
+                              setAcceptanceTask(task);
+                              setShowAcceptanceModal(true);
+                            }}
+                            className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                          >
+                            验收
+                          </button>
+                        )}
+                        {/* pending状态 - 显示撤回按钮 */}
+                        {task.status === 'pending' && (
+                          <button
+                            onClick={() => {
+                              setWithdrawCancelType('withdraw');
+                              setWithdrawCancelTask(task);
+                              setShowWithdrawCancelModal(true);
+                            }}
+                            className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
+                          >
+                            撤回
+                          </button>
+                        )}
+                        {/* accepted/in_progress状态 - 显示取消按钮 */}
+                        {(task.status === 'accepted' || task.status === 'in_progress') && (
+                          <button
+                            onClick={() => {
+                              setWithdrawCancelType('cancel');
+                              setWithdrawCancelTask(task);
+                              setShowWithdrawCancelModal(true);
+                            }}
+                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                          >
+                            取消
+                          </button>
+                        )}
+                        {/* 超时状态 - 显示超时处理按钮 */}
+                        {(task as any).timeout?.severity === 'critical' && (
+                          <button
+                            onClick={() => {
+                              setOvertimeTask(task);
+                              setShowOvertimeModal(true);
+                            }}
+                            className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
+                          >
+                            超时处理
+                          </button>
+                        )}
+                        {/* 催办按钮 - 非终态显示 */}
+                        {!['completed', 'cancelled', 'abandoned'].includes(task.status) && (
+                          (() => {
+                            const remindCheck = canRemind(task.id);
+                            const cooldownSec = getCooldownRemaining(task.id);
+                            const todayCount = getTodayReminderCount(task.id);
+                            return (
+                              <button
+                                onClick={() => {
+                                  if (remindCheck.allowed) {
+                                    sendReminder(
+                                      task.id,
+                                      task.taskCode,
+                                      task.assigneeId,
+                                      task.assigneeName,
+                                      'admin',
+                                      '管理员'
+                                    );
+                                  } else {
+                                    alert(remindCheck.reason || '暂时无法催办');
+                                  }
+                                }}
+                                disabled={!remindCheck.allowed}
+                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                  remindCheck.allowed
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                }`}
+                                title={cooldownSec > 0 ? `${Math.ceil(cooldownSec / 60)}分钟后可催办` : `今日已催办${todayCount}次`}
+                              >
+                                <Bell className="w-3 h-3 inline mr-1" />
+                                {cooldownSec > 0 ? `${Math.ceil(cooldownSec / 60)}m` : '催办'}
+                              </button>
+                            );
+                          })()
+                        )}
+                        {/* 查看详情按钮 - 所有状态都显示 */}
+                        <button
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setShowDetailModal(true);
+                          }}
+                          className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                        >
+                          详情
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1765,23 +1953,82 @@ export default function TaskDispatchPage() {
               {/* Step 1: 任务定义 */}
               {createStep === 1 && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newTask.taskId || ''}
-                        onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="点击生成获取任务编号"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskId() })}
-                        className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
-                      >
-                        生成
-                      </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newTask.taskId || ''}
+                          onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
+                          className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder="点击下方生成按钮"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode() })}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                        >
+                          生成
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">关联生产批次</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={newTask.batchCode || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewTask(prev => ({ ...prev, batchCode: val, batchId: val ? prev.batchId : '' }));
+                          }}
+                          onFocus={() => setShowBatchDropdown(true)}
+                          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder="搜索或选择生产批次..."
+                        />
+                        {showBatchDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {cropBatches
+                              .filter(b =>
+                                !newTask.batchCode ||
+                                b.batchCode.toLowerCase().includes(newTask.batchCode.toLowerCase()) ||
+                                b.cropName.includes(newTask.batchCode)
+                              )
+                              .slice(0, 10)
+                              .map(batch => (
+                                <div
+                                  key={batch.id}
+                                  className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                                  onClick={() => {
+                                    setNewTask(prev => ({
+                                      ...prev,
+                                      batchId: batch.id,
+                                      batchCode: batch.batchCode,
+                                    }));
+                                    setShowBatchDropdown(false);
+                                  }}
+                                >
+                                  <div className="font-medium text-gray-900">{batch.batchCode}</div>
+                                  <div className="text-xs text-gray-500">{batch.cropName} · {batch.greenhouseName}</div>
+                                </div>
+                              ))}
+                            {cropBatches.filter(b =>
+                              !newTask.batchCode ||
+                              b.batchCode.toLowerCase().includes(newTask.batchCode.toLowerCase()) ||
+                              b.cropName.includes(newTask.batchCode)
+                            ).length === 0 && (
+                              <div className="px-3 py-2 text-sm text-gray-500">未找到匹配的批次</div>
+                            )}
+                          </div>
+                        )}
+                        {showBatchDropdown && (
+                          <div
+                            className="fixed inset-0 z-0"
+                            onClick={() => setShowBatchDropdown(false)}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
