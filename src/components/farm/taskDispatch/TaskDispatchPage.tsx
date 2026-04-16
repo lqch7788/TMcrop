@@ -13,7 +13,11 @@ import {
   BatchEditModal,
   DeleteWarningModal,
   ExportFormatModal,
+  TaskAcceptanceModal,
+  OvertimeHandleModal,
+  WithdrawCancelModal,
 } from './modals';
+import { TaskProgressTimeline } from './components/TaskProgressTimeline';
 import { Modal } from '../../ui/Modal';
 import { TaskTypeConfigPanel } from './components/TaskTypeConfigPanel';
 import { TaskTypeConfigDisplay } from './components/TaskTypeConfigDisplay';
@@ -33,10 +37,18 @@ import {
   farmInspectionRecords,
   farmOperationRecords,
   farmHarvestRecords,
+  greenhouseOptions,  // 用于查找 greenhouseId
 } from '../../../data/farmMockData';
+
+// 导入用户数据（用于获取派发人信息）
+import { users } from '../../../data/mockData';
 
 // 导入智能推荐 Hook
 import { useSmartRecommendation } from '../../../hooks/farm';
+
+// 导入统一任务管理 Hook（数据闭环核心）
+import { useTasks, Task, TaskStatus } from '../../../hooks/useTasks';
+import { useOperationRecords } from '../../../hooks/useOperationRecords';
 
 // 任务类型定义（保留图标组件，这些不能放在 mockData 中）
 const taskTypes = [
@@ -129,7 +141,27 @@ const generateTaskId = (dateStr: string, existingTasks: typeof initialMockTasks)
 };
 
 export default function TaskDispatchPage() {
+  // 使用统一任务管理 Hook（数据闭环核心）
+  const {
+    tasks,
+    taskRecords,
+    addTask,
+    updateTask,
+    updateTaskStatus,
+    deleteTask,
+    getTaskRecordsByTaskId,
+    acceptCompletion,
+    rejectForRework,
+    withdrawTask,
+    cancelTask,
+    handleOvertime,
+    submitProgress,
+    detectOvertime,
+  } = useTasks();
+  const { addTaskRecord } = useOperationRecords();
+
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  // 合并：优先显示 useTasks 的数据，但也保留本地 mockTasks 用于兼容旧逻辑
   const [mockTasks, setMockTasks] = useState(initialMockTasks);
   const [taskIdSearch, setTaskIdSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -156,6 +188,19 @@ export default function TaskDispatchPage() {
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+
+  // 验收弹窗状态
+  const [showAcceptanceModal, setShowAcceptanceModal] = useState(false);
+  const [acceptanceTask, setAcceptanceTask] = useState<typeof mockTasks[0] | null>(null);
+
+  // 超时处理弹窗状态
+  const [showOvertimeModal, setShowOvertimeModal] = useState(false);
+  const [overtimeTask, setOvertimeTask] = useState<typeof mockTasks[0] | null>(null);
+
+  // 撤回/取消弹窗状态
+  const [showWithdrawCancelModal, setShowWithdrawCancelModal] = useState(false);
+  const [withdrawCancelType, setWithdrawCancelType] = useState<'withdraw' | 'cancel'>('withdraw');
+  const [withdrawCancelTask, setWithdrawCancelTask] = useState<typeof mockTasks[0] | null>(null);
   const [editedTaskIds, setEditedTaskIds] = useState<string[]>([]);
   const [editedTasks, setEditedTasks] = useState<Record<string, Partial<typeof mockTasks[0]>>>({});
 
@@ -312,7 +357,43 @@ export default function TaskDispatchPage() {
       };
     });
 
-    setMockTasks(prev => [...prev, ...newTasks]);
+    // ========== 数据闭环：同步新建任务到 useTasks ==========
+    // 先调用 addTask 获取 useTasks 生成的任务 ID，再更新 mockTasks（保持 ID 一致）
+    const tasksWithUseTasksId = newTasks.map(task => {
+      const taskTypeInfo = taskTypes.find(t => t.value === task.type);
+      const assigneeStaff = staff.find(s => s.name === task.assignee);
+
+      const useTasksTask = addTask({
+        title: task.typeLabel || '农事任务',
+        type: task.type,
+        typeName: task.typeLabel,
+        batchId: '',
+        batchCode: '',
+        greenhouseId: assigneeStaff?.fieldId?.toString() || '',
+        greenhouseName: task.field,
+        cropName: task.crop,
+        priority: (task.priority as 'urgent' | 'high' | 'normal') || 'normal',
+        assigneeId: assigneeStaff?.id?.toString() || '',
+        assigneeName: task.assignee,
+        assignerId: 'U001',
+        assignerName: '张建国',
+        dueDate: task.planEnd?.split(' ')[0] || '',
+        description: '',
+        remarks: '',
+        sourceType: 'dispatch',
+        materials: [],
+        requiredFeedback: [],
+      });
+
+      // 返回带有 useTasks 真实 ID 的任务对象
+      return {
+        ...task,
+        id: useTasksTask.id,  // 使用 useTasks 返回的 ID
+      };
+    });
+
+    setMockTasks(prev => [...prev, ...tasksWithUseTasksId]);
+
     // 使用 Hook 标记推荐为已接受
     selectedRecommendations.forEach(id => acceptRecommendation(id));
     setSelectedRecommendations([]);
@@ -913,8 +994,48 @@ export default function TaskDispatchPage() {
     const cropValue = newTask.crops?.includes('other')
       ? newTask.cropRemarks
       : (newTask.crops?.join(',') || '');
+    // ========== 数据闭环：同步到 useTasks（先调用，获取返回的 ID）==========
+    // 查找执行人和派发人信息
+    const assigneeStaff = staff.find(s => s.name === newTask.assignee);
+
+    // 查找派发人信息（默认使用系统管理员 U001）
+    // TODO: 后续可接入登录系统，获取实际当前登录用户
+    const defaultDispatcher = users.find(u => u.id === 'U001');
+    const assignerId = defaultDispatcher?.id || 'U001';
+    const assignerName = defaultDispatcher?.name || '张建国';
+
+    // 根据 fieldValue 查找对应的 greenhouseId
+    // 匹配逻辑：fieldValue 可能是 "1号棚,2号棚" 格式，直接从 taskDispatchFields 精确匹配
+    const firstFieldName = fieldValue.split(',')[0]?.trim() || '';
+    const matchedField = taskDispatchFields.find(f => f.name === firstFieldName);
+    const greenhouseId = matchedField?.id?.toString() || '';
+
+    // 先调用 addTask 获取 useTasks 生成的任务对象（包含生成的任务ID）
+    const task = addTask({
+      title: typeLabels || '农事任务',
+      type: newTask.types[0] || 'other',
+      typeName: typeLabels,
+      batchId: '',  // 农事任务可不关联批次
+      batchCode: '',  // 农事任务可不关联批次
+      greenhouseId: greenhouseId,
+      greenhouseName: fieldValue,
+      cropName: cropValue,
+      priority: (newTask.priority as 'urgent' | 'high' | 'normal') || 'normal',
+      assigneeId: assigneeStaff?.id?.toString() || '',
+      assigneeName: newTask.assignee,
+      assignerId: assignerId,  // 派发人ID
+      assignerName: assignerName,  // 派发人名称
+      dueDate: newTask.planEnd?.split(' ')[0] || '',
+      description: newTask.sopContent,
+      remarks: '',
+      sourceType: 'dispatch',
+      materials: newTask.materials,
+      requiredFeedback: newTask.requiredFeedback,
+    });
+
+    // 用 useTasks 返回的任务 ID 同步更新 mockTasks（保持 ID 一致）
     const newTaskData = {
-      id: newTask.taskId,
+      id: task.id,  // 使用 useTasks 返回的 ID，保持两个系统 ID 一致
       types: newTask.types,
       field: fieldValue,
       crop: cropValue,
@@ -926,7 +1047,27 @@ export default function TaskDispatchPage() {
       priority: newTask.priority,
     };
     setMockTasks(prev => [...prev, newTaskData]);
-    console.log('创建任务:', newTaskData);
+
+    // ========== 数据闭环：同步到 useOperationRecords ==========
+    if (task) {
+      addTaskRecord({
+        operationType: newTask.types[0] || 'other',
+        operationTypeName: typeLabels,
+        status: 'pending',
+        greenhouseId: greenhouseId,  // 使用查找到的 greenhouseId
+        greenhouseName: fieldValue,
+        cropName: cropValue,
+        operatorId: assigneeStaff?.id?.toString() || '',
+        operatorName: newTask.assignee,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: task.id,
+        sourceCode: task.taskCode,
+        progress: 0,
+        remarks: `任务已派发，等待执行人接受`,
+      });
+    }
+
+    console.log('创建任务:', newTaskData, '已同步到数据闭环');
     setShowCreateModal(false);
     setCreateStep(1);
     setNewTask({
@@ -2291,11 +2432,19 @@ export default function TaskDispatchPage() {
         size="xl"
         showFooter={false}
         bottomContent={
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             {selectedTask?.status === 'waiting_acceptance' && (
-              <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
-                验收通过
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setAcceptanceTask(selectedTask);
+                    setShowAcceptanceModal(true);
+                  }}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600"
+                >
+                  验收
+                </button>
+              </>
             )}
           </div>
         }
@@ -3076,6 +3225,36 @@ export default function TaskDispatchPage() {
               const edited = editedTasks[task.id];
               return edited ? { ...task, ...edited } : task;
             }));
+
+            // ========== 数据闭环：同步批量编辑到 useTasks ==========
+            // 将 mockTasks 格式的编辑字段映射到 Task 格式
+            Object.entries(editedTasks).forEach(([taskId, edits]) => {
+              const taskEdits: Partial<Task> = {};
+
+              // 映射 status
+              if (edits.status) {
+                taskEdits.status = edits.status as TaskStatus;
+              }
+              // 映射 priority
+              if (edits.priority) {
+                taskEdits.priority = edits.priority as 'urgent' | 'high' | 'normal';
+              }
+              // 映射 assignee
+              if (edits.assignee) {
+                const assigneeStaff = staff.find(s => s.name === edits.assignee);
+                taskEdits.assigneeId = assigneeStaff?.id?.toString() || '';
+                taskEdits.assigneeName = edits.assignee as string;
+              }
+              // 映射 dueDate
+              if (edits.planStart) {
+                taskEdits.dueDate = (edits.planStart as string).split(' ')[0];
+              }
+
+              // 调用 updateTask 同步到 useTasks（只同步有变化的字段）
+              if (Object.keys(taskEdits).length > 0) {
+                updateTask(taskId, taskEdits);
+              }
+            });
           }
           setShowBatchEditModal(false);
           setBatchEditMode(false);
@@ -3097,6 +3276,16 @@ export default function TaskDispatchPage() {
         onConfirm={() => {
           // 删除选中的任务
           const indicesToDelete = [...selectedRows].sort((a, b) => b - a);
+
+          // ========== 数据闭环：同步删除到 useTasks ==========
+          // 根据索引获取要删除的任务 ID，调用 deleteTask 同步
+          indicesToDelete.forEach(index => {
+            const taskToDelete = filteredTasks[index];
+            if (taskToDelete && taskToDelete.id) {
+              deleteTask(taskToDelete.id);
+            }
+          });
+
           setMockTasks(prev => prev.filter((_, index) => !indicesToDelete.includes(index)));
           setShowDeleteWarning(false);
           setBatchDeleteMode(false);
@@ -3112,6 +3301,78 @@ export default function TaskDispatchPage() {
         onFormatChange={setExportFormat}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleActualExport}
+      />
+
+      {/* 验收弹窗 */}
+      <TaskAcceptanceModal
+        isOpen={showAcceptanceModal}
+        task={acceptanceTask as any}
+        taskRecords={acceptanceTask ? getTaskRecordsByTaskId(acceptanceTask.id) : []}
+        onAccept={(comments) => {
+          if (acceptanceTask) {
+            acceptCompletion(acceptanceTask.id, comments);
+            setShowAcceptanceModal(false);
+            setAcceptanceTask(null);
+          }
+        }}
+        onReject={(reason) => {
+          if (acceptanceTask) {
+            rejectForRework(acceptanceTask.id, reason);
+            setShowAcceptanceModal(false);
+            setAcceptanceTask(null);
+          }
+        }}
+        onClose={() => {
+          setShowAcceptanceModal(false);
+          setAcceptanceTask(null);
+        }}
+      />
+
+      {/* 超时处理弹窗 */}
+      <OvertimeHandleModal
+        isOpen={showOvertimeModal}
+        task={overtimeTask as any}
+        timeout={overtimeTask ? detectOvertime(overtimeTask as any) || null : null}
+        onContinue={(reason, newDeadline) => {
+          if (overtimeTask) {
+            handleOvertime(overtimeTask.id, 'continue', { reason, newDeadline });
+            setShowOvertimeModal(false);
+            setOvertimeTask(null);
+          }
+        }}
+        onAbandon={(reason) => {
+          if (overtimeTask) {
+            handleOvertime(overtimeTask.id, 'abandon', { reason });
+            setShowOvertimeModal(false);
+            setOvertimeTask(null);
+          }
+        }}
+        onClose={() => {
+          setShowOvertimeModal(false);
+          setOvertimeTask(null);
+        }}
+      />
+
+      {/* 撤回/取消弹窗 */}
+      <WithdrawCancelModal
+        isOpen={showWithdrawCancelModal}
+        task={withdrawCancelTask as any}
+        type={withdrawCancelType}
+        onConfirm={(reason) => {
+          if (withdrawCancelTask) {
+            if (withdrawCancelType === 'withdraw') {
+              withdrawTask(withdrawCancelTask.id, reason);
+            } else {
+              cancelTask(withdrawCancelTask.id, reason);
+            }
+            setShowWithdrawCancelModal(false);
+            setWithdrawCancelTask(null);
+          }
+        }}
+        onClose={() => {
+          setShowWithdrawCancelModal(false);
+          setWithdrawCancelTask(null);
+        }}
       />
     </div>
   );
