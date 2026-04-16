@@ -66,6 +66,8 @@ export interface Task {
   sourceProblemId?: number;
   // 任务进度（0-100）
   progress?: number;
+  // 必填反馈要求（位置打卡、作业前照片、作业后照片等）
+  requiredFeedback?: string[];
 }
 
 // 临时任务类型
@@ -258,6 +260,8 @@ export interface InspectionRecord {
   feedbackUsers?: string[];
   // 期望完成时间
   expectedCompletion?: string;
+  // 关联问题ID（用于关联问题分派记录）
+  problemId?: number;
 }
 
 export interface HarvestRecord {
@@ -522,4 +526,26 @@ export type {
   Equipment,
   Infrastructure,
 } from './index';
+
+// 农事任务类型导出
+export type {
+  Task,
+  TaskStatus,
+  TaskAction,
+  TaskRecord,
+  TaskTimeout,
+  DeadlineExtension,
+  ReworkRecord,
+  FeedbackRequirement,
+  FeedbackType,
+  ReminderRecord,
+  SubTask,
+  TaskFilters,
+  TaskStats,
+} from './task';
+
+export {
+  TASK_STATUS_CONFIG,
+  TASK_ACTION_CONFIG,
+} from './task';
 
