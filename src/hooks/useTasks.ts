@@ -30,6 +30,9 @@ import {
   TASK_ACTION_CONFIG,
 } from '../config/taskConfig';
 
+// 导入原始任务数据（保留原有数据）
+import { taskDispatchTasks, TaskDispatchTask } from '../data/farmMockData';
+
 // ============================================
 // 状态标签配置
 // ============================================
@@ -47,210 +50,83 @@ export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: stri
 };
 
 // ============================================
-// 演示任务初始数据（覆盖所有状态）
+// 原始任务数据转换函数
+// 将 taskDispatchTasks 转换为 Task 格式
 // ============================================
-const INITIAL_TASKS: Task[] = [
-  // ========== 待接受 (pending) ==========
-  {
-    id: 'TASK_001',
-    taskCode: 'NT20260416-001',
-    title: '1号棚番茄施肥任务',
-    type: 'fertilization',
-    typeName: '施肥',
-    status: 'pending',
-    priority: 'normal',
-    progress: 0,
+function convertToTask(t: TaskDispatchTask): Task {
+  // 获取第一个任务类型作为主类型
+  const primaryType = t.types[0] || 'other';
+  const typeNameMap: Record<string, string> = {
+    fertilization: '施肥',
+    irrigation: '灌溉',
+    pruning: '修剪',
+    harvest: '采收',
+    plant_protection: '植保',
+    pesticide: '植保',
+    weeding: '除草',
+    other: '其他',
+  };
+
+  return {
+    id: t.id,
+    taskCode: t.id,
+    title: `${t.field}${t.crop}${typeNameMap[primaryType] || '任务'}`,
+    type: primaryType,
+    typeName: t.typeLabel || typeNameMap[primaryType] || '其他',
+    status: t.status as TaskStatus,
+    priority: t.priority as 'urgent' | 'high' | 'normal',
+    progress: t.progress,
     sourceType: 'dispatch',
-    assigneeId: 'W001',
-    assigneeName: '张三',
+    assigneeId: `W${t.assignee.charCodeAt(0)}`,
+    assigneeName: t.assignee,
     assignerId: 'M001',
     assignerName: '王主管',
-    dueDate: '2026-04-16',
-    feedbackRequirements: [
-      { type: 'gps', label: 'GPS位置', required: true },
-      { type: 'image_before', label: '作业前照片', required: true },
-      { type: 'image_after', label: '作业后照片', required: false },
-    ],
+    dueDate: t.planEnd?.split(' ')[0] || '',
+    startTime: t.progress > 0 ? t.planStart : undefined,
+    // 兼容旧界面字段
+    greenhouseId: t.field,
+    greenhouseName: t.field,
+    cropName: t.crop,
+    types: t.types,
+    field: t.field,
+    assignee: t.assignee,
+    crop: t.crop,
+    planStart: t.planStart,
+    planEnd: t.planEnd,
+    estimatedDays: t.estimatedDays,
+    estimatedHours: t.estimatedHours,
+    // 转换必填反馈
+    feedbackRequirements: (t.requiredFeedback || []).map((f: string) => {
+      const feedbackMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text'; label: string; required: boolean }> = {
+        gps: { type: 'gps', label: 'GPS位置', required: true },
+        photo_before: { type: 'image_before', label: '作业前照片', required: true },
+        photo_after: { type: 'image_after', label: '作业后照片', required: true },
+        material: { type: 'materials', label: '物料使用', required: true },
+      };
+      return feedbackMap[f] || { type: 'text', label: f, required: false };
+    }),
+    // 其他字段
+    materials: t.materials,
+    tools: t.tools,
+    sopContent: t.sopContent,
+    typeConfig: t.typeConfig,
     reworkCount: 0,
     reworkHistory: [],
     deadlineExtensions: [],
     version: 1,
-    createdAt: '2026-04-16T08:00:00Z',
-    updatedAt: '2026-04-16T08:00:00Z',
-  },
-  {
-    id: 'TASK_002',
-    taskCode: 'NT20260416-002',
-    title: '2号棚黄瓜灌溉任务',
-    type: 'irrigation',
-    typeName: '灌溉',
-    status: 'pending',
-    priority: 'high',
-    progress: 0,
-    sourceType: 'dispatch',
-    assigneeId: 'W002',
-    assigneeName: '李四',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-16',
-    feedbackRequirements: [{ type: 'gps', label: 'GPS位置', required: true }],
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-16T08:30:00Z',
-    updatedAt: '2026-04-16T08:30:00Z',
-  },
-  // ========== 进行中 (in_progress) ==========
-  {
-    id: 'TASK_003',
-    taskCode: 'NT20260415-003',
-    title: '3号棚番茄修剪任务',
-    type: 'pruning',
-    typeName: '修剪',
-    status: 'in_progress',
-    priority: 'normal',
-    progress: 60,
-    sourceType: 'dispatch',
-    assigneeId: 'W003',
-    assigneeName: '王五',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-15',
-    startTime: '2026-04-15T08:00:00Z',
-    feedbackRequirements: [
-      { type: 'image_before', label: '作业前照片', required: true },
-      { type: 'image_after', label: '作业后照片', required: true },
-    ],
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-15T08:00:00Z',
-    updatedAt: '2026-04-15T10:30:00Z',
-  },
-  {
-    id: 'TASK_004',
-    taskCode: 'NT20260414-004',
-    title: '4号棚辣椒植保任务',
-    type: 'plant_protection',
-    typeName: '植保',
-    status: 'in_progress',
-    priority: 'urgent',
-    progress: 80,
-    sourceType: 'dispatch',
-    assigneeId: 'W001',
-    assigneeName: '张三',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-14',
-    startTime: '2026-04-14T07:30:00Z',
-    feedbackRequirements: [
-      { type: 'gps', label: 'GPS位置', required: true },
-      { type: 'image_before', label: '作业前照片', required: true },
-      { type: 'image_after', label: '作业后照片', required: true },
-    ],
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-14T07:00:00Z',
-    updatedAt: '2026-04-14T14:00:00Z',
-  },
-  // ========== 待验收 (waiting_acceptance) ==========
-  {
-    id: 'TASK_005',
-    taskCode: 'NT20260415-005',
-    title: '5号棚茄子采摘任务',
-    type: 'harvest',
-    typeName: '采收',
-    status: 'waiting_acceptance',
-    priority: 'high',
-    progress: 100,
-    sourceType: 'dispatch',
-    assigneeId: 'W002',
-    assigneeName: '李四',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-15',
-    feedbackRequirements: [
-      { type: 'image_before', label: '作业前照片', required: true },
-      { type: 'image_after', label: '作业后照片', required: true },
-    ],
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-15T09:00:00Z',
-    updatedAt: '2026-04-15T16:00:00Z',
-  },
-  // ========== 已完成 (completed) ==========
-  {
-    id: 'TASK_006',
-    taskCode: 'NT20260414-006',
-    title: '6号棚生菜采收任务',
-    type: 'harvest',
-    typeName: '采收',
-    status: 'completed',
-    priority: 'normal',
-    progress: 100,
-    sourceType: 'dispatch',
-    assigneeId: 'W003',
-    assigneeName: '王五',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-14',
-    startTime: '2026-04-14T08:00:00Z',
-    endTime: '2026-04-14T17:00:00Z',
-    completedAt: '2026-04-14T17:00:00Z',
-    feedbackRequirements: [
-      { type: 'image_before', label: '作业前照片', required: true },
-      { type: 'image_after', label: '作业后照片', required: true },
-    ],
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-14T08:00:00Z',
-    updatedAt: '2026-04-14T17:00:00Z',
-  },
-  // ========== 返工中 (rejected) ==========
-  {
-    id: 'TASK_007',
-    taskCode: 'NT20260413-007',
-    title: '1号棚草莓浇水任务',
-    type: 'irrigation',
-    typeName: '浇水',
-    status: 'rejected',
-    priority: 'normal',
-    progress: 40,
-    sourceType: 'dispatch',
-    assigneeId: 'W004',
-    assigneeName: '赵六',
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: '2026-04-13',
-    rejectReason: '浇水量不足，需重新作业',
-    feedbackRequirements: [
-      { type: 'gps', label: 'GPS位置', required: true },
-      { type: 'image_after', label: '作业后照片', required: true },
-    ],
-    reworkCount: 1,
-    reworkHistory: [
-      {
-        reworkCount: 1,
-        reworkReason: '浇水量不足，需重新作业',
-        reworkBy: '王主管',
-        reworkAt: '2026-04-13T11:00:00Z',
-        taskStatusBeforeRework: 'waiting_acceptance',
-      },
-    ],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt: '2026-04-13T08:00:00Z',
-    updatedAt: '2026-04-13T11:00:00Z',
-  },
-];
+    createdAt: `2026-${t.id.substring(0, 2)}-${t.id.substring(2, 4)}T08:00:00Z`,
+    updatedAt: `2026-${t.id.substring(0, 2)}-${t.id.substring(2, 4)}T08:00:00Z`,
+  };
+}
+
+// ============================================
+// 演示任务初始数据（来自原始 taskDispatchTasks）
+// ============================================
+const INITIAL_TASKS: Task[] = taskDispatchTasks.map(convertToTask);
+
+// 数据版本控制（用于检测数据结构变化，自动重置数据）
+const DATA_VERSION = 2;
+const STORAGE_VERSION_KEY = 'yuanxingtu_tasks_version';
 
 // ============================================
 // 生成任务编号
@@ -259,7 +135,7 @@ function generateTaskCode(): string {
   const date = new Date();
   const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
   const random = String(Math.random()).slice(2, 5);
-  return `NT${dateStr}-${random}`;
+  return `NS${dateStr}-${random}`;
 }
 
 // ============================================
@@ -334,12 +210,17 @@ function canPerformAction(
   if (!permission) return false;
 
   // 检查角色
-  if (!permission.roles.includes(userRole as 'admin' | 'assignee' | 'assigner')) {
+  const roleAllowed = (permission.roles as readonly string[]).includes(userRole);
+  if (!roleAllowed) {
     return false;
   }
 
   // 检查状态
-  if (permission.statuses !== '*' && !permission.statuses.includes(task.status)) {
+  const statuses = permission.statuses as unknown;
+  if (typeof statuses === 'string') {
+    // 如果是 '*'，表示所有状态都允许
+    if (statuses !== '*') return false;
+  } else if (!(statuses as readonly string[]).includes(task.status)) {
     return false;
   }
 
@@ -446,6 +327,16 @@ export interface UseTasksReturn {
 export function useTasks(): UseTasksReturn {
   // 从 localStorage 读取任务数据
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+
+  // 版本检测：如果存储的版本低于当前版本，重置数据
+  useEffect(() => {
+    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+    if (!storedVersion || parseInt(storedVersion, 10) < DATA_VERSION) {
+      // 版本不匹配，使用新数据重置
+      setTasks(INITIAL_TASKS);
+      localStorage.setItem(STORAGE_VERSION_KEY, String(DATA_VERSION));
+    }
+  }, [setTasks]);
 
   // 操作记录
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);
@@ -720,7 +611,7 @@ export function useTasks(): UseTasksReturn {
       saveTaskRecords([record, ...taskRecords]);
 
       // 计算工作时长
-      let workDuration = task.workDuration || 0;
+      let workDuration = 0;
       if (options?.startTime && options?.endTime) {
         const [sh, sm] = options.startTime.split(':').map(Number);
         const [eh, em] = options.endTime.split(':').map(Number);
@@ -743,7 +634,16 @@ export function useTasks(): UseTasksReturn {
       }
 
       // 同步到每日工单汇总
-      syncWorkLogFromTask(task, {
+      syncWorkLogFromTask({
+        id: task.id,
+        taskCode: task.taskCode,
+        assigneeName: task.assigneeName,
+        cropName: task.cropName || '',
+        greenhouseName: task.greenhouseName || '',
+        title: task.title,
+        batchId: task.batchId,
+        batchCode: task.batchCode,
+      }, {
         progress,
         notes: options?.remarks,
         workload: options?.workload,
