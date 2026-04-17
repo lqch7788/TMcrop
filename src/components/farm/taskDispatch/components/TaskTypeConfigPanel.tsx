@@ -99,7 +99,7 @@ export function TaskTypeConfigPanel({
           >
             <ConfigFieldRenderer
               field={field}
-              value={configValues[field.key]}
+              value={configValues?.[field.key]}
               onChange={onConfigChange}
               error={errors[field.key]}
             />
