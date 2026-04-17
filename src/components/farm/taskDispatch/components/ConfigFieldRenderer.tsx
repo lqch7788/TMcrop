@@ -246,15 +246,18 @@ export function ConfigFieldRenderer({
 
   // ========== 渲染多条目输入（混合配比） ==========
   const renderMultiEntry = () => {
-    const entries = (value as MultiEntryRecord[]) || [];
+    // 防御性检查：确保 entries 是有效数组
+    const entries: MultiEntryRecord[] = Array.isArray(value) ? value : [];
     const maxEntries = field.multiEntryDef?.maxEntries || 5;
+    const multiEntryFields = field.multiEntryDef?.fields || [];
 
     // 添加新条目
     const handleAddEntry = () => {
       if (entries.length >= maxEntries) return;
 
       const newEntry: MultiEntryRecord = { id: generateId() };
-      field.multiEntryDef?.fields.forEach(f => {
+      // 使用预获取的 multiEntryFields，避免可选链问题
+      multiEntryFields.forEach(f => {
         newEntry[f.key] = '';
       });
 
@@ -263,13 +266,13 @@ export function ConfigFieldRenderer({
 
     // 删除条目
     const handleRemoveEntry = (id: string) => {
-      handleChange(entries.filter(e => e.id !== id));
+      handleChange(entries.filter(e => e && e.id !== id));
     };
 
     // 更新条目中某个字段
     const handleEntryChange = (id: string, fieldKey: string, fieldValue: string | number) => {
       handleChange(
-        entries.map(e => (e.id === id ? { ...e, [fieldKey]: fieldValue } : e))
+        entries.map(e => (e && e.id === id ? { ...e, [fieldKey]: fieldValue } : e))
       );
     };
 

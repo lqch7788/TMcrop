@@ -1,0 +1,295 @@
+/**
+ * 任务表格行组件
+ */
+
+import React from 'react';
+import { FileText, Bell } from 'lucide-react';
+import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
+import { OvertimeBadge } from './OvertimeBadge';
+
+interface TaskTableRowProps {
+  task: any;
+  index: number;
+  showCheckbox: boolean;
+  isSelected: boolean;
+  isSelectable: boolean;
+  selectableReason?: string;
+  onSelect: () => void;
+  onViewDetail: () => void;
+  onViewSop?: () => void;
+  onAccept?: () => void;
+  onWithdraw?: () => void;
+  onCancel?: () => void;
+  onOvertime?: () => void;
+  onContinue?: () => void;
+  onReassign?: () => void;
+  onRemind?: () => void;
+  remindProps?: {
+    allowed: boolean;
+    cooldownSec: number;
+    todayCount: number;
+  };
+  canRemind: (taskId: string) => { allowed: boolean; reason?: string };
+  sendReminder: (
+    taskId: string,
+    taskCode: string,
+    assigneeId: string,
+    assigneeName: string,
+    senderId: string,
+    senderName: string
+  ) => void;
+}
+
+export function TaskTableRow({
+  task,
+  index,
+  showCheckbox,
+  isSelected,
+  isSelectable,
+  selectableReason,
+  onSelect,
+  onViewDetail,
+  onViewSop,
+  onAccept,
+  onWithdraw,
+  onCancel,
+  onOvertime,
+  onContinue,
+  onReassign,
+  onRemind,
+  remindProps,
+  canRemind,
+  sendReminder,
+}: TaskTableRowProps) {
+  const statusInfo = STATUS_MAP[task.status] || { label: task.status, bg: 'bg-gray-100', color: 'text-gray-600' };
+
+  return (
+    <tr key={task.id} className="hover:bg-blue-100 transition-colors">
+      {/* 复选框 */}
+      {showCheckbox && (
+        <td className="px-3 py-3 text-center whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            disabled={!isSelectable}
+            onChange={onSelect}
+            className={`w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 ${!isSelectable ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={!isSelectable ? selectableReason : ''}
+          />
+        </td>
+      )}
+
+      {/* 任务ID */}
+      <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
+        <button
+          onClick={onViewDetail}
+          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+          title="点击查看详情"
+        >
+          {task.id}
+        </button>
+      </td>
+
+      {/* 任务类型 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <div className="flex flex-wrap gap-1 items-center">
+          {(task.types || []).slice(0, 2).map((typeValue: string, idx: number) => {
+            const typeLabel = getTypeLabel(typeValue);
+            return typeLabel === '其他' ? (
+              <span key={idx} className="text-orange-500 text-xs">其他</span>
+            ) : (
+              <span key={idx} className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(typeValue)}`}>
+                {typeLabel}
+              </span>
+            );
+          })}
+          {(task.types || []).length > 2 && (
+            <span className="text-xs text-gray-500">+{(task.types || []).length - 2}</span>
+          )}
+        </div>
+      </td>
+
+      {/* 任务区域 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.field}</td>
+
+      {/* 作物 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        {task.crop === '其他' ? (
+          <div className="text-orange-500 text-xs">其他（{(task as any).cropRemarks || ''}）</div>
+        ) : (
+          <span className="text-sm text-gray-600">{task.crop}</span>
+        )}
+      </td>
+
+      {/* 批次 */}
+      <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
+        {(task as any).batchCode || '-'}
+      </td>
+
+      {/* 执行人 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <span className="text-sm text-gray-600">{task.assignee}</span>
+      </td>
+
+      {/* 进度 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-16 flex-shrink-0">
+            <div
+              className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : task.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+              style={{ width: `${task.progress}%` }}
+            />
+          </div>
+          <span className="text-xs text-gray-500">{task.progress}%</span>
+        </div>
+      </td>
+
+      {/* 优先级 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <span className={`text-xs font-medium ${task.priority === 'urgent' ? 'text-red-500' : task.priority === 'high' ? 'text-orange-500' : 'text-gray-500'}`}>
+          {task.priority === 'urgent' ? '紧急' : task.priority === 'high' ? '高' : '普通'}
+        </span>
+      </td>
+
+      {/* 状态 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <div className="flex flex-col gap-1">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color}`}>
+            {statusInfo.label}
+          </span>
+          {/* 超时警示徽章 */}
+          {(task as any).timeout && (
+            <OvertimeBadge timeout={(task as any).timeout} size="sm" showLabel={true} />
+          )}
+        </div>
+      </td>
+
+      {/* 备注 */}
+      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
+        {(task as any).remarks || '-'}
+      </td>
+
+      {/* 作业标准 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
+          <button
+            onClick={onViewSop}
+            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
+          >
+            <FileText className="w-3 h-3" />
+            SOP文件
+          </button>
+        ) : (
+          <span className="text-gray-400 text-xs">-</span>
+        )}
+      </td>
+
+      {/* 计划开始 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</td>
+
+      {/* 计划结束 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</td>
+
+      {/* 任务工时 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+        {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
+      </td>
+
+      {/* 操作按钮 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* 待验收 - 验收按钮 */}
+          {task.status === 'waiting_acceptance' && onAccept && (
+            <button
+              onClick={onAccept}
+              className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+            >
+              验收
+            </button>
+          )}
+
+          {/* pending - 撤回按钮 */}
+          {task.status === 'pending' && onWithdraw && (
+            <button
+              onClick={onWithdraw}
+              className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
+            >
+              撤回
+            </button>
+          )}
+
+          {/* accepted/in_progress - 取消按钮 */}
+          {(task.status === 'accepted' || task.status === 'in_progress') && onCancel && (
+            <button
+              onClick={onCancel}
+              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+            >
+              取消
+            </button>
+          )}
+
+          {/* 超时严重 - 超时处理按钮 */}
+          {(task as any).timeout?.severity === 'critical' && onOvertime && (
+            <button
+              onClick={onOvertime}
+              className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
+            >
+              超时处理
+            </button>
+          )}
+
+          {/* rejected - 继续执行按钮 */}
+          {task.status === 'rejected' && onContinue && (
+            <button
+              onClick={onContinue}
+              className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+            >
+              继续执行
+            </button>
+          )}
+
+          {/* failed/abandoned - 重新派发按钮 */}
+          {(task.status === 'failed' || task.status === 'abandoned') && onReassign && (
+            <button
+              onClick={onReassign}
+              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
+            >
+              重新派发
+            </button>
+          )}
+
+          {/* 催办按钮 - 已发布状态且非终态显示 */}
+          {!['draft', 'completed', 'cancelled', 'abandoned'].includes(task.status) && onRemind && (
+            <button
+              onClick={() => {
+                const remindCheck = canRemind(task.id);
+                if (remindCheck.allowed) {
+                  sendReminder(
+                    task.id,
+                    task.taskCode || task.id,
+                    task.assigneeId || '',
+                    task.assigneeName || task.assignee,
+                    'admin',
+                    '管理员'
+                  );
+                } else {
+                  alert(remindCheck.reason || '暂时无法催办');
+                }
+              }}
+              disabled={!remindProps?.allowed}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                remindProps?.allowed
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              }`}
+              title={remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}分钟后可催办` : `今日已催办${remindProps?.todayCount || 0}次`}
+            >
+              <Bell className="w-3 h-3 inline mr-1" />
+              {remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}m` : '催办'}
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
