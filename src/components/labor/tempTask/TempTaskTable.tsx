@@ -161,6 +161,7 @@ export function TempTaskTable({
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">紧急程度</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">超时</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
@@ -237,6 +238,21 @@ export function TempTaskTable({
                     {statusConfig[task.status].label}
                   </span>
                 </td>
+                <td className="px-3 py-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          (task.progress || 0) === 100 ? 'bg-green-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${task.progress || 0}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-gray-600 w-8">
+                      {task.progress || 0}%
+                    </span>
+                  </div>
+                </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[task.urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
                     {TEMP_TASK_URGENCY_CONFIG[task.urgency]?.label || task.urgency}
@@ -258,8 +274,8 @@ export function TempTaskTable({
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-1 flex-wrap">
-                    {/* 待验收 - 验收按钮 */}
-                    {task.status === 'waiting_acceptance' && onAccept && (
+                    {/* 待验收 或 进度100% - 验收按钮 */}
+                    {(task.status === 'waiting_acceptance' || task.progress === 100) && onAccept && (
                       <button
                         onClick={() => onAccept(task)}
                         className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
@@ -268,8 +284,8 @@ export function TempTaskTable({
                       </button>
                     )}
 
-                    {/* pending - 撤回按钮 */}
-                    {task.status === 'pending' && onWithdraw && (
+                    {/* pending 且进度未100% - 撤回按钮 */}
+                    {task.status === 'pending' && task.progress !== 100 && onWithdraw && (
                       <button
                         onClick={() => onWithdraw(task)}
                         className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"

@@ -95,6 +95,7 @@ export interface TempTask {
   greenhouseId?: string;
   workerCount?: number;
   rejectCount?: number;
+  progress?: number;
 }
 
 // 临时任务配置
