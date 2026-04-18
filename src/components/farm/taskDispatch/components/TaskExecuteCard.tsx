@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Play, Pause, CheckCircle, Clock, MapPin, Camera, Mic, FileText, Package } from 'lucide-react';
 import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '../../../ui/Modal';
+import FeedbackInput from '../../../common/FeedbackInput';
 
 interface TaskExecuteCardProps {
   task: Task;
@@ -27,6 +28,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
   const [progress, setProgress] = useState(task.progress || 0);
   const [feedback, setFeedback] = useState<TaskFeedback>({});
   const [submitText, setSubmitText] = useState('');
+  const [materialCode, setMaterialCode] = useState('');
 
   if (!task) return null;
 
@@ -35,8 +37,14 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
   const canSubmit = task.status === 'accepted' || task.status === 'in_progress';
 
   const handleSubmit = () => {
+    // 如果有扫码的物资编码，添加到 materials 中
+    const materialsWithCode = materialCode
+      ? [{ name: materialCode, qty: 1, unit: '个' }]
+      : feedback.materials;
+
     onSubmitProgress(progress, {
       ...feedback,
+      materials: materialsWithCode,
       text: submitText || undefined,
     });
     onClose();
@@ -191,18 +199,11 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                     />
                   )}
                   {req.type === 'materials' && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="物料名称"
-                        className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                      />
-                      <input
-                        type="number"
-                        placeholder="数量"
-                        className="w-20 px-2 py-1 border border-gray-200 rounded text-sm"
-                      />
-                    </div>
+                    <FeedbackInput
+                      type="material"
+                      value={materialCode}
+                      onChange={(v) => setMaterialCode(v)}
+                    />
                   )}
                 </div>
               ))}
