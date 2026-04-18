@@ -53,6 +53,8 @@ export function Filters({
             </label>
             <select
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              value={select.value}
+              onChange={(e) => select.onChange(e.target.value)}
             >
               {select.options.map((option) => (
                 <option key={option.value} value={option.value}>

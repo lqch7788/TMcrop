@@ -3,7 +3,7 @@ import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 interface TaskData {
   id: string;
   types: string[];
-  typeLabel: string;
+  typeName: string;
   field: string;
   crop: string;
   assignee: string;
@@ -93,7 +93,7 @@ export function BatchEditModal({
               { value: '', label: '请选择任务编号' },
               ...selectedTasks.map(t => ({
                 value: t.id,
-                label: `${t.id} - ${t.field} - ${t.typeLabel} ${
+                label: `${t.id} - ${t.assignee} - ${t.typeName} ${
                   editedTaskIds.includes(t.id) ? '✅ 已编辑' : ''
                 }`,
               })),
@@ -137,8 +137,8 @@ export function BatchEditModal({
               />
             </FormField>
 
-            {/* 负责人 - 可编辑 */}
-            <FormField label="负责人">
+            {/* 执行人 - 可编辑 */}
+            <FormField label="执行人">
               <Select
                 value={editedData.assignee ?? currentTask.assignee}
                 onChange={(e) => handleFieldChange('assignee', e.target.value)}

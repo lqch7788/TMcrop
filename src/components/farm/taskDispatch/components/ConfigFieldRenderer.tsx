@@ -358,7 +358,7 @@ export function ConfigFieldRenderer({
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">
         {field.label}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
+        {(field.required || error) && <span className="text-red-500 ml-1">*</span>}
       </label>
       {renderInput()}
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

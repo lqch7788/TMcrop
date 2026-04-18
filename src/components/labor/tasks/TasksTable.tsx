@@ -148,41 +148,41 @@ export function TasksTable({
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-start gap-2">
                     <TaskModeBadge mode={task.mode} />
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{task.title}</p>
+                    <div className="max-w-[150px]">
+                      <p className="font-medium text-gray-900 text-sm truncate" title={task.title}>{task.title}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-700">{task.typeName}</span>
+                  <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.typeName}>{task.typeName}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-500">{(task as any).typeRemarks || '-'}</span>
+                  <span className="text-sm text-gray-500 truncate max-w-[100px] block" title={(task as any).typeRemarks || '-'}>{(task as any).typeRemarks || '-'}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-700">{task.greenhouseName}</span>
+                  <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.greenhouseName}>{task.greenhouseName}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-700">{(task as any).crop || '-'}</span>
+                  <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={(task as any).crop || '-'}>{((task as any).crop as string) || '-'}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-500">{(task as any).cropRemarks || '-'}</span>
+                  <span className="text-sm text-gray-500 truncate max-w-[100px] block" title={(task as any).cropRemarks || '-'}>{((task as any).cropRemarks as string) || '-'}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium flex-shrink-0">
                       {(task.assigneeName || task.assignee || '-').charAt(0)}
                     </div>
-                    <span className="text-sm text-gray-700">{task.assigneeName || task.assignee || '-'}</span>
+                    <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.assigneeName || task.assignee || '-'}>{task.assigneeName || task.assignee || '-'}</span>
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-600">{(task as any).planStart || '-'}</span>
+                  <span className="text-sm text-gray-600 truncate max-w-[90px] block" title={(task as any).planStart || '-'}>{((task as any).planStart as string) || '-'}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Calendar className="w-3 h-3" />
-                    {task.dueDate}
+                    <Calendar className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate max-w-[90px] block" title={task.dueDate}>{task.dueDate}</span>
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
@@ -201,17 +201,13 @@ export function TasksTable({
                   <TaskStatusBadge status={task.status} />
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-600">
-                    {(task as any).materials?.length > 0
-                      ? (task as any).materials.map((m: any) => m.name).join(', ')
-                      : '-'}
+                  <span className="text-sm text-gray-600 truncate max-w-[120px] block" title={(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}>
+                    {(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <span className="text-sm text-gray-600">
-                    {(task as any).tools?.length > 0
-                      ? (task as any).tools.map((t: any) => t.name).join(', ')
-                      : '-'}
+                  <span className="text-sm text-gray-600 truncate max-w-[120px] block" title={(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}>
+                    {(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>

@@ -117,6 +117,12 @@ export interface TaskRecord {
     gpsLocation?: { lat: number; lng: number };
     materials?: { name: string; qty: number; unit: string }[];
     laborCost?: number;
+    // 工作量确认
+    workloadDays?: number;
+    workloadHours?: number;
+    workers?: number;
+    // 物资编码
+    materialCode?: string;
   };
 
   // 扩展信息
@@ -222,13 +228,37 @@ export interface Task {
   updatedAt: string;
   createdAt: string;
 
+  // 派发模式（区分三个Tab：农事任务、临时任务、智能派工）
+  dispatchMode?: 'farm' | 'tempTask' | 'smart';
+
+  // 智能派工相关
+  recommendedExecutorName?: string;  // 推荐执行人姓名
+  recommendScore?: number;           // 推荐评分
+  selectedExecutor?: {
+    id: string;
+    name: string;
+    recommendScore?: number;
+  };
+
   // 扩展字段（兼容旧版本）
   priority?: 'urgent' | 'high' | 'normal';
   description?: string;
   remarks?: string;
   materials?: { name: string; qty: number; unit: string }[];
+  tools?: { name: string; qty: number; unit: string }[];  // 工具列表
+  toolsRemarks?: string;      // 工具备注（当选择"其他"时使用）
   rejectReason?: string;
+  executorRejectCount?: number;  // 执行人拒绝次数，达到2次后必须更换执行人
   subTasks?: SubTask[];
+
+  // ========== 兼容旧界面字段 ==========
+  types?: string[];        // 任务类型数组，与 type 字段对应
+  typeLabel?: string;       // 类型显示名称
+  field?: string;          // 地块/大棚名称（兼容 greenhouseName）
+  assignee?: string;        // 执行人姓名（兼容 assigneeName）
+  crop?: string;           // 作物名称（兼容 cropName）
+  planStart?: string;      // 计划开始时间
+  planEnd?: string;        // 计划结束时间
 }
 
 // ============================================

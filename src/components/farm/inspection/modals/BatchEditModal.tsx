@@ -35,7 +35,6 @@ interface InspectionRecord {
   issueText?: string;
   issuePhotos?: string[];
   feedbackUsers?: string[];
-  expectedCompletion?: string;
 }
 
 interface BatchEditModalProps {
@@ -220,15 +219,6 @@ export function BatchEditModal({
                 value={(editedData.issueCategories ?? currentRecord.issueCategories ?? [''])[0] || ''}
                 onChange={(e) => handleFieldChange('issueCategories', e.target.value ? [e.target.value] : [])}
                 options={[{ value: '', label: '请选择' }, ...issueCategoryOptions]}
-              />
-            </FormField>
-
-            {/* 期望完成 - 可编辑 */}
-            <FormField label="期望完成">
-              <Select
-                value={editedData.expectedCompletion ?? currentRecord.expectedCompletion ?? ''}
-                onChange={(e) => handleFieldChange('expectedCompletion', e.target.value)}
-                options={[{ value: '', label: '请选择' }, ...completionTimeOptions]}
               />
             </FormField>
 

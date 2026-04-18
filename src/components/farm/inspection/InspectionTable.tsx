@@ -1,4 +1,5 @@
 import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { users } from '../../../data/mockData';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {
@@ -179,6 +180,7 @@ export function InspectionTable({
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">严重程度</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈状态</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">处理进度</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
@@ -224,12 +226,18 @@ export function InspectionTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                  <span className="font-medium text-gray-900">{record.inspectorName}</span>
+                  <span className="font-medium text-gray-900 truncate block" title={record.inspectorName}>{record.inspectorName}</span>
                 </td>
-                <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-1">
-                    <MapPin className="w-4 h-4 text-emerald-600" />
-                    <span className="text-gray-900">
+                <td className="px-4 py-3 text-sm text-gray-600 min-w-[10em] max-w-[15em]">
+                  <div className="flex items-center gap-1 overflow-hidden">
+                    <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span className="text-gray-900 truncate block" title={
+                      record.inspectionType === 'farm' && record.greenhouseName ||
+                      record.inspectionType === 'equipment' && record.equipmentName ||
+                      record.inspectionType === 'infrastructure' && record.infrastructureName ||
+                      record.inspectionType === 'other' && record.remarks ||
+                      record.greenhouseName || '-'
+                    }>
                       {record.inspectionType === 'farm' && record.greenhouseName}
                       {record.inspectionType === 'equipment' && record.equipmentName}
                       {record.inspectionType === 'infrastructure' && record.infrastructureName}
@@ -310,9 +318,51 @@ export function InspectionTable({
                     <span className="text-sm text-gray-500">-</span>
                   )}
                 </td>
+                {/* 反馈状态列 */}
+                <td className="px-4 py-3 text-center">
+                  {(() => {
+                    const problem = getProblemForRecord(record);
+                    if (!problem?.flowRecords) {
+                      return <span className="text-gray-300">-</span>;
+                    }
+                    // 查找最后一个包含 feedbackData 的记录
+                    const submitRecord = [...(problem.flowRecords || [])]
+                      .reverse()
+                      .find(r => r.action === 'submit' && (r as any).feedbackData);
+                    const feedbackData = submitRecord ? (submitRecord as any).feedbackData : null;
+                    if (!feedbackData) {
+                      return <span className="text-gray-300">-</span>;
+                    }
+                    return (
+                      <div className="flex items-center justify-center gap-1">
+                        {feedbackData.gpsLocation && (
+                          <span title="GPS已打卡" className="text-emerald-600">📍</span>
+                        )}
+                        {feedbackData.photosBefore && feedbackData.photosBefore.length > 0 && (
+                          <span title={`作业前照片${feedbackData.photosBefore.length}张`} className="text-blue-600">📷</span>
+                        )}
+                        {feedbackData.photosAfter && feedbackData.photosAfter.length > 0 && (
+                          <span title={`作业后照片${feedbackData.photosAfter.length}张`} className="text-orange-600">📷</span>
+                        )}
+                        {feedbackData.materialCode && (
+                          <span title="物资已扫码" className="text-purple-600">📦</span>
+                        )}
+                        {feedbackData.voiceNote && (
+                          <span title="语音备注" className="text-red-600">🎤</span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.feedbackUsers && record.feedbackUsers.length > 0 ? (
-                    <span className="text-red-600">{record.feedbackUsers.length}人</span>
+                    <span className="text-gray-700">
+                      {(() => {
+                        const user = users.find(u => u.id === record.feedbackUsers![0]);
+                        return user ? user.name : record.feedbackUsers![0];
+                      })()}
+                      {record.feedbackUsers.length > 1 && '等'}
+                    </span>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
@@ -345,7 +395,7 @@ export function InspectionTable({
                   })()}
                 </td>
                 {/* 操作列 */}
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 text-center whitespace-nowrap">
                   {(() => {
                     const problem = getProblemForRecord(record);
                     if (canAccept(problem)) {
@@ -359,16 +409,18 @@ export function InspectionTable({
                       );
                     }
                     if (problem && problem.status !== '已处理') {
-                      return <span className="text-xs text-gray-400">处理中</span>;
+                      return <span className="text-xs text-blue-500 font-medium">{problem.status}</span>;
                     }
                     if (problem?.status === '已处理') {
-                      return <span className="text-xs text-green-500">已完成</span>;
+                      return <span className="text-xs text-green-500 font-medium">{problem.status}</span>;
                     }
                     return <span className="text-gray-400 text-xs">-</span>;
                   })()}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate">
-                  {record.remarks || <span className="text-gray-400">-</span>}
+                <td className="px-4 py-3 text-sm text-gray-600 max-w-[10em]">
+                  <span className="truncate block" title={record.remarks || ''}>
+                    {record.remarks ? record.remarks.slice(0, 10) + (record.remarks.length > 10 ? '...' : '') : <span className="text-gray-400">-</span>}
+                  </span>
                 </td>
               </tr>
             ))}

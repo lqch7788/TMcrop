@@ -66,6 +66,14 @@ export function TaskTypeConfigPanel({
 
   const visibleFields = getVisibleFields(taskType, configValues);
 
+  // 检测是否有"其他"选项被选中
+  const hasOtherSelected = Object.values(configValues || {}).some(
+    v => v === 'other' || (Array.isArray(v) && v.includes('other'))
+  );
+
+  // 如果有"其他"被选中，给备注字段添加错误提示
+  const remarksError = hasOtherSelected ? '选择"其他"时必填' : undefined;
+
   // 无需配置
   if (visibleFields.length === 0) {
     return (
@@ -88,23 +96,29 @@ export function TaskTypeConfigPanel({
 
       {/* 配置字段网格 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {visibleFields.map(field => (
-          <div
-            key={field.key}
-            className={
-              field.type === 'textarea' || field.type === 'multiSelect'
-                ? 'md:col-span-2'
-                : ''
-            }
-          >
-            <ConfigFieldRenderer
-              field={field}
-              value={configValues?.[field.key]}
-              onChange={onConfigChange}
-              error={errors[field.key]}
-            />
-          </div>
-        ))}
+        {visibleFields.map(field => {
+          // 对于 remarks 字段，如果有"其他"被选中，设置错误提示
+          const fieldError = field.key === 'remarks' && hasOtherSelected
+            ? remarksError
+            : errors[field.key];
+          return (
+            <div
+              key={field.key}
+              className={
+                field.type === 'textarea' || field.type === 'multiSelect'
+                  ? 'md:col-span-2'
+                  : ''
+              }
+            >
+              <ConfigFieldRenderer
+                field={field}
+                value={configValues?.[field.key]}
+                onChange={onConfigChange}
+                error={fieldError}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

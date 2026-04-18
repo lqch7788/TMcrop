@@ -238,13 +238,23 @@ export function TaskTableRow({
             </button>
           )}
 
-          {/* rejected - 继续执行按钮 */}
-          {task.status === 'rejected' && onContinue && (
+          {/* rejected - 重新派发按钮（执行人拒绝后需要重新派发给其他人） */}
+          {task.status === 'rejected' && onReassign && (
             <button
-              onClick={onContinue}
-              className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+              onClick={onReassign}
+              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
             >
-              继续执行
+              重新派发
+            </button>
+          )}
+
+          {/* pending 但没有执行人（被清空） - 重新派发按钮（需要重新选择执行人） */}
+          {task.status === 'pending' && !task.assigneeId && onReassign && (
+            <button
+              onClick={onReassign}
+              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+            >
+              选择执行人
             </button>
           )}
 
