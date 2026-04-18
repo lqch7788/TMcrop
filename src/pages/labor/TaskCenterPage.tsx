@@ -13,7 +13,7 @@ import { SmartDispatchPage } from '../../components/labor/dispatch/SmartDispatch
 import { MyTasksPage } from '../../components/labor/myTasks/MyTasksPage';
 
 const TABS = [
-  { key: 'temp-task', label: '临时任务', icon: ClipboardList },
+  { key: 'temp-task', label: '临时任务处理', icon: ClipboardList },
   { key: 'task-execute', label: '任务执行', icon: Play },
   { key: 'work-log', label: '工作日志', icon: BookMarked },
   { key: 'smart-dispatch', label: '智能派工', icon: Sparkles },

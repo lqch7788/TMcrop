@@ -97,6 +97,7 @@ export interface TempTask {
 // 临时任务配置
 export const TEMP_TASK_URGENCY_CONFIG = {
   normal: { label: '普通', color: 'bg-gray-100 text-gray-600', badge: 'bg-gray-100 text-gray-700' },
+  high: { label: '高', color: 'bg-orange-100 text-orange-700', badge: 'bg-orange-100 text-orange-700' },
   urgent: { label: '紧急', color: 'bg-amber-100 text-amber-700', badge: 'bg-amber-100 text-amber-700' },
   critical: { label: '非常紧急', color: 'bg-red-100 text-red-700', badge: 'bg-red-500 text-white' },
 } as const;

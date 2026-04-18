@@ -63,7 +63,7 @@ export const DispatchPage: React.FC = () => {
               <Truck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">任务派发</h1>
+              <h1 className="text-2xl font-bold text-gray-900">农事任务派发</h1>
               <p className="text-sm text-gray-500">统一管理农事任务、临时任务和智能派工</p>
             </div>
           </div>

@@ -1,19 +1,70 @@
 import { useState } from 'react';
-import { Plus, AlertTriangle, Edit, Trash2, Download } from 'lucide-react';
+import { Plus, AlertTriangle, Edit, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
 import { TempTask } from '../../../types';
 import { tempTasks as initialTempTasks, users } from '../../../data/mockData';
 import { TempTaskFilters } from './TempTaskFilters';
 import { TempTaskTable } from './TempTaskTable';
-import { TempTaskDetailModal } from './TempTaskDetailModal';
 import { TempTaskFormModal } from './TempTaskFormModal';
 import { useTempTaskFilters } from './hooks/useTempTaskFilters';
 import { useTempTaskForm } from './hooks/useTempTaskForm';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
+import { Modal } from '../../ui/Modal';
+import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
+import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../hooks/useTempTasks';
 import { useTasks } from '../../../hooks/useTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
+import type { Task, TaskRecord } from '../../../types/task';
+
+// 状态映射
+const statusMap: Record<string, { bg: string; color: string; label: string }> = {
+  draft: { bg: 'bg-gray-100', color: 'text-gray-600', label: '草稿' },
+  pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待接受' },
+  accepted: { bg: 'bg-blue-100', color: 'text-blue-600', label: '已接受' },
+  in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
+  completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
+  waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
+  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已拒绝' },
+  failed: { bg: 'bg-purple-100', color: 'text-purple-600', label: '任务失败' },
+  cancelled: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已取消' },
+  abandoned: { bg: 'bg-red-50', color: 'text-red-400', label: '已放弃' },
+};
+
+// 优先级映射
+const priorityMap: Record<string, { color: string; label: string }> = {
+  urgent: { color: 'text-red-500', label: '紧急' },
+  high: { color: 'text-orange-500', label: '高' },
+  medium: { color: 'text-yellow-500', label: '中' },
+  low: { color: 'text-green-500', label: '低' },
+  normal: { color: 'text-gray-500', label: '普通' },
+};
+
+// 任务类型定义
+const taskTypes = [
+  { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
+  { value: 'irrigation', label: '灌溉', color: 'bg-blue-500' },
+  { value: 'pruning', label: '修剪', color: 'bg-purple-500' },
+  { value: 'pesticide', label: '植保', color: 'bg-red-500' },
+  { value: 'rootIrrigation', label: '灌根', color: 'bg-cyan-500' },
+  { value: 'planting', label: '定植', color: 'bg-lime-500' },
+  { value: 'harvest', label: '采收', color: 'bg-orange-500' },
+  { value: 'weeding', label: '除草', color: 'bg-emerald-500' },
+  { value: 'other', label: '其他', color: 'bg-gray-500' },
+];
+
+// 获取任务类型颜色
+const getTypeColor = (type: string): string => {
+  const taskType = taskTypes.find(t => t.value === type);
+  return taskType?.color || 'bg-gray-500';
+};
+
+// 获取任务类型标签
+const getTypeLabel = (type: string): string => {
+  const taskType = taskTypes.find(t => t.value === type);
+  return taskType?.label || type;
+};
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -423,12 +474,247 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
   );
 }
 
+// 撤回/取消弹窗组件
+interface WithdrawCancelModalProps {
+  isOpen: boolean;
+  task: TempTask | null;
+  type: 'withdraw' | 'cancel';
+  onConfirm: (reason: string) => void;
+  onClose: () => void;
+}
+
+function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: WithdrawCancelModalProps) {
+  const [reason, setReason] = useState('');
+
+  if (!isOpen || !task) return null;
+
+  const isWithdraw = type === 'withdraw';
+  const title = isWithdraw ? '撤回任务' : '取消任务';
+  const colorClass = isWithdraw ? 'text-blue-600 bg-blue-50' : 'text-red-600 bg-red-50';
+  const buttonClass = isWithdraw ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600';
+
+  const handleSubmit = () => {
+    if (reason.trim()) {
+      onConfirm(reason);
+      setReason('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+              ×
+            </button>
+          </div>
+          <div className="p-6 space-y-5">
+            {/* 警示信息 */}
+            <div className={`flex items-start gap-3 p-4 rounded-lg border ${colorClass}`}>
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">
+                  {isWithdraw ? '撤回后将取消该任务的派发，执行人将无法再接受此任务' : '取消后任务将终止，执行人将无法继续执行'}
+                </p>
+                <p className="text-sm mt-1 opacity-80">
+                  此操作需要填写原因
+                </p>
+              </div>
+            </div>
+
+            {/* 任务信息 */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="font-medium text-gray-900">{task.title}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
+                <p>任务编号：{task.taskCode}</p>
+                <p>执行人：{task.assigneeName}</p>
+                <p>当前状态：{isWithdraw ? '待接受' : '处理中'}</p>
+                <p>派发人：{task.assignerName}</p>
+              </div>
+            </div>
+
+            {/* 原因输入 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                操作原因 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={`请输入${isWithdraw ? '撤回' : '取消'}原因...`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                rows={3}
+              />
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => {
+                  setReason('');
+                  onClose();
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!reason.trim()}
+                className={`px-4 py-2 ${buttonClass} text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                确认{title}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 重新派发弹窗组件
+interface ReassignTaskModalProps {
+  isOpen: boolean;
+  task: TempTask | null;
+  users: Array<{ id: string; name: string; role?: string }>;
+  onConfirm: (newAssigneeId: string, newAssigneeName: string) => void;
+  onClose: () => void;
+}
+
+function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: ReassignTaskModalProps) {
+  const [selectedAssignee, setSelectedAssignee] = useState('');
+
+  if (!isOpen || !task) return null;
+
+  const handleSubmit = () => {
+    if (selectedAssignee) {
+      const user = users.find(u => u.id === selectedAssignee);
+      if (user) {
+        onConfirm(selectedAssignee, user.name);
+        setSelectedAssignee('');
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">重新派发任务</h2>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+              ×
+            </button>
+          </div>
+          <div className="p-6 space-y-5">
+            {/* 警示信息 */}
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-orange-100 bg-orange-50">
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-orange-600" />
+              <div>
+                <p className="font-medium text-orange-900">
+                  任务 "{task.title}" 需要重新派发
+                </p>
+                <p className="text-sm mt-1 text-orange-700">
+                  请选择新的执行人。原执行人：{task.assigneeName || '(已清空)'}
+                </p>
+              </div>
+            </div>
+
+            {/* 任务信息 */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+                <p>任务编号：{task.taskCode}</p>
+                <p>执行人：{task.assigneeName || '(已清空)'}</p>
+                <p>任务类型：{task.tempTaskType || '其他'}</p>
+                <p>当前状态：
+                  <span className="text-red-600 font-medium">
+                    {task.status === 'rejected' ? '已拒绝' : task.status === 'pending_reassign' ? '待重新派发' : '进行中'}
+                  </span>
+                </p>
+                {task.rejectReason && (
+                  <p className="col-span-2 text-red-600">拒绝原因：{task.rejectReason}</p>
+                )}
+              </div>
+            </div>
+
+            {/* 执行人选择 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                选择新执行人
+              </label>
+              <select
+                value={selectedAssignee}
+                onChange={(e) => setSelectedAssignee(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择执行人</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} {user.role ? `(${user.role})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 确认提示 */}
+            {selectedAssignee && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <p className="text-sm text-emerald-800">
+                  确认将任务派发给：
+                  <span className="font-medium">
+                    {users.find(u => u.id === selectedAssignee)?.name}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* 操作按钮 */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!selectedAssignee}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  selectedAssignee
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                确认派发
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TempTaskPage() {
   // 使用统一临时任务管理 Hook（数据闭环核心）
-  const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion } = useTempTasks();
+  const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
   // 统一任务管理 Hook（用于临时任务同步）
-  const { createTask } = useTasks();
+  const { createTask, publishTask } = useTasks();
+
+  // 紧急程度映射到优先级
+  const mapUrgencyToPriority = (urgency?: string): 'urgent' | 'high' | 'normal' => {
+    switch (urgency) {
+      case 'critical': return 'urgent';
+      case 'urgent': return 'high';
+      default: return 'normal';
+    }
+  };
 
   // 使用 useTempTasks 的数据替代本地 state
   const [selectedTask, setSelectedTask] = useState<TempTask | null>(null);
@@ -445,6 +731,15 @@ export function TempTaskPage() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+
+  // 撤回/取消弹窗状态
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [withdrawCancelTask, setWithdrawCancelTask] = useState<TempTask | null>(null);
+
+  // 重新派发弹窗状态
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignTask, setReassignTask] = useState<TempTask | null>(null);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -485,31 +780,40 @@ export function TempTaskPage() {
     users: users.map(u => ({ id: u.id, name: u.name })),
     onSubmit: (taskData, status) => {
       if (editingTask) {
-        // 更新 - 暂时不处理（useTempTasks 未实现 update 方法，可后续扩展）
+        // 更新逻辑（后续实现）
         console.log('更新临时任务:', editingTask.id, taskData);
       } else {
         // ========== 数据闭环：新建临时任务 ==========
-        const newTask = addTempTask({
+        // 使用 useTasks 创建任务（sourceType = 'tempTask'）
+        const newTask = createTask({
           title: taskData.title || '',
-          type: taskData.tempTaskType || '其他',
+          type: taskData.tempTaskType || 'other',
           typeName: taskData.tempTaskType || '其他',
-          urgency: (taskData.urgency as 'urgent' | 'high' | 'normal') || 'normal',
-          priority: (taskData.priority as 'urgent' | 'high' | 'normal') || 'normal',
-          location: taskData.workLocation || '',
+          status: 'draft',
+          priority: mapUrgencyToPriority(taskData.urgency),
+          progress: 0,
+          sourceType: 'tempTask',
           assigneeId: taskData.assigneeId || '',
           assigneeName: taskData.assigneeName || '待分配',
           assignerId: 'admin',
           assignerName: '管理员',
+          greenhouseName: taskData.workLocation || '',
+          cropName: '',
+          feedbackRequirements: [],
+          dueDate: taskData.dueDate,
           estimatedHours: taskData.estimatedHours || 1,
-          description: taskData.description || '',
-          remarks: taskData.notes || '',
-        });
+        }, 'tempTask');
+
+        // 自动发布任务（status: draft → pending）
+        if (status === 'pending') {
+          publishTask(newTask.id);
+        }
 
         // ========== 数据闭环：同步到农事操作记录 ==========
         addTempTaskRecord({
           operationType: taskData.tempTaskType || '其他',
           operationTypeName: `临时任务-${taskData.tempTaskType || '其他'}`,
-          status: 'pending',
+          status: status === 'pending' ? 'pending' : 'draft',
           greenhouseId: '',
           greenhouseName: taskData.workLocation || '',
           cropName: '',
@@ -519,28 +823,7 @@ export function TempTaskPage() {
           sourceId: newTask.id,
           sourceCode: newTask.taskCode,
           progress: 0,
-          remarks: '临时任务已创建，等待执行',
-        });
-
-        // ========== 数据闭环：同步到 useTasks 统一管理 ==========
-        createTask({
-          title: taskData.title || '',
-          type: taskData.tempTaskType || 'other',
-          typeName: taskData.tempTaskType || '其他',
-          status: 'pending',
-          priority: (taskData.priority as 'urgent' | 'high' | 'normal') || 'normal',
-          progress: 0,
-          sourceType: 'tempTask',
-          sourceId: newTask.id,
-          sourceCode: newTask.taskCode,
-          assigneeId: taskData.assigneeId || '',
-          assigneeName: taskData.assigneeName || '待分配',
-          assignerId: 'admin',
-          assignerName: '管理员',
-          greenhouseName: taskData.workLocation || '',
-          cropName: '',
-          feedbackRequirements: [],
-          dueDate: newTask.dueDate,
+          remarks: status === 'pending' ? '临时任务已发布' : '临时任务已创建（草稿）',
         });
       }
       closeFormModal();
@@ -688,6 +971,108 @@ export function TempTaskPage() {
     window.location.reload();
   };
 
+  // 撤回任务（待接受状态）
+  const handleWithdraw = (task: TempTask) => {
+    setWithdrawCancelTask(task);
+    setShowWithdrawModal(true);
+  };
+
+  // 取消任务（进行中状态）
+  const handleCancel = (task: TempTask) => {
+    setWithdrawCancelTask(task);
+    setShowCancelModal(true);
+  };
+
+  // 撤回确认
+  const handleWithdrawConfirm = (reason: string) => {
+    if (withdrawCancelTask) {
+      updateTempTask(withdrawCancelTask.id, {
+        status: 'cancelled',
+      });
+      addTempTaskRecord({
+        operationType: 'withdraw',
+        operationTypeName: '撤回任务',
+        status: 'cancelled',
+        greenhouseId: '',
+        greenhouseName: withdrawCancelTask.location || '',
+        cropName: '',
+        operatorId: withdrawCancelTask.assignerId,
+        operatorName: withdrawCancelTask.assignerName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: withdrawCancelTask.id,
+        sourceCode: withdrawCancelTask.taskCode,
+        progress: 0,
+        remarks: reason || '任务被撤回',
+      });
+      setShowWithdrawModal(false);
+      setWithdrawCancelTask(null);
+      window.location.reload();
+    }
+  };
+
+  // 取消确认
+  const handleCancelConfirm = (reason: string) => {
+    if (withdrawCancelTask) {
+      updateTempTask(withdrawCancelTask.id, {
+        status: 'cancelled',
+      });
+      addTempTaskRecord({
+        operationType: 'cancel',
+        operationTypeName: '取消任务',
+        status: 'cancelled',
+        greenhouseId: '',
+        greenhouseName: withdrawCancelTask.location || '',
+        cropName: '',
+        operatorId: withdrawCancelTask.assignerId,
+        operatorName: withdrawCancelTask.assignerName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: withdrawCancelTask.id,
+        sourceCode: withdrawCancelTask.taskCode,
+        progress: 0,
+        remarks: reason || '任务被取消',
+      });
+      setShowCancelModal(false);
+      setWithdrawCancelTask(null);
+      window.location.reload();
+    }
+  };
+
+  // 打开重新派发弹窗
+  const handleOpenReassign = (task: TempTask) => {
+    setReassignTask(task);
+    setShowReassignModal(true);
+  };
+
+  // 重新派发确认
+  const handleReassignConfirm = (newAssigneeId: string, newAssigneeName: string) => {
+    if (reassignTask) {
+      updateTempTask(reassignTask.id, {
+        status: 'pending',
+        assigneeId: newAssigneeId,
+        assigneeName: newAssigneeName,
+        rejectCount: 0,
+      });
+      addTempTaskRecord({
+        operationType: 'reassign',
+        operationTypeName: '重新派发',
+        status: 'pending',
+        greenhouseId: '',
+        greenhouseName: reassignTask.location || '',
+        cropName: '',
+        operatorId: reassignTask.assignerId,
+        operatorName: reassignTask.assignerName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: reassignTask.id,
+        sourceCode: reassignTask.taskCode,
+        progress: 0,
+        remarks: `任务被重新派发给${newAssigneeName}，原执行人：${reassignTask.assigneeName || '(已清空)'}`,
+      });
+      setShowReassignModal(false);
+      setReassignTask(null);
+      window.location.reload();
+    }
+  };
+
   // 批量选择操作
   const handleSelectAll = () => {
     if (selectedRows.length === filteredTasks.length) {
@@ -824,8 +1209,8 @@ export function TempTaskPage() {
             <AlertTriangle className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">临时任务</h1>
-            <p className="text-gray-500">管理不在计划内的临时任务</p>
+            <h1 className="text-2xl font-bold text-gray-900">临时任务派发</h1>
+            <p className="text-gray-500">管理不在计划内的临时任务派发</p>
           </div>
         </div>
       </div>
@@ -870,7 +1255,22 @@ export function TempTaskPage() {
       {/* 任务列表表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">临时任务列表</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900">临时任务派发列表</h3>
+            {/* 已超时/即将到期徽章 */}
+            {stats.overdue > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                <AlertTriangle className="w-4 h-4" />
+                <span>已超时 {stats.overdue} 个</span>
+              </div>
+            )}
+            {stats.warning > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                <Clock className="w-4 h-4" />
+                <span>即将到期 {stats.warning} 个</span>
+              </div>
+            )}
+          </div>
           {exportMode ? (
             <div className="flex gap-2">
               <button
@@ -971,13 +1371,10 @@ export function TempTaskPage() {
           selectedRows={selectedRows}
           onViewTask={openDetailModal}
           onEditTask={openEditModal}
-          onStartTask={handleStartTask}
-          onSubmitComplete={(task) => {
-            // 打开详情弹窗，触发提交完成流程
-            openDetailModal(task);
-          }}
-          onAcceptComplete={handleAcceptComplete}
-          onRejectComplete={handleRejectComplete}
+          onAccept={handleAcceptComplete}
+          onWithdraw={handleWithdraw}
+          onCancel={handleCancel}
+          onReassign={handleOpenReassign}
           onSelectAll={handleSelectAll}
           onSelectRow={handleSelectRow}
           pagination={{
@@ -994,15 +1391,199 @@ export function TempTaskPage() {
       </div>
 
       {/* 详情弹窗 */}
-      <TempTaskDetailModal
-        task={selectedTask}
+      <Modal
+        isOpen={isDetailModalOpen && !!selectedTask}
         onClose={closeDetailModal}
-        onStartTask={handleStartTask}
-        onSubmitComplete={handleSubmitComplete}
-        onAcceptComplete={handleAcceptComplete}
-        onRejectComplete={handleRejectComplete}
-        onReassign={handleReassign}
-      />
+        title={`任务详情 - ${selectedTask?.taskCode || selectedTask?.id || ''}`}
+        size="xl"
+        showFooter={false}
+      >
+        {selectedTask && (
+          <div className="space-y-6">
+            {/* 基本信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">任务名称</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.title || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">任务区域</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">执行人</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.assigneeName || '待分配'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">优先级</label>
+                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
+                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority || '普通'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 任务类型 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型</h4>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.tempTaskType || 'other')}`}>
+                  {getTypeLabel(selectedTask.tempTaskType || 'other')}
+                </span>
+              </div>
+            </div>
+
+            {/* 紧急程度 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">紧急程度</h4>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1.5 rounded text-sm font-medium ${
+                  selectedTask.urgency === 'critical' ? 'bg-red-100 text-red-700' :
+                  selectedTask.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedTask.urgency === 'critical' ? '非常紧急' :
+                   selectedTask.urgency === 'urgent' ? '紧急' : '普通'}
+                </span>
+              </div>
+            </div>
+
+            {/* 任务描述 */}
+            {selectedTask.description && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">任务描述</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTask.description}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 时间信息 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">派发时间</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString('zh-CN') : '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">截止日期</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.dueDate || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">状态</label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || 'bg-gray-100'} ${statusMap[selectedTask.status]?.color || 'text-gray-600'}`}>
+                      {statusMap[selectedTask.status]?.label || selectedTask.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">预估时长</label>
+                  <p className="font-semibold text-gray-900">
+                    {selectedTask.estimatedHours ? `${selectedTask.estimatedHours}小时` : '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 进度 */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all"
+                    style={{ width: `${selectedTask.progress || 0}%` }}
+                  />
+                </div>
+                <span className="w-14 text-sm font-medium text-gray-700 text-center">
+                  {selectedTask.progress || 0}%
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
+              </p>
+            </div>
+
+            {/* 备注 */}
+            {(selectedTask.notes || selectedTask.remarks) && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">备注</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {selectedTask.notes || selectedTask.remarks}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 驳回原因 */}
+            {selectedTask.rejectReason && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">驳回原因</h4>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm text-red-700">{selectedTask.rejectReason}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 完成备注 */}
+            {selectedTask.completionRemarks && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">完成备注</h4>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm text-green-700">{selectedTask.completionRemarks}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 验收备注 */}
+            {selectedTask.acceptanceRemarks && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">验收备注</h4>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-700">{selectedTask.acceptanceRemarks}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 操作记录 */}
+            {(() => {
+              const records = selectedTask.operationRecords || [];
+              if (records.length === 0) return null;
+              return (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
+                  <div className="space-y-4">
+                    {records.map((record: any, index: number) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                              {record.operationTypeName || record.operationType}
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">{record.operationDate}</span>
+                        </div>
+                        {record.remarks && (
+                          <p className="text-sm text-gray-600 mt-2">{record.remarks}</p>
+                        )}
+                        {record.rejectReason && (
+                          <p className="text-sm text-red-600 mt-2">驳回原因：{record.rejectReason}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </Modal>
 
       {/* 创建/编辑表单弹窗 */}
       <TempTaskFormModal
@@ -1044,6 +1625,42 @@ export function TempTaskPage() {
         onFormatChange={setExportFormat}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleDoExport}
+      />
+
+      {/* 撤回任务弹窗 */}
+      <WithdrawCancelModal
+        isOpen={showWithdrawModal}
+        task={withdrawCancelTask}
+        type="withdraw"
+        onConfirm={handleWithdrawConfirm}
+        onClose={() => {
+          setShowWithdrawModal(false);
+          setWithdrawCancelTask(null);
+        }}
+      />
+
+      {/* 取消任务弹窗 */}
+      <WithdrawCancelModal
+        isOpen={showCancelModal}
+        task={withdrawCancelTask}
+        type="cancel"
+        onConfirm={handleCancelConfirm}
+        onClose={() => {
+          setShowCancelModal(false);
+          setWithdrawCancelTask(null);
+        }}
+      />
+
+      {/* 重新派发任务弹窗 */}
+      <ReassignTaskModal
+        isOpen={showReassignModal}
+        task={reassignTask}
+        users={users.map(u => ({ id: u.id, name: u.name, role: u.role }))}
+        onConfirm={handleReassignConfirm}
+        onClose={() => {
+          setShowReassignModal(false);
+          setReassignTask(null);
+        }}
       />
     </div>
   );

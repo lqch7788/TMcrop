@@ -72,12 +72,12 @@ const materialsSubItems = [
 // 农事管理子菜单（扩充：任务中心、问题分派、每日工单汇总从其他模块移入，采收入库移出到库存管理）
 // 任务派发整合了农事任务派发、临时任务、智能派工三个模块
 const farmSubItems = [
-  { icon: Truck, label: '任务派发', path: '/task-dispatch' },
+  { icon: Truck, label: '农事任务派发', path: '/task-dispatch' },
   { icon: Eye, label: '巡查管理', path: '/inspection' },
   { icon: Send, label: '问题分派', path: '/problem-dispatch' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
-  { icon: Sparkles, label: '临时任务', path: '/temp-task' },
+  { icon: Sparkles, label: '临时任务派发', path: '/temp-task' },
 ];
 
 const indicatorsSubItems = [
