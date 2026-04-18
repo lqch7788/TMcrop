@@ -96,6 +96,9 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
               执行人
             </th>
             <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              派发人
+            </th>
+            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               状态
             </th>
             <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -149,6 +152,9 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                 </td>
                 <td className="px-3 py-3 text-sm text-gray-500">
                   {task.assigneeName || '-'}
+                </td>
+                <td className="px-3 py-3 text-sm text-gray-500">
+                  {task.assignerName || (task as any).assignerName || '-'}
                 </td>
                 <td className="px-3 py-3">
                   <span
