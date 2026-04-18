@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, FileText, CheckCircle, XCircle, Play, Upload, Eye, Clock } from 'lucide-react';
+import { Edit, FileText, CheckCircle, XCircle, Play, Upload, Eye, Clock, AlertTriangle, MapPin, User } from 'lucide-react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { Modal } from '../../ui/Modal';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
@@ -13,6 +13,7 @@ import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { FeedbackInput, FEEDBACK_OPTIONS } from '../../common/FeedbackInput';
+import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
 // 导入统一任务管理 Hook（数据闭环核心）
 import { useTasks } from '../../../hooks/useTasks';
@@ -87,11 +88,14 @@ export function MyTasksPage() {
     ? unifiedTasks.map(t => ({
         id: t.id,
         taskCode: t.taskCode || t.id,
+        title: t.title || '',
         types: t.types || [],
         typeLabel: t.typeName || '',
+        typeName: t.typeName || '',
         field: t.field || t.greenhouseName || '',
         crop: t.crop || t.cropName || '',
         assignee: t.assigneeName || t.assignee || '',
+        assigneeName: t.assigneeName || t.assignee || '',
         planStart: t.planStart || '',
         planEnd: t.planEnd || '',
         progress: t.progress || 0,
@@ -99,8 +103,10 @@ export function MyTasksPage() {
         priority: t.priority || 'normal',
         estimatedDays: t.estimatedDays || 0,
         estimatedHours: t.estimatedHours || 0,
+        dueDate: t.dueDate || '',
         requiredFeedback: t.requiredFeedback || [],
         feedbackRequirements: t.feedbackRequirements || [],
+        remarks: t.remarks || '',
         // 任务配置
         typeConfig: (t as any).typeConfig || {},
         sopContent: (t as any).sopContent || '',
@@ -110,6 +116,12 @@ export function MyTasksPage() {
         sourceProblemId: (t as any).sourceProblemId,
         // 来源类型（用于区分临时任务和生产任务）
         sourceType: (t as any).sourceType,
+        // 临时任务特有字段
+        workLocation: (t as any).workLocation || '',
+        urgency: (t as any).urgency || 'normal',
+        tempTaskType: (t as any).tempTaskType || '',
+        workerCount: (t as any).workerCount || 1,
+        totalEstimatedHours: (t as any).totalEstimatedHours || 0,
       }))
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
@@ -130,8 +142,8 @@ export function MyTasksPage() {
         // 生产任务：没有 sourceProblemId 且不是临时任务的任务
         return myTasks.filter(task => !task.sourceProblemId && (task as any).sourceType !== 'tempTask');
       case 'temp':
-        // 临时任务 Tab：筛选 sourceType === 'tempTask'
-        return myTasks.filter(task => (task as any).sourceType === 'tempTask');
+        // 临时任务 Tab：筛选 sourceType === 'tempTask' 且非草稿状态
+        return myTasks.filter(task => (task as any).sourceType === 'tempTask' && task.status !== 'draft');
       default:
         return myTasks;
     }
@@ -611,172 +623,305 @@ export function MyTasksPage() {
           <table className="w-full min-w-[1200px]">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                {taskFilter === 'temp' ? (
+                  <>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">任务编号</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">任务名称</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">类型</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">工作地点</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">负责人</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">截止日期</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">预计天数</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">紧急程度</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">超时</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={taskFilter === 'temp' ? 13 : 14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
                   </td>
                 </tr>
               ) : (
                 paginatedTasks.map((task) => {
                   const types = task.types || [];
+                  const isTempTask = (task as any).sourceType === 'tempTask';
+                  const totalHours = ((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) * ((task as any).workerCount || 1);
                   return (
-                    <tr key={task.id} className="hover:bg-blue-50 transition-colors">
-                      <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                        <button
-                          onClick={() => openDetailModal(task)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                          title="点击查看详情"
-                        >
-                          {task.id}
-                        </button>
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {renderTypeCell(task)}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {task.field || '-'}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {task.crop || '-'}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="text-sm text-gray-700">陆启闯</span>
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {task.planStart?.split(' ')[0] || '-'}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {task.planEnd || '-'}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) || 0}小时
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : (task.progress || 0) > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
-                              style={{ width: `${task.progress || 0}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-500">{task.progress || 0}%</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className={`text-xs font-medium ${priorityMap[task.priority]?.color || 'text-gray-500'}`}>
-                          {priorityMap[task.priority]?.label || task.priority}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
-                          {statusMap[task.status]?.label || task.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={task.typeLabel || '-'}>
-                        {task.typeLabel || '-'}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {types.length >= 2 && task.sopContent ? (
-                          <button
-                            onClick={(e) => openSopModal(task, e)}
-                            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
-                          >
-                            <FileText className="w-3 h-3" />
-                            SOP文件
-                          </button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {task.status === 'pending' && (
-                          // 待接受状态：显示接受和拒绝按钮
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleAccept(task)}
-                              className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
-                              title="接受任务"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              接受
-                            </button>
-                            <button
-                              onClick={() => openRejectModal(task)}
-                              className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
-                              title="拒绝任务"
-                            >
-                              <XCircle className="w-3 h-3" />
-                              拒绝
-                            </button>
-                          </div>
-                        )}
-                        {(task.status === 'accepted' || task.status === 'in_progress') && (
-                          // 已接受/进行中状态：显示提交进度按钮
-                          <button
-                            onClick={() => openFeedbackModal(task)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
-                            title="点击提交进度"
-                          >
-                            <Edit className="w-4 h-4" />
-                            提交进度
-                          </button>
-                        )}
-                        {task.status === 'rejected' && (
-                          // 被驳回状态：显示继续执行和查看按钮
-                          <>
-                            <button
-                              onClick={() => {
-                                const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
-                                if (unifiedTask) {
-                                  continueExecution(unifiedTask.id);
-                                }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
-                              title="继续完成任务后重新提交"
-                            >
-                              <Play className="w-4 h-4" />
-                              继续执行
-                            </button>
+                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && (task as any).urgency === 'critical' ? 'bg-red-50' : ''}`}>
+                      {taskFilter === 'temp' ? (
+                        <>
+                          <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
                             <button
                               onClick={() => openDetailModal(task)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                               title="点击查看详情"
                             >
-                              <Eye className="w-4 h-4" />
-                              查看
+                              {task.taskCode}
                             </button>
-                          </>
-                        )}
-                        {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
-                          // 待验收/已完成状态：只显示查看详情按钮
-                          <button
-                            onClick={() => openDetailModal(task)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                            title="点击查看详情"
-                          >
-                            <Eye className="w-4 h-4" />
-                            查看
-                          </button>
-                        )}
-                      </td>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              {isTempTask && (task as any).urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                              <span className="font-medium text-gray-900 text-sm">{task.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as any).typeName || '-'}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              {task.field || '-'}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              {task.assigneeName || '-'}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              {(task as any).dueDate || '-'}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as any).estimatedDays || 0}天</td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as any).workerCount || 1}人</td>
+                          <td className="px-3 py-3 text-center text-sm font-medium text-emerald-600">{totalHours}h</td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
+                              {statusMap[task.status]?.label || task.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[(task as any).urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
+                              {TEMP_TASK_URGENCY_CONFIG[(task as any).urgency]?.label || (task as any).urgency || '-'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {/* 超时状态由执行人端判断，暂不显示 */}
+                            <span className="text-xs text-gray-400">-</span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {task.status === 'pending' && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleAccept(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="接受任务"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  接受
+                                </button>
+                                <button
+                                  onClick={() => openRejectModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="拒绝任务"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  拒绝
+                                </button>
+                              </div>
+                            )}
+                            {(task.status === 'accepted' || task.status === 'in_progress') && (
+                              <button
+                                onClick={() => openFeedbackModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+                                title="点击提交进度"
+                              >
+                                <Edit className="w-4 h-4" />
+                                提交进度
+                              </button>
+                            )}
+                            {task.status === 'rejected' && (
+                              <button
+                                onClick={() => {
+                                  const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+                                  if (unifiedTask) {
+                                    continueExecution(unifiedTask.id);
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
+                                title="继续完成任务后重新提交"
+                              >
+                                <Play className="w-4 h-4" />
+                                继续执行
+                              </button>
+                            )}
+                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
+                              <button
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                                查看
+                              </button>
+                            )}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
+                            <button
+                              onClick={() => openDetailModal(task)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                              title="点击查看详情"
+                            >
+                              {task.id}
+                            </button>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {renderTypeCell(task)}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {task.field || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {task.crop || '-'}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="text-sm text-gray-700">{task.assigneeName || '-'}</span>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {task.planStart?.split(' ')[0] || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {task.planEnd || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) || 0}小时
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : (task.progress || 0) > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                  style={{ width: `${task.progress || 0}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-500">{task.progress || 0}%</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`text-xs font-medium ${priorityMap[task.priority]?.color || 'text-gray-500'}`}>
+                              {priorityMap[task.priority]?.label || task.priority}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
+                              {statusMap[task.status]?.label || task.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={task.typeLabel || '-'}>
+                            {task.typeLabel || '-'}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {types.length >= 2 && task.sopContent ? (
+                              <button
+                                onClick={(e) => openSopModal(task, e)}
+                                className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
+                              >
+                                <FileText className="w-3 h-3" />
+                                SOP文件
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {task.status === 'pending' && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleAccept(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="接受任务"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  接受
+                                </button>
+                                <button
+                                  onClick={() => openRejectModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="拒绝任务"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  拒绝
+                                </button>
+                              </div>
+                            )}
+                            {(task.status === 'accepted' || task.status === 'in_progress') && (
+                              <button
+                                onClick={() => openFeedbackModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+                                title="点击提交进度"
+                              >
+                                <Edit className="w-4 h-4" />
+                                提交进度
+                              </button>
+                            )}
+                            {task.status === 'rejected' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+                                    if (unifiedTask) {
+                                      continueExecution(unifiedTask.id);
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
+                                  title="继续完成任务后重新提交"
+                                >
+                                  <Play className="w-4 h-4" />
+                                  继续执行
+                                </button>
+                                <button
+                                  onClick={() => openDetailModal(task)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                  title="点击查看详情"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  查看
+                                </button>
+                              </>
+                            )}
+                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
+                              <button
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                                查看
+                              </button>
+                            )}
+                          </td>
+                        </>
+                      )}
                     </tr>
                   );
                 })

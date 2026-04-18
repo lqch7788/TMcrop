@@ -304,16 +304,102 @@ function PhotoInput({ value, onChange, captureType }: { value: string[]; onChang
 function MaterialInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const colorClass = 'purple';
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const codeReaderRef = useRef<any>(null);
 
-  // 模拟扫码（实际可扩展为扫码枪或扫二维码）
-  const handleScan = () => {
+  // 停止相机
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject = null;
+    }
+    setScanning(false);
+  };
+
+  // 初始化扫码器并开始扫描
+  const startScanning = async () => {
     setScanning(true);
-    // 模拟扫码结果
-    setTimeout(() => {
-      const mockCode = 'MAT-' + Date.now().toString().slice(-8);
-      onChange(mockCode);
+    setError(null);
+
+    try {
+      // 动态导入 zxing
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      const { BarcodeFormat, DecodeHintType } = await import('@zxing/library');
+
+      // 配置扫码器支持多种格式
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.CODE_93,
+        BarcodeFormat.CODABAR,
+        BarcodeFormat.ITF,
+        BarcodeFormat.RSS_14,
+        BarcodeFormat.QR_CODE,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      codeReaderRef.current = new BrowserMultiFormatReader(hints);
+
+      // 请求相机权限并获取视频流
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' } // 后置摄像头
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+
+      // 开始连续扫描
+      scanFrame();
+    } catch (err: any) {
+      console.error('扫码初始化失败:', err);
+      setError('无法访问相机，请检查权限设置');
       setScanning(false);
-    }, 500);
+    }
+  };
+
+  // 逐帧扫描
+  const scanFrame = async () => {
+    if (!scanning || !videoRef.current || !codeReaderRef.current) return;
+
+    try {
+      const result = await codeReaderRef.current.decodeFromVideoElement(videoRef.current);
+      if (result) {
+        // 识别成功
+        onChange(result.getText());
+        stopCamera();
+        return;
+      }
+    } catch (err) {
+      // 没识别到，继续扫描
+    }
+
+    // 继续扫描
+    if (scanning) {
+      requestAnimationFrame(scanFrame);
+    }
+  };
+
+  // 停止扫描
+  const handleStop = () => {
+    stopCamera();
+  };
+
+  // 手动输入
+  const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
   };
 
   return (
@@ -333,29 +419,64 @@ function MaterialInput({ value, onChange }: { value: string; onChange: (v: strin
         )}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="扫描或输入物资编码"
-          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
-        <button
-          onClick={handleScan}
-          disabled={scanning}
-          className={`px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2 transition-colors`}
-        >
-          {scanning ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Package className="w-4 h-4" />
+      {/* 扫码区域 */}
+      {scanning ? (
+        <div className="space-y-3">
+          <div className="relative bg-black rounded-lg overflow-hidden" style={{ height: '200px' }}>
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+            />
+            {/* 扫描框 */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-48 h-32 border-2 border-purple-400 rounded-lg">
+                <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-purple-500" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-purple-500" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-purple-500" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-purple-500" />
+              </div>
+            </div>
+            {/* 扫描线动画 */}
+            <div className="absolute left-0 right-0 h-0.5 bg-purple-500 animate-pulse" style={{ top: '50%' }} />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleStop}
+              className="flex-1 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              取消
+            </button>
+          </div>
+          <p className="text-xs text-purple-600 text-center">将条形码或二维码放入框内即可自动扫描</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={value}
+              onChange={handleManualInput}
+              placeholder="扫描或输入物资编码"
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <button
+              onClick={startScanning}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2 transition-colors"
+            >
+              <Package className="w-4 h-4" />
+              扫码
+            </button>
+          </div>
+          {error && (
+            <p className="text-xs text-red-500">{error}</p>
           )}
-          扫码
-        </button>
-      </div>
-      {value && (
-        <p className="mt-2 text-xs text-purple-600">物资编码：{value}</p>
+          {value && (
+            <p className="text-xs text-purple-600">物资编码：{value}</p>
+          )}
+        </div>
       )}
     </div>
   );

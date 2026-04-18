@@ -113,7 +113,7 @@ export function NumberInput({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       disabled={disabled}
-      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''} ${className}`}
+      className={`w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''} ${className}`}
     />
   );
 }

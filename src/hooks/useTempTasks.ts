@@ -127,7 +127,9 @@ export interface TempTask {
   assignerName: string;      // 分派人名称
 
   // 预计工时
-  estimatedHours: number;     // 预计工时（小时）
+  estimatedHours: number;     // 预计总工时（小时）
+  estimatedDays?: number;     // 预计天数
+  workerCount?: number;       // 人工数量
   actualHours?: number;      // 实际工时
 
   // 描述
@@ -225,7 +227,7 @@ export interface UseTempTasksReturn {
   operationRecords: TempTaskOperationRecord[];
 
   // 添加临时任务
-  addTempTask: (task: Omit<TempTask, 'id' | 'taskCode' | 'status' | 'createdAt' | 'updatedAt'>) => TempTask;
+  addTempTask: (task: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>) => TempTask;
 
   // 更新临时任务
   updateTempTask: (id: string, updates: Partial<TempTask>) => void;
@@ -284,13 +286,13 @@ export function useTempTasks(): UseTempTasksReturn {
   }, []);
 
   // 添加临时任务
-  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'taskCode' | 'status' | 'createdAt' | 'updatedAt'>): TempTask => {
+  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>): TempTask => {
     const now = new Date().toISOString();
     const newTask: TempTask = {
       ...taskData,
       id: `TEMP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       taskCode: generateTempTaskCode(),
-      status: 'pending',
+      status: taskData.status || 'pending',
       rejectCount: 0,
       createdAt: now,
       updatedAt: now,

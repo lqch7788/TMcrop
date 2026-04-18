@@ -390,7 +390,7 @@ export function Input({ error, className = '', type = 'text', ...props }: InputP
       <input
         type={type}
         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-          error ? 'border-red-500' : 'border-gray-300'
+          error ? 'border-red-500' : 'border-gray-400'
         } ${className}`}
         {...props}
       />

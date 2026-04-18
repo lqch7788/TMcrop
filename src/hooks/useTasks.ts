@@ -166,10 +166,11 @@ function convertTempTaskToTask(t: TempTask): Task {
     assignerId: t.assignerId,
     assignerName: t.assignerName,
     dueDate: t.dueDate,
-    feedbackRequirements: [],
-    greenhouseId: '',
-    greenhouseName: t.workLocation || '',
+    feedbackRequirements: t.requiredFeedback || [],
+    greenhouseId: t.greenhouseId || '',
+    greenhouseName: t.workLocation || t.location || '',
     cropName: '',
+    field: t.workLocation || t.location || t.greenhouseName || '',
     reworkCount: t.rejectCount,
     reworkHistory: [],
     deadlineExtensions: [],
@@ -178,6 +179,15 @@ function convertTempTaskToTask(t: TempTask): Task {
     updatedAt: t.updatedAt,
     acceptedAt: t.acceptedAt,
     completedAt: t.status === 'completed' ? new Date().toISOString() : undefined,
+    // 临时任务特有字段
+    workLocation: t.workLocation || t.location || t.greenhouseName || '',
+    urgency: t.urgency || 'normal',
+    tempTaskType: t.tempTaskType || t.type || '',
+    estimatedDays: t.estimatedDays || 0,
+    estimatedHours: t.estimatedHours || 0,
+    workerCount: t.workerCount || 1,
+    remarks: t.remarks || '',
+    requiredFeedback: t.requiredFeedback || [],
   };
 }
 
