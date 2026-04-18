@@ -158,6 +158,9 @@ export interface TempTask {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+
+  // 进度（0-100）
+  progress?: number;
 }
 
 // ============================================
