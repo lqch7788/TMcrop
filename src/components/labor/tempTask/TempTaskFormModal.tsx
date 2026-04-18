@@ -190,8 +190,8 @@ export function TempTaskFormModal({
           </FormField>
         </div>
 
-        {/* 第三行：工作地点、发布人 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 第三行：工作地点、执行人、发布人 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="工作地点" required error={errors.workLocation}>
             <Select
               value={formData.greenhouseId || formData.workLocation}
@@ -202,6 +202,21 @@ export function TempTaskFormModal({
                 ...greenhouses.map(g => ({ value: g.id, label: g.name })),
                 { value: '---other---', label: '━━━━━━━━ 其他地点 ━━━━━━━━', disabled: true },
                 ...OTHER_LOCATIONS,
+              ]}
+            />
+          </FormField>
+
+          <FormField label="执行人" required error={errors.assigneeId as any}>
+            <Select
+              value={formData.assigneeId}
+              onChange={(e) => {
+                const selectedUser = workerUsers.find(u => u.id === e.target.value);
+                onChange('assigneeId', e.target.value);
+                onChange('assigneeName', selectedUser?.name || '');
+              }}
+              options={[
+                { value: '', label: '请选择执行人', disabled: true },
+                ...workerUsers.map(u => ({ value: u.id, label: u.name })),
               ]}
             />
           </FormField>
