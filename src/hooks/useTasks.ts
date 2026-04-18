@@ -32,6 +32,9 @@ import {
 
 // 导入原始任务数据（保留原有数据）
 import { taskDispatchTasks, TaskDispatchTask } from '../data/farmMockData';
+// 导入临时任务数据
+import { tempTasks as mockTempTasks } from '../data/mockData';
+import { TempTask } from '../hooks/useTempTasks';
 
 // ============================================
 // 状态标签配置
@@ -125,8 +128,69 @@ function convertToTask(t: TaskDispatchTask): Task {
 // ============================================
 const INITIAL_TASKS: Task[] = taskDispatchTasks.map(convertToTask);
 
+// ============================================
+// 临时任务转换函数
+// 将 mockTempTasks 转换为 Task 格式
+// ============================================
+function convertTempTaskToTask(t: TempTask): Task {
+  const progress = t.actualHours
+    ? Math.min(100, Math.round((t.actualHours / t.estimatedHours) * 100))
+    : 0;
+
+  // 将 TempTaskStatus 映射为 TaskStatus
+  // pending_reassign 映射为 rejected（等待重新派发的任务相当于被驳回）
+  const statusMap: Record<string, TaskStatus> = {
+    draft: 'draft',
+    pending: 'pending',
+    in_progress: 'in_progress',
+    waiting_acceptance: 'waiting_acceptance',
+    completed: 'completed',
+    rejected: 'rejected',
+    pending_reassign: 'rejected',
+  };
+  const taskStatus = statusMap[t.status] || 'pending';
+
+  return {
+    id: t.taskCode,
+    taskCode: t.taskCode,
+    title: t.title,
+    type: t.type,
+    typeName: t.typeName,
+    status: taskStatus,
+    priority: t.priority === 'urgent' ? 'urgent' : t.priority === 'high' ? 'high' : 'normal',
+    progress,
+    sourceType: 'tempTask',
+    dispatchMode: 'tempTask',
+    assigneeId: t.assigneeId,
+    assigneeName: t.assigneeName,
+    assignerId: t.assignerId,
+    assignerName: t.assignerName,
+    dueDate: t.dueDate,
+    feedbackRequirements: [],
+    greenhouseId: '',
+    greenhouseName: t.workLocation || '',
+    cropName: '',
+    reworkCount: t.rejectCount,
+    reworkHistory: [],
+    deadlineExtensions: [],
+    version: 1,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+    acceptedAt: t.acceptedAt,
+    completedAt: t.status === 'completed' ? new Date().toISOString() : undefined,
+  };
+}
+
+// ============================================
+// 合并初始任务数据（农事任务 + 临时任务）
+// ============================================
+const INITIAL_TASKS_WITH_TEMP: Task[] = [
+  ...INITIAL_TASKS,
+  ...mockTempTasks.map(convertTempTaskToTask),
+];
+
 // 数据版本控制（用于检测数据结构变化，自动重置数据）
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
 const STORAGE_VERSION_KEY = 'yuanxingtu_tasks_version';
 
 // ============================================
@@ -353,15 +417,15 @@ export interface UseTasksReturn {
 // useTasks Hook
 // ============================================
 export function useTasks(): UseTasksReturn {
-  // 从 localStorage 读取任务数据
-  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+  // 从 localStorage 读取任务数据（包含农事任务和临时任务）
+  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS_WITH_TEMP);
 
   // 版本检测：如果存储的版本低于当前版本，重置数据
   useEffect(() => {
     const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
     if (!storedVersion || parseInt(storedVersion, 10) < DATA_VERSION) {
-      // 版本不匹配，使用新数据重置
-      setTasks(INITIAL_TASKS);
+      // 版本不匹配，使用新数据重置（包含临时任务）
+      setTasks(INITIAL_TASKS_WITH_TEMP);
       localStorage.setItem(STORAGE_VERSION_KEY, String(DATA_VERSION));
     }
   }, [setTasks]);

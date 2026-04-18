@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+import { tempTasks as mockTempTasks } from '../data/mockData';
 
 // ============================================
 // 临时任务状态流转
@@ -258,8 +259,8 @@ export interface UseTempTasksReturn {
 // useTempTasks Hook
 // ============================================
 export function useTempTasks(): UseTempTasksReturn {
-  // 从 localStorage 读取临时任务数据
-  const [tempTasks, setTempTasks] = useLocalStorage<TempTask[]>('yuanxingtu_tempTasks', []);
+  // 从 localStorage 读取临时任务数据，如果存储的数据为空则使用 mockData 作为初始数据
+  const [tempTasks, setTempTasks] = useLocalStorage<TempTask[]>('yuanxingtu_tempTasks', mockTempTasks);
 
   // 操作记录状态
   const [operationRecords, setOperationRecords] = useState<TempTaskOperationRecord[]>([]);

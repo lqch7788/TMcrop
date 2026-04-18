@@ -108,11 +108,13 @@ export function MyTasksPage() {
         tools: t.tools || [],
         // 关联字段
         sourceProblemId: (t as any).sourceProblemId,
+        // 来源类型（用于区分临时任务和生产任务）
+        sourceType: (t as any).sourceType,
       }))
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
-  // 任务筛选状态：全部 / 问题处理 / 生产任务
-  const [taskFilter, setTaskFilter] = useState<'all' | 'problem' | 'production'>('all');
+  // 任务筛选状态：全部 / 问题处理 / 生产任务 / 临时任务
+  const [taskFilter, setTaskFilter] = useState<'all' | 'problem' | 'production' | 'temp'>('all');
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -125,8 +127,11 @@ export function MyTasksPage() {
         // 问题处理任务：有 sourceProblemId 的任务
         return myTasks.filter(task => task.sourceProblemId !== undefined);
       case 'production':
-        // 生产任务：没有 sourceProblemId 的任务
-        return myTasks.filter(task => !task.sourceProblemId);
+        // 生产任务：没有 sourceProblemId 且不是临时任务的任务
+        return myTasks.filter(task => !task.sourceProblemId && (task as any).sourceType !== 'tempTask');
+      case 'temp':
+        // 临时任务 Tab：筛选 sourceType === 'tempTask'
+        return myTasks.filter(task => (task as any).sourceType === 'tempTask');
       default:
         return myTasks;
     }
@@ -142,7 +147,8 @@ export function MyTasksPage() {
   const taskCounts = useMemo(() => ({
     all: myTasks.length,
     problem: myTasks.filter(t => t.sourceProblemId !== undefined).length,
-    production: myTasks.filter(t => !t.sourceProblemId).length,
+    production: myTasks.filter(t => !t.sourceProblemId && (t as any).sourceType !== 'tempTask').length,
+    temp: myTasks.filter(t => (t as any).sourceType === 'tempTask').length,
   }), [myTasks]);
 
   // 详情弹窗状态
@@ -565,7 +571,7 @@ export function MyTasksPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            问题处理
+            生产问题处理
             <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
               {taskCounts.problem}
             </span>
@@ -578,9 +584,22 @@ export function MyTasksPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            生产任务
+            农事任务处理
             <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
               {taskCounts.production}
+            </span>
+          </button>
+          <button
+            onClick={() => { setTaskFilter('temp'); setCurrentPage(1); }}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              taskFilter === 'temp'
+                ? 'border-orange-500 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            临时任务处理
+            <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
+              {taskCounts.temp}
             </span>
           </button>
         </div>
