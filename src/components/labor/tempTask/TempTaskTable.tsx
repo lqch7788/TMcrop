@@ -156,6 +156,7 @@ export function TempTaskTable({
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">类型</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">工作地点</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">发布人</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">截止日期</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预计天数</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
@@ -210,6 +211,12 @@ export function TempTaskTable({
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     {task.location || task.workLocation || task.greenhouseName}
+                  </div>
+                </td>
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    {task.assignerName || task.assigneeName}
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">

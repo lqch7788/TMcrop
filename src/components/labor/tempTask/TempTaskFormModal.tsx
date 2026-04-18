@@ -108,7 +108,7 @@ export function TempTaskFormModal({
         onClick={onSubmit}
         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
       >
-        保存
+        发布
       </button>
     </div>
   );
