@@ -87,6 +87,7 @@ import AttendancePage from './pages/labor/AttendancePage';
 import PersonnelPage from './pages/labor/PersonnelPage';
 import CompensationPage from './pages/labor/CompensationPage';
 import AnalyticsPage from './pages/labor/AnalyticsPage';
+import { DispatchPage } from './components/dispatch';
 
 // 带侧边栏的布局组件（种植管理系统）
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -234,6 +235,7 @@ function AppContent() {
         <Route path="/iot-monitor" element={<IoTMonitor />} />
         <Route path="/env-control" element={<EnvControl />} />
         <Route path="/agriculture-record" element={<AgricultureRecord />} />
+        <Route path="/dispatch" element={<DispatchPage />} />
         <Route path="/task-dispatch" element={<TaskDispatch />} />
         <Route path="/traceability" element={<Traceability />} />
         <Route path="/device-monitor" element={<DeviceMonitor />} />

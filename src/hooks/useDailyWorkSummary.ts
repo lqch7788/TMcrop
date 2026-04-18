@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react';
 import type { DailyWorkSummaryRow, DailyWorkStatCard, DailyWorkFilters } from '../types/views';
 import { usePersistentWorkLogs, INITIAL_WORK_LOGS } from './usePersistentWorkLogs';
 import { usePersistentAttendance, INITIAL_ATTENDANCE } from './usePersistentAttendance';
+import { useTasks, Task, INITIAL_TASKS } from './useTasks';
 
 /**
  * 每日工单汇总数据 Hook
@@ -16,6 +17,7 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
   const [loading, setLoading] = useState(true);
   const { workLogs } = usePersistentWorkLogs();
   const { attendance } = usePersistentAttendance();
+  const { tasks } = useTasks();
 
   // 模拟异步加载
   useEffect(() => {
@@ -26,42 +28,55 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
 
   // 聚合每日工单数据
   const summaries = useMemo((): DailyWorkSummaryRow[] => {
-    // 按日期分组汇总
-    const groupedByDate = workLogs.reduce((acc, log) => {
-      if (!acc[log.date]) {
-        acc[log.date] = [];
+    // 直接返回每条工单作为一行，保留任务编号等信息
+    const rows: DailyWorkSummaryRow[] = workLogs.map(log => {
+      // 获取该日期的考勤数据来计算工时（通过姓名匹配）
+      const dayAttendance = attendance.filter(a => a.date === log.date);
+
+      // 获取任务状态（如果有关联任务）
+      let status = '已完成';
+      let completionRate = '100%';
+      if (log.taskId) {
+        const task = tasks.find(t => t.id === log.taskId);
+        if (task) {
+          if (task.status === 'completed') {
+            status = '已完成';
+            completionRate = '100%';
+          } else if (task.status === 'in_progress' || task.status === 'accepted') {
+            status = '进行中';
+            completionRate = `${task.progress}%`;
+          } else if (task.status === 'waiting_acceptance') {
+            status = '待验收';
+            completionRate = '100%';
+          } else if (task.status === 'rejected') {
+            status = '已驳回';
+            completionRate = `${task.progress}%`;
+          } else {
+            status = '待接受';
+            completionRate = '0%';
+          }
+        }
       }
-      acc[log.date].push(log);
-      return acc;
-    }, {} as Record<string, typeof workLogs>);
 
-    // 转换为汇总行
-    const rows: DailyWorkSummaryRow[] = Object.entries(groupedByDate).map(([date, logs]) => {
-      // 获取该日期的考勤数据来计算工时
-      const dayAttendance = attendance.filter(a => a.date === date);
-
-      // 汇总工时
-      const totalHours = dayAttendance.reduce((sum, a) => sum + a.hours, 0);
-
-      // 获取唯一温室和作物
-      const uniqueGreenhouses = [...new Set(logs.map(l => l.greenhouse))];
-      const uniqueCrops = [...new Set(logs.map(l => l.crop))];
-
-      // 统计作业类型
-      const taskTypes = logs.map(l => l.tasks).join('、');
+      // 临时任务（无 taskId）根据工单数据判断
+      if (!log.taskId && log.problems && log.problems !== '无') {
+        status = '已处理';
+      }
 
       return {
-        id: date,
-        date,
-        greenhouse: uniqueGreenhouses.join('、'),
-        crop: uniqueCrops.join('、'),
-        taskType: taskTypes || '无',
+        id: log.taskId ? `${log.date}-${log.taskId}` : `${log.date}-${log.id}`,
+        date: log.date,
+        taskId: log.taskId,
+        taskCode: log.batchCode || log.code, // 显示批次编号或工单编号
+        greenhouse: log.greenhouse,
+        crop: log.crop,
+        taskType: log.tasks,
         plannedArea: 0,
         completedArea: 0,
-        workerCount: dayAttendance.length || logs.length,
-        workHours: totalHours,
-        status: '已完成',
-        completionRate: '100%',
+        workerCount: 1,
+        workHours: dayAttendance.find(a => a.name === log.worker)?.hours || 0,
+        status,
+        completionRate,
       };
     });
 
@@ -69,7 +84,7 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
     rows.sort((a, b) => b.date.localeCompare(a.date));
 
     return rows;
-  }, [workLogs, attendance]);
+  }, [workLogs, attendance, tasks]);
 
   // 应用筛选
   const filteredSummaries = useMemo(() => {

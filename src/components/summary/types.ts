@@ -3,13 +3,14 @@
  */
 
 // 导出格式
-export type ExportFormat = 'excel' | 'csv' | 'word';
+export type ExportFormat = 'excel' | 'csv' | 'word' | 'excel_with_attachments';
 
 // 导出格式选项
 export const EXPORT_FORMATS: { value: ExportFormat; label: string; desc: string }[] = [
   { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
   { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
   { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+  { value: 'excel_with_attachments', label: 'Excel+附件 (.zip)', desc: '包含照片等附件，适合需要原始证据的场景' },
 ];
 
 // 统计卡片配置
@@ -25,6 +26,8 @@ export interface FilterSelectConfig {
   key: string;
   label: string;
   options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
 }
 
 // 表格列定义

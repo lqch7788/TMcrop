@@ -127,14 +127,17 @@ export interface BatchTableColumn<T> {
 
 /**
  * 每日工单汇总行（用于 DailyWorkSummary 表格）
+ * 支持按任务明细展示，每行对应一个任务的当日提交
  */
 export interface DailyWorkSummaryRow {
-  id: string;               // 日期作为ID
+  id: string;               // 工单ID（格式：日期-taskId）
   date: string;             // 日期
+  taskId?: string;          // 关联任务ID
+  taskCode: string;          // 关联任务编号
   greenhouse: string;        // 温室
   crop: string;             // 作物
-  taskType: string;         // 作业类型
-  plannedArea: number;      // 计划面积(亩)
+  taskType: string;         // 作业类型/任务标题
+  plannedArea: number;       // 计划面积(亩)
   completedArea: number;     // 完成面积(亩)
   workerCount: number;       // 作业人数
   workHours: number;         // 工时

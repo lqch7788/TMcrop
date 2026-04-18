@@ -56,10 +56,20 @@ export interface FarmOperationRecord {
 
   // 工作量
   workload?: number;
+  workloadDays?: number;
+  workloadHours?: number;
+  workers?: number;
   unit?: string;
 
   // 物料使用
   materials?: { name: string; qty: number; unit: string }[];
+
+  // 反馈信息
+  gpsLocation?: { lat: number; lng: number };
+  photosBefore?: string[];
+  photosAfter?: string[];
+  voiceNote?: string;
+  materialCode?: string;
 
   // 备注
   remarks?: string;
@@ -104,10 +114,20 @@ export interface FarmOperationRecordChild {
 
   // 工作量
   workload?: number;
+  workloadDays?: number;
+  workloadHours?: number;
+  workers?: number;
   unit?: string;
 
   // 物料
   materials?: { name: string; qty: number; unit: string }[];
+
+  // 反馈信息
+  gpsLocation?: { lat: number; lng: number };
+  photosBefore?: string[];
+  photosAfter?: string[];
+  voiceNote?: string;
+  materialCode?: string;
 
   // 备注
   remarks?: string;
@@ -695,8 +715,16 @@ export function useOperationRecords(): UseOperationRecordsReturn {
           progressIncrement: recordData.progressIncrement,
           area: recordData.area,
           workload: recordData.workload,
+          workloadDays: recordData.workloadDays,
+          workloadHours: recordData.workloadHours,
+          workers: recordData.workers,
           unit: recordData.unit,
           materials: recordData.materials,
+          gpsLocation: recordData.gpsLocation,
+          photosBefore: recordData.photosBefore,
+          photosAfter: recordData.photosAfter,
+          voiceNote: recordData.voiceNote,
+          materialCode: recordData.materialCode,
           remarks: recordData.remarks,
           rejectReason: recordData.rejectReason,
           createdAt: now,

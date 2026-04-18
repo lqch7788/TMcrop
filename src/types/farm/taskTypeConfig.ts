@@ -169,13 +169,14 @@ const fertilizationConfig: TaskTypeConfig = {
         { value: 'spray', label: '叶面喷施' },
         { value: 'base', label: '基肥' },
         { value: 'topdress', label: '追肥' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
-      placeholder: '补充说明，如天气条件、注意事项等',
+      placeholder: '补充说明，如天气条件、注意事项等（选择"其他"施用方式时必填）',
     },
   ],
   defaultRemarks: '避免雨前4小时施用',
@@ -210,6 +211,7 @@ const irrigationConfig: TaskTypeConfig = {
         { value: 'sprinkler', label: '喷灌' },
         { value: 'flood', label: '漫灌' },
         { value: 'furrow', label: '沟灌' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -223,7 +225,7 @@ const irrigationConfig: TaskTypeConfig = {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
-      placeholder: '补充说明',
+      placeholder: '补充说明（选择"其他"灌溉方式时必填）',
     },
   ],
 };
@@ -255,12 +257,14 @@ const rootIrrigationConfig: TaskTypeConfig = {
         { value: 'none', label: '不使用' },
         { value: 'waterSoluble', label: '水溶肥' },
         { value: 'liquid', label: '液体肥' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"肥料时必填，请说明具体肥料名称',
     },
   ],
 };
@@ -290,6 +294,7 @@ const pesticideConfig: TaskTypeConfig = {
         { value: 'soil', label: '土壤处理' },
         { value: 'smearing', label: '涂抹' },
         { value: 'mist', label: '弥雾' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -346,6 +351,7 @@ const pesticideConfig: TaskTypeConfig = {
         { value: 'net', label: '防虫网' },
         { value: 'bag', label: '套袋' },
         { value: 'trap', label: '诱捕器' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -383,12 +389,14 @@ const pesticideConfig: TaskTypeConfig = {
         { value: 'gloves', label: '手套' },
         { value: 'goggles', label: '护目镜' },
         { value: 'suit', label: '防护服' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"植保方式或防护装备时必填，请详细说明',
     },
   ],
 };
@@ -414,6 +422,7 @@ const pruningConfig: TaskTypeConfig = {
         { value: 'rejuvenation', label: '更新修剪' },
         { value: 'pinching', label: '摘心' },
         { value: 'thinning', label: '疏枝' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -425,6 +434,7 @@ const pruningConfig: TaskTypeConfig = {
         { value: 'saw', label: '手锯' },
         { value: 'machete', label: '砍刀' },
         { value: 'ladder', label: '梯子' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -437,6 +447,7 @@ const pruningConfig: TaskTypeConfig = {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"修剪类型或工具时必填，请详细说明',
     },
   ],
 };
@@ -487,12 +498,14 @@ const plantingConfig: TaskTypeConfig = {
       options: [
         { value: 'none', label: '不使用' },
         { value: 'used', label: '使用' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"生根剂时必填，请说明具体产品名称',
     },
   ],
 };
@@ -516,6 +529,7 @@ const harvestConfig: TaskTypeConfig = {
         { value: '90', label: '90%成熟' },
         { value: '80', label: '80%成熟' },
         { value: 'full', label: '完全成熟' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -533,6 +547,7 @@ const harvestConfig: TaskTypeConfig = {
         { value: 'A', label: 'A级' },
         { value: 'B', label: 'B级' },
         { value: 'C', label: 'C级' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -544,12 +559,14 @@ const harvestConfig: TaskTypeConfig = {
         { value: 'scissors', label: '剪刀' },
         { value: 'cart', label: '手推车' },
         { value: 'scale', label: '电子秤' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"成熟度、品质等级或工具时必填，请详细说明',
     },
   ],
 };
@@ -573,6 +590,7 @@ const weedingConfig: TaskTypeConfig = {
         { value: 'manual', label: '人工除草' },
         { value: 'mechanical', label: '机械除草' },
         { value: 'chemical', label: '化学除草' },
+        { value: 'other', label: '其他' },
       ],
     },
     {
@@ -587,6 +605,7 @@ const weedingConfig: TaskTypeConfig = {
       key: 'remarks',
       label: '备注',
       type: 'textarea',
+      placeholder: '选择"其他"除草方式时必填，请详细说明',
     },
   ],
 };

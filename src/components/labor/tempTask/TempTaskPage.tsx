@@ -12,6 +12,7 @@ import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../hooks/useTempTasks';
+import { useTasks } from '../../../hooks/useTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 
 // 导出格式弹窗
@@ -426,6 +427,8 @@ export function TempTaskPage() {
   // 使用统一临时任务管理 Hook（数据闭环核心）
   const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
+  // 统一任务管理 Hook（用于临时任务同步）
+  const { createTask } = useTasks();
 
   // 使用 useTempTasks 的数据替代本地 state
   const [selectedTask, setSelectedTask] = useState<TempTask | null>(null);
@@ -517,6 +520,27 @@ export function TempTaskPage() {
           sourceCode: newTask.taskCode,
           progress: 0,
           remarks: '临时任务已创建，等待执行',
+        });
+
+        // ========== 数据闭环：同步到 useTasks 统一管理 ==========
+        createTask({
+          title: taskData.title || '',
+          type: taskData.tempTaskType || 'other',
+          typeName: taskData.tempTaskType || '其他',
+          status: 'pending',
+          priority: (taskData.priority as 'urgent' | 'high' | 'normal') || 'normal',
+          progress: 0,
+          sourceType: 'tempTask',
+          sourceId: newTask.id,
+          sourceCode: newTask.taskCode,
+          assigneeId: taskData.assigneeId || '',
+          assigneeName: taskData.assigneeName || '待分配',
+          assignerId: 'admin',
+          assignerName: '管理员',
+          greenhouseName: taskData.workLocation || '',
+          cropName: '',
+          feedbackRequirements: [],
+          dueDate: newTask.dueDate,
         });
       }
       closeFormModal();
@@ -792,18 +816,16 @@ export function TempTaskPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">临时任务</h1>
-              <p className="text-xs text-gray-500">管理不在计划内的临时任务</p>
-            </div>
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
+            <AlertTriangle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">临时任务</h1>
+            <p className="text-gray-500">管理不在计划内的临时任务</p>
           </div>
         </div>
       </div>

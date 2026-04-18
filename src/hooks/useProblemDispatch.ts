@@ -41,11 +41,20 @@ export interface ProblemFlowRecord {
   problemId: number;
   operatorId: string;
   operatorName: string;
-  action: 'report' | 'dispatch' | 'accept' | 'reject' | 'start' | 'submit' | 'approve' | 'complete' | 'comment';
+  action: 'report' | 'dispatch' | 'accept' | 'reject' | 'start' | 'submit' | 'approve' | 'complete' | 'comment' | 'progress';
   fromStatus: string;
   toStatus: string;
   comment?: string;
   actionTime: string;
+  // 反馈数据（位置、照片、语音等）
+  feedbackData?: {
+    gpsLocation?: { lat: number; lng: number };
+    photosBefore?: string[];
+    photosAfter?: string[];
+    materialCode?: string;
+    voiceNote?: string;
+    progress?: number;
+  };
 }
 
 // 计算下一个任务序号（基于日期+序号）
@@ -122,12 +131,16 @@ export function useProblemDispatch() {
   );
 
   // 分派问题给员工
+  // expectedCompletion: 分派人员设置的期望完成时间，格式为 YYYY-MM-DD
+  // requiredFeedback: 必填反馈要求列表，如 ['gps', 'photo_before', 'photo_after', 'material', 'voice']
   const dispatchProblem = useCallback((
     problemId: number,
     assigneeId: string,
     assigneeName: string,
     dispatcherId: string = 'U001',
-    dispatcherName: string = '系统管理员'
+    dispatcherName: string = '系统管理员',
+    expectedCompletion?: string,
+    requiredFeedback?: string[]
   ): Task | null => {
     const problem = problems.find(p => p.id === problemId);
     if (!problem) return null;
@@ -159,12 +172,13 @@ export function useProblemDispatch() {
       assigneeName,
       assignerId: dispatcherId,
       assignerName: dispatcherName,
-      dueDate: calculateDueDate(problem.issueSeverity),
+      dueDate: expectedCompletion || calculateDueDate(problem.issueSeverity),
       workDuration: 0,
       requiredMaterials: [],
       description: `问题描述：${problem.issueText}\n严重程度：${problem.issueSeverity}\n巡检时间：${problem.checkDate} ${problem.checkTime}\n温室：${problem.greenhouseName}\n作物：${problem.cropName}`,
       actualWorkload: 0,
       sourceProblemId: problemId,
+      requiredFeedback: requiredFeedback || [],
     };
 
     // 保存任务
@@ -189,6 +203,7 @@ export function useProblemDispatch() {
       handler: assigneeName,
       sourceTaskId: newTask.id,
       flowRecords: [...(problem.flowRecords || []), flowRecord],
+      expectedCompletion,
     });
 
     // 记录分派历史
@@ -212,7 +227,9 @@ export function useProblemDispatch() {
       assigneeName: string;
       dispatcherId?: string;
       dispatcherName?: string;
-    }>
+    }>,
+    expectedCompletion?: string,
+    requiredFeedback?: string[]
   ): Task[] => {
     const createdTasks: Task[] = [];
     dispatches.forEach(dispatch => {
@@ -221,7 +238,9 @@ export function useProblemDispatch() {
         dispatch.assigneeId,
         dispatch.assigneeName,
         dispatch.dispatcherId || 'U001',
-        dispatch.dispatcherName || '系统管理员'
+        dispatch.dispatcherName || '系统管理员',
+        expectedCompletion,
+        requiredFeedback
       );
       if (task) {
         createdTasks.push(task);
@@ -304,6 +323,7 @@ export function useProblemDispatch() {
   }, [problems, updateProblem]);
 
   // 提交反馈（问题处理完成，提交待验收）
+  // feedback: 包含文字结果和完整反馈数据（位置、照片、语音等）
   const submitProblemFeedback = useCallback((
     problemId: number,
     operatorId: string,
@@ -311,7 +331,7 @@ export function useProblemDispatch() {
     feedback: {
       resultText: string;
       actualWorkload?: number;
-      photos?: string[];
+      feedbackData?: ProblemFlowRecord['feedbackData'];
     }
   ) => {
     const problem = problems.find(p => p.id === problemId);
@@ -327,6 +347,7 @@ export function useProblemDispatch() {
       toStatus: '待验收',
       comment: feedback.resultText || '处理完成，提交验收',
       actionTime: new Date().toISOString(),
+      feedbackData: feedback.feedbackData,
     };
 
     updateProblem(problemId, {
@@ -338,12 +359,14 @@ export function useProblemDispatch() {
   }, [problems, updateProblem]);
 
   // 记录进度（每次提交进度时调用）
+  // feedbackData: 包含位置、照片、语音等反馈数据
   const addProgressRecord = useCallback((
     problemId: number,
     operatorId: string,
     operatorName: string,
     progress: number,
-    comment?: string
+    comment?: string,
+    feedbackData?: ProblemFlowRecord['feedbackData']
   ) => {
     const problem = problems.find(p => p.id === problemId);
     if (!problem) return;
@@ -358,7 +381,7 @@ export function useProblemDispatch() {
       toStatus: '处理中',
       comment: comment || `提交进度：${progress}%`,
       actionTime: new Date().toISOString(),
-      progress,
+      feedbackData,
     };
 
     updateProblem(problemId, {

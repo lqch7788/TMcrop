@@ -25,6 +25,16 @@ export interface WorkLogEntry {
   batchCode?: string;
 }
 
+// 任务进度更新参数
+export interface TaskProgressUpdate {
+  progress: number;
+  notes?: string;
+  workload?: number;
+  unit?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 // 初始 mock 数据
 const INITIAL_WORK_LOGS: WorkLogEntry[] = [
   { id: 1, code: 'WL20240301', date: '2024-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好', tasks: '授粉、浇水', problems: '无', solutions: '-', taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001' },
@@ -83,14 +93,82 @@ export function usePersistentWorkLogs() {
     return `WL${dateStr}${String(nextWorkLogId).padStart(3, '0')}`;
   }, []);
 
+  // 按任务ID查询工单（用于判断是否已存在）
+  const getWorkLogsByTaskId = useCallback((taskId: string): WorkLogEntry | undefined => {
+    return workLogs.find(log => log.taskId === taskId);
+  }, [workLogs]);
+
+  // 按任务ID更新工单
+  const updateWorkLogByTaskId = useCallback((taskId: string, updates: Partial<WorkLogEntry>) => {
+    setWorkLogs(prev => prev.map(log =>
+      log.taskId === taskId ? { ...log, ...updates } : log
+    ));
+  }, [setWorkLogs]);
+
+  // 从任务进度创建或更新工单（用于每日工单汇总对接）
+  const syncWorkLogFromTask = useCallback((
+    task: {
+      id: string;
+      taskCode: string;
+      assigneeName: string;
+      cropName: string;
+      greenhouseName: string;
+      title: string;
+      batchId?: string;
+      batchCode?: string;
+    },
+    progressUpdate: TaskProgressUpdate
+  ): WorkLogEntry => {
+    const today = new Date().toISOString().slice(0, 10);
+    const existingLog = workLogs.find(log => log.taskId === task.id);
+
+    if (existingLog) {
+      // 已存在则更新
+      const updatedLog: WorkLogEntry = {
+        ...existingLog,
+        tasks: task.title,
+        solutions: progressUpdate.notes || existingLog.solutions,
+        date: today, // 更新为今天
+      };
+      setWorkLogs(prev => prev.map(log =>
+        log.id === existingLog.id ? updatedLog : log
+      ));
+      return updatedLog;
+    } else {
+      // 不存在则创建新工单
+      const newLog: WorkLogEntry = {
+        id: nextWorkLogId++,
+        code: generateWorkLogCode(),
+        date: today,
+        worker: task.assigneeName,
+        weather: '',
+        temperature: '',
+        crop: task.cropName,
+        greenhouse: task.greenhouseName,
+        growthStatus: '良好',
+        tasks: task.title,
+        problems: '',
+        solutions: progressUpdate.notes || '',
+        taskId: task.id,
+        batchId: task.batchId,
+        batchCode: task.batchCode,
+      };
+      setWorkLogs(prev => [newLog, ...prev]);
+      return newLog;
+    }
+  }, [workLogs, setWorkLogs, generateWorkLogCode]);
+
   return {
     workLogs,
     addWorkLog,
     updateWorkLog,
     deleteWorkLog,
     resetToInitial,
-    resetWorkLogs: resetToInitial, // 别名
+    resetWorkLogs: resetToInitial,
     generateWorkLogCode,
+    getWorkLogsByTaskId,
+    updateWorkLogByTaskId,
+    syncWorkLogFromTask,
   };
 }
 

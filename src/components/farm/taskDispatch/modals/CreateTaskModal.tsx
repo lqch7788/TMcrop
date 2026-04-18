@@ -79,7 +79,7 @@ export function CreateTaskModal({
             />
           </FormField>
 
-          <FormField label="负责人" required error={errors.assignee}>
+          <FormField label="执行人" required error={errors.assignee}>
             <Select
               value={formData.assignee}
               onChange={(e) => onFormChange('assignee', e.target.value)}

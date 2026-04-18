@@ -7,6 +7,14 @@ import { warehouseOptions } from '../../../data/farmMockData';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
+// ========== 引入组件（组件化重构） ==========
+import {
+  HarvestPageHeader,
+  HarvestStatsCards,
+  HarvestFilterToolbar,
+  HarvestTableToolbar,
+} from './components';
+
 export default function HarvestPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -395,179 +403,39 @@ export default function HarvestPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Warehouse className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">采收入库</h1>
-            <p className="text-gray-500">管理采收记录、品质分级和入库操作</p>
-          </div>
-        </div>
-      </div>
+      <HarvestPageHeader />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: '本月采收批次', value: harvestRecords.length, icon: Package, color: 'bg-emerald-500' },
-          { label: '总采收量', value: harvestRecords.reduce((sum, r) => sum + r.harvestQuantity, 0), icon: Warehouse, color: 'bg-blue-500', unit: 'kg' },
-          { label: 'A级占比', value: harvestRecords.length > 0 ? Math.round(harvestRecords.filter(r => r.grade === 'A').length / harvestRecords.length * 100) : 0, icon: Package, color: 'bg-amber-500', unit: '%' },
-          { label: '待入库', value: harvestRecords.filter(r => r.status !== 'stored').length, icon: Warehouse, color: 'bg-purple-500' },
-        ].map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                <stat.icon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}{stat.unit || ''}</p>
-                <p className="text-sm text-gray-500">{stat.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <HarvestStatsCards records={harvestRecords} />
 
       {/* 搜索卡片 */}
-      <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* 采收单号 */}
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">采收单号</label>
-            <input
-              type="text"
-              value={searchFilters.harvestCode}
-              onChange={(e) => setSearchFilters({ ...searchFilters, harvestCode: e.target.value })}
-              placeholder="请输入采收单号"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* 批次信息 */}
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">批次信息</label>
-            <input
-              type="text"
-              value={searchFilters.batchCode}
-              onChange={(e) => setSearchFilters({ ...searchFilters, batchCode: e.target.value })}
-              placeholder="请输入批次号"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* 采收区域 */}
-          <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">采收区域</label>
-            <select
-              value={searchFilters.greenhouseId}
-              onChange={(e) => setSearchFilters({ ...searchFilters, greenhouseId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">全部</option>
-              {greenhouses.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 作物名称 */}
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
-            <input
-              type="text"
-              value={searchFilters.cropName}
-              onChange={(e) => setSearchFilters({ ...searchFilters, cropName: e.target.value })}
-              placeholder="请输入作物名称"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* 品质等级 */}
-          <div className="min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">品质等级</label>
-            <select
-              value={searchFilters.grade}
-              onChange={(e) => setSearchFilters({ ...searchFilters, grade: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">全部</option>
-              <option value="A">A级</option>
-              <option value="B">B级</option>
-              <option value="C">C级</option>
-            </select>
-          </div>
-
-          {/* 采收人员 */}
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">采收人员</label>
-            <input
-              type="text"
-              value={searchFilters.harvesterName}
-              onChange={(e) => setSearchFilters({ ...searchFilters, harvesterName: e.target.value })}
-              placeholder="请输入采收人员"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* 入库仓库 */}
-          <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">入库仓库</label>
-            <select
-              value={searchFilters.warehouseId}
-              onChange={(e) => setSearchFilters({ ...searchFilters, warehouseId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">全部</option>
-              {warehouseOptions.map(w => (
-                <option key={w.value} value={w.value}>{w.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 状态 */}
-          <div className="min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-            <select
-              value={searchFilters.status}
-              onChange={(e) => setSearchFilters({ ...searchFilters, status: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">全部</option>
-              <option value="harvested">已采收</option>
-              <option value="graded">已分级</option>
-              <option value="stored">已入库</option>
-            </select>
-          </div>
-
-          {/* 按钮行 */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleReset}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              重置
-            </button>
-            <button
-              onClick={handleSearch}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <Search className="w-4 h-4" />
-              搜索
-            </button>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              新增
-            </button>
-          </div>
-        </div>
-      </div>
+      <HarvestFilterToolbar
+        searchFilters={searchFilters}
+        greenhouses={greenhouses}
+        warehouseOptions={warehouseOptions}
+        onFiltersChange={setSearchFilters}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        onCreate={() => setIsCreateModalOpen(true)}
+      />
 
       {/* Harvest Records */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <HarvestTableToolbar
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          onCreate={() => setIsCreateModalOpen(true)}
+          onBatchEdit={handleBatchEditClick}
+          onBatchDelete={handleBatchDeleteClick}
+          onExport={handleExportClick}
+          onConfirmExport={() => setShowExportModal(true)}
+          onCancelExport={handleCancelExport}
+          onConfirmBatchEdit={() => setShowBatchEditModal(true)}
+          onCancelBatchEdit={handleCancelBatchEdit}
+          onConfirmBatchDelete={() => setShowDeleteWarning(true)}
+          onCancelBatchDelete={handleCancelBatchDelete}
+        />
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">采收入库记录表</h3>
           {(exportMode || batchEditMode || batchDeleteMode) ? (

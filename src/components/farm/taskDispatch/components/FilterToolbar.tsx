@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Upload, Sparkles, List, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 
 interface FilterToolbarProps {
@@ -21,7 +21,6 @@ interface FilterToolbarProps {
 
   // 视图模式
   viewMode: 'list' | 'calendar';
-  exportMode: boolean;
 
   // 操作
   onTaskIdChange: (value: string) => void;
@@ -33,7 +32,6 @@ interface FilterToolbarProps {
   onImport: () => void;
   onSmartRecommend: () => void;
   onViewModeChange: (mode: 'list' | 'calendar') => void;
-  onExport: () => void;
 }
 
 export function FilterToolbar({
@@ -45,7 +43,6 @@ export function FilterToolbar({
   fields,
   staff,
   viewMode,
-  exportMode,
   onTaskIdChange,
   onTimeFilterChange,
   onFieldFilterChange,
@@ -55,7 +52,6 @@ export function FilterToolbar({
   onImport,
   onSmartRecommend,
   onViewModeChange,
-  onExport,
 }: FilterToolbarProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -154,19 +150,6 @@ export function FilterToolbar({
           >
             <Sparkles className="w-4 h-4" />
             智能推荐
-          </button>
-
-          {/* 导出模式切换 */}
-          <button
-            onClick={onExport}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg shadow-sm transition-colors ${
-              exportMode
-                ? 'bg-amber-500 text-white hover:bg-amber-600'
-                : 'bg-gray-500 text-white hover:bg-gray-600'
-            }`}
-          >
-            <Download className="w-4 h-4" />
-            {exportMode ? '退出导出' : '导出'}
           </button>
 
           {/* 视图切换 */}

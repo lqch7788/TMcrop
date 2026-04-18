@@ -32,7 +32,6 @@ interface InspectionRecordFormData {
   issueSeverity?: '轻微' | '中等' | '严重'; // 问题严重程度
   issuePhotos: string[]; // 问题照片（改名避免混淆）
   feedbackUsers: string[]; // 反馈人员（多选）
-  expectedCompletion: string; // 期望完成时间
   // 原有字段保留
   newImages: string[];
   remarks: string;
@@ -305,7 +304,7 @@ export function CreateInspectionModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
             />
           </FormField>
-          <FormField label="关联批次">
+          <FormField label="关联生产计划批次">
             <select
               value={newRecord.batchId}
               onChange={(e) => updateField('batchId', e.target.value)}
@@ -680,20 +679,6 @@ export function CreateInspectionModal({
                 <option value="">+ 选择反馈人员</option>
                 {users.filter(u => !(newRecord.feedbackUsers || []).includes(u.id)).map(user => (
                   <option key={user.id} value={user.id}>{user.name} - {user.role}</option>
-                ))}
-              </select>
-            </FormField>
-
-            {/* 期望完成时间 */}
-            <FormField label="期望完成">
-              <select
-                value={newRecord.expectedCompletion}
-                onChange={(e) => updateField('expectedCompletion', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">请选择</option>
-                {completionTimeOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </FormField>

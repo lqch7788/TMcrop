@@ -40,6 +40,7 @@ interface ProblemTableProps {
   onCancelBatchDispatch?: () => void;
   onCancelExport?: () => void;
   onShowExportModal?: () => void;
+  onSingleDispatch?: (problem: ProblemEntry) => void;
 }
 
 export function ProblemTable({
@@ -61,6 +62,7 @@ export function ProblemTable({
   onCancelBatchDispatch,
   onCancelExport,
   onShowExportModal,
+  onSingleDispatch,
 }: ProblemTableProps) {
   const showCheckbox = batchDeleteMode || exportMode || batchDispatchMode;
 
@@ -147,24 +149,7 @@ export function ProblemTable({
               取消
             </button>
           </>
-        ) : (
-          <>
-            <button
-              onClick={onBatchDispatch}
-              className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
-            >
-              <Send className="w-4 h-4" />
-              批量分派
-            </button>
-            <button
-              onClick={onExport}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
-          </>
-        )}
+        ) : null}
       </div>
 
       {/* 表格 */}
@@ -266,7 +251,7 @@ export function ProblemTable({
                   <td className="px-4 py-3">
                     {problem.status === '待处理' && !problem.sourceTaskId && (
                       <button
-                        onClick={() => onViewDetail(problem)}
+                        onClick={() => onSingleDispatch?.(problem)}
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         分派

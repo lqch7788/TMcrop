@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Download, Plus, Edit, Trash2, Send, CheckCircle } from 'lucide-react';
+import { Download, Plus, Edit, Trash2 } from 'lucide-react';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -71,10 +71,10 @@ interface TaskTableProps {
   onConfirmExport?: () => void;
   onCancelExport?: () => void;
   onBatchEdit?: () => void;
+  onConfirmBatchEdit?: () => void;
+  onCancelBatchEdit?: () => void;
   onBatchDelete?: () => void;
   onExport?: () => void;
-  onBatchAccept?: () => void;
-  onBatchDispatch?: () => void;
   onCreate?: () => void;
 }
 
@@ -103,25 +103,30 @@ export function TaskTable({
   onConfirmExport,
   onCancelExport,
   onBatchEdit,
+  onConfirmBatchEdit,
+  onCancelBatchEdit,
   onBatchDelete,
   onExport,
-  onBatchAccept,
-  onBatchDispatch,
   onCreate,
 }: TaskTableProps) {
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
   const total = tasks.length;
   const paginatedTasks = tasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // 全选状态计算
-  const isAllSelected = paginatedTasks.length > 0 && paginatedTasks.every((_, idx) => {
-    const globalIndex = (currentPage - 1) * pageSize + idx;
-    return selectedRows.includes(globalIndex);
-  });
-  const isSomeSelected = paginatedTasks.some((_, idx) => {
-    const globalIndex = (currentPage - 1) * pageSize + idx;
-    return selectedRows.includes(globalIndex);
-  });
+  // 计算当前页可编辑的全局索引（用于批量编辑模式）
+  const currentPageStartIdx = (currentPage - 1) * pageSize;
+  const currentPageEditableIndexes = batchEditMode
+    ? paginatedTasks
+        .map((task, idx) => {
+          const editableStatuses = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
+          return editableStatuses.includes(task.status) ? currentPageStartIdx + idx : -1;
+        })
+        .filter(idx => idx !== -1)
+    : paginatedTasks.map((_, idx) => currentPageStartIdx + idx);
+
+  // 全选状态计算 - 使用全局索引
+  const isAllSelected = currentPageEditableIndexes.length > 0 && currentPageEditableIndexes.every(idx => selectedRows.includes(idx));
+  const isSomeSelected = currentPageEditableIndexes.some(idx => selectedRows.includes(idx)) || selectedRows.length > 0;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -150,15 +155,15 @@ export function TaskTable({
           ) : batchEditMode ? (
             <>
               <button
-                onClick={onBatchEdit}
+                onClick={onConfirmBatchEdit}
                 disabled={selectedRows.length === 0}
                 className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
-                批量编辑
+                确认编辑
               </button>
               <button
-                onClick={() => { onBatchEdit?.(); }}
+                onClick={() => { onCancelBatchEdit?.(); }}
                 className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
@@ -218,24 +223,6 @@ export function TaskTable({
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
-              )}
-              {onBatchAccept && (
-                <button
-                  onClick={onBatchAccept}
-                  className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  批量验收
-                </button>
-              )}
-              {onBatchDispatch && (
-                <button
-                  onClick={onBatchDispatch}
-                  className="h-8 px-3 flex items-center gap-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                  批量派发
                 </button>
               )}
             </>

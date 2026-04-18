@@ -12,6 +12,14 @@ import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData'
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { FeedbackInput, FEEDBACK_OPTIONS } from '../../common/FeedbackInput';
+
+// 导入统一任务管理 Hook（数据闭环核心）
+import { useTasks } from '../../../hooks/useTasks';
+import { useOperationRecords } from '../../../hooks/useOperationRecords';
+
+// 导入任务配置（用于详情弹窗的流转记录显示）
+import { TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../config/taskConfig';
 
 // 任务类型定义
 const taskTypes = [
@@ -28,12 +36,16 @@ const taskTypes = [
 
 // 状态映射（扩展支持问题处理流程）
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
+  draft: { bg: 'bg-gray-100', color: 'text-gray-600', label: '草稿' },
   pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待接受' },
   accepted: { bg: 'bg-blue-100', color: 'text-blue-600', label: '已接受' },
   in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
   completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
   waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
   rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已拒绝' },
+  failed: { bg: 'bg-purple-100', color: 'text-purple-600', label: '任务失败' },
+  cancelled: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已取消' },
+  abandoned: { bg: 'bg-red-50', color: 'text-red-400', label: '已放弃' },
 };
 
 // 优先级映射
@@ -58,15 +70,46 @@ const getTypeLabel = (type: string): string => {
 };
 
 export function MyTasksPage() {
-  // 从 localStorage 读取任务（用于进度更新等操作）
+  // 使用统一任务管理 Hook（数据闭环核心）
+  const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, operationRecords, getTaskRecordsByTaskId } = useTasks();
+  const { addTaskRecord, records: operationRecordsList, getRecordsByTaskId } = useOperationRecords();
+
+  // 从 localStorage 读取任务（仅用于兼容旧数据初始化）
   // 注意：问题分派的任务存储在 TASKS key 下
-  const [tasks, setTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.TASKS, []);
+  const [localTasks, setLocalTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.TASKS, []);
 
   // 获取当前用户名（原型阶段默认使用陆启闯）
   const currentUserName = localStorage.getItem('username') || '陆启闯';
 
-  // 使用任务数据（优先从 localStorage 读取，如果没有则使用 taskDispatchTasks）
-  const myTasks = tasks.length > 0 ? tasks : taskDispatchTasks;
+  // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
+  // 兼容处理：如果是 Task[] 类型直接使用，否则从 unifiedTasks 获取
+  const myTasks: (TaskDispatchTask | Task)[] = unifiedTasks.length > 0
+    ? unifiedTasks.map(t => ({
+        id: t.id,
+        taskCode: t.taskCode || t.id,
+        types: t.types || [],
+        typeLabel: t.typeName || '',
+        field: t.field || t.greenhouseName || '',
+        crop: t.crop || t.cropName || '',
+        assignee: t.assigneeName || t.assignee || '',
+        planStart: t.planStart || '',
+        planEnd: t.planEnd || '',
+        progress: t.progress || 0,
+        status: t.status as string,
+        priority: t.priority || 'normal',
+        estimatedDays: t.estimatedDays || 0,
+        estimatedHours: t.estimatedHours || 0,
+        requiredFeedback: t.requiredFeedback || [],
+        feedbackRequirements: t.feedbackRequirements || [],
+        // 任务配置
+        typeConfig: (t as any).typeConfig || {},
+        sopContent: (t as any).sopContent || '',
+        materials: t.materials || [],
+        tools: t.tools || [],
+        // 关联字段
+        sourceProblemId: (t as any).sourceProblemId,
+      }))
+    : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
   // 任务筛选状态：全部 / 问题处理 / 生产任务
   const [taskFilter, setTaskFilter] = useState<'all' | 'problem' | 'production'>('all');
@@ -74,31 +117,6 @@ export function MyTasksPage() {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // 初始化数据到 localStorage
-  useEffect(() => {
-    // 如果 localStorage 为空，则使用 taskDispatchTasks 初始化
-    if (tasks.length === 0) {
-      setTasks(taskDispatchTasks);
-    }
-  }, [tasks.length, setTasks]);
-
-  // 监听 localStorage 变化（其他页面更新后同步）
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEYS.TASKS && e.newValue) {
-        try {
-          const newTasks = JSON.parse(e.newValue);
-          // 强制更新组件状态
-          setTasks(newTasks);
-        } catch (err) {
-          console.warn('Failed to parse tasks from storage:', err);
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [setTasks]);
 
   // 根据筛选过滤任务
   const filteredTasks = useMemo(() => {
@@ -154,8 +172,12 @@ export function MyTasksPage() {
     progressText: '',
     workloadDays: '',
     workloadHours: '',
+    workloadConfirm: null as { days: number; hours: number; workers: number } | null,
     photosBefore: [] as string[],
     photosAfter: [] as string[],
+    gpsLocation: null as { lat: number; lng: number } | null,
+    materialCode: '',
+    voiceNote: '',
   });
 
   // 拒绝原因弹窗
@@ -166,14 +188,32 @@ export function MyTasksPage() {
 
   const [rejectReason, setRejectReason] = useState('');
 
-  // 处理接单
+  // 处理接单 - 使用统一任务管理
   const handleAccept = (task: TaskDispatchTask) => {
     if (task.sourceProblemId) {
       acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
     }
-    setTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, status: 'accepted' } : t
-    ));
+    // 查找 unifiedTasks 中对应的任务并接受
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      acceptTask(unifiedTask.id);
+      // 记录接单操作
+      addTaskRecord({
+        operationType: unifiedTask.type,
+        operationTypeName: unifiedTask.typeName,
+        status: 'accepted',
+        greenhouseId: '',
+        greenhouseName: task.field || '',
+        cropName: task.crop || '',
+        operatorId: 'U013',
+        operatorName: currentUserName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: unifiedTask.id,
+        sourceCode: unifiedTask.taskCode,
+        progress: 0,
+        remarks: '执行人已接受任务',
+      });
+    }
     setShowDetailModal(false);
   };
 
@@ -183,24 +223,46 @@ export function MyTasksPage() {
     setRejectReason('');
   };
 
-  // 处理拒绝
+  // 处理拒绝 - 执行人拒绝任务，任务状态变为rejected，可重新派发
   const handleReject = () => {
     if (!rejectModal.task || !rejectReason.trim()) return;
     const task = rejectModal.task;
     if (task.sourceProblemId) {
       rejectProblem(task.sourceProblemId, 'U013', '陆启闯', rejectReason);
     }
-    setTasks(prev => prev.filter(t => t.id !== task.id));
+    // 查找 unifiedTasks 中对应的任务
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      rejectByExecutor(unifiedTask.id, rejectReason, unifiedTask.assigneeId, unifiedTask.assigneeName);
+      // 记录拒绝操作
+      addTaskRecord({
+        operationType: unifiedTask.type,
+        operationTypeName: unifiedTask.typeName,
+        status: 'rejected',
+        greenhouseId: '',
+        greenhouseName: task.field || '',
+        cropName: task.crop || '',
+        operatorId: 'U013',
+        operatorName: currentUserName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: unifiedTask.id,
+        sourceCode: unifiedTask.taskCode,
+        progress: task.progress || 0,
+        remarks: rejectReason,
+        rejectReason: rejectReason,
+      });
+    }
     setRejectModal({ isOpen: false, task: null });
     setRejectReason('');
     setShowDetailModal(false);
   };
 
-  // 开始处理
+  // 开始处理 - 使用统一任务管理
   const handleStartProcessing = (task: TaskDispatchTask) => {
-    setTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, status: 'in_progress' } : t
-    ));
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      updateTaskStatus(unifiedTask.id, 'in_progress');
+    }
     setShowDetailModal(false);
   };
 
@@ -209,35 +271,144 @@ export function MyTasksPage() {
     setFeedbackModal({ isOpen: true, task });
     setFeedbackForm({
       resultText: '',
-      actualWorkload: '',
+      progressText: '',
+      workloadDays: '',
+      workloadHours: '',
       photosBefore: [],
       photosAfter: [],
+      gpsLocation: null,
+      materialCode: '',
+      voiceNote: '',
     });
     setShowDetailModal(false);
+  };
+
+  // 校验必填反馈是否完成
+  const validateRequiredFeedback = (): { valid: boolean; message: string } => {
+    if (!feedbackModal.task?.requiredFeedback || feedbackModal.task.requiredFeedback.length === 0) {
+      return { valid: true, message: '' };
+    }
+
+    const required = feedbackModal.task.requiredFeedback;
+    const { workloadConfirm, gpsLocation, photosBefore, photosAfter, materialCode, voiceNote } = feedbackForm;
+
+    if (required.includes('workload_confirm') && !workloadConfirm) {
+      return { valid: false, message: '请确认工作量' };
+    }
+    if (required.includes('gps') && !gpsLocation) {
+      return { valid: false, message: '请完成位置打卡' };
+    }
+    if (required.includes('photo_before') && (!photosBefore || photosBefore.length === 0)) {
+      return { valid: false, message: '请上传作业前照片' };
+    }
+    if (required.includes('photo_after') && (!photosAfter || photosAfter.length === 0)) {
+      return { valid: false, message: '请上传作业后照片' };
+    }
+    if (required.includes('material') && !materialCode) {
+      return { valid: false, message: '请扫码或输入物资编码' };
+    }
+    if (required.includes('voice') && !voiceNote) {
+      return { valid: false, message: '请录制语音备注' };
+    }
+
+    return { valid: true, message: '' };
   };
 
   // 提交反馈
   const handleSubmitFeedback = () => {
     if (!feedbackModal.task) return;
     const task = feedbackModal.task;
+
+    // 校验必填反馈
+    const validation = validateRequiredFeedback();
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
+
+    // 构建反馈数据（工作量、GPS、照片、语音等）
+    const feedbackData = {
+      workloadConfirm: feedbackForm.workloadConfirm || undefined,
+      gpsLocation: feedbackForm.gpsLocation || undefined,
+      photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
+      photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
+      materialCode: feedbackForm.materialCode || undefined,
+      voiceNote: feedbackForm.voiceNote || undefined,
+      progress: task.progress || 0,
+    };
+
     if (task.sourceProblemId) {
-      // 先记录进度流转
-      addProgressRecord(task.sourceProblemId, 'U013', '陆启闯', task.progress || 0, feedbackForm.resultText);
+      // 先记录进度流转（包含反馈数据）
+      addProgressRecord(
+        task.sourceProblemId,
+        'U013',
+        '陆启闯',
+        task.progress || 0,
+        feedbackForm.progressText || feedbackForm.resultText,
+        feedbackData
+      );
       // 进度100%时提交验收，否则只是进度反馈
       if (task.progress === 100) {
         submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
           resultText: feedbackForm.resultText,
-          actualWorkload: feedbackForm.workloadDays || feedbackForm.workloadHours
-            ? (parseFloat(feedbackForm.workloadDays || '0') * 24 + parseFloat(feedbackForm.workloadHours || '0'))
-            : undefined,
+          actualWorkload: feedbackForm.workloadConfirm
+            ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
+            : (feedbackForm.workloadDays || feedbackForm.workloadHours
+              ? (parseFloat(feedbackForm.workloadDays || '0') * 24 + parseFloat(feedbackForm.workloadHours || '0'))
+              : undefined),
+          feedbackData,
         });
       }
     }
-    // 进度100%时进入待验收，否则继续进行中
-    const newStatus = task.progress === 100 ? 'waiting_acceptance' : 'in_progress';
-    setTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, status: newStatus, progress: task.progress } : t
-    ));
+
+    // ========== 数据闭环：同步到 useTasks ==========
+    // 查找 unifiedTasks 中对应的任务
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      const isFinal = task.progress === 100;
+      // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
+      submitProgress(unifiedTask.id, task.progress || 0, {
+        remarks: feedbackForm.resultText || feedbackForm.progressText,
+        workload: feedbackForm.workloadConfirm
+          ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
+          : (feedbackForm.workloadHours ? parseFloat(feedbackForm.workloadHours) : undefined),
+        isFinal,
+        gpsLocation: feedbackForm.gpsLocation || undefined,
+        photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
+        photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
+        voiceNote: feedbackForm.voiceNote || undefined,
+        materialCode: feedbackForm.materialCode || undefined,
+        workloadDays: feedbackForm.workloadConfirm?.days,
+        workloadHours: feedbackForm.workloadConfirm?.hours,
+        workers: feedbackForm.workloadConfirm?.workers,
+      });
+
+      // ========== 数据闭环：同步到 useOperationRecords ==========
+      addTaskRecord({
+        operationType: unifiedTask.type,
+        operationTypeName: unifiedTask.typeName,
+        status: isFinal ? 'waiting_acceptance' : 'in_progress',
+        greenhouseId: '',
+        greenhouseName: task.field || '',
+        cropName: task.crop || '',
+        operatorId: 'U013',
+        operatorName: currentUserName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: unifiedTask.id,
+        sourceCode: unifiedTask.taskCode,
+        progress: task.progress,
+        remarks: feedbackForm.resultText,
+        workloadDays: feedbackForm.workloadConfirm?.days,
+        workloadHours: feedbackForm.workloadConfirm?.hours,
+        workers: feedbackForm.workloadConfirm?.workers,
+        gpsLocation: feedbackForm.gpsLocation || undefined,
+        photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
+        photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
+        voiceNote: feedbackForm.voiceNote || undefined,
+        materialCode: feedbackForm.materialCode || undefined,
+      });
+    }
+
     setFeedbackModal({ isOpen: false, task: null });
   };
 
@@ -247,6 +418,62 @@ export function MyTasksPage() {
     return getProblemFlowRecords(selectedTask.sourceProblemId);
   };
 
+  // 获取当前任务关联的操作记录（useOperationRecords）
+  const getCurrentOperationRecords = () => {
+    if (!selectedTask) return [];
+    // 查找 unifiedTasks 中对应的任务
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === selectedTask.id || t.id === selectedTask.id);
+    if (!unifiedTask) return [];
+    // 使用 getRecordsByTaskId 根据 sourceId 获取记录
+    return getRecordsByTaskId(unifiedTask.id);
+  };
+
+  // 获取当前任务关联的 TaskRecord 记录（useTasks 系统）
+  const getCurrentTaskRecords = () => {
+    if (!selectedTask) return [];
+    // 查找 unifiedTasks 中对应的任务
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === selectedTask.id || t.id === selectedTask.id);
+    if (!unifiedTask) return [];
+    // 使用 getTaskRecordsByTaskId 获取 useTasks 系统的记录
+    return getTaskRecordsByTaskId(unifiedTask.id);
+  };
+
+  // 汇总任务记录中的实际完成工作量
+  const getActualWorkload = () => {
+    const records = getCurrentTaskRecords();
+    let totalDays = 0;
+    let totalHours = 0;
+    let totalWorkers = 0;
+    let recordCount = 0;
+
+    records.forEach(record => {
+      if (record.feedback) {
+        if (record.feedback.workloadDays) {
+          totalDays += record.feedback.workloadDays;
+          recordCount++;
+        }
+        if (record.feedback.workloadHours) {
+          totalHours += record.feedback.workloadHours;
+          recordCount++;
+        }
+        // 人数取最大值（不累加，因为同一人执行）
+        if (record.feedback.workers && record.feedback.workers > totalWorkers) {
+          totalWorkers = record.feedback.workers;
+        }
+      }
+    });
+
+    // 如果没有记录，从 progress 字段估算
+    if (recordCount === 0 && selectedTask?.progress && selectedTask.progress > 0) {
+      const estimatedTotal = ((selectedTask.estimatedDays || 0) * 8 + (selectedTask.estimatedHours || 0));
+      if (estimatedTotal > 0) {
+        totalHours = Math.round(estimatedTotal * (selectedTask.progress / 100) * 10) / 10;
+      }
+    }
+
+    return { days: totalDays, hours: totalHours, workers: totalWorkers };
+  };
+
   // 打开SOP弹窗
   const openSopModal = (task: TaskDispatchTask, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -254,11 +481,12 @@ export function MyTasksPage() {
     setShowSopModal(true);
   };
 
-  // 更新任务进度
+  // 更新任务进度 - 使用统一任务管理
   const handleProgressChange = (taskId: string, progress: number) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, progress } : t
-    ));
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === taskId || t.id === taskId);
+    if (unifiedTask) {
+      updateTaskProgress(unifiedTask.id, progress);
+    }
     // 更新当前选中的任务显示
     if (selectedTask && selectedTask.id === taskId) {
       setSelectedTask(prev => prev ? { ...prev, progress } : null);
@@ -266,11 +494,12 @@ export function MyTasksPage() {
     // 注意：进度100%时不自动改变状态，用户需要通过提交反馈来确认完成
   };
 
-  // 确认完成
+  // 确认完成 - 使用统一任务管理
   const handleConfirmComplete = (task: TaskDispatchTask) => {
-    setTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, status: 'completed', progress: 100 } : t
-    ));
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      updateTaskStatus(unifiedTask.id, 'completed');
+    }
     setShowDetailModal(false);
     setSelectedTask(null);
   };
@@ -361,7 +590,7 @@ export function MyTasksPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1200px]">
-            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
@@ -491,8 +720,34 @@ export function MyTasksPage() {
                             提交进度
                           </button>
                         )}
-                        {(task.status === 'waiting_acceptance' || task.status === 'completed' || task.status === 'rejected') && (
-                          // 待验收/已完成/已拒绝状态：只显示查看详情按钮
+                        {task.status === 'rejected' && (
+                          // 被驳回状态：显示继续执行和查看按钮
+                          <>
+                            <button
+                              onClick={() => {
+                                const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+                                if (unifiedTask) {
+                                  continueExecution(unifiedTask.id);
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
+                              title="继续完成任务后重新提交"
+                            >
+                              <Play className="w-4 h-4" />
+                              继续执行
+                            </button>
+                            <button
+                              onClick={() => openDetailModal(task)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                              title="点击查看详情"
+                            >
+                              <Eye className="w-4 h-4" />
+                              查看
+                            </button>
+                          </>
+                        )}
+                        {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
+                          // 待验收/已完成状态：只显示查看详情按钮
                           <button
                             onClick={() => openDetailModal(task)}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
@@ -696,6 +951,53 @@ export function MyTasksPage() {
               </div>
             </div>
 
+            {/* 实际完成工作量 */}
+            {(() => {
+              const actualWorkload = getActualWorkload();
+              const hasActualWorkload = actualWorkload.days > 0 || actualWorkload.hours > 0;
+              if (!hasActualWorkload) return null;
+              return (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">实际完成工作量</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs text-green-600">实际工日</label>
+                        <p className="font-bold text-green-700 text-lg">
+                          {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-green-600">实际工时</label>
+                        <p className="font-bold text-green-700 text-lg">
+                          {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-green-600">作业人数</label>
+                        <p className="font-bold text-green-700 text-lg">
+                          {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedTask.estimatedDays !== undefined && selectedTask.estimatedHours !== undefined && (
+                      <div className="mt-3 pt-3 border-t border-green-200">
+                        <p className="text-xs text-green-600">
+                          预估总工时：{(selectedTask.estimatedDays * 8 + selectedTask.estimatedHours)}小时 → 实际总工时：{actualWorkload.days * 8 + actualWorkload.hours}小时
+                          {actualWorkload.days * 8 + actualWorkload.hours > 0 && (
+                            <span className={`ml-2 ${actualWorkload.days * 8 + actualWorkload.hours > selectedTask.estimatedDays * 8 + selectedTask.estimatedHours ? 'text-red-600' : 'text-green-600'}`}>
+                              ({actualWorkload.days * 8 + actualWorkload.hours > selectedTask.estimatedDays * 8 + selectedTask.estimatedHours ? '超出' : '节省'}
+                              {Math.abs((actualWorkload.days * 8 + actualWorkload.hours) - (selectedTask.estimatedDays * 8 + selectedTask.estimatedHours)).toFixed(1)}小时)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* 必填反馈 */}
             {selectedTask.requiredFeedback && selectedTask.requiredFeedback.length > 0 && (
               <div>
@@ -720,6 +1022,216 @@ export function MyTasksPage() {
                 <TaskFlowTimeline records={getCurrentProblemFlowRecords()} />
               </div>
             )}
+
+            {/* 操作记录（useOperationRecords） */}
+            {(() => {
+              const opRecords = getCurrentOperationRecords();
+              if (opRecords.length === 0) return null;
+              return (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
+                  <div className="space-y-4">
+                    {opRecords.map((record) => (
+                      <div key={record.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                              {record.operationTypeName || record.operationType}
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">{record.operationDate}</span>
+                        </div>
+                        {/* 显示子记录（children） */}
+                        {record.children && record.children.length > 0 && (
+                          <div className="mt-3 pl-4 border-l-2 border-gray-300 space-y-3">
+                            {record.children.map((child) => (
+                              <div key={child.id} className="bg-white rounded p-3 shadow-sm">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
+                                      {child.operationTypeName || child.operationType}
+                                    </span>
+                                    <span className="text-xs text-gray-600">{child.operatorName}</span>
+                                  </div>
+                                  <span className="text-xs text-gray-400">
+                                    {child.time || child.operationDate}
+                                  </span>
+                                </div>
+                                {/* 工作量 */}
+                                {(child.workloadDays || child.workloadHours || child.workers) && (
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    工作量：{child.workloadDays && `${child.workloadDays}天`}
+                                    {child.workloadHours && `${child.workloadHours}小时`}
+                                    {child.workers && `×${child.workers}人`}
+                                  </div>
+                                )}
+                                {/* 进度 */}
+                                {child.progress !== undefined && (
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    进度：{child.progress}%
+                                    {child.progressIncrement !== undefined && child.progressIncrement > 0 && (
+                                      <span className="text-emerald-600 ml-1">(+{child.progressIncrement}%)</span>
+                                    )}
+                                  </div>
+                                )}
+                                {/* GPS位置 */}
+                                {child.gpsLocation && (
+                                  <div className="text-xs text-emerald-600 mb-1">
+                                    GPS：{child.gpsLocation.lat.toFixed(6)}, {child.gpsLocation.lng.toFixed(6)}
+                                  </div>
+                                )}
+                                {/* 照片 */}
+                                {(child.photosBefore?.length || child.photosAfter?.length) && (
+                                  <div className="text-xs text-blue-600 mb-1">
+                                    照片：{child.photosBefore?.length || 0}张(前) + {child.photosAfter?.length || 0}张(后)
+                                  </div>
+                                )}
+                                {/* 语音 */}
+                                {child.voiceNote && (
+                                  <div className="text-xs text-purple-600 mb-1">语音备注</div>
+                                )}
+                                {/* 物料 */}
+                                {child.materials && child.materials.length > 0 && (
+                                  <div className="text-xs text-orange-600 mb-1">
+                                    物料：{child.materials.map(m => `${m.name}×${m.qty}`).join(', ')}
+                                  </div>
+                                )}
+                                {/* 备注 */}
+                                {child.remarks && (
+                                  <div className="text-sm text-gray-700 bg-gray-50 rounded px-2 py-1 mt-1">
+                                    {child.remarks}
+                                  </div>
+                                )}
+                                {/* 驳回原因 */}
+                                {child.rejectReason && (
+                                  <div className="text-sm text-red-600 bg-red-50 rounded px-2 py-1 mt-1">
+                                    驳回原因：{child.rejectReason}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 任务流转记录（useTasks.taskRecords） */}
+            {(() => {
+              const taskRecords = getCurrentTaskRecords();
+              if (taskRecords.length === 0) return null;
+              return (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">任务流转记录</h4>
+                  <div className="space-y-4">
+                    {taskRecords.map((record) => {
+                      const actionConfig = TASK_ACTION_CONFIG[record.action as keyof typeof TASK_ACTION_CONFIG];
+                      const statusFromConfig = record.fromStatus ? TASK_STATUS_CONFIG[record.fromStatus as keyof typeof TASK_STATUS_CONFIG] : null;
+                      const statusToConfig = record.toStatus ? TASK_STATUS_CONFIG[record.toStatus as keyof typeof TASK_STATUS_CONFIG] : null;
+                      return (
+                      <div key={record.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                              {actionConfig?.label || record.actionName || record.action}
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(record.actionTime).toLocaleString('zh-CN')}
+                          </span>
+                        </div>
+                        {/* 状态变化 */}
+                        {(record.fromStatus || record.toStatus) && (
+                          <div className="flex items-center gap-1 mb-2 text-xs">
+                            {record.fromStatus && (
+                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
+                                {statusFromConfig?.label || record.fromStatus}
+                              </span>
+                            )}
+                            <span className="text-gray-400">→</span>
+                            {record.toStatus && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                {statusToConfig?.label || record.toStatus}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {/* 进度 */}
+                        {record.progress !== undefined && (
+                          <div className="text-xs text-gray-600 mb-1">
+                            进度：{record.progress}%
+                            {record.progressIncrement !== undefined && record.progressIncrement > 0 && (
+                              <span className="text-emerald-600 ml-1">(+{record.progressIncrement}%)</span>
+                            )}
+                          </div>
+                        )}
+                        {/* 反馈内容 */}
+                        {record.feedback && (
+                          <div className="mt-2 space-y-1">
+                            {record.feedback.text && (
+                              <div className="text-sm text-gray-700 bg-white rounded p-2">
+                                {record.feedback.text}
+                              </div>
+                            )}
+                            {record.feedback.gpsLocation && (
+                              <div className="text-xs text-emerald-600">
+                                GPS：{record.feedback.gpsLocation.lat.toFixed(6)}, {record.feedback.gpsLocation.lng.toFixed(6)}
+                              </div>
+                            )}
+                            {record.feedback.images && record.feedback.images.length > 0 && (
+                              <div className="text-xs text-blue-600">
+                                照片：{record.feedback.images.length}张
+                              </div>
+                            )}
+                            {record.feedback.voiceNote && (
+                              <div className="text-xs text-purple-600">语音备注</div>
+                            )}
+                            {record.feedback.materials && record.feedback.materials.length > 0 && (
+                              <div className="text-xs text-orange-600">
+                                物料：{record.feedback.materials.map(m => `${m.name}×${m.qty}`).join(', ')}
+                              </div>
+                            )}
+                            {/* 工作量确认 */}
+                            {(record.feedback.workloadDays !== undefined || record.feedback.workloadHours !== undefined || record.feedback.workers !== undefined) && (
+                              <div className="text-xs text-cyan-600">
+                                工作量确认：
+                                {record.feedback.workloadDays !== undefined && `${record.feedback.workloadDays}天`}
+                                {record.feedback.workloadHours !== undefined && `${record.feedback.workloadHours}小时`}
+                                {record.feedback.workers !== undefined && `×${record.feedback.workers}人`}
+                              </div>
+                            )}
+                            {/* 物资编码 */}
+                            {record.feedback.materialCode && (
+                              <div className="text-xs text-pink-600">
+                                物资编码：{record.feedback.materialCode}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* 备注 */}
+                        {record.comment && (
+                          <div className="text-sm text-gray-600 bg-white rounded p-2 mt-2">
+                            {record.comment}
+                          </div>
+                        )}
+                        {/* 驳回原因 */}
+                        {record.reason && (
+                          <div className="text-sm text-red-600 bg-red-50 rounded p-2 mt-2">
+                            驳回原因：{record.reason}
+                          </div>
+                        )}
+                      </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 进度（只读） */}
             <div>
@@ -764,7 +1276,8 @@ export function MyTasksPage() {
                 !feedbackModal.task ||
                 (feedbackModal.task.progress === 100
                   ? !(feedbackForm?.resultText || '').trim()
-                  : !(feedbackForm?.progressText || '').trim())
+                  : !(feedbackForm?.progressText || '').trim()) ||
+                !validateRequiredFeedback().valid
               }
               className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -847,9 +1360,7 @@ export function MyTasksPage() {
                   value={feedbackModal.task.progress || 0}
                   onChange={(e) => {
                     const newProgress = parseInt(e.target.value);
-                    setTasks(prev => prev.map(t =>
-                      t.id === feedbackModal.task!.id ? { ...t, progress: newProgress } : t
-                    ));
+                    // 只更新弹窗内的本地状态，实际提交通过 handleSubmitFeedback 使用 unifiedTasks
                     setFeedbackModal(prev => ({
                       ...prev,
                       task: prev.task ? { ...prev.task, progress: newProgress } : null
@@ -867,22 +1378,55 @@ export function MyTasksPage() {
               </p>
             </div>
 
-            {/* 必填反馈提醒 */}
+            {/* 必填反馈输入区域 */}
             {feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <label className="block text-sm font-medium text-amber-800 mb-2">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
                   必填反馈项
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {feedbackModal.task.requiredFeedback.map((fb: string) => (
-                    <span key={fb} className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs">
-                      {fb === 'gps' && '位置打卡'}
-                      {fb === 'material' && '物资扫码'}
-                      {fb === 'photo_before' && '作业前照片'}
-                      {fb === 'photo_after' && '作业后照片'}
-                      {fb === 'voice' && '语音备注'}
-                    </span>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {feedbackModal.task.requiredFeedback.includes('workload_confirm') && (
+                    <FeedbackInput
+                      type="workload_confirm"
+                      value={feedbackForm.workloadConfirm}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, workloadConfirm: v }))}
+                    />
+                  )}
+                  {feedbackModal.task.requiredFeedback.includes('gps') && (
+                    <FeedbackInput
+                      type="gps"
+                      value={feedbackForm.gpsLocation}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, gpsLocation: v }))}
+                    />
+                  )}
+                  {feedbackModal.task.requiredFeedback.includes('photo_before') && (
+                    <FeedbackInput
+                      type="photo_before"
+                      value={feedbackForm.photosBefore}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, photosBefore: v }))}
+                    />
+                  )}
+                  {feedbackModal.task.requiredFeedback.includes('photo_after') && (
+                    <FeedbackInput
+                      type="photo_after"
+                      value={feedbackForm.photosAfter}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, photosAfter: v }))}
+                    />
+                  )}
+                  {feedbackModal.task.requiredFeedback.includes('material') && (
+                    <FeedbackInput
+                      type="material"
+                      value={feedbackForm.materialCode}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, materialCode: v }))}
+                    />
+                  )}
+                  {feedbackModal.task.requiredFeedback.includes('voice') && (
+                    <FeedbackInput
+                      type="voice"
+                      value={feedbackForm.voiceNote}
+                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, voiceNote: v }))}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -911,34 +1455,6 @@ export function MyTasksPage() {
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
-                </div>
-
-                {/* 实际工作量 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    实际工作量
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={feedbackForm.workloadDays}
-                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, workloadDays: e.target.value }))}
-                      placeholder="0"
-                      min="0"
-                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                    <span className="text-sm text-gray-600">天</span>
-                    <input
-                      type="number"
-                      value={feedbackForm.workloadHours}
-                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, workloadHours: e.target.value }))}
-                      placeholder="0"
-                      min="0"
-                      max="23"
-                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                    <span className="text-sm text-gray-600">小时</span>
-                  </div>
                 </div>
               </>
             ) : (

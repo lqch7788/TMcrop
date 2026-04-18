@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
-import { tasks as initialTasks, greenhouses, cropBatches, users } from '../../../data/mockData';
+import { greenhouses, cropBatches, users } from '../../../data/mockData';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
 import { TasksTable } from './TasksTable';
@@ -9,7 +9,7 @@ import { TaskFormModal } from './TaskFormModal';
 import { BatchEditModal } from './BatchEditModal';
 import { useTasksFilters } from './hooks/useTasksFilters';
 import { useTaskForm } from './hooks/useTaskForm';
-import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { useTasks } from '../../../hooks/useTasks';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 
 // 导出格式弹窗
@@ -114,9 +114,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 }
 
 export function TasksPage() {
-  // 优先从 localStorage 读取任务（问题分派创建的任务）
-  const [localTasks, setLocalTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
-  const [taskList, setTaskList] = useState<Task[]>([]);
+  // 使用统一任务管理 Hook
+  const { tasks, addTask, updateTask, deleteTask, updateTaskStatus } = useTasks();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -129,19 +128,6 @@ export function TasksPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
-
-  // 合并 localStorage 任务和 mockData 任务
-  useEffect(() => {
-    // 清理 localStorage 中错误的数据类型（TaskDispatchTask 没有 taskCode 字段）
-    const validLocalTasks = localTasks.filter(t => t.taskCode && t.title);
-    const merged = [...validLocalTasks];
-    initialTasks.forEach(task => {
-      if (!merged.find(t => t.id === task.id)) {
-        merged.push(task);
-      }
-    });
-    setTaskList(merged);
-  }, [localTasks]);
 
   // 问题记录更新
   const { updateProblem } = usePersistentProblems();
@@ -173,7 +159,7 @@ export function TasksPage() {
     setTypeFilter,
     setStatusFilter,
     setModeFilter,
-  } = useTasksFilters({ tasks: taskList });
+  } = useTasksFilters({ tasks });
 
   // 使用表单hook - 注意：不传onCancel避免循环依赖
   const {
@@ -195,18 +181,9 @@ export function TasksPage() {
     users,
     onSubmit: (task) => {
       if (editingTask) {
-        setTaskList(prev => prev.map(t => t.id === task.id ? task : t));
-        // 如果是 localStorage 中的任务，同步更新
-        const localTask = localTasks.find(t => t.id === task.id);
-        if (localTask) {
-          setLocalTasks(prev => prev.map(t => t.id === task.id ? task : t));
-        }
+        updateTask(task.id, task);
       } else {
-        setTaskList(prev => [task, ...prev]);
-        // 新创建的任务，如果有 sourceProblemId 也保存到 localStorage
-        if (task.sourceProblemId) {
-          setLocalTasks(prev => [task, ...prev]);
-        }
+        addTask(task);
       }
       closeFormModal();
     },
@@ -238,38 +215,17 @@ export function TasksPage() {
   // 删除任务
   const handleDeleteTask = (task: Task) => {
     if (window.confirm(`确定要删除任务 "${task.title}" 吗？`)) {
-      // 如果是 localStorage 中的任务，同步删除
-      const localTask = localTasks.find(t => t.id === task.id);
-      if (localTask) {
-        setLocalTasks(prev => prev.filter(t => t.id !== task.id));
-      }
-      // 从列表移除
-      setTaskList(prev => prev.filter(t => t.id !== task.id));
+      deleteTask(task.id);
     }
   };
 
   // 确认完成
   const handleConfirmComplete = (task: Task) => {
-    // 更新任务列表中的状态
-    setTaskList(prev => prev.map(t =>
-      t.id === task.id
-        ? { ...t, status: 'completed' as const }
-        : t
-    ));
-
-    // 如果是 localStorage 中的任务（问题分派创建的），同步更新
-    const localTask = localTasks.find(t => t.id === task.id);
-    if (localTask) {
-      setLocalTasks(prev => prev.map(t =>
-        t.id === task.id
-          ? { ...t, status: 'completed' as const }
-          : t
-      ));
-    }
+    updateTaskStatus(task.id, 'completed');
 
     // 如果是问题来源的任务，自动更新问题的处理结果
-    if (task.sourceProblemId) {
-      updateProblem(task.sourceProblemId, {
+    if ((task as any).sourceProblemId) {
+      updateProblem((task as any).sourceProblemId, {
         status: '已处理',
         handleDate: new Date().toISOString().slice(0, 10),
         handleResult: `任务已完成：${task.title}`,
@@ -303,13 +259,7 @@ export function TasksPage() {
   };
 
   const handleDeleteConfirm = () => {
-    // 如果是 localStorage 中的任务，同步删除
-    const localTaskIds = localTasks.filter(t => selectedRows.includes(t.id)).map(t => t.id);
-    if (localTaskIds.length > 0) {
-      setLocalTasks(prev => prev.filter(t => !localTaskIds.includes(t.id)));
-    }
-    // 从列表移除
-    setTaskList(prev => prev.filter(t => !selectedRows.includes(t.id)));
+    selectedRows.forEach(id => deleteTask(id));
     setSelectedRows([]);
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
@@ -318,13 +268,12 @@ export function TasksPage() {
   // 批量编辑确认
   const handleBatchEditConfirm = (editedTasks: Record<string, Partial<Task>>) => {
     if (Object.keys(editedTasks).length === 0) return;
-    setTaskList(prev => prev.map(task => {
-      const edited = editedTasks[task.taskCode];
-      if (edited) {
-        return { ...task, ...edited };
+    Object.entries(editedTasks).forEach(([taskCode, updates]) => {
+      const task = tasks.find(t => t.taskCode === taskCode);
+      if (task) {
+        updateTask(task.id, updates);
       }
-      return task;
-    }));
+    });
     setSelectedRows([]);
     setBatchEditMode(false);
   };
@@ -349,7 +298,7 @@ export function TasksPage() {
   };
 
   const handleDoExport = () => {
-    const selectedData = taskList.filter(t => selectedRows.includes(t.id));
+    const selectedData = tasks.filter(t => selectedRows.includes(t.id));
     const headers = ['任务编号', '任务标题', '任务类型', '作业区域', '执行人', '计划开始', '计划结束', '优先级', '状态'];
     const exportData = selectedData.map(row => ({
       '任务编号': row.taskCode,
@@ -592,7 +541,7 @@ export function TasksPage() {
       <BatchEditModal
         isOpen={showBatchEditModal}
         selectedRows={selectedRows}
-        tasks={taskList}
+        tasks={tasks}
         users={users.map(u => ({ id: u.id, name: u.name }))}
         greenhouses={greenhouses.map(g => ({ id: g.id, name: g.name }))}
         onClose={() => setShowBatchEditModal(false)}

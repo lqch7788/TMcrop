@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
-  Plus, Eye, Download, Pencil, Trash2, Scan, X, ThumbsUp, ThumbsDown
+  Plus, Eye, Download, Pencil, Trash2, Scan, X, ThumbsUp, ThumbsDown,
+  MapPin, Camera, Package, Mic
 } from 'lucide-react';
 import { inspectionRecords as initialRecords, greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords, iotSensors } from '../../../data/mockData';
 import QRScanner, { QRData } from '../../common/QRScanner';
@@ -11,6 +12,9 @@ import { BatchEditModal, DeleteWarningModal, DetailInspectionModal } from './mod
 import { InspectionSearch } from './InspectionSearch';
 import { InspectionTable } from './InspectionTable';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
+
+// ========== 引入组件（组件化重构） ==========
+import { InspectionPageHeader, InspectionToolbar } from './components';
 import { Modal } from '../../ui/Modal';
 // 导入农事管理类型定义（消除硬编码）
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS } from '../../../types/farm/common';
@@ -99,7 +103,6 @@ export default function InspectionPage() {
     issueSeverity: '中等' as '轻微' | '中等' | '严重',
     issuePhotos: [] as string[],
     feedbackUsers: [] as string[],
-    expectedCompletion: '',
     remarks: '',
     // 设备保养专用
     equipmentId: '',
@@ -520,9 +523,25 @@ export default function InspectionPage() {
       // 其他类型不需要关联温室/设备
     }
 
-    // 如果需要反馈，同步到问题记录（用于每日问题汇总）
+    /**
+     * 业务规则：问题推送逻辑
+     * ========================================
+     * 巡查记录仅在以下全部条件满足时才会推送至【问题分派模块】和【每日问题汇总】：
+     *   1. feedbackRequired = true（用户勾选了"需要反馈"）
+     *   2. feedbackUsers.length > 0（至少选择了一位反馈人员）
+     *   3. inspectionResult 存在且 inspectionResult !== 'normal'（巡查结果为"异常"）
+     *
+     * 业务说明：
+     *   - 巡查结果为"正常"或未设置时，说明未发现问题，无需创建问题单进行分派处理
+     *   - 即使巡查结果为"异常"，如果不选择反馈人员，也不会创建问题单
+     *   - 推送后问题单状态为"待处理"，等待分派员指派执行人
+     *
+     * 相关数据流：
+     *   巡查记录 → ProblemEntry → 问题分派 → TaskDispatchTask
+     * ========================================
+     */
     let newProblemId: number | undefined;
-    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0) {
+    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult && newRecord.inspectionResult !== 'normal') {
       // 合并预设问题 + 文本描述
       const presetIssues = newRecord.issuePresets?.join('、') || '';
       const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
@@ -598,7 +617,6 @@ export default function InspectionPage() {
       issueSeverity: newRecord.issueSeverity || '中等',
       issuePhotos: newRecord.issuePhotos || [],
       feedbackUsers: newRecord.feedbackUsers || [],
-      expectedCompletion: newRecord.expectedCompletion || undefined,
       remarks: newRecord.remarks,
       equipmentId: equipmentId || undefined,
       equipmentName: equipmentName || undefined,
@@ -635,7 +653,6 @@ export default function InspectionPage() {
       issueText: '',
       issuePhotos: [],
       feedbackUsers: [],
-      expectedCompletion: '',
       remarks: '',
       equipmentId: '',
       equipmentName: '',
@@ -721,7 +738,6 @@ export default function InspectionPage() {
       issueSeverity: '中等' as '轻微' | '中等' | '严重',
       issuePhotos: [] as string[],
       feedbackUsers: [] as string[],
-      expectedCompletion: '',
       remarks: '',
       issueStatus: 'pending',
       newImages: [],
@@ -760,17 +776,7 @@ export default function InspectionPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
-            <Eye className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">巡查管理</h1>
-            <p className="text-gray-500">人工巡查记录管理</p>
-          </div>
-        </div>
-      </div>
+      <InspectionPageHeader />
 
       {/* 搜索卡片 - 使用独立组件 */}
       <InspectionSearch
@@ -782,68 +788,21 @@ export default function InspectionPage() {
 
       {/* 巡查记录表格 - 使用独立组件 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">巡查记录列表</h3>
-          {(exportMode || batchEditMode || batchDeleteMode) ? (
-            <div className="flex gap-2">
-              {exportMode && (
-                <>
-                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                    <Download className="w-4 h-4" />
-                    确认导出
-                  </button>
-                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-              {batchEditMode && (
-                <>
-                  <button onClick={() => setShowBatchEditModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                    <Pencil className="w-4 h-4" />
-                    确认编辑
-                  </button>
-                  <button onClick={handleCancelBatchEdit} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-              {batchDeleteMode && (
-                <>
-                  <button onClick={() => setShowDeleteWarning(true)} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
-                    <Trash2 className="w-4 h-4" />
-                    确认删除
-                  </button>
-                  <button onClick={handleCancelBatchDelete} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={handleOpenCreateModal}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              <button onClick={handleBatchEditClick} className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
-                <Pencil className="w-4 h-4" />
-                编辑
-              </button>
-              <button onClick={handleBatchDeleteClick} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
-                <Trash2 className="w-4 h-4" />
-                删除
-              </button>
-              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-            </div>
-          )}
-        </div>
+        <InspectionToolbar
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          onCreate={handleOpenCreateModal}
+          onBatchEdit={handleBatchEditClick}
+          onBatchDelete={handleBatchDeleteClick}
+          onExport={handleExportClick}
+          onConfirmExport={() => setShowExportModal(true)}
+          onCancelExport={handleCancelExport}
+          onConfirmBatchEdit={() => setShowBatchEditModal(true)}
+          onCancelBatchEdit={handleCancelBatchEdit}
+          onConfirmBatchDelete={() => setShowDeleteWarning(true)}
+          onCancelBatchDelete={handleCancelBatchDelete}
+        />
         <InspectionTable
           records={filteredRecords}
           currentPage={currentPage}
@@ -996,7 +955,7 @@ export default function InspectionPage() {
           setRejectionReason('');
         }}
         title="问题验收"
-        size="lg"
+        size="xl"
       >
         {acceptanceModal.problemId && (
           <div className="space-y-4">
@@ -1039,6 +998,111 @@ export default function InspectionPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* 执行人反馈详情 */}
+                  {(() => {
+                    // 找到最后一个 submit 类型的流转记录，提取 feedbackData
+                    const submitRecord = [...(problem.flowRecords || [])]
+                      .reverse()
+                      .find(r => r.action === 'submit');
+                    const feedbackData = submitRecord?.feedbackData;
+                    if (!feedbackData) return null;
+
+                    return (
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">执行人反馈详情</h4>
+                        <div className="space-y-4">
+                          {/* GPS 位置 */}
+                          {feedbackData.gpsLocation && (
+                            <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
+                              <MapPin className="w-5 h-5 text-emerald-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-emerald-600 mb-1">GPS 位置</div>
+                                <div className="text-sm font-mono text-gray-800">
+                                  {feedbackData.gpsLocation.lat.toFixed(6)}, {feedbackData.gpsLocation.lng.toFixed(6)}
+                                </div>
+                              </div>
+                              <a
+                                href={`https://maps.google.com/?q=${feedbackData.gpsLocation.lat},${feedbackData.gpsLocation.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-emerald-500 text-white rounded text-xs hover:bg-emerald-600"
+                              >
+                                查看地图
+                              </a>
+                            </div>
+                          )}
+
+                          {/* 作业前照片 */}
+                          {feedbackData.photosBefore && feedbackData.photosBefore.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Camera className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-medium text-gray-700">作业前照片 ({feedbackData.photosBefore.length}张)</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {feedbackData.photosBefore.map((img, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt={`作业前照片${idx + 1}`}
+                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => window.open(img, '_blank')}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 作业后照片 */}
+                          {feedbackData.photosAfter && feedbackData.photosAfter.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Camera className="w-4 h-4 text-orange-600" />
+                                <span className="text-sm font-medium text-gray-700">作业后照片 ({feedbackData.photosAfter.length}张)</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {feedbackData.photosAfter.map((img, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt={`作业后照片${idx + 1}`}
+                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => window.open(img, '_blank')}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 物资编码 */}
+                          {feedbackData.materialCode && (
+                            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                              <Package className="w-5 h-5 text-purple-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-purple-600 mb-1">物资编码</div>
+                                <div className="text-sm font-mono text-gray-800">{feedbackData.materialCode}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 语音备注 */}
+                          {feedbackData.voiceNote && (
+                            <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
+                              <Mic className="w-5 h-5 text-red-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-red-600 mb-1">语音备注</div>
+                                <div className="text-sm text-gray-800">已录制语音</div>
+                              </div>
+                              <audio controls className="h-8">
+                                <source src={feedbackData.voiceNote} type="audio/webm" />
+                              </audio>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* 流转记录 */}
                   <div>

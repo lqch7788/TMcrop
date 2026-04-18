@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Send, X, AlertTriangle, CheckCircle, Clock, User, List, Eye, Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Send, X, AlertTriangle, CheckCircle, Clock, User, List, Eye, Plus, Edit, Trash2, Download, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { useProblemDispatch } from '../../../hooks';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
@@ -14,12 +14,28 @@ import {
   DeleteWarningModal,
   ExportFormatModal,
 } from './modals';
+import { Modal } from '../../ui/Modal';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import type { ProblemFlowRecord } from '../../../hooks/useProblemDispatch';
 import { SourceFilter } from './components/SourceFilter';
 import { SourceCell } from './components/SourceCell';
 import { SourceBadge } from './components/SourceBadge';
 import type { SourceModuleType } from './constants/sourceConfig';
+
+// ========== 引入组件（组件化重构） ==========
+import {
+  ProblemStatsCards,
+  ProblemPageHeader,
+  ProblemTable,
+  ProblemFilterToolbar,
+} from './components';
 
 export function ProblemDispatchPage() {
   const {
@@ -100,6 +116,22 @@ export function ProblemDispatchPage() {
     name: string;
   } | null>(null);
 
+  // 期望完成日期状态
+  const [expectedCompletion, setExpectedCompletion] = useState<'today' | 'tomorrow' | '3days' | 'week' | 'custom'>('3days');
+  const [customDueDate, setCustomDueDate] = useState('');
+
+  // 必填反馈状态
+  const [requiredFeedback, setRequiredFeedback] = useState<string[]>(['gps', 'photo_after']);
+
+  // 必填反馈选项配置
+  const feedbackOptions = [
+    { key: 'gps', label: '位置打卡', icon: MapPin },
+    { key: 'photo_before', label: '作业前照片', icon: Camera },
+    { key: 'photo_after', label: '作业后照片', icon: Camera },
+    { key: 'material', label: '物资扫码', icon: Package },
+    { key: 'voice', label: '语音备注', icon: Mic },
+  ];
+
   // 根据筛选过滤问题
   const filteredProblems = useMemo(() => {
     let list: ProblemEntry[] = [];
@@ -164,6 +196,33 @@ export function ProblemDispatchPage() {
     return list;
   }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
 
+  // 计算期望完成日期
+  const calculateDueDate = () => {
+    const today = new Date();
+    switch (expectedCompletion) {
+      case 'today':
+        return today.toISOString().slice(0, 10);
+      case 'tomorrow':
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().slice(0, 10);
+      case '3days':
+        const threeDays = new Date(today);
+        threeDays.setDate(threeDays.getDate() + 3);
+        return threeDays.toISOString().slice(0, 10);
+      case 'week':
+        const week = new Date(today);
+        week.setDate(week.getDate() + 7);
+        return week.toISOString().slice(0, 10);
+      case 'custom':
+        return customDueDate;
+      default:
+        const defaultDate = new Date(today);
+        defaultDate.setDate(defaultDate.getDate() + 3);
+        return defaultDate.toISOString().slice(0, 10);
+    }
+  };
+
   // 处理单选分派
   const handleDispatch = () => {
     if (!dispatchModal.problem || !selectedWorker) return;
@@ -171,11 +230,18 @@ export function ProblemDispatchPage() {
     dispatchProblem(
       dispatchModal.problem.id,
       selectedWorker.id,
-      selectedWorker.name
+      selectedWorker.name,
+      'U001',
+      '系统管理员',
+      calculateDueDate(),
+      requiredFeedback
     );
 
+    // 重置状态
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
     setSelectedWorker(null);
+    setExpectedCompletion('3days');
+    setCustomDueDate('');
   };
 
   // 处理批量分派
@@ -185,13 +251,24 @@ export function ProblemDispatchPage() {
     selectedProblems.forEach(problemId => {
       const problem = pendingProblems.find(p => p.id === problemId);
       if (problem) {
-        dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
+        dispatchProblem(
+          problem.id,
+          selectedWorker.id,
+          selectedWorker.name,
+          'U001',
+          '系统管理员',
+          calculateDueDate(),
+          requiredFeedback
+        );
       }
     });
 
+    // 重置状态
     setSelectedProblems([]);
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
     setSelectedWorker(null);
+    setExpectedCompletion('3days');
+    setCustomDueDate('');
   };
 
   // 切换全选
@@ -411,68 +488,15 @@ export function ProblemDispatchPage() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-            <Send className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">问题分派</h1>
-            <p className="text-sm text-gray-500">将巡检发现的问题分派给员工处理</p>
-          </div>
-        </div>
-      </div>
+      <ProblemPageHeader />
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{totalCount}</div>
-              <div className="text-sm text-gray-500">问题总数</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{pendingProblems.length}</div>
-              <div className="text-sm text-gray-500">待分派</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Send className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{dispatchedProblems.length}</div>
-              <div className="text-sm text-gray-500">已分派</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{handledProblems.length}</div>
-              <div className="text-sm text-gray-500">已处理</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProblemStatsCards
+        totalCount={totalCount}
+        pendingCount={pendingProblems.length}
+        dispatchedCount={dispatchedProblems.length}
+        handledCount={handledProblems.length}
+      />
 
       {/* 标签页切换 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -502,7 +526,7 @@ export function ProblemDispatchPage() {
             <List className="w-4 h-4" />
             关联任务
             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
-              {tasks.length}
+              {tasks.filter(t => t.sourceProblemId).length}
             </span>
           </button>
         </div>
@@ -512,409 +536,288 @@ export function ProblemDispatchPage() {
       {activeTab === 'problems' && (
       <>
       {/* 筛选工具栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* 时间筛选 */}
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg overflow-hidden border border-gray-200">
-              {[
-                { value: 'all', label: '全部' },
-                { value: 'week', label: '本周' },
-                { value: 'month', label: '本月' },
-                { value: 'year', label: '本年' },
-                { value: 'custom', label: '时间段' },
-              ].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setTimeFilter(opt.value as typeof timeFilter)}
-                  className={`px-3 py-1.5 text-sm ${
-                    timeFilter === opt.value
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <ProblemFilterToolbar
+        timeFilter={timeFilter}
+        dateRange={dateRange}
+        statusFilter={statusFilter}
+        severityFilter={severityFilter}
+        sourceModuleFilter={sourceModuleFilter}
+        exportMode={exportMode}
+        batchDeleteMode={batchDeleteMode}
+        batchDispatchMode={batchDispatchMode}
+        selectedRowsLength={selectedRows.length}
+        selectedProblemsLength={selectedProblems.length}
+        onTimeFilterChange={setTimeFilter}
+        onDateRangeChange={setDateRange}
+        onStatusFilterChange={setStatusFilter}
+        onSeverityFilterChange={setSeverityFilter}
+        onSourceModuleChange={setSourceModuleFilter}
+        onBatchDispatch={() => {
+          setBatchDispatchMode(true);
+          setSelectedProblems([]);
+          setStatusFilter('pending');
+        }}
+        onBatchDelete={() => {}}
+        onShowDeleteWarning={() => setShowDeleteWarning(true)}
+        onExport={() => {
+          setExportMode(true);
+          setSelectedRows([]);
+        }}
+        onCancelExport={handleCancelExport}
+        onCancelBatchDelete={() => {
+          setBatchDeleteMode(false);
+          setSelectedRows([]);
+        }}
+        onCancelBatchDispatch={() => {
+          setBatchDispatchMode(false);
+          setSelectedProblems([]);
+        }}
+      />
 
-          {/* 自定义时间段筛选 */}
-          {timeFilter === 'custom' && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-400">至</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {/* 状态筛选 */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">状态：</span>
-            <div className="flex rounded-lg overflow-hidden border border-gray-200">
-              {[
-                { value: 'all', label: '全部' },
-                { value: 'pending', label: '待分派' },
-                { value: 'dispatched', label: '已分派' },
-                { value: 'handled', label: '已处理' },
-              ].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setStatusFilter(opt.value as typeof statusFilter)}
-                  className={`px-3 py-1.5 text-sm ${
-                    statusFilter === opt.value
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 严重程度筛选 */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">严重程度：</span>
-            <select
-              value={severityFilter}
-              onChange={e => setSeverityFilter(e.target.value as typeof severityFilter)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">全部</option>
-              <option value="轻微">轻微</option>
-              <option value="中等">中等</option>
-              <option value="严重">严重</option>
-            </select>
-          </div>
-
-          {/* 来源模块筛选 */}
-          <SourceFilter
-            value={sourceModuleFilter}
-            onChange={setSourceModuleFilter}
-          />
-
-          {/* 操作按钮 */}
-          {exportMode ? (
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => setShowExportModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                确认导出
-              </button>
-              <button
-                onClick={handleCancelExport}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </div>
-          ) : batchDeleteMode ? (
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => setShowDeleteWarning(true)}
-                disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 className="w-4 h-4" />
-                确认删除
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDeleteMode(false);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </div>
-          ) : batchDispatchMode ? (
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
-                disabled={selectedProblems.length === 0}
-                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4" />
-                确认分派
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDispatchMode(false);
-                  setSelectedProblems([]);
-                }}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => {
-                  setBatchDispatchMode(true);
-                  setSelectedProblems([]); // 清空已选
-                  setStatusFilter('pending'); // 自动切换到待分派筛选
-                }}
-                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
-              >
-                <Send className="w-4 h-4" />
-                批量分派
-              </button>
-              <button
-                onClick={() => {
-                  setExportMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 问题列表 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-12">
-                  {(batchDeleteMode || exportMode || batchDispatchMode) && filteredProblems.length > 0 && (
-                    <input
-                      type="checkbox"
-                      checked={
-                        batchDispatchMode
-                          ? selectedProblems.length === pendingProblems.length && pendingProblems.length > 0
-                          : selectedRows.length === filteredProblems.length
-                      }
-                      onChange={batchDispatchMode ? toggleSelectAll : handleBatchSelectAll}
-                      className="w-4 h-4 rounded border-white/30 bg-white/20"
-                    />
-                  )}
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">来源</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">问题描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">严重程度</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">处理人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredProblems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
-                    暂无问题数据
-                  </td>
-                </tr>
-              ) : (
-                filteredProblems.map(problem => (
-                  <tr key={problem.id} className="hover:bg-blue-50 transition-colors">
-                    <td className="px-4 py-3">
-                      {batchDispatchMode ? (
-                        problem.status === '待处理' && !problem.sourceTaskId ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedProblems.includes(problem.id)}
-                            onChange={() => toggleSelect(problem.id)}
-                            className="w-4 h-4 rounded border-gray-300"
-                          />
-                        ) : null
-                      ) : (batchDeleteMode || exportMode) ? (
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(problem.id)}
-                          onChange={() => handleBatchSelectRow(problem.id)}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      <button
-                        onClick={() => setDetailModal({ isOpen: true, problem })}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
-                        title="点击查看详情"
-                      >
-                        {problem.problemCode}
-                      </button>
-                    </td>
-                    {/* 来源列 */}
-                    <td className="px-4 py-3">
-                      <SourceCell problem={problem} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[300px] truncate">
-                      {problem.issueText}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        problem.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
-                        problem.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
-                        {problem.issueSeverity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        problem.status === '已处理' ? 'bg-green-100 text-green-700' :
-                        problem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {problem.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {problem.handler || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {problem.status === '待处理' && !problem.sourceTaskId && (
-                        <button
-                          onClick={() => setDispatchModal({ isOpen: true, problem, batchMode: false })}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs hover:bg-orange-600"
-                        >
-                          <Send className="w-3 h-3" />
-                          分派
-                        </button>
-                      )}
-                      {problem.sourceTaskId && (
-                        <span className="text-xs text-blue-600">已分派</span>
-                      )}
-                      {problem.status === '已处理' && (
-                        <span className="text-xs text-green-600">已完成</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* 问题表格 */}
+      <ProblemTable
+        problems={filteredProblems}
+        selectedRows={selectedRows}
+        selectedProblems={selectedProblems}
+        batchDeleteMode={batchDeleteMode}
+        batchDispatchMode={batchDispatchMode}
+        exportMode={exportMode}
+        pendingProblems={pendingProblems}
+        onViewDetail={(problem) => setDetailModal({ isOpen: true, problem })}
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={handleBatchSelectAll}
+        onBatchSelectAll={toggleSelectAll}
+        onBatchDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
+        onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
+        onBatchDelete={() => setShowDeleteWarning(true)}
+        onExport={() => setExportMode(true)}
+        onCancelBatchDelete={() => {
+          setBatchDeleteMode(false);
+          setSelectedRows([]);
+        }}
+        onCancelBatchDispatch={() => {
+          setBatchDispatchMode(false);
+          setSelectedProblems([]);
+        }}
+        onCancelExport={handleCancelExport}
+        onShowExportModal={() => setShowExportModal(true)}
+      />
 
       {/* 分派弹窗 */}
-      {dispatchModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-            {/* 弹窗头部 */}
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {dispatchModal.batchMode ? '批量分派问题' : '分派问题'}
-              </h3>
-              <button
-                onClick={() => {
-                  setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-                  setSelectedWorker(null);
-                }}
-                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* 弹窗内容 */}
-            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-              {/* 问题信息 */}
-              {dispatchModal.problem && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">问题描述</div>
-                  <div className="text-sm font-medium text-gray-800 mb-2">
-                    {dispatchModal.problem.issueText}
-                  </div>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span>温室：{dispatchModal.problem.greenhouseName}</span>
-                    <span>严重程度：{dispatchModal.problem.issueSeverity}</span>
-                  </div>
-                </div>
-              )}
-
-              {dispatchModal.batchMode && (
-                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="text-sm text-orange-800">
-                    选中了 {selectedProblems.length} 个问题，将分派给同一执行人
-                  </div>
-                </div>
-              )}
-
-              {/* 执行人选择 */}
-              <div>
-                <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  选择执行人
-                </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {workerList.map(worker => (
-                    <div
-                      key={worker.id}
-                      onClick={() => setSelectedWorker({ id: worker.id, name: worker.name })}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedWorker?.id === worker.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium text-gray-800">{worker.name}</div>
-                          <div className="text-xs text-gray-500">{worker.position}</div>
-                        </div>
-                        <div className="flex gap-1">
-                          {worker.skillTags.slice(0, 3).map(tag => (
-                            <span
-                              key={tag}
-                              className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+      <Modal
+        isOpen={dispatchModal.isOpen}
+        onClose={() => {
+          setDispatchModal({ isOpen: false, problem: null, batchMode: false });
+          setSelectedWorker(null);
+          setExpectedCompletion('3days');
+          setCustomDueDate('');
+        }}
+        title={dispatchModal.batchMode ? '批量分派问题' : '分派问题'}
+        size="xl"
+        showFooter={true}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              onClick={() => {
+                setDispatchModal({ isOpen: false, problem: null, batchMode: false });
+                setSelectedWorker(null);
+                setExpectedCompletion('3days');
+                setCustomDueDate('');
+              }}
+              className="px-5 py-2.5 text-base font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={dispatchModal.batchMode ? handleBatchDispatch : handleDispatch}
+              disabled={!selectedWorker}
+              className={`px-6 py-2.5 text-base font-medium rounded-lg transition-colors ${
+                selectedWorker
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-md'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              确认分派
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* 问题信息 */}
+          {dispatchModal.problem && (
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="text-sm text-slate-500 mb-1 font-medium">问题描述</div>
+              <div className="text-base font-semibold text-indigo-700 mb-3">
+                {dispatchModal.problem.issueText}
+              </div>
+              <div className="flex gap-4 text-sm">
+                <span className="text-slate-600">
+                  <span className="font-medium">温室：</span>
+                  <span className="text-emerald-600 font-medium">{dispatchModal.problem.greenhouseName}</span>
+                </span>
+                <span className="text-slate-600">
+                  <span className="font-medium">严重程度：</span>
+                  <span className={`font-semibold ${
+                    dispatchModal.problem.issueSeverity === '严重' ? 'text-red-600' :
+                    dispatchModal.problem.issueSeverity === '中等' ? 'text-amber-600' :
+                    'text-blue-600'
+                  }`}>{dispatchModal.problem.issueSeverity}</span>
+                </span>
               </div>
             </div>
+          )}
 
-            {/* 弹窗底部 */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+          {dispatchModal.batchMode && (
+            <div className="p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
+              <div className="text-base text-orange-800 font-medium">
+                选中了 {selectedProblems.length} 个问题，将分派给同一执行人
+              </div>
+            </div>
+          )}
+
+          {/* 执行人选择 */}
+          <div>
+            <div className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-500" />
+              选择执行人
+            </div>
+            <Select
+              value={selectedWorker?.id || ''}
+              onValueChange={(value) => {
+                const worker = workerList.find(w => w.id === value);
+                if (worker) {
+                  setSelectedWorker({ id: worker.id, name: worker.name });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg text-base focus:border-blue-500">
+                <SelectValue placeholder="请选择执行人..." />
+              </SelectTrigger>
+              <SelectContent>
+                {workerList.map(worker => (
+                  <SelectItem key={worker.id} value={worker.id} className="text-base py-3">
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <div className="font-medium">{worker.name}</div>
+                        <div className="text-sm text-gray-500">{worker.position}</div>
+                      </div>
+                      <div className="flex gap-1 ml-4">
+                        {worker.skillTags.slice(0, 2).map(tag => (
+                          <span
+                            key={tag}
+                            className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedWorker && (
+              <div className="mt-2 text-sm text-emerald-600 font-medium">
+                已选择：{selectedWorker.name}
+              </div>
+            )}
+          </div>
+
+          {/* 期望完成时间 */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" />
+              期望完成时间
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'today', label: '今天', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
+                { value: 'tomorrow', label: '明天', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+                { value: '3days', label: '3天内', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
+                { value: 'week', label: '本周', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    setExpectedCompletion(opt.value as typeof expectedCompletion);
+                    setCustomDueDate('');
+                  }}
+                  className={`px-4 py-2 rounded-lg border-2 font-medium transition-colors ${
+                    expectedCompletion === opt.value && !customDueDate
+                      ? `${opt.bg} ${opt.border} ${opt.text}`
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
               <button
-                onClick={() => {
-                  setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-                  setSelectedWorker(null);
-                }}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                onClick={() => setExpectedCompletion('custom')}
+                className={`px-4 py-2 rounded-lg border-2 font-medium transition-colors ${
+                  expectedCompletion === 'custom'
+                    ? 'bg-violet-50 border-violet-200 text-violet-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                }`}
               >
-                取消
+                自定义
               </button>
-              <button
-                onClick={dispatchModal.batchMode ? handleBatchDispatch : handleDispatch}
-                disabled={!selectedWorker}
-                className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                确认分派
-              </button>
+              {expectedCompletion === 'custom' && (
+                <input
+                  type="date"
+                  value={customDueDate}
+                  onChange={(e) => setCustomDueDate(e.target.value)}
+                  className="px-4 py-2 border-2 border-violet-200 rounded-lg text-base focus:outline-none focus:border-violet-500"
+                />
+              )}
+            </div>
+            {expectedCompletion !== 'custom' && (
+              <div className="mt-2 text-sm text-slate-500">
+                预计完成日期：<span className="font-medium text-violet-600">{calculateDueDate()}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 必填反馈要求 */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-emerald-500" />
+              必填反馈要求
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {feedbackOptions.map(item => (
+                <label
+                  key={item.key}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 cursor-pointer transition-all ${
+                    requiredFeedback.includes(item.key)
+                      ? 'border-emerald-400 bg-emerald-50'
+                      : 'border-gray-200 bg-white hover:border-emerald-200'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={requiredFeedback.includes(item.key)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setRequiredFeedback([...requiredFeedback, item.key]);
+                      } else {
+                        setRequiredFeedback(requiredFeedback.filter(f => f !== item.key));
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  <item.icon className={`w-4 h-4 ${requiredFeedback.includes(item.key) ? 'text-emerald-500' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${requiredFeedback.includes(item.key) ? 'text-emerald-700' : 'text-gray-600'}`}>
+                    {item.label}
+                  </span>
+                  {requiredFeedback.includes(item.key) && (
+                    <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto" />
+                  )}
+                </label>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </Modal>
       </>)}
 
       {/* 关联任务标签页 */}
@@ -938,7 +841,7 @@ export function ProblemDispatchPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold">任务编号</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">任务标题</th>
@@ -951,14 +854,14 @@ export function ProblemDispatchPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {tasks.length === 0 ? (
+                  {tasks.filter(t => t.sourceProblemId).length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
                         暂无分派任务
                       </td>
                     </tr>
                   ) : (
-                    tasks.map(task => {
+                    tasks.filter(t => t.sourceProblemId).map(task => {
                       const problem = [...pendingProblems, ...dispatchedProblems, ...handledProblems].find(
                         p => p.id === task.sourceProblemId
                       );
