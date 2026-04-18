@@ -24,9 +24,9 @@ export function TaskTableHeader({
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
 
   return (
-    <tr className="bg-gray-50">
+    <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
       {showCheckbox && (
-        <th className="px-3 py-3 text-center">
+        <th className="px-4 py-3 text-center">
           <input
             type="checkbox"
             checked={isAllSelected}
@@ -38,21 +38,21 @@ export function TaskTableHeader({
           />
         </th>
       )}
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">批次</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">执行人</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
-      <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务ID</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务类型</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务区域</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">批次</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">优先级</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作业标准</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划开始</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划结束</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务工时</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
     </tr>
   );
 }

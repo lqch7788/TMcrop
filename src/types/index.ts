@@ -91,6 +91,9 @@ export interface TempTask {
   tempTaskType: string;
   workLocation: string;
   estimatedHours: number;
+  estimatedDays?: number;
+  greenhouseId?: string;
+  workerCount?: number;
   rejectCount?: number;
 }
 
@@ -102,12 +105,15 @@ export const TEMP_TASK_URGENCY_CONFIG = {
   critical: { label: '非常紧急', color: 'bg-red-100 text-red-700', badge: 'bg-red-500 text-white' },
 } as const;
 
+// 临时任务类型
 export const TEMP_TASK_TYPES = [
-  '病虫害处理',
-  '设备维修',
-  '人员调配',
-  '应急抢修',
-  '其他',
+  { value: 'farm_repair', label: '农事抢修' },
+  { value: 'equipment_repair', label: '设备维修' },
+  { value: 'facility_maintenance', label: '设施维护' },
+  { value: 'staff_dispatch', label: '人员调配' },
+  { value: 'cleaning', label: '清洁整理' },
+  { value: 'safety_check', label: '安全检查' },
+  { value: 'other', label: '其他' },
 ] as const;
 
 export interface Material {

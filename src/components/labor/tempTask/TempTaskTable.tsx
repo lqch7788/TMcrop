@@ -5,6 +5,7 @@ import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTemp
 const statusConfig = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-50' },
   pending: { label: '待执行', color: 'text-amber-600', bg: 'bg-amber-50' },
+  accepted: { label: '已接受', color: 'text-teal-600', bg: 'bg-teal-50' },
   in_progress: { label: '进行中', color: 'text-blue-600', bg: 'bg-blue-50' },
   waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-50' },
   completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-50' },
@@ -12,6 +13,39 @@ const statusConfig = {
   rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-50' },
   pending_reassign: { label: '待重新派发', color: 'text-purple-600', bg: 'bg-purple-50' },
 };
+
+// 必填反馈配置
+const FEEDBACK_CONFIG: Record<string, { label: string; icon: string }> = {
+  workload_confirm: { label: '工作量', icon: '📊' },
+  gps: { label: '位置', icon: '📍' },
+  material: { label: '物资', icon: '📦' },
+  photo_before: { label: '前照', icon: '📷' },
+  photo_after: { label: '后照', icon: '📷' },
+  voice: { label: '语音', icon: '🎤' },
+};
+
+// 渲染必填反馈标签
+function renderFeedbackTags(feedbacks: string[] = []) {
+  if (feedbacks.length === 0) {
+    return <span className="text-gray-400 text-xs">无</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1 justify-center">
+      {feedbacks.map(fb => {
+        const config = FEEDBACK_CONFIG[fb];
+        return config ? (
+          <span
+            key={fb}
+            className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded flex items-center gap-0.5"
+            title={config.label}
+          >
+            {config.icon} {config.label}
+          </span>
+        ) : null;
+      })}
+    </div>
+  );
+}
 
 interface TempTaskTableProps {
   tasks: TempTask[];
@@ -22,8 +56,12 @@ interface TempTaskTableProps {
   selectedRows: string[];
   onViewTask: (task: TempTask) => void;
   onEditTask: (task: TempTask) => void;
-  onStartTask: (task: TempTask) => void;
-  onSubmitComplete: (task: TempTask) => void;
+  onStartTask?: (task: TempTask) => void;
+  onSubmitComplete?: (task: TempTask) => void;
+  onAccept?: (task: TempTask) => void;
+  onWithdraw?: (task: TempTask) => void;
+  onCancel?: (task: TempTask) => void;
+  onReassign?: (task: TempTask) => void;
   onAcceptComplete?: (task: TempTask) => void;
   onRejectComplete?: (task: TempTask, reason: string) => void;
   onSelectAll?: () => void;
@@ -48,6 +86,12 @@ export function TempTaskTable({
   onEditTask,
   onStartTask,
   onSubmitComplete,
+  onAccept,
+  onWithdraw,
+  onCancel,
+  onReassign,
+  onAcceptComplete,
+  onRejectComplete,
   onSelectAll,
   onSelectRow,
   pagination,
@@ -98,7 +142,7 @@ export function TempTaskTable({
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={getAllSelectedForMode()}
@@ -107,16 +151,19 @@ export function TempTaskTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作地点</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">截止日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">紧急程度</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">超时</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务编号</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务名称</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">类型</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">工作地点</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">发布人</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">截止日期</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预计天数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">紧急程度</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">超时</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-300">
@@ -126,10 +173,9 @@ export function TempTaskTable({
               <tr
                 key={task.id}
                 className={`hover:bg-blue-100 transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''} ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''} ${overdueStatus === 'overdue' ? 'bg-red-50' : ''} ${overdueStatus === 'warning' ? 'bg-orange-50' : ''}`}
-                onClick={() => onViewTask(task)}
               >
                 {showCheckbox && (
-                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedRows.includes(task.id)}
@@ -143,7 +189,7 @@ export function TempTaskTable({
                     />
                   </td>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
                   <button
                     onClick={() => onViewTask(task)}
                     className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -152,42 +198,51 @@ export function TempTaskTable({
                     {task.taskCode}
                   </button>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     {task.urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                    <span className="font-medium text-gray-900">{task.title}</span>
+                    <span className="font-medium text-gray-900 text-sm">{task.title}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{task.tempTaskType}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.typeName || task.type}</td>
+                <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {task.workLocation}
+                    {task.location || task.workLocation || task.greenhouseName}
                   </div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     {task.assigneeName}
                   </div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     {task.dueDate}
                   </div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 text-center text-sm text-gray-600">
+                  {(task as any).estimatedDays || 0}天
+                </td>
+                <td className="px-3 py-3 text-center text-sm text-gray-600">
+                  {(task as any).workerCount || 1}人
+                </td>
+                <td className="px-3 py-3 text-center text-sm font-medium text-emerald-600">
+                  {((task as any).estimatedDays * 8 + task.estimatedHours) * ((task as any).workerCount || 1)}h
+                </td>
+                <td className="px-3 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[task.status].bg} ${statusConfig[task.status].color}`}>
                     {statusConfig[task.status].label}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[task.urgency].badge}`}>
-                    {TEMP_TASK_URGENCY_CONFIG[task.urgency].label}
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[task.urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
+                    {TEMP_TASK_URGENCY_CONFIG[task.urgency]?.label || task.urgency}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   {overdueStatus === 'overdue' && (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
@@ -199,41 +254,57 @@ export function TempTaskTable({
                       即将到期
                     </span>
                   )}
-                  {overdueStatus === 'normal' && (
-                    <span className="text-xs text-gray-400">-</span>
-                  )}
+  
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEditTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="编辑"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {task.status === 'pending' && (
+                <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {/* 待验收 - 验收按钮 */}
+                    {task.status === 'waiting_acceptance' && onAccept && (
                       <button
-                        onClick={() => onStartTask(task)}
-                        className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        onClick={() => onAccept(task)}
+                        className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                       >
-                        开始
+                        验收
                       </button>
                     )}
-                    {task.status === 'in_progress' && (
+
+                    {/* pending - 撤回按钮 */}
+                    {task.status === 'pending' && onWithdraw && (
                       <button
-                        onClick={() => onSubmitComplete(task)}
-                        className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
+                        onClick={() => onWithdraw(task)}
+                        className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
                       >
-                        提交完成
+                        撤回
                       </button>
                     )}
-                    {task.status === 'waiting_acceptance' && onAcceptComplete && (
+
+                    {/* in_progress - 取消按钮 */}
+                    {task.status === 'in_progress' && onCancel && (
                       <button
-                        onClick={() => onAcceptComplete(task)}
-                        className="px-3 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
+                        onClick={() => onCancel(task)}
+                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
                       >
-                        审核通过
+                        取消
+                      </button>
+                    )}
+
+                    {/* rejected/pending_reassign - 重新派发按钮 */}
+                    {(task.status === 'rejected' || task.status === 'pending_reassign') && onReassign && (
+                      <button
+                        onClick={() => onReassign(task)}
+                        className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
+                      >
+                        重新派发
+                      </button>
+                    )}
+
+                    {/* pending 但没有执行人 - 选择执行人按钮 */}
+                    {task.status === 'pending' && !task.assigneeId && onReassign && (
+                      <button
+                        onClick={() => onReassign(task)}
+                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                      >
+                        选择执行人
                       </button>
                     )}
                   </div>

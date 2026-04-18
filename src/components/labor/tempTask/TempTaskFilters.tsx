@@ -48,27 +48,10 @@ export function TempTaskFilters({
   onOverdueChange,
 }: TempTaskFiltersProps) {
   return (
-    <div className="space-y-4">
-      {/* 统计信息 + 紧急程度筛选 */}
-      <div className="flex items-center justify-between">
-        {/* 超时统计徽章 */}
-        <div className="flex items-center gap-3">
-          {stats.overdue > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-              <AlertTriangle className="w-4 h-4" />
-              <span>已超时 {stats.overdue} 个</span>
-            </div>
-          )}
-          {stats.warning > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-              <Clock className="w-4 h-4" />
-              <span>即将到期 {stats.warning} 个</span>
-            </div>
-          )}
-        </div>
-
-        {/* 紧急程度筛选 */}
-        <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
+    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
+      <div className="flex flex-col lg:flex-row gap-4 items-center">
+        {/* 紧急程度筛选（放在搜索框前面） */}
+        <div className="bg-white rounded-xl p-1 inline-flex shadow-sm flex-shrink-0">
           {(['all', 'normal', 'urgent', 'critical'] as const).map((urgency) => (
             <button
               key={urgency}
@@ -89,45 +72,40 @@ export function TempTaskFilters({
             </button>
           ))}
         </div>
-      </div>
 
-      {/* 搜索和状态筛选 */}
-      <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* 搜索 */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索任务名称、任务编号..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* 超时筛选 */}
-          <select
-            value={overdueFilter}
-            onChange={(e) => onOverdueChange(e.target.value as 'all' | 'overdue' | 'warning')}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white min-w-[120px]"
-          >
-            {overdueOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-
-          {/* 状态筛选 */}
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusChange(e.target.value as 'all' | TempTask['status'])}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white min-w-[140px]"
-          >
-            {statusOptions.map((status) => (
-              <option key={status.value} value={status.value}>{status.label}</option>
-            ))}
-          </select>
+        {/* 搜索 */}
+        <div className="flex-1 relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索任务名称、任务编号..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
         </div>
+
+        {/* 超时筛选 */}
+        <select
+          value={overdueFilter}
+          onChange={(e) => onOverdueChange(e.target.value as 'all' | 'overdue' | 'warning')}
+          className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white min-w-[120px]"
+        >
+          {overdueOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+
+        {/* 状态筛选 */}
+        <select
+          value={statusFilter}
+          onChange={(e) => onStatusChange(e.target.value as 'all' | TempTask['status'])}
+          className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white min-w-[140px]"
+        >
+          {statusOptions.map((status) => (
+            <option key={status.value} value={status.value}>{status.label}</option>
+          ))}
+        </select>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, AlertTriangle, Edit, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
-import { TempTask } from '../../../types';
+import { TempTask, TEMP_TASK_TYPES } from '../../../types';
 import { tempTasks as initialTempTasks, users } from '../../../data/mockData';
 import { TempTaskFilters } from './TempTaskFilters';
 import { TempTaskTable } from './TempTaskTable';
@@ -337,9 +337,9 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
                 />
               </div>
 
-              {/* 负责人 - 可编辑 */}
+              {/* 执行人 - 可编辑 */}
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">负责人</div>
+                <div className="text-xs text-gray-500 mb-1">执行人</div>
                 <select
                   value={editedData.assigneeId ?? currentTask.assigneeId}
                   onChange={(e) => {
@@ -775,6 +775,7 @@ export function TempTaskPage() {
     updateFormData,
     handleSubmit: handleFormSubmit,
     handleSubmitDraft,
+    generateNewTaskCode,
   } = useTempTaskForm({
     initialData: editingTask,
     users: users.map(u => ({ id: u.id, name: u.name })),
@@ -784,46 +785,76 @@ export function TempTaskPage() {
         console.log('更新临时任务:', editingTask.id, taskData);
       } else {
         // ========== 数据闭环：新建临时任务 ==========
-        // 使用 useTasks 创建任务（sourceType = 'tempTask'）
-        const newTask = createTask({
+        const finalStatus = status === 'pending' ? 'pending' : 'draft';
+        // 计算总工时
+        const totalEstimatedHours = ((taskData.estimatedDays || 0) * 8 + (taskData.estimatedHours || 0)) * (taskData.workerCount || 1);
+
+        // ========== 方式1：使用 useTasks.createTask() 创建临时任务（同步到"我的任务-临时任务处理"）==========
+        const useTasksTask = createTask({
           title: taskData.title || '',
           type: taskData.tempTaskType || 'other',
-          typeName: taskData.tempTaskType || '其他',
-          status: 'draft',
+          typeName: TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他',
           priority: mapUrgencyToPriority(taskData.urgency),
-          progress: 0,
-          sourceType: 'tempTask',
           assigneeId: taskData.assigneeId || '',
           assigneeName: taskData.assigneeName || '待分配',
           assignerId: 'admin',
           assignerName: '管理员',
+          dueDate: taskData.dueDate || '',
+          description: taskData.description || '',
+          remarks: taskData.notes || '',
+          sourceType: 'tempTask',
+          // 临时任务特有字段
+          workLocation: taskData.workLocation || '',
+          tempTaskType: taskData.tempTaskType || 'other',
+          urgency: taskData.urgency || 'normal',
+          estimatedDays: taskData.estimatedDays || 0,
+          estimatedHours: taskData.estimatedHours || 0,
+          workerCount: taskData.workerCount || 1,
+          totalEstimatedHours,
+          greenhouseId: taskData.greenhouseId || '',
           greenhouseName: taskData.workLocation || '',
-          cropName: '',
-          feedbackRequirements: [],
-          dueDate: taskData.dueDate,
-          estimatedHours: taskData.estimatedHours || 1,
-        }, 'tempTask');
+          // 必填反馈
+          requiredFeedback: taskData.requiredFeedback || [],
+        }, 'tempTask', finalStatus);
 
-        // 自动发布任务（status: draft → pending）
-        if (status === 'pending') {
-          publishTask(newTask.id);
-        }
+        // ========== 方式2：同时使用 addTempTask（兼容临时任务派发列表显示）==========
+        const newTask = addTempTask({
+          title: taskData.title || '',
+          type: taskData.tempTaskType || 'other',
+          typeName: TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他',
+          urgency: taskData.urgency || 'normal',
+          priority: mapUrgencyToPriority(taskData.urgency),
+          location: taskData.workLocation || '',
+          greenhouseId: taskData.greenhouseId || '',
+          greenhouseName: taskData.workLocation || '',
+          assigneeId: taskData.assigneeId || '',
+          assigneeName: taskData.assigneeName || '待分配',
+          assignerId: 'admin',
+          assignerName: '管理员',
+          dueDate: taskData.dueDate || '',
+          estimatedDays: taskData.estimatedDays || 0,
+          estimatedHours: taskData.estimatedHours || 0,
+          workerCount: taskData.workerCount || 1,
+          description: taskData.description || '',
+          remarks: taskData.notes || '',
+          status: finalStatus,
+          requiredFeedback: taskData.requiredFeedback || [],
+        });
 
         // ========== 数据闭环：同步到农事操作记录 ==========
         addTempTaskRecord({
-          operationType: taskData.tempTaskType || '其他',
-          operationTypeName: `临时任务-${taskData.tempTaskType || '其他'}`,
-          status: status === 'pending' ? 'pending' : 'draft',
-          greenhouseId: '',
+          operationType: taskData.tempTaskType || 'other',
+          operationTypeName: `临时任务-${TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他'}`,
+          status: finalStatus,
+          greenhouseId: taskData.greenhouseId || '',
           greenhouseName: taskData.workLocation || '',
-          cropName: '',
           operatorId: taskData.assigneeId || '',
           operatorName: taskData.assigneeName || '待分配',
           operationDate: new Date().toISOString().split('T')[0],
-          sourceId: newTask.id,
-          sourceCode: newTask.taskCode,
+          sourceId: useTasksTask.id,
+          sourceCode: useTasksTask.taskCode,
           progress: 0,
-          remarks: status === 'pending' ? '临时任务已发布' : '临时任务已创建（草稿）',
+          remarks: finalStatus === 'pending' ? '临时任务已发布' : '临时任务已创建（草稿）',
         });
       }
       closeFormModal();
@@ -860,7 +891,7 @@ export function TempTaskPage() {
       status: 'in_progress',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      cropName: '',
+      
       operatorId: task.assigneeId,
       operatorName: task.assigneeName,
       operationDate: new Date().toISOString().split('T')[0],
@@ -885,7 +916,7 @@ export function TempTaskPage() {
       status: 'waiting_acceptance',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      cropName: '',
+      
       operatorId: task.assigneeId,
       operatorName: task.assigneeName,
       operationDate: new Date().toISOString().split('T')[0],
@@ -908,7 +939,7 @@ export function TempTaskPage() {
       status: 'completed',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      cropName: '',
+      
       operatorId: task.assignerId,
       operatorName: task.assignerName,
       operationDate: new Date().toISOString().split('T')[0],
@@ -935,7 +966,7 @@ export function TempTaskPage() {
       status: 'pending',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      cropName: '',
+      
       operatorId: task.assignerId,
       operatorName: task.assignerName,
       operationDate: new Date().toISOString().split('T')[0],
@@ -958,7 +989,7 @@ export function TempTaskPage() {
       status: 'rejected',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      cropName: '',
+      
       operatorId: task.assignerId,
       operatorName: task.assignerName,
       operationDate: new Date().toISOString().split('T')[0],
@@ -995,7 +1026,7 @@ export function TempTaskPage() {
         status: 'cancelled',
         greenhouseId: '',
         greenhouseName: withdrawCancelTask.location || '',
-        cropName: '',
+        
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
         operationDate: new Date().toISOString().split('T')[0],
@@ -1022,7 +1053,7 @@ export function TempTaskPage() {
         status: 'cancelled',
         greenhouseId: '',
         greenhouseName: withdrawCancelTask.location || '',
-        cropName: '',
+        
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
         operationDate: new Date().toISOString().split('T')[0],
@@ -1058,7 +1089,7 @@ export function TempTaskPage() {
         status: 'pending',
         greenhouseId: '',
         greenhouseName: reassignTask.location || '',
-        cropName: '',
+        
         operatorId: reassignTask.assignerId,
         operatorName: reassignTask.assignerName,
         operationDate: new Date().toISOString().split('T')[0],
@@ -1145,13 +1176,13 @@ export function TempTaskPage() {
 
   const handleDoExport = () => {
     const selectedData = tempTasks.filter(t => selectedRows.includes(t.id));
-    const headers = ['任务编号', '任务名称', '类型', '工作地点', '负责人', '截止日期', '紧急程度', '状态', '描述'];
+    const headers = ['任务编号', '任务名称', '类型', '工作地点', '发布人', '截止日期', '紧急程度', '状态', '描述'];
     const exportData = selectedData.map(row => ({
       '任务编号': row.taskCode,
       '任务名称': row.title,
       '类型': row.tempTaskType,
       '工作地点': row.workLocation,
-      '负责人': row.assigneeName,
+      '发布人': row.assigneeName,
       '截止日期': row.dueDate,
       '紧急程度': row.urgency,
       '状态': row.status,
@@ -1216,26 +1247,40 @@ export function TempTaskPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-md">
           <p className="text-sm text-gray-500">总任务</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-md">
           <p className="text-sm text-gray-500">待执行</p>
           <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-md">
           <p className="text-sm text-gray-500">进行中</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{stats.inProgress}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-md">
           <p className="text-sm text-gray-500">已完成</p>
           <p className="text-2xl font-bold text-green-600 mt-1">{stats.completed}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-red-500">
+        <div className="bg-white rounded-xl p-4 shadow-md border-l-4 border-red-500">
           <p className="text-sm text-gray-500">非常紧急</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{stats.critical}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-md border-l-4 border-orange-500">
+          <p className="text-sm text-gray-500">超时预警</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-2xl font-bold text-orange-600">
+              {stats.overdue + stats.warning}
+            </p>
+            {stats.overdue > 0 && (
+              <span className="text-xs text-red-600">已超时{stats.overdue}</span>
+            )}
+            {stats.warning > 0 && (
+              <span className="text-xs text-orange-600">即将到期{stats.warning}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1257,19 +1302,6 @@ export function TempTaskPage() {
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-semibold text-gray-900">临时任务派发列表</h3>
-            {/* 已超时/即将到期徽章 */}
-            {stats.overdue > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                <AlertTriangle className="w-4 h-4" />
-                <span>已超时 {stats.overdue} 个</span>
-              </div>
-            )}
-            {stats.warning > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-                <Clock className="w-4 h-4" />
-                <span>即将到期 {stats.warning} 个</span>
-              </div>
-            )}
           </div>
           {exportMode ? (
             <div className="flex gap-2">
@@ -1597,6 +1629,7 @@ export function TempTaskPage() {
         onSubmitDraft={handleSubmitDraft}
         onSubmit={() => handleFormSubmit('pending')}
         onChange={updateFormData}
+        generateNewTaskCode={generateNewTaskCode}
       />
 
       {/* 批量编辑弹窗 */}

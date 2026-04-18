@@ -86,44 +86,44 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <tr>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
               <input
                 type="checkbox"
                 checked={selectedRows.length === tasks.length}
                 onChange={onSelectAll}
-                className="rounded border-gray-300"
+                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
               />
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               任务编号
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               任务标题
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               温室
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               农事类型
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               执行人
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               状态
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               紧急程度
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               物资
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               创建时间
             </th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
               操作
             </th>
           </tr>
