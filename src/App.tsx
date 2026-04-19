@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
+import { ToastProvider } from './contexts/ToastContext';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -262,9 +263,11 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <ApprovalProvider>
-        <AppContent />
-      </ApprovalProvider>
+      <ToastProvider>
+        <ApprovalProvider>
+          <AppContent />
+        </ApprovalProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }
