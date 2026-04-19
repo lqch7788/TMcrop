@@ -74,7 +74,7 @@ const materialsSubItems = [
 const farmSubItems = [
   { icon: Truck, label: '农事任务派发', path: '/task-dispatch' },
   { icon: Sparkles, label: '临时任务派发', path: '/temp-task' },
-  { icon: Eye, label: '巡查管理', path: '/inspection' },
+  { icon: Eye, label: '巡查反馈', path: '/inspection' },
   { icon: Send, label: '问题分派', path: '/problem-dispatch' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },

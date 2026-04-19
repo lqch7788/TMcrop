@@ -56,6 +56,7 @@ export default function InspectionPage() {
     startDate: '',
     endDate: '',
     status: '',
+    problemStatus: '',
   });
 
   // Export state
@@ -223,6 +224,11 @@ export default function InspectionPage() {
     if (searchFilters.startDate && record.checkDate < searchFilters.startDate) return false;
     if (searchFilters.endDate && record.checkDate > searchFilters.endDate) return false;
     if (searchFilters.status && record.status !== searchFilters.status) return false;
+    // 问题处理状态筛选
+    if (searchFilters.problemStatus) {
+      const problem = problems.find(p => p.id === record.problemId);
+      if (problem?.status !== searchFilters.problemStatus) return false;
+    }
     return true;
   });
 
@@ -232,12 +238,13 @@ export default function InspectionPage() {
 
   const handleReset = () => {
     setSearchFilters({
+      recordCode: '',
       inspectorName: '',
-      greenhouseId: '',
-      cropName: '',
+      inspectionType: '',
       startDate: '',
       endDate: '',
       status: '',
+      problemStatus: '',
     });
     setCurrentPage(1);
   };

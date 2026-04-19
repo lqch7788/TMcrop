@@ -8,6 +8,8 @@ export interface InspectionSearchFilters {
   startDate: string;
   endDate: string;
   status: string;
+  // 新增：问题处理状态筛选
+  problemStatus: string;
 }
 
 interface InspectionSearchProps {
@@ -18,7 +20,7 @@ interface InspectionSearchProps {
 }
 
 /**
- * 巡查管理搜索栏组件
+ * 巡查反馈搜索栏组件
  * 负责搜索过滤条件的显示和交互
  */
 export function InspectionSearch({
@@ -58,14 +60,14 @@ export function InspectionSearch({
           </select>
         </div>
 
-        {/* 巡查人员 */}
+        {/* 提交人 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">巡查人员</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">提交人</label>
           <input
             type="text"
             value={filters.inspectorName}
             onChange={(e) => onFiltersChange({ ...filters, inspectorName: e.target.value })}
-            placeholder="请输入巡查人员"
+            placeholder="请输入提交人"
             className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -104,6 +106,22 @@ export function InspectionSearch({
             <option value="normal">正常</option>
             <option value="attention">需关注</option>
             <option value="critical">异常</option>
+          </select>
+        </div>
+
+        {/* 问题处理状态 */}
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">问题处理状态</label>
+          <select
+            value={filters.problemStatus}
+            onChange={(e) => onFiltersChange({ ...filters, problemStatus: e.target.value })}
+            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value="">全部</option>
+            <option value="待处理">待处理</option>
+            <option value="处理中">处理中</option>
+            <option value="待验收">待验收</option>
+            <option value="已处理">已处理</option>
           </select>
         </div>
 

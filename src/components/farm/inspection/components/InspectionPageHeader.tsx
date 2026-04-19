@@ -1,5 +1,5 @@
 /**
- * 巡查管理页面头部组件
+ * 巡查反馈页面头部组件
  */
 
 import React from 'react';
@@ -11,7 +11,7 @@ interface InspectionPageHeaderProps {
 }
 
 export function InspectionPageHeader({
-  title = '巡查管理',
+  title = '巡查反馈',
   subtitle = '人工巡查记录管理'
 }: InspectionPageHeaderProps) {
   return (

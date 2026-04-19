@@ -17,6 +17,16 @@ const PRIORITY_OPTIONS = [
   { value: 'low', label: '低' },
 ];
 
+// 执行人选项
+const EXECUTOR_OPTIONS = [
+  { value: 'W001', label: '萧峰' },
+  { value: 'W002', label: '虚竹' },
+  { value: 'W003', label: '狄云' },
+  { value: 'W004', label: '石破天' },
+  { value: 'W005', label: '胡斐' },
+  { value: 'W006', label: '袁承志' },
+];
+
 export interface TempTaskFormProps {
   task?: Task | null;
   onSave: () => void;
@@ -40,16 +50,6 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
   const [assigneeId, setAssigneeId] = useState('');
   const [assigneeName, setAssigneeName] = useState('');
   const [dueDate, setDueDate] = useState('');
-
-  // 执行人选项
-  const EXECUTOR_OPTIONS = [
-    { value: 'W001', label: '萧峰' },
-    { value: 'W002', label: '虚竹' },
-    { value: 'W003', label: '狄云' },
-    { value: 'W004', label: '石破天' },
-    { value: 'W005', label: '胡斐' },
-    { value: 'W006', label: '袁承志' },
-  ];
 
   // 初始化表单数据
   useEffect(() => {
