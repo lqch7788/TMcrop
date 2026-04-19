@@ -1646,6 +1646,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-18T09:00:00.000Z',
     updatedAt: '2026-04-18T09:00:00.000Z',
+    startDate: '2026-04-18T08:00',
   },
   // 状态2: 待接受 (pending)
   {
@@ -1674,6 +1675,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-18T08:00:00.000Z',
     updatedAt: '2026-04-18T08:00:00.000Z',
+    startDate: '2026-04-18T08:00',
   },
   // 状态3: 已接受 (accepted)
   {
@@ -1703,6 +1705,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-17T10:00:00.000Z',
     updatedAt: '2026-04-17T14:00:00.000Z',
+    startDate: '2026-04-17T08:00',
   },
   // 状态4: 进行中 (in_progress)
   {
@@ -1732,6 +1735,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-17T09:00:00.000Z',
     updatedAt: '2026-04-18T10:00:00.000Z',
+    startDate: '2026-04-17T08:00',
   },
   // 状态5: 待验收 (waiting_acceptance)
   {
@@ -1762,6 +1766,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-16T08:00:00.000Z',
     updatedAt: '2026-04-18T16:00:00.000Z',
+    startDate: '2026-04-16T08:00',
   },
   // 状态6: 已完成 (completed)
   {
@@ -1792,6 +1797,7 @@ export const tempTasks: TempTask[] = [
     rejectCount: 0,
     createdAt: '2026-04-15T08:00:00.000Z',
     updatedAt: '2026-04-16T16:00:00.000Z',
+    startDate: '2026-04-15T08:00',
   },
 ];
 
@@ -2030,5 +2036,287 @@ export const workers: Worker[] = [
     workExperiences: [],
     annualAssessments: [],
     status: '在职', remarks: '年轻员工，可塑性强'
+  },
+];
+
+// ============================================
+// Inspection Feedback Tasks (derived from inspectionRecords with problemId)
+// These appear in "My Tasks - Inspection Feedback Processing" tab
+// Filter condition: taskFilter === 'problem' -> sourceProblemId !== undefined
+// ============================================
+
+const INSPECTION_CATEGORY_MAP: Record<string, string> = {
+  environment: '环境调控',
+  pest: '病虫害防治',
+  equipment: '设备维修',
+  infrastructure: '基础设施维修',
+  other: '其他处理',
+};
+
+const INSPECTION_MATERIALS_MAP: Record<string, { name: string; qty: number; unit: string }[]> = {
+  environment: [{ name: '遮阳网', qty: 2, unit: '卷' }],
+  pest: [{ name: '吡虫啉', qty: 3, unit: '袋' }, { name: '多菌灵', qty: 2, unit: '袋' }],
+  equipment: [{ name: '轴承', qty: 1, unit: '个' }, { name: '润滑油', qty: 1, unit: '瓶' }],
+  infrastructure: [{ name: '管道接头', qty: 2, unit: '个' }, { name: '防水胶带', qty: 1, unit: '卷' }],
+  other: [],
+};
+
+const INSPECTION_TOOLS_MAP: Record<string, { name: string; qty: number; unit: string }[]> = {
+  environment: [{ name: '温度计', qty: 1, unit: '个' }],
+  pest: [{ name: '喷雾器', qty: 2, unit: '台' }],
+  equipment: [{ name: '扳手', qty: 1, unit: '套' }, { name: '螺丝刀', qty: 1, unit: '套' }],
+  infrastructure: [{ name: '管钳', qty: 1, unit: '把' }, { name: '扳手', qty: 1, unit: '套' }],
+  other: [],
+};
+
+const INSPECTION_SOP_MAP: Record<string, string> = {
+  environment: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度、光照等环境参数\n3. 调控措施：通风、遮阳、加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全\n- 高空作业需佩戴安全带',
+  pest: '【病虫害防治作业标准】\n1. 病虫害情况：根据巡查记录确定\n2. 药剂配比：根据药剂说明稀释\n3. 施药方式：叶面喷雾，均匀喷施叶背\n4. 安全间隔期：根据药剂要求确定\n\n【安全要求】\n- 操作人员需佩戴防护手套、口罩\n- 施药后需清洗工具和衣物',
+  equipment: '【设备维修作业标准】\n1. 设备问题：根据巡查记录确定\n2. 维修步骤：关闭电源/水源，拆卸故障部件，更换新部件，重新安装，测试运行\n\n【安全要求】\n- 操作前关闭电源/水源\n- 佩戴防护手套',
+  infrastructure: '【基础设施维修作业标准】\n1. 问题描述：根据巡查记录确定\n2. 维修步骤：关闭相关系统，切割/拆卸损坏部件，安装新部件，测试运行情况\n\n【安全要求】\n- 操作前关闭相关系统\n- 佩戴防护手套',
+  other: '【其他作业标准】\n1. 作业内容：根据巡查记录确定\n2. 作业步骤：根据实际情况确定\n3. 注意事项：根据具体情况确定\n\n【安全要求】\n- 根据实际情况佩戴防护装备',
+};
+
+const INSPECTION_TASK_STATUSES = ['pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected'];
+
+export interface InspectionFeedbackTaskData {
+  id: string;
+  recordCode: string;
+  problemId: number;
+  inspectionId: string;
+  inspectorId: string;
+  inspectorName: string;
+  greenhouseId: string;
+  greenhouseName: string;
+  cropName: string;
+  checkDate: string;
+  checkTime: string;
+  issueText: string;
+  issueSeverity: string;
+  issueCategories: string[];
+  issueStatus: string;
+  expectedCompletion: string;
+  assignee: string;
+  assigneeName: string;
+  dispatchTime: string;
+  status: string;
+  priority: string;
+  sopContent: string;
+  materials: { name: string; qty: number; unit: string }[];
+  tools: { name: string; qty: number; unit: string }[];
+  requiredFeedback: string[];
+  remarks: string;
+  // 巡查反馈处理表格额外字段
+  inspectionType: string;      // 巡查类型：farm/equipment/infrastructure/other
+  submitterId: string;        // 提交人ID
+  submitterName: string;      // 提交人名称
+  location: string;           // 位置/对象
+  checkResult: string;        // 巡查结果：正常/异常
+  photos: string[];           // 问题照片
+  feedbackStatus: string;     // 反馈状态
+  feedbackUsers: string[];     // 反馈人员
+  processProgress: string;     // 处理进度
+}
+
+// 注意：巡查反馈任务现在通过问题分派功能动态创建，不再使用静态模拟数据
+// 原 inspectionFeedbackTasks 已禁用，巡查反馈处理列表数据完全来自 dispatchProblem 创建的任务
+// 以下为演示数据，存储在代码中，清除缓存后会从代码恢复
+// 注意：InspectionFeedbackTaskData 接口中没有 sourceId 字段，但 Task 类型中有
+// 在 convertInspectionFeedbackTaskToTask 函数中会将 inspectionId 作为 sourceId 处理
+export const inspectionFeedbackTasks: InspectionFeedbackTaskData[] = [
+  // 模拟1：待接受状态 - 问题还未被执行人接受（对应 XT20260408-001 巡查记录）
+  {
+    id: 'RW-20260408-001',
+    recordCode: 'PD20260408001',
+    problemId: 2,
+    inspectionId: 'XT20260408-001',
+    inspectorId: 'U005',
+    inspectorName: '杨过',
+    greenhouseId: 'G004',
+    greenhouseName: '日光温室1号',
+    cropName: '草莓',
+    checkDate: '2026-04-08',
+    checkTime: '10:00',
+    issueText: '草莓叶片发现白粉虱成虫，数量较少但需密切关注，发现2株有虫害迹象',
+    issueSeverity: '轻微',
+    issueCategories: ['病虫害防治'],
+    issueStatus: '待处理',
+    expectedCompletion: '2026-04-11',
+    assignee: 'U005',
+    assigneeName: '杨过',
+    dispatchTime: '2026-04-08T10:30:00',
+    status: 'pending',
+    priority: 'normal',
+    sopContent: '【病虫害防治作业标准】\n1. 病虫害情况：根据巡查记录确定\n2. 药剂配比：根据药剂说明稀释\n3. 施药方式：叶面喷雾，均匀喷施叶背\n4. 安全间隔期：根据药剂要求确定\n\n【安全要求】\n- 操作人员需佩戴防护手套、口罩\n- 施药后需清洗工具和衣物',
+    materials: [{ name: '吡虫啉', qty: 3, unit: '袋' }, { name: '多菌灵', qty: 2, unit: '袋' }],
+    tools: [{ name: '喷雾器', qty: 2, unit: '台' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '需密切关注虫害发展情况',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U005',
+    submitterName: '杨过',
+    location: '日光温室1号',
+    checkResult: '异常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff6b9d"%3E🍓%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '待接受',
+    feedbackUsers: ['杨过'],
+    processProgress: '0%',
+  },
+  // 模拟2：处理中状态 - 执行人正在处理（对应 XT20260409-001 巡查记录）
+  {
+    id: 'RW-20260409-001',
+    recordCode: 'PD20260409001',
+    problemId: 1,
+    inspectionId: 'XT20260409-001',
+    inspectorId: 'U004',
+    inspectorName: '郭靖',
+    greenhouseId: 'G002',
+    greenhouseName: '玻璃温室B区',
+    cropName: '黄瓜',
+    checkDate: '2026-04-09',
+    checkTime: '14:30',
+    issueText: '黄瓜叶片出现轻微萎蔫，大棚内温度偏高导致，建议增加通风遮阳',
+    issueSeverity: '中等',
+    issueCategories: ['环境调控'],
+    issueStatus: '处理中',
+    expectedCompletion: '2026-04-12',
+    assignee: 'U003',
+    assigneeName: '黄蓉',
+    dispatchTime: '2026-04-09T15:00:00',
+    status: 'in_progress',
+    priority: 'normal',
+    sopContent: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度，光照等环境参数\n3. 调控措施：通风、遮阳，加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全\n- 高空作业需佩戴安全带',
+    materials: [{ name: '遮阳网', qty: 2, unit: '卷' }],
+    tools: [{ name: '温度计', qty: 1, unit: '个' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '已增加通风设备，正在进行处理',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U004',
+    submitterName: '郭靖',
+    location: '玻璃温室B区',
+    checkResult: '异常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300cc00"%3E🥬%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '处理中',
+    feedbackUsers: ['黄蓉'],
+    processProgress: '50%',
+  },
+  // 模拟3：被返工状态 - 第一次验收被驳回，执行人需要继续处理（对应 XT20260412-001 巡查记录）
+  {
+    id: 'RW-20260412-001',
+    recordCode: 'PD20260412001',
+    problemId: 6,
+    inspectionId: 'XT20260412-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G005',
+    greenhouseName: '日光温室2号',
+    cropName: '',
+    checkDate: '2026-04-12',
+    checkTime: '09:00',
+    issueText: '2号温室滴灌系统主供水管道接头处严重漏水，已用胶带临时封堵，需要采购新接头进行修复',
+    issueSeverity: '严重',
+    issueCategories: ['设备维修'],
+    issueStatus: '处理中',
+    expectedCompletion: '2026-04-14',
+    assignee: 'U013',
+    assigneeName: '一灯大师',
+    dispatchTime: '2026-04-12T09:30:00',
+    status: 'rejected',
+    priority: 'high',
+    sopContent: '【设备维修作业标准】\n1. 设备问题：根据巡查记录确定\n2. 维修步骤：关闭电源/水源，拆卸故障部件，更换新部件，重新安装，测试运行\n\n【安全要求】\n- 操作前关闭电源/水源\n- 佩戴防护手套',
+    materials: [{ name: '管道接头', qty: 2, unit: '个' }, { name: '防水胶带', qty: 1, unit: '卷' }],
+    tools: [{ name: '扳手', qty: 1, unit: '套' }, { name: '螺丝刀', qty: 1, unit: '套' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_before', 'photo_after'],
+    remarks: '第一次验收不通过，需要重新处理',
+    // 额外字段
+    inspectionType: 'equipment',
+    submitterId: 'U006',
+    submitterName: '黄蓉',
+    location: '日光温室2号',
+    checkResult: '异常',
+    photos: [],
+    feedbackStatus: '返工中',
+    feedbackUsers: ['一灯大师'],
+    processProgress: '30%',
+  },
+  // 模拟4：待验收状态 - 执行人已提交，等待管理者验收（对应 XT20260409-002 巡查记录）
+  {
+    id: 'RW-20260409-002',
+    recordCode: 'PD20260409002',
+    problemId: 7,
+    inspectionId: 'XT20260409-002',
+    inspectorId: 'U013',
+    inspectorName: '一灯大师',
+    greenhouseId: '',
+    greenhouseName: '园区主干道',
+    cropName: '',
+    checkDate: '2026-04-09',
+    checkTime: '16:00',
+    issueText: '园区环形通道K+200处路面破损，面积约2平方米，影响农机通行',
+    issueSeverity: '中等',
+    issueCategories: ['基础设施维修'],
+    issueStatus: '待验收',
+    expectedCompletion: '2026-04-11',
+    assignee: 'U003',
+    assigneeName: '令狐冲',
+    dispatchTime: '2026-04-09T16:30:00',
+    status: 'waiting_acceptance',
+    priority: 'normal',
+    sopContent: '【基础设施维修作业标准】\n1. 问题描述：根据巡查记录确定\n2. 维修步骤：关闭相关系统，切割/拆卸损坏部件，安装新部件，测试运行情况\n\n【安全要求】\n- 操作前关闭相关系统\n- 佩戴防护手套',
+    materials: [{ name: '管道接头', qty: 2, unit: '个' }],
+    tools: [{ name: '管钳', qty: 1, unit: '把' }, { name: '扳手', qty: 1, unit: '套' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '已完成路面修复填充，等待验收',
+    // 额外字段
+    inspectionType: 'infrastructure',
+    submitterId: 'U013',
+    submitterName: '一灯大师',
+    location: '园区主干道',
+    checkResult: '异常',
+    photos: [],
+    feedbackStatus: '待验收',
+    feedbackUsers: ['令狐冲'],
+    processProgress: '100%',
+  },
+  // 模拟5：已完成状态 - 问题已处理完毕（对应 XT20260406-001 巡查记录）
+  {
+    id: 'RW-20260406-001',
+    recordCode: 'PD20260406001',
+    problemId: 3,
+    inspectionId: 'XT20260406-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G006',
+    greenhouseName: '日光温室3号',
+    cropName: '菠菜',
+    checkDate: '2026-04-06',
+    checkTime: '15:30',
+    issueText: '菠菜出现轻微萎蔫，土壤湿度偏低，需要立即灌溉',
+    issueSeverity: '轻微',
+    issueCategories: ['环境调控'],
+    issueStatus: '已处理',
+    expectedCompletion: '2026-04-06',
+    assignee: 'U008',
+    assigneeName: '小龙女',
+    dispatchTime: '2026-04-06T16:00:00',
+    status: 'completed',
+    priority: 'normal',
+    sopContent: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度，光照等环境参数\n3. 调控措施：通风、遮阳，加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全',
+    materials: [],
+    tools: [{ name: '温度计', qty: 1, unit: '个' }],
+    requiredFeedback: ['workload_confirm', 'gps'],
+    remarks: '已完成灌溉，土壤湿度已恢复正常',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U006',
+    submitterName: '黄蓉',
+    location: '日光温室3号',
+    checkResult: '正常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23006600"%3E🥬%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '已完成',
+    feedbackUsers: ['小龙女'],
+    processProgress: '100%',
   },
 ];

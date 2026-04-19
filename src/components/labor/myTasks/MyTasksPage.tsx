@@ -193,6 +193,25 @@ export function MyTasksPage() {
         tempTaskType: (t as any).tempTaskType || '',
         workerCount: (t as any).workerCount || 1,
         totalEstimatedHours: (t as any).totalEstimatedHours || 0,
+        // 巡查反馈处理表格字段（用于 taskFilter === 'problem' 时显示）
+        sourceId: (t as any).sourceId,
+        recordCode: (t as any).recordCode,
+        inspectionType: (t as any).inspectionType || 'farm',
+        submitterId: (t as any).submitterId,
+        submitterName: (t as any).submitterName || (t as any).assignerName || '',
+        location: (t as any).location || t.greenhouseName || t.field || '',
+        checkDate: (t as any).checkDate || t.planStart?.split(' ')[0] || '',
+        checkTime: (t as any).checkTime || '',
+        checkResult: (t as any).checkResult || '',
+        issueCategories: (t as any).issueCategories || [],
+        issueSeverity: (t as any).issueSeverity || '',
+        issueText: (t as any).issueText || '',
+        photos: (t as any).photos || [],
+        feedbackStatus: (t as any).feedbackStatus || t.status,
+        feedbackUsers: (t as any).feedbackUsers || [],
+        processProgress: (t as any).processProgress || '0%',
+        inspectorId: (t as any).inspectorId,
+        inspectorName: (t as any).inspectorName || (t as any).assignerName || '',
       }))
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
@@ -405,100 +424,119 @@ export function MyTasksPage() {
 
   // 提交反馈
   const handleSubmitFeedback = () => {
-    if (!feedbackModal.task) return;
-    const task = feedbackModal.task;
-
-    // 校验必填反馈
-    const validation = validateRequiredFeedback();
-    if (!validation.valid) {
-      alert(validation.message);
-      return;
-    }
-
-    // 构建反馈数据（工作量、GPS、照片、语音等）
-    const feedbackData = {
-      workloadConfirm: feedbackForm.workloadConfirm || undefined,
-      gpsLocation: feedbackForm.gpsLocation || undefined,
-      photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
-      photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
-      materialCode: feedbackForm.materialCode || undefined,
-      voiceNote: feedbackForm.voiceNote || undefined,
-      progress: task.progress || 0,
-    };
-
-    if (task.sourceProblemId) {
-      // 先记录进度流转（包含反馈数据）
-      addProgressRecord(
-        task.sourceProblemId,
-        'U013',
-        '陆启闯',
-        task.progress || 0,
-        feedbackForm.progressText || feedbackForm.resultText,
-        feedbackData
-      );
-      // 进度100%时提交验收，否则只是进度反馈
-      if (task.progress === 100) {
-        submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
-          resultText: feedbackForm.resultText,
-          actualWorkload: feedbackForm.workloadConfirm
-            ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
-            : (feedbackForm.workloadDays || feedbackForm.workloadHours
-              ? (parseFloat(feedbackForm.workloadDays || '0') * 24 + parseFloat(feedbackForm.workloadHours || '0'))
-              : undefined),
-          feedbackData,
-        });
+    try {
+      if (!feedbackModal.task) {
+        console.error('[提交反馈] 错误：feedbackModal.task 为空');
+        return;
       }
-    }
+      const task = feedbackModal.task;
+      console.log('[提交反馈] 开始提交', { taskId: task.id, progress: task.progress, sourceProblemId: task.sourceProblemId });
 
-    // ========== 数据闭环：同步到 useTasks ==========
-    // 查找 unifiedTasks 中对应的任务
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
-    if (unifiedTask) {
-      const isFinal = task.progress === 100;
-      // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
-      submitProgress(unifiedTask.id, task.progress || 0, {
-        remarks: feedbackForm.resultText || feedbackForm.progressText,
-        workload: feedbackForm.workloadConfirm
-          ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
-          : (feedbackForm.workloadHours ? parseFloat(feedbackForm.workloadHours) : undefined),
-        isFinal,
+      // 校验必填反馈
+      const validation = validateRequiredFeedback();
+      if (!validation.valid) {
+        alert(validation.message);
+        return;
+      }
+
+      // 构建反馈数据（工作量、GPS、照片、语音等）
+      const feedbackData = {
+        workloadConfirm: feedbackForm.workloadConfirm || undefined,
         gpsLocation: feedbackForm.gpsLocation || undefined,
         photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
         photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
-        voiceNote: feedbackForm.voiceNote || undefined,
         materialCode: feedbackForm.materialCode || undefined,
-        workloadDays: feedbackForm.workloadConfirm?.days,
-        workloadHours: feedbackForm.workloadConfirm?.hours,
-        workers: feedbackForm.workloadConfirm?.workers,
-      });
+        voiceNote: feedbackForm.voiceNote || undefined,
+        progress: task.progress || 0,
+      };
 
-      // ========== 数据闭环：同步到 useOperationRecords ==========
-      addTaskRecord({
-        operationType: unifiedTask.type,
-        operationTypeName: unifiedTask.typeName,
-        status: isFinal ? 'waiting_acceptance' : 'in_progress',
-        greenhouseId: '',
-        greenhouseName: task.field || '',
-        cropName: task.crop || '',
-        operatorId: 'U013',
-        operatorName: currentUserName,
-        operationDate: new Date().toISOString().split('T')[0],
-        sourceId: unifiedTask.id,
-        sourceCode: unifiedTask.taskCode,
-        progress: task.progress,
-        remarks: feedbackForm.resultText,
-        workloadDays: feedbackForm.workloadConfirm?.days,
-        workloadHours: feedbackForm.workloadConfirm?.hours,
-        workers: feedbackForm.workloadConfirm?.workers,
-        gpsLocation: feedbackForm.gpsLocation || undefined,
-        photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
-        photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
-        voiceNote: feedbackForm.voiceNote || undefined,
-        materialCode: feedbackForm.materialCode || undefined,
-      });
+      if (task.sourceProblemId) {
+        console.log('[提交反馈] 更新问题流转记录', { problemId: task.sourceProblemId });
+        // 先记录进度流转（包含反馈数据）
+        addProgressRecord(
+          task.sourceProblemId,
+          'U013',
+          '陆启闯',
+          task.progress || 0,
+          feedbackForm.progressText || feedbackForm.resultText,
+          feedbackData
+        );
+        // 进度100%时提交验收，否则只是进度反馈
+        if (task.progress === 100) {
+          console.log('[提交反馈] 进度100%，提交验收');
+          submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
+            resultText: feedbackForm.resultText,
+            actualWorkload: feedbackForm.workloadConfirm
+              ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
+              : (feedbackForm.workloadDays || feedbackForm.workloadHours
+                ? (parseFloat(feedbackForm.workloadDays || '0') * 24 + parseFloat(feedbackForm.workloadHours || '0'))
+                : undefined),
+            feedbackData,
+          });
+        }
+      } else {
+        console.log('[提交反馈] 警告：task.sourceProblemId 为空，跳过问题流转更新');
+      }
+
+      // ========== 数据闭环：同步到 useTasks ==========
+      // 查找 unifiedTasks 中对应的任务
+      const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+      if (unifiedTask) {
+        console.log('[提交反馈] 找到统一任务', { unifiedTaskId: unifiedTask.id, taskCode: unifiedTask.taskCode });
+        const isFinal = task.progress === 100;
+        // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
+        submitProgress(unifiedTask.id, task.progress || 0, {
+          remarks: feedbackForm.resultText || feedbackForm.progressText,
+          workload: feedbackForm.workloadConfirm
+            ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
+            : (feedbackForm.workloadHours ? parseFloat(feedbackForm.workloadHours) : undefined),
+          isFinal,
+          gpsLocation: feedbackForm.gpsLocation || undefined,
+          photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
+          photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
+          voiceNote: feedbackForm.voiceNote || undefined,
+          materialCode: feedbackForm.materialCode || undefined,
+          workloadDays: feedbackForm.workloadConfirm?.days,
+          workloadHours: feedbackForm.workloadConfirm?.hours,
+          workers: feedbackForm.workloadConfirm?.workers,
+        });
+
+        // ========== 数据闭环：同步到 useOperationRecords ==========
+        addTaskRecord({
+          operationType: unifiedTask.type,
+          operationTypeName: unifiedTask.typeName,
+          status: isFinal ? 'waiting_acceptance' : 'in_progress',
+          greenhouseId: '',
+          greenhouseName: task.field || '',
+          cropName: task.crop || '',
+          operatorId: 'U013',
+          operatorName: currentUserName,
+          operationDate: new Date().toISOString().split('T')[0],
+          sourceId: unifiedTask.id,
+          sourceCode: unifiedTask.taskCode,
+          progress: task.progress,
+          remarks: feedbackForm.resultText,
+          workloadDays: feedbackForm.workloadConfirm?.days,
+          workloadHours: feedbackForm.workloadConfirm?.hours,
+          workers: feedbackForm.workloadConfirm?.workers,
+          gpsLocation: feedbackForm.gpsLocation || undefined,
+          photosBefore: feedbackForm.photosBefore.length > 0 ? feedbackForm.photosBefore : undefined,
+          photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
+          voiceNote: feedbackForm.voiceNote || undefined,
+          materialCode: feedbackForm.materialCode || undefined,
+        });
+        console.log('[提交反馈] 提交成功');
+      } else {
+        console.error('[提交反馈] 错误：在 unifiedTasks 中找不到对应任务', { taskId: task.id, taskCode: task.taskCode });
+        console.log('[提交反馈] unifiedTasks 当前 IDs:', unifiedTasks.map(t => ({ id: t.id, taskCode: t.taskCode })));
+      }
+
+      setFeedbackModal({ isOpen: false, task: null });
+      alert('提交成功！');
+    } catch (error) {
+      console.error('[提交反馈] 提交失败', error);
+      alert('提交失败：' + (error instanceof Error ? error.message : String(error)));
     }
-
-    setFeedbackModal({ isOpen: false, task: null });
   };
 
   // 获取当前任务关联的问题流转记录
@@ -617,18 +655,6 @@ export function MyTasksPage() {
 
   return (
     <div className="space-y-4">
-      {/* 提示信息 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-          <div>
-            <div className="text-sm font-medium text-blue-800">我的任务</div>
-            <div className="text-sm text-blue-600 mt-1">
-              这里显示所有分配给您的任务。完成任务后，可通过进度滑块更新任务进度。
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 任务类型标签页筛选 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -710,6 +736,23 @@ export function MyTasksPage() {
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">超时</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
                   </>
+                ) : taskFilter === 'problem' ? (
+                  <>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查编号</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查类型</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">提交人</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">位置/对象</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查日期</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查结果</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">严重程度</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈状态</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">处理进度</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
+                  </>
                 ) : (
                   <>
                     <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
@@ -733,7 +776,7 @@ export function MyTasksPage() {
             <tbody className="divide-y divide-gray-300">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={taskFilter === 'temp' ? 13 : 14} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={taskFilter === 'temp' ? 13 : taskFilter === 'problem' ? 14 : 14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
                   </td>
                 </tr>
@@ -858,6 +901,252 @@ export function MyTasksPage() {
                                 查看
                               </button>
                             )}
+                          </td>
+                        </>
+                      ) : taskFilter === 'problem' ? (
+                        <>
+                          {/* 巡查编号 - 可点击查看详情 */}
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            <button
+                              onClick={() => openDetailModal(task)}
+                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {(task as any).sourceId || (task as any).recordCode || task.taskCode || '-'}
+                            </button>
+                          </td>
+                          {/* 巡查类型 */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const type = (task as any).inspectionType || 'farm';
+                              const typeMap: Record<string, { label: string; className: string }> = {
+                                '农场巡查': { label: '种植', className: 'bg-emerald-100 text-emerald-700' },
+                                '设备巡查': { label: '设备', className: 'bg-blue-100 text-blue-700' },
+                                '设施巡查': { label: '设施', className: 'bg-amber-100 text-amber-700' },
+                                '其他巡查': { label: '其他', className: 'bg-purple-100 text-purple-700' },
+                                'farm': { label: '种植', className: 'bg-emerald-100 text-emerald-700' },
+                                'equipment': { label: '设备', className: 'bg-blue-100 text-blue-700' },
+                                'infrastructure': { label: '设施', className: 'bg-amber-100 text-amber-700' },
+                                'other': { label: '其他', className: 'bg-purple-100 text-purple-700' },
+                              };
+                              const config = typeMap[type] || { label: '种植', className: 'bg-emerald-100 text-emerald-700' };
+                              return <span className={`px-2 py-1 text-xs rounded-full ${config.className}`}>{config.label}</span>;
+                            })()}
+                          </td>
+                          {/* 提交人 */}
+                          <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
+                            <span className="font-medium text-gray-900 truncate block" title={(task as any).submitterName || task.assignerName || '-'}>
+                              {(task as any).submitterName || task.assignerName || '-'}
+                            </span>
+                          </td>
+                          {/* 位置/对象 */}
+                          <td className="px-3 py-3 text-sm text-gray-600 min-w-[10em] max-w-[15em]">
+                            <div className="flex items-center gap-1 overflow-hidden">
+                              <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                              <span className="text-gray-900 truncate block" title={(task as any).location || task.greenhouseName || task.field || '-'}>
+                                {(task as any).location || task.greenhouseName || task.field || '-'}
+                              </span>
+                            </div>
+                          </td>
+                          {/* 巡查日期 */}
+                          <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
+                            {(task as any).checkDate || task.planStart?.split(' ')[0] || '-'}
+                          </td>
+                          {/* 巡查结果 */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const result = (task as any).checkResult || (task as any).issueSeverity || '';
+                              const isNormal = result === '正常' || result === '轻微' || result === 'low';
+                              return isNormal ? (
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
+                              ) : (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">异常</span>
+                              );
+                            })()}
+                          </td>
+                          {/* 问题分类 */}
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {(() => {
+                              const cats = (task as any).issueCategories || [];
+                              if (Array.isArray(cats) && cats.length > 0) {
+                                return (
+                                  <div className="flex gap-1 justify-center flex-wrap">
+                                    {cats.slice(0, 2).map((cat: string, i: number) => (
+                                      <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
+                                        {cat}
+                                      </span>
+                                    ))}
+                                    {cats.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{cats.length - 2}</span>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return <span className="text-sm text-gray-500">-</span>;
+                            })()}
+                          </td>
+                          {/* 严重程度 */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const severity = (task as any).issueSeverity || (task as any).priority || '';
+                              if (severity === '严重' || severity === 'high') {
+                                return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">严重</span>;
+                              }
+                              if (severity === '中等' || severity === 'medium') {
+                                return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">中等</span>;
+                              }
+                              return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">轻微</span>;
+                            })()}
+                          </td>
+                          {/* 问题照片 */}
+                          <td className="px-3 py-3 text-center whitespace-nowrap">
+                            {(() => {
+                              const photos = (task as any).photos || [];
+                              if (photos.length > 0) {
+                                return (
+                                  <div className="flex justify-center gap-1">
+                                    {photos.slice(0, 3).map((img: string, imgIdx: number) => (
+                                      <div key={imgIdx} className="w-8 h-8 rounded overflow-hidden bg-gray-100">
+                                        <img src={img} alt="" className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                    {photos.length > 3 && (
+                                      <span className="flex items-center justify-center w-8 h-8 text-xs text-gray-500">+{photos.length - 3}</span>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return <span className="text-sm text-gray-500">-</span>;
+                            })()}
+                          </td>
+                          {/* 反馈状态 */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const fbStatus = (task as any).feedbackStatus || task.status;
+                              const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
+                                pending: { label: '待接受', bg: 'bg-gray-100', color: 'text-gray-600' },
+                                accepted: { label: '已接受', bg: 'bg-blue-100', color: 'text-blue-600' },
+                                in_progress: { label: '处理中', bg: 'bg-blue-100', color: 'text-blue-600' },
+                                waiting_acceptance: { label: '待验收', bg: 'bg-amber-100', color: 'text-amber-600' },
+                                completed: { label: '已完成', bg: 'bg-green-100', color: 'text-green-600' },
+                                rejected: { label: '返工中', bg: 'bg-red-100', color: 'text-red-600' },
+                                待接受: { label: '待接受', bg: 'bg-gray-100', color: 'text-gray-600' },
+                                已接受: { label: '已接受', bg: 'bg-blue-100', color: 'text-blue-600' },
+                                处理中: { label: '处理中', bg: 'bg-blue-100', color: 'text-blue-600' },
+                                待验收: { label: '待验收', bg: 'bg-amber-100', color: 'text-amber-600' },
+                                已完成: { label: '已完成', bg: 'bg-green-100', color: 'text-green-600' },
+                                返工中: { label: '返工中', bg: 'bg-red-100', color: 'text-red-600' },
+                              };
+                              const s = statusConfig[fbStatus] || { label: fbStatus, bg: 'bg-gray-100', color: 'text-gray-600' };
+                              return <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>{s.label}</span>;
+                            })()}
+                          </td>
+                          {/* 反馈人员 */}
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {(() => {
+                              const users = (task as any).feedbackUsers || [];
+                              return Array.isArray(users) && users.length > 0 ? users[0] : '-';
+                            })()}
+                          </td>
+                          {/* 处理进度 */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const progress = parseInt(String((task as any).processProgress || task.progress || 0));
+                              return (
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="h-full bg-blue-500 rounded-full"
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-500">{progress}%</span>
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          {/* 操作列 */}
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {task.status === 'pending' && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    const unifiedTask = unifiedTasks.find(t => t.id === task.id || t.taskCode === task.id);
+                                    if (unifiedTask) acceptTask(unifiedTask.id);
+                                    // 同时更新问题的接单状态
+                                    if (task.sourceProblemId) {
+                                      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="接受任务"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  接受
+                                </button>
+                                <button
+                                  onClick={() => openRejectModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="拒绝任务"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  拒绝
+                                </button>
+                              </div>
+                            )}
+                            {(task.status === 'accepted' || task.status === 'in_progress') && (
+                              <button
+                                onClick={() => openFeedbackModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+                                title="点击提交进度"
+                              >
+                                <Edit className="w-4 h-4" />
+                                提交进度
+                              </button>
+                            )}
+                            {task.status === 'rejected' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    const unifiedTask = unifiedTasks.find(t => t.id === task.id || t.taskCode === task.id);
+                                    if (unifiedTask) continueExecution(unifiedTask.id);
+                                    // 同时更新问题的继续执行状态
+                                    if (task.sourceProblemId) {
+                                      // 重新接受问题
+                                      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
+                                  title="继续完成任务后重新提交"
+                                >
+                                  <Play className="w-4 h-4" />
+                                  继续执行
+                                </button>
+                                <button
+                                  onClick={() => openDetailModal(task)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                  title="点击查看详情"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  查看
+                                </button>
+                              </>
+                            )}
+                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
+                              <button
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                                查看
+                              </button>
+                            )}
+                          </td>
+                          {/* 备注 */}
+                          <td className="px-3 py-3 text-sm text-gray-600 max-w-[10em]">
+                            <span className="truncate block" title={(task as any).issueText || (task as any).remarks || ''}>
+                              {((task as any).issueText || (task as any).remarks || '').slice(0, 10) || '-'}
+                            </span>
                           </td>
                         </>
                       ) : (
@@ -1618,6 +1907,39 @@ export function MyTasksPage() {
               </p>
             </div>
 
+            {/* 处理结果/进展情况（进度条下方） */}
+            {feedbackModal.task.progress === 100 ? (
+              <>
+                {/* 处理结果 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    处理结果 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={feedbackForm.resultText}
+                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
+                    placeholder="请描述处理过程和结果..."
+                    rows={4}
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+              </>
+            ) : (
+              /* 小于100%时显示进展情况 */
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  进展情况 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={feedbackForm.progressText}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, progressText: e.target.value }))}
+                  placeholder="请描述当前处理进度和下一步计划..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            )}
+
             {/* 必填反馈输入区域 */}
             {feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
               <div className="space-y-3">
@@ -1679,39 +2001,6 @@ export function MyTasksPage() {
                   : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
               </div>
             </div>
-
-            {/* 100%时显示处理结果和工作量 */}
-            {feedbackModal.task.progress === 100 ? (
-              <>
-                {/* 处理结果 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    处理结果 <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={feedbackForm.resultText}
-                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
-                    placeholder="请描述处理过程和结果..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              </>
-            ) : (
-              /* 小于100%时显示进展情况 */
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  进展情况 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={feedbackForm.progressText}
-                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, progressText: e.target.value }))}
-                  placeholder="请描述当前处理进度和下一步计划..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-            )}
           </div>
         )}
       </Modal>

@@ -840,39 +840,6 @@ export interface TaskDispatchStaff {
 
 // TaskDispatch 任务数据
 export const taskDispatchTasks: TaskDispatchTask[] = [
-  // 单一任务类型 - 施肥（完整配置）
-  {
-    id: 'NS20260317-001',
-    types: ['fertilization'],
-    typeLabel: '施肥',
-    field: '1号棚',
-    crop: '番茄',
-    assignee: '陆启闯',
-    planStart: '2026-03-17 08:00',
-    planEnd: '2026-03-17 12:00',
-    progress: 100,
-    status: 'completed',
-    priority: 'normal',
-    estimatedDays: 0,
-    estimatedHours: 4,
-    typeConfig: {
-      fertilizerMix: [
-        { id: '1', fertilizerType: 'compound', quantity: 15, dilutionRatio: 500 },
-        { id: '2', fertilizerType: 'urea', quantity: 8, dilutionRatio: 1000 },
-      ],
-      applicationMethod: 'drip',
-      remarks: '避免雨前4小时施用，施肥后注意观察作物生长情况',
-    },
-    materials: [
-      { name: '复合肥', qty: 50, unit: 'kg' },
-      { name: '尿素', qty: 20, unit: 'kg' },
-    ],
-    tools: [
-      { name: '施肥器', qty: 2, unit: '把' },
-    ],
-    requiredFeedback: ['gps', 'photo_before', 'photo_after'],
-    sopContent: '',
-  },
   // 多任务类型 - 灌溉+施肥
   {
     id: 'NS20260317-002',
@@ -908,48 +875,6 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
 【安全要求】
 - 操作人员需佩戴防护手套
 - 施肥设备使用后需清洗干净`,
-  },
-  // 多任务类型 - 植保+除草
-  {
-    id: 'NS20260317-003',
-    types: ['pesticide', 'weeding'],
-    typeLabel: '植保,除草',
-    field: '6号棚',
-    crop: '草莓',
-    assignee: '陆启闯',
-    planStart: '2026-03-17 14:00',
-    planEnd: '2026-03-17 18:00',
-    progress: 30,
-    status: 'failed',
-    priority: 'urgent',
-    estimatedDays: 0,
-    estimatedHours: 4,
-    materials: [
-      { name: '多菌灵', qty: 500, unit: 'g' },
-      { name: '吡虫啉', qty: 200, unit: 'g' },
-      { name: '除草剂', qty: 5, unit: 'L' },
-    ],
-    tools: [
-      { name: '喷雾器', qty: 2, unit: '台' },
-      { name: '防护服', qty: 2, unit: '套' },
-    ],
-    requiredFeedback: ['gps', 'photo_before', 'photo_after'],
-    sopContent: `【植保作业标准】
-1. 病虫害情况：发现蚜虫少量发生，需进行叶面喷雾处理
-2. 药剂配比：
-   - 多菌灵：稀释1000倍
-   - 吡虫啉：稀释2000倍
-3. 施药方式：叶面喷雾，均匀喷施叶背
-4. 安全间隔期：7天
-
-【除草作业标准】
-1. 除草方式：化学除草
-2. 除草剂用量：5L/亩
-3. 注意事项：避免除草剂喷洒到作物叶片上
-
-【防护要求】
-- 操作人员需佩戴口罩、防护手套、护目镜
-- 作业后需更换工作服并洗手`,
   },
   // 多任务类型 - 修剪+采收
   {
@@ -1034,33 +959,6 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
 2. 除草剂用量：8L/亩
 3. 注意事项：整地前进行全田除草`,
   },
-  // 单一任务类型 - 除草（完整配置）
-  {
-    id: 'NS20260317-004',
-    types: ['weeding'],
-    typeLabel: '除草',
-    field: 'B1地块',
-    crop: '小麦',
-    assignee: '陆启闯',
-    planStart: '2026-03-17 10:00',
-    planEnd: '2026-03-17 14:00',
-    progress: 50,
-    status: 'abandoned',
-    priority: 'normal',
-    estimatedDays: 0,
-    estimatedHours: 4,
-    typeConfig: {
-      weedingMethod: 'mechanical',
-      weedingDepth: 8,
-      remarks: '机械除草，注意不要伤及作物根系',
-    },
-    materials: [],
-    tools: [
-      { name: '除草机', qty: 1, unit: '台' },
-    ],
-    requiredFeedback: ['gps', 'photo_before', 'photo_after'],
-    sopContent: '',
-  },
   // 多任务类型 - 施肥+灌溉
   {
     id: 'NS20260317-005',
@@ -1117,30 +1015,6 @@ export const taskDispatchTasks: TaskDispatchTask[] = [
     materials: [],
     tools: [
       { name: '滴灌设备', qty: 1, unit: '套' },
-    ],
-    requiredFeedback: ['gps', 'photo_before', 'photo_after'],
-    sopContent: '',
-  },
-  // 草稿状态任务
-  {
-    id: 'NS20260401-001',
-    types: ['planting'],
-    typeLabel: '定植',
-    field: 'E1地块',
-    crop: '茄子',
-    assignee: '陆启闯',
-    planStart: '2026-04-01 08:00',
-    planEnd: '2026-04-01 12:00',
-    progress: 0,
-    status: 'draft',
-    priority: 'normal',
-    estimatedDays: 0,
-    estimatedHours: 4,
-    materials: [
-      { name: '茄子苗', qty: 500, unit: '株' },
-    ],
-    tools: [
-      { name: '挖坑器', qty: 2, unit: '把' },
     ],
     requiredFeedback: ['gps', 'photo_before', 'photo_after'],
     sopContent: '',

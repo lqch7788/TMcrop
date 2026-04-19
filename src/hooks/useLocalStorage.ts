@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 
 // 数据版本控制 - 用于强制刷新过时的模拟数据
-const DATA_VERSION = 4; // 每次修改默认数据时递增（数字类型，与 useTasks 保持一致）
+const DATA_VERSION = 9; // 每次修改默认数据时递增（数字类型，与 useTasks 保持一致）
 
 interface StoredData<T> {
   version: string;
