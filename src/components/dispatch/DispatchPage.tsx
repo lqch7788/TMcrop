@@ -11,6 +11,7 @@ import { TempTaskTab } from './components/dispatch/TempTaskTab';
 import { SmartDispatchTab } from './components/dispatch/SmartDispatchTab';
 import { DISPATCH_MODE_CONFIG } from './types/dispatch';
 import type { DispatchMode } from './types/dispatch';
+import { TasksProvider } from '../../hooks/TasksContext';
 
 /**
  * Tab配置
@@ -97,7 +98,9 @@ export const DispatchPage: React.FC = () => {
 
         {/* Tab内容 */}
         <div className="p-6">
-          {renderTabContent()}
+          <TasksProvider>
+            {renderTabContent()}
+          </TasksProvider>
         </div>
       </div>
     </div>

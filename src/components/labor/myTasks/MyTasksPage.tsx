@@ -70,6 +70,76 @@ const getTypeLabel = (type: string): string => {
   return taskType?.label || type;
 };
 
+// 格式化日期为短格式（4月19日 8:00）
+function formatDateShort(dateStr: string) {
+  if (!dateStr) return '-';
+  // 尝试解析日期，支持多种格式
+  let date: Date;
+  try {
+    date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      date = new Date(dateStr.replace(' ', 'T'));
+    }
+    if (isNaN(date.getTime())) {
+      return '-';
+    }
+  } catch {
+    return '-';
+  }
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours().toString().padStart(2, '0');
+  return `${month}月${day}日 ${hours}:00`;
+}
+
+// 计算预计结束日期
+function formatExpectedEndDate(startDateStr: string, estimatedDays: number, estimatedHours: number = 0) {
+  if (!startDateStr) return '-';
+  // 如果既没有天数也没有小时，返回 '-'
+  if (!estimatedDays && !estimatedHours) return '-';
+
+  // 尝试解析日期
+  let startDate: Date;
+  try {
+    startDate = new Date(startDateStr);
+    if (isNaN(startDate.getTime())) {
+      startDate = new Date(startDateStr.replace(' ', 'T'));
+    }
+    if (isNaN(startDate.getTime())) {
+      return '-';
+    }
+  } catch {
+    return '-';
+  }
+
+  // 如果只有小时数（没有天数），按半天计算（4小时以内算半天下班12:00，4小时以上算整天下班17:00）
+  if (!estimatedDays && estimatedHours) {
+    const endDate = new Date(startDate);
+    if (estimatedHours <= 4) {
+      // 半天，12:00结束
+      endDate.setHours(12, 0, 0, 0);
+    } else {
+      // 整天，17:00结束
+      endDate.setHours(17, 0, 0, 0);
+    }
+    const month = endDate.getMonth() + 1;
+    const day = endDate.getDate();
+    return `${month}月${day}日 ${estimatedHours <= 4 ? '12:00' : '17:00'}`;
+  }
+
+  // 结束日期 = 开始日期 + (预估天数 - 1) 天
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + Math.floor(estimatedDays) - 1);
+
+  // 如果有0.5天，结束时间是12:00，否则是17:00
+  const hasHalfDay = estimatedDays % 1 !== 0;
+  endDate.setHours(hasHalfDay ? 12 : 17, 0, 0, 0);
+
+  const month = endDate.getMonth() + 1;
+  const day = endDate.getDate();
+  return `${month}月${day}日 ${hasHalfDay ? '12:00' : '17:00'}`;
+}
+
 export function MyTasksPage() {
   // 使用统一任务管理 Hook（数据闭环核心）
   const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, operationRecords, getTaskRecordsByTaskId } = useTasks();
@@ -104,6 +174,7 @@ export function MyTasksPage() {
         estimatedDays: t.estimatedDays || 0,
         estimatedHours: t.estimatedHours || 0,
         dueDate: t.dueDate || '',
+        startDate: t.startDate || '',
         requiredFeedback: t.requiredFeedback || [],
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
@@ -583,7 +654,7 @@ export function MyTasksPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            生产问题处理
+            巡查反馈处理
             <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
               {taskCounts.problem}
             </span>
@@ -630,8 +701,8 @@ export function MyTasksPage() {
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">类型</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">工作地点</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">负责人</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">截止日期</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">预计天数</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">开始时间</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">预计结束</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
@@ -706,10 +777,15 @@ export function MyTasksPage() {
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-sm text-gray-600">
                               <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              {(task as any).dueDate || '-'}
+                              {(task as any).startDate ? formatDateShort((task as any).startDate) : '-'}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as any).estimatedDays || 0}天</td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-sm text-emerald-600">
+                              <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                              {formatExpectedEndDate((task as any).startDate, (task as any).estimatedDays, (task as any).estimatedHours)}
+                            </div>
+                          </td>
                           <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as any).workerCount || 1}人</td>
                           <td className="px-3 py-3 text-center text-sm font-medium text-emerald-600">{totalHours}h</td>
                           <td className="px-3 py-3 whitespace-nowrap">
