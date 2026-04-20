@@ -1,5 +1,5 @@
 /**
- * 物料总览页面
+ * 库存总览页面
  * 从 WarehouseMaterialsPage 拆分出来，专注物料库存总览
  */
 
@@ -9,6 +9,7 @@ import { MaterialsTable } from '../../components/warehouse/MaterialsTable';
 import { MaterialDetailModal } from '../../components/warehouse/MaterialDetailModal';
 import { MaterialEditModal, MaterialDeleteConfirmModal } from '../../components/warehouse/MaterialEditModal';
 import { MaterialBatchEditModal } from '../../components/warehouse/MaterialBatchEditModal';
+import { BatchEditWarningModal } from '../../components/warehouse/BatchEditWarningModal';
 import { DeleteWarningDialog } from '../../components/warehouse/DeleteWarningDialog';
 import { BatchDeleteConfirmDialog } from '../../components/warehouse/BatchDeleteConfirmDialog';
 import { MaterialExportModal } from '../../components/warehouse/MaterialExportModal';
@@ -211,6 +212,7 @@ export default function WarehouseOverviewPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [showBatchEditWarning, setShowBatchEditWarning] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [batchEditedMaterials, setBatchEditedMaterials] = useState<Record<number, any>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
@@ -259,7 +261,63 @@ export default function WarehouseOverviewPage() {
 
   const handleDoExport = async () => {
     const selectedData = filteredMaterials.filter(m => selectedRows.includes(m.id));
-    alert(`已选择导出为 ${exportFormat.toUpperCase()} 格式，共 ${selectedData.length} 条数据`);
+
+    // 生成Excel HTML内容
+    const headers = ['物料编码', '物料名称', '分类', '规格', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '数据状态'];
+    const rows = selectedData.map(m => [
+      m.code, m.name, m.category, m.specification, m.unit,
+      m.quantity, m.minStock, m.maxStock, m.price, m.supplier, m.location, m.dataStatus
+    ]);
+
+    let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    rows.forEach(row => {
+      content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`;
+    });
+    content += '</table></body></html>';
+
+    let mimeType = 'application/vnd.ms-excel;charset=utf-8';
+    let extension = 'xls';
+    const fileName = `物料汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+    try {
+      if (window.showSaveFilePicker) {
+        // 使用文件系统API直接保存到用户选择的文件夹
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Excel Files',
+              accept: { [mimeType]: ['.' + extension] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      } else {
+        // 降级方案：使用Blob下载
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Export failed:', err);
+        // 降级方案
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+
     setShowExportModal(false);
     setExportMode(false);
     setSelectedRows([]);
@@ -292,7 +350,7 @@ export default function WarehouseOverviewPage() {
 
   // ActionToolbar callbacks
   const handleLowStockToggle = () => setFilters(prev => ({ ...prev, showLowStock: !prev.showLowStock }));
-  const handleBatchEditClick = () => setBatchEditMode(true);
+  const handleBatchEditClick = () => setShowBatchEditWarning(true);
   const handleDeleteWarning = () => setShowDeleteWarning(true);
   const handleExport = () => handleExportClick();
   const handleConfirmBatchEdit = () => {
@@ -318,7 +376,7 @@ export default function WarehouseOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="物料总览" subtitle="仓库物料库存总览" />
+      <PageHeader title="库存总览" subtitle="仓库物料库存总览" />
 
       <MaterialFilters
         filters={filters}
@@ -330,7 +388,7 @@ export default function WarehouseOverviewPage() {
 
       {/* 表头行：标题 + 操作按钮 */}
       <ActionToolbar
-        title="仓库物料"
+        title="物料汇总表"
         batchEditMode={batchEditMode}
         deleteMode={deleteMode}
         exportMode={exportMode}
@@ -439,6 +497,16 @@ export default function WarehouseOverviewPage() {
           } else {
             setCurrentBatchEditIndex(0);
           }
+        }}
+      />
+
+      <BatchEditWarningModal
+        isOpen={showBatchEditWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowBatchEditWarning(false)}
+        onConfirm={() => {
+          setShowBatchEditWarning(false);
+          setBatchEditMode(true);
         }}
       />
 

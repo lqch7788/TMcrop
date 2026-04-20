@@ -39,7 +39,7 @@ export function MaterialBatchEditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="批量编辑物料"
-      size="lg"
+      size="xxl"
       showFooter={false}
     >
       <div className="bg-blue-50 rounded-lg p-4 mb-4">
@@ -54,7 +54,7 @@ export function MaterialBatchEditModal({
             const idx = selectedRows.indexOf(Number(e.target.value));
             onMaterialSelect(idx >= 0 ? idx : 0);
           }}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
         >
           {selectedMaterialsList.map((material, idx) => (
             <option key={material.id} value={material.id}>
@@ -79,7 +79,7 @@ export function MaterialBatchEditModal({
             <select
               value={currentEditedData.dataStatus || '启用'}
               onChange={(e) => onFieldChange(currentMaterialId, 'dataStatus', e.target.value)}
-              className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             >
               <option value="启用">启用</option>
               <option value="停用">停用</option>
@@ -94,7 +94,7 @@ export function MaterialBatchEditModal({
               type="number"
               value={currentEditedData.quantity ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'quantity', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -103,7 +103,7 @@ export function MaterialBatchEditModal({
               type="number"
               value={currentEditedData.minStock ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'minStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -112,7 +112,7 @@ export function MaterialBatchEditModal({
               type="number"
               value={currentEditedData.maxStock ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'maxStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -124,7 +124,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={(currentEditedData.price || '').toString().replace('元', '')}
               onChange={(e) => onFieldChange(currentMaterialId, 'price', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -133,7 +133,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.unit || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'unit', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -142,7 +142,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.location || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'location', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -153,7 +153,7 @@ export function MaterialBatchEditModal({
             type="text"
             value={currentEditedData.supplier || ''}
             onChange={(e) => onFieldChange(currentMaterialId, 'supplier', e.target.value)}
-            className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
           />
         </div>
 
@@ -164,7 +164,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.specification || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'specification', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -173,7 +173,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.barcode || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'barcode', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -182,7 +182,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.batchNo || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'batchNo', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -194,7 +194,7 @@ export function MaterialBatchEditModal({
               type="date"
               value={currentEditedData.productionDate || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'productionDate', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -203,7 +203,7 @@ export function MaterialBatchEditModal({
               type="date"
               value={currentEditedData.expiryDate || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'expiryDate', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>

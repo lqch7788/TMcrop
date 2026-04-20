@@ -31,13 +31,15 @@ export function MaterialExportModal({
       isOpen={isOpen}
       onClose={onClose}
       title="选择导出格式"
-      size="sm"
+      size="md"
       showFooter={true}
       onSubmit={onExport}
       submitText="导出"
       cancelText="取消"
+      showMaximize={false}
+      enableDrag={false}
+      enableResize={false}
     >
-      <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
       <div className="space-y-3">
         {formats.map((format) => (
           <label
@@ -45,7 +47,7 @@ export function MaterialExportModal({
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
               exportFormat === format.value
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-300 hover:border-gray-400'
             }`}
           >
             <input

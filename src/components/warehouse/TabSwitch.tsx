@@ -31,7 +31,7 @@ export default function TabSwitch({ activeTab, onTabChange, codeGenExpanded, onC
               : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
-          物料总览
+          库存总览
         </button>
       </div>
       {showCodeGen && (

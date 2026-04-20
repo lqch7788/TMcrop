@@ -383,7 +383,7 @@ export default function MaterialsPage() {
               : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
-          物料总览
+          库存总览
         </button>
         <button
           onClick={() => {
@@ -400,7 +400,7 @@ export default function MaterialsPage() {
         </button>
       </div>
 
-      {/* 物料总览 */}
+      {/* 库存总览 */}
       {activeTab === 'overview' && (
         <>
           {/* 筛选器 */}
