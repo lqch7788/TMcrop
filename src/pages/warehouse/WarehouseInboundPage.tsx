@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2 } from 'lucide-react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../components/warehouse/MaterialInboundTab';
-import { InboundDetailModal, InboundEditModal, InboundAddModal, InboundDeleteConfirmModal, InboundBatchEditModal } from '../../components/warehouse/InboundModals';
+import { InboundDetailModal, InboundEditModal, InboundAddModal, InboundDeleteConfirmModal, InboundBatchEditModal, InboundExportModal } from '../../components/warehouse/InboundModals';
 import PageHeader from '../../components/warehouse/PageHeader';
 
 const categoryConfig: Record<string, { name: string; categories: Record<string, { name: string; subCategories: Record<string, { name: string; prefix: string }> }> }> = {
@@ -525,6 +525,8 @@ export default function WarehouseInboundPage() {
       alert('请先选择要编辑的记录');
       return;
     }
+    // 打开批量编辑弹窗
+    setShowBatchEditModal(true);
   };
 
   const handleConfirmDelete = () => {
@@ -748,23 +750,34 @@ export default function WarehouseInboundPage() {
             {!editMode && !deleteMode && !exportMode ? (
               <>
                 <button
+                  onClick={handleAddRecord}
+                  className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+                <button
                   onClick={() => setEditMode(true)}
                   className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
                 >
+                  <Pencil className="w-4 h-4" />
                   编辑
                 </button>
                 <button
                   onClick={() => setDeleteMode(true)}
                   className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
                 >
+                  <Trash2 className="w-4 h-4" />
                   删除
                 </button>
-                <div className="w-px h-6 bg-gray-300 mx-1"></div>
                 <button
-                  onClick={handleAddRecord}
+                  onClick={() => setExportMode(true)}
                   className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
                 >
-                  新增入库
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  导出
                 </button>
               </>
             ) : (
@@ -893,24 +906,24 @@ export default function WarehouseInboundPage() {
                 </tr>
                 {/* 展开的物料明细行 */}
                 {expandedRows.has(record.id) && (
-                  <tr key={`${record.id}-expanded`} className="bg-blue-50 hover:bg-blue-100">
+                  <tr key={`${record.id}-expanded`} className="bg-white hover:bg-gray-50">
                     <td colSpan={(editMode || deleteMode || exportMode) ? 9 : 8} className="px-4 py-3">
                       <div className="space-y-2">
                         <div className="text-sm font-medium text-gray-700 mb-2">物料明细（共 {record.materials.length} 项）</div>
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-100">
+                          <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
                             <tr>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">物料编码</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">物料名称</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">分类</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">规格</th>
-                              <th className="px-3 py-2 text-right text-gray-600 font-medium">数量</th>
-                              <th className="px-3 py-2 text-right text-gray-600 font-medium">单价</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">批次号</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">有效期至</th>
+                              <th className="px-3 py-2 text-left font-medium">物料编码</th>
+                              <th className="px-3 py-2 text-left font-medium">物料名称</th>
+                              <th className="px-3 py-2 text-left font-medium">分类</th>
+                              <th className="px-3 py-2 text-left font-medium">规格</th>
+                              <th className="px-3 py-2 text-right font-medium">数量</th>
+                              <th className="px-3 py-2 text-right font-medium">单价</th>
+                              <th className="px-3 py-2 text-left font-medium">批次号</th>
+                              <th className="px-3 py-2 text-left font-medium">有效期至</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-200">
+                          <tbody className="divide-y divide-gray-300">
                             {record.materials.map((material, idx) => (
                               <tr key={idx} className="hover:bg-gray-50">
                                 <td className="px-3 py-2 text-gray-800 font-mono text-xs">{material.materialCode}</td>
@@ -990,6 +1003,7 @@ export default function WarehouseInboundPage() {
         onClose={() => setShowInboundAddModal(false)}
         onSave={handleSaveNewInbound}
         onGenerateCode={generateSequentialOrderCode}
+        existingCodes={inboundRecords.map(r => r.code)}
       />
 
       <InboundDeleteConfirmModal
@@ -1004,6 +1018,15 @@ export default function WarehouseInboundPage() {
         isOpen={showBatchEditModal}
         onClose={() => setShowBatchEditModal(false)}
         onSave={handleBatchSaveRecord}
+      />
+
+      <InboundExportModal
+        records={selectedRecords}
+        isOpen={showExportModal}
+        onClose={() => {
+          setShowExportModal(false);
+          setExportMode(false);
+        }}
       />
     </div>
   );

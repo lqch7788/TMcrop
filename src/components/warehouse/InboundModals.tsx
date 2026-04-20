@@ -1,6 +1,9 @@
 import { X, Package, Plus, Trash2, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { InboundRecord, InboundMaterial } from './MaterialInboundTab';
+import { currentUser } from '../../data/mockData';
+import * as XLSX from 'xlsx';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun } from 'docx';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;
@@ -1011,8 +1014,218 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
 
   if (!isOpen) return null;
 
+  // 生成导出文件名
+  const generateFileName = (format: string) => {
+    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const recordCount = records.length;
+    return `物料入库记录_${timestamp}_${recordCount}条.${format}`;
+  };
+
+  // 导出为Excel格式
+  const exportToExcel = () => {
+    // 准备表头
+    const headers = [
+      '入库单号', '入库日期', '供应商', '操作员', '状态',
+      '物料编码', '物料名称', '分类', '规格', '单位',
+      '数量', '单价', '批号', '生产日期', '有效期至', '存放位置', '备注'
+    ];
+
+    // 准备数据行
+    const rows: (string | number)[][] = [];
+
+    records.forEach(record => {
+      // 每个入库单号对应其下的所有物料明细
+      record.materials.forEach((material, index) => {
+        rows.push([
+          index === 0 ? record.code : '',  // 入库单号：只在第一行显示
+          index === 0 ? record.inboundDate : '',
+          index === 0 ? record.supplier : '',
+          index === 0 ? record.operator : '',
+          index === 0 ? (record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废') : '',
+          material.materialCode,
+          material.materialName,
+          material.category || '',
+          material.specification || '',
+          material.unit,
+          material.quantity,
+          material.price || '',
+          material.batchNo || '',
+          material.productionDate || '',
+          material.expiryDate || '',
+          material.location || '',
+          material.remarks || ''
+        ]);
+      });
+    });
+
+    // 创建工作簿和工作表
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+    // 设置列宽
+    worksheet['!cols'] = [
+      { wch: 18 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 8 },
+      { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 8 },
+      { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '物料入库记录');
+
+    // 下载文件
+    XLSX.writeFile(workbook, generateFileName('xlsx'));
+  };
+
+  // 导出为CSV格式
+  const exportToCsv = () => {
+    const headers = [
+      '入库单号', '入库日期', '供应商', '操作员', '状态',
+      '物料编码', '物料名称', '分类', '规格', '单位',
+      '数量', '单价', '批号', '生产日期', '有效期至', '存放位置', '备注'
+    ];
+
+    const rows: string[][] = [];
+
+    records.forEach(record => {
+      record.materials.forEach((material, index) => {
+        rows.push([
+          index === 0 ? record.code : '',
+          index === 0 ? record.inboundDate : '',
+          index === 0 ? record.supplier : '',
+          index === 0 ? record.operator : '',
+          index === 0 ? (record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废') : '',
+          material.materialCode,
+          material.materialName,
+          material.category || '',
+          material.specification || '',
+          material.unit,
+          String(material.quantity),
+          material.price || '',
+          material.batchNo || '',
+          material.productionDate || '',
+          material.expiryDate || '',
+          material.location || '',
+          material.remarks || ''
+        ]);
+      });
+    });
+
+    // 添加BOM以便Excel正确识别UTF-8编码的CSV
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [headers, ...rows].map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = generateFileName('csv');
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  // 导出为Word格式
+  const exportToWord = async () => {
+    const tables: Table[] = [];
+
+    for (const record of records) {
+      // 为每条入库记录创建一个表
+      const headerRow = new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '入库单号', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '入库日期', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '供应商', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '操作员', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '状态', bold: true })] })] }),
+        ],
+      });
+
+      const dataRow = new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.code })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.inboundDate })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.supplier })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.operator })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废' })] })] }),
+        ],
+      });
+
+      // 物料明细表头
+      const materialHeaderRow = new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '物料编码', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '物料名称', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '分类', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '规格', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '单位', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '数量', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '单价', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '批号', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '有效期至', bold: true })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '存放位置', bold: true })] })] }),
+        ],
+      });
+
+      const materialRows = record.materials.map(m => new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.materialCode })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.materialName })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.category || '-' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.specification || '-' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.unit })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(m.quantity) })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.price || '-' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.batchNo || '-' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.expiryDate || '-' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.location || '-' })] })] }),
+        ],
+      }));
+
+      tables.push(
+        new Table({
+          rows: [
+            headerRow,
+            dataRow,
+            materialHeaderRow,
+            ...materialRows
+          ],
+        })
+      );
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: '物料入库记录', bold: true, size: 32 })],
+            alignment: 1 as any, // Center alignment
+          }),
+          new Paragraph({ children: [] }),
+          ...tables.flatMap(t => t.rows.map(row => new Paragraph({ children: [] }))),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = generateFileName('docx');
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   const handleExport = () => {
-    console.log(`导出 ${records.length} 条记录，格式: ${exportFormat}`);
+    switch (exportFormat) {
+      case 'excel':
+        exportToExcel();
+        break;
+      case 'csv':
+        exportToCsv();
+        break;
+      case 'word':
+        exportToWord();
+        break;
+    }
     onClose();
   };
 
@@ -1081,19 +1294,172 @@ interface InboundAddModalProps {
   onClose: () => void;
   onSave: (record: Omit<InboundRecord, 'id'>) => void;
   onGenerateCode: () => string;
+  existingCodes: string[];
 }
 
-export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode }: InboundAddModalProps) {
+export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, existingCodes }: InboundAddModalProps) {
+  // 获取当天日期字符串
+  const today = new Date().toISOString().split('T')[0];
   const [formData, setFormData] = useState({
     code: '',
-    inboundDate: new Date().toISOString().split('T')[0],
+    inboundDate: today,
     supplier: '',
-    operator: '',
-    status: 'pending' as 'pending' | 'completed',
+    operator: currentUser.name, // 默认当前登录用户
   });
   const [materials, setMaterials] = useState<InboundMaterial[]>([]);
+  const [codeError, setCodeError] = useState('');
+  // 弹窗大小调整状态
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [dialogSize, setDialogSize] = useState({ width: 'max-w-6xl', height: 'max-h-[90vh]' });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  // 弹窗拖动状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
 
-  if (!isOpen) return null;
+  // 鼠标按下准备拖动弹窗
+  const handleDragStart = (e: React.MouseEvent) => {
+    if (isMaximized) return;
+    // 只允许在标题栏拖动
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    setIsDragging(true);
+    const dialog = document.getElementById('inbound-add-dialog');
+    if (dialog) {
+      const rect = dialog.getBoundingClientRect();
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+        left: rect.left,
+        top: rect.top,
+      });
+    }
+  };
+
+  // 鼠标移动拖动弹窗
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      const dialog = document.getElementById('inbound-add-dialog');
+      if (dialog) {
+        dialog.style.position = 'fixed';
+        dialog.style.left = `${dragStart.left + deltaX}px`;
+        dialog.style.top = `${dragStart.top + deltaY}px`;
+        dialog.style.margin = '0';
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // 鼠标按下准备调整大小
+  const handleResizeStart = (e: React.MouseEvent) => {
+    if (isMaximized) return;
+    e.preventDefault();
+    setIsResizing(true);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: e.currentTarget.parentElement?.clientWidth || 0,
+      height: e.currentTarget.parentElement?.clientHeight || 0,
+    });
+  };
+
+  // 鼠标移动调整大小
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+      const newWidth = Math.max(600, resizeStart.width + deltaX);
+      const newHeight = Math.max(400, resizeStart.height + deltaY);
+
+      // 通过设置style来实现大小调整
+      const dialog = document.getElementById('inbound-add-dialog');
+      if (dialog) {
+        dialog.style.width = `${newWidth}px`;
+        dialog.style.maxWidth = 'none';
+        dialog.style.height = `${newHeight}px`;
+        dialog.style.maxHeight = 'none';
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, resizeStart]);
+
+  // 最大化/还原切换
+  const toggleMaximize = () => {
+    const dialog = document.getElementById('inbound-add-dialog');
+    if (!isMaximized && dialog) {
+      // 最大化：保存当前大小并切换
+      dialog.style.width = '100vw';
+      dialog.style.height = '100vh';
+      dialog.style.maxWidth = 'none';
+      dialog.style.maxHeight = 'none';
+      dialog.style.borderRadius = '0';
+    } else if (dialog) {
+      // 还原：恢复默认大小
+      dialog.style.width = '';
+      dialog.style.height = '';
+      dialog.style.maxWidth = '';
+      dialog.style.maxHeight = '';
+      dialog.style.borderRadius = '';
+    }
+    setIsMaximized(!isMaximized);
+  };
+
+  // 生成入库单号（带自动查重）
+  const handleGenerateCode = () => {
+    let newCode = onGenerateCode();
+    let attempts = 0;
+    const maxAttempts = 999;
+
+    // 查重：如果生成的编号已存在，则递增直到找到可用编号
+    while (existingCodes.includes(newCode) && attempts < maxAttempts) {
+      const today = new Date().toISOString().split('T')[0];
+      const todayPrefix = `RK${today.replace(/-/g, '')}-`;
+      const seq = parseInt(newCode.replace(todayPrefix, ''), 10);
+      const nextSeq = seq + 1;
+      if (nextSeq > 999) {
+        setCodeError('今日编号已达上限999');
+        return;
+      }
+      newCode = `${todayPrefix}${String(nextSeq).padStart(3, '0')}`;
+      attempts++;
+    }
+
+    if (existingCodes.includes(newCode)) {
+      setCodeError('编号生成失败，请稍后重试');
+      return;
+    }
+
+    setFormData({ ...formData, code: newCode });
+    setCodeError('');
+  };
 
   const handleAddMaterial = () => {
     const newMaterial: InboundMaterial = {
@@ -1129,55 +1495,114 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode }: Inb
     setMaterials(materials.filter(m => m.id !== id));
   };
 
-  const handleSave = () => {
+  const handleSubmit = () => {
+    // 提交后默认进入待审核状态
     onSave({
       code: formData.code || onGenerateCode(),
       inboundDate: formData.inboundDate,
       supplier: formData.supplier,
       operator: formData.operator,
-      status: formData.status,
+      status: 'pending' as const,
       materials,
     });
     setFormData({
       code: '',
-      inboundDate: new Date().toISOString().split('T')[0],
+      inboundDate: today,
       supplier: '',
-      operator: '',
-      status: 'pending',
+      operator: currentUser.name,
     });
     setMaterials([]);
     onClose();
   };
 
+  // 如果弹窗未打开，不渲染任何内容
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl shadow-xl max-h-[90vh] flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0">
-          <h3 className="text-lg font-semibold text-white">新增入库记录</h3>
-          <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
+      <div
+        id="inbound-add-dialog"
+        className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[90vh] flex flex-col relative"
+      >
+        {/* 调整大小拖动条 - 右下角 */}
+        {!isMaximized && (
+          <div
+            className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-10"
+            onMouseDown={handleResizeStart}
+            style={{}}
+          >
+            <svg className="w-full h-full text-gray-300 hover:text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z" />
+            </svg>
+          </div>
+        )}
+
+        <div
+          className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0 cursor-move"
+          onMouseDown={handleDragStart}
+        >
+          <h3 className="text-lg font-semibold text-white select-none">新增入库记录</h3>
+          <div className="flex items-center gap-1">
+            {/* 最大化/还原按钮 */}
+            <button
+              onClick={toggleMaximize}
+              className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors"
+              title={isMaximized ? '还原' : '最大化'}
+            >
+              {isMaximized ? (
+                // 还原图标（两个重叠的方框）
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H6a2 2 0 00-2 2v2m0 4v2a2 2 0 002 2h2m8 0h2a2 2 0 002-2v-2m0-4V6a2 2 0 00-2-2h-2" />
+                </svg>
+              ) : (
+                // 最大化图标（一个方框）
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
+            {/* 关闭按钮 */}
+            <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1 rounded">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 bg-emerald-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</label>
-              <input
-                type="text"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                placeholder="自动生成"
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
-              />
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={formData.code}
+                  onChange={(e) => {
+                    setFormData({ ...formData, code: e.target.value });
+                    setCodeError('');
+                  }}
+                  placeholder="点击生成"
+                  className="flex-1 h-8 px-2 border border-gray-200 rounded text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateCode}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                  title="生成入库单号"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+              {codeError && <span className="text-xs text-red-500 mt-0.5">{codeError}</span>}
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">入库日期</label>
               <input
                 type="date"
                 value={formData.inboundDate}
-                onChange={(e) => setFormData({ ...formData, inboundDate: e.target.value })}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                readOnly
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
               />
             </div>
             <div>
@@ -1194,20 +1619,9 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode }: Inb
               <input
                 type="text"
                 value={formData.operator}
-                onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                readOnly
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">状态</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'completed' })}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
-              >
-                <option value="pending">待审核</option>
-                <option value="completed">已完成</option>
-              </select>
             </div>
           </div>
         </div>
@@ -1388,10 +1802,10 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode }: Inb
             取消
           </button>
           <button
-            onClick={handleSave}
+            onClick={handleSubmit}
             className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
           >
-            保存
+            提交
           </button>
         </div>
       </div>
