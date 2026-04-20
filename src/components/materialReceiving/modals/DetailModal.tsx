@@ -14,10 +14,10 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
       isOpen={isOpen}
       onClose={onClose}
       title="领料单详情"
-      size="lg"
+      size="xxl"
       showFooter={false}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="text-sm text-gray-500">领料单号</label>
           <p className="font-mono font-semibold text-gray-900">{record.code}</p>
@@ -77,21 +77,21 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
         <div className="mt-6">
           <label className="text-sm text-gray-500 block mb-2">物料明细</label>
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-emerald-100">
+            <thead className="bg-blue-600">
               <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料编码</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料名称</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">规格</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单位</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">申领数量</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">当前库存</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单价(元)</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">小计(元)</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">仓库货位</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-white">备注</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-300">
               {record.materials.map((material: MaterialItem, idx: number) => {
                 const subtotal = material.requestedQuantity * material.unitPrice;
                 const isStockWarning = material.requestedQuantity > material.stockQuantity;
@@ -115,15 +115,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
         </div>
       )}
 
-      {/* 底部按钮 */}
-      <div className="mt-6 flex justify-end">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
-          关闭
-        </button>
-      </div>
+      {/* 底部按钮 - 已移除关闭按钮 */}
     </UnifiedModal>
   );
 };

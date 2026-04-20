@@ -12,6 +12,9 @@ interface UnifiedModalProps {
   onSubmit?: () => void;
   submitText?: string;
   cancelText?: string;
+  showMaximize?: boolean;
+  enableDrag?: boolean;
+  enableResize?: boolean;
 }
 
 /**
@@ -30,6 +33,9 @@ export function UnifiedModal({
   onSubmit,
   submitText = '保存',
   cancelText = '取消',
+  showMaximize = true,
+  enableDrag = true,
+  enableResize = true,
 }: UnifiedModalProps) {
   return (
     <Modal
@@ -43,6 +49,9 @@ export function UnifiedModal({
       submitText={submitText}
       cancelText={cancelText}
       headerAction={headerAction}
+      showMaximize={showMaximize}
+      enableDrag={enableDrag}
+      enableResize={enableResize}
     >
       {children}
     </Modal>

@@ -61,6 +61,47 @@ export const materialReceivingDetails: MaterialReceivingRecord[] = [
 ];
 
 // ============================================
+// 物料基础数据库（用于自动填充）
+// ============================================
+export interface MaterialBase {
+  materialCode: string;
+  materialName: string;
+  spec: string;
+  unit: string;
+  category: string;
+  stockQuantity: number;
+  unitPrice: number;
+  warehousePosition: string;
+  remark: string;
+}
+
+// 物料数据库 - 包含所有物料的基础信息
+export const materialBaseDatabase: MaterialBase[] = [
+  { materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', category: '肥料与土壤改良剂', stockQuantity: 150, unitPrice: 45.00, warehousePosition: 'A-01-01', remark: '正常出库' },
+  { materialCode: 'SP0202001', materialName: '尿素', spec: '50kg/袋', unit: '袋', category: '肥料与土壤改良剂', stockQuantity: 80, unitPrice: 85.00, warehousePosition: 'A-01-02', remark: '库存充足' },
+  { materialCode: 'SP0301001', materialName: '吡虫啉', spec: '100g/瓶', unit: '瓶', category: '农药与植保产品', stockQuantity: 120, unitPrice: 28.00, warehousePosition: 'B-02-03', remark: '正常出库' },
+  { materialCode: 'SP0302001', materialName: '多菌灵', spec: '200g/袋', unit: '袋', category: '农药与植保产品', stockQuantity: 45, unitPrice: 35.00, warehousePosition: 'C-03-01', remark: '待审批' },
+  { materialCode: 'SP0103001', materialName: '番茄种子', spec: '50g/袋', unit: '袋', category: '种质资源', stockQuantity: 60, unitPrice: 120.00, warehousePosition: 'A-02-01', remark: '正常出库' },
+  { materialCode: 'SP0101001', materialName: '水稻种子', spec: '20kg/袋', unit: '袋', category: '种质资源', stockQuantity: 100, unitPrice: 65.00, warehousePosition: 'B-02-01', remark: '正常出库' },
+  { materialCode: 'OP0201001', materialName: '锄头', spec: '标准型', unit: '把', category: '劳保与防护用品', stockQuantity: 35, unitPrice: 42.00, warehousePosition: 'C-04-01', remark: '正常出库' },
+  { materialCode: 'OP0102001', materialName: '劳保胶靴', spec: '标准码', unit: '双', category: '劳保与防护用品', stockQuantity: 50, unitPrice: 68.00, warehousePosition: 'C-04-02', remark: '正常出库' },
+  { materialCode: 'EQ0103001', materialName: '电动喷雾机', spec: '标准型', unit: '台', category: '农业机械', stockQuantity: 15, unitPrice: 580.00, warehousePosition: 'A-05-01', remark: '正常出库' },
+  { materialCode: 'EQ0306001', materialName: '滴灌带', spec: '50m/卷', unit: '卷', category: '农业机械', stockQuantity: 200, unitPrice: 38.00, warehousePosition: 'C-05-01', remark: '待审批' },
+  { materialCode: 'PH0104001', materialName: '塑料袋', spec: '标准型', unit: '卷', category: '采收容器', stockQuantity: 500, unitPrice: 8.50, warehousePosition: 'A-03-01', remark: '正常出库' },
+  { materialCode: 'IT0101001', materialName: '土壤温湿度传感器', spec: '标准型', unit: '个', category: '监测设备', stockQuantity: 30, unitPrice: 260.00, warehousePosition: 'A-04-01', remark: '正常出库' },
+];
+
+// 根据物料编码查找物料信息
+export const findMaterialByCode = (code: string): MaterialBase | undefined => {
+  return materialBaseDatabase.find(m => m.materialCode === code);
+};
+
+// 根据物料名称查找物料信息
+export const findMaterialByName = (name: string): MaterialBase | undefined => {
+  return materialBaseDatabase.find(m => m.materialName === name);
+};
+
+// ============================================
 // 领料统计 Mock 数据
 // ============================================
 

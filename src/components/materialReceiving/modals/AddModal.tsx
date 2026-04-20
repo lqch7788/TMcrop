@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { MaterialItem } from '../../../types/materialReceiving';
+import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
 
 // 申请人选项
 const APPLICANTS = [
@@ -39,7 +40,45 @@ export const AddModal: React.FC<AddModalProps> = ({
   onMaterialChange,
   onGenerateCode,
 }) => {
+  // 获取当前登录用户
+  const currentOperator = localStorage.getItem('username') || '陆启闯';
   const isOtherBatch = addForm.productionBatchCode === '其他';
+
+  // 物料编码或名称变化时，自动填充其他字段
+  const handleMaterialCodeChange = (idx: number, value: string) => {
+    onMaterialChange(idx, 'materialCode', value);
+    if (value) {
+      const material = findMaterialByCode(value);
+      if (material) {
+        onMaterialChange(idx, 'materialName', material.materialName);
+        onMaterialChange(idx, 'spec', material.spec);
+        onMaterialChange(idx, 'unit', material.unit);
+        onMaterialChange(idx, 'category', material.category);
+        onMaterialChange(idx, 'stockQuantity', material.stockQuantity);
+        onMaterialChange(idx, 'unitPrice', material.unitPrice);
+        onMaterialChange(idx, 'warehousePosition', material.warehousePosition);
+        onMaterialChange(idx, 'remark', material.remark);
+      }
+    }
+  };
+
+  // 物料名称变化时，自动填充其他字段
+  const handleMaterialNameChange = (idx: number, value: string) => {
+    onMaterialChange(idx, 'materialName', value);
+    if (value) {
+      const material = findMaterialByName(value);
+      if (material) {
+        onMaterialChange(idx, 'materialCode', material.materialCode);
+        onMaterialChange(idx, 'spec', material.spec);
+        onMaterialChange(idx, 'unit', material.unit);
+        onMaterialChange(idx, 'category', material.category);
+        onMaterialChange(idx, 'stockQuantity', material.stockQuantity);
+        onMaterialChange(idx, 'unitPrice', material.unitPrice);
+        onMaterialChange(idx, 'warehousePosition', material.warehousePosition);
+        onMaterialChange(idx, 'remark', material.remark);
+      }
+    }
+  };
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -48,7 +87,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       size="xxl"
       showFooter={false}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">领料单号</label>
           <div className="flex gap-2">
@@ -57,7 +96,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={addForm.code}
               readOnly
               placeholder="点击生成获取单号"
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
+              className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50 font-mono"
             />
             <button
               onClick={onGenerateCode}
@@ -75,7 +114,16 @@ export const AddModal: React.FC<AddModalProps> = ({
             type="date"
             value={addForm.date}
             onChange={(e) => onChange('date', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+          <input
+            type="text"
+            value={currentOperator}
+            readOnly
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 font-medium"
           />
         </div>
         <div>
@@ -83,7 +131,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <select
             value={addForm.applicant}
             onChange={(e) => onChange('applicant', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择申请人</option>
             {APPLICANTS.map(name => (
@@ -96,7 +144,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <select
             value={addForm.department}
             onChange={(e) => onChange('department', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择部门</option>
             <option value="生产部">生产部</option>
@@ -111,7 +159,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <select
             value={addForm.warehouseLocation}
             onChange={(e) => onChange('warehouseLocation', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="仓库A区">仓库A区</option>
             <option value="仓库B区">仓库B区</option>
@@ -127,7 +175,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.plantArea}
             onChange={(e) => onChange('plantArea', e.target.value)}
             placeholder="如：1号棚-叶菜区"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
@@ -135,7 +183,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <select
             value={addForm.reviewer}
             onChange={(e) => onChange('reviewer', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="王经理">王经理</option>
             <option value="李经理">李经理</option>
@@ -149,7 +197,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <select
             value={addForm.productionBatchCode}
             onChange={(e) => onChange('productionBatchCode', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择生产批次</option>
             {PRODUCTION_BATCH_CODES.map(code => (
@@ -166,7 +214,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={addForm.batchRemark || ''}
               onChange={(e) => onChange('batchRemark', e.target.value)}
               placeholder="请输入其他批次的具体说明"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         )}
@@ -175,7 +223,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 物料明细 */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">物料明细</label>
+          <label className="text-sm font-bold text-gray-700">物料明细</label>
           <button
             onClick={onAddMaterial}
             className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
@@ -185,20 +233,20 @@ export const AddModal: React.FC<AddModalProps> = ({
           </button>
         </div>
         {addForm.materials.length > 0 ? (
-          <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-emerald-100">
+          <table className="w-full border border-gray-400 rounded-lg overflow-hidden">
+            <thead className="bg-blue-600">
               <tr>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">物料编码</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">物料名称</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">规格</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">单位</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">申领数量</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">当前库存</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">单价(元)</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white whitespace-nowrap">小计(元)</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">仓库货位</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white">备注</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-white w-12 whitespace-nowrap">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -211,7 +259,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                       <input
                         type="text"
                         value={material.materialCode}
-                        onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
+                        onChange={(e) => handleMaterialCodeChange(idx, e.target.value)}
                         className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </td>
@@ -219,7 +267,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                       <input
                         type="text"
                         value={material.materialName}
-                        onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
+                        onChange={(e) => handleMaterialNameChange(idx, e.target.value)}
                         className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </td>
@@ -263,7 +311,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                         className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </td>
-                    <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50">
+                    <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50 whitespace-nowrap">
                       {subtotal.toFixed(2)}
                     </td>
                     <td className="px-2 py-2">
@@ -296,7 +344,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             </tbody>
           </table>
         ) : (
-          <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
+          <div className="text-sm text-gray-500 italic border border-gray-400 rounded-lg p-4 text-center">
             暂无物料明细，请点击"添加物料"按钮添加
           </div>
         )}
