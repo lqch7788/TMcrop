@@ -3,7 +3,7 @@
  * 从 WarehouseMaterialsPage 拆分出来，专注物料入库操作
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -540,13 +540,6 @@ export default function WarehouseInboundPage() {
 
       {/* Tab切换按钮 + 编码规则 */}
       <div className="flex items-center gap-4">
-        <div className="flex gap-2">
-          <button
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white`}
-          >
-            物料入库
-          </button>
-        </div>
         <div className="h-6 w-px bg-gray-500"></div>
         <button
           onClick={() => navigate('/code-rule')}
@@ -554,7 +547,7 @@ export default function WarehouseInboundPage() {
         >
           编码规则 &gt;&gt;
         </button>
-        <span className="text-sm font-bold text-gray-900">物料编码生成</span>
+        <span className="text-base font-bold text-blue-600">物料编码生成</span>
         <button
           onClick={() => setCodeGenExpanded(!codeGenExpanded)}
           className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -853,7 +846,8 @@ export default function WarehouseInboundPage() {
             </thead>
             <tbody className="divide-y divide-gray-300">
               {displayedRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                <React.Fragment key={record.id}>
+                <tr className="hover:bg-blue-100 transition-colors">
                   {(editMode || deleteMode || exportMode) && (
                     <td className="px-4 py-3 whitespace-nowrap">
                       {deleteMode && record.status !== 'pending' ? (
@@ -897,6 +891,45 @@ export default function WarehouseInboundPage() {
                     </span>
                   </td>
                 </tr>
+                {/* 展开的物料明细行 */}
+                {expandedRows.has(record.id) && (
+                  <tr key={`${record.id}-expanded`} className="bg-blue-50 hover:bg-blue-100">
+                    <td colSpan={(editMode || deleteMode || exportMode) ? 9 : 8} className="px-4 py-3">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-700 mb-2">物料明细（共 {record.materials.length} 项）</div>
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">物料编码</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">物料名称</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">分类</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">规格</th>
+                              <th className="px-3 py-2 text-right text-gray-600 font-medium">数量</th>
+                              <th className="px-3 py-2 text-right text-gray-600 font-medium">单价</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">批次号</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">有效期至</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {record.materials.map((material, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 text-gray-800 font-mono text-xs">{material.materialCode}</td>
+                                <td className="px-3 py-2 text-gray-800 font-medium">{material.materialName}</td>
+                                <td className="px-3 py-2 text-gray-600">{material.category}</td>
+                                <td className="px-3 py-2 text-gray-600">{material.specification}</td>
+                                <td className="px-3 py-2 text-right text-gray-800">{material.quantity} {material.unit}</td>
+                                <td className="px-3 py-2 text-right text-gray-800">{material.price}</td>
+                                <td className="px-3 py-2 text-gray-600">{material.batchNo || '-'}</td>
+                                <td className="px-3 py-2 text-gray-600">{material.expiryDate || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

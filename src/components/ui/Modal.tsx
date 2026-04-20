@@ -220,14 +220,14 @@ export function Modal({
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 ${useCenteredLayout ? '' : 'backdrop-blur-sm'}`}
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
 
       {/* Modal Container - Draggable & Resizable */}
       <div
         ref={modalRef}
-        className={`bg-white rounded-xl shadow-xl flex flex-col ${useCenteredLayout ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'absolute'} ${isDragging || isResizing ? '' : 'transition-all duration-200'}`}
+        className={`bg-white rounded-xl shadow-xl flex flex-col ${useCenteredLayout ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'absolute'}`}
         style={useCenteredLayout ? {
           width: modalSize.width,
           maxHeight: '90vh'
@@ -242,7 +242,7 @@ export function Modal({
       >
         {/* Header - Double click to maximize */}
         <div
-          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl ${enableDrag ? 'cursor-move' : 'cursor-default'} select-none ${isDragging ? 'ring-2 ring-white/30 shadow-lg' : ''}`}
+          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl ${enableDrag ? 'cursor-move' : 'cursor-default'} select-none`}
           onDoubleClick={handleMaximize}
         >
           <h3 className="text-lg font-semibold text-white">{title}</h3>
@@ -253,7 +253,7 @@ export function Modal({
                 {/* Maximize/Restore Button */}
                 <button
                   onClick={handleMaximize}
-                  className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors group relative"
+                  className="p-1.5 rounded-lg hover:bg-emerald-500 group relative"
                   title={isMaximized ? '还原窗口' : '最大化窗口'}
                 >
                   {isMaximized ? (
@@ -262,7 +262,7 @@ export function Modal({
                     <Maximize2 className="w-4 h-4 text-white" />
                   )}
                   {/* Tooltip */}
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
                     {isMaximized ? '还原窗口' : '最大化窗口'}
                   </span>
                 </button>
@@ -271,7 +271,7 @@ export function Modal({
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-emerald-500"
             >
               <X className="w-5 h-5 text-white" />
             </button>
@@ -283,19 +283,19 @@ export function Modal({
           <>
             {/* Corner handles - Enhanced visibility */}
             <div
-              className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
+              className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'nw')}
             />
             <div
-              className="absolute top-0 right-0 w-2 h-2 cursor-ne-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
+              className="absolute top-0 right-0 w-2 h-2 cursor-ne-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'ne')}
             />
             <div
-              className="absolute bottom-0 left-0 w-2 h-2 cursor-sw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
+              className="absolute bottom-0 left-0 w-2 h-2 cursor-sw-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'sw')}
             />
             <div
-              className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md transition-all duration-150 rounded-sm"
+              className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize hover:w-3 hover:h-3 hover:bg-emerald-400/50 hover:shadow-md rounded-sm"
               onMouseDown={(e) => handleResizeMouseDown(e, 'se')}
             />
             {/* Edge handles */}
@@ -337,7 +337,7 @@ export function Modal({
               <>
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium"
                 >
                   {cancelText}
                 </button>
@@ -345,7 +345,7 @@ export function Modal({
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? '保存中...' : submitText}
                   </button>

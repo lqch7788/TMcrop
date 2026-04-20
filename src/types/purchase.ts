@@ -26,7 +26,7 @@ export type PurchasePriority = 'low' | 'normal' | 'high' | 'urgent';
 export type PurchaseType = 'production' | 'urgent' | 'routine' | 'material' | 'equipment' | 'other';
 
 /**
- * 物料明细项 - 对齐仓库物料总览字段结构
+ * 物料明细项 - 对齐库存总览字段结构
  * 支持后续导出用于入库
  */
 export interface PurchaseItem {
