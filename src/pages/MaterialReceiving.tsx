@@ -2193,6 +2193,7 @@ export default function MaterialReceiving() {
       {/* 查看详情弹窗 */}
       {showDetailModal && selectedRecord && (
         <DetailModal
+          isOpen={showDetailModal}
           record={selectedRecord}
           onClose={() => setShowDetailModal(false)}
         />
@@ -2490,7 +2491,7 @@ export default function MaterialReceiving() {
 
       {/* 批量编辑弹窗 */}
       <BatchEditModal
-        show={showBatchEditModal}
+        isOpen={showBatchEditModal}
         selectedRows={selectedRows}
         batchEditedRecords={batchEditedRecords}
         currentBatchEditIndex={currentBatchEditIndex}

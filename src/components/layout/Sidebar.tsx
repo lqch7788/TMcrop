@@ -59,9 +59,9 @@ const approvalSubItems = [
   { icon: Users, label: 'HR审批单', path: '/hr-approval' },
 ];
 
-// 库存管理子菜单（仓库物料拆分为物料总览和物料入库，采收入库从农事管理移入）
+// 库存管理子菜单（仓库物料拆分为库存总览和物料入库，采收入库从农事管理移入）
 const materialsSubItems = [
-  { icon: Archive, label: '物料总览', path: '/warehouse-overview' },
+  { icon: Archive, label: '库存总览', path: '/warehouse-overview' },
   { icon: Warehouse, label: '物料入库', path: '/warehouse-inbound' },
   { icon: Box, label: '采收入库', path: '/harvest' },
   { icon: Truck, label: '供应商管理', path: '/supplier-management' },
