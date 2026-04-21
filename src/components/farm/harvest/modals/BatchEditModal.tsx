@@ -114,7 +114,7 @@ export function BatchEditModal({
               { value: '', label: '请选择采收单号' },
               ...selectedRecords.map(r => ({
                 value: r.id.toString(),
-                label: `${r.harvestCode} - ${r.cropName} - ${r.harvestDate} ${
+                label: `${r.harvestCode} - ${r.cropName} ${
                   editedRecordIds.includes(r.id.toString()) ? '✅ 已编辑' : ''
                 }`,
               })),

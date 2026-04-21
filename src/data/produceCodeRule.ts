@@ -5,7 +5,7 @@
  * 总长度：9位
  *
  * 示例：PD01010001
- * - PD: 果蔬产品类
+ * - PD: 蔬菜类
  * - 01: 叶菜类
  * - 01: 菠菜
  * - 001: 第1个产品
@@ -19,6 +19,7 @@ export interface ProduceCategory {
   name: string;
   nameEn: string;
   description: string;
+  types: ProduceType[];
 }
 
 // 中类（产品类型）
@@ -34,54 +35,12 @@ export interface ProduceSubType {
   name: string;
 }
 
-// 农产品大类配置
-export const produceCategories: ProduceCategory[] = [
-  {
-    code: 'PD',
-    name: '果蔬产品类',
-    nameEn: 'Produce & Vegetables',
-    description: '新鲜蔬菜和水果产品',
-  },
-  {
-    code: 'FR',
-    name: '水果类',
-    nameEn: 'Fruits',
-    description: '各类水果产品',
-  },
-  {
-    code: 'GR',
-    name: '粮食类',
-    nameEn: 'Grains & Cereals',
-    description: '粮食作物及加工品',
-  },
-  {
-    code: 'FL',
-    name: '花卉类',
-    nameEn: 'Flowers & Plants',
-    description: '花卉及观赏植物',
-  },
-  {
-    code: 'HB',
-    name: '药材类',
-    nameEn: 'Herbs & Medicine',
-    description: '中药材和药用植物',
-  },
-  {
-    code: 'MG',
-    name: '食用菌类',
-    nameEn: 'Mushrooms',
-    description: '食用菌及菌菇类产品',
-  },
-  {
-    code: 'OT',
-    name: '其他类',
-    nameEn: 'Others',
-    description: '其他农产品',
-  },
-];
+// ============================================
+// 类型配置（必须在 produceCategories 之前定义）
+// ============================================
 
-// 果蔬产品类（PD）类型配置
-export const produceTypesPD: ProduceType[] = [
+// 蔬菜类（PD）类型配置
+const produceTypesPD: ProduceType[] = [
   {
     code: '01',
     name: '叶菜类',
@@ -103,17 +62,16 @@ export const produceTypesPD: ProduceType[] = [
   },
   {
     code: '02',
-    name: '瓜果类',
+    name: '瓜菜类',
     subCategories: [
       { code: '01', name: '黄瓜' },
       { code: '02', name: '丝瓜' },
       { code: '03', name: '苦瓜' },
       { code: '04', name: '冬瓜' },
       { code: '05', name: '南瓜' },
-      { code: '06', name: '西瓜' },
-      { code: '07', name: '甜瓜' },
-      { code: '08', name: '哈密瓜' },
-      { code: '99', name: '其他瓜类' },
+      { code: '06', name: '瓠瓜' },
+      { code: '07', name: '西葫芦' },
+      { code: '99', name: '其他瓜菜' },
     ],
   },
   {
@@ -171,27 +129,10 @@ export const produceTypesPD: ProduceType[] = [
       { code: '99', name: '其他葱蒜' },
     ],
   },
-  {
-    code: '07',
-    name: '食用菌类',
-    subCategories: [
-      { code: '01', name: '香菇' },
-      { code: '02', name: '金针菇' },
-      { code: '03', name: '平菇' },
-      { code: '04', name: '杏鲍菇' },
-      { code: '05', name: '白玉菇' },
-      { code: '06', name: '蟹味菇' },
-      { code: '07', name: '木耳' },
-      { code: '08', name: '银耳' },
-      { code: '09', name: '茶树菇' },
-      { code: '10', name: '虫草花' },
-      { code: '99', name: '其他食用菌' },
-    ],
-  },
 ];
 
 // 水果类（FR）类型配置
-export const produceTypesFR: ProduceType[] = [
+const produceTypesFR: ProduceType[] = [
   {
     code: '01',
     name: '浆果类',
@@ -269,7 +210,7 @@ export const produceTypesFR: ProduceType[] = [
 ];
 
 // 粮食类（GR）类型配置
-export const produceTypesGR: ProduceType[] = [
+const produceTypesGR: ProduceType[] = [
   {
     code: '01',
     name: '稻谷类',
@@ -329,7 +270,7 @@ export const produceTypesGR: ProduceType[] = [
 ];
 
 // 花卉类（FL）类型配置
-export const produceTypesFL: ProduceType[] = [
+const produceTypesFL: ProduceType[] = [
   {
     code: '01',
     name: '鲜切花',
@@ -378,7 +319,7 @@ export const produceTypesFL: ProduceType[] = [
 ];
 
 // 药材类（HB）类型配置
-export const produceTypesHB: ProduceType[] = [
+const produceTypesHB: ProduceType[] = [
   {
     code: '01',
     name: '根茎类药材',
@@ -422,7 +363,7 @@ export const produceTypesHB: ProduceType[] = [
 ];
 
 // 食用菌类（MG）类型配置
-export const produceTypesMG: ProduceType[] = [
+const produceTypesMG: ProduceType[] = [
   {
     code: '01',
     name: '木腐菌',
@@ -464,7 +405,7 @@ export const produceTypesMG: ProduceType[] = [
 ];
 
 // 其他类（OT）类型配置
-export const produceTypesOT: ProduceType[] = [
+const produceTypesOT: ProduceType[] = [
   {
     code: '01',
     name: '坚果类',
@@ -513,6 +454,65 @@ export const produceTypesOT: ProduceType[] = [
   },
 ];
 
+// ============================================
+// 农产品大类配置（包含完整层级结构）
+// ============================================
+export const produceCategories: ProduceCategory[] = [
+  {
+    code: 'PD',
+    name: '蔬菜类',
+    nameEn: 'Vegetables',
+    description: '新鲜蔬菜产品',
+    types: produceTypesPD,
+  },
+  {
+    code: 'FR',
+    name: '水果类',
+    nameEn: 'Fruits',
+    description: '各类水果产品',
+    types: produceTypesFR,
+  },
+  {
+    code: 'GR',
+    name: '粮食类',
+    nameEn: 'Grains & Cereals',
+    description: '粮食作物及加工品',
+    types: produceTypesGR,
+  },
+  {
+    code: 'FL',
+    name: '花卉类',
+    nameEn: 'Flowers & Plants',
+    description: '花卉及观赏植物',
+    types: produceTypesFL,
+  },
+  {
+    code: 'HB',
+    name: '药材类',
+    nameEn: 'Herbs & Medicine',
+    description: '中药材和药用植物',
+    types: produceTypesHB,
+  },
+  {
+    code: 'MG',
+    name: '食用菌类',
+    nameEn: 'Mushrooms',
+    description: '食用菌及菌菇类产品',
+    types: produceTypesMG,
+  },
+  {
+    code: 'OT',
+    name: '其他类',
+    nameEn: 'Others',
+    description: '其他农产品',
+    types: produceTypesOT,
+  },
+];
+
+// ============================================
+// 辅助函数
+// ============================================
+
 // 根据大类获取类型配置
 export const getProduceTypesByCategory = (categoryCode: ProduceCategoryCode): ProduceType[] => {
   switch (categoryCode) {
@@ -557,7 +557,9 @@ export const generateProduceCode = (categoryCode: ProduceCategoryCode, typeCode:
 
 // 根据编码获取分类信息
 export const getProduceCategoryInfo = (code: string): { category: ProduceCategory; type: ProduceType; variety: ProduceSubType } | null => {
-  if (code.length < 10) return null;
+  // 编码结构：大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位) = 9位
+  // 前6位是分类信息
+  if (code.length < 6) return null;
 
   const categoryCode = code.substring(0, 2) as ProduceCategoryCode;
   const typeCode = code.substring(2, 4);
@@ -574,4 +576,54 @@ export const getProduceCategoryInfo = (code: string): { category: ProduceCategor
   if (!variety) return null;
 
   return { category, type, variety };
+};
+
+// 根据作物名称查找对应的编码信息
+export interface ProduceCodeInfo {
+  categoryCode: ProduceCategoryCode;
+  typeCode: string;
+  subCode: string;
+  categoryName: string;
+  typeName: string;
+  subName: string;
+}
+
+// 缓存作物名称到编码信息的映射
+let cropNameToCodeCache: Map<string, ProduceCodeInfo> | null = null;
+
+const buildCropNameCache = (): Map<string, ProduceCodeInfo> => {
+  if (cropNameToCodeCache) return cropNameToCodeCache;
+
+  cropNameToCodeCache = new Map();
+  for (const category of produceCategories) {
+    const types = getProduceTypesByCategory(category.code);
+    for (const type of types) {
+      for (const sub of type.subCategories) {
+        // 使用作物品种名称作为key（去除空格）
+        const normalizedName = sub.name.trim();
+        cropNameToCodeCache.set(normalizedName, {
+          categoryCode: category.code,
+          typeCode: type.code,
+          subCode: sub.code,
+          categoryName: category.name,
+          typeName: type.name,
+          subName: sub.name,
+        });
+      }
+    }
+  }
+  return cropNameToCodeCache;
+};
+
+// 根据作物品种名称查找编码信息（如"菠菜" -> PD01）
+export const findProduceCodeByName = (cropName: string): ProduceCodeInfo | null => {
+  if (!cropName) return null;
+  const cache = buildCropNameCache();
+  return cache.get(cropName.trim()) || null;
+};
+
+// 获取所有作物品种名称列表（用于下拉选择）
+export const getAllCropNames = (): string[] => {
+  const cache = buildCropNameCache();
+  return Array.from(cache.keys()).sort();
 };

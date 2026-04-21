@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import { harvestRecords as initialRecords, cropBatches, greenhouses, users } from '../../../data/mockData';
 import { warehouseOptions } from '../../../data/farmMockData';
-import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
-import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal } from './modals';
+import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal, AddModal } from './modals';
 import {
   produceCategories,
   getProduceTypesByCategory,
@@ -85,7 +84,7 @@ export default function HarvestPage() {
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [showExportTypeModal, setShowExportTypeModal] = useState(false);
 
   // Batch Edit state
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -148,14 +147,14 @@ export default function HarvestPage() {
   };
 
   const handleExportClick = () => {
-    setExportMode(true);
-  };
-
-  const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
       alert('请先选择要导出的数据');
       return;
     }
+    setShowExportTypeModal(true);
+  };
+
+  const handleConfirmExport = () => {
     handleDoExport();
   };
 
@@ -163,26 +162,59 @@ export default function HarvestPage() {
   const handleDoExport = async () => {
     // Get selected data - use index-based selection from filtered records
     const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
-    const headers = ['采收单号', '产品编码', '作物名称', '作物品种', '生产计划批次号', '种植模式', '采收区域', '采收时间', '采收量', '目标产量', '完成率', '品质等级', '采收人员', '入库仓库', '状态', '审核人员', '备注'];
-    const exportData = selectedData.map((row, idx) => ({
-      '采收单号': row.harvestCode,
-      '产品编码': generateProductCode(row.cropName, row.variety, idx),
-      '作物名称': row.cropName,
-      '作物品种': row.variety,
-      '生产计划批次号': row.batchCode,
-      '种植模式': row.plantingMode,
-      '采收区域': row.greenhouseName,
-      '采收时间': row.harvestDate,
-      '采收量': `${row.harvestQuantity} ${row.unit}`,
-      '目标产量': `${row.targetYield} ${row.unit}`,
-      '完成率': `${Math.round(row.harvestQuantity / row.targetYield * 100)}%`,
-      '品质等级': row.grade,
-      '采收人员': row.harvesterNames.join(', '),
-      '入库仓库': row.warehouseName,
-      '状态': row.status === 'harvested' ? '已采收' : row.status === 'graded' ? '已分级' : '已入库',
-      '审核人员': row.auditor,
-      '备注': row.remarks || ''
-    }));
+
+    // 导出表头
+    const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物名称', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
+
+    // 展开产品明细生成导出数据
+    const exportData: Record<string, string>[] = [];
+    selectedData.forEach((record, recordIdx) => {
+      // 如果有产品明细，展开显示
+      if (record.products && record.products.length > 0) {
+        record.products.forEach((product, productIdx) => {
+          exportData.push({
+            '采收单号': record.harvestCode,
+            '采收日期': record.harvestDate,
+            '采收区域': record.greenhouseName,
+            '入库仓库': record.warehouseName,
+            '采收人员': record.harvesterNames.join(', '),
+            '产品编码': product.productCode || generateProductCode(product.cropName, product.variety, recordIdx * 100 + productIdx),
+            '作物名称': product.cropName || record.cropName,
+            '作物品种': product.variety || record.variety,
+            '批次号': product.batchCode || record.batchCode,
+            '种植模式': record.plantingMode,
+            '采收量(kg)': `${product.harvestQuantity} ${record.unit}`,
+            '目标产量(kg)': `${product.targetYield} ${record.unit}`,
+            '完成率': `${product.targetYield > 0 ? Math.round(product.harvestQuantity / product.targetYield * 100) : 0}%`,
+            '品质等级': product.grade || record.grade,
+            '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
+            '审核人员': record.auditor,
+            '备注': product.remarks || record.remarks || ''
+          });
+        });
+      } else {
+        // 没有产品明细时，显示主行数据
+        exportData.push({
+          '采收单号': record.harvestCode,
+          '采收日期': record.harvestDate,
+          '采收区域': record.greenhouseName,
+          '入库仓库': record.warehouseName,
+          '采收人员': record.harvesterNames.join(', '),
+          '产品编码': generateProductCode(record.cropName, record.variety, recordIdx),
+          '作物名称': record.cropName,
+          '作物品种': record.variety,
+          '批次号': record.batchCode,
+          '种植模式': record.plantingMode,
+          '采收量(kg)': `${record.harvestQuantity} ${record.unit}`,
+          '目标产量(kg)': `${record.targetYield} ${record.unit}`,
+          '完成率': `${Math.round(record.harvestQuantity / record.targetYield * 100)}%`,
+          '品质等级': record.grade,
+          '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
+          '审核人员': record.auditor,
+          '备注': record.remarks || ''
+        });
+      }
+    });
 
     // Create content based on format
     let content = '';
@@ -196,7 +228,7 @@ export default function HarvestPage() {
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
-    } else if (exportFormat === 'excel') {
+    } else if (exportFormat === 'xlsx') {
       // Excel format (as HTML table)
       content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-excel;charset=utf-8';
@@ -248,7 +280,7 @@ export default function HarvestPage() {
     // Reset states
     setExportMode(false);
     setSelectedRows([]);
-    setShowExportModal(false);
+    setShowExportTypeModal(false);
   };
 
   const handleCancelExport = () => {
@@ -357,15 +389,27 @@ export default function HarvestPage() {
   // Create Harvest Record Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newRecord, setNewRecord] = useState({
+    harvestCode: '',
     batchCode: '',
     greenhouseId: '',
     harvestDate: new Date().toISOString().split('T')[0],
-    harvestQuantity: 0,
-    grade: 'A',
     warehouseId: '',
     harvesterIds: [] as string[],
-    remarks: '',
+    harvesterNames: [] as string[],
     auditor: '陆启闯',
+    remarks: '',
+    products: [] as Array<{
+      productCode: string;
+      cropName: string;
+      variety: string;
+      batchCode: string;
+      plantingMode: string;
+      harvestQuantity: number;
+      targetYield: number;
+      grade: string;
+      auditor: string;
+      remarks: string;
+    }>,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -380,13 +424,48 @@ export default function HarvestPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    if (!newRecord.harvestCode) newErrors.harvestCode = '请生成采收单号';
     if (!newRecord.batchCode) newErrors.batchCode = '请选择采收批次';
     if (!newRecord.greenhouseId) newErrors.greenhouseId = '请选择采收区域';
     if (!newRecord.harvestDate) newErrors.harvestDate = '请选择采收日期';
-    if (newRecord.harvestQuantity <= 0) newErrors.harvestQuantity = '请输入采收数量';
     if (!newRecord.warehouseId) newErrors.warehouseId = '请选择入库仓库';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // 添加产品
+  const handleAddProduct = () => {
+    setNewRecord(prev => ({
+      ...prev,
+      products: [...prev.products, {
+        productCode: '',
+        cropName: '',
+        variety: '',
+        batchCode: prev.batchCode,
+        plantingMode: '',
+        harvestQuantity: 0,
+        targetYield: 0,
+        grade: 'A',
+        auditor: prev.auditor,
+        remarks: '',
+      }],
+    }));
+  };
+
+  // 删除产品
+  const handleRemoveProduct = (index: number) => {
+    setNewRecord(prev => ({
+      ...prev,
+      products: prev.products.filter((_, i) => i !== index),
+    }));
+  };
+
+  // 更新产品
+  const handleProductChange = (index: number, field: string, value: any) => {
+    setNewRecord(prev => ({
+      ...prev,
+      products: prev.products.map((p, i) => i === index ? { ...p, [field]: value } : p),
+    }));
   };
 
   const handleCreateRecord = () => {
@@ -397,41 +476,62 @@ export default function HarvestPage() {
     const selectedWarehouse = warehouseOptions.find(w => w.value === newRecord.warehouseId);
     const selectedHarvesters = users.filter(u => newRecord.harvesterIds.includes(u.id));
 
-    const record = {
-      id: harvestRecords.length + 1,
-      harvestCode: generateHarvestCode(),
-      batchCode: newRecord.batchCode,
-      cropName: selectedBatch?.cropName || '',
-      greenhouseId: newRecord.greenhouseId,
-      greenhouseName: selectedGreenhouse?.name || '',
-      harvestDate: newRecord.harvestDate,
-      harvestQuantity: newRecord.harvestQuantity,
-      unit: '公斤',
-      grade: newRecord.grade,
-      warehouseId: newRecord.warehouseId,
-      warehouseName: selectedWarehouse?.name || '',
-      harvesterIds: newRecord.harvesterIds,
-      harvesterNames: selectedHarvesters.map(u => u.name),
-      status: 'harvested' as const,
-      remarks: newRecord.remarks,
-      auditor: newRecord.auditor,
-      variety: selectedBatch?.variety || '',
-      plantingMode: selectedBatch?.plantingMode || '',
-      targetYield: selectedBatch?.targetYield || 0,
-    };
+    // 计算总采收量
+    const totalHarvestQuantity = newRecord.products.reduce((sum, p) => sum + (p.harvestQuantity || 0), 0);
 
-    setHarvestRecords([record, ...harvestRecords]);
+    // 为每个产品创建记录（目前一条采收单对应一个产品）
+    const productRecords = newRecord.products.length > 0 ? newRecord.products : [{
+      productCode: '',
+      cropName: selectedBatch?.cropName || '',
+      variety: selectedBatch?.variety || '',
+      batchCode: newRecord.batchCode,
+      plantingMode: selectedBatch?.plantingMode || '',
+      harvestQuantity: totalHarvestQuantity || 0,
+      targetYield: selectedBatch?.targetYield || 0,
+      grade: 'A',
+      auditor: newRecord.auditor,
+      remarks: newRecord.remarks,
+    }];
+
+    productRecords.forEach((product) => {
+      const record = {
+        id: harvestRecords.length + 1,
+        harvestCode: newRecord.harvestCode || generateHarvestCode(),
+        batchCode: newRecord.batchCode,
+        cropName: selectedBatch?.cropName || product.cropName,
+        greenhouseId: newRecord.greenhouseId,
+        greenhouseName: selectedGreenhouse?.name || '',
+        harvestDate: newRecord.harvestDate,
+        harvestQuantity: product.harvestQuantity || totalHarvestQuantity,
+        unit: '公斤',
+        grade: product.grade,
+        warehouseId: newRecord.warehouseId,
+        warehouseName: selectedWarehouse?.name || '',
+        harvesterIds: newRecord.harvesterIds,
+        harvesterNames: selectedHarvesters.map(u => u.name),
+        status: 'harvested' as const,
+        remarks: product.remarks || newRecord.remarks,
+        auditor: product.auditor || newRecord.auditor,
+        variety: product.variety || selectedBatch?.variety || '',
+        plantingMode: product.plantingMode || selectedBatch?.plantingMode || '',
+        targetYield: product.targetYield || selectedBatch?.targetYield || 0,
+      };
+
+      setHarvestRecords(prev => [record, ...prev]);
+    });
+
     setIsCreateModalOpen(false);
     setNewRecord({
+      harvestCode: '',
       batchCode: '',
       greenhouseId: '',
       harvestDate: new Date().toISOString().split('T')[0],
-      harvestQuantity: 0,
-      grade: 'A',
       warehouseId: '',
       harvesterIds: [],
-      remarks: '',
+      harvesterNames: [],
       auditor: '陆启闯',
+      remarks: '',
+      products: [],
     });
     setErrors({});
   };
@@ -519,8 +619,15 @@ export default function HarvestPage() {
           onCreate={() => setIsCreateModalOpen(true)}
           onBatchEdit={handleBatchEditClick}
           onBatchDelete={handleBatchDeleteClick}
-          onExport={handleExportClick}
-          onConfirmExport={() => setShowExportModal(true)}
+          onExport={() => setExportMode(true)}
+          onConfirmExport={() => {
+            if (selectedRows.length === 0) {
+              alert('请先选择要导出的数据');
+              return;
+            }
+            // 点击确认导出时，打开导出格式选择弹窗
+            setShowExportTypeModal(true);
+          }}
           onCancelExport={handleCancelExport}
           onConfirmBatchEdit={() => setShowBatchEditModal(true)}
           onCancelBatchEdit={handleCancelBatchEdit}
@@ -689,186 +796,31 @@ export default function HarvestPage() {
       </div>
 
       {/* Create Harvest Record Modal */}
-      <Modal
+      <AddModal
         isOpen={isCreateModalOpen}
-        onClose={handleCloseModal}
-        title="采收登记"
-        size="xl"
-        onSubmit={handleCreateRecord}
-        submitText="提交登记"
-        cancelText="取消"
-      >
-        <div className="space-y-4">
-          {/* 批次与作物信息 */}
-          <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-            <div className="text-sm font-medium text-emerald-700 mb-2">批次与作物信息（自动填充）</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-emerald-600">作物名称</div>
-                <div className="text-sm text-gray-900">
-                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.cropName || '-'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-emerald-600">作物品种</div>
-                <div className="text-sm text-gray-900">
-                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.variety || '-'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-emerald-600">种植模式</div>
-                <div className="text-sm text-gray-900">
-                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.plantingMode || '-'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-emerald-600">目标产量(kg)</div>
-                <div className="text-sm text-gray-900">
-                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.targetYield || '-'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="生产计划批次号" required error={errors.batchCode}>
-              <select
-                value={newRecord.batchCode}
-                onChange={(e) => setNewRecord({ ...newRecord, batchCode: e.target.value })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              >
-                <option value="">请选择批次</option>
-                {cropBatches.map(batch => (
-                  <option key={batch.id} value={batch.batchCode}>{batch.batchCode} - {batch.cropName}</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="采收区域" required error={errors.greenhouseId}>
-              <select
-                value={newRecord.greenhouseId}
-                onChange={(e) => setNewRecord({ ...newRecord, greenhouseId: e.target.value })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              >
-                <option value="">请选择区域</option>
-                {greenhouses.map(gh => (
-                  <option key={gh.id} value={gh.id}>{gh.name}</option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="采收日期" required error={errors.harvestDate}>
-              <input
-                type="date"
-                value={newRecord.harvestDate}
-                onChange={(e) => setNewRecord({ ...newRecord, harvestDate: e.target.value })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              />
-            </FormField>
-            <FormField label="采收数量(kg)" required error={errors.harvestQuantity}>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={newRecord.harvestQuantity}
-                onChange={(e) => setNewRecord({ ...newRecord, harvestQuantity: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="品质等级">
-              <select
-                value={newRecord.grade}
-                onChange={(e) => setNewRecord({ ...newRecord, grade: e.target.value })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              >
-                <option value="A">A级 (优质)</option>
-                <option value="B">B级 (良好)</option>
-                <option value="C">C级 (一般)</option>
-              </select>
-            </FormField>
-            <FormField label="入库仓库" required error={errors.warehouseId}>
-              <select
-                value={newRecord.warehouseId}
-                onChange={(e) => setNewRecord({ ...newRecord, warehouseId: e.target.value })}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-              >
-                <option value="">请选择仓库</option>
-                {warehouseOptions.map(w => (
-                  <option key={w.value} value={w.value}>{w.label}</option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-
-          <FormField label="采收人员">
-            <div className="relative">
-              <div
-                className="w-full min-h-[42px] px-3 py-2 border border-gray-200 rounded-lg bg-white cursor-pointer flex items-center justify-between"
-                onClick={() => {
-                  const dropdown = document.getElementById('harvester-dropdown');
-                  if (dropdown) dropdown.classList.toggle('hidden');
-                }}
-              >
-                <span className="text-sm text-gray-700">
-                  {newRecord.harvesterIds.length > 0
-                    ? `${newRecord.harvesterIds.length} 人已选择`
-                    : '请选择采收人员'}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              </div>
-              <div id="harvester-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
-                {users.filter(u => u.role === 'worker' || u.role === 'technician').map(user => (
-                  <label
-                    key={user.id}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={newRecord.harvesterIds.includes(user.id)}
-                      onChange={() => toggleHarvester(user.id)}
-                      className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-gray-700">{user.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </FormField>
-
-          <FormField label="审核人员">
-            <input
-              type="text"
-              value={newRecord.auditor}
-              onChange={(e) => setNewRecord({ ...newRecord, auditor: e.target.value })}
-              placeholder="请输入审核人员"
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
-            />
-          </FormField>
-
-          <FormField label="备注">
-            <textarea
-              value={newRecord.remarks}
-              onChange={(e) => setNewRecord({ ...newRecord, remarks: e.target.value })}
-              placeholder="请输入采收备注"
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            />
-          </FormField>
-        </div>
-      </Modal>
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateRecord}
+        addForm={newRecord}
+        onFormChange={(field, value) => setNewRecord(prev => ({ ...prev, [field]: value }))}
+        onAddProduct={handleAddProduct}
+        onRemoveProduct={handleRemoveProduct}
+        onProductChange={handleProductChange}
+        onGenerateCode={() => setNewRecord(prev => ({ ...prev, harvestCode: generateHarvestCode() }))}
+        greenhouses={greenhouses}
+        warehouseOptions={warehouseOptions}
+        cropBatches={cropBatches}
+        users={users}
+        errors={errors}
+      />
 
       {/* Export Format Modal */}
       <ExportFormatModal
-        isOpen={showExportModal}
-        exportFormat={exportFormat}
-        selectedCount={selectedRows.length}
-        onFormatChange={setExportFormat}
-        onClose={() => setShowExportModal(false)}
+        isOpen={showExportTypeModal}
+        exportFileType={exportFormat}
+        onChange={setExportFormat}
+        onClose={() => setShowExportTypeModal(false)}
         onConfirm={handleConfirmExport}
+        selectedCount={selectedRows.length}
       />
 
       {/* Batch Edit Modal */}
