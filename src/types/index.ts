@@ -291,9 +291,30 @@ export interface HarvestRecord {
   warehouseId: string;
   warehouseName: string;
   status: 'harvested' | 'graded' | 'stored';
+  // 审核人员
+  auditor: string;
+  // 新增字段
+  variety: string;         // 作物品种
+  plantingMode: string;    // 种植模式
+  targetYield: number;     // 目标产量
   // 数据闭环关联字段
   relatedTaskId?: string;   // 关联任务ID
   relatedTaskCode?: string; // 关联任务编号
+  // 产品明细数组
+  products?: HarvestProduct[];
+}
+
+// 采收产品明细
+export interface HarvestProduct {
+  productCode: string;    // 产品编码
+  cropName: string;       // 作物名称
+  variety: string;        // 品种
+  subCategory: string;    // 品种代码
+  batchCode: string;     // 批次号
+  harvestQuantity: number; // 采收数量
+  targetYield: number;    // 目标产量
+  grade: string;          // 品质等级
+  remarks: string;        // 备注
 }
 
 export interface Approval {
