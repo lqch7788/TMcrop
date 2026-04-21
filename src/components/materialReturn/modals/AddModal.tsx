@@ -1,7 +1,7 @@
 import { Trash2, RefreshCw } from 'lucide-react';
-import { AddFormData, MaterialItem } from '../types';
+import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { DEPARTMENTS, APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
-import { mockSourceApplications } from '../mockData';
+import { mockSourceApplications, currentUser } from '../mockData';
 import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 
@@ -103,12 +103,11 @@ export function AddModal({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">操作人：</span>
-            <SearchableSelect
-              value={form.operator}
-              options={OPERATORS.map(v => ({ value: v, label: v }))}
-              onChange={(val) => onFormChange('operator', val)}
-              placeholder="请选择"
-              className="flex-1"
+            <input
+              type="text"
+              value={currentUser.name}
+              readOnly
+              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -211,13 +210,16 @@ export function AddModal({
                       <td className="px-3 py-2 text-sm text-right text-gray-700">{material.unitPrice ? `¥${material.unitPrice.toFixed(2)}` : '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-700 truncate">{material.warehousePosition || '-'}</td>
                       <td className="px-3 py-2">
-                        <input
-                          type="text"
+                        <select
                           value={material.reason}
                           onChange={(e) => onMaterialChange(idx, 'reason', e.target.value)}
                           className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="请输入"
-                        />
+                        >
+                          <option value="">请选择</option>
+                          {RETURN_REASONS.map(reason => (
+                            <option key={reason} value={reason}>{reason}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-3 py-2 text-center">
                         <button

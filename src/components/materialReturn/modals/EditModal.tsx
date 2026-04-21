@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { ReturnRecord, EditFormData, MaterialItem } from '../types';
+import { ReturnRecord, EditFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { DEPARTMENTS, RETURN_TYPES } from '../config';
 import { mockSourceApplications } from '../mockData';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
@@ -252,12 +252,16 @@ export function EditModal({
                     />
                   </td>
                   <td className="px-2 py-2">
-                    <input
-                      type="text"
+                    <select
                       value={material.reason}
                       onChange={(e) => onMaterialChange(idx, 'reason', e.target.value)}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
+                    >
+                      <option value="">请选择</option>
+                      {RETURN_REASONS.map(reason => (
+                        <option key={reason} value={reason}>{reason}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-2 py-2">
                     <button
