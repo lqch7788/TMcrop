@@ -25,10 +25,11 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="选择导出文件类型"
-      size="sm"
+      size="md"
       showFooter={false}
       showMaximize={showMaximize}
       enableResize={enableResize}
+      bodyClassName="flex flex-col min-h-[220px]"
     >
       <div className="space-y-3">
         <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
