@@ -7,6 +7,8 @@ interface ExportTypeModalProps {
   onChange: (v: string) => void;
   onConfirm: () => void;
   onClose: () => void;
+  showMaximize?: boolean;
+  enableResize?: boolean;
 }
 
 export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
@@ -15,6 +17,8 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
   onChange,
   onConfirm,
   onClose,
+  showMaximize = true,
+  enableResize = true,
 }) => {
   return (
     <UnifiedModal
@@ -23,6 +27,8 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
       title="选择导出文件类型"
       size="sm"
       showFooter={false}
+      showMaximize={showMaximize}
+      enableResize={enableResize}
     >
       <div className="space-y-3">
         <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">

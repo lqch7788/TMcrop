@@ -2614,14 +2614,15 @@ export default function MaterialReceiving() {
       )}
 
       {/* 导出文件类型选择弹窗 */}
-      {showExportTypeModal && (
-        <ExportTypeModal
-          exportFileType={exportFileType}
-          onChange={setExportFileType}
-          onConfirm={confirmExport}
-          onCancel={() => setShowExportTypeModal(false)}
-        />
-      )}
+      <ExportTypeModal
+        isOpen={showExportTypeModal}
+        exportFileType={exportFileType}
+        onChange={setExportFileType}
+        onConfirm={confirmExport}
+        onCancel={() => setShowExportTypeModal(false)}
+        showMaximize={false}
+        enableResize={false}
+      />
       </div>
 
       {/* 领料出库 Tab内容 */}
@@ -3077,14 +3078,15 @@ export default function MaterialReceiving() {
       )}
 
       {/* 导出类型选择弹窗 */}
-      {executeShowExportTypeModal && (
-        <ExportTypeModal
-          exportFileType={executeExportFileType}
-          onChange={setExecuteExportFileType}
-          onConfirm={confirmExecuteExport}
-          onCancel={() => setExecuteShowExportTypeModal(false)}
-        />
-      )}
+      <ExportTypeModal
+        isOpen={executeShowExportTypeModal}
+        exportFileType={executeExportFileType}
+        onChange={setExecuteExportFileType}
+        onConfirm={confirmExecuteExport}
+        onCancel={() => setExecuteShowExportTypeModal(false)}
+        showMaximize={false}
+        enableResize={false}
+      />
 
       {/* 编辑警告弹窗 */}
       <ExecuteEditWarningModal
@@ -4049,14 +4051,15 @@ export default function MaterialReceiving() {
         </div>
 
         {/* 导出格式选择弹窗 */}
-        {statShowExportTypeModal && (
-          <ExportTypeModal
-            exportFileType={statExportFileType}
-            onChange={setStatExportFileType}
-            onConfirm={statExportTarget === 'monthly' ? confirmStatExport : confirmMaterialStatExport}
-            onCancel={() => setStatShowExportTypeModal(false)}
-          />
-        )}
+        <ExportTypeModal
+          isOpen={statShowExportTypeModal}
+          exportFileType={statExportFileType}
+          onChange={setStatExportFileType}
+          onConfirm={statExportTarget === 'monthly' ? confirmStatExport : confirmMaterialStatExport}
+          onCancel={() => setStatShowExportTypeModal(false)}
+          showMaximize={false}
+          enableResize={false}
+        />
 
         {/* 详情查看弹窗 */}
         <StatDetailModal
