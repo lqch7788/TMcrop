@@ -28,6 +28,9 @@ export interface AlertSettings {
   enableQuantityAlert: boolean;      // 启用库存量预警
   minQuantityThreshold: number;       // 最小库存预警量
   maxQuantityThreshold: number;       // 最大库存预警量
+  minStock: number;                  // 最低库存限值
+  maxStock: number;                  // 最高库存限值
+  expirationDays: number;             // 保质期天数
 }
 
 // 采收产品库存
