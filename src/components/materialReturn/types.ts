@@ -87,7 +87,9 @@ export const STATUS_OPTIONS = [
 
 // 退料原因选项
 export const RETURN_REASONS = [
-  '质量问题',
+  '生产剩余',
+  '产品质量问题',
+  '领错物料',
   '规格不符',
   '过期产品',
   '运输损坏',
