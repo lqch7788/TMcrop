@@ -20,7 +20,8 @@ export function HarvestStatsCards({ records }: HarvestStatsCardsProps) {
   const gradeAPercent = records.length > 0
     ? Math.round(records.filter(r => r.grade === 'A').length / records.length * 100)
     : 0;
-  const pendingCount = records.filter(r => r.status !== 'stored').length;
+  // 待入库 = 采收中、已采收、已分级状态的数量（已入库不算待入库）
+  const pendingInboundCount = records.filter(r => ['harvesting', 'harvested', 'graded'].includes(r.status)).length;
 
   const stats = [
     {
@@ -45,7 +46,7 @@ export function HarvestStatsCards({ records }: HarvestStatsCardsProps) {
     },
     {
       label: '待入库',
-      value: pendingCount,
+      value: pendingInboundCount,
       icon: Warehouse,
       color: 'bg-purple-500',
     },

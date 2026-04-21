@@ -74,12 +74,16 @@ export function getGradeLabel(grade: string): string {
 // 采收状态
 // ============================================
 export const HARVEST_STATUS = {
+  PENDING: 'pending',       // 待采收
+  HARVESTING: 'harvesting', // 采收中
   HARVESTED: 'harvested',   // 已采收
   GRADED: 'graded',         // 已分级
-  STORED: 'stored',         // 已入库
+  STORED: 'stored',          // 已入库
 } as const;
 
 export const HARVEST_STATUS_LABELS: Record<string, string> = {
+  [HARVEST_STATUS.PENDING]: '待采收',
+  [HARVEST_STATUS.HARVESTING]: '采收中',
   [HARVEST_STATUS.HARVESTED]: '已采收',
   [HARVEST_STATUS.GRADED]: '已分级',
   [HARVEST_STATUS.STORED]: '已入库',

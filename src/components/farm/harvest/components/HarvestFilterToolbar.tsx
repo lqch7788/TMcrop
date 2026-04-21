@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface HarvestFilterToolbarProps {
   // 筛选状态
@@ -24,7 +24,6 @@ interface HarvestFilterToolbarProps {
   onFiltersChange: (filters: any) => void;
   onSearch: () => void;
   onReset: () => void;
-  onCreate: () => void;
 }
 
 export function HarvestFilterToolbar({
@@ -34,7 +33,6 @@ export function HarvestFilterToolbar({
   onFiltersChange,
   onSearch,
   onReset,
-  onCreate,
 }: HarvestFilterToolbarProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
@@ -105,18 +103,6 @@ export function HarvestFilterToolbar({
           </select>
         </div>
 
-        {/* 采收人员 */}
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采收人员</label>
-          <input
-            type="text"
-            value={searchFilters.harvesterName}
-            onChange={(e) => onFiltersChange({ ...searchFilters, harvesterName: e.target.value })}
-            placeholder="请输入采收人员"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
         {/* 入库仓库 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">入库仓库</label>
@@ -141,17 +127,19 @@ export function HarvestFilterToolbar({
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           >
             <option value="">全部</option>
+            <option value="pending">待采收</option>
+            <option value="harvesting">采收中</option>
             <option value="harvested">已采收</option>
             <option value="graded">已分级</option>
             <option value="stored">已入库</option>
           </select>
         </div>
 
-        {/* 按钮行 */}
+        {/* 按钮行 - 放同一行后面 */}
         <div className="flex gap-2">
           <button
             onClick={onReset}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
           >
             重置
           </button>
@@ -161,13 +149,6 @@ export function HarvestFilterToolbar({
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
-          <button
-            onClick={onCreate}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新增
           </button>
         </div>
       </div>

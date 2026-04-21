@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { harvestRecords as initialRecords, cropBatches, greenhouses, users } from '../../../data/mockData';
 import { warehouseOptions } from '../../../data/farmMockData';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
-import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
+import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal } from './modals';
+import {
+  produceCategories,
+  getProduceTypesByCategory,
+} from '../../../data/produceCodeRule';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -13,13 +18,53 @@ import {
   HarvestStatsCards,
   HarvestFilterToolbar,
   HarvestTableToolbar,
+  HarvestTabSwitch,
+  ProduceCodeGenerator,
 } from './components';
 
+// 作物名称到大类代码的映射
+const cropToCategoryMap: Record<string, string> = {
+  '番茄': 'PD', '黄瓜': 'PD', '菠菜': 'PD', '生菜': 'PD', '草莓': 'FR',
+  '辣椒': 'PD', '茄子': 'PD', '白菜': 'PD', '萝卜': 'PD', '胡萝卜': 'PD',
+  '土豆': 'GR', '红薯': 'GR', '玉米': 'GR', '小麦': 'GR', '水稻': 'GR',
+  '苹果': 'FR', '梨': 'FR', '桃': 'FR', '葡萄': 'FR', '西瓜': 'PD',
+  '玫瑰': 'FL', '菊花': 'FL', '百合': 'FL', '郁金香': 'FL',
+  '人参': 'HB', '枸杞': 'HB', '黄芪': 'HB', '当归': 'HB',
+  '香菇': 'MG', '平菇': 'MG', '金针菇': 'MG', '杏鲍菇': 'MG',
+};
+
+// 品种名称到类型和品种代码的映射（基于cropName）
+const varietyToCodesMap: Record<string, { typeCode: string; subCode: string }> = {
+  // 番茄
+  '红果番茄': { typeCode: '04', subCode: '01' }, '水果黄瓜': { typeCode: '02', subCode: '02' },
+  // 叶菜类
+  '菠菜': { typeCode: '01', subCode: '01' }, '散叶生菜': { typeCode: '01', subCode: '02' },
+  '圆叶菠菜': { typeCode: '01', subCode: '01' }, '生菜': { typeCode: '01', subCode: '02' },
+  // 瓜果类
+  '黄瓜': { typeCode: '02', subCode: '01' }, '红颜': { typeCode: '03', subCode: '01' },
+  // 水果类
+  '草莓': { typeCode: '01', subCode: '01' },
+  // 辣椒
+  '青椒': { typeCode: '05', subCode: '01' }, '红椒': { typeCode: '05', subCode: '02' },
+};
+
+// 根据作物名称和品种生成产品编码
+const generateProductCode = (cropName: string, variety: string, index: number): string => {
+  const categoryCode = cropToCategoryMap[cropName] || 'PD';
+  const varietyInfo = varietyToCodesMap[variety] || varietyToCodesMap[cropName] || { typeCode: '01', subCode: '01' };
+  const seq = String(index + 1).padStart(3, '0');
+  return `${categoryCode}${varietyInfo.typeCode}${varietyInfo.subCode}${seq}`;
+};
+
 export default function HarvestPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // 产品编码生成器状态
+  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
 
   // Search state
   const [searchFilters, setSearchFilters] = useState({
@@ -52,6 +97,24 @@ export default function HarvestPage() {
   // Batch Delete state
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+
+  // Detail Modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailRecord, setSelectedDetailRecord] = useState<typeof harvestRecords[0] | null>(null);
+
+  // 展开/折叠状态
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // 展开/折叠行
+  const toggleExpandRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   // Filter records based on search
   const filteredRecords = harvestRecords.filter(record => {
@@ -100,16 +163,25 @@ export default function HarvestPage() {
   const handleDoExport = async () => {
     // Get selected data - use index-based selection from filtered records
     const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
-    const headers = ['采收单号', '批次信息', '采收区域', '采收量', '品质等级', '采收人员', '入库仓库', '状态'];
-    const exportData = selectedData.map(row => ({
+    const headers = ['采收单号', '产品编码', '作物名称', '作物品种', '生产计划批次号', '种植模式', '采收区域', '采收时间', '采收量', '目标产量', '完成率', '品质等级', '采收人员', '入库仓库', '状态', '审核人员', '备注'];
+    const exportData = selectedData.map((row, idx) => ({
       '采收单号': row.harvestCode,
-      '批次信息': row.batchCode,
+      '产品编码': generateProductCode(row.cropName, row.variety, idx),
+      '作物名称': row.cropName,
+      '作物品种': row.variety,
+      '生产计划批次号': row.batchCode,
+      '种植模式': row.plantingMode,
       '采收区域': row.greenhouseName,
+      '采收时间': row.harvestDate,
       '采收量': `${row.harvestQuantity} ${row.unit}`,
+      '目标产量': `${row.targetYield} ${row.unit}`,
+      '完成率': `${Math.round(row.harvestQuantity / row.targetYield * 100)}%`,
       '品质等级': row.grade,
       '采收人员': row.harvesterNames.join(', '),
       '入库仓库': row.warehouseName,
-      '状态': row.status === 'harvested' ? '已采收' : row.status === 'graded' ? '已分级' : '已入库'
+      '状态': row.status === 'harvested' ? '已采收' : row.status === 'graded' ? '已分级' : '已入库',
+      '审核人员': row.auditor,
+      '备注': row.remarks || ''
     }));
 
     // Create content based on format
@@ -293,6 +365,7 @@ export default function HarvestPage() {
     warehouseId: '',
     harvesterIds: [] as string[],
     remarks: '',
+    auditor: '陆启闯',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -333,7 +406,7 @@ export default function HarvestPage() {
       greenhouseName: selectedGreenhouse?.name || '',
       harvestDate: newRecord.harvestDate,
       harvestQuantity: newRecord.harvestQuantity,
-      unit: 'kg',
+      unit: '公斤',
       grade: newRecord.grade,
       warehouseId: newRecord.warehouseId,
       warehouseName: selectedWarehouse?.name || '',
@@ -341,6 +414,10 @@ export default function HarvestPage() {
       harvesterNames: selectedHarvesters.map(u => u.name),
       status: 'harvested' as const,
       remarks: newRecord.remarks,
+      auditor: newRecord.auditor,
+      variety: selectedBatch?.variety || '',
+      plantingMode: selectedBatch?.plantingMode || '',
+      targetYield: selectedBatch?.targetYield || 0,
     };
 
     setHarvestRecords([record, ...harvestRecords]);
@@ -354,6 +431,7 @@ export default function HarvestPage() {
       warehouseId: '',
       harvesterIds: [],
       remarks: '',
+      auditor: '陆启闯',
     });
     setErrors({});
   };
@@ -393,6 +471,8 @@ export default function HarvestPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'pending': return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">待采收</span>;
+      case 'harvesting': return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">采收中</span>;
       case 'harvested': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已采收</span>;
       case 'graded': return <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">已分级</span>;
       case 'stored': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已入库</span>;
@@ -407,6 +487,17 @@ export default function HarvestPage() {
 
       {/* Stats */}
       <HarvestStatsCards records={harvestRecords} />
+
+      {/* Tab切换和编码生成器 */}
+      <HarvestTabSwitch
+        showCodeGen={true}
+        codeGenExpanded={codeGenExpanded}
+        onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
+        onCodeRuleClick={() => navigate('/produce-code-rule')}
+      />
+
+      {/* 产品编码生成器 */}
+      <ProduceCodeGenerator codeGenExpanded={codeGenExpanded} />
 
       {/* 搜索卡片 */}
       <HarvestFilterToolbar
@@ -436,119 +527,122 @@ export default function HarvestPage() {
           onConfirmBatchDelete={() => setShowDeleteWarning(true)}
           onCancelBatchDelete={handleCancelBatchDelete}
         />
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">采收入库记录表</h3>
-          {(exportMode || batchEditMode || batchDeleteMode) ? (
-            <div className="flex gap-2">
-              {exportMode && (
-                <>
-                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                    <Download className="w-4 h-4" />
-                    确认导出
-                  </button>
-                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-              {batchEditMode && (
-                <>
-                  <button onClick={() => setShowBatchEditModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                    <Pencil className="w-4 h-4" />
-                    确认编辑
-                  </button>
-                  <button onClick={handleCancelBatchEdit} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-              {batchDeleteMode && (
-                <>
-                  <button onClick={() => setShowDeleteWarning(true)} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
-                    <Trash2 className="w-4 h-4" />
-                    确认删除
-                  </button>
-                  <button onClick={handleCancelBatchDelete} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                    取消
-                  </button>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={handleBatchEditClick} className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
-                <Pencil className="w-4 h-4" />
-                编辑
-              </button>
-              <button onClick={handleBatchDeleteClick} className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
-                <Trash2 className="w-4 h-4" />
-                删除
-              </button>
-              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-            </div>
-          )}
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                  />
-                </th>}
+                {(exportMode || batchEditMode || batchDeleteMode) && (
+                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </th>
+                )}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次信息</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收日期</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质等级</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收人员</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库仓库</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收人员</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">产品数量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人员</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
-                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
-                  {(exportMode || batchEditMode || batchDeleteMode) && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.includes(idx)}
-                        onChange={() => handleSelectRow(idx)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
+                <React.Fragment key={record.id}>
+                  {/* 主行：采收单号信息 */}
+                  <tr className="hover:bg-blue-100 transition-colors">
+                    {(exportMode || batchEditMode || batchDeleteMode) && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(idx)}
+                          onChange={() => handleSelectRow(idx)}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggleExpandRow(idx)}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        {expandedRows.has(idx) ? (
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-500" />
+                        )}
+                      </button>
                     </td>
+                    <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => { setSelectedDetailRecord(record); setShowDetailModal(true); }}>
+                      {record.harvestCode}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col items-center gap-1">
+                        {record.harvesterNames.map((name, i) => (
+                          <span key={i} className="text-sm text-gray-900">{name}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</td>
+                  </tr>
+                  {/* 展开行：产品明细 */}
+                  {expandedRows.has(idx) && (
+                    <tr>
+                      <td colSpan={(exportMode || batchEditMode || batchDeleteMode) ? 10 : 9} className="px-4 py-3 bg-gray-50">
+                        <div className="text-sm">
+                          <p className="font-medium text-gray-700 mb-2">产品明细：</p>
+                          <div className="overflow-x-auto rounded border">
+                            <table className="w-full bg-white">
+                              <thead className="bg-emerald-600 text-white">
+                                <tr>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">产品编码</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物名称</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物品种</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">生产计划批次号</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">种植模式</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">采收量</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">目标产量</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">完成率</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">品质等级</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">备注</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-t">
+                                  <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
+                                    {generateProductCode(record.cropName, record.variety, idx)}
+                                  </td>
+                                  <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
+                                    {Math.round(record.harvestQuantity / record.targetYield * 100)}%
+                                  </td>
+                                  <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade)}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="font-medium text-blue-600 underline cursor-pointer">{record.harvestCode}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <p className="text-sm text-gray-900">{record.cropName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{record.batchCode}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="font-medium text-gray-900">{record.harvestQuantity}</span>
-                    <span className="text-gray-500 text-sm ml-1">{record.unit}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{getGradeBadge(record.grade)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex flex-col items-center gap-1">
-                      {record.harvesterNames.map((name, i) => (
-                        <span key={i} className="text-sm text-gray-900">{name}</span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</td>
-                </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -599,18 +693,49 @@ export default function HarvestPage() {
         isOpen={isCreateModalOpen}
         onClose={handleCloseModal}
         title="采收登记"
-        size="lg"
+        size="xl"
         onSubmit={handleCreateRecord}
         submitText="提交登记"
         cancelText="取消"
       >
         <div className="space-y-4">
+          {/* 批次与作物信息 */}
+          <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+            <div className="text-sm font-medium text-emerald-700 mb-2">批次与作物信息（自动填充）</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs text-emerald-600">作物名称</div>
+                <div className="text-sm text-gray-900">
+                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.cropName || '-'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-emerald-600">作物品种</div>
+                <div className="text-sm text-gray-900">
+                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.variety || '-'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-emerald-600">种植模式</div>
+                <div className="text-sm text-gray-900">
+                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.plantingMode || '-'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-emerald-600">目标产量(kg)</div>
+                <div className="text-sm text-gray-900">
+                  {cropBatches.find(b => b.batchCode === newRecord.batchCode)?.targetYield || '-'}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="采收批次" required error={errors.batchCode}>
+            <FormField label="生产计划批次号" required error={errors.batchCode}>
               <select
                 value={newRecord.batchCode}
                 onChange={(e) => setNewRecord({ ...newRecord, batchCode: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               >
                 <option value="">请选择批次</option>
                 {cropBatches.map(batch => (
@@ -622,7 +747,7 @@ export default function HarvestPage() {
               <select
                 value={newRecord.greenhouseId}
                 onChange={(e) => setNewRecord({ ...newRecord, greenhouseId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               >
                 <option value="">请选择区域</option>
                 {greenhouses.map(gh => (
@@ -638,7 +763,7 @@ export default function HarvestPage() {
                 type="date"
                 value={newRecord.harvestDate}
                 onChange={(e) => setNewRecord({ ...newRecord, harvestDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               />
             </FormField>
             <FormField label="采收数量(kg)" required error={errors.harvestQuantity}>
@@ -648,7 +773,7 @@ export default function HarvestPage() {
                 step="0.1"
                 value={newRecord.harvestQuantity}
                 onChange={(e) => setNewRecord({ ...newRecord, harvestQuantity: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               />
             </FormField>
           </div>
@@ -658,7 +783,7 @@ export default function HarvestPage() {
               <select
                 value={newRecord.grade}
                 onChange={(e) => setNewRecord({ ...newRecord, grade: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               >
                 <option value="A">A级 (优质)</option>
                 <option value="B">B级 (良好)</option>
@@ -669,7 +794,7 @@ export default function HarvestPage() {
               <select
                 value={newRecord.warehouseId}
                 onChange={(e) => setNewRecord({ ...newRecord, warehouseId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
               >
                 <option value="">请选择仓库</option>
                 {warehouseOptions.map(w => (
@@ -712,6 +837,16 @@ export default function HarvestPage() {
                 ))}
               </div>
             </div>
+          </FormField>
+
+          <FormField label="审核人员">
+            <input
+              type="text"
+              value={newRecord.auditor}
+              onChange={(e) => setNewRecord({ ...newRecord, auditor: e.target.value })}
+              placeholder="请输入审核人员"
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-600"
+            />
           </FormField>
 
           <FormField label="备注">
@@ -761,6 +896,13 @@ export default function HarvestPage() {
         selectedCount={selectedRows.length}
         onClose={() => setShowDeleteWarning(false)}
         onConfirm={handleConfirmBatchDelete}
+      />
+
+      {/* Harvest Detail Modal */}
+      <HarvestDetailModal
+        isOpen={showDetailModal}
+        record={selectedDetailRecord}
+        onClose={() => setShowDetailModal(false)}
       />
     </div>
   );

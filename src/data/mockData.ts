@@ -7,6 +7,7 @@ import {
   Equipment, Infrastructure
 } from '../types';
 import { Approval } from '../types/approval';
+import { ProduceInventory } from '../types/inventory';
 
 // 用户数据
 export const users: User[] = [
@@ -551,10 +552,12 @@ export const infrastructureRecords: Infrastructure[] = [
 
 // 采收记录数据
 export const harvestRecords: HarvestRecord[] = [
-  { id: 'H001', harvestCode: 'HS20240314-001', batchId: 'B003', batchCode: 'FQ2024-003', cropName: '草莓', greenhouseId: 'G004', greenhouseName: '日光温室1号', harvestDate: '2024-03-14', harvestArea: 600, harvestQuantity: 120, unit: '公斤', quality: 'good', grade: 'A', harvesterIds: ['U008'], harvesterNames: ['吴美丽'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'stored' },
-  { id: 'H002', harvestCode: 'HS20240313-001', batchId: 'B004', batchCode: 'FQ2024-004', cropName: '生菜', greenhouseId: 'G005', greenhouseName: '日光温室2号', harvestDate: '2024-03-13', harvestArea: 500, harvestQuantity: 350, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007'], harvesterNames: ['陈小芳', '周志强'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'stored' },
-  { id: 'H003', harvestCode: 'HS20240312-001', batchId: 'B006', batchCode: 'FQ2024-006', cropName: '菠菜', greenhouseId: 'G008', greenhouseName: '塑料大棚1号', harvestDate: '2024-03-12', harvestArea: 800, harvestQuantity: 280, unit: '公斤', quality: 'good', grade: 'B', harvesterIds: ['U006'], harvesterNames: ['陈小芳'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'stored' },
-  { id: 'H004', harvestCode: 'HS20240310-001', batchId: 'B001', batchCode: 'FQ2024-001', cropName: '番茄', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', harvestDate: '2024-03-10', harvestArea: 3000, harvestQuantity: 1850, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007', 'U008'], harvesterNames: ['陈小芳', '周志强', '吴美丽'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'stored' },
+  { id: 'H001', harvestCode: 'HS20260314-001', batchId: 'B003', batchCode: 'FQ2026-003', cropName: '草莓', greenhouseId: 'G004', greenhouseName: '日光温室1号', harvestDate: '2026-03-14', harvestArea: 600, harvestQuantity: 120, unit: '公斤', quality: 'good', grade: 'A', harvesterIds: ['U008'], harvesterNames: ['小龙女'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'stored', auditor: '陆启闯', variety: '红颜', plantingMode: '土壤种植', targetYield: 3000 },
+  { id: 'H002', harvestCode: 'HS20260313-001', batchId: 'B004', batchCode: 'FQ2026-004', cropName: '生菜', greenhouseId: 'G005', greenhouseName: '日光温室2号', harvestDate: '2026-03-13', harvestArea: 500, harvestQuantity: 350, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007'], harvesterNames: ['郭靖', '黄蓉'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'pending', auditor: '陆启闯', variety: '散叶生菜', plantingMode: '水培', targetYield: 5000 },
+  { id: 'H003', harvestCode: 'HS20260312-001', batchId: 'B006', batchCode: 'FQ2026-006', cropName: '菠菜', greenhouseId: 'G008', greenhouseName: '塑料大棚1号', harvestDate: '2026-03-12', harvestArea: 800, harvestQuantity: 280, unit: '公斤', quality: 'good', grade: 'B', harvesterIds: ['U006'], harvesterNames: ['杨过'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'harvesting', auditor: '陆启闯', variety: '圆叶菠菜', plantingMode: '土壤种植', targetYield: 4000 },
+  { id: 'H004', harvestCode: 'HS20260310-001', batchId: 'B001', batchCode: 'FQ2026-001', cropName: '番茄', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', harvestDate: '2026-03-10', harvestArea: 3000, harvestQuantity: 1850, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007', 'U008'], harvesterNames: ['张无忌', '令狐冲', '段誉'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'harvested', auditor: '陆启闯', variety: '红果番茄', plantingMode: '椰糠种植', targetYield: 30000 },
+  { id: 'H005', harvestCode: 'HS20260315-001', batchId: 'B002', batchCode: 'FQ2026-002', cropName: '黄瓜', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', harvestDate: '2026-03-15', harvestArea: 2500, harvestQuantity: 680, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U007', 'U008'], harvesterNames: ['萧峰', '虚竹'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'graded', auditor: '陆启闯', variety: '水果黄瓜', plantingMode: '椰糠种植', targetYield: 20000 },
+  { id: 'H006', harvestCode: 'HS20260316-001', batchId: 'B005', batchCode: 'FQ2026-005', cropName: '辣椒', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', harvestDate: '2026-03-16', harvestArea: 2000, harvestQuantity: 420, unit: '公斤', quality: 'good', grade: 'B', harvesterIds: ['U006'], harvesterNames: ['周伯通'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'stored', auditor: '陆启闯', variety: '青椒', plantingMode: '椰糠种植', targetYield: 15000 },
 ];
 
 // 采购计划数据
@@ -2318,5 +2321,264 @@ export const inspectionFeedbackTasks: InspectionFeedbackTaskData[] = [
     feedbackStatus: '已完成',
     feedbackUsers: ['小龙女'],
     processProgress: '100%',
+  },
+];
+
+// ========== 仓库模拟数据 ==========
+export const warehouses = [
+  { id: 'W001', name: '成品冷库A区', location: 'A区', capacity: 1000, currentStock: 650 },
+  { id: 'W002', name: '成品冷库B区', location: 'B区', capacity: 800, currentStock: 400 },
+  { id: 'W003', name: '常温库', location: 'C区', capacity: 500, currentStock: 200 },
+];
+
+// ========== 采收产品库存模拟数据 ==========
+// 产品编码规则：大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位)
+// 大类：PD=果蔬产品类, FR=水果类, GR=粮食类, FL=花卉类, HB=药材类, MG=食用菌类, OT=其他类
+// 示例：PD0101001 = PD(果蔬产品) + 01(叶菜类) + 01(菠菜) + 001
+export const produceInventory: ProduceInventory[] = [
+  // 草莓产品库存 - FR0101001 (FR水果类-浆果类-草莓)
+  {
+    id: 'PI001',
+    harvestRecordId: 'H001',
+    productCode: 'FR0101001',
+    cropName: '草莓',
+    variety: '红颜',
+    quantity: 150,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-01-03',
+    harvestDate: '2026-03-14',
+    storageDate: '2026-03-15',
+    expirationDate: '2026-04-14',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 25,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 50,
+      maxQuantityThreshold: 300,
+    },
+    batchCode: 'FQ2026-003',
+    greenhouseName: '日光温室1号',
+    plantingMode: '土壤种植',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT001', type: 'inbound', quantity: 200, date: '2026-03-15', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT001', type: 'outbound', quantity: 50, date: '2026-03-20', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 番茄产品库存 - PD0301001 (PD果蔬类-茄果类-番茄)
+  {
+    id: 'PI002',
+    harvestRecordId: 'H002',
+    productCode: 'PD0301001',
+    cropName: '番茄',
+    variety: '红果番茄',
+    quantity: 80,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'good',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-02-01',
+    harvestDate: '2026-03-15',
+    storageDate: '2026-03-16',
+    expirationDate: '2026-04-15',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 20,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 100,
+      maxQuantityThreshold: 500,
+    },
+    batchCode: 'FQ2026-001',
+    greenhouseName: '玻璃温室A区',
+    plantingMode: '无土栽培',
+    status: 'low_stock',
+    inboundRecords: [
+      { id: 'IT002', type: 'inbound', quantity: 300, date: '2026-03-16', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT002', type: 'outbound', quantity: 220, date: '2026-03-25', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 黄瓜产品库存 - PD0201001 (PD果蔬类-瓜果类-黄瓜)
+  {
+    id: 'PI003',
+    harvestRecordId: 'H003',
+    productCode: 'PD0201001',
+    cropName: '黄瓜',
+    variety: '水果黄瓜',
+    quantity: 450,
+    unit: '公斤',
+    grade: 'B',
+    quality: 'good',
+    warehouseId: 'W002',
+    warehouseName: '成品冷库B区',
+    storageLocation: 'B区-01-05',
+    harvestDate: '2026-03-16',
+    storageDate: '2026-03-17',
+    expirationDate: '2026-04-10',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 15,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 200,
+      maxQuantityThreshold: 600,
+    },
+    batchCode: 'FQ2026-002',
+    greenhouseName: '日光温室2号',
+    plantingMode: '土壤种植',
+    status: 'expired',
+    inboundRecords: [
+      { id: 'IT003', type: 'inbound', quantity: 500, date: '2026-03-17', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT003', type: 'outbound', quantity: 50, date: '2026-03-22', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 生菜产品库存 - PD0102001 (PD果蔬类-叶菜类-生菜)
+  {
+    id: 'PI004',
+    harvestRecordId: 'H004',
+    productCode: 'PD0102001',
+    cropName: '生菜',
+    variety: '玻璃生菜',
+    quantity: 30,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W002',
+    warehouseName: '成品冷库B区',
+    storageLocation: 'B区-02-02',
+    harvestDate: '2026-03-18',
+    storageDate: '2026-03-19',
+    expirationDate: '2026-03-26',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 5,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 20,
+      maxQuantityThreshold: 100,
+    },
+    batchCode: 'FQ2026-004',
+    greenhouseName: '日光温室3号',
+    plantingMode: '水培',
+    status: 'expired',
+    inboundRecords: [
+      { id: 'IT004', type: 'inbound', quantity: 80, date: '2026-03-19', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT004', type: 'outbound', quantity: 50, date: '2026-03-21', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 菠菜产品库存 - PD0101001 (PD果蔬类-叶菜类-菠菜)
+  {
+    id: 'PI005',
+    harvestRecordId: 'H005',
+    productCode: 'PD0101001',
+    cropName: '菠菜',
+    variety: '尖叶菠菜',
+    quantity: 120,
+    unit: '公斤',
+    grade: 'B',
+    quality: 'good',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-03-02',
+    harvestDate: '2026-03-20',
+    storageDate: '2026-03-21',
+    expirationDate: '2026-04-05',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 10,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 50,
+      maxQuantityThreshold: 200,
+    },
+    batchCode: 'FQ2026-005',
+    greenhouseName: '日光温室3号',
+    plantingMode: '土壤种植',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT005', type: 'inbound', quantity: 150, date: '2026-03-21', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT005', type: 'outbound', quantity: 30, date: '2026-03-25', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 辣椒产品库存 - PD0304001 (PD果蔬类-茄果类-辣椒)
+  {
+    id: 'PI006',
+    harvestRecordId: 'H006',
+    productCode: 'PD0304001',
+    cropName: '辣椒',
+    variety: '螺丝椒',
+    quantity: 200,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W002',
+    warehouseName: '成品冷库B区',
+    storageLocation: 'B区-03-01',
+    harvestDate: '2026-03-22',
+    storageDate: '2026-03-23',
+    expirationDate: '2026-04-20',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 20,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 80,
+      maxQuantityThreshold: 400,
+    },
+    batchCode: 'FQ2026-006',
+    greenhouseName: '玻璃温室B区',
+    plantingMode: '无土栽培',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT006', type: 'inbound', quantity: 250, date: '2026-03-23', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT006', type: 'outbound', quantity: 50, date: '2026-03-28', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 小番茄产品库存 - PD0302001 (PD果蔬类-茄果类-小番茄)
+  {
+    id: 'PI007',
+    harvestRecordId: 'H007',
+    productCode: 'PD0302001',
+    cropName: '小番茄',
+    variety: '千禧果',
+    quantity: 350,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-04-03',
+    harvestDate: '2026-04-01',
+    storageDate: '2026-04-02',
+    expirationDate: '2026-04-25',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 18,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 100,
+      maxQuantityThreshold: 500,
+    },
+    batchCode: 'FQ2026-007',
+    greenhouseName: '日光温室1号',
+    plantingMode: '土壤种植',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT007', type: 'inbound', quantity: 400, date: '2026-04-02', operator: '陆启闯', remarks: '初始入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT007', type: 'outbound', quantity: 50, date: '2026-04-08', operator: '陆启闯', remarks: '销售出库' },
+    ],
   },
 ];
