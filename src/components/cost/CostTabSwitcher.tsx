@@ -27,7 +27,7 @@ export const CostTabSwitcher: React.FC<CostTabSwitcherProps> = ({ activeTab, onT
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-bold transition-colors relative ${
               activeTab === tab.key
                 ? 'text-emerald-600'
                 : 'text-gray-500 hover:text-gray-700'
