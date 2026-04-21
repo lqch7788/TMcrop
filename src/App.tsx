@@ -22,6 +22,19 @@ import ProductionApproval from './pages/ProductionApproval';
 import ApprovalDemo from './pages/ApprovalDemo';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
+import SystemConfig from './pages/SystemConfig';
+import DictionaryManagement from './pages/DictionaryManagement';
+import UserPermission from './pages/UserPermission';
+import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
+import NotificationSettings from './pages/NotificationSettings';
+import DeviceManagement from './pages/DeviceManagement';
+import WarehouseManagement from './pages/WarehouseManagement';
+import TeamManagement from './pages/TeamManagement';
+import CostAccounting from './pages/CostAccounting';
+import AuditLog from './pages/AuditLog';
+import BranchManagement from './pages/BranchManagement';
+import BlockManagement from './pages/BlockManagement';
+import FarmActivityManagement from './pages/FarmActivityManagement';
 import BaseSettings from './pages/BaseSettings';
 import IoTMonitor from './pages/IoTMonitor';
 import EnvControl from './pages/EnvControl';
@@ -161,6 +174,16 @@ function AppContent() {
         <Routes>
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />}>
+            <Route path="system-config" element={<SystemConfig />} />
+            <Route path="dictionary" element={<DictionaryManagement />} />
+            <Route path="user-permission" element={<UserPermission />} />
+            <Route path="approval-workflow" element={<ApprovalWorkflowConfig />} />
+            <Route path="notification" element={<NotificationSettings />} />
+            <Route path="device" element={<DeviceManagement />} />
+            <Route path="warehouse" element={<WarehouseManagement />} />
+            <Route path="team" element={<TeamManagement />} />
+            <Route path="cost-accounting" element={<CostAccounting />} />
+            <Route path="audit-log" element={<AuditLog />} />
             <Route path="modes" element={<PlantingModeManagement />} />
             <Route path="regions" element={<PlantAreaManagement />} />
             <Route path="crops" element={<CropManagement />} />
@@ -168,6 +191,9 @@ function AppContent() {
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<BaseSettings />} />
+            <Route path="branch" element={<BranchManagement />} />
+            <Route path="block" element={<BlockManagement />} />
+            <Route path="farm-activity" element={<FarmActivityManagement />} />
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
           <Route path="/settings/personnel/staff" element={<SettingsPersonnelStaff />} />
