@@ -2619,9 +2619,7 @@ export default function MaterialReceiving() {
         exportFileType={exportFileType}
         onChange={setExportFileType}
         onConfirm={confirmExport}
-        onCancel={() => setShowExportTypeModal(false)}
-        showMaximize={false}
-        enableResize={false}
+        onClose={() => setShowExportTypeModal(false)}
       />
       </div>
 
@@ -3083,9 +3081,7 @@ export default function MaterialReceiving() {
         exportFileType={executeExportFileType}
         onChange={setExecuteExportFileType}
         onConfirm={confirmExecuteExport}
-        onCancel={() => setExecuteShowExportTypeModal(false)}
-        showMaximize={false}
-        enableResize={false}
+        onClose={() => setExecuteShowExportTypeModal(false)}
       />
 
       {/* 编辑警告弹窗 */}
@@ -4056,9 +4052,7 @@ export default function MaterialReceiving() {
           exportFileType={statExportFileType}
           onChange={setStatExportFileType}
           onConfirm={statExportTarget === 'monthly' ? confirmStatExport : confirmMaterialStatExport}
-          onCancel={() => setStatShowExportTypeModal(false)}
-          showMaximize={false}
-          enableResize={false}
+          onClose={() => setStatShowExportTypeModal(false)}
         />
 
         {/* 详情查看弹窗 */}
