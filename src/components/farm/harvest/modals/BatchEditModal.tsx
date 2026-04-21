@@ -17,6 +17,10 @@ interface HarvestRecord {
   harvesterNames: string[];
   status: string;
   remarks: string;
+  auditor: string;
+  variety: string;
+  plantingMode: string;
+  targetYield: number;
 }
 
 interface BatchEditModalProps {
@@ -127,14 +131,32 @@ export function BatchEditModal({
               <div className="text-sm font-medium text-gray-900">{currentRecord.harvestCode}</div>
             </div>
 
-            {/* 批次信息 - 可编辑 */}
-            <FormField label="批次信息">
+            {/* 作物名称 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">作物名称</div>
+              <div className="text-sm font-medium text-gray-900">{currentRecord.cropName}</div>
+            </div>
+
+            {/* 作物品种 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">作物品种</div>
+              <div className="text-sm font-medium text-gray-900">{currentRecord.variety}</div>
+            </div>
+
+            {/* 生产计划批次号 - 可编辑 */}
+            <FormField label="生产计划批次号">
               <Select
                 value={editedData.batchCode ?? currentRecord.batchCode}
                 onChange={(e) => handleFieldChange('batchCode', e.target.value)}
                 options={cropBatches.map(b => ({ value: b.batchCode, label: `${b.batchCode} - ${b.cropName}` }))}
               />
             </FormField>
+
+            {/* 种植模式 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">种植模式</div>
+              <div className="text-sm font-medium text-gray-900">{currentRecord.plantingMode}</div>
+            </div>
 
             {/* 采收区域 - 可编辑 */}
             <FormField label="采收区域">
@@ -144,12 +166,6 @@ export function BatchEditModal({
                 options={greenhouses.map(g => ({ value: g.id, label: g.name }))}
               />
             </FormField>
-
-            {/* 作物名称 - 不可编辑（随批次） */}
-            <div className="bg-gray-100 rounded-lg p-3">
-              <div className="text-xs text-gray-500 mb-1">作物名称</div>
-              <div className="text-sm font-medium text-gray-900">{currentRecord.cropName}</div>
-            </div>
 
             {/* 采收日期 - 可编辑 */}
             <FormField label="采收日期">
@@ -170,6 +186,12 @@ export function BatchEditModal({
                 onChange={(e) => handleFieldChange('harvestQuantity', parseFloat(e.target.value) || 0)}
               />
             </FormField>
+
+            {/* 目标产量 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">目标产量(kg)</div>
+              <div className="text-sm font-medium text-gray-900">{currentRecord.targetYield}</div>
+            </div>
 
             {/* 品质等级 - 可编辑 */}
             <FormField label="品质等级">
@@ -203,6 +225,15 @@ export function BatchEditModal({
               <div className="text-xs text-gray-500 mb-1">采收人员</div>
               <div className="text-sm font-medium text-gray-900">{currentRecord.harvesterNames.join(', ')}</div>
             </div>
+
+            {/* 审核人员 - 可编辑 */}
+            <FormField label="审核人员">
+              <Input
+                value={editedData.auditor ?? currentRecord.auditor ?? ''}
+                onChange={(e) => handleFieldChange('auditor', e.target.value)}
+                placeholder="请输入审核人员"
+              />
+            </FormField>
 
             {/* 备注 - 可编辑 */}
             <FormField label="备注" className="md:col-span-4">

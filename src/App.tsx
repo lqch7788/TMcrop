@@ -13,6 +13,8 @@ import Materials from './pages/Materials';
 import Inspection from './pages/Inspection';
 import EnvironmentMonitor from './pages/EnvironmentMonitor';
 import Harvest from './pages/Harvest';
+import ProduceInventory from './pages/ProduceInventory';
+import ProduceCodeRule from './pages/ProduceCodeRule';
 import Reports from './pages/Reports';
 import Approvals from './pages/Approvals';
 import MaterialApproval from './pages/MaterialApproval';
@@ -233,6 +235,8 @@ function AppContent() {
         <Route path="/inspection" element={<Inspection />} />
         <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
         <Route path="/harvest" element={<Harvest />} />
+        <Route path="/produce-inventory" element={<ProduceInventory />} />
+        <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
         <Route path="/iot-monitor" element={<IoTMonitor />} />
         <Route path="/env-control" element={<EnvControl />} />
         <Route path="/agriculture-record" element={<AgricultureRecord />} />
