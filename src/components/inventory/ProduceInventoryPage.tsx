@@ -4,12 +4,15 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { produceInventory, warehouses } from '../../data/mockData';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Select, Modal } from '../ui/Modal';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
 import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
+import { ProduceDetailModal } from './ProduceDetailModal';
+import { ProduceInventoryBatchEditModal } from './ProduceInventoryBatchEditModal';
+import { DeleteWarningModal } from './DeleteWarningModal';
 
 /**
  * 预警状态徽章组件
@@ -454,6 +457,10 @@ export default function ProduceInventoryPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  // 批量编辑状态
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [batchEditedItems, setBatchEditedItems] = useState<Record<string, Partial<ProduceInventory>>>({});
+  const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -615,8 +622,13 @@ export default function ProduceInventoryPage() {
   };
 
   const handleBatchEdit = () => {
-    setBatchEditMode(true);
-    setSelectedRows([]);
+    if (selectedRows.length === 0) {
+      setBatchEditMode(true);
+    } else {
+      setShowBatchEditModal(true);
+      setCurrentBatchEditIndex(0);
+      setBatchEditedItems({});
+    }
   };
 
   const handleDelete = () => {
@@ -634,6 +646,9 @@ export default function ProduceInventoryPage() {
     setDeleteMode(false);
     setExportMode(false);
     setSelectedRows([]);
+    setShowBatchEditModal(false);
+    setBatchEditedItems({});
+    setCurrentBatchEditIndex(0);
   };
 
   const handleSelectAll = () => {
@@ -653,20 +668,46 @@ export default function ProduceInventoryPage() {
   };
 
   const handleConfirmBatchEdit = () => {
-    // 批量编辑模式：单条记录直接打开编辑，多条记录暂不支持
-    if (selectedRows.length === 1) {
-      const item = inventoryData.find(i => i.id === selectedRows[0]);
-      if (item) {
-        setSelectedInventory(item);
-        setShowAlertSettingsModal(true);
-      }
-    } else if (selectedRows.length > 1) {
-      // 多条记录：批量设置预警
-      setSelectedInventory(null);
-      setShowAlertSettingsModal(true);
+    // 打开批量编辑弹窗
+    if (selectedRows.length > 0) {
+      setShowBatchEditModal(true);
+      setCurrentBatchEditIndex(0);
+      setBatchEditedItems({});
     }
     setBatchEditMode(false);
+  };
+
+  // 批量编辑弹窗操作
+  const handleBatchItemSelect = (index: number) => {
+    setCurrentBatchEditIndex(index);
+  };
+
+  const handleBatchFieldChange = (id: string, field: string, value: any) => {
+    setBatchEditedItems(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value },
+    }));
+  };
+
+  const handleBatchSaveAll = () => {
+    // 保存所有编辑的项
+    setInventoryData(prev => prev.map(item => {
+      if (batchEditedItems[item.id]) {
+        return { ...item, ...batchEditedItems[item.id] };
+      }
+      return item;
+    }));
+    setShowBatchEditModal(false);
+    setBatchEditedItems({});
+    setCurrentBatchEditIndex(0);
+    setBatchEditMode(false);
     setSelectedRows([]);
+  };
+
+  const handleBatchNext = () => {
+    if (currentBatchEditIndex < selectedRows.length - 1) {
+      setCurrentBatchEditIndex(prev => prev + 1);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -677,8 +718,12 @@ export default function ProduceInventoryPage() {
     setSelectedRows([]);
   };
 
-  const handleConfirmExport = () => {
+  const handleShowExportModal = () => {
     setShowExportModal(true);
+  };
+
+  const handleConfirmExport = () => {
+    handleDoExport();
   };
 
   const handleDoExport = async () => {
@@ -686,13 +731,16 @@ export default function ProduceInventoryPage() {
     const exportData = selectedData.length > 0 ? selectedData : filteredData;
 
     // 生成Excel HTML内容
-    const headers = ['产品编码', '产品名称', '品种', '等级', '库存数量', '单位', '仓库', '存放位置', '存储时间', '预警状态', '生产计划批次号', '种植区域'];
+    const headers = ['产品编码', '产品名称', '品种', '等级', '库存数量', '单位', '库存限值', '仓库', '存放位置', '入库时间', '保质期(天)', '过期时间', '存储时间', '预警状态', '备注'];
     const rows = exportData.map(item => [
       item.productCode, item.cropName, item.variety, item.grade,
-      item.quantity, item.unit, item.warehouseName, item.storageLocation,
-      `${getStorageDays(item.storageDate)}天`,
+      item.quantity, item.unit,
+      `${item.alertSettings.minStock}~${item.alertSettings.maxStock}`,
+      item.warehouseName, item.storageLocation,
+      item.storageDate, item.alertSettings.expirationDays,
+      item.expirationDate, `${getStorageDays(item.storageDate)}天`,
       item.status === 'in_stock' ? '正常' : item.status === 'low_stock' ? '库存不足' : item.status === 'expired' ? '已过期' : '缺货',
-      item.batchCode, item.greenhouseName
+      '-'
     ]);
 
     let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
@@ -780,6 +828,30 @@ export default function ProduceInventoryPage() {
             </div>
           </div>
 
+          {/* 搜索和重置按钮 */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setSearchText('');
+                setFilters({ ...filters, warehouseId: '', cropName: '', grade: '', status: '' });
+                setCurrentPage(1);
+              }}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              重置
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage(1);
+              }}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            >
+              <Search className="w-4 h-4" />
+              搜索
+            </button>
+          </div>
+
           {/* 仓库筛选 */}
           <div className="w-40">
             <Select
@@ -833,20 +905,6 @@ export default function ProduceInventoryPage() {
             />
           </div>
 
-          {/* 重置筛选按钮 */}
-          {(searchText || filters.warehouseId || filters.cropName || filters.grade || filters.status) && (
-            <button
-              onClick={() => {
-                setSearchText('');
-                setFilters({ ...filters, warehouseId: '', cropName: '', grade: '', status: '' });
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg flex items-center gap-1"
-            >
-              <X className="w-4 h-4" />
-              重置
-            </button>
-          )}
         </div>
       </div>
 
@@ -867,12 +925,12 @@ export default function ProduceInventoryPage() {
         onCancelBatchEdit={handleCancelSelection}
         onConfirmDelete={() => setShowDeleteModal(true)}
         onCancelDelete={handleCancelSelection}
-        onConfirmExport={handleConfirmExport}
+        onConfirmExport={handleShowExportModal}
         onCancelExport={handleCancelSelection}
       />
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ maxHeight: 'calc(100vh - 520px)', display: 'flex', flexDirection: 'column' }}>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ maxHeight: 'calc(100vh - 420px)', display: 'flex', flexDirection: 'column' }}>
         {/* 选择操作栏 */}
         {(exportMode || batchEditMode || deleteMode) && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
@@ -906,18 +964,22 @@ export default function ProduceInventoryPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">产品名称</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">品种</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-16">等级</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">库存数量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">库存数量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">库存限值</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">仓库</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">存放位置</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">入库时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">保质期(天)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">过期时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">存储时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">预警状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">备注</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {displayedData.length === 0 ? (
                 <tr>
-                  <td colSpan={(exportMode || batchEditMode || deleteMode) ? 11 : 10} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={(exportMode || batchEditMode || deleteMode) ? 15 : 14} className="px-4 py-12 text-center text-gray-500">
                     <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>暂无数据</p>
                   </td>
@@ -951,27 +1013,20 @@ export default function ProduceInventoryPage() {
                         {item.quantity} {item.unit}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {item.alertSettings.minStock} ~ {item.alertSettings.maxStock} {item.unit}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.warehouseName}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono whitespace-nowrap">{item.storageLocation}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.storageDate}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.alertSettings.expirationDays} 天</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expirationDate}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getStorageDays(item.storageDate)} 天</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <AlertBadge status={item.status} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewDetail(item)}
-                          className="px-3 py-1 text-xs text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        >
-                          详情
-                        </button>
-                        <button
-                          onClick={() => handleAlertSettings(item)}
-                          className="px-3 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        >
-                          预警设置
-                        </button>
-                      </div>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      -
                     </td>
                   </tr>
                 ))
@@ -1015,6 +1070,45 @@ export default function ProduceInventoryPage() {
           </div>
         </div>
       </div>
+
+      {/* 产品详情弹窗 */}
+      <ProduceDetailModal
+        isOpen={showDetailModal}
+        inventory={selectedInventory}
+        onClose={() => setShowDetailModal(false)}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <ProduceInventoryBatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        inventoryData={inventoryData}
+        batchEditedItems={batchEditedItems}
+        currentEditIndex={currentBatchEditIndex}
+        onClose={() => { setShowBatchEditModal(false); setBatchEditedItems({}); setCurrentBatchEditIndex(0); }}
+        onItemSelect={handleBatchItemSelect}
+        onFieldChange={handleBatchFieldChange}
+        onSaveAll={handleBatchSaveAll}
+        onNext={handleBatchNext}
+      />
+
+      {/* 导出格式弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFileType={exportFormat}
+        onChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleConfirmExport}
+        selectedCount={selectedRows.length}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

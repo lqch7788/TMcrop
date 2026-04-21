@@ -33,6 +33,7 @@ export default function SupplierManagementPage() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [batchEditMode, setBatchEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
 
@@ -74,6 +75,9 @@ export default function SupplierManagementPage() {
       alert('请先选择要编辑的供应商');
       return;
     }
+    setBatchEditMode(true);
+    setDeleteMode(false);
+    setExportMode(false);
     setShowBatchEditModal(true);
   };
 
@@ -82,10 +86,15 @@ export default function SupplierManagementPage() {
       alert('请先选择要删除的供应商');
       return;
     }
+    setBatchEditMode(false);
+    setDeleteMode(true);
+    setExportMode(false);
     setShowBatchDeleteConfirm(true);
   };
 
   const handleExport = () => {
+    setBatchEditMode(false);
+    setDeleteMode(false);
     setExportMode(true);
     setSelectedRows([]);
   };
@@ -93,20 +102,29 @@ export default function SupplierManagementPage() {
   // 批量操作确认
   const handleConfirmBatchEdit = () => {
     setBatchEditMode(false);
+    setShowBatchEditModal(false);
     setSelectedRows([]);
   };
 
   const handleCancelBatchEdit = () => {
     setBatchEditMode(false);
+    setShowBatchEditModal(false);
+    setSelectedRows([]);
   };
 
-  const handleConfirmExport = () => {
-    setShowExportModal(true);
+  const handleCancelDelete = () => {
+    setDeleteMode(false);
+    setShowBatchDeleteConfirm(false);
+    setSelectedRows([]);
   };
 
   const handleCancelExport = () => {
     setExportMode(false);
     setSelectedRows([]);
+  };
+
+  const handleConfirmExport = () => {
+    setShowExportModal(true);
   };
 
   // 表格操作
@@ -275,6 +293,7 @@ export default function SupplierManagementPage() {
       {/* 工具栏 */}
       <ActionToolbar
         batchEditMode={batchEditMode}
+        deleteMode={deleteMode}
         exportMode={exportMode}
         selectedRows={selectedRows}
         onBatchEdit={handleBatchEdit}
@@ -283,8 +302,8 @@ export default function SupplierManagementPage() {
         onAdd={handleAdd}
         onConfirmBatchEdit={handleConfirmBatchEdit}
         onCancelBatchEdit={handleCancelBatchEdit}
-        onConfirmDelete={() => {}}
-        onCancelDelete={() => {}}
+        onConfirmDelete={() => setShowBatchDeleteConfirm(true)}
+        onCancelDelete={handleCancelDelete}
         onConfirmExport={handleConfirmExport}
         onCancelExport={handleCancelExport}
       />
