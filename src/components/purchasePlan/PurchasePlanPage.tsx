@@ -1833,9 +1833,9 @@ export function PurchasePlanPage() {
             <button
               type="button"
               onClick={() => { setShowBatchEditModal(false); setBatchEditMode(false); setSelectedRows([]); setEditedPlanCodes([]); setEditedPlans({}); setSelectedPlanCode(''); setCurrentEditingPlan(null); }}
-              className="px-6 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+              className="px-6 h-10 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-50 whitespace-nowrap"
             >
-              取消
+              确认（下一个）
             </button>
             <button
               type="button"

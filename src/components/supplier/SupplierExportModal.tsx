@@ -21,6 +21,8 @@ export default function SupplierExportModal({ isOpen, exportFormat, selectedCoun
       title="导出供应商数据"
       size="sm"
       showFooter={true}
+      showMaximize={false}
+      enableResize={false}
       onSubmit={onExport}
       submitText="确认导出"
       cancelText="取消"
