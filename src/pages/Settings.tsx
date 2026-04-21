@@ -59,9 +59,9 @@ export default function Settings() {
             <h3 className="font-semibold text-gray-900 mb-4">系统信息</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: '系统版本', value: 'v2.0.0' },
+                { label: '系统版本', value: 'V3.0.0' },
                 { label: '数据库版本', value: 'PostgreSQL 14' },
-                { label: '最后更新', value: '2024-03-15' },
+                { label: '最后更新', value: '2026-04-30' },
                 { label: '在线用户', value: '12人' },
               ].map((info, index) => (
                 <div key={index} className="p-3 bg-gray-50 rounded-lg">

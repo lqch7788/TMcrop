@@ -64,6 +64,7 @@ const materialsSubItems = [
   { icon: Archive, label: '库存总览', path: '/warehouse-overview' },
   { icon: Warehouse, label: '物料入库', path: '/warehouse-inbound' },
   { icon: Box, label: '采收入库', path: '/harvest' },
+  { icon: Package, label: '产品库存', path: '/produce-inventory' },
   { icon: Truck, label: '供应商管理', path: '/supplier-management' },
   { icon: ClipboardList, label: '生产领料', path: '/material-receiving' },
   { icon: ArrowLeftRight, label: '生产退料', path: '/material-return' },
