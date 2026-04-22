@@ -318,6 +318,9 @@ export function MyTasksPage() {
     gpsLocation: null as { lat: number; lng: number } | null,
     materialCode: '',
     voiceNote: '',
+    // 新增：无法继续相关字段
+    cannotContinue: false,     // 是否无法继续
+    cannotContinueReason: '',   // 无法继续的原因
   });
 
   // 拒绝原因弹窗
@@ -419,6 +422,9 @@ export function MyTasksPage() {
       gpsLocation: null,
       materialCode: '',
       voiceNote: '',
+      // 新增：无法继续相关字段
+      cannotContinue: false,
+      cannotContinueReason: '',
     });
     setShowDetailModal(false);
   };
@@ -463,6 +469,41 @@ export function MyTasksPage() {
       }
       const task = feedbackModal.task;
       console.log('[提交反馈] 开始提交', { taskId: task.id, progress: task.progress, sourceProblemId: task.sourceProblemId });
+
+      // 新增：处理"无法继续"逻辑
+      if (feedbackForm.cannotContinue && feedbackForm.cannotContinueReason.trim()) {
+        console.log('[提交反馈] 执行无法继续逻辑');
+        // 查找 unifiedTasks 中对应的任务
+        const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+        if (unifiedTask) {
+          rejectByExecutor(
+            unifiedTask.id,
+            feedbackForm.cannotContinueReason,
+            unifiedTask.assigneeId,
+            unifiedTask.assigneeName
+          );
+          // 记录操作
+          addTaskRecord({
+            operationType: unifiedTask.type,
+            operationTypeName: unifiedTask.typeName,
+            status: 'rejected',
+            greenhouseId: '',
+            greenhouseName: task.field || '',
+            cropName: task.crop || '',
+            operatorId: 'U013',
+            operatorName: currentUserName,
+            operationDate: new Date().toISOString().split('T')[0],
+            sourceId: unifiedTask.id,
+            sourceCode: unifiedTask.taskCode,
+            progress: task.progress || 0,
+            remarks: feedbackForm.cannotContinueReason,
+            rejectReason: feedbackForm.cannotContinueReason,
+          });
+        }
+        setFeedbackModal({ isOpen: false, task: null });
+        alert('已提交无法继续反馈，任务将重新分派');
+        return;
+      }
 
       // 校验必填反馈
       const validation = validateRequiredFeedback();
@@ -910,17 +951,12 @@ export function MyTasksPage() {
                             )}
                             {task.status === 'rejected' && (
                               <button
-                                onClick={() => {
-                                  const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
-                                  if (unifiedTask) {
-                                    continueExecution(unifiedTask.id);
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
-                                title="继续完成任务后重新提交"
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
                               >
-                                <Play className="w-4 h-4" />
-                                继续执行
+                                <Eye className="w-4 h-4" />
+                                查看
                               </button>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
@@ -1136,32 +1172,14 @@ export function MyTasksPage() {
                               </button>
                             )}
                             {task.status === 'rejected' && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    const unifiedTask = unifiedTasks.find(t => t.id === task.id || t.taskCode === task.id);
-                                    if (unifiedTask) continueExecution(unifiedTask.id);
-                                    // 同时更新问题的继续执行状态
-                                    if (task.sourceProblemId) {
-                                      // 重新接受问题
-                                      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
-                                  title="继续完成任务后重新提交"
-                                >
-                                  <Play className="w-4 h-4" />
-                                  继续执行
-                                </button>
-                                <button
-                                  onClick={() => openDetailModal(task)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                  title="点击查看详情"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  查看
-                                </button>
-                              </>
+                              <button
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                                查看
+                              </button>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
                               <button
@@ -1282,29 +1300,14 @@ export function MyTasksPage() {
                               </button>
                             )}
                             {task.status === 'rejected' && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
-                                    if (unifiedTask) {
-                                      continueExecution(unifiedTask.id);
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors"
-                                  title="继续完成任务后重新提交"
-                                >
-                                  <Play className="w-4 h-4" />
-                                  继续执行
-                                </button>
-                                <button
-                                  onClick={() => openDetailModal(task)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                  title="点击查看详情"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  查看
-                                </button>
-                              </>
+                              <button
+                                onClick={() => openDetailModal(task)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                                title="点击查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                                查看
+                              </button>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
                               <button
@@ -1831,18 +1834,38 @@ export function MyTasksPage() {
             >
               取消
             </button>
+            {/* 新增：无法继续按钮 */}
+            <button
+              onClick={() => {
+                // 切换无法继续模式
+                setFeedbackForm(prev => ({ ...prev, cannotContinue: !prev.cannotContinue }));
+              }}
+              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                feedbackForm.cannotContinue
+                  ? 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
+                  : 'border-red-300 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              {feedbackForm.cannotContinue ? '取消无法继续' : '无法继续'}
+            </button>
             <button
               onClick={handleSubmitFeedback}
               disabled={
                 !feedbackModal.task ||
-                (feedbackModal.task.progress === 100
-                  ? !(feedbackForm?.resultText || '').trim()
-                  : !(feedbackForm?.progressText || '').trim()) ||
+                (feedbackForm.cannotContinue
+                  ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时需要填写原因
+                  : feedbackModal.task.progress === 100
+                    ? !(feedbackForm?.resultText || '').trim()  // 100%时需要填写处理结果
+                    : !(feedbackForm?.progressText || '').trim()) ||  // 非100%时需要填写进展情况
                 !validateRequiredFeedback().valid
               }
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                feedbackForm.cannotContinue
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-amber-500 hover:bg-amber-600'
+              }`}
             >
-              提交反馈
+              {feedbackForm.cannotContinue ? '确认无法继续' : '提交反馈'}
             </button>
           </div>
         }
@@ -1969,6 +1992,25 @@ export function MyTasksPage() {
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+              </div>
+            )}
+
+            {/* 无法继续原因输入区域（当 cannotContinue 为 true 时显示） */}
+            {feedbackForm.cannotContinue && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <label className="block text-sm font-medium text-red-700 mb-2">
+                  请说明无法继续的原因 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={feedbackForm.cannotContinueReason}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, cannotContinueReason: e.target.value }))}
+                  placeholder="请详细描述无法继续的原因（如：天气原因、设备故障、物料不足、其他紧急任务等）..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+                <p className="text-xs text-red-600 mt-2">
+                  提交后任务将变为"已拒绝"状态，等待重新分派给其他执行人。
+                </p>
               </div>
             )}
 
