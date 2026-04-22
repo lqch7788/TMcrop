@@ -36,19 +36,24 @@ export default function DailyWorkSummary() {
 
   // 导出 Hook
   const exportHook = useExport({
-    data: summaries.map((s) => ({
-      日期: s.date,
-      温室: s.greenhouse,
-      作物: s.crop,
-      作业类型: s.taskType,
-      '计划面积(亩)': s.plannedArea,
-      '完成面积(亩)': s.completedArea,
-      作业人数: s.workerCount,
-      工时: s.workHours,
-      状态: s.status,
-      完成率: s.completionRate,
-    })),
-    headers: ['日期', '温室', '作物', '作业类型', '计划面积(亩)', '完成面积(亩)', '作业人数', '工时', '状态', '完成率'],
+    data: summaries.map((s) => {
+      const parts = [];
+      if (s.workloadDays) parts.push(`${s.workloadDays}天`);
+      if (s.workloadHours) parts.push(`${s.workloadHours}小时`);
+      if (s.workers) parts.push(`${s.workers}人`);
+      return {
+        日期: s.date,
+        温室: s.greenhouse,
+        作物: s.crop,
+        作业类型: s.taskType,
+        '计划面积(亩)': s.plannedArea,
+        '完成面积(亩)': s.completedArea,
+        工作量: parts.length > 0 ? parts.join('') : '-',
+        状态: s.status,
+        完成率: s.completionRate,
+      };
+    }),
+    headers: ['日期', '温室', '作物', '作业类型', '计划面积(亩)', '完成面积(亩)', '工作量', '状态', '完成率'],
     filenamePrefix: '每日工单汇总',
   });
 
@@ -82,8 +87,21 @@ export default function DailyWorkSummary() {
     { key: 'greenhouse', label: '温室', width: '100px' },
     { key: 'crop', label: '作物', width: '80px' },
     { key: 'taskType', label: '作业类型', width: '150px' },
-    { key: 'workerCount', label: '作业人数', width: '80px' },
-    { key: 'workHours', label: '工时', width: '80px' },
+    {
+      key: 'workload',
+      label: '工作量',
+      width: '120px',
+      render: (_: any, row: any) => {
+        const days = row.workloadDays;
+        const hours = row.workloadHours;
+        const workers = row.workers;
+        const parts = [];
+        if (days) parts.push(`${days}天`);
+        if (hours) parts.push(`${hours}小时`);
+        if (workers) parts.push(`${workers}人`);
+        return parts.length > 0 ? parts.join('') : '-';
+      },
+    },
     {
       key: 'status',
       label: '状态',
