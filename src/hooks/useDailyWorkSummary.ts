@@ -73,8 +73,9 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
         taskType: log.tasks,
         plannedArea: 0,
         completedArea: 0,
-        workerCount: 1,
-        workHours: dayAttendance.find(a => a.name === log.worker)?.hours || 0,
+        workloadDays: log.workloadDays,
+        workloadHours: log.workloadHours,
+        workers: log.workers,
         status,
         completionRate,
       };

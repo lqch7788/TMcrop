@@ -139,8 +139,9 @@ export interface DailyWorkSummaryRow {
   taskType: string;         // 作业类型/任务标题
   plannedArea: number;       // 计划面积(亩)
   completedArea: number;     // 完成面积(亩)
-  workerCount: number;       // 作业人数
-  workHours: number;         // 工时
+  workloadDays?: number;    // 工作量（天）
+  workloadHours?: number;    // 工作量（小时）
+  workers?: number;          // 作业人数
   status: string;           // 状态
   completionRate: string;    // 完成率
 }
