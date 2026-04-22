@@ -119,34 +119,10 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     workloadHours: 5, workloadDays: 1, workers: 2,
     submitTime: '2026-03-11T14:00:00Z', feedbackText: '施肥进度50%，预计明天完成'
   },
-  {
-    id: 10, code: 'WL20260310001', date: '2026-03-10', worker: '杨过', weather: '晴', temperature: '27°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
-    tasks: '黄瓜日常浇水', problems: '无', solutions: '-',
-    taskId: 'T002', batchId: 'B002', batchCode: 'FQ2026-002',
-    taskCode: 'RW-20260310-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
-    workloadHours: 3, workloadDays: 1, workers: 1,
-    submitTime: '2026-03-10T10:00:00Z', feedbackText: '浇水完成'
-  },
-  {
-    id: 11, code: 'WL20260310002', date: '2026-03-10', worker: '张无忌', weather: '晴', temperature: '25°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '良好',
-    tasks: '草莓采摘', problems: '无', solutions: '-',
-    taskId: 'T003', batchId: 'B003', batchCode: 'FQ2026-003',
-    taskCode: 'RW-20260310-002', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
-    workloadHours: 8, workloadDays: 1, workers: 2,
-    submitTime: '2026-03-10T17:30:00Z', feedbackText: '采摘草莓150kg，品质良好'
-  },
-  {
-    id: 12, code: 'WL20260309001', date: '2026-03-09', worker: '令狐冲', weather: '阴', temperature: '21°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
-    tasks: '番茄病虫害巡查', problems: '发现疑似晚疫病早期症状', solutions: '加强通风，适当减少浇水',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
-    taskCode: 'RW-20260309-001', taskType: 'inspection', taskTypeName: '巡查', progress: 30,
-    workloadHours: 2, workloadDays: 1, workers: 1,
-    submitTime: '2026-03-09T09:30:00Z', feedbackText: '发现疑似晚疫病，已采取措施'
-  },
 ];
 
 // 下一个可用的 ID
-let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为13
+let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为10
 
 /**
  * 工单持久化 Hook
