@@ -43,7 +43,7 @@ export default function DailyWorkSummary() {
       if (s.workers) parts.push(`${s.workers}人`);
       return {
         日期: s.date,
-        温室: s.greenhouse,
+        工作区域: s.greenhouse,
         作物: s.crop,
         作业类型: s.taskType,
         '计划面积(亩)': s.plannedArea,
@@ -53,7 +53,7 @@ export default function DailyWorkSummary() {
         完成率: s.completionRate,
       };
     }),
-    headers: ['日期', '温室', '作物', '作业类型', '计划面积(亩)', '完成面积(亩)', '工作量', '状态', '完成率'],
+    headers: ['日期', '工作区域', '作物', '作业类型', '计划面积(亩)', '完成面积(亩)', '工作量', '状态', '完成率'],
     filenamePrefix: '每日工单汇总',
   });
 
@@ -61,7 +61,7 @@ export default function DailyWorkSummary() {
   const filterSelects = [
     {
       key: 'greenhouse',
-      label: '温室',
+      label: '工作区域',
       options: filterOptions.greenhouses,
       value: greenhouseFilter,
       onChange: (value: string) => {
@@ -84,7 +84,7 @@ export default function DailyWorkSummary() {
   // 表格列配置
   const columns = [
     { key: 'date', label: '日期', width: '120px' },
-    { key: 'greenhouse', label: '温室', width: '100px' },
+    { key: 'greenhouse', label: '工作区域', width: '100px' },
     { key: 'crop', label: '作物', width: '80px' },
     { key: 'taskType', label: '作业类型', width: '150px' },
     {
