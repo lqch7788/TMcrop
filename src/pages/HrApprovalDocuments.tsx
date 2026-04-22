@@ -1,9 +1,3 @@
-// ============================================================
-// 考勤单据页面 - 重构版本
-// 文件路径：src/pages/HrApprovalDocuments.tsx
-// 使用统一数据层：ApprovalContext
-// ============================================================
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Search, Plus, Edit, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
