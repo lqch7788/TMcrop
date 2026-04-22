@@ -103,7 +103,7 @@ export function WorkLogTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作量</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">大棚</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作区域</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作内容</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">问题描述</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">处理措施</th>
