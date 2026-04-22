@@ -133,7 +133,9 @@ export function WorkLogTable({
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskCode || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskTypeName || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                {log.workloadDays ? `${log.workloadDays}天` : log.workloadHours ? `${log.workloadHours}小时` : '-'}
+                {log.workloadDays || log.workloadHours ? (
+                  `${log.workloadDays ? `${log.workloadDays}天` : ''}${log.workloadHours ? `${log.workloadHours}小时` : ''}${log.workers ? `，${log.workers}人` : ''}`
+                ) : '-'}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                 {log.progress !== undefined ? `${log.progress}%` : '-'}
