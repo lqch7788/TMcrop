@@ -472,7 +472,7 @@ export function WorkLogPage() {
       <WorkLogBatchEditModal
         isOpen={showBatchEditModal}
         selectedRows={selectedRows}
-        logs={data}
+        logs={filteredData}
         onClose={() => setShowBatchEditModal(false)}
         onConfirm={handleBatchEditConfirm}
       />
