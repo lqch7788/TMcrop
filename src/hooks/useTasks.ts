@@ -521,12 +521,37 @@ export function useTasks(): UseTasksReturn {
   // 从 localStorage 读取任务数据（包含农事任务和临时任务）
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS_WITH_TEMP);
 
-  // 版本检测：如果存储的版本低于当前版本，重置数据
+  // 版本检测：如果存储的版本低于当前版本，合并数据而不是覆盖
   useEffect(() => {
     const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
     if (!storedVersion || parseInt(storedVersion, 10) < DATA_VERSION) {
-      // 版本不匹配，使用新数据重置（包含临时任务）
-      setTasks(INITIAL_TASKS_WITH_TEMP);
+      // 版本不匹配，读取当前任务并与初始数据合并
+      // 这样可以保留问题分派等用户创建的任务
+      try {
+        const existingData = localStorage.getItem(STORAGE_KEYS.TASKS);
+        if (existingData) {
+          const parsed = JSON.parse(existingData);
+          const existingTasks = parsed.data || parsed; // 兼容新旧格式
+          // 过滤出用户创建的任务（非初始数据中的任务）
+          const initialIds = INITIAL_TASKS_WITH_TEMP.map(t => t.id);
+          const userCreatedTasks = Array.isArray(existingTasks)
+            ? existingTasks.filter((t: Task) => !initialIds.includes(t.id))
+            : [];
+          // 合并初始数据和用户创建的任务
+          const mergedTasks = [...INITIAL_TASKS_WITH_TEMP, ...userCreatedTasks];
+          setTasks(mergedTasks);
+          console.log(`[useTasks] 合并任务数据：初始${INITIAL_TASKS_WITH_TEMP.length}个 + 用户创建${userCreatedTasks.length}个 = ${mergedTasks.length}个`);
+          // 调试：检查用户创建的任务是否有 requiredFeedback
+          if (userCreatedTasks.length > 0) {
+            console.log('[useTasks] 用户创建任务示例:', JSON.stringify(userCreatedTasks[0], null, 2));
+          }
+        } else {
+          setTasks(INITIAL_TASKS_WITH_TEMP);
+        }
+      } catch (e) {
+        console.warn('[useTasks] 读取任务数据失败，使用初始数据', e);
+        setTasks(INITIAL_TASKS_WITH_TEMP);
+      }
       localStorage.setItem(STORAGE_VERSION_KEY, String(DATA_VERSION));
     }
   }, [setTasks]);

@@ -140,7 +140,8 @@ export function useProblemDispatch() {
     dispatcherId: string = 'U001',
     dispatcherName: string = '系统管理员',
     expectedCompletion?: string,
-    requiredFeedback?: string[]
+    requiredFeedback?: string[],
+    customPriority?: 'high' | 'medium' | 'low'
   ): Task | null => {
     const problem = problems.find(p => p.id === problemId);
     if (!problem) return null;
@@ -154,14 +155,18 @@ export function useProblemDispatch() {
       return 'scouting';
     };
 
+    // 确定优先级：优先使用自定义优先级，否则根据问题严重程度自动映射
+    const priority: Task['priority'] = customPriority || SEVERITY_PRIORITY_MAP[problem.issueSeverity];
+
     // 创建任务
+    const now = new Date().toISOString();
     const newTask: Task = {
       id: generateTaskId(tasks),
       taskCode: generateTaskCode(tasks),
       title: `【问题处理】${problem.issueText.slice(0, 30)}`,
       type: getProblemType(problem.issueText),
       typeName: '问题处理',
-      priority: SEVERITY_PRIORITY_MAP[problem.issueSeverity],
+      priority,
       status: 'pending',
       batchId: '',
       batchCode: '',
@@ -179,10 +184,20 @@ export function useProblemDispatch() {
       actualWorkload: 0,
       sourceProblemId: problemId,
       requiredFeedback: requiredFeedback || [],
+      // 保留原始巡查单号（用于追踪问题处理全过程）
+      sourceId: problem.sourceId,
+      sourceCode: problem.sourceId,
+      // 创建和更新时间（用于列表排序）
+      createdAt: now,
+      updatedAt: now,
     };
 
     // 保存任务
-    setTasks(prev => [...prev, newTask]);
+    setTasks(prev => {
+      const updated = [...prev, newTask];
+      console.log('[dispatchProblem] 保存任务:', JSON.stringify(newTask, null, 2));
+      return updated;
+    });
 
     // 创建流转记录
     const flowRecord: ProblemFlowRecord = {

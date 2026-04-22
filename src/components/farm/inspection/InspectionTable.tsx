@@ -179,7 +179,6 @@ export function InspectionTable({
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查结果</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">严重程度</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈状态</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">处理进度</th>
@@ -298,22 +297,6 @@ export function InspectionTable({
                     }`}>
                       {record.issueSeverity}
                     </span>
-                  ) : (
-                    <span className="text-sm text-gray-500">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center whitespace-nowrap">
-                  {record.issuePhotos && record.issuePhotos.length > 0 ? (
-                    <div className="flex justify-center gap-1">
-                      {record.issuePhotos.slice(0, 3).map((img: string, imgIdx: number) => (
-                        <div key={imgIdx} className="w-8 h-8 rounded overflow-hidden bg-gray-100">
-                          <img src={img} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                      {record.issuePhotos.length > 3 && (
-                        <span className="flex items-center justify-center w-8 h-8 text-xs text-gray-500">+{record.issuePhotos.length - 3}</span>
-                      )}
-                    </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>
                   )}
