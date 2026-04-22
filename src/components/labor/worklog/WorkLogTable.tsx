@@ -104,7 +104,6 @@ export function WorkLogTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">大棚</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长状况</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作内容</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">问题描述</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">处理措施</th>
@@ -138,17 +137,6 @@ export function WorkLogTable({
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.greenhouse}</td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span
-                  className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                    log.growthStatus === '良好'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {log.growthStatus}
-                </span>
-              </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[150px] truncate">
                 {log.tasks}
               </td>
