@@ -145,6 +145,9 @@ export function MyTasksPage() {
   const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, operationRecords, getTaskRecordsByTaskId } = useTasks();
   const { addTaskRecord, records: operationRecordsList, getRecordsByTaskId } = useOperationRecords();
 
+  // 强制刷新key，用于刷新任务列表状态
+  const [refreshKey, setRefreshKey] = useState(0);
+
   // 从 localStorage 读取任务（仅用于兼容旧数据初始化）
   // 注意：问题分派的任务存储在 TASKS key 下
   const [localTasks, setLocalTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.TASKS, []);
@@ -269,7 +272,7 @@ export function MyTasksPage() {
         // 全部任务也按创建时间倒序
         return [...myTasks].sort(sortByCreatedAt);
     }
-  }, [myTasks, taskFilter]);
+  }, [myTasks, taskFilter, refreshKey]);
 
   // 计算分页
   const totalPages = Math.ceil(filteredTasks.length / pageSize) || 1;
@@ -499,6 +502,8 @@ export function MyTasksPage() {
             remarks: feedbackForm.cannotContinueReason,
             rejectReason: feedbackForm.cannotContinueReason,
           });
+          // 触发刷新，确保任务列表显示最新状态
+          setRefreshKey(prev => prev + 1);
         }
         setFeedbackModal({ isOpen: false, task: null });
         alert('已提交无法继续反馈，任务将重新分派');
@@ -2014,8 +2019,8 @@ export function MyTasksPage() {
               </div>
             )}
 
-            {/* 必填反馈输入区域 */}
-            {feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
+            {/* 必填反馈输入区域（无法继续模式下不显示） */}
+            {!feedbackForm.cannotContinue && feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-700">
                   必填反馈项
@@ -2067,12 +2072,20 @@ export function MyTasksPage() {
               </div>
             )}
 
-            {/* 反馈表单（任何进度都可以提交） */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="text-sm text-amber-800">
-                {feedbackModal.task.progress === 100
-                  ? '提交反馈后，任务将进入"待验收"状态，等待管理者确认完成。'
-                  : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
+            {/* 反馈提示信息（根据模式显示不同内容） */}
+            <div className={`rounded-lg p-3 ${
+              feedbackForm.cannotContinue
+                ? 'bg-red-50 border border-red-200'
+                : 'bg-amber-50 border border-amber-200'
+            }`}>
+              <div className={`text-sm ${
+                feedbackForm.cannotContinue ? 'text-red-800' : 'text-amber-800'
+              }`}>
+                {feedbackForm.cannotContinue
+                  ? '确认无法继续后，任务将变为"已拒绝"状态，等待重新分派。'
+                  : feedbackModal.task.progress === 100
+                    ? '提交反馈后，任务将进入"待验收"状态，等待管理者确认完成。'
+                    : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
               </div>
             </div>
           </div>
