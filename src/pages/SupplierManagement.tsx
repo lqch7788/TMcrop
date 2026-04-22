@@ -594,14 +594,16 @@ export default function SupplierManagement() {
                   </button>
                   <button
                     onClick={() => { setShowEditWarning(true); }}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
                   >
+                    <Edit className="w-4 h-4" />
                     编辑
                   </button>
                   <button
                     onClick={() => { setShowDeleteWarning(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                   >
+                    <Trash2 className="w-4 h-4" />
                     删除
                   </button>
                 </>
