@@ -102,8 +102,6 @@ export function WorkLogTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作量</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">天气</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温度</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">大棚</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长状况</th>
@@ -138,8 +136,6 @@ export function WorkLogTable({
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                 {log.progress !== undefined ? `${log.progress}%` : '-'}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.weather}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.temperature}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.greenhouse}</td>
               <td className="px-4 py-3 whitespace-nowrap">
