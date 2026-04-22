@@ -48,100 +48,100 @@ export interface TaskProgressUpdate {
 // 初始 mock 数据
 const INITIAL_WORK_LOGS: WorkLogEntry[] = [
   {
-    id: 1, code: 'WL20240314', date: '2024-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 1, code: 'WL20260314', date: '2026-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄授粉工作', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001',
-    taskCode: 'RW-20240301-001', taskType: 'spraying', taskTypeName: '施肥', progress: 100,
+    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
+    taskCode: 'RW-20260301-001', taskType: 'spraying', taskTypeName: '施肥', progress: 100,
     workloadHours: 6, workloadDays: 1, workers: 2,
-    submitTime: '2024-03-14T17:30:00Z', feedbackText: '已完成全部授粉任务'
+    submitTime: '2026-03-14T17:30:00Z', feedbackText: '已完成全部授粉任务'
   },
   {
-    id: 2, code: 'WL20240314', date: '2024-03-14', worker: '杨过', weather: '晴', temperature: '26°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
+    id: 2, code: 'WL20260314', date: '2026-03-14', worker: '杨过', weather: '晴', temperature: '26°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
     tasks: '黄瓜施肥和病虫害防治', problems: '发现少量蚜虫', solutions: '已喷洒吡虫啉',
-    taskId: 'T002', batchId: 'B002', batchCode: 'FQ2024-002',
-    taskCode: 'RW-20240302-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 80,
+    taskId: 'T002', batchId: 'B002', batchCode: 'FQ2026-002',
+    taskCode: 'RW-20260302-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 80,
     workloadHours: 8, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-14T18:00:00Z', feedbackText: '发现蚜虫已处理，整体进度80%'
+    submitTime: '2026-03-14T18:00:00Z', feedbackText: '发现蚜虫已处理，整体进度80%'
   },
   {
-    id: 3, code: 'WL20240314', date: '2024-03-14', worker: '张无忌', weather: '晴', temperature: '24°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '一般',
+    id: 3, code: 'WL20260314', date: '2026-03-14', worker: '张无忌', weather: '晴', temperature: '24°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '一般',
     tasks: '草莓疏果和浇水', problems: '部分叶片发黄', solutions: '补充氮肥',
-    taskId: 'T003', batchId: 'B003', batchCode: 'FQ2024-003',
-    taskCode: 'RW-20240303-001', taskType: 'pruning', taskTypeName: '修剪', progress: 60,
+    taskId: 'T003', batchId: 'B003', batchCode: 'FQ2026-003',
+    taskCode: 'RW-20260303-001', taskType: 'pruning', taskTypeName: '修剪', progress: 60,
     workloadHours: 5, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-14T16:45:00Z', feedbackText: '叶片发黄已补充氮肥'
+    submitTime: '2026-03-14T16:45:00Z', feedbackText: '叶片发黄已补充氮肥'
   },
   {
-    id: 4, code: 'WL20240313', date: '2024-03-13', worker: '令狐冲', weather: '多云', temperature: '22°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 4, code: 'WL20260313', date: '2026-03-13', worker: '令狐冲', weather: '多云', temperature: '22°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄整枝和授粉', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001',
-    taskCode: 'RW-20240228-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
+    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
+    taskCode: 'RW-20260228-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
     workloadHours: 7, workloadDays: 1, workers: 2,
-    submitTime: '2024-03-13T17:00:00Z', feedbackText: '整枝授粉完成'
+    submitTime: '2026-03-13T17:00:00Z', feedbackText: '整枝授粉完成'
   },
   {
-    id: 5, code: 'WL20240313', date: '2024-03-13', worker: '段誉', weather: '多云', temperature: '23°C', crop: '辣椒', greenhouse: '4号棚', growthStatus: '良好',
+    id: 5, code: 'WL20260313', date: '2026-03-13', worker: '段誉', weather: '多云', temperature: '23°C', crop: '辣椒', greenhouse: '4号棚', growthStatus: '良好',
     tasks: '辣椒浇水施肥', problems: '无', solutions: '-',
-    taskId: 'T005', batchId: 'B005', batchCode: 'FQ2024-005',
-    taskCode: 'RW-20240305-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
+    taskId: 'T005', batchId: 'B005', batchCode: 'FQ2026-005',
+    taskCode: 'RW-20260305-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
     workloadHours: 4, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-13T15:30:00Z', feedbackText: '浇水施肥已完成'
+    submitTime: '2026-03-13T15:30:00Z', feedbackText: '浇水施肥已完成'
   },
   {
-    id: 6, code: 'WL20240312', date: '2024-03-12', worker: '黄蓉', weather: '阴', temperature: '20°C', crop: '生菜', greenhouse: '5号棚', growthStatus: '良好',
+    id: 6, code: 'WL20260312', date: '2026-03-12', worker: '黄蓉', weather: '阴', temperature: '20°C', crop: '生菜', greenhouse: '5号棚', growthStatus: '良好',
     tasks: '生菜采收清洗', problems: '无', solutions: '-',
-    taskId: 'T004', batchId: 'B004', batchCode: 'FQ2024-004',
-    taskCode: 'RW-20240306-001', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
+    taskId: 'T004', batchId: 'B004', batchCode: 'FQ2026-004',
+    taskCode: 'RW-20260306-001', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
     workloadHours: 10, workloadDays: 2, workers: 3,
-    submitTime: '2024-03-12T18:30:00Z', feedbackText: '生菜采收完毕，共200kg'
+    submitTime: '2026-03-12T18:30:00Z', feedbackText: '生菜采收完毕，共200kg'
   },
   {
-    id: 7, code: 'WL20240312', date: '2024-03-12', worker: '陈家洛', weather: '阴', temperature: '21°C', crop: '菠菜', greenhouse: '6号棚', growthStatus: '一般',
+    id: 7, code: 'WL20260312', date: '2026-03-12', worker: '陈家洛', weather: '阴', temperature: '21°C', crop: '菠菜', greenhouse: '6号棚', growthStatus: '一般',
     tasks: '菠菜除草浇水', problems: '发现蜗牛', solutions: '已撒石灰驱除',
-    taskId: undefined, batchId: 'B006', batchCode: 'FQ2024-006',
-    taskCode: 'RW-20240307-001', taskType: 'weeding', taskTypeName: '除草', progress: 45,
+    taskId: undefined, batchId: 'B006', batchCode: 'FQ2026-006',
+    taskCode: 'RW-20260307-001', taskType: 'weeding', taskTypeName: '除草', progress: 45,
     workloadHours: 3, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-12T14:20:00Z', feedbackText: '发现蜗牛，已用石灰处理'
+    submitTime: '2026-03-12T14:20:00Z', feedbackText: '发现蜗牛，已用石灰处理'
   },
   {
-    id: 8, code: 'WL20240311', date: '2024-03-11', worker: '任盈盈', weather: '晴', temperature: '24°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 8, code: 'WL20260311', date: '2026-03-11', worker: '任盈盈', weather: '晴', temperature: '24°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄绑蔓修剪', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001',
-    taskCode: 'RW-20240225-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
+    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
+    taskCode: 'RW-20260225-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
     workloadHours: 6, workloadDays: 1, workers: 2,
-    submitTime: '2024-03-11T16:00:00Z', feedbackText: '绑蔓修剪完成'
+    submitTime: '2026-03-11T16:00:00Z', feedbackText: '绑蔓修剪完成'
   },
   {
-    id: 9, code: 'WL20240311', date: '2024-03-11', worker: '郭靖', weather: '晴', temperature: '26°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 9, code: 'WL20260311', date: '2026-03-11', worker: '郭靖', weather: '晴', temperature: '26°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄第二次施肥', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001',
-    taskCode: 'RW-20240311-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 50,
+    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
+    taskCode: 'RW-20260311-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 50,
     workloadHours: 5, workloadDays: 1, workers: 2,
-    submitTime: '2024-03-11T14:00:00Z', feedbackText: '施肥进度50%，预计明天完成'
+    submitTime: '2026-03-11T14:00:00Z', feedbackText: '施肥进度50%，预计明天完成'
   },
   {
-    id: 10, code: 'WL20240310', date: '2024-03-10', worker: '杨过', weather: '晴', temperature: '27°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
+    id: 10, code: 'WL20260310', date: '2026-03-10', worker: '杨过', weather: '晴', temperature: '27°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
     tasks: '黄瓜日常浇水', problems: '无', solutions: '-',
-    taskId: 'T002', batchId: 'B002', batchCode: 'FQ2024-002',
-    taskCode: 'RW-20240310-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
+    taskId: 'T002', batchId: 'B002', batchCode: 'FQ2026-002',
+    taskCode: 'RW-20260310-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
     workloadHours: 3, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-10T10:00:00Z', feedbackText: '浇水完成'
+    submitTime: '2026-03-10T10:00:00Z', feedbackText: '浇水完成'
   },
   {
-    id: 11, code: 'WL20240310', date: '2024-03-10', worker: '张无忌', weather: '晴', temperature: '25°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '良好',
+    id: 11, code: 'WL20260310', date: '2026-03-10', worker: '张无忌', weather: '晴', temperature: '25°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '良好',
     tasks: '草莓采摘', problems: '无', solutions: '-',
-    taskId: 'T003', batchId: 'B003', batchCode: 'FQ2024-003',
-    taskCode: 'RW-20240310-002', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
+    taskId: 'T003', batchId: 'B003', batchCode: 'FQ2026-003',
+    taskCode: 'RW-20260310-002', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
     workloadHours: 8, workloadDays: 1, workers: 2,
-    submitTime: '2024-03-10T17:30:00Z', feedbackText: '采摘草莓150kg，品质良好'
+    submitTime: '2026-03-10T17:30:00Z', feedbackText: '采摘草莓150kg，品质良好'
   },
   {
-    id: 12, code: 'WL20240309', date: '2024-03-09', worker: '令狐冲', weather: '阴', temperature: '21°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 12, code: 'WL20260309', date: '2026-03-09', worker: '令狐冲', weather: '阴', temperature: '21°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄病虫害巡查', problems: '发现疑似晚疫病早期症状', solutions: '加强通风，适当减少浇水',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2024-001',
-    taskCode: 'RW-20240309-001', taskType: 'inspection', taskTypeName: '巡查', progress: 30,
+    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
+    taskCode: 'RW-20260309-001', taskType: 'inspection', taskTypeName: '巡查', progress: 30,
     workloadHours: 2, workloadDays: 1, workers: 1,
-    submitTime: '2024-03-09T09:30:00Z', feedbackText: '发现疑似晚疫病，已采取措施'
+    submitTime: '2026-03-09T09:30:00Z', feedbackText: '发现疑似晚疫病，已采取措施'
   },
 ];
 
