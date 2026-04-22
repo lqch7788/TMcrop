@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Sprout, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight,
   Calendar, User, MapPin, Clock, CheckCircle, XCircle, AlertCircle
@@ -214,6 +215,9 @@ export default function FarmActivityManagement() {
       {/* 页面头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3">
+          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </Link>
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
             <Sprout className="w-6 h-6 text-white" />
           </div>
