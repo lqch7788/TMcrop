@@ -1,7 +1,6 @@
 /**
  * 每日工单汇总表页面
- * 直接从 useTasks 获取任务数据，展示任务执行闭环的全流程状态
- * 路径变更：从 /daily-work-summary 移至农事管理模块
+ * 从 usePersistentWorkLogs 获取工作日志数据，展示每日工单汇总
  */
 
 import { useState, useMemo } from 'react';
@@ -14,122 +13,134 @@ import {
   ExportModal,
   useExport,
 } from '../../components/summary';
-import { useTasks, TASK_STATUS_CONFIG } from '../../hooks/useTasks';
-import { usePersistentAttendance } from '../../hooks/usePersistentAttendance';
-import type { TaskStatus } from '../../hooks/useTasks';
-import { users } from '../../data/mockData';
+import { usePersistentWorkLogs, WorkLogEntry } from '../../hooks/usePersistentWorkLogs';
+import { useTasks } from '../../hooks/useTasks';
 
 // 汇总行数据类型
 interface DailySummaryRow {
-  id: string;
+  id: number;
+  code: string;
   taskCode: string;
-  title: string;
-  typeName: string;
-  greenhouseName: string;
-  cropName: string;
-  assigneeName: string;
-  assignerName: string;
-  dueDate: string;
-  status: TaskStatus;
-  statusLabel: string;
-  progress: number;
-  workHours: number;
-  laborCost: number;  // 人工成本
-  checkIn: string;
-  checkOut: string;
+  taskTypeName: string;
+  greenhouse: string;
+  crop: string;
+  worker: string;
+  tasks: string;
+  workloadDays?: number;
+  workloadHours?: number;
+  workers?: number;
+  progress?: number;
+  status: string;
+  submitTime?: string;
 }
 
 export default function DailyWorkSummary() {
-  // 从 useTasks 获取任务数据
+  // 从 usePersistentWorkLogs 获取工作日志数据
+  const { workLogs } = usePersistentWorkLogs();
   const { tasks } = useTasks();
-  const { attendance } = usePersistentAttendance();
 
   // 筛选状态
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<string>('');
   const [greenhouseFilter, setGreenhouseFilter] = useState<string>('');
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('');
+  const [taskTypeFilter, setTaskTypeFilter] = useState<string>('');
 
-  // 将任务数据转换为汇总行
+  // 将工作日志数据转换为汇总行
   const summaries = useMemo((): DailySummaryRow[] => {
-    return tasks.map(task => {
-      // 查找对应的考勤记录
-      const taskAttendance = attendance.find(a => a.taskId === task.id);
-
-      // 计算人工成本：根据执行人姓名查找时薪
-      const worker = users.find(u => u.name === task.assigneeName);
-      const hourlyRate = (worker as any)?.hourlyRate || 35; // 默认35元/小时
-      const workHours = taskAttendance?.hours || task.estimatedHours || 0;
-      const laborCost = workHours * hourlyRate;
+    return workLogs.map(log => {
+      // 获取任务状态
+      let status = '已完成';
+      if (log.taskId) {
+        const task = tasks.find(t => t.id === log.taskId);
+        if (task) {
+          if (task.status === 'completed') {
+            status = '已完成';
+          } else if (task.status === 'in_progress' || task.status === 'accepted') {
+            status = '进行中';
+          } else if (task.status === 'waiting_acceptance') {
+            status = '待验收';
+          } else if (task.status === 'rejected') {
+            status = '已驳回';
+          }
+        }
+      }
 
       return {
-        id: task.id,
-        taskCode: task.taskCode,
-        title: task.title,
-        typeName: task.typeName,
-        greenhouseName: task.greenhouseName,
-        cropName: task.cropName,
-        assigneeName: task.assigneeName,
-        assignerName: task.assignerName,
-        dueDate: task.dueDate,
-        status: task.status,
-        statusLabel: TASK_STATUS_CONFIG[task.status]?.label || task.status,
-        progress: task.progress,
-        workHours,
-        laborCost,  // 人工成本
-        checkIn: taskAttendance?.checkIn || '-',
-        checkOut: taskAttendance?.checkOut || '-',
+        id: log.id,
+        code: log.code,
+        taskCode: log.taskCode || '-',
+        taskTypeName: log.taskTypeName || '-',
+        greenhouse: log.greenhouse,
+        crop: log.crop,
+        worker: log.worker,
+        tasks: log.tasks,
+        workloadDays: log.workloadDays,
+        workloadHours: log.workloadHours,
+        workers: log.workers,
+        progress: log.progress,
+        status,
+        submitTime: log.submitTime,
       };
     });
-  }, [tasks, attendance]);
+  }, [workLogs, tasks]);
 
   // 应用筛选
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
-      if (statusFilter && s.status !== statusFilter) return false;
-      if (greenhouseFilter && greenhouseFilter !== '全部' && s.greenhouseName !== greenhouseFilter) return false;
-      if (assigneeFilter && assigneeFilter !== '全部' && s.assigneeName !== assigneeFilter) return false;
+      if (dateFilter && s.code.startsWith(`WL${dateFilter.replace(/-/g, '')}`) === false) {
+        // 按日期筛选
+        const logDate = workLogs.find(w => w.id === s.id)?.date;
+        if (logDate !== dateFilter) return false;
+      }
+      if (greenhouseFilter && greenhouseFilter !== '全部' && s.greenhouse !== greenhouseFilter) return false;
+      if (taskTypeFilter && taskTypeFilter !== '全部' && s.taskTypeName !== taskTypeFilter) return false;
       return true;
     });
-  }, [summaries, statusFilter, greenhouseFilter, assigneeFilter]);
+  }, [summaries, dateFilter, greenhouseFilter, taskTypeFilter, workLogs]);
 
   // 计算统计卡片
   const statCards = useMemo(() => {
     const total = filteredSummaries.length;
-    const completed = filteredSummaries.filter(s => s.status === 'completed').length;
-    const inProgress = filteredSummaries.filter(s => s.status === 'in_progress' || s.status === 'accepted').length;
-    const waitingAcceptance = filteredSummaries.filter(s => s.status === 'waiting_acceptance').length;
-    const totalHours = filteredSummaries.reduce((sum, s) => sum + s.workHours, 0);
-    const totalLaborCost = filteredSummaries.reduce((sum, s) => sum + s.laborCost, 0);
+    const completed = filteredSummaries.filter(s => s.status === '已完成').length;
+    const inProgress = filteredSummaries.filter(s => s.status === '进行中').length;
+    const waitingAcceptance = filteredSummaries.filter(s => s.status === '待验收').length;
 
     return [
-      { label: '任务总数', value: total, icon: '📋', iconBgColor: 'bg-blue-500' },
+      { label: '工单总数', value: total, icon: '📋', iconBgColor: 'bg-blue-500' },
       { label: '已完成', value: completed, icon: '✓', iconBgColor: 'bg-green-500' },
       { label: '进行中', value: inProgress, icon: '⟳', iconBgColor: 'bg-amber-500' },
       { label: '待验收', value: waitingAcceptance, icon: '⏳', iconBgColor: 'bg-orange-500' },
-      { label: '总工时', value: totalHours.toFixed(1) + 'h', icon: '∑', iconBgColor: 'bg-purple-500' },
-      { label: '人工成本', value: '¥' + totalLaborCost.toFixed(0), icon: '💰', iconBgColor: 'bg-emerald-500' },
     ];
   }, [filteredSummaries]);
 
   // 获取筛选选项
   const filterOptions = useMemo(() => {
-    const greenhouses = [...new Set(tasks.map(t => t.greenhouseName))];
-    const assignees = [...new Set(tasks.map(t => t.assigneeName))];
+    // 日期选项
+    const dates = [...new Set(workLogs.map(w => w.date))].sort((a, b) => b.localeCompare(a));
+    const dateOptions = [
+      { value: '', label: '全部' },
+      ...dates.map(d => ({ value: d, label: d })),
+    ];
+
+    // 工作区域选项
+    const greenhouses = [...new Set(workLogs.map(w => w.greenhouse))];
+    const greenhouseOptions = [
+      { value: '', label: '全部' },
+      ...greenhouses.map(g => ({ value: g, label: g })),
+    ];
+
+    // 任务类型选项
+    const taskTypes = [...new Set(workLogs.map(w => w.taskTypeName).filter(Boolean))];
+    const taskTypeOptions = [
+      { value: '', label: '全部' },
+      ...taskTypes.map(t => ({ value: t || '', label: t || '' })),
+    ];
 
     return {
-      greenhouses: [{ value: '', label: '全部' }, ...greenhouses.map(g => ({ value: g, label: g }))],
-      assignees: [{ value: '', label: '全部' }, ...assignees.map(a => ({ value: a, label: a }))],
-      statuses: [
-        { value: '', label: '全部' },
-        { value: 'pending', label: '待接受' },
-        { value: 'accepted', label: '已接受' },
-        { value: 'in_progress', label: '进行中' },
-        { value: 'waiting_acceptance', label: '待验收' },
-        { value: 'completed', label: '已完成' },
-        { value: 'rejected', label: '已驳回' },
-      ],
+      dates: dateOptions,
+      greenhouses: greenhouseOptions,
+      taskTypes: taskTypeOptions,
     };
-  }, [tasks]);
+  }, [workLogs]);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -139,40 +150,43 @@ export default function DailyWorkSummary() {
 
   // 导出 Hook
   const exportHook = useExport({
-    data: filteredSummaries.map((s) => ({
-      '任务编号': s.taskCode,
-      '任务标题': s.title,
-      '任务类型': s.typeName,
-      '温室': s.greenhouseName,
-      '作物': s.cropName,
-      '执行人': s.assigneeName,
-      '派发人': s.assignerName,
-      '截止日期': s.dueDate,
-      '状态': s.statusLabel,
-      '进度': `${s.progress}%`,
-      '工时': s.workHours,
-      '签到': s.checkIn,
-      '签退': s.checkOut,
-    })),
-    headers: ['任务编号', '任务标题', '任务类型', '温室', '作物', '执行人', '派发人', '截止日期', '状态', '进度', '工时', '签到', '签退'],
+    data: filteredSummaries.map((s) => {
+      const parts = [];
+      if (s.workloadDays) parts.push(`${s.workloadDays}天`);
+      if (s.workloadHours) parts.push(`${s.workloadHours}小时`);
+      if (s.workers) parts.push(`${s.workers}人`);
+      return {
+        '日志编号': s.code,
+        '任务编号': s.taskCode,
+        '任务类型': s.taskTypeName,
+        '工作区域': s.greenhouse,
+        '作物': s.crop,
+        '执行人': s.worker,
+        '工作内容': s.tasks,
+        '工作量': parts.length > 0 ? parts.join('') : '-',
+        '进度': s.progress !== undefined ? `${s.progress}%` : '-',
+        '状态': s.status,
+      };
+    }),
+    headers: ['日志编号', '任务编号', '任务类型', '工作区域', '作物', '执行人', '工作内容', '工作量', '进度', '状态'],
     filenamePrefix: '每日工单汇总',
   });
 
   // 筛选配置
   const filterSelects = [
     {
-      key: 'status',
-      label: '状态',
-      options: filterOptions.statuses,
-      value: statusFilter,
+      key: 'date',
+      label: '日期',
+      options: filterOptions.dates,
+      value: dateFilter,
       onChange: (value: string) => {
-        setStatusFilter(value);
+        setDateFilter(value);
         setCurrentPage(1);
       },
     },
     {
       key: 'greenhouse',
-      label: '温室',
+      label: '工作区域',
       options: filterOptions.greenhouses,
       value: greenhouseFilter,
       onChange: (value: string) => {
@@ -181,58 +195,55 @@ export default function DailyWorkSummary() {
       },
     },
     {
-      key: 'assignee',
-      label: '执行人',
-      options: filterOptions.assignees,
-      value: assigneeFilter,
+      key: 'taskType',
+      label: '任务类型',
+      options: filterOptions.taskTypes,
+      value: taskTypeFilter,
       onChange: (value: string) => {
-        setAssigneeFilter(value);
+        setTaskTypeFilter(value);
         setCurrentPage(1);
       },
     },
   ];
 
-  // 表格列配置（与农事任务派发页面字段对齐）
+  // 表格列配置
   const columns = [
+    { key: 'code', label: '日志编号', width: '130px' },
     { key: 'taskCode', label: '任务编号', width: '130px' },
-    { key: 'title', label: '任务标题', width: '180px' },
-    { key: 'typeName', label: '任务类型', width: '80px' },
-    { key: 'greenhouseName', label: '温室', width: '80px' },
-    { key: 'cropName', label: '作物', width: '80px' },
-    { key: 'assigneeName', label: '执行人', width: '80px' },
-    { key: 'assigneeName', label: '派发人', width: '80px' },
-    { key: 'dueDate', label: '截止日期', width: '100px' },
+    { key: 'taskTypeName', label: '任务类型', width: '80px' },
+    { key: 'greenhouse', label: '工作区域', width: '80px' },
+    { key: 'crop', label: '作物', width: '80px' },
+    { key: 'worker', label: '执行人', width: '80px' },
     {
-      key: 'status',
-      label: '状态',
-      width: '90px',
-      render: (value: TaskStatus) => {
-        const config = TASK_STATUS_CONFIG[value] || { label: value, bg: 'bg-gray-100', color: 'text-gray-600' };
-        return (
-          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>
-            {config.label}
-          </span>
-        );
+      key: 'workload',
+      label: '工作量',
+      width: '120px',
+      render: (_: any, row: DailySummaryRow) => {
+        const parts = [];
+        if (row.workloadDays) parts.push(`${row.workloadDays}天`);
+        if (row.workloadHours) parts.push(`${row.workloadHours}小时`);
+        if (row.workers) parts.push(`${row.workers}人`);
+        return parts.length > 0 ? parts.join('') : '-';
       },
     },
     {
       key: 'progress',
       label: '进度',
       width: '80px',
-      render: (value: number) => (
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500 rounded-full" style={{ width: `${value}%` }} />
-          </div>
-          <span className="text-xs text-gray-500">{value}%</span>
-        </div>
-      ),
+      render: (value?: number) => value !== undefined ? `${value}%` : '-',
     },
     {
-      key: 'workHours',
-      label: '工时(h)',
-      width: '70px',
-      render: (value: number) => value.toFixed(1),
+      key: 'status',
+      label: '状态',
+      width: '90px',
+      render: (value: string) => {
+        const isCompleted = value === '已完成';
+        return (
+          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            {value}
+          </span>
+        );
+      },
     },
   ];
 
@@ -242,7 +253,7 @@ export default function DailyWorkSummary() {
       <PageHeader
         icon={<ClipboardList className="w-6 h-6 text-white" />}
         title="每日工单汇总"
-        description="任务执行闭环全流程追踪"
+        description="工作日志汇总展示"
       />
 
       {/* 统计卡片 */}
@@ -276,7 +287,7 @@ export default function DailyWorkSummary() {
         exportMode={exportHook.exportMode}
         selectedRows={exportHook.selectedRows}
         onPageChange={setCurrentPage}
-        onSelectAll={() => exportHook.handleSelectAll(filteredSummaries.map((s) => s.id))}
+        onSelectAll={() => exportHook.handleSelectAll(filteredSummaries.map((s) => s.id.toString()))}
         onSelectRow={(id) => exportHook.handleSelectRow(id as string)}
       />
 
