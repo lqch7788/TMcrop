@@ -103,26 +103,10 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     workloadHours: 3, workloadDays: 1, workers: 1,
     submitTime: '2026-03-12T14:20:00Z', feedbackText: '发现蜗牛，已用石灰处理'
   },
-  {
-    id: 8, code: 'WL20260311001', date: '2026-03-11', worker: '任盈盈', weather: '晴', temperature: '24°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
-    tasks: '番茄绑蔓修剪', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
-    taskCode: 'RW-20260225-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
-    workloadHours: 6, workloadDays: 1, workers: 2,
-    submitTime: '2026-03-11T16:00:00Z', feedbackText: '绑蔓修剪完成'
-  },
-  {
-    id: 9, code: 'WL20260311002', date: '2026-03-11', worker: '郭靖', weather: '晴', temperature: '26°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
-    tasks: '番茄第二次施肥', problems: '无', solutions: '-',
-    taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
-    taskCode: 'RW-20260311-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 50,
-    workloadHours: 5, workloadDays: 1, workers: 2,
-    submitTime: '2026-03-11T14:00:00Z', feedbackText: '施肥进度50%，预计明天完成'
-  },
 ];
 
 // 下一个可用的 ID
-let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为10
+let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为8
 
 /**
  * 工单持久化 Hook
