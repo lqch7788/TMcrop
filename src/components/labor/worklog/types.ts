@@ -20,6 +20,16 @@ export interface WorkLog {
   taskId?: string;           // 关联任务ID
   batchId?: string;         // 关联批次ID
   batchCode?: string;        // 批次编号（冗余便于显示）
+  // 【新增】任务相关信息
+  taskCode?: string;        // 任务编号（如 RW-20260422-001）
+  taskType?: string;        // 任务类型（spraying、irrigation等）
+  taskTypeName?: string;    // 任务类型名称（施肥、灌溉等）
+  progress?: number;         // 提交时的进度
+  workloadHours?: number;    // 工作量（小时）
+  workloadDays?: number;    // 工作量（天）
+  workers?: number;          // 作业人数
+  submitTime?: string;       // 提交时间
+  feedbackText?: string;     // 反馈/备注内容
 }
 
 // 筛选条件

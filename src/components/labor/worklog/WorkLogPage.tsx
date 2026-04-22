@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { BookMarked } from 'lucide-react';
-import { useWorkLog } from './hooks/useWorkLog';
+import { usePersistentWorkLogs, WorkLogEntry } from '../../../hooks/usePersistentWorkLogs';
 import { WorkLogFilters } from './WorkLogFilters';
 import { WorkLogTable } from './WorkLogTable';
 import { WorkLogDetailModal } from './WorkLogDetailModal';
 import { WorkLogFormModal } from './WorkLogFormModal';
 import { WorkLogBatchEditModal } from './WorkLogBatchEditModal';
-import type { WorkLog } from './types';
+import type { WorkLog, WorkLogFilters as WorkLogFiltersType, PaginationInfo } from './types';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -113,21 +113,69 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
  * 工作日志页面主容器组件
  */
 export function WorkLogPage() {
-  const {
-    data,
-    filters,
-    pagination,
-    setFilters,
-    setPage,
-    setPageSize,
-    selectedLog,
-    setSelectedLog,
-    isDetailOpen,
-    setIsDetailOpen,
-    isFormOpen,
-    setIsFormOpen,
-    handleSave,
-  } = useWorkLog();
+  // 使用持久化的工作日志数据
+  const { workLogs, addWorkLog, updateWorkLog, deleteWorkLog } = usePersistentWorkLogs();
+
+  // 筛选条件状态
+  const [filters, setFilters] = useState<WorkLogFiltersType>({
+    date: '',
+    worker: '',
+    greenhouse: '',
+  });
+
+  // 分页状态
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    currentPage: 1,
+    pageSize: 10,
+    total: workLogs.length,
+  });
+
+  // 选中日志用于查看详情
+  const [selectedLog, setSelectedLog] = useState<WorkLogEntry | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // 表单弹窗状态
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // 根据筛选条件过滤数据
+  const filteredData = useMemo(() => {
+    return workLogs.filter(log => {
+      if (filters.date && log.date !== filters.date) return false;
+      if (filters.worker && log.worker !== filters.worker) return false;
+      if (filters.greenhouse && log.greenhouse !== filters.greenhouse) return false;
+      return true;
+    });
+  }, [workLogs, filters]);
+
+  // 更新总数
+  useMemo(() => {
+    setPagination(prev => ({ ...prev, total: filteredData.length }));
+  }, [filteredData.length]);
+
+  // 分页后的数据
+  const paginatedData = useMemo(() => {
+    const start = (pagination.currentPage - 1) * pagination.pageSize;
+    return filteredData.slice(start, start + pagination.pageSize);
+  }, [filteredData, pagination.currentPage, pagination.pageSize]);
+
+  // 切换页码
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+  };
+
+  // 切换每页条数
+  const handlePageSizeChange = (size: number) => {
+    setPagination(prev => ({ ...prev, pageSize: size, currentPage: 1 }));
+  };
+
+  // 保存工作日志
+  const handleSave = useCallback((data: Partial<WorkLogEntry>) => {
+    if (data.id) {
+      updateWorkLog(data.id, data);
+    } else {
+      addWorkLog(data as Omit<WorkLogEntry, 'id'>);
+    }
+  }, [addWorkLog, updateWorkLog]);
 
   // 批量操作状态
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -160,10 +208,10 @@ export function WorkLogPage() {
 
   // 批量选择操作
   const handleSelectAll = () => {
-    if (selectedRows.length === data.length) {
+    if (selectedRows.length === filteredData.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(data.map(log => log.id));
+      setSelectedRows(filteredData.map(log => log.id));
     }
   };
 
@@ -182,7 +230,8 @@ export function WorkLogPage() {
   };
 
   const handleDeleteConfirm = () => {
-    // 从列表移除（这里只是示例，实际需要调用删除API）
+    // 批量删除选中的日志
+    selectedRows.forEach(id => deleteWorkLog(id));
     setSelectedRows([]);
     setShowDeleteWarning(false);
   };
@@ -207,7 +256,7 @@ export function WorkLogPage() {
   };
 
   const handleDoExport = () => {
-    const selectedData = data.filter(log => selectedRows.includes(log.id));
+    const selectedData = filteredData.filter(log => selectedRows.includes(log.id));
     const headers = ['日志编号', '日期', '工人', '天气', '温度', '作物', '大棚', '生长状况', '工作内容', '问题描述', '处理措施'];
     const exportData = selectedData.map(row => ({
       '日志编号': row.code,
@@ -304,15 +353,15 @@ export function WorkLogPage() {
 
       {/* 数据表格 */}
       <WorkLogTable
-        data={data}
+        data={paginatedData as WorkLog[]}
         pagination={pagination}
         showCheckbox={exportMode || batchEditMode || batchDeleteMode}
         exportMode={exportMode}
         batchEditMode={batchEditMode}
         batchDeleteMode={batchDeleteMode}
         selectedRows={selectedRows}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onViewDetail={handleViewDetail}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}

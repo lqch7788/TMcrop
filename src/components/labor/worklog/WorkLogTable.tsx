@@ -100,6 +100,10 @@ export function WorkLogTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日志编号</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工人姓名</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作量</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">天气</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温度</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
@@ -108,6 +112,7 @@ export function WorkLogTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作内容</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">问题描述</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">处理措施</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">提交时间</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
           </tr>
         </thead>
@@ -127,6 +132,14 @@ export function WorkLogTable({
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{log.code}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.date}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.worker}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskCode || '-'}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskTypeName || '-'}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                {log.workloadDays ? `${log.workloadDays}天` : log.workloadHours ? `${log.workloadHours}小时` : '-'}
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                {log.progress !== undefined ? `${log.progress}%` : '-'}
+              </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.weather}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.temperature}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</td>
@@ -150,6 +163,9 @@ export function WorkLogTable({
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate">
                 {log.solutions}
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                {log.submitTime ? new Date(log.submitTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
                 <button
