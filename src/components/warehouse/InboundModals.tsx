@@ -1021,12 +1021,12 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
     return `物料入库记录_${timestamp}_${recordCount}条.${format}`;
   };
 
-  // 导出为Excel格式
+  // 导出为Excel格式 - 优化版：入库单信息只在第一行显示，物料行用序号关联
   const exportToExcel = () => {
     // 准备表头
     const headers = [
-      '入库单号', '入库日期', '供应商', '操作员', '状态',
-      '物料编码', '物料名称', '分类', '规格', '单位',
+      '入库单号', '入库日期', '供应商', '操作员', '状态', '序号',
+      '物料编码', '物料名称', '分类', '规格', '条形码', '单位',
       '数量', '单价', '批号', '生产日期', '有效期至', '存放位置', '备注'
     ];
 
@@ -1034,18 +1034,24 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
     const rows: (string | number)[][] = [];
 
     records.forEach(record => {
-      // 每个入库单号对应其下的所有物料明细
+      const materialCount = record.materials.length;
+      const statusText = record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废';
+
+      // 添加入库单信息行（只在第一行显示入库单信息）
+      // 添加物料明细行（后续行只显示序号和物料信息）
       record.materials.forEach((material, index) => {
-        rows.push([
-          index === 0 ? record.code : '',  // 入库单号：只在第一行显示
-          index === 0 ? record.inboundDate : '',
-          index === 0 ? record.supplier : '',
-          index === 0 ? record.operator : '',
-          index === 0 ? (record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废') : '',
+        const materialRow = [
+          index === 0 ? record.code : '',           // 入库单号：只在第一行显示
+          index === 0 ? record.inboundDate : '',    // 入库日期：只在第一行显示
+          index === 0 ? record.supplier : '',       // 供应商：只在第一行显示
+          index === 0 ? record.operator : '',        // 操作员：只在第一行显示
+          index === 0 ? statusText : '',            // 状态：只在第一行显示
+          `${index + 1}/${materialCount}`,         // 序号：每行都显示
           material.materialCode,
           material.materialName,
           material.category || '',
           material.specification || '',
+          material.barcode || '',
           material.unit,
           material.quantity,
           material.price || '',
@@ -1054,7 +1060,8 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
           material.expiryDate || '',
           material.location || '',
           material.remarks || ''
-        ]);
+        ];
+        rows.push(materialRow);
       });
     });
 
@@ -1063,9 +1070,9 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
 
     // 设置列宽
     worksheet['!cols'] = [
-      { wch: 18 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 8 },
-      { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 8 },
-      { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
+      { wch: 18 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, // 入库单信息6列
+      { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 8 }, // 物料明细6列
+      { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 } // 物料属性7列
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -1075,28 +1082,34 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
     XLSX.writeFile(workbook, generateFileName('xlsx'));
   };
 
-  // 导出为CSV格式
+  // 导出为CSV格式 - 优化版：入库单信息只在第一行显示，物料行用序号关联
   const exportToCsv = () => {
     const headers = [
-      '入库单号', '入库日期', '供应商', '操作员', '状态',
-      '物料编码', '物料名称', '分类', '规格', '单位',
+      '入库单号', '入库日期', '供应商', '操作员', '状态', '序号',
+      '物料编码', '物料名称', '分类', '规格', '条形码', '单位',
       '数量', '单价', '批号', '生产日期', '有效期至', '存放位置', '备注'
     ];
 
     const rows: string[][] = [];
 
     records.forEach(record => {
+      const statusText = record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废';
+      const materialCount = record.materials.length;
+
+      // 添加物料明细行（入库单信息只在第一行显示）
       record.materials.forEach((material, index) => {
         rows.push([
-          index === 0 ? record.code : '',
-          index === 0 ? record.inboundDate : '',
-          index === 0 ? record.supplier : '',
-          index === 0 ? record.operator : '',
-          index === 0 ? (record.status === 'pending' ? '待审核' : record.status === 'completed' ? '已完成' : '已作废') : '',
+          index === 0 ? record.code : '',           // 入库单号：只在第一行显示
+          index === 0 ? record.inboundDate : '',    // 入库日期：只在第一行显示
+          index === 0 ? record.supplier : '',       // 供应商：只在第一行显示
+          index === 0 ? record.operator : '',        // 操作员：只在第一行显示
+          index === 0 ? statusText : '',            // 状态：只在第一行显示
+          `${index + 1}/${materialCount}`,         // 序号：每行都显示
           material.materialCode,
           material.materialName,
           material.category || '',
           material.specification || '',
+          material.barcode || '',
           material.unit,
           String(material.quantity),
           material.price || '',

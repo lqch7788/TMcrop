@@ -303,18 +303,18 @@ export default function ExecuteTab({
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              {!batchEditMode && (
+              {!batchEditMode ? (
                 <>
                   <button
-                    onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}
+                    onClick={() => setShowAddModal(true)}
                     className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增
+                  </button>
+                  <button
+                    onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
                   >
                     <Edit className="w-4 h-4" />
                     编辑
@@ -326,10 +326,16 @@ export default function ExecuteTab({
                     <Trash2 className="w-4 h-4" />
                     删除
                   </button>
+                  <button
+                    onClick={() => setExportMode(true)}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    导出
+                  </button>
                 </>
-              )}
-              {batchEditMode && (
-                <div className="flex gap-2">
+              ) : (
+                <>
                   <button
                     onClick={() => {
                       if (selectedRows.length === 0) {
@@ -355,16 +361,7 @@ export default function ExecuteTab({
                   >
                     取消
                   </button>
-                </div>
-              )}
-              {!batchEditMode && (
-                <button
-                  onClick={() => setExportMode(true)}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
+                </>
               )}
             </div>
           )}

@@ -26,7 +26,8 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       // 检查是否是带版本控制的数据格式
       try {
         const parsed = JSON.parse(item) as StoredData<T>;
-        if (parsed.version === DATA_VERSION) {
+        // 使用 == 进行松散比较（parsed.version 是字符串，DATA_VERSION 是数字）
+        if (parsed.version == DATA_VERSION) {
           return parsed.data;
         } else {
           // 版本不匹配，使用新初始值并清除旧数据
