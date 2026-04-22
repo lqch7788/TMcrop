@@ -23,6 +23,16 @@ export interface WorkLogEntry {
   taskId?: string;
   batchId?: string;
   batchCode?: string;
+  // 新增字段：与任务相关的详细信息
+  taskCode?: string;       // 任务编号（如 RW-20260422-001）
+  taskType?: string;      // 任务类型（spraying、irrigation等）
+  taskTypeName?: string;  // 任务类型名称（施肥、灌溉等）
+  progress?: number;      // 提交时的进度
+  workloadHours?: number; // 工作量（小时）
+  workloadDays?: number;  // 工作量（天）
+  workers?: number;        // 作业人数
+  submitTime?: string;    // 提交时间
+  feedbackText?: string;  // 反馈/备注内容
 }
 
 // 任务进度更新参数
@@ -116,8 +126,14 @@ export function usePersistentWorkLogs() {
       title: string;
       batchId?: string;
       batchCode?: string;
+      type?: string;       // 新增：任务类型
+      typeName?: string;   // 新增：任务类型名称
     },
-    progressUpdate: TaskProgressUpdate
+    progressUpdate: TaskProgressUpdate & {
+      workloadDays?: number;
+      workloadHours?: number;
+      workers?: number;
+    }
   ): WorkLogEntry => {
     const today = new Date().toISOString().slice(0, 10);
     const existingLog = workLogs.find(log => log.taskId === task.id);
@@ -129,6 +145,12 @@ export function usePersistentWorkLogs() {
         tasks: task.title,
         solutions: progressUpdate.notes || existingLog.solutions,
         date: today, // 更新为今天
+        progress: progressUpdate.progress,
+        workloadHours: progressUpdate.workloadHours,
+        workloadDays: progressUpdate.workloadDays,
+        workers: progressUpdate.workers,
+        feedbackText: progressUpdate.notes,
+        submitTime: new Date().toISOString(),
       };
       setWorkLogs(prev => prev.map(log =>
         log.id === existingLog.id ? updatedLog : log
@@ -152,6 +174,15 @@ export function usePersistentWorkLogs() {
         taskId: task.id,
         batchId: task.batchId,
         batchCode: task.batchCode,
+        taskCode: task.taskCode,
+        taskType: task.type,
+        taskTypeName: task.typeName,
+        progress: progressUpdate.progress,
+        workloadHours: progressUpdate.workloadHours,
+        workloadDays: progressUpdate.workloadDays,
+        workers: progressUpdate.workers,
+        submitTime: new Date().toISOString(),
+        feedbackText: progressUpdate.notes,
       };
       setWorkLogs(prev => [newLog, ...prev]);
       return newLog;
