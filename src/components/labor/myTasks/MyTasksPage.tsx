@@ -154,6 +154,8 @@ export function MyTasksPage() {
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 兼容处理：如果是 Task[] 类型直接使用，否则从 unifiedTasks 获取
+  // 调试：检查 unifiedTasks 中的 requiredFeedback
+  console.log('[MyTasksPage] unifiedTasks 示例:', unifiedTasks.slice(0, 3).map(t => ({ id: t.id, requiredFeedback: t.requiredFeedback, sourceProblemId: (t as any).sourceProblemId })));
   const myTasks: (TaskDispatchTask | Task)[] = unifiedTasks.length > 0
     ? unifiedTasks.map(t => ({
         id: t.id,
@@ -212,6 +214,8 @@ export function MyTasksPage() {
         processProgress: (t as any).processProgress || '0%',
         inspectorId: (t as any).inspectorId,
         inspectorName: (t as any).inspectorName || (t as any).assignerName || '',
+        // 用于排序的创建时间字段
+        createdAt: (t as any).createdAt || '',
       }))
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
@@ -222,20 +226,48 @@ export function MyTasksPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // 根据筛选过滤任务
+  // 根据筛选过滤任务（并按创建时间倒序排列，最新在前）
   const filteredTasks = useMemo(() => {
+    // 排序函数：按创建时间倒序（最新在前）
+    const sortByCreatedAt = (a: TaskDispatchTask | Task, b: TaskDispatchTask | Task) => {
+      const getCreatedAt = (task: TaskDispatchTask | Task) => {
+        // 优先使用 createdAt 字段，否则使用 planStart 或 startDate
+        return (task as any).createdAt || (task as any).planStart || (task as any).startDate || '';
+      };
+      const aTime = getCreatedAt(a);
+      const bTime = getCreatedAt(b);
+      if (!aTime && !bTime) return 0;
+      if (!aTime) return 1;
+      if (!bTime) return -1;
+      return bTime.localeCompare(aTime); // 倒序
+    };
+
     switch (taskFilter) {
       case 'problem':
-        // 问题处理任务：有 sourceProblemId 的任务
-        return myTasks.filter(task => task.sourceProblemId !== undefined);
+        // 问题处理任务：有 sourceProblemId 的任务，按创建时间倒序
+        return myTasks
+          .filter(task => task.sourceProblemId !== undefined)
+          .sort(sortByCreatedAt);
       case 'production':
-        // 生产任务：没有 sourceProblemId 且不是临时任务的任务
-        return myTasks.filter(task => !task.sourceProblemId && (task as any).sourceType !== 'tempTask');
+        // 生产任务：没有 sourceProblemId 且不是临时任务的任务，按创建时间倒序
+        return myTasks
+          .filter(task => !task.sourceProblemId && (task as any).sourceType !== 'tempTask')
+          .sort(sortByCreatedAt);
       case 'temp':
-        // 临时任务 Tab：筛选 sourceType === 'tempTask' 且非草稿状态
-        return myTasks.filter(task => (task as any).sourceType === 'tempTask' && task.status !== 'draft');
+        // 临时任务 Tab：筛选 sourceType === 'tempTask' 且非草稿状态，按开始时间倒序
+        return myTasks
+          .filter(task => (task as any).sourceType === 'tempTask' && task.status !== 'draft')
+          .sort((a, b) => {
+            const aTime = (a as any).startDate || (a as any).planStart || '';
+            const bTime = (b as any).startDate || (b as any).planStart || '';
+            if (!aTime && !bTime) return 0;
+            if (!aTime) return 1;
+            if (!bTime) return -1;
+            return bTime.localeCompare(aTime);
+          });
       default:
-        return myTasks;
+        // 全部任务也按创建时间倒序
+        return [...myTasks].sort(sortByCreatedAt);
     }
   }, [myTasks, taskFilter]);
 

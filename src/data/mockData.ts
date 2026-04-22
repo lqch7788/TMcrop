@@ -11,6 +11,9 @@ import { ProduceInventory } from '../types/inventory';
 
 // 用户数据
 export const users: User[] = [
+  { id: 'U001', name: '王建华', avatar: 'WJH', role: 'admin', department: '管理层', position: '管理员' },
+  { id: 'U002', name: '李明辉', avatar: 'LMH', role: 'manager', department: '生产部', position: '生产主管' },
+  { id: 'U003', name: '王建国', avatar: 'WJG', role: 'manager', department: '生产部', position: '生产经理' },
   { id: 'U006', name: '陈小芳', avatar: 'CXF', role: 'worker', department: '生产部', position: '种植工' },
   { id: 'U007', name: '周志强', avatar: 'ZZQ', role: 'worker', department: '生产部', position: '种植工' },
   { id: 'U008', name: '吴美丽', avatar: 'WML', role: 'worker', department: '生产部', position: '种植工' },
