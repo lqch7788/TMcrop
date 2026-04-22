@@ -184,12 +184,27 @@ export function usePersistentWorkLogs() {
     nextWorkLogId = INITIAL_WORK_LOGS.length + 1;
   }, [setWorkLogs]);
 
-  // 生成新的工单编号
+  // 生成新的工单编号 (WL+年月日+3位数流水号)
   const generateWorkLogCode = useCallback(() => {
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    return `WL${dateStr}${String(nextWorkLogId).padStart(3, '0')}`;
-  }, []);
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+
+    // 找出今天已有的最大流水号
+    const todayPrefix = `WL${dateStr}`;
+    const todayLogs = workLogs.filter(log => log.code.startsWith(todayPrefix));
+
+    let maxSeq = 0;
+    todayLogs.forEach(log => {
+      const seqStr = log.code.replace(todayPrefix, '');
+      const seq = parseInt(seqStr, 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
+    });
+
+    const nextSeq = maxSeq + 1;
+    return `WL${dateStr}${String(nextSeq).padStart(3, '0')}`;
+  }, [workLogs]);
 
   // 按任务ID查询工单（用于判断是否已存在）
   const getWorkLogsByTaskId = useCallback((taskId: string): WorkLogEntry | undefined => {
