@@ -1858,11 +1858,11 @@ export function MyTasksPage() {
               disabled={
                 !feedbackModal.task ||
                 (feedbackForm.cannotContinue
-                  ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时需要填写原因
-                  : feedbackModal.task.progress === 100
-                    ? !(feedbackForm?.resultText || '').trim()  // 100%时需要填写处理结果
-                    : !(feedbackForm?.progressText || '').trim()) ||  // 非100%时需要填写进展情况
-                !validateRequiredFeedback().valid
+                  ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时只需要填写原因
+                  : (!validateRequiredFeedback().valid ||  // 正常模式需要校验必填反馈
+                     (feedbackModal.task.progress === 100
+                       ? !(feedbackForm?.resultText || '').trim()  // 100%时需要填写处理结果
+                       : !(feedbackForm?.progressText || '').trim())))  // 非100%时需要填写进展情况
               }
               className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                 feedbackForm.cannotContinue
