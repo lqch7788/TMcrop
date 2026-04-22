@@ -99,7 +99,6 @@ export function WorkLogTable({
             )}
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日志编号</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工人姓名</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作量</th>
@@ -131,7 +130,6 @@ export function WorkLogTable({
               )}
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{log.code}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.date}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.worker}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskCode || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskTypeName || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
