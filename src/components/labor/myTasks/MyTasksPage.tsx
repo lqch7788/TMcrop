@@ -214,7 +214,7 @@ export function MyTasksPage() {
         photos: (t as any).photos || [],
         feedbackStatus: (t as any).feedbackStatus || t.status,
         feedbackUsers: (t as any).feedbackUsers || [],
-        processProgress: (t as any).processProgress || '0%',
+        processProgress: (t as any).processProgress || t.progress || 0,
         inspectorId: (t as any).inspectorId,
         inspectorName: (t as any).inspectorName || (t as any).assignerName || '',
         // 用于排序的创建时间字段
@@ -708,6 +708,8 @@ export function MyTasksPage() {
   const handleConfirmComplete = (task: TaskDispatchTask) => {
     const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
+      // 验收完成时确保进度为100%
+      updateTaskProgress(unifiedTask.id, 100);
       updateTaskStatus(unifiedTask.id, 'completed');
     }
     setShowDetailModal(false);
