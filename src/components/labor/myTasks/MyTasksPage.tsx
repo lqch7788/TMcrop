@@ -479,12 +479,17 @@ export function MyTasksPage() {
         // 查找 unifiedTasks 中对应的任务
         const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
         if (unifiedTask) {
+          // 1. 更新任务状态为已拒绝
           rejectByExecutor(
             unifiedTask.id,
             feedbackForm.cannotContinueReason,
             unifiedTask.assigneeId,
             unifiedTask.assigneeName
           );
+          // 2. 同步更新问题状态（这样巡查反馈页面也能看到最新状态）
+          if (task.sourceProblemId) {
+            rejectProblem(task.sourceProblemId, 'U013', '陆启闯', feedbackForm.cannotContinueReason);
+          }
           // 记录操作
           addTaskRecord({
             operationType: unifiedTask.type,
