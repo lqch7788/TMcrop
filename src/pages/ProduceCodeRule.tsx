@@ -26,6 +26,7 @@ export default function ProduceCodeRule() {
   const [expandedType, setExpandedType] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showCodeRuleInfo, setShowCodeRuleInfo] = useState(false);
 
   // 编辑状态
   const [editingCell, setEditingCell] = useState<{
@@ -39,10 +40,13 @@ export default function ProduceCodeRule() {
   // 添加状态
   const [showAddType, setShowAddType] = useState<string | null>(null);
   const [showAddSub, setShowAddSub] = useState<{ categoryCode: string; typeCode: string } | null>(null);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [newTypeCode, setNewTypeCode] = useState('');
   const [newTypeName, setNewTypeName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubName, setNewSubName] = useState('');
+  const [newCategoryCode, setNewCategoryCode] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   // 展开/折叠大类
   const toggleCategory = (code: string) => {
@@ -118,6 +122,21 @@ export default function ProduceCodeRule() {
   const cancelEdit = () => {
     setEditingCell(null);
     setEditValue('');
+  };
+
+  // 添加大类
+  const addCategory = () => {
+    if (!newCategoryCode.trim() || !newCategoryName.trim()) return;
+    setCategories(prev => [...prev, {
+      code: newCategoryCode.trim() as ProduceCategoryCode,
+      name: newCategoryName.trim(),
+      nameEn: '',
+      description: '',
+      types: []
+    }]);
+    setNewCategoryCode('');
+    setNewCategoryName('');
+    setShowAddCategory(false);
   };
 
   // 添加类型
@@ -320,31 +339,39 @@ export default function ProduceCodeRule() {
 
       {!isEditing && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <h3 className="font-semibold text-emerald-800 mb-2">编码规则说明</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm text-emerald-700">
-            <div>
-              <p><strong>编码结构：</strong>大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位) = 9位</p>
-              <p><strong>示例：</strong>PD01010001</p>
-              <ul className="ml-4 mt-1 space-y-0.5">
-                <li>• PD - 果蔬产品类</li>
-                <li>• 01 - 叶菜类</li>
-                <li>• 01 - 菠菜</li>
-                <li>• 001 - 第1个产品</li>
-              </ul>
+          <button
+            onClick={() => setShowCodeRuleInfo(!showCodeRuleInfo)}
+            className="flex items-center gap-2 w-full text-left"
+          >
+            <ChevronRight className={`w-5 h-5 text-emerald-600 transition-transform ${showCodeRuleInfo ? 'rotate-90' : ''}`} />
+            <h3 className="font-semibold text-emerald-800">编码规则说明</h3>
+          </button>
+          {showCodeRuleInfo && (
+            <div className="grid grid-cols-2 gap-4 text-sm text-emerald-700 mt-3">
+              <div>
+                <p><strong>编码结构：</strong>大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位) = 9位</p>
+                <p><strong>示例：</strong>PD01010001</p>
+                <ul className="ml-4 mt-1 space-y-0.5">
+                  <li>• PD - 果蔬产品类</li>
+                  <li>• 01 - 叶菜类</li>
+                  <li>• 01 - 菠菜</li>
+                  <li>• 001 - 第1个产品</li>
+                </ul>
+              </div>
+              <div>
+                <p><strong>大类代码：</strong></p>
+                <ul className="ml-4 mt-1 space-y-0.5">
+                  <li>• PD - 果蔬产品类</li>
+                  <li>• FR - 水果类</li>
+                  <li>• GR - 粮食类</li>
+                  <li>• FL - 花卉类</li>
+                  <li>• HB - 药材类</li>
+                  <li>• MG - 食用菌类</li>
+                  <li>• OT - 其他类</li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <p><strong>大类代码：</strong></p>
-              <ul className="ml-4 mt-1 space-y-0.5">
-                <li>• PD - 果蔬产品类</li>
-                <li>• FR - 水果类</li>
-                <li>• GR - 粮食类</li>
-                <li>• FL - 花卉类</li>
-                <li>• HB - 药材类</li>
-                <li>• MG - 食用菌类</li>
-                <li>• OT - 其他类</li>
-              </ul>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -356,7 +383,7 @@ export default function ProduceCodeRule() {
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">大类代码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-40">大类名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">类型代码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-40">类型名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-60">类型名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">品种代码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white">品种名称</th>
             </tr>
@@ -472,6 +499,20 @@ export default function ProduceCodeRule() {
                           </tr>
                         ))}
 
+                        {/* 品种列表下方添加品种按钮 */}
+                        {isEditing && isTypeExpanded && (
+                          <tr className="bg-blue-50 hover:bg-blue-100">
+                            <td colSpan={6} className="px-4 py-2">
+                              <button
+                                onClick={() => setShowAddSub({ categoryCode: category.code, typeCode: type.code })}
+                                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
+                              >
+                                <Plus className="w-4 h-4" /> 添加品种
+                              </button>
+                            </td>
+                          </tr>
+                        )}
+
                         {/* 添加品种弹窗 */}
                         {showAddSub?.categoryCode === category.code && showAddSub?.typeCode === type.code && (
                           <tr className="bg-blue-50">
@@ -578,6 +619,58 @@ export default function ProduceCodeRule() {
             })}
           </tbody>
         </table>
+
+        {/* 添加大类按钮 */}
+        {isEditing && (
+          <div className="p-4 bg-gray-50 border-t border-gray-200">
+            <button
+              onClick={() => setShowAddCategory(true)}
+              className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700"
+            >
+              <Plus className="w-5 h-5" />
+              添加大类
+            </button>
+          </div>
+        )}
+
+        {/* 添加大类弹窗 */}
+        {showAddCategory && (
+          <div className="p-4 bg-blue-50 border-t border-gray-200">
+            <div className="flex items-center gap-4">
+              <input
+                type="text"
+                value={newCategoryCode}
+                onChange={(e) => setNewCategoryCode(e.target.value.toUpperCase())}
+                placeholder="大类代码（2位大写字母）"
+                maxLength={2}
+                className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="大类名称"
+                className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <button
+                onClick={addCategory}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
+              >
+                添加
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddCategory(false);
+                  setNewCategoryCode('');
+                  setNewCategoryName('');
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 保存确认弹窗 */}
