@@ -9,7 +9,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot,
   Send, CalendarClock, Split, X, ChevronRight, ChevronDown, UserPlus,
-  CheckSquare, Square, RefreshCw, Lightbulb
+  CheckSquare, Square, RefreshCw, Lightbulb, ArrowLeft
 } from 'lucide-react';
 
 // 导入 hooks
@@ -769,6 +769,14 @@ export default function SmartDispatchPage() {
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* 返回按钮 */}
+            <button
+              onClick={() => window.location.href = '/farm-hub'}
+              className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>返回</span>
+            </button>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
               <Bot className="w-5 h-5 text-white" />
             </div>

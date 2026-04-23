@@ -584,8 +584,13 @@ export default function TaskDispatchPage() {
   };
 
   // 过滤任务 - 优先使用 useTasks 的数据（包含兼容字段），fallback 到 mockTasks
+  // 注意：农事任务表只显示 dispatchMode='farm' 的农事任务，排除临时任务和巡查反馈任务
   const taskDataSource = tasks.length > 0 ? tasks : mockTasks;
   const filteredTasks = taskDataSource.filter((task: any) => {
+    // 过滤掉非农事任务（排除临时任务 tempTask 和巡查反馈任务 inspection）
+    // 通过 dispatchMode 字段判断，dispatchMode 为 'farm' 或未定义的才是农事任务
+    const dispatchMode = task.dispatchMode || 'farm';
+    if (dispatchMode !== 'farm') return false;
     if (taskIdSearch && !task.id.toLowerCase().includes(taskIdSearch.toLowerCase())) return false;
     if (statusFilter !== 'all' && task.status !== statusFilter) return false;
     if (fieldFilter !== 'all') {
@@ -630,7 +635,16 @@ export default function TaskDispatchPage() {
   };
 
   const validateStep2 = (): string => {
-    if (!newTask.assignee) {
+    // AI辅助模式下，如果已通过AI推荐选择了执行人（assignedTo不为空），则验证通过
+    if (dispatchMode === 'ai_assisted' && assignedTo) {
+      // 如果选择了"其他"配置选项，备注必填
+      if (checkOtherOptionSelected() && !newTask.remarks?.trim()) {
+        return '选择了"其他"选项，备注为必填项，请填写说明';
+      }
+      return '';
+    }
+    // 手动模式下必须选择执行人
+    if (dispatchMode === 'manual' && !newTask.assignee) {
       return '请选择执行人';
     }
     // 如果选择了"其他"配置选项，备注必填
@@ -2371,9 +2385,16 @@ export default function TaskDispatchPage() {
                           setAssignedTo(workerId);
                           setAiConfidenceScore(score);
                           // 同步更新 newTask.assignee 为选中的人员姓名
+                          // 优先从 taskDispatchStaff 查找（用于兼容）
                           const selectedWorker = staff.find(s => s.id.toString() === workerId);
                           if (selectedWorker) {
                             setNewTask({ ...newTask, assignee: selectedWorker.name });
+                          } else {
+                            // 如果找不到，尝试从 aiRecommendations 中查找（AI推荐使用的worker列表）
+                            const aiWorker = aiRecommendations.find(r => r.worker.id === workerId);
+                            if (aiWorker) {
+                              setNewTask({ ...newTask, assignee: aiWorker.worker.name });
+                            }
                           }
                         }}
                         onManualSelect={() => setDispatchMode('manual')}

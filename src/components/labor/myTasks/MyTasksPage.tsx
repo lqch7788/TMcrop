@@ -311,6 +311,7 @@ export function MyTasksPage() {
   }>({ isOpen: false, task: null });
 
   const [feedbackForm, setFeedbackForm] = useState({
+    resultStatus: '' as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
     resultText: '',
     progressText: '',
     workloadDays: '',
@@ -1868,7 +1869,7 @@ export function MyTasksPage() {
                   ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时只需要填写原因
                   : (!validateRequiredFeedback().valid ||  // 正常模式需要校验必填反馈
                      (feedbackModal.task.progress === 100
-                       ? !(feedbackForm?.resultText || '').trim()  // 100%时需要填写处理结果
+                       ? (!feedbackForm.resultStatus || (feedbackForm.resultStatus === '其他' && !feedbackForm.resultText.trim()))  // 100%时需要选择处理结果状态，其他选项需要备注
                        : !(feedbackForm?.progressText || '').trim())))  // 非100%时需要填写进展情况
               }
               className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -1977,19 +1978,38 @@ export function MyTasksPage() {
             {/* 处理结果/进展情况（进度条下方） */}
             {feedbackModal.task.progress === 100 ? (
               <>
-                {/* 处理结果 */}
+                {/* 处理结果 - 改为下拉选择 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     处理结果 <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    value={feedbackForm.resultText}
-                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
-                    placeholder="请描述处理过程和结果..."
-                    rows={4}
+                  <select
+                    value={feedbackForm.resultStatus}
+                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultStatus: e.target.value as '' | '全部完成' | '部分完成' | '延迟完成' | '其他', resultText: '' }))}
                     className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  />
+                  >
+                    <option value="">请选择处理结果</option>
+                    <option value="全部完成">全部完成</option>
+                    <option value="部分完成">部分完成</option>
+                    <option value="延迟完成">延迟完成</option>
+                    <option value="其他">其他</option>
+                  </select>
                 </div>
+                {/* 备注输入框 - 仅当选择"其他"时显示 */}
+                {feedbackForm.resultStatus === '其他' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      备注说明 <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={feedbackForm.resultText}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
+                      placeholder="请详细说明处理情况和原因..."
+                      rows={4}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    />
+                  </div>
+                )}
               </>
             ) : (
               /* 小于100%时显示进展情况 */
