@@ -28,3 +28,23 @@ export { usePersistentProblems, INITIAL_PROBLEMS, type ProblemEntry } from './us
 
 // 问题分派
 export { useProblemDispatch } from './useProblemDispatch';
+
+// 派工模式配置
+export { useDispatchModeConfig } from './useDispatchModeConfig';
+
+// 月度任务规划
+export { useMonthlyTaskPlanning } from './useMonthlyTaskPlanning';
+export type {
+  MonthlyPlan,
+  WeeklySummary,
+  MaterialRequirement,
+  ToolRequirement,
+  WorkerRequirement,
+  CostBreakdown,
+  DailyPlan,
+  PredictedTask,
+} from './useMonthlyTaskPlanning';
+
+// AI优化建议
+export { useAIOptimization } from './useAIOptimization';
+export type { UseAIOptimizationReturn } from './useAIOptimization';

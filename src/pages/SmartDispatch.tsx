@@ -2,20 +2,46 @@
  * 智能派工管理页面
  * 整合农事任务、临时任务、巡查问题的统一派发入口
  * 基于AI多因子评分算法生成派工建议
+ * 智能派工系统阶段六：派工确认页面
  */
 
-import React, { useState, useMemo } from 'react';
-import { Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot, Send, CalendarClock, Split, X, ChevronRight, ChevronDown } from 'lucide-react';
-import { useComprehensiveDispatch, type UnifiedDispatchTask, type WorkerRecommendation, type DispatchTaskSource } from '../hooks/useComprehensiveDispatch';
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot,
+  Send, CalendarClock, Split, X, ChevronRight, ChevronDown, UserPlus,
+  CheckSquare, Square, RefreshCw, Lightbulb
+} from 'lucide-react';
+
+// 导入 hooks
+import {
+  useComprehensiveDispatch,
+  type UnifiedDispatchTask,
+  type WorkerRecommendation,
+  type DispatchTaskSource
+} from '../hooks/useComprehensiveDispatch';
 import { useEnvironmentData } from '../hooks/useEnvironmentData';
 import { useCropGrowthEngine, type PredictedTask } from '../hooks/useCropGrowthEngine';
 import { useMaterialEquipment } from '../hooks/useMaterialEquipment';
+import { useDailyWorkOrderAnalysis, type DailyWorkOrderReport } from '../hooks/useDailyWorkOrderAnalysis';
+import { usePendingConfirmTasks, type PendingConfirmTask, type PendingConfirmStatus } from '../hooks/usePendingConfirmTasks';
+import { useDispatchActions } from '../hooks/useDispatchActions';
+
+// 导入组件
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
 import { EnvironmentPanel } from '../components/dispatch/EnvironmentPanel';
 import { PredictedTasksPanel } from '../components/dispatch/PredictedTasksPanel';
 import { DispatchMetricsDashboard } from '../components/dispatch/DispatchMetricsDashboard';
 import { DispatchConfigPanel } from '../components/dispatch/DispatchConfigPanel';
 import { MaterialEquipmentPanel } from '../components/dispatch/MaterialEquipmentPanel';
+import { AIRecommendationPanel } from '../components/dispatch/AIRecommendationPanel';
+import { OptimizationSuggestionModal } from '../components/dispatch/OptimizationSuggestionModal';
+
+// 导入类型
+import type { UnifiedTaskInput, AIOptimizationSuggestion } from '../types/dispatch';
+
+// ============================================
+// 常量定义
+// ============================================
 
 /** 派工决策因素权重说明 */
 const DISPATCH_WEIGHTS_INFO = [
@@ -36,8 +62,394 @@ const PRIORITY_COLORS: Record<UnifiedDispatchTask['priority'], string> = {
   low: 'bg-gray-100 text-gray-700',
 };
 
+/** 状态标签颜色 */
+const STATUS_COLORS: Record<PendingConfirmStatus, { bg: string; text: string; label: string }> = {
+  pending_ai: { bg: 'bg-gray-100', text: 'text-gray-700', label: '待AI推荐' },
+  recommended: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'AI已推荐' },
+  predicted: { bg: 'bg-purple-100', text: 'text-purple-700', label: '预测任务' },
+  optimization: { bg: 'bg-amber-100', text: 'text-amber-700', label: '优化建议' },
+};
+
+// ============================================
+// 组件定义
+// ============================================
+
+/**
+ * 统计卡片组件
+ * 显示各类任务的数量统计
+ */
+function StatsCards({
+  pendingAI,
+  recommended,
+  predicted,
+  optimization,
+  total
+}: {
+  pendingAI: number;
+  recommended: number;
+  predicted: number;
+  optimization: number;
+  total: number;
+}) {
+  const stats = [
+    { label: '待AI推荐', value: pendingAI, color: 'bg-gray-500', icon: '⏳' },
+    { label: 'AI已推荐', value: recommended, color: 'bg-emerald-500', icon: '✅' },
+    { label: '预测任务', value: predicted, color: 'bg-purple-500', icon: '🔮' },
+    { label: '优化建议', value: optimization, color: 'bg-amber-500', icon: '💡' },
+  ];
+
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      {stats.map((stat) => (
+        <div
+          key={stat.label}
+          className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center text-white text-lg`}>
+              {stat.icon}
+            </div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-sm text-gray-500">{stat.label}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 任务卡片组件
+ * 显示单个任务的详情和操作按钮
+ */
+function TaskCard({
+  task,
+  isSelected,
+  onSelect,
+  onAccept,
+  onReplace,
+  onDelay,
+  onAcceptOptimization,
+  selectedWorker,
+  onWorkerSelect
+}: {
+  task: PendingConfirmTask;
+  isSelected: boolean;
+  onSelect: () => void;
+  onAccept: () => void;
+  onReplace: () => void;
+  onDelay: () => void;
+  onAcceptOptimization?: () => void;
+  selectedWorker?: WorkerRecommendation;
+  onWorkerSelect?: (worker: WorkerRecommendation) => void;
+}) {
+  const status = STATUS_COLORS[task.dispatchStatus];
+
+  return (
+    <div
+      className={`bg-white rounded-lg border-2 transition-all cursor-pointer ${
+        isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'
+      }`}
+      onClick={onSelect}
+    >
+      {/* 头部 */}
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-5 h-5 rounded flex items-center justify-center text-xs ${
+            isSelected ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+          }`}>
+            {isSelected ? '✓' : ''}
+          </span>
+          <span className="text-xs text-gray-500">{task.sourceLabel}</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
+          {status.label}
+        </span>
+      </div>
+
+      {/* 内容 */}
+      <div className="p-4">
+        <h4 className="font-medium text-gray-900 mb-2 line-clamp-1">{task.title}</h4>
+
+        {/* 任务信息 */}
+        <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+          <span>{task.typeName}</span>
+          <span>|</span>
+          <span>{task.workZone || task.greenhouse || '-'}</span>
+          <span>|</span>
+          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+            PRIORITY_COLORS[task.priority]
+          }`}>
+            {task.priority === 'urgent' ? '紧急' :
+             task.priority === 'high' ? '高' :
+             task.priority === 'normal' ? '中' : '低'}
+          </span>
+        </div>
+
+        {/* AI推荐信息 */}
+        {task.aiRecommendedWorkers && task.aiRecommendedWorkers.length > 0 && (
+          <div className="mb-3 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-emerald-700 font-medium">AI推荐</span>
+              <span className="text-xs text-emerald-600">
+                置信度: {task.aiConfidenceScore || 0}%
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-900">
+                {task.aiRecommendedWorkers[0].worker.name}
+              </span>
+              <span className="text-xs text-gray-500">
+                {task.aiRecommendedWorkers[0].worker.workerType}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+              <MapPin className="w-3 h-3" />
+              <span>{task.aiRecommendedWorkers[0].worker.workZone}</span>
+              <span>|</span>
+              <span>负荷{task.aiRecommendedWorkers[0].worker.currentLoad}%</span>
+            </div>
+          </div>
+        )}
+
+        {/* 优化建议信息 */}
+        {task.aiOptimizationSuggestion && (
+          <div className="mb-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Lightbulb className="w-4 h-4 text-amber-600" />
+              <span className="text-xs text-amber-700 font-medium">优化建议</span>
+            </div>
+            <div className="text-xs text-amber-600">
+              建议更换为 {task.aiOptimizationSuggestion.suggestedWorkerName}
+              <span className="ml-2 text-amber-500">
+                (评分差: +{task.aiOptimizationSuggestion.scoreDiff}分)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 操作按钮 */}
+        <div className="flex items-center gap-2">
+          {task.dispatchStatus === 'optimization' && onAcceptOptimization ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAcceptOptimization();
+              }}
+              className="flex-1 py-2 rounded-lg text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center gap-1"
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              接受优化
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAccept();
+              }}
+              disabled={!task.aiRecommendedWorkers?.length}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${
+                task.aiRecommendedWorkers?.length
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              接受
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onReplace();
+            }}
+            className="flex-1 py-2 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 flex items-center justify-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3" />
+            更换
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelay();
+            }}
+            className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center justify-center gap-1"
+          >
+            <CalendarClock className="w-3 h-3" />
+            延后
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 任务组组件
+ * 显示一组同类任务
+ */
+function TaskGroup({
+  title,
+  icon,
+  tasks,
+  selectedTaskId,
+  onSelectTask,
+  onAccept,
+  onReplace,
+  onDelay,
+  onAcceptOptimization
+}: {
+  title: string;
+  icon: string;
+  tasks: PendingConfirmTask[];
+  selectedTaskId?: string;
+  onSelectTask: (task: PendingConfirmTask) => void;
+  onAccept: (task: PendingConfirmTask) => void;
+  onReplace: (task: PendingConfirmTask) => void;
+  onDelay: (task: PendingConfirmTask) => void;
+  onAcceptOptimization: (task: PendingConfirmTask) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {/* 标题栏 */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{icon}</span>
+          <span className="font-medium text-gray-900">{title}</span>
+          <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs">
+            {tasks.length}
+          </span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+      </button>
+
+      {/* 任务列表 */}
+      {isExpanded && (
+        <div className="grid grid-cols-2 gap-4">
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              isSelected={selectedTaskId === task.id}
+              onSelect={() => onSelectTask(task)}
+              onAccept={() => onAccept(task)}
+              onReplace={() => onReplace(task)}
+              onDelay={() => onDelay(task)}
+              onAcceptOptimization={() => onAcceptOptimization(task)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 批量操作栏组件
+ */
+function BatchActionsBar({
+  selectedCount,
+  onConfirmAll,
+  onCancel
+}: {
+  selectedCount: number;
+  onConfirmAll: () => void;
+  onCancel: () => void;
+}) {
+  if (selectedCount === 0) return null;
+
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 px-6 py-3 flex items-center gap-4 z-50">
+      <span className="text-sm text-gray-700">
+        已选择 <span className="font-bold text-blue-600">{selectedCount}</span> 个任务
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onConfirmAll}
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 flex items-center gap-1"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          批量确认派发
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+        >
+          取消选择
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 统计卡片（兼容旧版本）
+ */
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
+          <span className="text-white text-lg font-bold">{value}</span>
+        </div>
+        <div className="text-sm text-gray-600">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 详情项组件（兼容旧版本）
+ */
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between text-sm">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-gray-900 font-medium">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * 推荐理由项组件（兼容旧版本）
+ */
+function ReasonItem({
+  icon,
+  title,
+  desc,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      {icon}
+      <div>
+        <div className="font-medium text-gray-900 text-sm">{title}</div>
+        <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// 主页面组件
+// ============================================
+
 export default function SmartDispatchPage() {
-  // 使用综合派工引擎
+  // ========== Hooks ==========
+
+  // 综合派工引擎
   const {
     taskPool,
     stats,
@@ -51,7 +463,7 @@ export default function SmartDispatchPage() {
     criticalAlerts,
   } = useComprehensiveDispatch();
 
-  // 使用环境数据
+  // 环境数据
   const {
     weatherForecasts,
     sensors,
@@ -59,14 +471,14 @@ export default function SmartDispatchPage() {
     acknowledgeAlert,
   } = useEnvironmentData();
 
-  // 使用作物生长引擎
+  // 作物生长引擎（预测任务）
   const {
     predictedTasks,
     overdueTasks,
     pestAlerts,
   } = useCropGrowthEngine();
 
-  // 使用物料设备管理
+  // 物料设备管理
   const {
     materials,
     equipments,
@@ -74,12 +486,41 @@ export default function SmartDispatchPage() {
     overview: materialEquipmentOverview,
   } = useMaterialEquipment();
 
-  // 本地状态
-  const [selectedTask, setSelectedTask] = useState<UnifiedDispatchTask | null>(null);
+  // 每日工单分析
+  const { generateDailyReport } = useDailyWorkOrderAnalysis();
+
+  // 待确认任务
+  const {
+    pendingTasks,
+    stats: confirmStats,
+    recommendedTasks,
+    pendingAITasks,
+    optimizationTasks,
+  } = usePendingConfirmTasks(getRecommendations);
+
+  // 派工操作
+  const {
+    confirmDispatch,
+    replaceWorker,
+    delayTask,
+    acceptOptimization,
+    rejectOptimization,
+    currentOptimization,
+  } = useDispatchActions();
+
+  // ========== 状态 ==========
+
+  // 选中的任务
+  const [selectedTask, setSelectedTask] = useState<PendingConfirmTask | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+
+  // 来源筛选
   const [sourceFilter, setSourceFilter] = useState<DispatchTaskSource | 'all'>('all');
+
+  // 派发结果提示
   const [dispatchResult, setDispatchResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // 派发操作状态
+  // 操作状态
   const [dispatchAction, setDispatchAction] = useState<'dispatch' | 'delay' | 'split' | 'dismiss' | null>(null);
   const [selectedRecommendation, setSelectedRecommendation] = useState<WorkerRecommendation | null>(null);
 
@@ -91,11 +532,43 @@ export default function SmartDispatchPage() {
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [selectedWorkersForSplit, setSelectedWorkersForSplit] = useState<string[]>([]);
 
-  // 被忽略的推荐（本地状态过滤）
+  // 忽略的推荐（本地状态过滤）
   const [dismissedRecommendations, setDismissedRecommendations] = useState<string[]>([]);
 
-  // 因素详情展开状态（记录哪些worker展开了因素详情）
+  // 因素详情展开状态
   const [expandedFactors, setExpandedFactors] = useState<Set<string>>(new Set());
+
+  // 配置面板弹窗状态
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
+
+  // 更换执行人弹窗状态
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+
+  // ========== 计算属性 ==========
+
+  // 根据筛选获取任务
+  const filteredTasks = useMemo(
+    () => filterBySource(sourceFilter),
+    [filterBySource, sourceFilter]
+  );
+
+  // 获取选中任务的推荐
+  const recommendations = useMemo<WorkerRecommendation[] | null>(() => {
+    if (!selectedTask) return null;
+    return getRecommendations(selectedTask, 5);
+  }, [selectedTask, getRecommendations]);
+
+  // 每日工单报告
+  const dailyReport = useMemo<DailyWorkOrderReport>(() => {
+    return generateDailyReport(new Date().toISOString().split('T')[0]);
+  }, [generateDailyReport]);
+
+  // 预测任务
+  const predictedPendingTasks = useMemo(() => {
+    return pendingTasks.filter(t => t.dispatchStatus === 'predicted');
+  }, [pendingTasks]);
+
+  // ========== 处理函数 ==========
 
   // 切换因素详情展开状态
   const toggleFactorsExpand = (workerId: string) => {
@@ -110,26 +583,35 @@ export default function SmartDispatchPage() {
     });
   };
 
-  // 根据筛选获取任务
-  const filteredTasks = useMemo(
-    () => filterBySource(sourceFilter),
-    [filterBySource, sourceFilter]
-  );
+  // 处理任务选择
+  const handleSelectTask = (task: PendingConfirmTask) => {
+    setSelectedTask(task);
+    setDispatchResult(null);
+    setDispatchAction(null);
+    setSelectedRecommendation(null);
+  };
 
-  // 获取选中任务的推荐
-  const recommendations = useMemo<WorkerRecommendation[] | null>(() => {
-    if (!selectedTask) return null;
-    return getRecommendations(selectedTask, 5);
-  }, [selectedTask, getRecommendations]);
+  // 切换任务选中
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
 
   // 处理派发
   const handleDispatch = (worker: WorkerRecommendation) => {
     if (!selectedTask) return;
 
-    executeDispatch(selectedTask, worker.worker.id, worker.worker.name);
+    const result = confirmDispatch(selectedTask.id, worker.worker.id, worker.worker.name);
     setDispatchResult({
-      success: true,
-      message: `已成功派发给 ${worker.worker.name}`,
+      success: result.success,
+      message: result.message,
     });
 
     // 3秒后清除结果
@@ -139,40 +621,60 @@ export default function SmartDispatchPage() {
     setSelectedTask(null);
   };
 
-  // 处理任务选择
-  const handleSelectTask = (task: UnifiedDispatchTask) => {
-    setSelectedTask(task);
-    setDispatchResult(null);
-    // 重置操作状态
-    setDispatchAction(null);
-    setSelectedRecommendation(null);
+  // 处理确认派工
+  const handleAccept = (task: PendingConfirmTask) => {
+    if (task.aiRecommendedWorkers && task.aiRecommendedWorkers.length > 0) {
+      const topWorker = task.aiRecommendedWorkers[0];
+      const result = confirmDispatch(task.id, topWorker.worker.id, topWorker.worker.name);
+      setDispatchResult({
+        success: result.success,
+        message: result.message,
+      });
+      setTimeout(() => setDispatchResult(null), 3000);
+    }
   };
 
-  /**
-   * 处理派发操作
-   * @param recommendation 推荐结果
-   * @param action 操作类型：dispatch(派发)、delay(延后)、split(拆分)、dismiss(忽略)
-   */
+  // 处理更换执行人
+  const handleReplace = (task: PendingConfirmTask) => {
+    setSelectedTask(task);
+    setShowReplaceModal(true);
+  };
+
+  // 处理延后
+  const handleDelay = (task: PendingConfirmTask) => {
+    setSelectedTask(task);
+    setShowDelayModal(true);
+  };
+
+  // 处理接受优化
+  const handleAcceptOptimization = (task: PendingConfirmTask) => {
+    if (task.aiOptimizationSuggestion) {
+      const result = acceptOptimization(task.aiOptimizationSuggestion);
+      setDispatchResult({
+        success: result.success,
+        message: result.message,
+      });
+      setTimeout(() => setDispatchResult(null), 3000);
+    }
+  };
+
+  // 处理派发操作
   const handleDispatchAction = (recommendation: WorkerRecommendation, action: 'dispatch' | 'delay' | 'split' | 'dismiss') => {
     setDispatchAction(action);
     setSelectedRecommendation(recommendation);
 
     switch (action) {
       case 'dispatch':
-        // 直接派发
         handleDispatch(recommendation);
         break;
       case 'delay':
-        // 弹出延后天数选择
         setShowDelayModal(true);
         break;
       case 'split':
-        // 弹出执行人选择
         setSelectedWorkersForSplit([recommendation.worker.id]);
         setShowSplitModal(true);
         break;
       case 'dismiss':
-        // 从推荐列表中移除（本地过滤）
         if (selectedTask) {
           setDismissedRecommendations(prev => [...prev, recommendation.worker.id]);
         }
@@ -184,10 +686,11 @@ export default function SmartDispatchPage() {
 
   // 延后操作确认
   const handleDelayConfirm = () => {
-    if (selectedRecommendation) {
+    if (selectedTask) {
+      const result = delayTask(selectedTask.id, delayDays);
       setDispatchResult({
-        success: true,
-        message: `已延后 ${delayDays} 天派发给 ${selectedRecommendation.worker.name}`,
+        success: result.success,
+        message: result.message,
       });
       setTimeout(() => setDispatchResult(null), 3000);
     }
@@ -225,8 +728,40 @@ export default function SmartDispatchPage() {
     );
   };
 
-  // 配置面板弹窗状态
-  const [showConfigPanel, setShowConfigPanel] = useState(false);
+  // 批量确认派发
+  const handleBatchConfirm = () => {
+    if (selectedTasks.size === 0) return;
+
+    const taskArray = Array.from(selectedTasks);
+    // TODO: 实现批量派发逻辑
+    setDispatchResult({
+      success: true,
+      message: `已批量派发 ${taskArray.length} 个任务`,
+    });
+    setTimeout(() => setDispatchResult(null), 3000);
+    setSelectedTasks(new Set());
+  };
+
+  // 取消选择
+  const handleCancelSelection = () => {
+    setSelectedTasks(new Set());
+  };
+
+  // 更换执行人确认
+  const handleReplaceConfirm = () => {
+    if (selectedTask && selectedRecommendation) {
+      const result = replaceWorker(selectedTask.id, selectedRecommendation.worker.id, selectedRecommendation.worker.name);
+      setDispatchResult({
+        success: result.success,
+        message: result.message,
+      });
+      setTimeout(() => setDispatchResult(null), 3000);
+    }
+    setShowReplaceModal(false);
+    setSelectedRecommendation(null);
+  };
+
+  // ========== 渲染 ==========
 
   return (
     <div className="space-y-4">
@@ -242,13 +777,15 @@ export default function SmartDispatchPage() {
               <p className="text-xs text-gray-500">AI综合评分 · 多源任务整合 · 智能推荐</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowConfigPanel(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            配置中心
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowConfigPanel(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              配置中心
+            </button>
+          </div>
         </div>
       </div>
 
@@ -278,13 +815,66 @@ export default function SmartDispatchPage() {
         pestAlerts={pestAlerts}
       />
 
+      {/* ========== 新增：派工确认页面结构 ========== */}
+
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard label="待派发总数" value={stats.total} color="bg-blue-500" />
-        <StatCard label="农事任务" value={stats.farm} color="bg-green-500" />
-        <StatCard label="临时任务" value={stats.tempTask} color="bg-purple-500" />
-        <StatCard label="巡查问题" value={stats.inspection} color="bg-orange-500" />
+      <StatsCards
+        pendingAI={confirmStats.pendingAI}
+        recommended={confirmStats.recommended}
+        predicted={confirmStats.predicted}
+        optimization={confirmStats.optimization}
+        total={confirmStats.total}
+      />
+
+      {/* 任务列表 */}
+      <div className="space-y-4">
+        <TaskGroup
+          title="AI已推荐"
+          icon="✅"
+          tasks={recommendedTasks}
+          selectedTaskId={selectedTask?.id}
+          onSelectTask={handleSelectTask}
+          onAccept={handleAccept}
+          onReplace={handleReplace}
+          onDelay={handleDelay}
+          onAcceptOptimization={handleAcceptOptimization}
+        />
+        <TaskGroup
+          title="待AI推荐"
+          icon="⏳"
+          tasks={pendingAITasks}
+          selectedTaskId={selectedTask?.id}
+          onSelectTask={handleSelectTask}
+          onAccept={handleAccept}
+          onReplace={handleReplace}
+          onDelay={handleDelay}
+          onAcceptOptimization={handleAcceptOptimization}
+        />
+        <TaskGroup
+          title="预测任务"
+          icon="🔮"
+          tasks={predictedPendingTasks}
+          selectedTaskId={selectedTask?.id}
+          onSelectTask={handleSelectTask}
+          onAccept={handleAccept}
+          onReplace={handleReplace}
+          onDelay={handleDelay}
+          onAcceptOptimization={handleAcceptOptimization}
+        />
+        <TaskGroup
+          title="优化建议"
+          icon="💡"
+          tasks={optimizationTasks}
+          selectedTaskId={selectedTask?.id}
+          onSelectTask={handleSelectTask}
+          onAccept={handleAccept}
+          onReplace={handleReplace}
+          onDelay={handleDelay}
+          onAcceptOptimization={handleAcceptOptimization}
+        />
       </div>
+
+      {/* ========== 原有页面布局保持兼容 ========== */}
 
       {/* 物料设备状态面板 */}
       <MaterialEquipmentPanel
@@ -309,8 +899,12 @@ export default function SmartDispatchPage() {
         <div className="col-span-1">
           <DispatchTaskPool
             tasks={filteredTasks}
-            selectedTaskId={selectedTask?.id}
-            onSelectTask={handleSelectTask}
+            selectedTaskId={selectedTask?.sourceId || selectedTask?.id}
+            onSelectTask={(task) => handleSelectTask({
+              ...task,
+              dispatchStatus: task.source === 'farm' ? 'recommended' : 'pending_ai',
+              sourceLabel: task.source === 'farm' ? '农事任务' : task.source === 'tempTask' ? '临时任务' : '巡查问题'
+            })}
             sourceFilter={sourceFilter}
             onSourceFilterChange={setSourceFilter}
           />
@@ -360,7 +954,6 @@ export default function SmartDispatchPage() {
                           <span className="font-medium text-gray-900">{rec.worker.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {/* 置信度徽章 */}
                           <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                             rec.confidenceLevel === 'high' ? 'bg-green-100 text-green-700' :
                             rec.confidenceLevel === 'medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -384,7 +977,7 @@ export default function SmartDispatchPage() {
                         <span>负荷{rec.worker.currentLoad}%</span>
                       </div>
 
-                      {/* 推荐理由 - 正面（✅） */}
+                      {/* 推荐理由 - 正面 */}
                       {rec.reasonsDetail.positive.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {rec.reasonsDetail.positive.map((reason, i) => (
@@ -395,7 +988,7 @@ export default function SmartDispatchPage() {
                         </div>
                       )}
 
-                      {/* 推荐理由 - 警告（⚠️） */}
+                      {/* 推荐理由 - 警告 */}
                       {rec.reasonsDetail.warning.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {rec.reasonsDetail.warning.map((reason, i) => (
@@ -416,9 +1009,8 @@ export default function SmartDispatchPage() {
                         </div>
                       )}
 
-                      {/* 全维度因素详情 - 可折叠section */}
+                      {/* 全维度因素详情 - 可折叠 */}
                       <div className="mb-2 border border-gray-200 rounded-lg overflow-hidden">
-                        {/* 展开/收起按钮 */}
                         <button
                           onClick={() => toggleFactorsExpand(rec.worker.id)}
                           className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-xs"
@@ -436,15 +1028,11 @@ export default function SmartDispatchPage() {
                           </div>
                         </button>
 
-                        {/* 展开的内容 */}
                         {expandedFactors.has(rec.worker.id) && (
                           <div className="p-3 space-y-3 bg-white">
-                            {/* 生产因素 */}
                             <div className="factor-section">
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
-                                  生产因素
-                                </span>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">生产因素</span>
                               </div>
                               <div className="pl-2 space-y-1">
                                 {rec.factorsDetail.production.length > 0 ? (
@@ -460,12 +1048,9 @@ export default function SmartDispatchPage() {
                               </div>
                             </div>
 
-                            {/* 环境因素 */}
                             <div className="factor-section">
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                  环境因素
-                                </span>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">环境因素</span>
                               </div>
                               <div className="pl-2 space-y-1">
                                 {rec.factorsDetail.environment.length > 0 ? (
@@ -481,12 +1066,9 @@ export default function SmartDispatchPage() {
                               </div>
                             </div>
 
-                            {/* 人员因素 */}
                             <div className="factor-section">
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                                  人员因素
-                                </span>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">人员因素</span>
                               </div>
                               <div className="pl-2 space-y-1">
                                 {rec.factorsDetail.worker.length > 0 ? (
@@ -521,7 +1103,6 @@ export default function SmartDispatchPage() {
 
                       {/* 操作工具按钮行 */}
                       <div className="flex items-center gap-2 mb-2">
-                        {/* 派发按钮 */}
                         <button
                           onClick={() => handleDispatch(rec)}
                           disabled={!rec.isAvailable}
@@ -535,7 +1116,6 @@ export default function SmartDispatchPage() {
                           派发
                         </button>
 
-                        {/* 延后按钮 */}
                         <button
                           onClick={() => handleDispatchAction(rec, 'delay')}
                           className={`flex-1 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
@@ -549,7 +1129,6 @@ export default function SmartDispatchPage() {
                           延后
                         </button>
 
-                        {/* 拆分按钮 */}
                         <button
                           onClick={() => handleDispatchAction(rec, 'split')}
                           className={`flex-1 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
@@ -563,7 +1142,6 @@ export default function SmartDispatchPage() {
                           拆分
                         </button>
 
-                        {/* 忽略按钮 */}
                         <button
                           onClick={() => handleDispatchAction(rec, 'dismiss')}
                           className={`flex-1 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
@@ -578,7 +1156,6 @@ export default function SmartDispatchPage() {
                         </button>
                       </div>
 
-                      {/* 选中指示器 */}
                       {selectedRecommendation?.worker.id === rec.worker.id && (
                         <div className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1">
                           <ChevronRight className="w-3 h-3" />
@@ -599,7 +1176,6 @@ export default function SmartDispatchPage() {
 
         {/* 右侧：任务详情与推荐理由 */}
         <div className="col-span-1 space-y-3">
-          {/* 任务详情 */}
           {selectedTask && (
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-3 border-b border-gray-200">
@@ -628,7 +1204,6 @@ export default function SmartDispatchPage() {
             </div>
           )}
 
-          {/* 推荐理由说明 */}
           {recommendations && recommendations.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-3 border-b border-gray-200">
@@ -678,8 +1253,10 @@ export default function SmartDispatchPage() {
         </div>
       </div>
 
+      {/* ========== 弹窗 ========== */}
+
       {/* 延后操作弹窗 */}
-      {showDelayModal && selectedRecommendation && (
+      {showDelayModal && selectedTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-80 p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -687,7 +1264,7 @@ export default function SmartDispatchPage() {
               <h3 className="font-semibold text-gray-900">延后派发</h3>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              将任务延后派发给 <span className="font-medium">{selectedRecommendation.worker.name}</span>
+              将任务延后派发
             </p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">延后天数</label>
@@ -764,9 +1341,7 @@ export default function SmartDispatchPage() {
                       <div className="text-xs text-gray-500">{worker.workerType} | {worker.workZone}</div>
                     </div>
                     {selectedWorkersForSplit.includes(worker.id) && (
-                      <span className="text-xs text-blue-600 font-medium">
-                        已选择
-                      </span>
+                      <span className="text-xs text-blue-600 font-medium">已选择</span>
                     )}
                   </label>
                 ))}
@@ -800,6 +1375,88 @@ export default function SmartDispatchPage() {
         </div>
       )}
 
+      {/* 更换执行人弹窗 */}
+      {showReplaceModal && selectedTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-96 p-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center gap-2 mb-4">
+              <RefreshCw className="w-5 h-5 text-blue-500" />
+              <h3 className="font-semibold text-gray-900">更换执行人</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              为 <span className="font-medium">{selectedTask.title}</span> 选择新的执行人
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">选择执行人</label>
+              <div className="space-y-2">
+                {workers.map(worker => (
+                  <label
+                    key={worker.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                      selectedRecommendation?.worker.id === worker.id
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="worker"
+                      checked={selectedRecommendation?.worker.id === worker.id}
+                      onChange={() => setSelectedRecommendation({
+                        worker,
+                        matchScore: 0,
+                        skillMatchRate: 0,
+                        locationScore: 0,
+                        loadScore: 0,
+                        performanceScore: 0,
+                        urgencyScore: 0,
+                        batchFamiliarityScore: 0,
+                        reasons: [],
+                        confidenceLevel: 'medium',
+                        confidenceScore: 0,
+                        suggestedAction: 'dispatch',
+                        reasonsDetail: { positive: [], warning: [] },
+                        riskWarnings: [],
+                        isAvailable: true,
+                        weatherScore: 0,
+                        factorsDetail: { production: [], environment: [], worker: [] }
+                      })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{worker.name}</div>
+                      <div className="text-xs text-gray-500">{worker.workerType} | {worker.workZone}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowReplaceModal(false);
+                  setSelectedRecommendation(null);
+                }}
+                className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReplaceConfirm}
+                disabled={!selectedRecommendation}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                  !selectedRecommendation
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                确认更换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 配置中心弹窗 */}
       {showConfigPanel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -820,58 +1477,19 @@ export default function SmartDispatchPage() {
               <DispatchConfigPanel
                 onSave={(config) => {
                   console.log('配置已保存:', config);
-                  // 这里可以添加配置保存逻辑
                 }}
               />
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-// 统计卡片组件
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-          <span className="text-white text-lg font-bold">{value}</span>
-        </div>
-        <div className="text-sm text-gray-600">{label}</div>
-      </div>
-    </div>
-  );
-}
-
-// 详情项组件
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-900 font-medium">{value}</span>
-    </div>
-  );
-}
-
-// 推荐理由项组件
-function ReasonItem({
-  icon,
-  title,
-  desc,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      {icon}
-      <div>
-        <div className="font-medium text-gray-900 text-sm">{title}</div>
-        <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
-      </div>
+      {/* 批量操作栏 */}
+      <BatchActionsBar
+        selectedCount={selectedTasks.size}
+        onConfirmAll={handleBatchConfirm}
+        onCancel={handleCancelSelection}
+      />
     </div>
   );
 }

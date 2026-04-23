@@ -3,8 +3,8 @@
  * 将问题分派给员工处理，并创建关联任务
  */
 
-import { useState, useMemo } from 'react';
-import { Send, X, AlertTriangle, CheckCircle, Clock, User, List, Eye, Plus, Edit, Trash2, Download, MapPin, Package, Camera, Mic } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Send, X, AlertTriangle, CheckCircle, Clock, User, List, Eye, Plus, Edit, Trash2, Download, MapPin, Package, Camera, Mic, Sparkles, UserPlus } from 'lucide-react';
 import { useProblemDispatch } from '../../../hooks';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
@@ -28,6 +28,10 @@ import { SourceFilter } from './components/SourceFilter';
 import { SourceCell } from './components/SourceCell';
 import { SourceBadge } from './components/SourceBadge';
 import type { SourceModuleType } from './constants/sourceConfig';
+import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
+import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
+import type { UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
+import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -47,6 +51,9 @@ export function ProblemDispatchPage() {
     workerList,
     getTaskForProblem,
   } = useProblemDispatch();
+
+  // 使用 useComprehensiveDispatch 获取AI推荐功能
+  const { getRecommendations } = useComprehensiveDispatch();
 
   // 使用 usePersistentProblems 获取 addProblem 方法
   const { addProblem } = usePersistentProblems();
@@ -86,6 +93,9 @@ export function ProblemDispatchPage() {
 
   // 标签页状态
   const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
+
+  // 分派模式状态（ai_assisted | manual）
+  const [dispatchMode, setDispatchMode] = useState<'ai_assisted' | 'manual'>('ai_assisted');
 
   // 筛选状态
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'handled'>('all');
@@ -199,6 +209,67 @@ export function ProblemDispatchPage() {
 
     return list;
   }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
+
+  // 问题类型到任务类型的映射
+  const getProblemType = (issueText: string): { type: string; typeName: string } => {
+    if (issueText.includes('虫') || issueText.includes('蚜')) return { type: 'spraying', typeName: '病虫防治' };
+    if (issueText.includes('病') || issueText.includes('斑') || issueText.includes('灰霉')) return { type: 'spraying', typeName: '病害处理' };
+    if (issueText.includes('水') || issueText.includes('旱')) return { type: 'irrigation', typeName: '灌溉处理' };
+    if (issueText.includes('肥')) return { type: 'fertilization', typeName: '施肥处理' };
+    return { type: 'scouting', typeName: '问题处理' };
+  };
+
+  // 严重程度转优先级
+  const severityToPriority: Record<string, UnifiedDispatchTask['priority']> = {
+    '严重': 'urgent',
+    '中等': 'high',
+    '轻微': 'normal',
+  };
+
+  // 将问题转换为统一任务格式（用于AI推荐）
+  const getProblemTaskInfo = useCallback((problem: ProblemEntry): UnifiedDispatchTask => {
+    const typeInfo = getProblemType(problem.issueText);
+    return {
+      id: `inspection-${problem.id}`,
+      source: 'inspection',
+      sourceId: problem.id.toString(),
+      taskCode: `PD-${problem.id}`,
+      title: `【问题处理】${problem.issueText.slice(0, 30)}`,
+      type: typeInfo.type,
+      typeName: typeInfo.typeName,
+      priority: severityToPriority[problem.issueSeverity] || 'normal',
+      workZone: problem.greenhouseName || '',
+      greenhouse: problem.greenhouseName || '',
+      cropName: problem.cropName || '',
+      batchId: problem.batchId,
+      batchCode: problem.batchCode,
+      requiredSkills: [], // AI推荐时会根据问题类型自动判断
+      estimatedHours: 2,
+      dueDate: '',
+      description: problem.issueText,
+      createdAt: new Date().toISOString(),
+    };
+  }, []);
+
+  // 获取问题的AI推荐（病虫害问题特殊处理：提升技能匹配权重）
+  const getProblemRecommendations = useCallback((problem: ProblemEntry) => {
+    const taskInfo = getProblemTaskInfo(problem);
+    const recommendations = getRecommendations(taskInfo, 5);
+
+    // 病虫害问题：提升技能匹配权重，优先选择有病害处理经验的人员
+    const isPestOrDisease = problem.issueText.includes('虫') ||
+                           problem.issueText.includes('病') ||
+                           problem.issueText.includes('蚜') ||
+                           problem.issueText.includes('斑') ||
+                           problem.issueText.includes('灰霉');
+
+    if (isPestOrDisease && recommendations.length > 0) {
+      // 对推荐结果按技能匹配度重新排序
+      return [...recommendations].sort((a, b) => b.skillMatchRate - a.skillMatchRate);
+    }
+
+    return recommendations;
+  }, [getProblemTaskInfo, getRecommendations]);
 
   // 计算期望完成日期
   const calculateDueDate = () => {
@@ -620,6 +691,7 @@ export function ProblemDispatchPage() {
           setExpectedCompletion('3days');
           setCustomDueDate('');
           setSelectedPriority('medium');
+          setDispatchMode('ai_assisted'); // 重置分派模式
         }}
         title={dispatchModal.batchMode ? '批量分派问题' : '分派问题'}
         size="xl"
@@ -633,6 +705,7 @@ export function ProblemDispatchPage() {
                 setExpectedCompletion('3days');
                 setCustomDueDate('');
                 setSelectedPriority('medium');
+                setDispatchMode('ai_assisted'); // 重置分派模式
               }}
               className="px-5 py-2.5 text-base font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
@@ -691,41 +764,91 @@ export function ProblemDispatchPage() {
               <User className="w-5 h-5 text-blue-500" />
               选择执行人
             </div>
-            <Select
-              value={selectedWorker?.id || ''}
-              onValueChange={(value) => {
-                const worker = workerList.find(w => w.id === value);
-                if (worker) {
-                  setSelectedWorker({ id: worker.id, name: worker.name });
-                }
-              }}
-            >
-              <SelectTrigger className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg text-base focus:border-blue-500">
-                <SelectValue placeholder="请选择执行人..." />
-              </SelectTrigger>
-              <SelectContent>
-                {workerList.map(worker => (
-                  <SelectItem key={worker.id} value={worker.id} className="text-base py-3">
-                    <div className="flex items-center justify-between w-full">
-                      <div>
-                        <div className="font-medium">{worker.name}</div>
-                        <div className="text-sm text-gray-500">{worker.position}</div>
+
+            {/* 分派模式切换 */}
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setDispatchMode('ai_assisted')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                  dispatchMode === 'ai_assisted'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                AI推荐（默认）
+              </button>
+              <button
+                type="button"
+                onClick={() => setDispatchMode('manual')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                  dispatchMode === 'manual'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                手动选择
+              </button>
+            </div>
+
+            {/* AI辅助模式（仅单选分派时显示AI推荐面板） */}
+            {dispatchMode === 'ai_assisted' && !dispatchModal.batchMode && dispatchModal.problem && (
+              <AIRecommendationPanel
+                taskInfo={getProblemTaskInfo(dispatchModal.problem)}
+                recommendations={getProblemRecommendations(dispatchModal.problem)}
+                onWorkerSelect={(workerId, score) => {
+                  const worker = workerList.find(w => w.id === workerId);
+                  if (worker) {
+                    setSelectedWorker({ id: worker.id, name: worker.name });
+                  }
+                }}
+                onManualSelect={() => setDispatchMode('manual')}
+                config={{ ...DEFAULT_AI_RECOMMEND_CONFIG, defaultSelectTop: true }}
+                selectedWorkerId={selectedWorker?.id}
+              />
+            )}
+
+            {/* 手动模式（批量分派或切换为手动时显示） */}
+            {(dispatchMode === 'manual' || (dispatchModal.batchMode && dispatchMode === 'ai_assisted')) && (
+              <Select
+                value={selectedWorker?.id || ''}
+                onValueChange={(value) => {
+                  const worker = workerList.find(w => w.id === value);
+                  if (worker) {
+                    setSelectedWorker({ id: worker.id, name: worker.name });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg text-base focus:border-blue-500">
+                  <SelectValue placeholder="请选择执行人..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {workerList.map(worker => (
+                    <SelectItem key={worker.id} value={worker.id} className="text-base py-3">
+                      <div className="flex items-center justify-between w-full">
+                        <div>
+                          <div className="font-medium">{worker.name}</div>
+                          <div className="text-sm text-gray-500">{worker.position}</div>
+                        </div>
+                        <div className="flex gap-1 ml-4">
+                          {worker.skillTags.slice(0, 2).map(tag => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex gap-1 ml-4">
-                        {worker.skillTags.slice(0, 2).map(tag => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             {selectedWorker && (
               <div className="mt-2 text-sm text-emerald-600 font-medium">
                 已选择：{selectedWorker.name}

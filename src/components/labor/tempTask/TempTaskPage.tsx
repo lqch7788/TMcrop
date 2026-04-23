@@ -741,6 +741,9 @@ export function TempTaskPage() {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignTask, setReassignTask] = useState<TempTask | null>(null);
 
+  // 派发模式状态
+  const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>('manual');
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -785,7 +788,15 @@ export function TempTaskPage() {
         console.log('更新临时任务:', editingTask.id, taskData);
       } else {
         // ========== 数据闭环：新建临时任务 ==========
-        const finalStatus = status === 'pending' ? 'pending' : 'draft';
+        // 根据派发模式和状态决定最终状态
+        let finalStatus: 'pending' | 'draft' | 'pending_ai' = 'draft';
+        if (status === 'pending') {
+          if (dispatchMode === 'ai_assisted') {
+            finalStatus = 'pending_ai'; // 待AI推荐
+          } else {
+            finalStatus = 'pending'; // 直接派发
+          }
+        }
         // 计算总工时
         const totalEstimatedHours = ((taskData.estimatedDays || 0) * 8 + (taskData.estimatedHours || 0)) * (taskData.workerCount || 1);
 
@@ -1630,6 +1641,8 @@ export function TempTaskPage() {
         onSubmit={() => handleFormSubmit('pending')}
         onChange={updateFormData}
         generateNewTaskCode={generateNewTaskCode}
+        dispatchMode={dispatchMode}
+        onDispatchModeChange={setDispatchMode}
       />
 
       {/* 批量编辑弹窗 */}
