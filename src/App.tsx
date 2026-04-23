@@ -92,6 +92,8 @@ import Performance from './pages/Performance';
 import Efficiency from './pages/Efficiency';
 import Risk from './pages/Risk';
 import SmartDispatch from './pages/SmartDispatch';
+import DailyPlanningPage from './pages/DailyPlanningPage';
+import MonthlyPlanningPage from './pages/MonthlyPlanningPage';
 import Piecework from './pages/Piecework';
 import SalaryBudget from './pages/SalaryBudget';
 import Onboarding from './pages/Onboarding';
@@ -253,6 +255,8 @@ function AppContent() {
         <Route path="/efficiency" element={<Efficiency />} />
         <Route path="/risk" element={<Risk />} />
         <Route path="/smart-dispatch" element={<SmartDispatch />} />
+        <Route path="/daily-planning" element={<DailyPlanningPage />} />
+        <Route path="/monthly-planning" element={<MonthlyPlanningPage />} />
         <Route path="/piecework" element={<Piecework />} />
         <Route path="/salary-budget" element={<SalaryBudget />} />
         <Route path="/onboarding" element={<Onboarding />} />

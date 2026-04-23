@@ -95,6 +95,7 @@ export const STORAGE_KEYS = {
   DISPATCH_RECORDS: 'yuanxingtu_dispatch_records',
   MY_TASKS: 'yuanxingtu_my_tasks',
   PROBLEM_ATTACHMENTS: 'yuanxingtu_problem_attachments',
+  DISPATCH_MODE_CONFIG: 'yuanxingtu_dispatch_mode_config',
 } as const;
 
 /**

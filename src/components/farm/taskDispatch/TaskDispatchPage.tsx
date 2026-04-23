@@ -64,6 +64,12 @@ import { useTasks, Task, TaskStatus } from '../../../hooks/useTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import { useReminder } from '../../../hooks/useReminder';
 
+// 导入智能推荐面板和派工类型
+import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
+import type { DispatchMode } from '../../../types/dispatch';
+import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
+import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
+
 // ========== 从 constants 导入的常量和工具函数 ==========
 // 任务类型定义（保留图标组件，这些不能放在 mockData 中）
 const taskTypes = TASK_TYPES;
@@ -157,6 +163,89 @@ export default function TaskDispatchPage() {
   const { addTaskRecord } = useOperationRecords();
   // 催办管理 Hook
   const { canRemind, sendReminder, getCooldownRemaining, getTodayReminderCount } = useReminder();
+
+  // 新建任务表单状态（必须在使用之前定义）
+  const [newTask, setNewTask] = useState<{
+    taskId: string;
+    types: string[];
+    typeRemarks: string;
+    fields: string[];
+    crops: string[];
+    areaRemarks: string;
+    assignee: string;
+    planStart: string;
+    planEnd: string;
+    sopContent: string;
+    materials: { name: string; qty: number; unit: string }[];
+    requiredFeedback: string[];
+    priority: string;
+    estimatedDays: number;
+    estimatedHours: number;
+    typeConfig: TaskConfigValues;  // 任务类型配置
+    toolsRemarks: string;  // 工具备注
+    batchId: string;  // 关联生产批次ID
+    batchCode: string;  // 关联生产批次编号
+    batchSearch: string;  // 批次搜索关键词
+  }>({
+    taskId: '',
+    types: [],
+    typeRemarks: '',
+    fields: [],
+    crops: [],
+    areaRemarks: '',
+    assignee: '',
+    planStart: '',
+    planEnd: '',
+    sopContent: '',
+    materials: [],
+    requiredFeedback: ['workload_confirm'],
+    priority: 'normal',
+    estimatedDays: 0,
+    estimatedHours: 1,
+    typeConfig: {},
+    toolsRemarks: '',
+    batchId: '',
+    batchCode: '',
+    batchSearch: '',
+  });
+
+  // 智能派工相关状态
+  const [dispatchMode, setDispatchMode] = useState<DispatchMode>('manual');
+  const [assignedTo, setAssignedTo] = useState<string | null>(null);
+  const [aiConfidenceScore, setAiConfidenceScore] = useState<number | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<WorkerRecommendation[]>([]);
+
+  // 使用综合派工 Hook 获取 AI 推荐功能
+  const { getRecommendations } = useComprehensiveDispatch();
+
+  // 获取 AI 推荐数据
+  const fetchAIRecommendations = useCallback(() => {
+    if (!newTask.fields[0] || !newTask.types[0]) return;
+
+    // 构建任务信息
+    const taskInfo = {
+      id: newTask.taskId || `temp-${Date.now()}`,
+      source: 'farm' as const,
+      sourceId: '',
+      taskCode: newTask.taskId || '',
+      title: newTask.types[0] || '农事任务',
+      type: newTask.types[0] || 'other',
+      typeName: newTask.types[0] || '',
+      priority: (newTask.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
+      workZone: newTask.fields[0] || '',
+      greenhouse: newTask.fields[0] || '',
+      cropName: newTask.crops[0] || '',
+      batchId: newTask.batchId,
+      batchCode: newTask.batchCode,
+      requiredSkills: [],
+      estimatedHours: newTask.estimatedHours || 2,
+      dueDate: newTask.planEnd?.split(' ')[0] || '',
+    };
+
+    // 获取推荐
+    const recommendations = getRecommendations(taskInfo, 3);
+    setAiRecommendations(recommendations);
+  }, [newTask.fields, newTask.types, newTask.taskId, newTask.priority, newTask.crops, newTask.batchId, newTask.batchCode, newTask.estimatedHours, newTask.planEnd, getRecommendations]);
 
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   // 合并：优先显示 useTasks 的数据，但也保留本地 mockTasks 用于兼容旧逻辑
@@ -419,51 +508,6 @@ export default function TaskDispatchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // 新建任务表单状态
-  const [newTask, setNewTask] = useState<{
-    taskId: string;
-    types: string[];
-    typeRemarks: string;
-    fields: string[];
-    crops: string[];
-    areaRemarks: string;
-    assignee: string;
-    planStart: string;
-    planEnd: string;
-    sopContent: string;
-    materials: { name: string; qty: number; unit: string }[];
-    requiredFeedback: string[];
-    priority: string;
-    estimatedDays: number;
-    estimatedHours: number;
-    typeConfig: TaskConfigValues;  // 任务类型配置
-    toolsRemarks: string;  // 工具备注
-    batchId: string;  // 关联生产批次ID
-    batchCode: string;  // 关联生产批次编号
-    batchSearch: string;  // 批次搜索关键词
-  }>({
-    taskId: '',
-    types: [],
-    typeRemarks: '',
-    fields: [],
-    crops: [],
-    areaRemarks: '',
-    assignee: '',
-    planStart: '',
-    planEnd: '',
-    sopContent: '',
-    materials: [],
-    requiredFeedback: ['workload_confirm'],
-    priority: 'normal',
-    estimatedDays: 0,
-    estimatedHours: 1,
-    typeConfig: {},
-    toolsRemarks: '',
-    batchId: '',
-    batchCode: '',
-    batchSearch: '',
-  });
-
   // 自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
   // 需要同时检查 tasks 和 mockTasks，避免编号冲突
   const autoGenerateTaskCode = () => {
@@ -519,6 +563,11 @@ export default function TaskDispatchPage() {
       batchCode: '',
       batchSearch: '',
     });
+    // 重置派工相关状态
+    setDispatchMode('manual');
+    setAssignedTo(null);
+    setAiConfidenceScore(null);
+    setAiRecommendations([]);
     setCreateStep(1);
     setShowCreateModal(true);
   };
@@ -1188,6 +1237,7 @@ export default function TaskDispatchPage() {
 
   // 处理创建任务
   // publish为true时直接发布（pending），false时保存为草稿（draft）
+  // dispatchMode 为 'ai_assisted' 且未选择执行人时，设置为 'pending_ai' 状态
   const handleCreateTask = (publish: boolean = true) => {
     const typeLabels = newTask.types.map(t => getTypeLabel(t)).join(',');
     // 处理任务区域：如果是"其他"则使用备注，否则使用选择的区域
@@ -1220,7 +1270,6 @@ export default function TaskDispatchPage() {
     const matchedField = taskDispatchFields.find(f => f.name === firstFieldName);
     const greenhouseId = matchedField?.id?.toString() || '';
 
-    // 先调用 createTask 获取 useTasks 生成的任务对象（包含生成的任务ID）
     // 计算任务工时
     const estimatedHours = ((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8)) + (newTask.estimatedHours || 0);
     // 计算计划结束时间
@@ -1230,7 +1279,22 @@ export default function TaskDispatchPage() {
       newTask.estimatedHours || 0,
       newTask.workHoursPerDay || 8
     );
-    // 直接传入正确的状态，避免 React 批处理导致 updateTask 找不到新任务的问题
+
+    // 根据派发模式确定任务状态
+    // AI辅助模式且未选择执行人时，设置为 pending_ai（待AI推荐）
+    // 否则根据 publish 参数设置为 pending 或 draft
+    let taskStatus: 'pending' | 'draft' | 'pending_ai' = 'draft';
+    if (publish) {
+      if (dispatchMode === 'ai_assisted' && !assignedTo) {
+        taskStatus = 'pending_ai';  // 待AI推荐
+      } else {
+        taskStatus = 'pending';  // 直接派发
+      }
+    } else {
+      taskStatus = 'draft';  // 保存草稿
+    }
+
+    // 先调用 createTask 获取 useTasks 生成的任务对象（包含生成的任务ID）
     const task = createTask({
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
@@ -1256,8 +1320,8 @@ export default function TaskDispatchPage() {
       typeConfig: newTask.typeConfig || {},
       tools: newTask.tools || [],
       toolsRemarks: newTask.toolsRemarks || '',
-      // 直接设置正确的状态
-      status: publish ? 'pending' as const : 'draft' as const,
+      // 根据派发模式设置状态
+      status: taskStatus,
       // ========== 兼容旧界面字段 ==========
       types: newTask.types,
       typeLabel: typeLabels,
@@ -1267,6 +1331,10 @@ export default function TaskDispatchPage() {
       planStart: newTask.planStart,
       planEnd: planEndTime,
       sopContent: newTask.sopContent || '',
+      // AI派工相关字段
+      dispatchMode: dispatchMode,
+      aiConfidenceScore: aiConfidenceScore,
+      submitToAiAt: dispatchMode === 'ai_assisted' && !assignedTo ? new Date().toISOString() : undefined,
     });
 
     // 用 useTasks 返回的任务 ID 同步更新 mockTasks（保持 ID 一致）
@@ -1286,17 +1354,27 @@ export default function TaskDispatchPage() {
       tools: newTask.tools || [],
       materials: newTask.materials || [],
       progress: 0,
-      status: publish ? 'pending' as const : 'draft' as const,
+      status: taskStatus,  // 使用 taskStatus 变量
       priority: newTask.priority,
     };
     setMockTasks(prev => [...prev, newTaskData]);
 
     // ========== 数据闭环：同步到 useOperationRecords ==========
     if (task) {
+      // 根据任务状态生成备注信息
+      let recordRemarks = '';
+      if (taskStatus === 'pending_ai') {
+        recordRemarks = '任务已提交，等待AI智能推荐执行人';
+      } else if (taskStatus === 'pending') {
+        recordRemarks = '任务已派发，等待执行人接受';
+      } else {
+        recordRemarks = '任务已保存为草稿';
+      }
+
       addTaskRecord({
         operationType: newTask.types[0] || 'other',
         operationTypeName: typeLabels,
-        status: publish ? 'pending' : 'draft',
+        status: taskStatus,
         greenhouseId: greenhouseId,  // 使用查找到的 greenhouseId
         greenhouseName: fieldValue,
         cropName: cropValue,
@@ -1306,7 +1384,7 @@ export default function TaskDispatchPage() {
         sourceId: task.id,
         sourceCode: task.taskCode,
         progress: 0,
-        remarks: publish ? `任务已派发，等待执行人接受` : `任务已保存为草稿`,
+        remarks: recordRemarks,
       });
     }
 
@@ -1333,6 +1411,11 @@ export default function TaskDispatchPage() {
       estimatedHours: 1,
       workHoursPerDay: 8,
     });
+    // 重置派工相关状态
+    setDispatchMode('manual');
+    setAssignedTo(null);
+    setAiConfidenceScore(null);
+    setAiRecommendations([]);
   };
 
   // 任务类型变化时自动加载SOP（多选版本，保留）
@@ -2210,19 +2293,100 @@ export default function TaskDispatchPage() {
               {/* Step 2: 资源与人员 */}
               {createStep === 2 && (
                 <div className="space-y-4">
+                  {/* 执行人选择模式切换 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">指派给 <span className="text-red-500">*</span></label>
-                    <select
-                      value={newTask.assignee}
-                      onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">请选择执行人</option>
-                      {staff.map(s => (
-                        <option key={s.id} value={s.name}>{s.name} ({s.status === 'available' ? '空闲' : s.status === 'busy' ? '工作中' : '休息中'})</option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">指派方式 <span className="text-red-500">*</span></label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="dispatchMode"
+                          value="manual"
+                          checked={dispatchMode === 'manual'}
+                          onChange={() => {
+                            setDispatchMode('manual');
+                            setAssignedTo(null);
+                            setAiConfidenceScore(null);
+                          }}
+                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm text-gray-700">👤 手动选择</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="dispatchMode"
+                          value="ai_assisted"
+                          checked={dispatchMode === 'ai_assisted'}
+                          onChange={() => {
+                            setDispatchMode('ai_assisted');
+                            setAssignedTo(null);
+                            setAiConfidenceScore(null);
+                            // 切换到AI辅助模式时获取推荐
+                            setTimeout(() => fetchAIRecommendations(), 0);
+                          }}
+                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm text-gray-700">🤖 待智能推荐</span>
+                      </label>
+                    </div>
                   </div>
+
+                  {/* 执行人选择区域 */}
+                  {dispatchMode === 'manual' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">执行人 <span className="text-red-500">*</span></label>
+                      <select
+                        value={newTask.assignee}
+                        onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">请选择执行人</option>
+                        {staff.map(s => (
+                          <option key={s.id} value={s.name}>{s.name} ({s.status === 'available' ? '空闲' : s.status === 'busy' ? '工作中' : '休息中'})</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">智能推荐</label>
+                      <AIRecommendationPanel
+                        taskInfo={{
+                          id: newTask.taskId || '',
+                          taskCode: newTask.taskId || '',
+                          title: newTask.types[0] || '农事任务',
+                          type: newTask.types[0] || '',
+                          typeName: newTask.types[0] || '',
+                          priority: (newTask.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
+                          workZone: newTask.fields[0] || '',
+                          greenhouse: newTask.fields[0] || '',
+                          cropName: newTask.crops[0] || '',
+                          batchId: newTask.batchId,
+                          batchCode: newTask.batchCode,
+                          estimatedHours: newTask.estimatedHours,
+                          dueDate: newTask.planEnd?.split(' ')[0] || '',
+                        }}
+                        recommendations={aiRecommendations}
+                        onWorkerSelect={(workerId, score) => {
+                          setAssignedTo(workerId);
+                          setAiConfidenceScore(score);
+                          // 同步更新 newTask.assignee 为选中的人员姓名
+                          const selectedWorker = staff.find(s => s.id.toString() === workerId);
+                          if (selectedWorker) {
+                            setNewTask({ ...newTask, assignee: selectedWorker.name });
+                          }
+                        }}
+                        onManualSelect={() => setDispatchMode('manual')}
+                        config={{ defaultSelectTop: true }}
+                        selectedWorkerId={assignedTo || undefined}
+                      />
+                      {aiConfidenceScore !== null && (
+                        <p className="mt-2 text-sm text-emerald-600">
+                          当前选中执行人置信度：{aiConfidenceScore}分
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">所需物资</label>
                     <div className="border border-gray-200 rounded-lg p-3 space-y-2">

@@ -1,7 +1,11 @@
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { greenhouses, currentUser } from '../../../data/mockData';
 import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
+import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
+import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
+import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
 
 interface TempTaskFormModalProps {
   isOpen: boolean;
@@ -32,6 +36,9 @@ interface TempTaskFormModalProps {
   onSubmit: () => void;
   onChange: <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => void;
   generateNewTaskCode: () => void;
+  /** 派发模式：manual=手动选择，ai_assisted=待智能推荐 */
+  dispatchMode?: 'manual' | 'ai_assisted';
+  onDispatchModeChange?: (mode: 'manual' | 'ai_assisted') => void;
 }
 
 export function TempTaskFormModal({
@@ -46,7 +53,80 @@ export function TempTaskFormModal({
   onSubmit,
   onChange,
   generateNewTaskCode,
+  dispatchMode: externalDispatchMode,
+  onDispatchModeChange,
 }: TempTaskFormModalProps) {
+  // 派发模式状态（默认手动选择）
+  const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>(externalDispatchMode || 'manual');
+  // AI推荐结果
+  const [recommendations, setRecommendations] = useState<WorkerRecommendation[]>([]);
+  // 选中执行人ID
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | undefined>(undefined);
+
+  // 从 useComprehensiveDispatch 获取推荐算法
+  const { getRecommendations } = useComprehensiveDispatch();
+
+  // 监听外部 dispatchMode 变化
+  useEffect(() => {
+    if (externalDispatchMode) {
+      setDispatchMode(externalDispatchMode);
+    }
+  }, [externalDispatchMode]);
+
+  // 当派发模式切换到AI推荐时，获取推荐
+  useEffect(() => {
+    if (dispatchMode === 'ai_assisted' && formData.tempTaskType) {
+      // 构建临时任务格式用于AI推荐
+      const tempTask: UnifiedDispatchTask = {
+        id: formData.taskCode || `temp-${Date.now()}`,
+        source: 'tempTask',
+        sourceId: '',
+        taskCode: formData.taskCode,
+        title: formData.title,
+        type: formData.tempTaskType,
+        typeName: TEMP_TASK_TYPES.find(t => t.value === formData.tempTaskType)?.label || '临时任务',
+        priority: formData.urgency === 'critical' ? 'urgent' : formData.urgency === 'urgent' ? 'high' : 'normal',
+        workZone: formData.workLocation || '',
+        greenhouse: formData.workLocation || '',
+        cropName: '',
+        requiredSkills: [],
+        estimatedHours: formData.estimatedHours || 2,
+        dueDate: formData.dueDate,
+        description: formData.description,
+        createdAt: new Date().toISOString(),
+      };
+
+      // 紧急任务时，自动提升"当前负荷"权重（优先推荐空闲人员）
+      let recs = getRecommendations(tempTask, 5);
+      if (formData.urgency === 'critical' || formData.urgency === 'urgent') {
+        // 紧急任务优先推荐空闲人员，按当前负荷排序
+        recs = recs.sort((a, b) => a.worker.currentLoad - b.worker.currentLoad);
+      }
+
+      setRecommendations(recs);
+    }
+  }, [dispatchMode, formData.tempTaskType, formData.title, formData.workLocation, formData.urgency, formData.estimatedHours, formData.dueDate, formData.description, formData.taskCode, getRecommendations]);
+
+  // 处理派发模式切换
+  const handleDispatchModeChange = (mode: 'manual' | 'ai_assisted') => {
+    setDispatchMode(mode);
+    onDispatchModeChange?.(mode);
+    if (mode === 'manual') {
+      // 切换到手动模式时，清空AI选中的执行人
+      setSelectedWorkerId(undefined);
+    }
+  };
+
+  // 处理AI推荐选中执行人
+  const handleAIWorkerSelect = (workerId: string, score: number) => {
+    setSelectedWorkerId(workerId);
+    const selectedWorker = recommendations.find(r => r.worker.id === workerId)?.worker;
+    if (selectedWorker) {
+      onChange('assigneeId', workerId);
+      onChange('assigneeName', selectedWorker.name);
+    }
+  };
+
   // 紧急程度到优先级的映射
   const urgencyToPriority = {
     critical: 'high',
@@ -207,18 +287,78 @@ export function TempTaskFormModal({
           </FormField>
 
           <FormField label="执行人" required error={errors.assigneeId as any}>
-            <Select
-              value={formData.assigneeId}
-              onChange={(e) => {
-                const selectedUser = workerUsers.find(u => u.id === e.target.value);
-                onChange('assigneeId', e.target.value);
-                onChange('assigneeName', selectedUser?.name || '');
-              }}
-              options={[
-                { value: '', label: '请选择执行人', disabled: true },
-                ...workerUsers.map(u => ({ value: u.id, label: u.name })),
-              ]}
-            />
+            {/* 派发模式切换 */}
+            <div className="flex gap-4 mb-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="dispatchMode"
+                  value="manual"
+                  checked={dispatchMode === 'manual'}
+                  onChange={() => handleDispatchModeChange('manual')}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">👤 手动选择</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="dispatchMode"
+                  value="ai_assisted"
+                  checked={dispatchMode === 'ai_assisted'}
+                  onChange={() => handleDispatchModeChange('ai_assisted')}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">🤖 待智能推荐</span>
+              </label>
+            </div>
+
+            {dispatchMode === 'manual' ? (
+              /* 手动选择模式 */
+              <Select
+                value={formData.assigneeId}
+                onChange={(e) => {
+                  const selectedUser = workerUsers.find(u => u.id === e.target.value);
+                  onChange('assigneeId', e.target.value);
+                  onChange('assigneeName', selectedUser?.name || '');
+                }}
+                options={[
+                  { value: '', label: '请选择执行人', disabled: true },
+                  ...workerUsers.map(u => ({ value: u.id, label: u.name })),
+                ]}
+              />
+            ) : (
+              /* AI智能推荐模式 */
+              <div className="mt-2">
+                {formData.title && formData.workLocation ? (
+                  <AIRecommendationPanel
+                    taskInfo={{
+                      id: formData.taskCode,
+                      taskCode: formData.taskCode,
+                      title: formData.title,
+                      type: formData.tempTaskType,
+                      typeName: TEMP_TASK_TYPES.find(t => t.value === formData.tempTaskType)?.label || '临时任务',
+                      priority: formData.urgency === 'critical' ? 'urgent' : formData.urgency === 'urgent' ? 'high' : 'normal',
+                      workZone: formData.workLocation,
+                      greenhouse: formData.workLocation,
+                      description: formData.description,
+                      estimatedHours: formData.estimatedHours,
+                    }}
+                    recommendations={recommendations}
+                    onWorkerSelect={handleAIWorkerSelect}
+                    onManualSelect={() => handleDispatchModeChange('manual')}
+                    selectedWorkerId={selectedWorkerId}
+                    config={{ defaultSelectTop: true, showTopN: 3 }}
+                  />
+                ) : (
+                  /* 任务信息不完整时显示提示 */
+                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-center">
+                    <p className="text-sm text-gray-500">请先填写任务名称和工作地点</p>
+                    <p className="text-xs text-gray-400 mt-1">系统将基于这些信息生成智能推荐</p>
+                  </div>
+                )}
+              </div>
+            )}
           </FormField>
 
           <FormField label="发布人">

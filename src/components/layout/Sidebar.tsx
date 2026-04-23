@@ -6,9 +6,9 @@ import {
   Users, MapPin, Target, ScrollText,
   Wifi, Thermometer, Activity, Search, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
-  Calendar, CalendarDays, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
+  Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap, Clipboard, Play
+  Briefcase, GraduationCap, Clipboard, Play, Bot
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -77,8 +77,11 @@ const farmSubItems = [
   { icon: Sparkles, label: '临时任务派发', path: '/temp-task' },
   { icon: Eye, label: '巡查反馈', path: '/inspection' },
   { icon: Send, label: '问题分派', path: '/problem-dispatch' },
+  { icon: Bot, label: '智能派工', path: '/smart-dispatch' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
+  { icon: CalendarCheck, label: '每日规划', path: '/daily-planning' },
+  { icon: CalendarRange, label: '月度规划', path: '/monthly-planning' },
 ];
 
 const indicatorsSubItems = [
