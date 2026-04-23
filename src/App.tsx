@@ -101,6 +101,7 @@ import Contract from './pages/Contract';
 import Team from './pages/Team';
 import TempTask from './pages/TempTask';
 import TaskCenterPage from './pages/farm/TaskCenterPage';
+import FarmTaskHub from './pages/farm/FarmTaskHub';
 import AttendancePage from './pages/labor/AttendancePage';
 import PersonnelPage from './pages/labor/PersonnelPage';
 import CompensationPage from './pages/labor/CompensationPage';
@@ -226,6 +227,7 @@ function AppContent() {
 
         {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
         <Route path="/task-center" element={<TaskCenterPage />} />
+        <Route path="/farm-hub" element={<FarmTaskHub />} />
         <Route path="/problem-dispatch" element={<ProblemDispatch />} />
         <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
         <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
