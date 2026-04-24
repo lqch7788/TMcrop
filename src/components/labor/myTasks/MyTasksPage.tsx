@@ -232,17 +232,19 @@ export function MyTasksPage() {
   // 根据筛选过滤任务（并按创建时间倒序排列，最新在前）
   const filteredTasks = useMemo(() => {
     // 排序函数：按创建时间倒序（最新在前）
+    // 使用时间戳比较，确保无效日期也能正确排序
     const sortByCreatedAt = (a: TaskDispatchTask | Task, b: TaskDispatchTask | Task) => {
-      const getCreatedAt = (task: TaskDispatchTask | Task) => {
-        // 优先使用 createdAt 字段，否则使用 planStart 或 startDate
-        return (task as any).createdAt || (task as any).planStart || (task as any).startDate || '';
+      const getCreatedAtTime = (task: TaskDispatchTask | Task): number => {
+        const timeStr = (task as any).createdAt || (task as any).planStart || (task as any).startDate || '';
+        if (!timeStr) return 0;
+        const date = new Date(timeStr);
+        return isNaN(date.getTime()) ? 0 : date.getTime();
       };
-      const aTime = getCreatedAt(a);
-      const bTime = getCreatedAt(b);
-      if (!aTime && !bTime) return 0;
-      if (!aTime) return 1;
-      if (!bTime) return -1;
-      return bTime.localeCompare(aTime); // 倒序
+      const aTime = getCreatedAtTime(a);
+      const bTime = getCreatedAtTime(b);
+      // 倒序，最新在前：bTime - aTime
+      // 无效日期（0）会排在最后
+      return bTime - aTime;
     };
 
     switch (taskFilter) {
@@ -261,12 +263,13 @@ export function MyTasksPage() {
         return myTasks
           .filter(task => (task as any).sourceType === 'tempTask' && task.status !== 'draft')
           .sort((a, b) => {
-            const aTime = (a as any).startDate || (a as any).planStart || '';
-            const bTime = (b as any).startDate || (b as any).planStart || '';
-            if (!aTime && !bTime) return 0;
-            if (!aTime) return 1;
-            if (!bTime) return -1;
-            return bTime.localeCompare(aTime);
+            const getTime = (t: any): number => {
+              const timeStr = t.startDate || t.planStart || '';
+              if (!timeStr) return 0;
+              const date = new Date(timeStr);
+              return isNaN(date.getTime()) ? 0 : date.getTime();
+            };
+            return getTime(b) - getTime(a);
           });
       default:
         // 全部任务也按创建时间倒序
@@ -1923,9 +1926,9 @@ export function MyTasksPage() {
                 (feedbackForm.cannotContinue
                   ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时只需要填写原因
                   : (!validateRequiredFeedback().valid ||  // 正常模式需要校验必填反馈
-                     (feedbackModal.task.progress === 100
-                       ? (!feedbackForm.resultStatus || (feedbackForm.resultStatus === '其他' && !feedbackForm.resultText.trim()))  // 100%时需要选择处理结果状态，其他选项需要备注
-                       : !(feedbackForm?.progressText || '').trim())))  // 非100%时需要填写进展情况
+                     !feedbackForm.resultStatus ||  // 必须选择处理结果
+                     ((feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && !feedbackForm.resultText.trim())  // 选择"其他"或"无法继续"时需要填写备注
+                  ))
               }
               className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                 feedbackForm.cannotContinue
@@ -2030,54 +2033,46 @@ export function MyTasksPage() {
               </p>
             </div>
 
-            {/* 处理结果/进展情况（进度条下方） */}
-            {feedbackModal.task.progress === 100 ? (
-              <>
-                {/* 处理结果 - 改为下拉选择 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    处理结果 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={feedbackForm.resultStatus}
-                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultStatus: e.target.value as '' | '全部完成' | '部分完成' | '延迟完成' | '其他', resultText: '' }))}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="">请选择处理结果</option>
-                    <option value="全部完成">全部完成</option>
-                    <option value="部分完成">部分完成</option>
-                    <option value="延迟完成">延迟完成</option>
-                    <option value="其他">其他</option>
-                  </select>
-                </div>
-                {/* 备注输入框 - 仅当选择"其他"时显示 */}
-                {feedbackForm.resultStatus === '其他' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      备注说明 <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={feedbackForm.resultText}
-                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
-                      placeholder="请详细说明处理情况和原因..."
-                      rows={4}
-                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              /* 小于100%时显示进展情况 */
+            {/* 处理结果/进展情况（进度条下方 - 统一使用下拉选择） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                处理结果 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={feedbackForm.resultStatus}
+                onChange={(e) => {
+                  const newStatus = e.target.value as '' | '全部完成' | '部分完成' | '延迟完成' | '无法继续' | '其他';
+                  setFeedbackForm(prev => ({
+                    ...prev,
+                    resultStatus: newStatus,
+                    resultText: '',
+                    // 选择"无法继续"时自动设置 cannotContinue 为 true
+                    cannotContinue: newStatus === '无法继续',
+                    cannotContinueReason: newStatus === '无法继续' ? prev.cannotContinueReason : '',
+                  }));
+                }}
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                <option value="">请选择处理结果</option>
+                <option value="全部完成">全部完成</option>
+                <option value="部分完成">部分完成</option>
+                <option value="延迟完成">延迟完成</option>
+                <option value="无法继续">无法继续</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+            {/* 备注输入框 - 仅当选择"其他"或"无法继续"时显示 */}
+            {(feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  进展情况 <span className="text-red-500">*</span>
+                  备注说明 <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  value={feedbackForm.progressText}
-                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, progressText: e.target.value }))}
-                  placeholder="请描述当前处理进度和下一步计划..."
+                  value={feedbackForm.resultText}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
+                  placeholder="请详细说明处理情况和原因..."
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 />
               </div>
             )}

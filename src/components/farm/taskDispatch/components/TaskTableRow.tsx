@@ -164,37 +164,6 @@ export function TaskTableRow({
         </div>
       </td>
 
-      {/* 备注 */}
-      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
-        {(task as any).remarks || '-'}
-      </td>
-
-      {/* 作业标准 */}
-      <td className="px-3 py-3 whitespace-nowrap">
-        {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
-          <button
-            onClick={onViewSop}
-            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
-          >
-            <FileText className="w-3 h-3" />
-            SOP文件
-          </button>
-        ) : (
-          <span className="text-gray-400 text-xs">-</span>
-        )}
-      </td>
-
-      {/* 计划开始 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</td>
-
-      {/* 计划结束 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</td>
-
-      {/* 任务工时 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
-      </td>
-
       {/* 操作按钮 */}
       <td className="px-3 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1 flex-wrap">
@@ -299,6 +268,37 @@ export function TaskTableRow({
             </button>
           )}
         </div>
+      </td>
+
+      {/* 备注 */}
+      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
+        {(task as any).remarks || '-'}
+      </td>
+
+      {/* 作业标准 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
+          <button
+            onClick={onViewSop}
+            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
+          >
+            <FileText className="w-3 h-3" />
+            SOP文件
+          </button>
+        ) : (
+          <span className="text-gray-400 text-xs">-</span>
+        )}
+      </td>
+
+      {/* 计划开始 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</td>
+
+      {/* 计划结束 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</td>
+
+      {/* 任务工时 */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+        {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
       </td>
     </tr>
   );
