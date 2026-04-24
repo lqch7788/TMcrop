@@ -17,6 +17,7 @@ import { VerifyTaskModal } from '../../components/farm/hub/VerifyTaskModal';
 import { TaskAcceptanceAdapter } from '../../components/farm/hub/modals/TaskAcceptanceAdapter';
 import { ProblemDispatchModal } from '../../components/farm/hub/ProblemDispatchModal';
 import { InspectionDetailModal } from '../../components/farm/hub/InspectionDetailModal';
+import { SelectExecutorModal } from '../../components/farm/hub/modals/SelectExecutorModal';
 import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
@@ -89,17 +90,22 @@ function autoGenerateTaskCode(tasks: Task[]): string {
 
 function getTypeLabel(type: string): string {
   const typeMap: Record<string, string> = {
-    'planting': '播种',
-    'fertilizing': '施肥',
+    'fertilization': '施肥',
     'irrigation': '灌溉',
+    'pruning': '修剪',
+    'pesticide': '植保',
+    'rootIrrigation': '灌根',
+    'planting': '定植',
+    'harvest': '采收',
+    'weeding': '除草',
+    'other': '其他',
+    // 兼容旧格式
+    'fertilizing': '施肥',
     'pest_control': '病虫害防治',
     'harvesting': '采收',
-    'pruning': '修剪整枝',
-    'weeding': '除草',
     'soil_management': '土壤管理',
     'seedling': '育苗',
     'transplanting': '移栽',
-    'other': '其他',
   };
   return typeMap[type] || type;
 }
@@ -134,6 +140,9 @@ export function FarmTaskHub() {
   // SOP 弹窗状态
   const [showSopModal, setShowSopModal] = useState(false);
   const [selectedSopContent, setSelectedSopContent] = useState<string>('');
+
+  // 选择执行人弹窗状态
+  const [selectExecutorTask, setSelectExecutorTask] = useState<import('../../types/task').Task | null>(null);
 
   // 新建任务状态
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -236,11 +245,8 @@ export function FarmTaskHub() {
       } else if (newTask.types.includes('other') && !newTask.typeRemarks.trim()) {
         error = '请输入其他任务备注';
       }
-    } else if (createStep === 2) {
-      if (!newTask.assignee) {
-        error = '请选择执行人';
-      }
     }
+    // Step 2 不需要验证执行人（执行人在任务列表中单独选择）
 
     if (error) {
       setStepError(error);
@@ -620,9 +626,8 @@ export function FarmTaskHub() {
       error = '请选择任务区域';
     } else if (newTask.crops.length === 0) {
       error = '请选择作物';
-    } else if (!newTask.assignee) {
-      error = '请选择执行人';
     }
+    // 执行人不再在新建时选择，而是在任务列表中单独选择
 
     if (error) {
       setStepError(error);
@@ -689,7 +694,7 @@ export function FarmTaskHub() {
     hub.refresh();
   };
 
-  // 接受任务 - 打开验收弹窗
+  // 验收任务 - 打开验收弹窗
   const handleTaskAccept = (task: import('../../types/task').Task) => {
     setVerifyTaskId(task.id);
   };
@@ -697,6 +702,21 @@ export function FarmTaskHub() {
   // 催办任务
   const handleTaskRemind = (task: import('../../types/task').Task) => {
     console.log('[FarmTaskHub] 催办任务:', task);
+  };
+
+  // 选择执行人
+  const handleSelectExecutor = (task: import('../../types/task').Task) => {
+    setSelectExecutorTask(task);
+  };
+
+  // 确认选择执行人
+  const handleConfirmSelectExecutor = (assigneeId: string, assigneeName: string) => {
+    if (selectExecutorTask) {
+      // 调用 acceptAndAssign 函数：设置执行人并将状态变为 accepted
+      tasksHook.acceptAndAssign(selectExecutorTask.id, assigneeId, assigneeName);
+      setSelectExecutorTask(null);
+      hub.refresh();
+    }
   };
 
   // 批量操作回调
@@ -783,6 +803,7 @@ export function FarmTaskHub() {
                 onContinue={handleTaskContinue}
                 onAccept={handleTaskAccept}
                 onRemind={handleTaskRemind}
+                onSelectExecutor={handleSelectExecutor}
                 onViewSop={(task) => {
                   setSelectedSopContent((task as any).sopContent || '');
                   setShowSopModal(true);
@@ -932,6 +953,14 @@ export function FarmTaskHub() {
         </div>
       </Modal>
 
+      {/* 选择执行人弹窗 */}
+      <SelectExecutorModal
+        isOpen={!!selectExecutorTask}
+        task={selectExecutorTask}
+        onConfirm={handleConfirmSelectExecutor}
+        onClose={() => setSelectExecutorTask(null)}
+      />
+
       {/* 新建任务模态框 */}
       <Modal
         isOpen={showCreateModal}
@@ -949,7 +978,7 @@ export function FarmTaskHub() {
                 上一步
               </button>
             )}
-            {createStep === 3 ? (
+            {createStep === 2 ? (
               <div className="flex gap-2 ml-auto">
                 <button
                   onClick={handleSaveDraft}
@@ -996,14 +1025,7 @@ export function FarmTaskHub() {
             </div>
             <div className={`flex items-center gap-2 ${createStep >= 2 ? 'text-emerald-600' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>2</div>
-              <span className="text-sm font-medium">资源与人员</span>
-            </div>
-            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
-              <div className={`h-full bg-emerald-500 transition-all ${createStep >= 3 ? 'w-full' : 'w-0'}`} />
-            </div>
-            <div className={`flex items-center gap-2 ${createStep >= 3 ? 'text-emerald-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 3 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>3</div>
-              <span className="text-sm font-medium">时间与要求</span>
+              <span className="text-sm font-medium">资源与时间</span>
             </div>
           </div>
         </div>
@@ -1376,110 +1398,9 @@ export function FarmTaskHub() {
             </div>
           )}
 
-          {/* Step 2: 资源与人员 */}
+          {/* Step 2: 资源与时间 */}
           {createStep === 2 && (
             <div className="space-y-4">
-              {/* 执行人选择模式切换 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">指派方式 <span className="text-red-500">*</span></label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dispatchMode"
-                      value="manual"
-                      checked={dispatchMode === 'manual'}
-                      onChange={() => {
-                        setDispatchMode('manual');
-                        setAssignedTo(null);
-                        setAiConfidenceScore(null);
-                      }}
-                      className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-gray-700">👤 手动选择</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dispatchMode"
-                      value="ai_assisted"
-                      checked={dispatchMode === 'ai_assisted'}
-                      onChange={() => {
-                        setDispatchMode('ai_assisted');
-                        setAssignedTo(null);
-                        setAiConfidenceScore(null);
-                        // 切换到AI辅助模式时获取推荐
-                        setTimeout(() => fetchAIRecommendations(), 0);
-                      }}
-                      className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-gray-700">🤖 待智能推荐</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* 执行人选择区域 */}
-              {dispatchMode === 'manual' ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">执行人 <span className="text-red-500">*</span></label>
-                  <select
-                    value={newTask.assignee}
-                    onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">请选择执行人</option>
-                    {taskDispatchStaff.map(s => (
-                      <option key={s.id} value={s.name}>{s.name} ({s.status === 'available' ? '空闲' : s.status === 'busy' ? '工作中' : '休息中'})</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">智能推荐</label>
-                  <AIRecommendationPanel
-                    taskInfo={{
-                      id: newTask.taskId || '',
-                      taskCode: newTask.taskId || '',
-                      title: newTask.types[0] || '农事任务',
-                      type: newTask.types[0] || '',
-                      typeName: newTask.types[0] || '',
-                      priority: (newTask.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
-                      workZone: newTask.fields[0] || '',
-                      greenhouse: newTask.fields[0] || '',
-                      cropName: newTask.crops[0] || '',
-                      batchId: newTask.batchId,
-                      batchCode: newTask.batchCode,
-                      estimatedHours: newTask.estimatedHours,
-                      dueDate: newTask.planEnd?.split(' ')[0] || '',
-                    }}
-                    recommendations={aiRecommendations}
-                    onWorkerSelect={(workerId, score) => {
-                      setAssignedTo(workerId);
-                      setAiConfidenceScore(score);
-                      // 同步更新 newTask.assignee 为选中的人员姓名
-                      // 优先从 taskDispatchStaff 查找（用于兼容）
-                      const selectedWorker = taskDispatchStaff.find(s => s.id.toString() === workerId);
-                      if (selectedWorker) {
-                        setNewTask({ ...newTask, assignee: selectedWorker.name });
-                      } else {
-                        // 如果找不到，尝试从 aiRecommendations 中查找（AI推荐使用的worker列表）
-                        const aiWorker = aiRecommendations.find(r => r.worker.id === workerId);
-                        if (aiWorker) {
-                          setNewTask({ ...newTask, assignee: aiWorker.worker.name });
-                        }
-                      }
-                    }}
-                    onManualSelect={() => setDispatchMode('manual')}
-                    config={{ defaultSelectTop: true }}
-                    selectedWorkerId={assignedTo || undefined}
-                  />
-                  {aiConfidenceScore !== null && (
-                    <p className="mt-2 text-sm text-emerald-600">
-                      当前选中执行人置信度：{aiConfidenceScore}分
-                    </p>
-                  )}
-                </div>
-              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">所需物资</label>
                 <div className="border border-gray-200 rounded-lg p-3 space-y-2">
@@ -1633,23 +1554,18 @@ export function FarmTaskHub() {
                   </button>
                 </div>
               </div>
-              {/* 资源与人员备注 */}
+              {/* 资源备注 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">备注（可选）</label>
                 <textarea
                   value={newTask.toolsRemarks || ''}
                   onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
-                  placeholder="补充说明资源与人员相关要求"
+                  placeholder="补充说明资源相关要求"
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-            </div>
-          )}
-
-          {/* Step 3: 时间与要求 */}
-          {createStep === 3 && (
-            <div className="space-y-4">
+              {/* 时间与要求 */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {/* 工作制 */}
                 <div>

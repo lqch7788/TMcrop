@@ -120,8 +120,13 @@ function convertToTask(t: TaskDispatchTask): Task {
     reworkHistory: [],
     deadlineExtensions: [],
     version: 1,
-    createdAt: `2026-${t.id.substring(0, 2)}-${t.id.substring(2, 4)}T08:00:00Z`,
-    updatedAt: `2026-${t.id.substring(0, 2)}-${t.id.substring(2, 4)}T08:00:00Z`,
+    // 从任务 ID 解析日期：格式如 NS20260417-001，取中间的日期部分
+    createdAt: t.id && t.id.length >= 10
+      ? `2026-${t.id.substring(5, 7)}-${t.id.substring(7, 9)}T08:00:00Z`
+      : new Date().toISOString(),
+    updatedAt: t.id && t.id.length >= 10
+      ? `2026-${t.id.substring(5, 7)}-${t.id.substring(7, 9)}T08:00:00Z`
+      : new Date().toISOString(),
   };
 }
 
@@ -456,6 +461,9 @@ export interface UseTasksReturn {
   // 接受任务
   acceptTask: (id: string) => void;
 
+  // 选择执行人并直接接受（用于待派工任务）
+  acceptAndAssign: (id: string, assigneeId: string, assigneeName: string) => void;
+
   // 提交进度
   submitProgress: (
     id: string,
@@ -692,6 +700,7 @@ export function useTasks(): UseTasksReturn {
       const updated = [savedTask, ...prev];
       console.log('[createTask] 创建任务:', JSON.stringify({ id: realTaskId, title: savedTask.title, dispatchMode: savedTask.dispatchMode, status: savedTask.status }));
       console.log('[createTask] 更新后任务总数:', updated.length, '其中农事任务数量:', updated.filter(t => t.dispatchMode === 'farm').length);
+      console.log('[createTask] 任务 dispatchMode 详情:', savedTask.dispatchMode);
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
@@ -735,23 +744,22 @@ export function useTasks(): UseTasksReturn {
     }
   }, [taskRecords, saveTaskRecords, createTaskRecord]);
 
-  // 撤回任务
+  // 撤回任务（撤回执行人，任务可重新派发）
   const withdrawTask = useCallback((id: string, reason: string) => {
     setTasks(prev => {
       const updated = prev.map(task => {
         if (task.id !== id || task.status !== 'pending') return task;
 
         const now = new Date().toISOString();
-        const record = createTaskRecord({ ...task, status: 'cancelled' }, 'withdraw', 'pending', { reason });
+        const record = createTaskRecord({ ...task, assigneeId: '', assigneeName: '' }, 'withdraw', 'pending', { reason });
 
         saveTaskRecords([record, ...taskRecords]);
 
         return {
           ...task,
-          status: 'cancelled',
-          cancelledReason: reason,
-          cancelledAt: now,
-          cancelledBy: task.assignerId,
+          // 撤回：清空执行人，状态保持 pending（可重新派发）
+          assigneeId: '',
+          assigneeName: '',
           updatedAt: now,
           version: task.version + 1,
         };
@@ -763,12 +771,12 @@ export function useTasks(): UseTasksReturn {
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
-  // 取消任务
+  // 取消任务（彻底取消，后续不再执行）
   const cancelTask = useCallback((id: string, reason: string) => {
     setTasks(prev => {
       const updated = prev.map(task => {
         if (task.id !== id) return task;
-        if (!['accepted', 'in_progress'].includes(task.status)) return task;
+        if (!['pending', 'accepted', 'in_progress'].includes(task.status)) return task;
 
         const now = new Date().toISOString();
         const record = createTaskRecord({ ...task, status: 'cancelled' }, 'cancel', task.status, { reason });
@@ -781,6 +789,9 @@ export function useTasks(): UseTasksReturn {
           cancelledReason: reason,
           cancelledAt: now,
           cancelledBy: task.assignerId,
+          // 取消：清空执行人，任务彻底终止
+          assigneeId: '',
+          assigneeName: '',
           updatedAt: now,
           version: task.version + 1,
         };
@@ -792,7 +803,7 @@ export function useTasks(): UseTasksReturn {
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
-  // 接受任务
+  // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 in_progress
   const acceptTask = useCallback((id: string) => {
     setTasks(prev => {
       const updated = prev.map(task => {
@@ -802,7 +813,7 @@ export function useTasks(): UseTasksReturn {
         const nowStr = now.toISOString().split('T')[0];
         const timeStr = now.toTimeString().slice(0, 5);
 
-        const record = createTaskRecord({ ...task, status: 'accepted' }, 'accept', 'pending');
+        const record = createTaskRecord({ ...task, status: 'in_progress' }, 'accept', 'pending');
 
         saveTaskRecords([record, ...taskRecords]);
 
@@ -823,7 +834,7 @@ export function useTasks(): UseTasksReturn {
 
         return {
           ...task,
-          status: 'accepted',
+          status: 'in_progress',
           acceptedAt: now.toISOString(),
           startTime: nowStr,
           updatedAt: now.toISOString(),
@@ -836,6 +847,36 @@ export function useTasks(): UseTasksReturn {
       return updated;
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, addAttendance]);
+
+  // 选择执行人（用于待派工任务）- 只设置执行人，状态保持 pending
+  const acceptAndAssign = useCallback((id: string, assigneeId: string, assigneeName: string) => {
+    setTasks(prev => {
+      const updated = prev.map(task => {
+        if (task.id !== id) return task;
+
+        // 创建操作记录
+        const record = createTaskRecord(
+          { ...task, assigneeId, assigneeName },
+          'assign',
+          task.status
+        );
+
+        saveTaskRecords([record, ...taskRecords]);
+
+        return {
+          ...task,
+          assigneeId,
+          assigneeName,
+          updatedAt: new Date().toISOString(),
+          version: task.version + 1,
+        };
+      });
+
+      // 持久化到 localStorage
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
+      return updated;
+    });
+  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 提交进度
   const submitProgress = useCallback((
@@ -1459,6 +1500,7 @@ export function useTasks(): UseTasksReturn {
     withdrawTask,
     cancelTask,
     acceptTask,
+    acceptAndAssign,
     submitProgress,
     handleOvertime,
     acceptCompletion,
