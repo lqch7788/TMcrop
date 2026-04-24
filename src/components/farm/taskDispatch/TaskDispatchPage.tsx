@@ -586,23 +586,42 @@ export default function TaskDispatchPage() {
   // 过滤任务 - 优先使用 useTasks 的数据（包含兼容字段），fallback 到 mockTasks
   // 注意：农事任务表只显示 dispatchMode='farm' 的农事任务，排除临时任务和巡查反馈任务
   const taskDataSource = tasks.length > 0 ? tasks : mockTasks;
-  const filteredTasks = taskDataSource.filter((task: any) => {
-    // 过滤掉非农事任务（排除临时任务 tempTask 和巡查反馈任务 inspection）
-    // 通过 dispatchMode 字段判断，dispatchMode 为 'farm' 或未定义的才是农事任务
-    const dispatchMode = task.dispatchMode || 'farm';
-    if (dispatchMode !== 'farm') return false;
-    if (taskIdSearch && !task.id.toLowerCase().includes(taskIdSearch.toLowerCase())) return false;
-    if (statusFilter !== 'all' && task.status !== statusFilter) return false;
-    if (fieldFilter !== 'all') {
-      const taskField = task.greenhouseId || task.field || '';
-      if (taskField !== fieldFilter) return false;
-    }
-    if (assigneeFilter !== 'all') {
-      const taskAssignee = task.assigneeId || task.assignee || '';
-      if (taskAssignee !== assigneeFilter) return false;
-    }
-    return true;
-  });
+
+  // 排序函数：按创建时间倒序（最新在前）
+  // 使用时间戳比较，确保无效日期也能正确排序
+  const sortByCreatedAt = (a: any, b: any) => {
+    const getCreatedAtTime = (task: any): number => {
+      const timeStr = task.createdAt || task.planStart || task.startDate || '';
+      if (!timeStr) return 0;
+      const date = new Date(timeStr);
+      return isNaN(date.getTime()) ? 0 : date.getTime();
+    };
+    const aTime = getCreatedAtTime(a);
+    const bTime = getCreatedAtTime(b);
+    // 倒序，最新在前：bTime - aTime
+    // 无效日期（0）会排在最后
+    return bTime - aTime;
+  };
+
+  const filteredTasks = taskDataSource
+    .filter((task: any) => {
+      // 过滤掉非农事任务（排除临时任务 tempTask 和巡查反馈任务 inspection）
+      // 通过 dispatchMode 字段判断，dispatchMode 为 'farm' 或未定义的才是农事任务
+      const dispatchMode = task.dispatchMode || 'farm';
+      if (dispatchMode !== 'farm') return false;
+      if (taskIdSearch && !task.id.toLowerCase().includes(taskIdSearch.toLowerCase())) return false;
+      if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+      if (fieldFilter !== 'all') {
+        const taskField = task.greenhouseId || task.field || '';
+        if (taskField !== fieldFilter) return false;
+      }
+      if (assigneeFilter !== 'all') {
+        const taskAssignee = task.assigneeId || task.assignee || '';
+        if (taskAssignee !== assigneeFilter) return false;
+      }
+      return true;
+    })
+    .sort(sortByCreatedAt);
 
   // ========== 新建任务分步验证 ==========
   // Step 1 验证：任务定义
@@ -1349,7 +1368,8 @@ export default function TaskDispatchPage() {
       dispatchMode: dispatchMode,
       aiConfidenceScore: aiConfidenceScore,
       submitToAiAt: dispatchMode === 'ai_assisted' && !assignedTo ? new Date().toISOString() : undefined,
-    });
+    }, 'farm'  // 农事任务的 dispatchMode 固定为 'farm'
+    );
 
     // 用 useTasks 返回的任务 ID 同步更新 mockTasks（保持 ID 一致）
     const newTaskData = {

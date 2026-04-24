@@ -168,6 +168,24 @@ export function useFarmHub(): UseFarmHubReturn {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 任务数据（直接从 localStorage 读取最新数据，确保实时更新）
+  // 排序函数：按创建时间倒序（最新在前）
+  // 使用时间戳比较，确保无效日期也能正确排序
+  const sortByCreatedAt = (a: Task, b: Task) => {
+    const getCreatedAtTime = (task: Task): number => {
+      const timeStr = task.createdAt || task.planStart || task.startDate || '';
+      if (!timeStr) return 0;
+      // 尝试解析为有效日期
+      const date = new Date(timeStr);
+      // 如果是无效日期（返回 NaN），返回 0 让有效日期排前面
+      return isNaN(date.getTime()) ? 0 : date.getTime();
+    };
+    const aTime = getCreatedAtTime(a);
+    const bTime = getCreatedAtTime(b);
+    // 倒序，最新在前：bTime - aTime
+    // 无效日期（0）会排在最后
+    return bTime - aTime;
+  };
+
   const tasks = useMemo(() => {
     try {
       // 直接从 localStorage 读取最新任务数据
@@ -175,19 +193,44 @@ export function useFarmHub(): UseFarmHubReturn {
       if (stored) {
         const parsed = JSON.parse(stored);
         const allTasks: Task[] = parsed.data || parsed || [];
-        return allTasks.filter(t => {
+        // 调试日志
+        console.log('[useFarmHub] 从localStorage读取任务，数量:', allTasks.length);
+
+        // 过滤农事任务
+        const farmTasks = allTasks.filter(t => {
           const dispatchMode = t.dispatchMode || 'farm';
           return dispatchMode === 'farm';
         });
+        console.log('[useFarmHub] 过滤后农事任务数量:', farmTasks.length);
+
+        // 排序前检查
+        if (farmTasks.length > 0) {
+          console.log('[useFarmHub] 排序前第一个任务:', { id: farmTasks[0].id, createdAt: farmTasks[0].createdAt });
+          console.log('[useFarmHub] 排序前最后一个任务:', { id: farmTasks[farmTasks.length - 1].id, createdAt: farmTasks[farmTasks.length - 1].createdAt });
+        }
+
+        // 排序
+        const sortedTasks = [...farmTasks].sort(sortByCreatedAt);
+
+        // 排序后检查
+        if (sortedTasks.length > 0) {
+          console.log('[useFarmHub] 排序后第一个任务:', { id: sortedTasks[0].id, createdAt: sortedTasks[0].createdAt });
+          console.log('[useFarmHub] 排序后最后一个任务:', { id: sortedTasks[sortedTasks.length - 1].id, createdAt: sortedTasks[sortedTasks.length - 1].createdAt });
+        }
+
+        return sortedTasks;
       }
     } catch (e) {
       console.warn('[useFarmHub] 读取任务数据失败:', e);
     }
     // 备用：从 useTasksData 获取
-    return useTasksData.filter(t => {
-      const dispatchMode = t.dispatchMode || 'farm';
-      return dispatchMode === 'farm';
-    });
+    console.log('[useFarmHub] 使用 useTasksData，任务数量:', useTasksData.length);
+    return useTasksData
+      .filter(t => {
+        const dispatchMode = t.dispatchMode || 'farm';
+        return dispatchMode === 'farm';
+      })
+      .sort(sortByCreatedAt);
   }, [refreshKey, useTasksData]);
 
   // 统计数据
@@ -299,38 +342,41 @@ export function useFarmHub(): UseFarmHubReturn {
 
   // 过滤后的数据
   const getFilteredTasks = useCallback((): Task[] => {
-    return tasks.filter(task => {
-      // 状态筛选
-      if (filters.status !== 'all' && task.status !== filters.status) {
-        return false;
-      }
-      // 类型筛选
-      if (filters.type !== 'all' && task.type !== filters.type) {
-        return false;
-      }
-      // 区域筛选
-      if (filters.area !== 'all' && task.greenhouseName !== filters.area) {
-        return false;
-      }
-      // 执行人筛选
-      if (filters.assignee !== 'all' && task.assigneeName !== filters.assignee) {
-        return false;
-      }
-      // 批次筛选
-      if (filters.batchCode !== 'all' && task.batchCode !== filters.batchCode) {
-        return false;
-      }
-      // 搜索筛选
-      if (filters.search) {
-        const search = filters.search.toLowerCase();
-        return (
-          task.title.toLowerCase().includes(search) ||
-          task.taskCode.toLowerCase().includes(search) ||
-          task.assigneeName?.toLowerCase().includes(search)
-        );
-      }
-      return true;
-    });
+    // 使用统一的排序函数（已在上方定义）
+    return tasks
+      .filter(task => {
+        // 状态筛选
+        if (filters.status !== 'all' && task.status !== filters.status) {
+          return false;
+        }
+        // 类型筛选
+        if (filters.type !== 'all' && task.type !== filters.type) {
+          return false;
+        }
+        // 区域筛选
+        if (filters.area !== 'all' && task.greenhouseName !== filters.area) {
+          return false;
+        }
+        // 执行人筛选
+        if (filters.assignee !== 'all' && task.assigneeName !== filters.assignee) {
+          return false;
+        }
+        // 批次筛选
+        if (filters.batchCode !== 'all' && task.batchCode !== filters.batchCode) {
+          return false;
+        }
+        // 搜索筛选
+        if (filters.search) {
+          const search = filters.search.toLowerCase();
+          return (
+            task.title.toLowerCase().includes(search) ||
+            task.taskCode.toLowerCase().includes(search) ||
+            task.assigneeName?.toLowerCase().includes(search)
+          );
+        }
+        return true;
+      })
+      .sort(sortByCreatedAt);
   }, [tasks, filters]);
 
   const getFilteredProblems = useCallback((): ProblemEntry[] => {

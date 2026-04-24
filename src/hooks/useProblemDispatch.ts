@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePersistentProblems, type ProblemEntry } from './usePersistentProblems';
 import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
+import { useTasks } from './useTasks';
 import type { Task } from '../types';
 import { workers } from '../data/mockData';
 
@@ -98,7 +99,8 @@ const calculateDueDate = (severity: ProblemEntry['issueSeverity']): string => {
  */
 export function useProblemDispatch() {
   const { problems, updateProblem } = usePersistentProblems();
-  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
+  // 使用 useTasks 来统一管理任务（确保任务状态同步）
+  const { tasks, createTask, updateTask, updateTaskStatus } = useTasks();
   const [dispatchRecords, setDispatchRecords] = useLocalStorage<DispatchRecord[]>(
     STORAGE_KEYS.DISPATCH_RECORDS,
     []
@@ -158,11 +160,8 @@ export function useProblemDispatch() {
     // 确定优先级：优先使用自定义优先级，否则根据问题严重程度自动映射
     const priority: Task['priority'] = customPriority || SEVERITY_PRIORITY_MAP[problem.issueSeverity];
 
-    // 创建任务
-    const now = new Date().toISOString();
-    const newTask: Task = {
-      id: generateTaskId(tasks),
-      taskCode: generateTaskCode(tasks),
+    // 通过 useTasks.createTask 创建任务（统一任务管理，新任务自动添加到列表前面）
+    const newTask = createTask({
       title: `【问题处理】${problem.issueText.slice(0, 30)}`,
       type: getProblemType(problem.issueText),
       typeName: '问题处理',
@@ -172,7 +171,7 @@ export function useProblemDispatch() {
       batchCode: '',
       greenhouseId: problem.greenhouseId,
       greenhouseName: problem.greenhouseName,
-      mode: 'glass',
+      mode: 'glass' as any,
       assigneeId,
       assigneeName,
       assignerId: dispatcherId,
@@ -187,16 +186,8 @@ export function useProblemDispatch() {
       // 保留原始巡查单号（用于追踪问题处理全过程）
       sourceId: problem.sourceId,
       sourceCode: problem.sourceId,
-      // 创建和更新时间（用于列表排序）
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // 保存任务
-    setTasks(prev => {
-      const updated = [...prev, newTask];
-      console.log('[dispatchProblem] 保存任务:', JSON.stringify(newTask, null, 2));
-      return updated;
+      // 派发模式标记
+      dispatchMode: 'problem' as any,
     });
 
     // 创建流转记录
@@ -232,7 +223,7 @@ export function useProblemDispatch() {
     }]);
 
     return newTask;
-  }, [problems, updateProblem, setTasks, setDispatchRecords]);
+  }, [problems, updateProblem, createTask, setDispatchRecords]);
 
   // 批量分派问题
   const batchDispatchProblems = useCallback((
@@ -434,13 +425,9 @@ export function useProblemDispatch() {
 
     // 同步更新关联任务的状态为已完成
     if (problem.sourceTaskId) {
-      setTasks(prev => prev.map(t =>
-        t.id === problem.sourceTaskId
-          ? { ...t, status: 'completed', progress: 100 }
-          : t
-      ));
+      updateTaskStatus(problem.sourceTaskId, 'completed');
     }
-  }, [problems, updateProblem, setTasks]);
+  }, [problems, updateProblem, updateTaskStatus]);
 
   // 验收返工（退回处理）
   // 第一次返工：保持原执行人，执行人继续处理
@@ -480,11 +467,7 @@ export function useProblemDispatch() {
       });
       // 任务状态变为已拒绝（原执行人被退回，任务不再属于他）
       if (problem.sourceTaskId) {
-        setTasks(prev => prev.map(t =>
-          t.id === problem.sourceTaskId
-            ? { ...t, status: 'rejected' }
-            : t
-        ));
+        updateTaskStatus(problem.sourceTaskId, 'rejected');
       }
     } else {
       // 第一次返工：保持原执行人，增加返工计数
@@ -494,14 +477,10 @@ export function useProblemDispatch() {
       });
       // 任务状态变为进行中，执行人继续处理（不改变handler）
       if (problem.sourceTaskId) {
-        setTasks(prev => prev.map(t =>
-          t.id === problem.sourceTaskId
-            ? { ...t, status: 'in_progress' }
-            : t
-        ));
+        updateTaskStatus(problem.sourceTaskId, 'in_progress');
       }
     }
-  }, [problems, updateProblem, setTasks]);
+  }, [problems, updateProblem, updateTaskStatus]);
 
   // 获取问题的流转记录
   const getProblemFlowRecords = useCallback((problemId: number): ProblemFlowRecord[] => {
