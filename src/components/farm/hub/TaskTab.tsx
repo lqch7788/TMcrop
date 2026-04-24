@@ -15,6 +15,7 @@ import { Plus, Upload } from 'lucide-react';
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
 import { taskDispatchStaff } from '../../../data/farmMockData';
+import { EDITABLE_STATUSES, DELETABLE_STATUSES } from './constants_taskDispatch';
 
 // 状态配置（与 taskDispatch 保持一致）
 const STATUS_FILTERS = [
@@ -64,6 +65,7 @@ interface TaskTabProps {
   onAccept?: (task: Task) => void;
   onRemind?: (task: Task) => void;
   onViewSop?: (sopContent: string) => void;
+  onSelectExecutor?: (task: Task) => void;
   // 批量操作回调
   onBatchDispatch?: (taskIds: string[]) => void;
   onBatchVerify?: (taskIds: string[]) => void;
@@ -98,6 +100,7 @@ export function TaskTab({
   onAccept,
   onRemind,
   onViewSop,
+  onSelectExecutor,
   onBatchDispatch,
   onBatchVerify,
   onBatchDelete,
@@ -213,6 +216,13 @@ export function TaskTab({
     }
   }, [onRemind]);
 
+  // 处理选择执行人
+  const handleSelectExecutor = useCallback((task: Task) => {
+    if (onSelectExecutor) {
+      onSelectExecutor(task);
+    }
+  }, [onSelectExecutor]);
+
   // 处理导出确认
   const handleConfirmExport = useCallback(() => {
     if (onExport && selectedIds.length > 0) {
@@ -241,18 +251,18 @@ export function TaskTab({
         }
       });
     } else if (toolbarMode === 'batchEdit') {
-      // 批量编辑模式：选中可编辑的任务
+      // 批量编辑模式：选中可编辑的任务（使用常量）
       filteredTasks.forEach(task => {
-        if (['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'].includes(task.status)) {
+        if (EDITABLE_STATUSES.includes(task.status)) {
           if (!selectedIds.includes(task.id)) {
             onToggleSelect(task.id);
           }
         }
       });
     } else if (toolbarMode === 'batchDelete') {
-      // 批量删除模式：选中可删除的任务（草稿、已取消、已放弃）
+      // 批量删除模式：选中可删除的任务（使用常量）
       filteredTasks.forEach(task => {
-        if (['draft', 'cancelled', 'abandoned'].includes(task.status)) {
+        if (DELETABLE_STATUSES.includes(task.status)) {
           if (!selectedIds.includes(task.id)) {
             onToggleSelect(task.id);
           }
@@ -429,6 +439,8 @@ export function TaskTab({
         onOvertime={handleOvertime}
         onContinue={handleContinue}
         onReassign={handleReassign}
+        onSelectExecutor={handleSelectExecutor}
+        isMyTasksView={false}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
           setPageSize(size);
@@ -445,27 +457,12 @@ export function TaskTab({
           onClearSelection();
         }}
         onCancelBatchEdit={toggleBatchEditMode}
+        onCancelBatchDelete={toggleBatchDeleteMode}
         onBatchDelete={toggleBatchDeleteMode}
         onExport={toggleExportMode}
         onImport={onImport}
         onCreate={onCreateTask}
       />
-      )}
-
-      {/* 批量操作提示栏 */}
-      {selectedIds.length > 0 && toolbarMode !== 'normal' && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-4 z-40">
-          <span>已选择 {selectedIds.length} 项</span>
-          <button
-            onClick={() => {
-              setToolbarMode('normal');
-              onClearSelection();
-            }}
-            className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
-          >
-            取消
-          </button>
-        </div>
       )}
     </div>
   );
