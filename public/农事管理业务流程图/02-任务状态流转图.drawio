@@ -1,0 +1,137 @@
+<mxfile host="Electron">
+  <diagram name="任务状态流转图" updated="2026-04-23" id="0">
+    <mxGraphModel dx="1212" dy="889" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" value="任务状态流转图（10种状态）" vertex="1">
+          <mxGeometry height="40" width="400" x="652" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="s_draft" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d9d9d9;strokeColor=#595959;fontColor=#000000;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="draft&#xa;草稿" vertex="1">
+          <mxGeometry height="60" width="100" x="522" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="s_pending" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#000000;fillColor=#ffe58f;strokeColor=#d46b08;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="pending&#xa;待接受" vertex="1">
+          <mxGeometry height="60" width="100" x="524" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="s_accepted" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#000000;fillColor=#b7eb8f;strokeColor=#389e0d;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="accepted&#xa;已接受" vertex="1">
+          <mxGeometry height="60" width="100" x="694" y="281" as="geometry" />
+        </mxCell>
+        <mxCell id="s_in_progress" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#000000;fillColor=#91d5ff;strokeColor=#096dd9;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="in_progress&#xa;进行中" vertex="1">
+          <mxGeometry height="60" width="100" x="877" y="285" as="geometry" />
+        </mxCell>
+        <mxCell id="s_waiting" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#000000;fillColor=#ffd591;strokeColor=#d46b08;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="waiting_acceptance&#xa;待验收" vertex="1">
+          <mxGeometry height="60" width="110" x="1074" y="288" as="geometry" />
+        </mxCell>
+        <mxCell id="s_completed" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#ffffff;fillColor=#52c41a;strokeColor=#237804;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="completed&#xa;已完成" vertex="1">
+          <mxGeometry height="60" width="100" x="1267" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="s_abandoned" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#000000;fillColor=#bfbfbf;strokeColor=#595959;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="abandoned&#xa;已放弃" vertex="1">
+          <mxGeometry height="60" width="100" x="437" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cancelled" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#ffffff;fillColor=#8c8c8c;strokeColor=#434343;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="cancelled&#xa;已取消" vertex="1">
+          <mxGeometry height="60" width="100" x="691" y="412" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rejected" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#ffffff;fillColor=#ff7875;strokeColor=#cf1322;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="rejected&#xa;返工中" vertex="1">
+          <mxGeometry height="60" width="100" x="943" y="587" as="geometry" />
+        </mxCell>
+        <mxCell id="s_failed" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontColor=#ffffff;fillColor=#ff4d4f;strokeColor=#a8071a;fontSize=14;align=center;verticalAlign=middle;fontStyle=1" value="failed&#xa;任务失败" vertex="1">
+          <mxGeometry height="60" width="100" x="1126" y="599" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="s_draft" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=3;endArrow=classic;endFill=1" target="s_pending" value="派发">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="s_pending" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=3;endArrow=classic;endFill=1" target="s_accepted" value="接受">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="s_accepted" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=3;endArrow=classic;endFill=1" target="s_in_progress" value="开始执行">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" source="s_in_progress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=3;endArrow=classic;endFill=1" target="s_waiting" value="提交验收">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" edge="1" parent="1" source="s_waiting" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=3;endArrow=classic;endFill=1" target="s_completed" value="验收通过">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" edge="1" parent="1" source="s_waiting" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_rejected" value="验收驳回">
+          <mxGeometry relative="1" x="0.474" y="2" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1094" y="465" />
+              <mxPoint x="1002" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l7" edge="1" parent="1" source="s_rejected" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fa8c16;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_in_progress" value="继续执行">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="955" y="531" />
+              <mxPoint x="955" y="531" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l8" edge="1" parent="1" source="s_rejected" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_failed" value="第2次驳回">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l9" edge="1" parent="1" source="s_rejected" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fa8c16;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_pending" value="重新派发">
+          <mxGeometry relative="1" x="0.1409" y="-20" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="549" y="617" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l10" edge="1" parent="1" source="s_failed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fa8c16;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_pending" value="更换执行人">
+          <mxGeometry relative="1" x="-0.0011" y="13" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1180" y="703" />
+              <mxPoint x="549" y="703" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l11" edge="1" parent="1" source="s_accepted" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8c8c8c;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_cancelled" value="取消任务">
+          <mxGeometry relative="1" x="0.3542" y="-23" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="729" y="389" />
+              <mxPoint x="729" y="429" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l12" edge="1" parent="1" source="s_in_progress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8c8c8c;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_cancelled" value="取消任务">
+          <mxGeometry relative="1" x="0.4549" y="-5" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="909" y="447" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l13" edge="1" parent="1" source="s_pending" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8c8c8c;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_cancelled" value="撤回任务">
+          <mxGeometry relative="1" x="0.4572" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="587" y="442" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l14" edge="1" parent="1" source="s_pending" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#bfbfbf;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_abandoned" value="超时放弃">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="373" y="292" />
+              <mxPoint x="373" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l15" edge="1" parent="1" source="s_abandoned" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#bfbfbf;strokeWidth=2;endArrow=classic;endFill=1;dashed=1" target="s_pending" value="重新接受">
+          <mxGeometry relative="1" x="0.4087" y="2" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="497" y="417" />
+              <mxPoint x="497" y="328" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

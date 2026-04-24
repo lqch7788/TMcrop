@@ -1,0 +1,264 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700">
+  <style>
+    text { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+  </style>
+  <defs>
+    <marker id="a-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+    </marker>
+    <marker id="a-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#16a34a"/>
+    </marker>
+    <marker id="a-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#9333ea"/>
+    </marker>
+    <marker id="a-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ea580c"/>
+    </marker>
+    <marker id="a-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#dc2626"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="700" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="550" y="35" text-anchor="middle" font-size="22" font-weight="700" fill="#111827">问题反馈 RAG 检索增强生成架构</text>
+
+  <!-- ========== COLUMN 1: Input & Query ========== -->
+  <!-- Layer label -->
+  <rect x="40" y="60" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="80" y="77" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">01 输入</text>
+
+  <!-- User -->
+  <g transform="translate(50, 100)">
+    <circle cx="40" cy="25" r="22" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="40" y="30" text-anchor="middle" font-size="11" fill="#2563eb">用户</text>
+  </g>
+
+  <!-- Query box -->
+  <g transform="translate(40, 150)">
+    <rect x="0" y="0" width="100" height="35" rx="5" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+    <text x="50" y="22" text-anchor="middle" font-size="11" fill="#111827">问题反馈查询</text>
+  </g>
+
+  <!-- Arrow: User → Query -->
+  <path d="M80,125 L80,150" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-blue)"/>
+
+  <!-- ========== COLUMN 2: Query Processing ========== -->
+  <rect x="40" y="210" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="80" y="227" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">02 查询处理</text>
+
+  <!-- Query Processor -->
+  <g transform="translate(50, 250)">
+    <rect x="0" y="0" width="100" height="45" rx="6" fill="#faf5ff" stroke="#9333ea" stroke-width="2"/>
+    <text x="50" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">Query</text>
+    <text x="50" y="35" text-anchor="middle" font-size="10" fill="#6b7280">查询处理器</text>
+  </g>
+
+  <!-- Embedding -->
+  <g transform="translate(50, 315)">
+    <rect x="0" y="0" width="100" height="45" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="50" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">Embedding</text>
+    <text x="50" y="35" text-anchor="middle" font-size="10" fill="#6b7280">向量化模型</text>
+  </g>
+
+  <!-- Arrow: Query → Embedding -->
+  <path d="M100,295 L100,315" stroke="#9333ea" stroke-width="2" fill="none" marker-end="url(#a-purple)"/>
+
+  <!-- ========== COLUMN 3: Knowledge Bases ========== -->
+  <rect x="40" y="390" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="80" y="407" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">03 知识库</text>
+
+  <!-- Problem KB -->
+  <g transform="translate(40, 430)">
+    <path d="M25,0 L95,0 L95,45 L25,45 Z" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+    <path d="M25,0 Q25,12 60,12 Q95,12 95,0" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <path d="M25,12 Q25,24 60,24 Q95,24 95,12" fill="none" stroke="#16a34a" stroke-width="1"/>
+    <path d="M25,24 Q25,36 60,36 Q95,36 95,24" fill="none" stroke="#16a34a" stroke-width="1"/>
+    <text x="60" y="65" text-anchor="middle" font-size="11" fill="#111827">问题向量库</text>
+  </g>
+
+  <!-- Flow KB -->
+  <g transform="translate(40, 510)">
+    <path d="M25,0 L95,0 L95,45 L25,45 Z" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+    <path d="M25,0 Q25,12 60,12 Q95,12 95,0" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+    <path d="M25,12 Q25,24 60,24 Q95,24 95,12" fill="none" stroke="#2563eb" stroke-width="1"/>
+    <path d="M25,24 Q25,36 60,36 Q95,36 95,24" fill="none" stroke="#2563eb" stroke-width="1"/>
+    <text x="60" y="65" text-anchor="middle" font-size="11" fill="#111827">流转记录库</text>
+  </g>
+
+  <!-- Task KB -->
+  <g transform="translate(40, 590)">
+    <path d="M25,0 L95,0 L95,45 L25,45 Z" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+    <path d="M25,0 Q25,12 60,12 Q95,12 95,0" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+    <path d="M25,12 Q25,24 60,24 Q95,24 95,12" fill="none" stroke="#ea580c" stroke-width="1"/>
+    <path d="M25,24 Q25,36 60,36 Q95,36 95,24" fill="none" stroke="#ea580c" stroke-width="1"/>
+    <text x="60" y="65" text-anchor="middle" font-size="11" fill="#111827">任务库</text>
+  </g>
+
+  <!-- ========== COLUMN 4: Retrieval ========== -->
+  <rect x="220" y="60" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="260" y="77" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">04 检索</text>
+
+  <!-- Vector Search -->
+  <g transform="translate(220, 110)">
+    <rect x="0" y="0" width="110" height="50" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="55" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">向量检索</text>
+    <text x="55" y="38" text-anchor="middle" font-size="10" fill="#6b7280">Similarity Search</text>
+  </g>
+
+  <!-- Reranker -->
+  <g transform="translate(220, 180)">
+    <rect x="0" y="0" width="110" height="50" rx="6" fill="#faf5ff" stroke="#9333ea" stroke-width="2"/>
+    <text x="55" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">重排序</text>
+    <text x="55" y="38" text-anchor="middle" font-size="10" fill="#6b7280">Reranker</text>
+  </g>
+
+  <!-- Context Builder -->
+  <g transform="translate(220, 250)">
+    <rect x="0" y="0" width="110" height="50" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="55" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">上下文构建</text>
+    <text x="55" y="38" text-anchor="middle" font-size="10" fill="#6b7280">Context Builder</text>
+  </g>
+
+  <!-- ========== COLUMN 5: LLM ========== -->
+  <rect x="420" y="60" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="460" y="77" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">05 LLM</text>
+
+  <!-- LLM -->
+  <g transform="translate(400, 120)">
+    <rect x="0" y="0" width="130" height="55" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+    <text x="65" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">大语言模型</text>
+    <text x="65" y="42" text-anchor="middle" font-size="11" fill="#6b7280">LLM / GPT-4</text>
+  </g>
+
+  <!-- ========== COLUMN 6: Output ========== -->
+  <rect x="420" y="210" width="80" height="25" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+  <text x="460" y="227" text-anchor="middle" font-size="11" font-weight="600" fill="#6b7280">06 输出</text>
+
+  <!-- Response -->
+  <g transform="translate(400, 260)">
+    <rect x="0" y="0" width="130" height="45" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="65" y="28" text-anchor="middle" font-size="13" font-weight="500" fill="#111827">结构化回复</text>
+  </g>
+
+  <!-- ========== ARROWS ========== -->
+  <!-- Embedding → Vector Search -->
+  <path d="M150,337 L210,337 L210,135 L220,135" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-blue)"/>
+
+  <!-- Vector Search → Problem KB -->
+  <path d="M220,160 L150,160 L150,452" stroke="#16a34a" stroke-width="1.5" fill="none" marker-end="url(#a-green)"/>
+
+  <!-- Vector Search → Flow KB -->
+  <path d="M220,160 L180,160 L180,532" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#a-blue)"/>
+
+  <!-- Vector Search → Task KB -->
+  <path d="M220,160 L220,200 L120,200 L120,612" stroke="#ea580c" stroke-width="1.5" fill="none" marker-end="url(#a-orange)"/>
+
+  <!-- Problem KB return → Vector Search -->
+  <path d="M135,475 L135,200 L220,200" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4,2" fill="none" marker-end="url(#a-green)"/>
+
+  <!-- Flow KB return → Vector Search -->
+  <path d="M135,555 L135,210 L220,210" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4,2" fill="none" marker-end="url(#a-blue)"/>
+
+  <!-- Task KB return → Vector Search -->
+  <path d="M135,612 L220,612 L220,250" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="4,2" fill="none" marker-end="url(#a-orange)"/>
+
+  <!-- Vector Search → Reranker -->
+  <path d="M275,135 L275,180" stroke="#16a34a" stroke-width="2" fill="none" marker-end="url(#a-green)"/>
+
+  <!-- Reranker → Context Builder -->
+  <path d="M275,230 L275,250" stroke="#9333ea" stroke-width="2" fill="none" marker-end="url(#a-purple)"/>
+
+  <!-- Context Builder → LLM -->
+  <path d="M330,275 L390,275 L390,147" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-blue)"/>
+
+  <!-- LLM → Response -->
+  <path d="M465,175 L465,260" stroke="#dc2626" stroke-width="2" fill="none" marker-end="url(#a-red)"/>
+
+  <!-- ========== RAG PROCESS (RIGHT) ========== -->
+  <g transform="translate(620, 60)">
+    <rect x="0" y="0" width="430" height="300" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="20" y="28" font-size="15" font-weight="600" fill="#111827">RAG 检索增强流程</text>
+    <line x1="10" y1="40" x2="420" y2="40" stroke="#bfdbfe"/>
+
+    <!-- Step 1 -->
+    <g transform="translate(20, 55)">
+      <circle cx="10" cy="10" r="9" fill="#2563eb"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">1</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">用户输入问题反馈查询</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">例: "查询黄瓜叶片萎蔫问题的处理进度"</text>
+    </g>
+
+    <!-- Step 2 -->
+    <g transform="translate(20, 105)">
+      <circle cx="10" cy="10" r="9" fill="#9333ea"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">2</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">Query处理与向量化</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">将用户问题转换为向量表示</text>
+    </g>
+
+    <!-- Step 3 -->
+    <g transform="translate(20, 155)">
+      <circle cx="10" cy="10" r="9" fill="#16a34a"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">3</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">多向量库并行检索</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">问题库 + 流转记录 + 任务库</text>
+    </g>
+
+    <!-- Step 4 -->
+    <g transform="translate(230, 105)">
+      <circle cx="10" cy="10" r="9" fill="#ea580c"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">4</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">检索结果重排序</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">根据相关性得分排序，筛选Top-K</text>
+    </g>
+
+    <!-- Step 5 -->
+    <g transform="translate(230, 155)">
+      <circle cx="10" cy="10" r="9" fill="#dc2626"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">5</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">构建上下文提示</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">拼接检索到的问题、流转、任务信息</text>
+    </g>
+
+    <!-- Step 6 -->
+    <g transform="translate(230, 205)">
+      <circle cx="10" cy="10" r="9" fill="#7c3aed"/>
+      <text x="10" y="14" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="600">6</text>
+      <text x="30" y="8" font-size="12" font-weight="500" fill="#111827">LLM生成结构化回复</text>
+      <text x="30" y="24" font-size="10" fill="#6b7280">返回问题状态、处理进度、建议</text>
+    </g>
+  </g>
+
+  <!-- ========== KNOWLEDGE BASE DETAIL (RIGHT BOTTOM) ========== -->
+  <g transform="translate(620, 380)">
+    <rect x="0" y="0" width="430" height="250" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="20" y="28" font-size="15" font-weight="600" fill="#111827">知识库组成</text>
+    <line x1="10" y1="40" x2="420" y2="40" stroke="#bbf7d0"/>
+
+    <!-- Problem KB -->
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="390" height="55" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="15" y="20" font-size="12" font-weight="600" fill="#111827">问题向量库 ProblemEntry</text>
+      <text x="15" y="38" font-size="10" fill="#6b7280">• 问题描述、严重程度、状态</text>
+      <text x="15" y="50" font-size="10" fill="#6b7280">• 温室、作物、巡查人员</text>
+    </g>
+
+    <!-- Flow KB -->
+    <g transform="translate(20, 120)">
+      <rect x="0" y="0" width="390" height="55" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="15" y="20" font-size="12" font-weight="600" fill="#111827">流转记录库 FlowRecords</text>
+      <text x="15" y="38" font-size="10" fill="#6b7280">• 分派、接单、处理、提交、验收</text>
+      <text x="15" y="50" font-size="10" fill="#6b7280">• 每一步的时间、操作人、评论</text>
+    </g>
+
+    <!-- Task KB -->
+    <g transform="translate(20, 185)">
+      <rect x="0" y="0" width="390" height="55" rx="6" fill="#ffffff" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="15" y="20" font-size="12" font-weight="600" fill="#111827">任务库 Task</text>
+      <text x="15" y="38" font-size="10" fill="#6b7280">• 任务编号、类型、优先级</text>
+      <text x="15" y="50" font-size="10" fill="#6b7280">• 执行人、截止日期、状态</text>
+    </g>
+  </g>
+</svg>
