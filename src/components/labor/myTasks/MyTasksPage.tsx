@@ -717,6 +717,31 @@ export function MyTasksPage() {
     setSelectedTask(null);
   };
 
+  // 继续执行 - 返工后恢复任务执行
+  const handleContinueExecution = (task: TaskDispatchTask) => {
+    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    if (unifiedTask) {
+      continueExecution(unifiedTask.id);
+      // 记录操作
+      addTaskRecord({
+        operationType: unifiedTask.type,
+        operationTypeName: unifiedTask.typeName,
+        status: 'in_progress',
+        greenhouseId: '',
+        greenhouseName: task.field || '',
+        cropName: task.crop || '',
+        operatorId: 'U013',
+        operatorName: currentUserName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: unifiedTask.id,
+        sourceCode: unifiedTask.taskCode,
+        progress: task.progress || 0,
+        remarks: '执行人继续执行任务',
+      });
+      setRefreshKey(prev => prev + 1);
+    }
+  };
+
   // 渲染任务类型单元格
   const renderTypeCell = (task: TaskDispatchTask) => {
     const types = task.types || [];
@@ -963,14 +988,24 @@ export function MyTasksPage() {
                               </button>
                             )}
                             {task.status === 'rejected' && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleContinueExecution(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击继续执行"
+                                >
+                                  <Play className="w-3 h-3" />
+                                  继续执行
+                                </button>
+                                <button
+                                  onClick={() => openDetailModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击查看详情"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  查看
+                                </button>
+                              </div>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
                               <button
@@ -1185,14 +1220,24 @@ export function MyTasksPage() {
                               </button>
                             )}
                             {task.status === 'rejected' && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleContinueExecution(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击继续执行"
+                                >
+                                  <Play className="w-3 h-3" />
+                                  继续执行
+                                </button>
+                                <button
+                                  onClick={() => openDetailModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击查看详情"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  查看
+                                </button>
+                              </div>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
                               <button
@@ -1313,14 +1358,24 @@ export function MyTasksPage() {
                               </button>
                             )}
                             {task.status === 'rejected' && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleContinueExecution(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击继续执行"
+                                >
+                                  <Play className="w-3 h-3" />
+                                  继续执行
+                                </button>
+                                <button
+                                  onClick={() => openDetailModal(task)}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
+                                  title="点击查看详情"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  查看
+                                </button>
+                              </div>
                             )}
                             {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
                               <button

@@ -66,6 +66,8 @@ export interface FarmHubState {
     type: string;
     area: string;
     search: string;
+    assignee: string;
+    batchCode: string;
   };
 
   // 选中项
@@ -106,6 +108,7 @@ export interface UseFarmHubReturn {
 
   // 刷新数据
   refresh: () => void;
+  forceRefresh: () => void;
 
   // 统计数据计算
   getFilteredTasks: () => Task[];
@@ -154,18 +157,38 @@ export function useFarmHub(): UseFarmHubReturn {
     type: 'all',
     area: 'all',
     search: '',
+    assignee: 'all',
+    batchCode: 'all',
   });
 
   // 选中项
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // 任务数据（使用 useTasks 的数据，并通过 dispatchMode 过滤）
+  // 刷新计数器（用于强制刷新任务列表）
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // 任务数据（直接从 localStorage 读取最新数据，确保实时更新）
   const tasks = useMemo(() => {
+    try {
+      // 直接从 localStorage 读取最新任务数据
+      const stored = localStorage.getItem(STORAGE_KEYS.TASKS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const allTasks: Task[] = parsed.data || parsed || [];
+        return allTasks.filter(t => {
+          const dispatchMode = t.dispatchMode || 'farm';
+          return dispatchMode === 'farm';
+        });
+      }
+    } catch (e) {
+      console.warn('[useFarmHub] 读取任务数据失败:', e);
+    }
+    // 备用：从 useTasksData 获取
     return useTasksData.filter(t => {
       const dispatchMode = t.dispatchMode || 'farm';
       return dispatchMode === 'farm';
     });
-  }, [useTasksData]);
+  }, [refreshKey, useTasksData]);
 
   // 统计数据
   const stats = useMemo((): HubStats => {
@@ -230,6 +253,13 @@ export function useFarmHub(): UseFarmHubReturn {
     } finally {
       setIsLoading(false);
     }
+    // 刷新任务计数，触发任务列表重新渲染
+    setRefreshKey(k => k + 1);
+  }, []);
+
+  // 强制刷新任务列表
+  const forceRefresh = useCallback(() => {
+    setRefreshKey(k => k + 1);
   }, []);
 
   // 初始加载
@@ -243,7 +273,7 @@ export function useFarmHub(): UseFarmHubReturn {
   }, []);
 
   const resetFilters = useCallback(() => {
-    setFilters({ status: 'all', type: 'all', area: 'all', search: '' });
+    setFilters({ status: 'all', type: 'all', area: 'all', search: '', assignee: 'all', batchCode: 'all' });
   }, []);
 
   // 选中操作
@@ -280,6 +310,14 @@ export function useFarmHub(): UseFarmHubReturn {
       }
       // 区域筛选
       if (filters.area !== 'all' && task.greenhouseName !== filters.area) {
+        return false;
+      }
+      // 执行人筛选
+      if (filters.assignee !== 'all' && task.assigneeName !== filters.assignee) {
+        return false;
+      }
+      // 批次筛选
+      if (filters.batchCode !== 'all' && task.batchCode !== filters.batchCode) {
         return false;
       }
       // 搜索筛选
@@ -428,6 +466,7 @@ export function useFarmHub(): UseFarmHubReturn {
     selectAll,
     clearSelection,
     refresh: loadData,
+    forceRefresh,
     getFilteredTasks,
     getFilteredProblems,
     getFilteredInspections,
