@@ -38,7 +38,14 @@
       "Bash(cp D:/TMcrop/yuanxingtu/V1.2/hongzhiyun/src/components/supplier/* D:/TMcrop/yuanxingtu/V1.1/hongzhiyun/src/components/supplier/)",
       "Bash(pnpm build:*)",
       "Read(//d/TMcrop/yuanxingtu/V1.1/**)",
-      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics"
+      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics",
+      "Bash(fc \"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\src\\\\components\\\\materialReceiving\\\\modals\\\\ExportTypeModal.tsx\" \"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\src\\\\components\\\\farm\\\\harvest\\\\modals\\\\ExportFormatModal.tsx\")",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "Bash(npx tsc *)",
+      "Bash(tasklist)",
+      "Bash(netstat -ano)"
     ]
   }
 }

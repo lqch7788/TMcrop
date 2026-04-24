@@ -4,8 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Task } from '../../../hooks/useTasks';
-import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { useTasks, Task } from '../../../hooks/useTasks';
 import { users as workers, cropBatches, greenhouses } from '../../../data/mockData';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
@@ -32,6 +31,8 @@ type Worker = User & {
  * 新建任务弹窗组件
  */
 export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskModalProps) {
+  const { createTask } = useTasks();
+
   const [title, setTitle] = useState(prefillData?.title || '');
   const [description, setDescription] = useState(prefillData?.description || '');
   const [taskType, setTaskType] = useState('irrigation');
@@ -43,13 +44,6 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
   const [assigneeId, setAssigneeId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const generateTaskCode = () => {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `TK${dateStr}${randomStr}`;
-  };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -63,12 +57,11 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
 
     setIsSubmitting(true);
     try {
-      const taskCode = generateTaskCode();
       const selectedWorker = workers.find(w => w.id === assigneeId);
 
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        taskCode,
+      // 使用 useTasks.createTask 创建任务，这样 React 状态会正确更新
+      // 状态：如果选择了执行人则为 'pending'，否则为 'draft'
+      createTask({
         title: title.trim(),
         description: description.trim(),
         type: taskType,
@@ -79,49 +72,12 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
         estimatedHours,
         dueDate: plannedDate,
         priority,
-        status: assigneeId ? 'pending' : 'draft',
-        progress: 0,
         assigneeId,
         assigneeName: selectedWorker?.name || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        sourceType: prefillData?.sourceType,
+        sourceType: prefillData?.sourceType as any,
         sourceId: prefillData?.sourceId,
-      };
-
-      const storedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
-      let tasksData: any = { data: [] };
-
-      if (storedTasks) {
-        tasksData = JSON.parse(storedTasks);
-        if (!Array.isArray(tasksData)) {
-          tasksData.data = tasksData.data || [];
-        }
-      }
-
-      if (!Array.isArray(tasksData)) {
-        tasksData.data = tasksData.data || [];
-      }
-
-      tasksData.data.unshift(newTask);
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasksData));
-
-      if (assigneeId) {
-        const storedRecords = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-        const recordsData = storedRecords ? JSON.parse(storedRecords) : [];
-
-        recordsData.unshift({
-          id: `record-${Date.now()}`,
-          taskId: newTask.id,
-          taskCode: newTask.taskCode,
-          actionTime: new Date().toISOString(),
-          operatorName: '当前用户',
-          action: 'assign',
-          content: `分派任务给${selectedWorker?.name}`,
-        });
-
-        localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(recordsData));
-      }
+        dispatchMode: 'farm',
+      }, 'farm', assigneeId ? 'pending' : 'draft');
 
       onCreated();
     } catch (error) {

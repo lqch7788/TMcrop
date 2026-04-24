@@ -690,10 +690,13 @@ export function useTasks(): UseTasksReturn {
       const realTaskId = generateTaskCode(prev);
       savedTask = { ...newTask, id: realTaskId, taskCode: realTaskId };
       const updated = [savedTask, ...prev];
+      console.log('[createTask] 创建任务:', JSON.stringify({ id: realTaskId, title: savedTask.title, dispatchMode: savedTask.dispatchMode, status: savedTask.status }));
+      console.log('[createTask] 更新后任务总数:', updated.length, '其中农事任务数量:', updated.filter(t => t.dispatchMode === 'farm').length);
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
 
+    console.log('[createTask] 返回任务:', savedTask ? savedTask.id : 'null');
     return savedTask || newTask;
   }, [setTasks]);
 
@@ -1378,9 +1381,12 @@ export function useTasks(): UseTasksReturn {
     return taskRecords.filter(record => record.taskId === taskId);
   }, [taskRecords]);
 
+  // 确保 tasks 总是数组，防止 undefined 导致渲染错误
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
   return {
-    tasks,
-    unifiedTasks: tasks, // 统一任务列表（unifiedTasks作为tasks的别名）
+    tasks: safeTasks,
+    unifiedTasks: safeTasks, // 统一任务列表（unifiedTasks作为tasks的别名）
     setTasks,
     taskRecords,
     reminderRecords,
