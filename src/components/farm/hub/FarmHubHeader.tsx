@@ -31,13 +31,13 @@ function StatCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className={`text-2xl font-bold ${valueColor || 'text-gray-900'}`}>{value}</p>
+          <p className="text-xs text-gray-500">{label}</p>
+          <p className={`text-xl font-bold ${valueColor || 'text-gray-900'}`}>{value}</p>
         </div>
-        <Icon className={`w-8 h-8 ${iconColor}`} />
+        <Icon className={`w-5 h-5 ${iconColor}`} />
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ export function FarmHubHeader({
       </div>
 
       {/* 统计卡片区域 */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-5 gap-3">
         {/* 待办任务 */}
         <StatCard
           icon={ClipboardList}

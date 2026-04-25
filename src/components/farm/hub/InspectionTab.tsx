@@ -55,28 +55,22 @@ export function InspectionTab({
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">巡查类型:</span>
-          <div className="flex gap-1">
+          <select
+            value={filters.type}
+            onChange={(e) => onFilterChange('type', e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+          >
             {INSPECTION_TYPES.map((type) => (
-              <button
-                key={type.value}
-                onClick={() => onFilterChange('type', type.value)}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  filters.type === type.value
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {type.label}
-              </button>
+              <option key={type.value} value={type.value}>{type.label}</option>
             ))}
-          </div>
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">状态:</span>
           <select
             value={filters.status}
             onChange={(e) => onFilterChange('status', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
           >
             <option value="all">全部状态</option>
             <option value="normal">正常</option>
@@ -86,7 +80,7 @@ export function InspectionTab({
         </div>
         <button
           onClick={onResetFilters}
-          className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700"
+          className="px-3 py-1.5 text-sm bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
         >
           重置
         </button>

@@ -55,7 +55,7 @@ interface ImportRow {
 
 // Tab配置
 const TAB_CONFIG: { key: HubTab; label: string }[] = [
-  { key: 'task', label: '任务管理' },
+  { key: 'task', label: '农事任务' },
   { key: 'problem', label: '问题管理' },
   { key: 'inspection', label: '巡查记录' },
 ];
