@@ -17,6 +17,7 @@ export const TASK_TYPES = [
   { value: 'irrigation', label: '灌溉', icon: Droplets, color: 'bg-blue-500' },
   { value: 'pruning', label: '修剪', icon: Scissors, color: 'bg-purple-500' },
   { value: 'pesticide', label: '植保', icon: Bug, color: 'bg-red-500' },
+  { value: 'pest_control', label: '病虫害防治', icon: Bug, color: 'bg-red-500' },
   { value: 'rootIrrigation', label: '灌根', icon: Droplets, color: 'bg-cyan-500' },
   { value: 'planting', label: '定植', icon: Trees, color: 'bg-lime-500' },
   { value: 'harvest', label: '采收', icon: ShoppingBasket, color: 'bg-orange-500' },
