@@ -10,6 +10,28 @@ import { usePersistentWorkLogs, WorkLogRecord } from './usePersistentWorkLogs';
 import { STORAGE_KEYS } from './useLocalStorage';
 import { InspectionRecord } from '../types';
 
+// 巡查搜索过滤器类型
+export interface InspectionSearchFilters {
+  recordCode: string;
+  inspectorName: string;
+  inspectionType: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  problemStatus: string;
+}
+
+// 初始巡查筛选条件
+const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
+  recordCode: '',
+  inspectorName: '',
+  inspectionType: 'all',
+  startDate: '',
+  endDate: '',
+  status: 'all',
+  problemStatus: 'all',
+};
+
 // 导入初始任务数据（用于空状态时显示）
 import { taskDispatchTasks } from '../data/farmMockData';
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks } from '../data/mockData';
@@ -21,7 +43,7 @@ import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFe
 /**
  * Tab类型
  */
-export type HubTab = 'task' | 'problem' | 'inspection';
+export type HubTab = 'task' | 'problem' | 'inspection' | 'tempTask';
 
 /**
  * 统计数据
@@ -30,8 +52,13 @@ export interface HubStats {
   pendingTasks: number;           // 待办任务数
   inProgressTasks: number;        // 进行中任务数
   todayCompleted: number;         // 今日完成数
-  urgentProblems: number;        // 紧急问题数
+  urgentProblems: number;          // 紧急问题数
   todayInspections: number;       // 今日巡查数
+  // 巡查统计
+  totalInspections: number;       // 累计巡查数
+  abnormalInspections: number;    // 异常巡查数
+  pendingProblems: number;         // 待处理问题数
+  processedProblems: number;       // 已处理问题数
 }
 
 /**
@@ -167,6 +194,27 @@ export function useFarmHub(): UseFarmHubReturn {
   // 刷新计数器（用于强制刷新任务列表）
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // ========== 巡查相关状态 ==========
+  // 巡查筛选状态
+  const [inspectionFilters, setInspectionFilters] = useState<InspectionSearchFilters>(INITIAL_INSPECTION_FILTERS);
+  // 巡查分页状态
+  const [inspectionPage, setInspectionPage] = useState(1);
+  const [inspectionPageSize, setInspectionPageSize] = useState(20);
+  // 巡查模式状态
+  const [inspectionExportMode, setInspectionExportMode] = useState(false);
+  const [inspectionBatchEditMode, setInspectionBatchEditMode] = useState(false);
+  const [inspectionBatchDeleteMode, setInspectionBatchDeleteMode] = useState(false);
+  // 巡查选中行（基于当前页索引）
+  const [inspectionSelectedRows, setInspectionSelectedRows] = useState<number[]>([]);
+  // 巡查弹窗状态
+  const [inspectionDetailId, setInspectionDetailId] = useState<string | null>(null);
+  const [isCreateInspectionOpen, setIsCreateInspectionOpen] = useState(false);
+  const [isInspectionDetailOpen, setIsInspectionDetailOpen] = useState(false);
+  // 巡查批量编辑相关状态
+  const [inspectionEditedRecords, setInspectionEditedRecords] = useState<Record<string, Partial<InspectionRecord>>>({});
+  const [inspectionEditedRecordIds, setInspectionEditedRecordIds] = useState<string[]>([]);
+  const [inspectionSelectedRecordId, setInspectionSelectedRecordId] = useState<string>('');
+
   // 任务数据（直接从 localStorage 读取最新数据，确保实时更新）
   // 排序函数：按创建时间倒序（最新在前）
   // 使用时间戳比较，确保无效日期也能正确排序
@@ -257,6 +305,16 @@ export function useFarmHub(): UseFarmHubReturn {
     const todayInspections = inspections.filter(i =>
       isToday(i.checkDate)
     ).length;
+    const totalInspections = inspections.length;
+    const abnormalInspections = inspections.filter(i =>
+      i.status === 'critical' || i.status === 'abnormal'
+    ).length;
+    const pendingProblems = problems.filter(p =>
+      ['待处理', '处理中'].includes(p.status)
+    ).length;
+    const processedProblems = problems.filter(p =>
+      p.status === '已处理'
+    ).length;
 
     return {
       pendingTasks,
@@ -264,6 +322,10 @@ export function useFarmHub(): UseFarmHubReturn {
       todayCompleted,
       urgentProblems,
       todayInspections,
+      totalInspections,
+      abnormalInspections,
+      pendingProblems,
+      processedProblems,
     };
   }, [tasks, problems, inspections]);
 
@@ -408,30 +470,46 @@ export function useFarmHub(): UseFarmHubReturn {
 
   const getFilteredInspections = useCallback((): InspectionRecord[] => {
     return inspections.filter(inspection => {
+      // 巡查编号筛选
+      if (inspectionFilters.recordCode && !inspection.recordCode?.toLowerCase().includes(inspectionFilters.recordCode.toLowerCase())) {
+        return false;
+      }
+      // 提交人筛选
+      if (inspectionFilters.inspectorName && !inspection.inspectorName?.toLowerCase().includes(inspectionFilters.inspectorName.toLowerCase())) {
+        return false;
+      }
+      // 巡查类型筛选
+      if (inspectionFilters.inspectionType !== 'all' && inspection.inspectionType !== inspectionFilters.inspectionType) {
+        return false;
+      }
+      // 巡查日期起筛选
+      if (inspectionFilters.startDate && inspection.checkDate < inspectionFilters.startDate) {
+        return false;
+      }
+      // 巡查日期止筛选
+      if (inspectionFilters.endDate && inspection.checkDate > inspectionFilters.endDate) {
+        return false;
+      }
       // 状态筛选
-      if (filters.status !== 'all' && inspection.status !== filters.status) {
+      if (inspectionFilters.status !== 'all' && inspection.status !== inspectionFilters.status) {
         return false;
       }
-      // 类型筛选
-      if (filters.type !== 'all' && inspection.inspectionType !== filters.type) {
-        return false;
-      }
-      // 区域筛选
-      if (filters.area !== 'all' && inspection.greenhouseName !== filters.area) {
-        return false;
-      }
-      // 搜索筛选
-      if (filters.search) {
-        const search = filters.search.toLowerCase();
-        return (
-          inspection.recordCode?.toLowerCase().includes(search) ||
-          inspection.inspectorName?.toLowerCase().includes(search) ||
-          inspection.greenhouseName?.toLowerCase().includes(search)
-        );
+      // 问题处理状态筛选
+      if (inspectionFilters.problemStatus !== 'all') {
+        const problemStatusMap: Record<string, string> = {
+          '待处理': 'pending',
+          '处理中': 'processing',
+          '待验收': 'pending', // 待验收也是pending状态
+          '已处理': 'resolved',
+        };
+        const mappedStatus = problemStatusMap[inspectionFilters.problemStatus];
+        if (mappedStatus && inspection.issueStatus !== mappedStatus) {
+          return false;
+        }
       }
       return true;
     });
-  }, [inspections, filters]);
+  }, [inspections, inspectionFilters]);
 
   // 构建统一操作记录
   const recentRecords = useMemo((): UnifiedOperationRecord[] => {
@@ -491,6 +569,103 @@ export function useFarmHub(): UseFarmHubReturn {
   const filteredProblems = getFilteredProblems();
   const filteredInspections = getFilteredInspections();
 
+  // ========== 巡查相关操作方法 ==========
+  // 巡查筛选操作
+  const setInspectionFilter = useCallback((key: keyof InspectionSearchFilters, value: string) => {
+    setInspectionFilters(prev => ({ ...prev, [key]: value }));
+    setInspectionPage(1); // 重置页码
+  }, []);
+
+  const resetInspectionFilters = useCallback(() => {
+    setInspectionFilters(INITIAL_INSPECTION_FILTERS);
+    setInspectionPage(1);
+  }, []);
+
+  // 巡查分页操作
+  const inspectionGoToPage = useCallback((page: number) => {
+    setInspectionPage(page);
+  }, []);
+
+  const inspectionGoToPageSize = useCallback((size: number) => {
+    setInspectionPageSize(size);
+    setInspectionPage(1);
+  }, []);
+
+  // 巡查模式切换
+  const toggleInspectionExportMode = useCallback(() => {
+    setInspectionExportMode(prev => !prev);
+    setInspectionBatchEditMode(false);
+    setInspectionBatchDeleteMode(false);
+    setInspectionSelectedRows([]);
+  }, []);
+
+  const toggleInspectionBatchEditMode = useCallback(() => {
+    setInspectionBatchEditMode(prev => !prev);
+    setInspectionExportMode(false);
+    setInspectionBatchDeleteMode(false);
+    setInspectionSelectedRows([]);
+  }, []);
+
+  const toggleInspectionBatchDeleteMode = useCallback(() => {
+    setInspectionBatchDeleteMode(prev => !prev);
+    setInspectionExportMode(false);
+    setInspectionBatchEditMode(false);
+    setInspectionSelectedRows([]);
+  }, []);
+
+  // 巡查行选择操作
+  const toggleInspectionSelectRow = useCallback((index: number) => {
+    setInspectionSelectedRows(prev =>
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  }, []);
+
+  const selectAllInspectionRows = useCallback((totalRows: number) => {
+    setInspectionSelectedRows(Array.from({ length: totalRows }, (_, i) => i));
+  }, []);
+
+  const clearInspectionSelection = useCallback(() => {
+    setInspectionSelectedRows([]);
+  }, []);
+
+  // 巡查弹窗操作
+  const openInspectionDetail = useCallback((recordId: string) => {
+    setInspectionDetailId(recordId);
+    setIsInspectionDetailOpen(true);
+  }, []);
+
+  const closeInspectionDetail = useCallback(() => {
+    setInspectionDetailId(null);
+    setIsInspectionDetailOpen(false);
+  }, []);
+
+  const openCreateInspection = useCallback(() => {
+    setIsCreateInspectionOpen(true);
+  }, []);
+
+  const closeCreateInspection = useCallback(() => {
+    setIsCreateInspectionOpen(false);
+  }, []);
+
+  // 巡查批量编辑操作
+  const updateInspectionEditedRecords = useCallback((records: Record<string, Partial<InspectionRecord>>) => {
+    setInspectionEditedRecords(records);
+  }, []);
+
+  const updateInspectionEditedRecordIds = useCallback((ids: string[]) => {
+    setInspectionEditedRecordIds(ids);
+  }, []);
+
+  const updateInspectionSelectedRecordId = useCallback((id: string) => {
+    setInspectionSelectedRecordId(id);
+  }, []);
+
+  const clearInspectionEditedRecords = useCallback(() => {
+    setInspectionEditedRecords({});
+    setInspectionEditedRecordIds([]);
+    setInspectionSelectedRecordId('');
+  }, []);
+
   return {
     state: {
       activeTab,
@@ -516,6 +691,39 @@ export function useFarmHub(): UseFarmHubReturn {
     getFilteredTasks,
     getFilteredProblems,
     getFilteredInspections,
+    // 巡查状态
+    inspectionFilters,
+    inspectionPage,
+    inspectionPageSize,
+    inspectionExportMode,
+    inspectionBatchEditMode,
+    inspectionBatchDeleteMode,
+    inspectionSelectedRows,
+    inspectionDetailId,
+    isCreateInspectionOpen,
+    isInspectionDetailOpen,
+    inspectionEditedRecords,
+    inspectionEditedRecordIds,
+    inspectionSelectedRecordId,
+    // 巡查操作方法
+    setInspectionFilter,
+    resetInspectionFilters,
+    inspectionGoToPage,
+    inspectionGoToPageSize,
+    toggleInspectionExportMode,
+    toggleInspectionBatchEditMode,
+    toggleInspectionBatchDeleteMode,
+    toggleInspectionSelectRow,
+    selectAllInspectionRows,
+    clearInspectionSelection,
+    openInspectionDetail,
+    closeInspectionDetail,
+    openCreateInspection,
+    closeCreateInspection,
+    updateInspectionEditedRecords,
+    updateInspectionEditedRecordIds,
+    updateInspectionSelectedRecordId,
+    clearInspectionEditedRecords,
   };
 }
 

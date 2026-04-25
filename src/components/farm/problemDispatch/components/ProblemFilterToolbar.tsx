@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Send, Download, Trash2 } from 'lucide-react';
+import { Send, Download, Trash2, Plus } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
 
 interface ProblemFilterToolbarProps {
@@ -33,11 +33,13 @@ interface ProblemFilterToolbarProps {
   onCancelExport: () => void;
   onCancelBatchDelete: () => void;
   onCancelBatchDispatch: () => void;
+  onCreate?: () => void;
 }
 
 export function ProblemFilterToolbar({
   timeFilter,
   dateRange,
+  onCreate,
   statusFilter,
   severityFilter,
   sourceModuleFilter,
@@ -109,26 +111,16 @@ export function ProblemFilterToolbar({
         {/* 状态筛选 */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">状态：</span>
-          <div className="flex rounded-lg overflow-hidden border border-gray-200">
-            {[
-              { value: 'all', label: '全部' },
-              { value: 'pending', label: '待分派' },
-              { value: 'dispatched', label: '已分派' },
-              { value: 'handled', label: '已处理' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => onStatusFilterChange(opt.value as typeof statusFilter)}
-                className={`px-3 py-1.5 text-sm ${
-                  statusFilter === opt.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <select
+            value={statusFilter}
+            onChange={e => onStatusFilterChange(e.target.value as typeof statusFilter)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">全部</option>
+            <option value="pending">待分派</option>
+            <option value="dispatched">已分派</option>
+            <option value="handled">已处理</option>
+          </select>
         </div>
 
         {/* 严重程度筛选 */}
@@ -204,6 +196,15 @@ export function ProblemFilterToolbar({
           </div>
         ) : (
           <div className="flex gap-2 ml-auto">
+            {onCreate && (
+              <button
+                onClick={onCreate}
+                className="h-8 px-3 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                新建
+              </button>
+            )}
             <button
               onClick={onBatchDispatch}
               className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"

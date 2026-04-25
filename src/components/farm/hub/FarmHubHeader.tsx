@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { HubStats } from '../../../hooks/useFarmHub';
-import { Send, CheckCircle, Clock, AlertTriangle, ClipboardList } from 'lucide-react';
+import { Send, CheckCircle, Clock, AlertTriangle, ClipboardList, Activity, AlertCircle, CheckCheck, XCircle } from 'lucide-react';
 
 interface FarmHubHeaderProps {
   stats: HubStats;
@@ -31,7 +31,7 @@ function StatCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-3 py-2">
+    <div className="bg-white rounded-lg shadow-sm border-2 border-gray-200 px-3 py-2">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-xs text-gray-500">{label}</p>
@@ -87,8 +87,8 @@ export function FarmHubHeader({
         </div>
       </div>
 
-      {/* 统计卡片区域 */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* 任务统计卡片区域 - 一排9列 */}
+      <div className="grid grid-cols-9 gap-3">
         {/* 待办任务 */}
         <StatCard
           icon={ClipboardList}
@@ -126,10 +126,45 @@ export function FarmHubHeader({
 
         {/* 今日巡查 */}
         <StatCard
-          icon={ClipboardList}
+          icon={Activity}
           label="今日巡查"
           value={stats.todayInspections}
           iconColor="text-purple-500"
+        />
+
+        {/* 累计巡查 */}
+        <StatCard
+          icon={ClipboardList}
+          label="累计巡查"
+          value={stats.totalInspections}
+          iconColor="text-indigo-500"
+        />
+
+        {/* 异常巡查 */}
+        <StatCard
+          icon={XCircle}
+          label="异常巡查"
+          value={stats.abnormalInspections}
+          iconColor="text-red-400"
+          valueColor="text-red-500"
+        />
+
+        {/* 待处理问题 */}
+        <StatCard
+          icon={AlertCircle}
+          label="待处理问题"
+          value={stats.pendingProblems}
+          iconColor="text-amber-500"
+          valueColor="text-amber-600"
+        />
+
+        {/* 已处理问题 */}
+        <StatCard
+          icon={CheckCheck}
+          label="已处理问题"
+          value={stats.processedProblems}
+          iconColor="text-teal-500"
+          valueColor="text-teal-600"
         />
       </div>
     </div>

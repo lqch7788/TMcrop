@@ -11,6 +11,7 @@ import { FarmHubHeader } from '../../components/farm/hub/FarmHubHeader';
 import { TaskTab } from '../../components/farm/hub/TaskTab';
 import { ProblemTab } from '../../components/farm/hub/ProblemTab';
 import { InspectionTab } from '../../components/farm/hub/InspectionTab';
+import { TempTaskTab } from '../../components/dispatch/components/dispatch/TempTaskTab';
 import { OperationRecordPanel } from '../../components/farm/hub/OperationRecordPanel';
 import { TaskDetailModal } from '../../components/farm/hub/TaskDetailModal';
 import { VerifyTaskModal } from '../../components/farm/hub/VerifyTaskModal';
@@ -56,8 +57,9 @@ interface ImportRow {
 // Tab配置
 const TAB_CONFIG: { key: HubTab; label: string }[] = [
   { key: 'task', label: '农事任务' },
-  { key: 'problem', label: '问题管理' },
+  { key: 'tempTask', label: '临时任务' },
   { key: 'inspection', label: '巡查记录' },
+  { key: 'problem', label: '问题管理' },
 ];
 
 // 辅助函数
@@ -721,12 +723,30 @@ export function FarmTaskHub() {
 
   // 批量操作回调
   const handleBatchDispatch = (taskIds: string[]) => {
-    console.log('[FarmTaskHub] 批量派发:', taskIds);
+    // 获取选中的任务
+    const tasksToDispatch = hub.tasks.filter(t => taskIds.includes(t.id));
+    if (tasksToDispatch.length === 0) return;
+
+    // 打开派发弹窗（单选模式选择执行人，然后批量派发）
+    // 这里简化处理：直接标记为已派发状态
+    taskIds.forEach(taskId => {
+      const task = hub.tasks.find(t => t.id === taskId);
+      if (task && task.status === 'pending') {
+        // 更新任务状态为已派发
+        tasksHook.updateTaskStatus(taskId, 'accepted');
+      }
+    });
     hub.refresh();
   };
 
   const handleBatchVerify = (taskIds: string[]) => {
-    console.log('[FarmTaskHub] 批量验收:', taskIds);
+    // 批量验收：只处理waiting_acceptance状态的任务，将其标记为已完成
+    taskIds.forEach(taskId => {
+      const task = hub.tasks.find(t => t.id === taskId);
+      if (task && task.status === 'waiting_acceptance') {
+        tasksHook.updateTaskStatus(taskId, 'completed');
+      }
+    });
     hub.refresh();
   };
 
@@ -756,27 +776,44 @@ export function FarmTaskHub() {
         <div className="bg-white rounded-xl shadow-sm mb-6">
           {/* Tab 头部 */}
           <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              {TAB_CONFIG.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => hub.setActiveTab(tab.key)}
-                  className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                    hub.state.activeTab === tab.key
-                      ? 'border-emerald-500 text-emerald-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.label}
-                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                    hub.state.activeTab === tab.key
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : hub.inspections.length}
-                  </span>
-                </button>
-              ))}
+            <nav className="flex -mb-px gap-1">
+              {TAB_CONFIG.map((tab) => {
+                const isActive = hub.state.activeTab === tab.key;
+                // 不同Tab不同颜色主题
+                const getTabStyle = () => {
+                  if (tab.key === 'task') {
+                    return isActive
+                      ? 'bg-blue-500 text-white font-bold'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
+                  } else if (tab.key === 'inspection') {
+                    return isActive
+                      ? 'bg-emerald-500 text-white font-bold'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
+                  } else if (tab.key === 'problem') {
+                    return isActive
+                      ? 'bg-orange-500 text-white font-bold'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
+                  } else if (tab.key === 'tempTask') {
+                    return isActive
+                      ? 'bg-purple-500 text-white font-bold'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
+                  }
+                };
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => hub.setActiveTab(tab.key)}
+                    className={`px-6 py-3 text-base rounded-t-lg transition-all ${getTabStyle()}`}
+                  >
+                    {tab.label}
+                    <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-medium ${
+                      isActive ? 'bg-white/30' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : tab.key === 'inspection' ? hub.inspections.length : '-'}
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
@@ -816,31 +853,58 @@ export function FarmTaskHub() {
                 onExport={handleExport}
               />
             )}
-            {hub.state.activeTab === 'problem' && (
-              <ProblemTab
-                problems={hub.getFilteredProblems()}
-                selectedIds={hub.state.selectedIds}
-                onToggleSelect={hub.toggleSelect}
-                onSelectAll={hub.selectAll}
-                onClearSelection={hub.clearSelection}
-                filters={hub.state.filters}
-                onFilterChange={hub.setFilter}
-                onResetFilters={hub.resetFilters}
-                onDispatchProblem={(problemId) => setDispatchProblemId(problemId)}
-              />
-            )}
             {hub.state.activeTab === 'inspection' && (
               <InspectionTab
-                inspections={hub.getFilteredInspections()}
-                selectedIds={hub.state.selectedIds}
-                onToggleSelect={hub.toggleSelect}
-                onSelectAll={hub.selectAll}
-                onClearSelection={hub.clearSelection}
-                filters={hub.state.filters}
-                onFilterChange={hub.setFilter}
-                onResetFilters={hub.resetFilters}
-                onViewInspection={(recordId) => setDetailInspectionId(recordId)}
+                inspections={hub.inspections}
+                filters={hub.inspectionFilters}
+                onFilterChange={hub.setInspectionFilter}
+                onResetFilters={hub.resetInspectionFilters}
+                currentPage={hub.inspectionPage}
+                pageSize={hub.inspectionPageSize}
+                onPageChange={hub.inspectionGoToPage}
+                onPageSizeChange={hub.inspectionGoToPageSize}
+                exportMode={hub.inspectionExportMode}
+                batchEditMode={hub.inspectionBatchEditMode}
+                batchDeleteMode={hub.inspectionBatchDeleteMode}
+                onToggleExportMode={hub.toggleInspectionExportMode}
+                onToggleBatchEditMode={hub.toggleInspectionBatchEditMode}
+                onToggleBatchDeleteMode={hub.toggleInspectionBatchDeleteMode}
+                selectedRows={hub.inspectionSelectedRows}
+                onToggleSelectRow={hub.toggleInspectionSelectRow}
+                onSelectAll={hub.selectAllInspectionRows}
+                onClearSelection={hub.clearInspectionSelection}
+                detailRecordId={hub.inspectionDetailId}
+                onViewDetail={hub.openInspectionDetail}
+                onCloseDetail={hub.closeInspectionDetail}
+                isCreateModalOpen={hub.isCreateInspectionOpen}
+                onOpenCreateModal={hub.openCreateInspection}
+                onCloseCreateModal={hub.closeCreateInspection}
+                problems={hub.problems}
+                onReportProblem={() => {}}
+                onAcceptProblem={(problemId) => {
+                  // 问题验收功能由 InspectionTab 内部处理
+                }}
+                onBatchDelete={(ids) => {
+                  // 调用 hub 的巡查批量删除
+                  ids.forEach(id => {
+                    hub.deleteInspection?.(id);
+                  });
+                  hub.refresh();
+                }}
+                onBatchEdit={(ids) => {
+                  // 调用 hub 的巡查批量编辑（打开编辑弹窗）
+                  console.log('[FarmTaskHub] 巡查批量编辑:', ids);
+                }}
               />
+            )}
+            {hub.state.activeTab === 'problem' && (
+              <ProblemTab
+                // 传递hooks获取实时数据
+                onProblemDispatched={handleProblemDispatched}
+              />
+            )}
+            {hub.state.activeTab === 'tempTask' && (
+              <TempTaskTab />
             )}
           </div>
         </div>
