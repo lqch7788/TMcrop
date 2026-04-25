@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Download, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle } from 'lucide-react';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -40,11 +40,13 @@ interface TaskTableProps {
   // 分页
   currentPage: number;
   pageSize: number;
-  // 选择状态
-  selectedRows: number[];
+  // 选择状态 - 改为接收选中任务的 ID 列表，由组件自己计算选中状态
+  selectedIds: string[];
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
+  batchDispatchMode: boolean;
+  batchVerifyMode: boolean;
   // 催办
   canRemind: (taskId: string) => { allowed: boolean; reason?: string };
   sendReminder: (
@@ -78,6 +80,10 @@ interface TaskTableProps {
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
   onBatchDelete?: () => void;
+  onBatchDispatch?: () => void;
+  onConfirmBatchDispatch?: () => void;
+  onBatchVerify?: () => void;
+  onConfirmBatchVerify?: () => void;
   onExport?: () => void;
   onImport?: () => void;
   onCreate?: () => void;
@@ -87,10 +93,12 @@ export function TaskTable({
   tasks,
   currentPage,
   pageSize,
-  selectedRows,
+  selectedIds,
   exportMode,
   batchEditMode,
   batchDeleteMode,
+  batchDispatchMode,
+  batchVerifyMode,
   canRemind,
   sendReminder,
   onSelectRow,
@@ -114,28 +122,28 @@ export function TaskTable({
   onCancelBatchEdit,
   onCancelBatchDelete,
   onBatchDelete,
+  onBatchDispatch,
+  onConfirmBatchDispatch,
+  onBatchVerify,
+  onConfirmBatchVerify,
   onExport,
   onImport,
   onCreate,
 }: TaskTableProps) {
-  const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
+  const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode;
   const total = tasks.length;
   const paginatedTasks = tasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // 计算当前页可编辑的全局索引（用于批量编辑模式）
-  const currentPageStartIdx = (currentPage - 1) * pageSize;
-  const currentPageEditableIndexes = batchEditMode
+  // 计算当前页可编辑的任务ID（用于批量编辑模式）
+  const currentPageEditableIds = batchEditMode
     ? paginatedTasks
-        .map((task, idx) => {
-          const editableStatuses = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
-          return editableStatuses.includes(task.status) ? currentPageStartIdx + idx : -1;
-        })
-        .filter(idx => idx !== -1)
-    : paginatedTasks.map((_, idx) => currentPageStartIdx + idx);
+        .filter(task => EDITABLE_STATUSES.includes(task.status))
+        .map(task => task.id)
+    : paginatedTasks.map(task => task.id);
 
-  // 全选状态计算 - 使用全局索引
-  const isAllSelected = currentPageEditableIndexes.length > 0 && currentPageEditableIndexes.every(idx => selectedRows.includes(idx));
-  const isSomeSelected = currentPageEditableIndexes.some(idx => selectedRows.includes(idx)) || selectedRows.length > 0;
+  // 全选状态计算 - 使用任务ID
+  const isAllSelected = currentPageEditableIds.length > 0 && currentPageEditableIds.every(id => selectedIds.includes(id));
+  const isSomeSelected = currentPageEditableIds.some(id => selectedIds.includes(id)) || selectedIds.length > 0;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -148,7 +156,7 @@ export function TaskTable({
             <>
               <button
                 onClick={onConfirmExport}
-                disabled={selectedRows.length === 0}
+                disabled={selectedIds.length === 0}
                 className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
@@ -165,7 +173,7 @@ export function TaskTable({
             <>
               <button
                 onClick={onConfirmBatchEdit}
-                disabled={selectedRows.length === 0}
+                disabled={selectedIds.length === 0}
                 className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
@@ -182,7 +190,7 @@ export function TaskTable({
             <>
               <button
                 onClick={onBatchDelete}
-                disabled={selectedRows.length === 0}
+                disabled={selectedIds.length === 0}
                 className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
@@ -190,6 +198,38 @@ export function TaskTable({
               </button>
               <button
                 onClick={() => { onCancelBatchDelete?.(); }}
+                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+            </>
+          ) : batchDispatchMode ? (
+            <>
+              <button
+                onClick={onConfirmBatchDispatch}
+                disabled={selectedIds.length === 0}
+                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认派发
+              </button>
+              <button
+                onClick={onCancelBatchDelete}
+                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+            </>
+          ) : batchVerifyMode ? (
+            <>
+              <button
+                onClick={onConfirmBatchVerify}
+                disabled={selectedIds.length === 0}
+                className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认验收
+              </button>
+              <button
+                onClick={onCancelBatchDelete}
                 className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
@@ -225,6 +265,24 @@ export function TaskTable({
                   删除
                 </button>
               )}
+              {onBatchDispatch && (
+                <button
+                  onClick={onBatchDispatch}
+                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  派发
+                </button>
+              )}
+              {onBatchVerify && (
+                <button
+                  onClick={onBatchVerify}
+                  className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  验收
+                </button>
+              )}
               {onExport && (
                 <button
                   onClick={onExport}
@@ -256,6 +314,8 @@ export function TaskTable({
               exportMode={exportMode}
               batchEditMode={batchEditMode}
               batchDeleteMode={batchDeleteMode}
+              batchDispatchMode={batchDispatchMode}
+              batchVerifyMode={batchVerifyMode}
               isAllSelected={isAllSelected}
               isSomeSelected={isSomeSelected}
               onSelectAll={onSelectAll}
@@ -263,7 +323,6 @@ export function TaskTable({
           </thead>
           <tbody className="divide-y divide-gray-300">
             {paginatedTasks.map((task, index) => {
-              const globalIndex = (currentPage - 1) * pageSize + index;
               const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
               const isDeletable = batchDeleteMode && DELETABLE_STATUSES.includes(task.status);
               const isSelectable = batchEditMode ? isEditable : (batchDeleteMode ? isDeletable : true);
@@ -274,12 +333,12 @@ export function TaskTable({
                 <TaskTableRow
                   key={task.id}
                   task={task}
-                  index={globalIndex}
+                  index={index}
                   showCheckbox={showCheckbox}
-                  isSelected={selectedRows.includes(globalIndex)}
+                  isSelected={selectedIds.includes(task.id)}
                   isSelectable={isSelectable}
                   selectableReason={selectableReason}
-                  onSelect={() => onSelectRow(globalIndex)}
+                  onSelect={() => onSelectRow(index)}
                   onViewDetail={() => onViewDetail(task)}
                   onViewSop={onViewSop ? () => onViewSop(task) : undefined}
                   onAccept={onAccept ? () => onAccept(task) : undefined}
@@ -316,8 +375,8 @@ export function TaskTable({
       {/* 导出模式底部栏 */}
       {exportMode && (
         <div className="flex items-center gap-4 px-4 py-3 border-t border-gray-100">
-          <span className="text-sm text-gray-500">{selectedRows.length === tasks.length ? '全不选' : '全选'}</span>
-          <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+          <span className="text-sm text-gray-500">{selectedIds.length === tasks.length ? '全不选' : '全选'}</span>
+          <span className="text-sm text-gray-500">已选择 {selectedIds.length} 项</span>
         </div>
       )}
     </div>
