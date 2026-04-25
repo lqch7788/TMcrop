@@ -1,164 +1,138 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { Clock } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { NumberInput } from '../../../ui/NumberInput';
+import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
-// 时间计算函数
-function calculateEndDateTime(startTime: string, days: number, hours: number, workHoursPerDay: number): string {
-  if (!startTime) return '';
-  try {
-    const [datePart, timePart] = startTime.split(' ');
-    if (!datePart) return '';
-    const finalTime = timePart || '08:00';
-    const start = new Date(`${datePart}T${finalTime}:00`);
-    const totalHours = days * workHoursPerDay + hours;
-    const end = new Date(start.getTime() + totalHours * 60 * 60 * 1000);
-    const endDate = end.toISOString().split('T')[0];
-    const endTime = end.toTimeString().slice(0, 5);
-    return `${endDate} ${endTime}`;
-  } catch {
-    return '';
-  }
-}
-
-interface TaskData {
+interface InspectionRecord {
   id: string;
-  types: string[];
-  typeName: string;
-  field: string;
-  greenhouseName?: string;
-  crop: string;
-  batchCode?: string;
-  planStart: string;
-  planEnd: string;
-  progress: number;
+  recordCode: string;
+  inspectionType: 'farm' | 'equipment' | 'infrastructure' | 'other';
+  greenhouseId: string;
+  greenhouseName: string;
+  cropName: string;
+  equipmentId?: string;
+  equipmentName?: string;
+  infrastructureId?: string;
+  infrastructureName?: string;
+  inspectorId: string;
+  inspectorName: string;
+  checkDate: string;
+  checkTime?: string;
+  weather: string;
+  temperature: number;
+  humidity: number;
+  cropStatus?: string;
+  plantHeight?: number;
+  leafCount?: number;
   status: string;
-  priority: string;
-  estimatedDays: number;
-  estimatedHours: number;
-  workHoursPerDay?: number;
+  issues: string[];
+  images: string[];
+  remarks?: string;
+  issueStatus?: 'pending' | 'processing' | 'resolved';
+  duration?: number;
+  // 新增字段
+  issueCategories?: string[];
+  issuePresets?: string[];
+  issueText?: string;
+  issuePhotos?: string[];
+  feedbackUsers?: string[];
 }
 
 interface BatchEditModalProps {
   isOpen: boolean;
   selectedRows: number[];
-  tasks: TaskData[];
-  editedTaskIds: string[];
-  editedTasks: Record<string, Partial<TaskData>>;
-  selectedTaskId: string;
-  onSelectedTaskIdChange: (id: string) => void;
-  onEditedTasksChange: (tasks: Record<string, Partial<TaskData>>) => void;
-  onEditedTaskIdsChange: (ids: string[]) => void;
+  records: InspectionRecord[];
+  editedRecordIds: string[];
+  editedRecords: Record<string, Partial<InspectionRecord>>;
+  selectedRecordId: string;
+  onSelectedRecordIdChange: (id: string) => void;
+  onEditedRecordsChange: (records: Record<string, Partial<InspectionRecord>>) => void;
+  onEditedRecordIdsChange: (ids: string[]) => void;
   onClose: () => void;
   onConfirm: () => void;
-  fields: { id: number; name: string; type: string; crop: string; area: number }[];
-  taskTypes: { value: string; label: string }[];
-  batchCodes: { value: string; label: string }[];
+  greenhouses: { id: string; name: string }[];
+  users: { id: string; name: string; role: string; roleName: string }[];
+  equipmentRecords: { id: string; name: string }[];
+  infrastructureRecords: { id: string; name: string; type: string }[];
 }
+
+const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '雾', '大风'];
+const inspectionTypeOptions = [
+  { value: 'farm', label: '种植区域巡查' },
+  { value: 'equipment', label: '设备保养巡查' },
+  { value: 'infrastructure', label: '基础设施巡检' },
+  { value: 'other', label: '其他' },
+];
+const issueCategoryOptions = ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label }));
+const completionTimeOptions = COMPLETION_TIME_OPTIONS.map(t => ({ value: t.value, label: t.label }));
 
 export function BatchEditModal({
   isOpen,
-  selectedRows,
-  tasks,
-  editedTaskIds,
-  editedTasks,
-  selectedTaskId,
-  onSelectedTaskIdChange,
-  onEditedTasksChange,
-  onEditedTaskIdsChange,
+  selectedRows = [],
+  records = [],
+  editedRecordIds = [],
+  editedRecords = {},
+  selectedRecordId,
+  onSelectedRecordIdChange,
+  onEditedRecordsChange,
+  onEditedRecordIdsChange,
   onClose,
   onConfirm,
-  fields,
-  taskTypes,
-  batchCodes,
+  greenhouses = [],
+  users = [],
+  equipmentRecords = [],
+  infrastructureRecords = [],
 }: BatchEditModalProps) {
-  const selectedTasks = selectedRows.map(index => tasks[index]).filter(Boolean) as TaskData[];
-  const currentTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
-  const editedData = selectedTaskId ? editedTasks[selectedTaskId] || {} : {};
+  const safeSelectedRows: number[] = selectedRows;
+  const safeRecords: InspectionRecord[] = records;
+  const safeEditedRecordIds: string[] = editedRecordIds;
+  const safeEditedRecords: Record<string, Partial<InspectionRecord>> = editedRecords;
 
-  // 本地状态用于计算截止时间
-  const [localWorkHours, setLocalWorkHours] = useState(8);
-  const [localPlanStart, setLocalPlanStart] = useState('');
-  const [localEstimatedDays, setLocalEstimatedDays] = useState(0);
-  const [localEstimatedHours, setLocalEstimatedHours] = useState(0);
+  const selectedRecords = safeSelectedRows.map(index => safeRecords[index]).filter(Boolean) as InspectionRecord[];
+  const currentRecord = selectedRecordId ? safeRecords.find(r => r.id.toString() === selectedRecordId) : null;
+  const editedData = selectedRecordId ? safeEditedRecords[selectedRecordId] || {} : {};
 
-  // 初始化本地状态
-  useEffect(() => {
-    if (currentTask) {
-      setLocalWorkHours(editedData.workHoursPerDay ?? currentTask.workHoursPerDay ?? 8);
-      setLocalPlanStart(editedData.planStart ?? currentTask.planStart ?? '');
-      setLocalEstimatedDays(editedData.estimatedDays ?? currentTask.estimatedDays ?? 0);
-      setLocalEstimatedHours(editedData.estimatedHours ?? currentTask.estimatedHours ?? 0);
-    }
-  }, [currentTask, selectedTaskId]);
-
-  const handleFieldChange = (field: keyof TaskData, value: unknown) => {
-    if (!selectedTaskId) return;
+  const handleFieldChange = (field: keyof InspectionRecord, value: unknown) => {
+    if (!selectedRecordId) return;
     const updated = {
-      ...editedTasks,
-      [selectedTaskId]: { ...editedTasks[selectedTaskId], [field]: value },
+      ...safeEditedRecords,
+      [selectedRecordId]: { ...safeEditedRecords[selectedRecordId], [field]: value },
     };
-    onEditedTasksChange(updated);
-    if (!editedTaskIds.includes(selectedTaskId)) {
-      onEditedTaskIdsChange([...editedTaskIds, selectedTaskId]);
+    onEditedRecordsChange(updated);
+    if (!safeEditedRecordIds.includes(selectedRecordId)) {
+      onEditedRecordIdsChange([...safeEditedRecordIds, selectedRecordId]);
     }
-  };
-
-  // 计算截止时间
-  const endDateTime = localPlanStart
-    ? calculateEndDateTime(localPlanStart, localEstimatedDays, localEstimatedHours, localWorkHours)
-    : '-';
-
-  // 计算总小时数
-  const totalHours = localEstimatedDays * localWorkHours + localEstimatedHours;
-
-  // 获取状态标签
-  const getStatusLabel = (status: string) => {
-    const statusLabels: Record<string, string> = {
-      draft: '草稿',
-      pending: '待派发',
-      accepted: '已接受',
-      in_progress: '处理中',
-      waiting_acceptance: '待验收',
-      completed: '已完成',
-      rejected: '已拒绝',
-      failed: '任务失败',
-      cancelled: '已取消',
-      abandoned: '已放弃',
-    };
-    return statusLabels[status] || status;
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="批量编辑农事任务"
+      title="批量编辑巡查记录"
       size="xxl"
-      showFooter={false}
+      onSubmit={onConfirm}
+      submitText="保存修改"
+      cancelText="取消"
     >
       <div className="space-y-4">
         {/* 信息提示 */}
         <div className="bg-blue-50 rounded-lg p-3">
           <p className="text-sm text-blue-800">
-            已选择 <strong>{selectedRows.length}</strong> 个任务进行批量编辑，
-            已编辑 <strong>{editedTaskIds.length}</strong> 个
-          </p>
-          <p className="text-xs text-blue-600 mt-1">
-            提示：执行人需在操作列单独选择，此处不可编辑
+            已选择 <strong>{safeSelectedRows.length}</strong> 条记录进行批量编辑，
+            已编辑 <strong>{safeEditedRecordIds.length}</strong> 条
           </p>
         </div>
 
-        {/* 任务选择器 */}
-        <FormField label="选择任务编号">
+        {/* 记录选择器 */}
+        <FormField label="选择记录编号">
           <Select
-            value={selectedTaskId || ''}
-            onChange={(e) => onSelectedTaskIdChange(e.target.value)}
+            value={selectedRecordId || ''}
+            onChange={(e) => onSelectedRecordIdChange(e.target.value)}
             options={[
-              { value: '', label: '请选择任务编号' },
-              ...selectedTasks.map(t => ({
-                value: t.id,
-                label: `${t.id} - ${t.typeName || t.types?.[0] || ''} - ${t.field || ''} ${
-                  editedTaskIds.includes(t.id) ? '✅ 已编辑' : ''
+              { value: '', label: '请选择记录编号' },
+              ...selectedRecords.map(r => ({
+                value: r.id.toString(),
+                label: `${r.recordCode} - ${r.inspectorName} ${
+                  safeEditedRecordIds.includes(r.id.toString()) ? '✅ 已编辑' : ''
                 }`,
               })),
             ]}
@@ -166,220 +140,131 @@ export function BatchEditModal({
         </FormField>
 
         {/* 编辑区域 */}
-        {selectedTaskId && currentTask && (
-          <>
-            {/* 第一行：任务类型、区域、批次 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* 任务类型 - 可编辑 */}
-              <FormField label="任务类型">
-                <Select
-                  value={editedData.types?.[0] ?? currentTask.types?.[0] ?? ''}
-                  onChange={(e) => handleFieldChange('types', [e.target.value])}
-                  options={taskTypes.map(t => ({ value: t.value, label: t.label }))}
-                />
-              </FormField>
-
-              {/* 温室/大田 - 可编辑 */}
-              <FormField label="温室/大田">
-                <Select
-                  value={editedData.field ?? currentTask.field ?? ''}
-                  onChange={(e) => handleFieldChange('field', e.target.value)}
-                  options={fields.map(f => ({ value: f.name, label: `${f.name} - ${f.crop}` }))}
-                />
-              </FormField>
-
-              {/* 关联批次 - 可编辑 */}
-              <FormField label="关联批次">
-                <Select
-                  value={editedData.batchCode ?? currentTask.batchCode ?? ''}
-                  onChange={(e) => handleFieldChange('batchCode', e.target.value)}
-                  options={[{ value: '', label: '无关联批次' }, ...batchCodes]}
-                />
-              </FormField>
+        {selectedRecordId && currentRecord && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* 巡查编号 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">巡查编号</div>
+              <div className="text-sm font-medium text-blue-600">{currentRecord.recordCode}</div>
             </div>
 
-            {/* 第二行：作物、优先级，工作制 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* 作物 - 可编辑 */}
-              <FormField label="作物">
-                <Select
-                  value={editedData.crop ?? currentTask.crop ?? ''}
-                  onChange={(e) => handleFieldChange('crop', e.target.value)}
-                  options={fields.map(f => ({ value: f.crop, label: f.crop })).filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
-                />
-              </FormField>
+            {/* 巡查类型 - 可编辑 */}
+            <FormField label="巡查类型">
+              <Select
+                value={editedData.inspectionType ?? currentRecord.inspectionType}
+                onChange={(e) => handleFieldChange('inspectionType', e.target.value)}
+                options={inspectionTypeOptions}
+              />
+            </FormField>
 
-              {/* 优先级 - 可编辑 */}
-              <FormField label="优先级">
-                <Select
-                  value={editedData.priority ?? currentTask.priority ?? 'normal'}
-                  onChange={(e) => handleFieldChange('priority', e.target.value)}
-                  options={[
-                    { value: 'normal', label: '普通' },
-                    { value: 'high', label: '高' },
-                    { value: 'urgent', label: '紧急' },
-                  ]}
-                />
-              </FormField>
+            {/* 巡查人员 - 可编辑 */}
+            <FormField label="巡查人员">
+              <Select
+                value={editedData.inspectorId ?? currentRecord.inspectorId}
+                onChange={(e) => handleFieldChange('inspectorId', e.target.value)}
+                options={users.filter(u => u.role === 'technician' || u.role === 'supervisor').map(u => ({
+                  value: u.id,
+                  label: u.name,
+                }))}
+              />
+            </FormField>
 
-              {/* 工作制 - 可编辑 */}
-              <FormField label="工作制">
-                <Select
-                  value={String(localWorkHours)}
-                  onChange={(e) => {
-                    const newWorkHours = parseInt(e.target.value);
-                    setLocalWorkHours(newWorkHours);
-                    handleFieldChange('workHoursPerDay', newWorkHours);
-                    // 如果当前小时数超过新工作制的最大限制，自动调整
-                    if (localEstimatedHours >= newWorkHours) {
-                      const newHours = newWorkHours - 1;
-                      setLocalEstimatedHours(newHours);
-                      handleFieldChange('estimatedHours', newHours);
-                    }
-                  }}
-                  options={[
-                    { value: '8', label: '8小时/天' },
-                    { value: '10', label: '10小时/天' },
-                    { value: '12', label: '12小时/天' },
-                  ]}
-                />
-              </FormField>
+            {/* 巡查日期 - 可编辑 */}
+            <FormField label="巡查日期">
+              <Input
+                type="date"
+                value={editedData.checkDate ?? currentRecord.checkDate}
+                onChange={(e) => handleFieldChange('checkDate', e.target.value)}
+              />
+            </FormField>
+
+            {/* 天气 - 可编辑 */}
+            <FormField label="天气">
+              <Select
+                value={editedData.weather ?? currentRecord.weather}
+                onChange={(e) => handleFieldChange('weather', e.target.value)}
+                options={weatherOptions.map(w => ({ value: w, label: w }))}
+              />
+            </FormField>
+
+            {/* 温度 - 可编辑 */}
+            <FormField label="温度(°C)">
+              <NumberInput
+                value={editedData.temperature ?? currentRecord.temperature ?? ''}
+                onChange={(val) => handleFieldChange('temperature', val)}
+                onBlur={(val) => handleFieldChange('temperature', val)}
+                placeholder="0.00"
+              />
+            </FormField>
+
+            {/* 湿度 - 可编辑 */}
+            <FormField label="湿度(%)">
+              <NumberInput
+                value={editedData.humidity ?? currentRecord.humidity ?? ''}
+                onChange={(val) => handleFieldChange('humidity', val)}
+                onBlur={(val) => handleFieldChange('humidity', val)}
+                placeholder="0.00"
+              />
+            </FormField>
+
+            {/* 巡查结果 - 不可编辑 */}
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">巡查结果</div>
+              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                currentRecord.status === 'normal' ? 'bg-emerald-100 text-emerald-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                {currentRecord.status === 'normal' ? '正常' : '异常'}
+              </span>
             </div>
 
-            {/* 第三行：开始日期、开始时间 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 计划开始日期 */}
-              <FormField label="开始日期">
+            {/* 问题分类 - 可编辑 */}
+            <FormField label="问题分类">
+              <Select
+                value={(editedData.issueCategories ?? currentRecord.issueCategories ?? [''])[0] || ''}
+                onChange={(e) => handleFieldChange('issueCategories', e.target.value ? [e.target.value] : [])}
+                options={[{ value: '', label: '请选择' }, ...issueCategoryOptions]}
+              />
+            </FormField>
+
+            {/* 反馈人员 - 可编辑 */}
+            <FormField label="反馈人员">
+              <Select
+                value={(editedData.feedbackUsers ?? currentRecord.feedbackUsers ?? [''])[0] || ''}
+                onChange={(e) => handleFieldChange('feedbackUsers', e.target.value ? [e.target.value] : [])}
+                options={[
+                  { value: '', label: '请选择' },
+                  ...users.filter(u => u.role === 'technician' || u.role === 'supervisor' || u.role === 'manager').map(u => ({
+                    value: u.id,
+                    label: u.name,
+                  }))
+                ]}
+              />
+            </FormField>
+
+            {/* 问题描述 - 可编辑 */}
+            <div className="col-span-2">
+              <FormField label="问题描述">
                 <Input
-                  type="date"
-                  value={localPlanStart?.split(' ')[0] || ''}
-                  onChange={(e) => {
-                    const newDate = e.target.value;
-                    const timePart = localPlanStart?.split(' ')[1] || '08:00';
-                    const newPlanStart = `${newDate} ${timePart}`;
-                    setLocalPlanStart(newPlanStart);
-                    handleFieldChange('planStart', newPlanStart);
-                  }}
-                />
-              </FormField>
-
-              {/* 开始时间 */}
-              <FormField label="开始时间">
-                <Select
-                  value={localPlanStart?.split(' ')[1] || '08:00'}
-                  onChange={(e) => {
-                    const datePart = localPlanStart?.split(' ')[0] || '';
-                    const newPlanStart = `${datePart} ${e.target.value}`;
-                    setLocalPlanStart(newPlanStart);
-                    handleFieldChange('planStart', newPlanStart);
-                  }}
-                  options={[7,8,9,10,11,12,13,14,15,16,17,18,19].map(h => ({
-                    value: `${String(h).padStart(2, '0')}:00`,
-                    label: `${String(h).padStart(2, '0')}:00`,
-                  }))}
+                  value={editedData.issueText ?? currentRecord.issueText ?? ''}
+                  onChange={(e) => handleFieldChange('issueText', e.target.value)}
+                  placeholder="请输入问题描述"
                 />
               </FormField>
             </div>
 
-            {/* 第四行：天数、小时 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 天数 */}
-              <FormField label="天数">
+            {/* 备注 - 可编辑 */}
+            <div className="col-span-2">
+              <FormField label="备注">
                 <Input
-                  type="number"
-                  value={localEstimatedDays}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setLocalEstimatedDays(val);
-                    handleFieldChange('estimatedDays', val);
-                  }}
-                  min={0}
-                />
-              </FormField>
-
-              {/* 小时 */}
-              <FormField label={`小时 (最大${localWorkHours - 1})`}>
-                <Input
-                  type="number"
-                  value={localEstimatedHours}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    const maxHours = localWorkHours - 1;
-                    if (val >= 0 && val <= maxHours) {
-                      setLocalEstimatedHours(val);
-                      handleFieldChange('estimatedHours', val);
-                    } else if (val > maxHours) {
-                      setLocalEstimatedHours(maxHours);
-                      handleFieldChange('estimatedHours', maxHours);
-                    } else if (val < 0) {
-                      setLocalEstimatedHours(0);
-                      handleFieldChange('estimatedHours', 0);
-                    }
-                  }}
-                  min={0}
-                  max={localWorkHours - 1}
+                  value={editedData.remarks ?? currentRecord.remarks ?? ''}
+                  onChange={(e) => handleFieldChange('remarks', e.target.value)}
+                  placeholder="请输入备注"
                 />
               </FormField>
             </div>
-
-            {/* 任务截止时间自动计算显示 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-blue-700">
-                  任务截止时间：
-                </span>
-                <span className="text-sm font-medium text-blue-900">
-                  {endDateTime}
-                </span>
-                <span className="text-xs text-blue-500">
-                  (共 {totalHours} 小时)
-                </span>
-              </div>
-            </div>
-
-            {/* 第五行：状态、进度（状态不可编辑） */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 当前状态 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-3">
-                <div className="text-xs text-gray-500 mb-1">当前状态</div>
-                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                  currentTask.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  currentTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                  currentTask.status === 'pending' ? 'bg-gray-100 text-gray-700' :
-                  currentTask.status === 'waiting_acceptance' ? 'bg-amber-100 text-amber-700' :
-                  currentTask.status === 'cancelled' ? 'bg-red-50 text-red-500' :
-                  currentTask.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {getStatusLabel(currentTask.status)}
-                </span>
-              </div>
-
-              {/* 进度 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-3">
-                <div className="text-xs text-gray-500 mb-1">进度</div>
-                <span className="text-sm font-medium text-gray-700">0%</span>
-              </div>
-            </div>
-          </>
+          </div>
         )}
-      </div>
-      {/* 底部操作按钮 */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
-          关闭
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={editedTaskIds.length === 0}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          保存修改
-        </button>
       </div>
     </Modal>
   );

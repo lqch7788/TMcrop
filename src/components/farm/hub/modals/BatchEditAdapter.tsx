@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { BatchEditModal } from './BatchEditModal';
+import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
-import { taskDispatchFields } from '../../../../data/farmMockData';
+import { taskDispatchFields, taskDispatchStaff } from '../../../../data/farmMockData';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { cropBatches } from '../../../../data/mockData';
 
@@ -29,6 +29,13 @@ const taskTypes = FARM_OPERATION_TYPES.map(t => ({
 const batchCodes = cropBatches.map(b => ({
   value: b.batchCode,
   label: b.batchCode,
+}));
+
+// 员工选项（转换为 BatchEditModal 所需的格式）
+const staff = taskDispatchStaff.map(s => ({
+  id: s.id,
+  name: s.name,
+  status: s.status,
 }));
 
 interface BatchEditAdapterProps {
@@ -80,6 +87,7 @@ export function BatchEditAdapter({
       onClose={onClose}
       onConfirm={handleConfirm}
       fields={fields}
+      staff={staff}
       taskTypes={taskTypes}
       batchCodes={batchCodes}
     />

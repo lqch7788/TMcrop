@@ -55,8 +55,8 @@ export function ProblemDispatchPage() {
   // 使用 useComprehensiveDispatch 获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
 
-  // 使用 usePersistentProblems 获取 addProblem 方法
-  const { addProblem } = usePersistentProblems();
+  // 使用 usePersistentProblems 获取 addProblem 和 deleteProblem 方法
+  const { addProblem, deleteProblem } = usePersistentProblems();
 
   // 读取关联的任务
   const [tasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
@@ -445,8 +445,10 @@ export function ProblemDispatchPage() {
       return problem && problem.status === '待处理' && !problem.sourceTaskId;
     });
 
-    // 这里需要调用 deleteProblem 方法
-    // 由于 useProblemDispatch 没有导出 deleteProblem，需要从 usePersistentProblems 获取
+    // 调用 deleteProblem 方法删除每个可删除的问题
+    toDelete.forEach(id => {
+      deleteProblem(id);
+    });
 
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);

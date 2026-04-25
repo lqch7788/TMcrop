@@ -702,7 +702,7 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
 
 export function TempTaskPage() {
   // 使用统一临时任务管理 Hook（数据闭环核心）
-  const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask } = useTempTasks();
+  const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
   // 统一任务管理 Hook（用于临时任务同步）
   const { createTask, publishTask } = useTasks();
@@ -746,7 +746,7 @@ export function TempTaskPage() {
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // 筛选hook - 使用 useTempTasks 的数据
   const {
@@ -1139,8 +1139,13 @@ export function TempTaskPage() {
   };
 
   const handleBatchEditConfirm = (editedTasks: Record<string, Partial<TempTask>>) => {
-    // 批量编辑功能暂未接入 useTempTasks，可后续扩展
-    console.log('批量编辑暂未接入数据闭环:', editedTasks);
+    // ========== 数据闭环：批量编辑临时任务 ==========
+    Object.entries(editedTasks).forEach(([taskCode, updates]) => {
+      const task = tempTasks.find(t => t.taskCode === taskCode);
+      if (task) {
+        updateTempTask(task.id, updates);
+      }
+    });
     setSelectedRows([]);
     setBatchEditMode(false);
   };
@@ -1154,13 +1159,7 @@ export function TempTaskPage() {
   const handleDeleteConfirm = () => {
     // ========== 数据闭环：批量删除临时任务 ==========
     selectedRows.forEach(id => {
-      // useTempTasks 的 deleteTempTask 会删除任务
-      // 注意：这里需要遍历 tempTasks 找到对应的任务来删除
-      const taskToDelete = tempTasks.find(t => t.id === id);
-      if (taskToDelete) {
-        // 临时任务删除暂未在 useTempTasks 中实现同步删除操作记录
-        // 可后续扩展
-      }
+      deleteTempTask(id);
     });
     setSelectedRows([]);
     setShowDeleteWarning(false);

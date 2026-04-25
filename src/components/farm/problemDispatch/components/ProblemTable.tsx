@@ -13,8 +13,9 @@ interface ProblemEntry {
   sourceTaskId?: string;
   issueText: string;
   issueSeverity: '轻微' | '中等' | '严重';
-  status: '待处理' | '处理中' | '已处理';
-  handlerName?: string;
+  status: '待处理' | '处理中' | '待验收' | '已处理';
+  handler?: string;
+  handlerName?: string; // 兼容别名
 }
 
 interface ProblemTableProps {
@@ -85,6 +86,8 @@ export function ProblemTable({
         return 'bg-green-100 text-green-700';
       case '处理中':
         return 'bg-amber-100 text-amber-700';
+      case '待验收':
+        return 'bg-purple-100 text-purple-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -244,7 +247,7 @@ export function ProblemTable({
 
                   {/* 处理人 */}
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {problem.handlerName || '-'}
+                    {problem.handler || problem.handlerName || '-'}
                   </td>
 
                   {/* 操作 */}
@@ -255,6 +258,22 @@ export function ProblemTable({
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         分派
+                      </button>
+                    )}
+                    {problem.status === '处理中' && (
+                      <button
+                        onClick={() => onViewDetail(problem)}
+                        className="text-green-600 hover:text-green-800 text-sm mr-2"
+                      >
+                        详情
+                      </button>
+                    )}
+                    {problem.status === '待验收' && (
+                      <button
+                        onClick={() => onViewDetail(problem)}
+                        className="text-amber-600 hover:text-amber-800 text-sm"
+                      >
+                        验收
                       </button>
                     )}
                   </td>
