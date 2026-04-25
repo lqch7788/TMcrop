@@ -32,11 +32,14 @@ export const STATUS_MAP = TASK_STATUS_MAP;
 export const PRIORITY_MAP = TASK_PRIORITY_MAP;
 
 // ========== 批量操作状态限制 ==========
-// 批量编辑时可编辑的状态（仅草稿和待派发状态）
-export const EDITABLE_STATUSES = ['draft', 'pending'];
+// 批量编辑时可编辑的状态（与源页面 FarmTaskTable.tsx 保持一致）
+export const EDITABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
 
-// 批量删除时可删除的状态（草稿、待派发、已取消）
-export const DELETABLE_STATUSES = ['draft', 'pending', 'cancelled'];
+// 批量删除时可删除的状态（仅草稿和已取消）
+export const DELETABLE_STATUSES = ['draft', 'cancelled'];
+
+// 批量派发时可派发的状态（仅草稿）
+export const BATCH_DISPATCH_STATUSES = ['draft'];
 
 // ========== 工作制配置 ==========
 export const WORK_HOUR_SYSTEMS = [

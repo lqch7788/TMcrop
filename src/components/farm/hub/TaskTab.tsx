@@ -15,7 +15,7 @@ import { Plus, Upload } from 'lucide-react';
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
 import { taskDispatchStaff } from '../../../data/farmMockData';
-import { EDITABLE_STATUSES, DELETABLE_STATUSES } from './constants_taskDispatch';
+import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES } from './constants_taskDispatch';
 
 // 状态配置（与 taskDispatch 保持一致）
 const STATUS_FILTERS = [
@@ -32,14 +32,13 @@ const STATUS_FILTERS = [
   { value: 'abandoned', label: '已放弃' },
 ];
 
-// 可批量派发的状态：草稿、返工（重新派发）
-const BATCH_DISPATCH_STATUSES = ['draft', 'rejected'];
+// BATCH_DISPATCH_STATUSES 已从 constants_taskDispatch 导入
 
 // 可批量验收的状态：待验收
 const BATCH_ACCEPT_STATUSES = ['waiting_acceptance'];
 
 // 工具栏状态类型
-type ToolbarMode = 'normal' | 'export' | 'batchEdit' | 'batchDelete';
+type ToolbarMode = 'normal' | 'export' | 'batchEdit' | 'batchDelete' | 'batchDispatch' | 'batchVerify';
 
 // 视图模式类型
 type ViewMode = 'list' | 'calendar';
@@ -240,6 +239,24 @@ export function TaskTab({
     onClearSelection();
   }, [onBatchDelete, selectedIds, onClearSelection]);
 
+  // 处理批量派发确认
+  const handleConfirmBatchDispatch = useCallback(() => {
+    if (onBatchDispatch && selectedIds.length > 0) {
+      onBatchDispatch(selectedIds);
+    }
+    setToolbarMode('normal');
+    onClearSelection();
+  }, [onBatchDispatch, selectedIds, onClearSelection]);
+
+  // 处理批量验收确认
+  const handleConfirmBatchVerify = useCallback(() => {
+    if (onBatchVerify && selectedIds.length > 0) {
+      onBatchVerify(selectedIds);
+    }
+    setToolbarMode('normal');
+    onClearSelection();
+  }, [onBatchVerify, selectedIds, onClearSelection]);
+
   // 处理全选
   const handleSelectAll = useCallback(() => {
     // 根据当前模式选中对应的任务
@@ -268,6 +285,24 @@ export function TaskTab({
           }
         }
       });
+    } else if (toolbarMode === 'batchDispatch') {
+      // 批量派发模式：选中草稿或返工状态的任务
+      filteredTasks.forEach(task => {
+        if (BATCH_DISPATCH_STATUSES.includes(task.status)) {
+          if (!selectedIds.includes(task.id)) {
+            onToggleSelect(task.id);
+          }
+        }
+      });
+    } else if (toolbarMode === 'batchVerify') {
+      // 批量验收模式：选中待验收状态的任务
+      filteredTasks.forEach(task => {
+        if (BATCH_ACCEPT_STATUSES.includes(task.status)) {
+          if (!selectedIds.includes(task.id)) {
+            onToggleSelect(task.id);
+          }
+        }
+      });
     }
   }, [filteredTasks, selectedIds, onToggleSelect, toolbarMode]);
 
@@ -284,6 +319,16 @@ export function TaskTab({
 
   const toggleBatchDeleteMode = () => {
     setToolbarMode(prev => prev === 'batchDelete' ? 'normal' : 'batchDelete');
+    onClearSelection();
+  };
+
+  const toggleBatchDispatchMode = () => {
+    setToolbarMode(prev => prev === 'batchDispatch' ? 'normal' : 'batchDispatch');
+    onClearSelection();
+  };
+
+  const toggleBatchVerifyMode = () => {
+    setToolbarMode(prev => prev === 'batchVerify' ? 'normal' : 'batchVerify');
     onClearSelection();
   };
 
@@ -399,13 +444,14 @@ export function TaskTab({
         tasks={filteredTasks}
         currentPage={currentPage}
         pageSize={pageSize}
-        selectedRows={selectedIds.map(id => {
-          const index = filteredTasks.findIndex(t => t.id === id);
-          return index >= 0 ? index : -1;
-        }).filter(idx => idx >= 0)}
+        // 传递 selectedIds（选中任务ID列表），让 TaskTable 根据 currentPage 和 pageSize 自己计算选中状态
+        // 避免翻页后索引错乱的问题
+        selectedIds={selectedIds}
         exportMode={toolbarMode === 'export'}
         batchEditMode={toolbarMode === 'batchEdit'}
         batchDeleteMode={toolbarMode === 'batchDelete'}
+        batchDispatchMode={toolbarMode === 'batchDispatch'}
+        batchVerifyMode={toolbarMode === 'batchVerify'}
         canRemind={canRemind}
         sendReminder={(
           taskId: string,
@@ -459,6 +505,10 @@ export function TaskTab({
         onCancelBatchEdit={toggleBatchEditMode}
         onCancelBatchDelete={toggleBatchDeleteMode}
         onBatchDelete={toggleBatchDeleteMode}
+        onBatchDispatch={toggleBatchDispatchMode}
+        onConfirmBatchDispatch={handleConfirmBatchDispatch}
+        onBatchVerify={toggleBatchVerifyMode}
+        onConfirmBatchVerify={handleConfirmBatchVerify}
         onExport={toggleExportMode}
         onImport={onImport}
         onCreate={onCreateTask}

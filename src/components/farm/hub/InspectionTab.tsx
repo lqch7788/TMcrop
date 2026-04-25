@@ -1,11 +1,25 @@
 /**
- * 农事任务中心 - 巡查记录Tab
- * 样式与 TaskDispatchPage 统一
+ * 农事任务中心 - 巡查记录Tab（完整功能版）
+ * 集成独立巡查页面的所有功能
  */
 
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { usePersistentInspections } from '../../../hooks/usePersistentInspections';
+import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
+import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
+import { InspectionToolbar } from './components/InspectionToolbar';
+import { CreateInspectionModal } from './modals/CreateInspectionModal';
+import { DetailInspectionModal } from './modals/DetailInspectionModal';
+import { BatchEditModal } from './modals/BatchEditModal';
+import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
-import { Plus, Eye, Edit, QrCode } from 'lucide-react';
+import { greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
+import QRScanner, { QRData } from '../../common/QRScanner';
+import { Modal } from '../../ui/Modal';
+import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { InspectionTable } from '../inspection/InspectionTable';
 
 // 巡查类型配置
 const INSPECTION_TYPES = [
@@ -23,215 +37,1073 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   critical: { bg: 'bg-red-100', text: 'text-red-700', label: '异常' },
 };
 
+// 初始筛选条件
+const INITIAL_FILTERS: InspectionSearchFilters = {
+  recordCode: '',
+  inspectorName: '',
+  inspectionType: 'all',
+  startDate: '',
+  endDate: '',
+  status: 'all',
+  problemStatus: 'all',
+};
+
 interface InspectionTabProps {
+  // 来自 hub 的数据
   inspections: InspectionRecord[];
-  selectedIds: string[];
-  onToggleSelect: (id: string) => void;
-  onSelectAll: () => void;
-  onClearSelection: () => void;
-  filters: { status: string; type: string; area: string; search: string };
-  onFilterChange: (key: string, value: string) => void;
+  // 筛选状态
+  filters: InspectionSearchFilters;
+  onFilterChange: (key: keyof InspectionSearchFilters, value: string) => void;
   onResetFilters: () => void;
-  onViewInspection?: (recordId: string) => void;
+  // 分页状态
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  // 模式状态
+  exportMode: boolean;
+  batchEditMode: boolean;
+  batchDeleteMode: boolean;
+  onToggleExportMode: () => void;
+  onToggleBatchEditMode: () => void;
+  onToggleBatchDeleteMode: () => void;
+  // 选择状态
+  selectedRows: number[];
+  onToggleSelectRow: (index: number) => void;
+  onSelectAll: (total: number) => void;
+  onClearSelection: () => void;
+  // 弹窗状态
+  detailRecordId: string | null;
+  onViewDetail: (recordId: string) => void;
+  onCloseDetail: () => void;
+  isCreateModalOpen: boolean;
+  onOpenCreateModal: () => void;
+  onCloseCreateModal: () => void;
+  // 问题相关
+  problems: any[];
+  onReportProblem: (record: InspectionRecord) => void;
+  onAcceptProblem: (problem: any) => void;
+  // 批量操作回调
+  onBatchDelete: (ids: string[]) => void;
+  onBatchEdit: (ids: string[]) => void;
 }
 
 /**
- * 巡查记录Tab组件
+ * 巡查记录Tab组件（完整功能版）
  */
 export function InspectionTab({
   inspections,
-  selectedIds,
-  onToggleSelect,
-  onSelectAll,
-  onClearSelection,
   filters,
   onFilterChange,
   onResetFilters,
-  onViewInspection,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  exportMode,
+  batchEditMode,
+  batchDeleteMode,
+  onToggleExportMode,
+  onToggleBatchEditMode,
+  onToggleBatchDeleteMode,
+  selectedRows,
+  onToggleSelectRow,
+  onSelectAll,
+  onClearSelection,
+  detailRecordId,
+  onViewDetail,
+  onCloseDetail,
+  isCreateModalOpen,
+  onOpenCreateModal,
+  onCloseCreateModal,
+  problems,
+  onReportProblem,
+  onAcceptProblem,
+  onBatchDelete,
+  onBatchEdit,
 }: InspectionTabProps) {
+  // 使用 hub 传来的 inspections 作为数据源（与 hub 保持同步）
+  // 同时保留本地状态用于本地更新
+  const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(inspections);
+
+  // 当 hub 的 inspections 变化时，同步到本地状态
+  // 这确保了 hub 侧的数据变化能反映到当前组件
+  React.useEffect(() => {
+    setInspectionRecords(inspections);
+  }, [inspections]);
+
+  // 问题相关 Hook
+  const { addProblem, forceRefresh } = usePersistentProblems();
+  const { approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
+
+  // 任务数据（用于获取实际处理进度）
+  const [tasks] = useLocalStorage<any[]>(STORAGE_KEYS.TASKS, []);
+
+  // 弹窗状态
+  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('excel');
+
+  // 批量编辑相关状态
+  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
+  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<InspectionRecord>>>({});
+  const [selectedRecordId, setSelectedRecordId] = useState('');
+
+  // 新建表单状态
+  const [newRecord, setNewRecord] = useState({
+    recordCode: '',
+    inspectionType: 'farm' as 'farm' | 'equipment' | 'infrastructure' | 'other',
+    greenhouseId: '',
+    cropName: '',
+    inspectorId: '',
+    batchId: '',
+    batchCode: '',
+    checkDate: new Date().toISOString().split('T')[0],
+    checkTime: new Date().toTimeString().slice(0, 5),
+    duration: 0,
+    weather: '晴',
+    temperature: 0,
+    humidity: 0,
+    cropStatus: '良好',
+    plantHeight: 0,
+    leafCount: 0,
+    inspectionResult: 'normal' as 'normal' | 'abnormal',
+    feedbackRequired: false,
+    issueCategories: [] as string[],
+    issuePresets: [] as string[],
+    issueText: '',
+    issueSeverity: '中等' as '轻微' | '中等' | '严重',
+    issuePhotos: [] as string[],
+    feedbackUsers: [] as string[],
+    remarks: '',
+    equipmentId: '',
+    equipmentName: '',
+    infrastructureId: '',
+    infrastructureName: '',
+    airTemperature: 0,
+    airHumidity: 0,
+    lightIntensity: 0,
+    co2Concentration: 0,
+    soilTemperature: 0,
+    soilMoisture: 0,
+    soilEc: 0,
+    soilPh: 0,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // 验收弹窗状态
+  const [acceptanceModal, setAcceptanceModal] = useState({
+    isOpen: false,
+    problemId: null as number | null,
+  });
+  const [acceptanceComment, setAcceptanceComment] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  // QR Scanner 弹窗状态
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+
+  // QR扫描成功处理
+  const handleQRScanSuccess = useCallback((data: QRData) => {
+    // 获取该温室的传感器数据用于自动填充环境参数
+    const sensors = iotSensors.filter(s => s.greenhouseId === data.code);
+    const envParams = {
+      airTemperature: sensors.find(s => s.type === 'air_temp')?.value || 0,
+      airHumidity: sensors.find(s => s.type === 'air_humidity')?.value || 0,
+      soilTemperature: sensors.find(s => s.type === 'soil_temp')?.value || 0,
+      soilMoisture: sensors.find(s => s.type === 'soil_moisture')?.value || 0,
+      lightIntensity: sensors.find(s => s.type === 'light')?.value || 0,
+      co2Concentration: sensors.find(s => s.type === 'co2')?.value || 0,
+      soilEc: sensors.find(s => s.type === 'soil_ec')?.value || 0,
+      soilPh: sensors.find(s => s.type === 'soil_ph')?.value || 0,
+    };
+
+    if (data.type === 'farm') {
+      const greenhouse = greenhouses.find(g => g.id === data.code);
+      setNewRecord(prev => ({
+        ...prev,
+        inspectionType: 'farm',
+        greenhouseId: data.code,
+        cropName: '',
+        equipmentId: '',
+        equipmentName: '',
+        infrastructureId: '',
+        infrastructureName: '',
+        ...envParams,
+      }));
+    } else if (data.type === 'equipment') {
+      const equipment = equipmentRecords.find(e => e.id === data.code);
+      setNewRecord(prev => ({
+        ...prev,
+        inspectionType: 'equipment',
+        greenhouseId: equipment?.greenhouseId || '',
+        equipmentId: data.code,
+        equipmentName: data.name,
+        infrastructureId: '',
+        infrastructureName: '',
+        ...envParams,
+      }));
+    } else if (data.type === 'infrastructure') {
+      const infrastructure = infrastructureRecords.find(i => i.id === data.code);
+      setNewRecord(prev => ({
+        ...prev,
+        inspectionType: 'infrastructure',
+        greenhouseId: infrastructure?.greenhouseId || '',
+        equipmentId: '',
+        equipmentName: '',
+        infrastructureId: data.code,
+        infrastructureName: data.name,
+        ...envParams,
+      }));
+    }
+    setIsQRScannerOpen(false);
+  }, []);
+
+  // 生成巡查编号
+  const generateRecordCode = useCallback(() => {
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+    const todayRecords = inspectionRecords.filter(r => r.recordCode.includes(dateStr));
+    const maxSeq = todayRecords.reduce((max, r) => {
+      const seq = parseInt(r.recordCode.split('-')[1] || '0');
+      return seq > max ? seq : max;
+    }, 0);
+    const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
+    return `XT${dateStr}-${nextSeq}`;
+  }, [inspectionRecords]);
+
+  // 过滤后的数据
+  const filteredRecords = useMemo(() => {
+    return inspectionRecords.filter(record => {
+      // 巡查编号筛选
+      if (filters.recordCode && !record.recordCode?.toLowerCase().includes(filters.recordCode.toLowerCase())) {
+        return false;
+      }
+      // 提交人筛选
+      if (filters.inspectorName && !record.inspectorName?.toLowerCase().includes(filters.inspectorName.toLowerCase())) {
+        return false;
+      }
+      // 巡查类型筛选
+      if (filters.inspectionType !== 'all' && record.inspectionType !== filters.inspectionType) {
+        return false;
+      }
+      // 巡查日期起筛选
+      if (filters.startDate && record.checkDate < filters.startDate) {
+        return false;
+      }
+      // 巡查日期止筛选
+      if (filters.endDate && record.checkDate > filters.endDate) {
+        return false;
+      }
+      // 状态筛选
+      if (filters.status !== 'all' && record.status !== filters.status) {
+        return false;
+      }
+      // 问题处理状态筛选
+      if (filters.problemStatus !== 'all') {
+        const problem = problems.find(p => p.id === record.problemId);
+        const problemStatusMap: Record<string, string> = {
+          '待处理': 'pending',
+          '处理中': 'processing',
+          '待验收': 'pending',
+          '已处理': 'resolved',
+        };
+        const mappedStatus = problemStatusMap[filters.problemStatus];
+        if (mappedStatus && problem?.status !== mappedStatus) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [inspectionRecords, filters, problems]);
+
+  // 分页后的数据
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredRecords.slice(start, start + pageSize);
+  }, [filteredRecords, currentPage, pageSize]);
+
+  // 选中的 ID 数组
+  const selectedIds = useMemo(() => {
+    return selectedRows.map(idx => paginatedRecords[idx]?.id).filter(Boolean);
+  }, [selectedRows, paginatedRecords]);
+
+  // 详情记录
+  const detailRecord = useMemo(() => {
+    return inspectionRecords.find(r => r.id?.toString() === detailRecordId?.toString()) || null;
+  }, [inspectionRecords, detailRecordId]);
+
+  // 打开新建弹窗
+  const handleOpenCreateModal = () => {
+    // 只有在数据为空时才填充默认值，保留扫码结果的数据
+    setNewRecord(prev => ({
+      ...prev,
+      recordCode: prev.recordCode || generateRecordCode(),
+      checkDate: prev.checkDate || new Date().toISOString().split('T')[0],
+      checkTime: prev.checkTime || new Date().toTimeString().slice(0, 5),
+      inspectorId: prev.inspectorId || 'U013', // 默认巡查人员
+    }));
+    onOpenCreateModal();
+  };
+
+  // 打开扫码弹窗
+  const handleOpenQRScanner = () => {
+    setIsQRScannerOpen(true);
+  };
+
+  // 关闭新建弹窗
+  const handleCloseCreateModal = () => {
+    setNewRecord({
+      recordCode: '',
+      inspectionType: 'farm',
+      greenhouseId: '',
+      cropName: '',
+      inspectorId: '',
+      batchId: '',
+      batchCode: '',
+      checkDate: new Date().toISOString().split('T')[0],
+      checkTime: new Date().toTimeString().slice(0, 5),
+      duration: 0,
+      weather: '晴',
+      temperature: 0,
+      humidity: 0,
+      cropStatus: '良好',
+      plantHeight: 0,
+      leafCount: 0,
+      inspectionResult: 'normal',
+      feedbackRequired: false,
+      issueCategories: [],
+      issuePresets: [],
+      issueText: '',
+      issueSeverity: '中等',
+      issuePhotos: [],
+      feedbackUsers: [],
+      remarks: '',
+      equipmentId: '',
+      equipmentName: '',
+      infrastructureId: '',
+      infrastructureName: '',
+      airTemperature: 0,
+      airHumidity: 0,
+      lightIntensity: 0,
+      co2Concentration: 0,
+      soilTemperature: 0,
+      soilMoisture: 0,
+      soilEc: 0,
+      soilPh: 0,
+    });
+    setErrors({});
+    onCloseCreateModal();
+  };
+
+  // 验证表单
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!newRecord.checkDate) newErrors.checkDate = '请选择巡查日期';
+
+    if (newRecord.inspectionType === 'farm') {
+      if (!newRecord.greenhouseId) newErrors.greenhouseId = '请选择巡查区域';
+      if (!newRecord.cropName) newErrors.cropName = '请选择作物名称';
+    } else if (newRecord.inspectionType === 'equipment') {
+      if (!newRecord.equipmentId) newErrors.equipmentId = '请选择设备';
+    } else if (newRecord.inspectionType === 'infrastructure') {
+      if (!newRecord.infrastructureId) newErrors.infrastructureId = '请选择基础设施';
+    } else if (newRecord.inspectionType === 'other') {
+      if (!newRecord.remarks) newErrors.remarks = '请输入其他说明';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // 创建巡查记录
+  const handleCreateRecord = () => {
+    if (!validateForm()) return;
+
+    const selectedUser = users.find(u => u.id === newRecord.inspectorId);
+    const selectedBatch = cropBatches.find(b => b.id === newRecord.batchId);
+
+    // 根据巡查类型获取位置信息
+    let greenhouseId = '';
+    let greenhouseName = '';
+    let cropName = '';
+    let equipmentId = '';
+    let equipmentName = '';
+    let infrastructureId = '';
+    let infrastructureName = '';
+
+    if (newRecord.inspectionType === 'farm') {
+      const selectedGreenhouse = greenhouses.find(g => g.id === newRecord.greenhouseId);
+      greenhouseId = newRecord.greenhouseId;
+      greenhouseName = selectedGreenhouse?.name || '';
+      cropName = newRecord.cropName;
+    } else if (newRecord.inspectionType === 'equipment') {
+      const selectedEquipment = equipmentRecords.find(e => e.id === newRecord.equipmentId);
+      greenhouseId = selectedEquipment?.greenhouseId || '';
+      greenhouseName = selectedEquipment?.location || '';
+      equipmentId = newRecord.equipmentId;
+      equipmentName = selectedEquipment?.name || '';
+    } else if (newRecord.inspectionType === 'infrastructure') {
+      const selectedInfrastructure = infrastructureRecords.find(i => i.id === newRecord.infrastructureId);
+      greenhouseId = selectedInfrastructure?.greenhouseId || '';
+      greenhouseName = selectedInfrastructure?.location || '';
+      infrastructureId = newRecord.infrastructureId;
+      infrastructureName = selectedInfrastructure?.name || '';
+    }
+
+    // 问题推送逻辑
+    let newProblemId: number | undefined;
+    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult && newRecord.inspectionResult !== 'normal') {
+      const presetIssues = newRecord.issuePresets?.join('、') || '';
+      const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
+
+      const feedbackUserNames = newRecord.feedbackUsers
+        .map(id => users.find(u => u.id === id)?.name || id)
+        .join('、');
+
+      let severity: '轻微' | '中等' | '严重' = newRecord.issueSeverity || '中等';
+      if (!newRecord.issueSeverity) {
+        const allIssueText = issueText + newRecord.issueText;
+        if (allIssueText.includes('严重') || allIssueText.includes('灰霉') || allIssueText.includes('病毒')) {
+          severity = '严重';
+        } else if (allIssueText.includes('蚜虫') || allIssueText.includes('病') || allIssueText.includes('虫')) {
+          severity = '中等';
+        }
+      }
+
+      newProblemId = addProblem({
+        greenhouseId: newRecord.greenhouseId,
+        greenhouseName: greenhouseName,
+        cropName: cropName,
+        inspectorId: newRecord.inspectorId,
+        inspectorName: selectedUser?.name || '',
+        checkDate: newRecord.checkDate,
+        checkTime: newRecord.checkTime,
+        weather: newRecord.weather,
+        temperature: newRecord.temperature,
+        humidity: newRecord.humidity,
+        cropStatus: newRecord.cropStatus,
+        plantHeight: newRecord.plantHeight || undefined,
+        leafCount: newRecord.leafCount || undefined,
+        issueText: issueText || newRecord.issueText || '未描述具体问题',
+        issueSeverity: severity,
+        status: '待处理',
+        remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
+        images: newRecord.issuePhotos || [],
+        sourceModule: 'inspection',
+        sourceId: newRecord.recordCode,
+      });
+    }
+
+    const record = {
+      id: inspectionRecords.length + 1,
+      recordCode: newRecord.recordCode,
+      inspectionType: newRecord.inspectionType,
+      greenhouseId,
+      greenhouseName,
+      cropName,
+      inspectorId: newRecord.inspectorId,
+      inspectorName: selectedUser?.name || '',
+      batchId: newRecord.batchId || undefined,
+      batchCode: selectedBatch?.batchCode || undefined,
+      checkDate: newRecord.checkDate,
+      checkTime: newRecord.checkTime,
+      duration: newRecord.duration || undefined,
+      weather: newRecord.weather,
+      temperature: newRecord.temperature,
+      humidity: newRecord.humidity,
+      cropStatus: newRecord.cropStatus,
+      plantHeight: newRecord.plantHeight || undefined,
+      leafCount: newRecord.leafCount || undefined,
+      status: newRecord.inspectionResult === 'normal' ? 'normal' : 'critical',
+      issueCategories: newRecord.issueCategories || [],
+      issuePresets: newRecord.issuePresets || [],
+      issueText: newRecord.issueText || '',
+      issueSeverity: newRecord.issueSeverity || '中等',
+      issuePhotos: newRecord.issuePhotos || [],
+      feedbackUsers: newRecord.feedbackUsers || [],
+      remarks: newRecord.remarks,
+      equipmentId: equipmentId || undefined,
+      equipmentName: equipmentName || undefined,
+      infrastructureId: infrastructureId || undefined,
+      infrastructureName: infrastructureName || undefined,
+      problemId: newProblemId,
+    };
+
+    setInspectionRecords([record, ...inspectionRecords]);
+    handleCloseCreateModal();
+  };
+
+  // 导出处理
+  const handleConfirmExport = () => {
+    if (selectedIds.length === 0) {
+      alert('请先选择要导出的数据');
+      return;
+    }
+    setShowExportModal(true);
+  };
+
+  const handleDoExport = async () => {
+    const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
+    const headers = ['巡查编号', '巡查类型', '巡查人员', '位置/对象', '巡查日期', '天气', '温度(°C)', '湿度(%)', '发现问题', '问题照片', '问题处理', '状态'];
+    const exportData = selectedData.map(row => ({
+      '巡查编号': row.recordCode,
+      '巡查类型': row.inspectionType === 'farm' ? '种植' : row.inspectionType === 'equipment' ? '设备' : row.inspectionType === 'infrastructure' ? '设施' : row.inspectionType === 'other' ? '其他' : '-',
+      '巡查人员': row.inspectorName,
+      '位置/对象': row.inspectionType === 'farm' ? row.greenhouseName : row.inspectionType === 'equipment' ? row.equipmentName : row.inspectionType === 'infrastructure' ? row.infrastructureName : row.remarks || '-',
+      '巡查日期': row.checkDate,
+      '天气': row.weather,
+      '温度(°C)': row.temperature,
+      '湿度(%)': row.humidity,
+      '发现问题': (row.issues && row.issues.length > 0) ? row.issues.join('; ') : '-',
+      '问题照片': (row.images && row.images.length > 0) ? `有${row.images.length}张照片` : '-',
+      '问题处理': row.issueStatus === 'resolved' ? '已解决' : row.issueStatus === 'processing' ? '处理中' : row.issueStatus === 'pending' ? '待处理' : '-',
+      '状态': row.status === 'normal' ? '正常' : row.status === 'warning' ? '注意' : row.status === 'critical' ? '异常' : row.status === 'attention' ? '需关注' : '-'
+    }));
+
+    let content = '';
+    let mimeType = '';
+    let extension = '';
+
+    if (exportFormat === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+      extension = 'csv';
+    } else if (exportFormat === 'excel') {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    } else if (exportFormat === 'word') {
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-word;charset=utf-8';
+      extension = 'doc';
+    }
+
+    const fileName = `巡查巡检_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+    try {
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: exportFormat.toUpperCase() + ' Files',
+            accept: { [mimeType]: ['.' + extension] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      } else {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    onToggleExportMode();
+    onClearSelection();
+    setShowExportModal(false);
+  };
+
+  // 批量编辑确认
+  const handleConfirmBatchEdit = () => {
+    const updatedRecords = [...inspectionRecords];
+    editedRecordIds.forEach(id => {
+      const index = updatedRecords.findIndex(r => r.id.toString() === id);
+      if (index !== -1 && editedRecords[id]) {
+        const record = updatedRecords[index];
+        if (editedRecords[id].greenhouseId && editedRecords[id].greenhouseId !== record.greenhouseId) {
+          const gh = greenhouses.find(g => g.id === editedRecords[id].greenhouseId);
+          updatedRecords[index] = {
+            ...record,
+            ...editedRecords[id],
+            greenhouseName: gh?.name || record.greenhouseName,
+          };
+        } else {
+          updatedRecords[index] = { ...record, ...editedRecords[id] };
+        }
+        if (editedRecords[id].inspectorId && editedRecords[id].inspectorId !== record.inspectorId) {
+          const user = users.find(u => u.id === editedRecords[id].inspectorId);
+          updatedRecords[index] = {
+            ...updatedRecords[index],
+            inspectorName: user?.name || record.inspectorName,
+          };
+        }
+      }
+    });
+    setInspectionRecords(updatedRecords);
+    setShowBatchEditModal(false);
+    onToggleBatchEditMode();
+    onClearSelection();
+    setEditedRecordIds([]);
+    setEditedRecords({});
+    setSelectedRecordId('');
+  };
+
+  // 批量删除确认
+  const handleConfirmBatchDelete = () => {
+    const indicesToDelete = new Set(selectedRows);
+    const remainingRecords = inspectionRecords.filter((_, index) => {
+      const filteredIndex = filteredRecords.findIndex(r => r.id === inspectionRecords[index].id);
+      return !indicesToDelete.has(filteredIndex);
+    });
+    setInspectionRecords(remainingRecords);
+    setShowDeleteWarning(false);
+    onToggleBatchDeleteMode();
+    onClearSelection();
+  };
+
+  // 验收通过
+  const handleApproveAcceptance = () => {
+    if (!acceptanceModal.problemId) return;
+    approveProblemCompletion(
+      acceptanceModal.problemId,
+      'U001',
+      '系统管理员',
+      acceptanceComment || '验收通过'
+    );
+    forceRefresh();
+    setAcceptanceModal({ isOpen: false, problemId: null });
+    setAcceptanceComment('');
+  };
+
+  // 返工
+  const handleRejectToDispatch = (reason: string) => {
+    if (!acceptanceModal.problemId) return;
+    rejectAcceptance(
+      acceptanceModal.problemId,
+      'U001',
+      '系统管理员',
+      reason
+    );
+    forceRefresh();
+    setAcceptanceModal({ isOpen: false, problemId: null });
+  };
+
+  // 总页数
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+
   return (
-    <div>
-      {/* 筛选栏 */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">巡查类型:</span>
-          <select
-            value={filters.type}
-            onChange={(e) => onFilterChange('type', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-          >
-            {INSPECTION_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>{type.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">状态:</span>
-          <select
-            value={filters.status}
-            onChange={(e) => onFilterChange('status', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-          >
-            <option value="all">全部状态</option>
-            <option value="normal">正常</option>
-            <option value="attention">需关注</option>
-            <option value="critical">异常</option>
-          </select>
-        </div>
-        <button
-          onClick={onResetFilters}
-          className="px-3 py-1.5 text-sm bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-        >
-          重置
-        </button>
+    <div className="space-y-4">
+      {/* 搜索栏 */}
+      <InspectionSearch
+        filters={filters}
+        onFiltersChange={(newFilters) => {
+          Object.entries(newFilters).forEach(([key, value]) => {
+            onFilterChange(key as keyof InspectionSearchFilters, value);
+          });
+        }}
+        onSearch={() => {}}
+        onReset={onResetFilters}
+      />
+
+      {/* 工具栏 */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <InspectionToolbar
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          onCreate={handleOpenCreateModal}
+          onBatchEdit={onToggleBatchEditMode}
+          onBatchDelete={onToggleBatchDeleteMode}
+          onExport={onToggleExportMode}
+          onConfirmExport={handleConfirmExport}
+          onCancelExport={onToggleExportMode}
+          onConfirmBatchEdit={() => setShowBatchEditModal(true)}
+          onCancelBatchEdit={() => {
+            onToggleBatchEditMode();
+            onClearSelection();
+            setEditedRecordIds([]);
+            setEditedRecords({});
+            setSelectedRecordId('');
+          }}
+          onConfirmBatchDelete={() => setShowDeleteWarning(true)}
+          onCancelBatchDelete={() => {
+            onToggleBatchDeleteMode();
+            onClearSelection();
+          }}
+        />
+
+        {/* 表格 - 使用与巡查记录页面完全一致的组件 */}
+        <InspectionTable
+          records={filteredRecords}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          selectedRows={selectedRows}
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          batchDeleteMode={batchDeleteMode}
+          onSelectRow={(idx) => {
+            // 将当前页索引转换为 filteredRecords 的真实索引
+            const realIndex = (currentPage - 1) * pageSize + idx;
+            if (!selectedRows.includes(realIndex)) {
+              // 使用回调方式更新 selection
+              onToggleSelectRow(realIndex);
+            } else {
+              onToggleSelectRow(realIndex);
+            }
+          }}
+          onSelectAll={() => {
+            if (selectedRows.length === filteredRecords.length) {
+              onClearSelection();
+            } else {
+              onSelectAll(filteredRecords.length);
+            }
+          }}
+          onViewDetail={(record) => { onViewDetail(record.id?.toString() || ''); }}
+          onPageChange={onPageChange}
+          onPageSizeChange={(size) => { onPageSizeChange(size); }}
+          problems={problems}
+          tasks={tasks}
+          onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
+        />
       </div>
 
-      {/* 快捷操作 */}
-      <div className="mb-4 p-3 bg-emerald-50 rounded-lg flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-emerald-700">快捷操作:</span>
-          <button
-            onClick={() => window.location.href = '/inspection'}
-            className="flex items-center gap-2 px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
-          >
-            <Plus className="w-4 h-4" />
-            新建巡查
-          </button>
-          <button className="px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700">
-            查看巡查计划
-          </button>
-          <button className="px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700">
-            巡查统计
-          </button>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-emerald-600">
-          <QrCode className="w-5 h-5" />
-          扫码录入
-        </div>
-      </div>
+      {/* 新建弹窗 */}
+      <CreateInspectionModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        onSubmit={handleCreateRecord}
+        newRecord={newRecord}
+        onNewRecordChange={setNewRecord}
+        errors={errors}
+        generateRecordCode={generateRecordCode}
+        onImageUpload={() => {}}
+        onRemoveImage={() => {}}
+        greenhouses={greenhouses}
+        users={users}
+        cropTypes={cropTypes}
+        cropBatches={cropBatches}
+        equipmentRecords={equipmentRecords}
+        infrastructureRecords={infrastructureRecords}
+        onOpenQRScanner={handleOpenQRScanner}
+      />
 
-      {/* 巡查列表 */}
-      {inspections.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          <p>暂无巡查记录</p>
-        </div>
-      ) : (
-        <div className="rounded-xl overflow-hidden border border-gray-100">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <th className="px-4 py-3 text-center">
+      {/* 详情弹窗 */}
+      <DetailInspectionModal
+        isOpen={!!detailRecord}
+        onClose={onCloseDetail}
+        record={detailRecord}
+        onAcceptProblem={(problemId) => {
+          setAcceptanceModal({ isOpen: true, problemId });
+        }}
+      />
+
+      {/* 批量编辑弹窗 */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        selectedRows={selectedRows}
+        records={filteredRecords}
+        editedRecordIds={editedRecordIds}
+        editedRecords={editedRecords}
+        selectedRecordId={selectedRecordId}
+        onSelectedRecordIdChange={setSelectedRecordId}
+        onEditedRecordsChange={setEditedRecords}
+        onEditedRecordIdsChange={setEditedRecordIds}
+        onClose={() => setShowBatchEditModal(false)}
+        onConfirm={handleConfirmBatchEdit}
+        greenhouses={greenhouses}
+        users={users}
+        equipmentRecords={equipmentRecords}
+        infrastructureRecords={infrastructureRecords}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteWarningModal
+        isOpen={showDeleteWarning}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteWarning(false)}
+        onConfirm={handleConfirmBatchDelete}
+      />
+
+      {/* 导出格式弹窗 */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">选择导出格式</h2>
+            <div className="space-y-3 mb-6">
+              {[
+                { value: 'excel', label: 'Excel 文件 (.xlsx)', icon: '📊' },
+                { value: 'csv', label: 'CSV 文件 (.csv)', icon: '📄' },
+                { value: 'word', label: 'Word 文件 (.docx)', icon: '📝' },
+              ].map((format) => (
+                <label
+                  key={format.value}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    exportFormat === format.value
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-gray-300 hover:border-emerald-300'
+                  }`}
+                >
                   <input
-                    type="checkbox"
-                    checked={selectedIds.length === inspections.length && inspections.length > 0}
-                    onChange={() => selectedIds.length === inspections.length ? onClearSelection() : onSelectAll()}
-                    className="w-4 h-4 rounded border-gray-300"
+                    type="radio"
+                    name="exportFormat"
+                    value={format.value}
+                    checked={exportFormat === format.value}
+                    onChange={(e) => setExportFormat(e.target.value)}
+                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
                   />
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查编号</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查类型</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">区域</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查员</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查时间</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">发现问题</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
-              {inspections.map((inspection) => {
-                const statusConfig = STATUS_CONFIG[inspection.status] || STATUS_CONFIG.normal;
-                const typeLabel = INSPECTION_TYPES.find(t => t.value === inspection.inspectionType)?.label || '种植巡查';
-                const issueCount = inspection.issues?.length || 0;
-                return (
-                  <tr key={inspection.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(inspection.id)}
-                        onChange={() => onToggleSelect(inspection.id)}
-                        className="w-4 h-4 rounded border-gray-300"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">{inspection.recordCode}</td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">{typeLabel}</td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">{inspection.greenhouseName || '-'}</td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">{inspection.inspectorName || '-'}</td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">
-                      {inspection.checkDate} {inspection.checkTime}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {issueCount > 0 ? (
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          inspection.status === 'critical' ? 'bg-red-100 text-red-700' :
-                          inspection.status === 'attention' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {issueCount}个问题
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">无</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 text-xs rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
-                        {statusConfig.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {onViewInspection ? (
-                          <button
-                            onClick={() => onViewInspection(inspection.id)}
-                            className="flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-sm"
-                          >
-                            <Eye className="w-4 h-4" />
-                            详情
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => window.location.href = `/inspection?recordId=${inspection.id}`}
-                            className="flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-sm"
-                          >
-                            <Eye className="w-4 h-4" />
-                            查看
-                          </button>
-                        )}
-                        <button
-                          onClick={() => window.location.href = `/inspection?recordId=${inspection.id}`}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                          编辑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* 分页 */}
-      {inspections.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <p className="text-sm text-gray-500">共 {inspections.length} 条记录</p>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50" disabled>
-              上一页
-            </button>
-            <span className="px-3 py-1 text-sm">第 1/1 页</span>
-            <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50" disabled>
-              下一页
-            </button>
+                  <span className="text-lg">{format.icon}</span>
+                  <span className="text-sm font-medium text-gray-900">{format.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDoExport}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+              >
+                导出
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* QR Scanner Modal */}
+      <QRScanner
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScanSuccess={handleQRScanSuccess}
+      />
+
+      {/* 问题验收弹窗 */}
+      <Modal
+        isOpen={acceptanceModal.isOpen}
+        onClose={() => {
+          setAcceptanceModal({ isOpen: false, problemId: null });
+          setAcceptanceComment('');
+          setRejectionReason('');
+        }}
+        title="问题验收"
+        size="xl"
+      >
+        {acceptanceModal.problemId && (
+          <div className="space-y-4">
+            {/* 实时获取最新问题数据 */}
+            {(() => {
+              const problem = problems.find(p => p.id === acceptanceModal.problemId);
+              if (!problem) return null;
+              return (
+                <>
+                  {/* 处理结果信息 */}
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理人</span>
+                      <span className="text-sm font-medium">{problem.handler || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理日期</span>
+                      <span className="text-sm font-medium">{problem.handleDate || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">处理结果</span>
+                    </div>
+                    <div className="bg-white rounded p-3 text-sm">
+                      {problem.handleResult || '无处理结果'}
+                    </div>
+                  </div>
+
+                  {/* 返工次数提示 */}
+                  {(problem.reworkCount ?? 0) > 0 && (
+                    <div className={`text-sm p-3 rounded-lg border ${
+                      (problem.reworkCount ?? 0) >= 2
+                        ? 'bg-red-50 text-red-700 border-red-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      <div className="font-medium">
+                        {(problem.reworkCount ?? 0) >= 2
+                          ? '⚠️ 已返工多次，将退回问题分派页面重新分派'
+                          : `已返工${problem.reworkCount}次，再次返工将退回问题分派`
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 执行人反馈详情 */}
+                  {(() => {
+                    // 找到最后一个 submit 类型的流转记录，提取 feedbackData
+                    const submitRecord = [...(problem.flowRecords || [])]
+                      .reverse()
+                      .find(r => r.action === 'submit');
+                    const feedbackData = submitRecord?.feedbackData;
+                    if (!feedbackData) return null;
+
+                    return (
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">执行人反馈详情</h4>
+                        <div className="space-y-4">
+                          {/* GPS 位置 */}
+                          {feedbackData.gpsLocation && (
+                            <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
+                              <MapPin className="w-5 h-5 text-emerald-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-emerald-600 mb-1">GPS 位置</div>
+                                <div className="text-sm font-mono text-gray-800">
+                                  {feedbackData.gpsLocation.lat.toFixed(6)}, {feedbackData.gpsLocation.lng.toFixed(6)}
+                                </div>
+                              </div>
+                              <a
+                                href={`https://maps.google.com/?q=${feedbackData.gpsLocation.lat},${feedbackData.gpsLocation.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-emerald-500 text-white rounded text-xs hover:bg-emerald-600"
+                              >
+                                查看地图
+                              </a>
+                            </div>
+                          )}
+
+                          {/* 作业前照片 */}
+                          {feedbackData.photosBefore && feedbackData.photosBefore.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Camera className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-medium text-gray-700">作业前照片 ({feedbackData.photosBefore.length}张)</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {feedbackData.photosBefore.map((img, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt={`作业前照片${idx + 1}`}
+                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => window.open(img, '_blank')}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 作业后照片 */}
+                          {feedbackData.photosAfter && feedbackData.photosAfter.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Camera className="w-4 h-4 text-orange-600" />
+                                <span className="text-sm font-medium text-gray-700">作业后照片 ({feedbackData.photosAfter.length}张)</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {feedbackData.photosAfter.map((img, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt={`作业后照片${idx + 1}`}
+                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => window.open(img, '_blank')}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 物资编码 */}
+                          {feedbackData.materialCode && (
+                            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                              <Package className="w-5 h-5 text-purple-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-purple-600 mb-1">物资编码</div>
+                                <div className="text-sm font-mono text-gray-800">{feedbackData.materialCode}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 语音备注 */}
+                          {feedbackData.voiceNote && (
+                            <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
+                              <Mic className="w-5 h-5 text-red-600" />
+                              <div className="flex-1">
+                                <div className="text-xs text-red-600 mb-1">语音备注</div>
+                                <div className="text-sm text-gray-800">已录制语音</div>
+                              </div>
+                              <audio controls className="h-8">
+                                <source src={feedbackData.voiceNote} type="audio/webm" />
+                              </audio>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 流转记录 */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">处理流转记录</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {(problem.flowRecords || []).map((record: any) => (
+                        <div key={record.id} className="flex gap-3 text-xs">
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {new Date(record.actionTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="font-medium text-gray-700">{record.operatorName}</span>
+                          <span className="text-gray-500">
+                            {record.action === 'report' && '上报问题'}
+                            {record.action === 'dispatch' && '分派任务'}
+                            {record.action === 'accept' && '接单'}
+                            {record.action === 'reject' && '拒绝'}
+                            {record.action === 'submit' && '提交反馈'}
+                            {record.action === 'approve' && '验收通过'}
+                            {record.action === 'reject_acceptance' && '验收返工'}
+                          </span>
+                          {record.comment && <span className="text-gray-400">- {record.comment}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 验收操作 */}
+                  <div className="border-t pt-4">
+                    <div className="flex gap-3 mb-4">
+                      <button
+                        onClick={() => handleApproveAcceptance()}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                        验收通过
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('请输入返工原因：');
+                          if (reason) {
+                            handleRejectToDispatch(reason);
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                        返工
+                      </button>
+                    </div>
+                    <div className="text-xs text-gray-500 text-center">
+                      通过：问题关闭，流转结束 | 返工：第1次给原执行人，第2次退分派重分
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
