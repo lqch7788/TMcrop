@@ -58,6 +58,7 @@ export interface SeedSource {
   cropCategory: string;        // 作物类别
   cropName: string;           // 作物名称
   cropVariety: string;        // 作物品种
+  cropCode: string;           // 作物编码（9位）
   supplierId: string;          // 供应商ID
   supplierName: string;        // 供应商名称
   purchaseDate: string;        // 采购日期
@@ -105,6 +106,7 @@ export interface Seedling {
   sourceCode: string;          // 关联种源批号
   cropName: string;            // 作物名称
   cropVariety: string;         // 作物品种
+  cropCode: string;           // 作物编码（9位）
   seedlingType: string;        // 育苗方式
   siteId: string;             // 场地ID
   siteName: string;            // 场地名称
@@ -142,6 +144,7 @@ export interface Planting {
   sourceCode: string;         // 来源批号
   cropName: string;           // 作物名称
   cropVariety: string;         // 作物品种
+  cropCode: string;           // 作物编码（9位）
   areaId: string;            // 区域ID
   areaName: string;           // 区域名称
   rootName: string;           // 大棚/根区名称
@@ -168,22 +171,27 @@ export interface Planting {
 
 /** 种源筛选条件 */
 export interface SeedSourceFilters {
+  cropCategory: string;  // 作物类别
   cropName: string;      // 作物名称
   seedCode: string;      // 种源批号
   sourceType: string;    // 来源类型
   supplierName: string;  // 供应商名称
   startDate: string;     // 开始日期
   endDate: string;       // 结束日期
-  status: string;        // 库存状态
+  status: string;       // 库存状态
+  createBy: string;      // 记录人员
 }
 
 /** 育苗筛选条件 */
 export interface SeedlingFilters {
   siteName: string;      // 场地名称
   seedlingCode: string;  // 育苗批号
+  sourceCode: string;     // 种源批号
   startDate: string;     // 开始日期
   endDate: string;       // 结束日期
   cropName: string;      // 作物名称
+  seedlingType: string;   // 育苗方式
+  createBy: string;       // 记录人员
   status: string;        // 状态
 }
 
@@ -191,8 +199,11 @@ export interface SeedlingFilters {
 export interface PlantingFilters {
   areaName: string;      // 区域名称
   plantCode: string;     // 种植批号
+  sourceCode: string;     // 来源批号（种源/育苗批号）
   isHarvest: string;     // 是否已采收
   startDate: string;     // 开始日期
   endDate: string;       // 结束日期
   cropName: string;      // 作物名称
+  transplantDate: string; // 定植日期
+  createBy: string;      // 记录人员
 }
