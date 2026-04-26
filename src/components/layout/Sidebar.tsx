@@ -8,7 +8,8 @@ import {
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap, Clipboard, Play, Bot, UserMinus, FileSpreadsheet
+  Briefcase, GraduationCap, Clipboard, Play, Bot, UserMinus, FileSpreadsheet,
+  Leaf, Flower2, Trees
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,6 +20,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
   { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
@@ -31,6 +33,13 @@ const productionSubItems = [
   { icon: FileText, label: '生产计划', path: '/production' },
   { icon: FileCode, label: '技术方案', path: '/tech-solution' },
   { icon: ShoppingCart, label: '采购计划', path: '/purchase-plan' },
+];
+
+// 作物管理子菜单
+const cropSubItems = [
+  { icon: Sprout, label: '种源管理', path: '/crop/seed-source' },
+  { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
+  { icon: Trees, label: '种植管理', path: '/crop/planting' },
 ];
 
 // 人工管理5大模块（任务中心已移出到农事管理）
@@ -93,6 +102,7 @@ const indicatorsSubItems = [
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
+  const [cropExpanded, setCropExpanded] = useState(true);
   const [productionExpanded, setProductionExpanded] = useState(true);
   const [materialsExpanded, setMaterialsExpanded] = useState(true);
   const [laborExpanded, setLaborExpanded] = useState(true);
@@ -233,7 +243,51 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
 
             {menuItems.map((item) => (
               <li key={item.path}>
-                {item.label === '库存管理' ? (
+                {item.label === '作物管理' ? (
+                  <>
+                    <button
+                      onClick={() => setCropExpanded(!cropExpanded)}
+                      className={`
+                        flex items-center rounded-lg transition-all duration-200 w-full
+                        ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
+                        ${isActive(item.path) || cropSubItems.some(sub => isActive(sub.path))
+                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
+                        }
+                      `}
+                    >
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      {!collapsed && (
+                        <>
+                          <span className="text-sm font-medium">{item.label}</span>
+                          <ChevronRight className={`w-4 h-4 ml-auto transition-transform text-gray-400 ${cropExpanded ? 'rotate-90' : ''}`} />
+                        </>
+                      )}
+                    </button>
+                    {cropExpanded && !collapsed && (
+                      <ul className="mt-1 ml-4 space-y-1">
+                        {cropSubItems.map((subItem) => (
+                          <li key={subItem.path}>
+                            <Link
+                              to={subItem.path}
+                              onClick={onClose}
+                              className={`
+                                flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
+                                ${isActive(subItem.path)
+                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
+                                }
+                              `}
+                            >
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <span className="text-sm">{subItem.label}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : item.label === '库存管理' ? (
                   <>
                     <button
                       onClick={() => setMaterialsExpanded(!materialsExpanded)}

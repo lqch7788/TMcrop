@@ -227,9 +227,9 @@ const produceTypesGR: ProduceType[] = [
     name: '小麦类',
     subCategories: [
       { code: '01', name: '小麦' },
-      { code: '02', name: '面粉' },
-      { code: '03', name: '全麦粉' },
-      { code: '99', name: '其他小麦制品' },
+      { code: '02', name: '大麦' },
+      { code: '03', name: '荞麦' },
+      { code: '99', name: '其他小麦类' },
     ],
   },
   {

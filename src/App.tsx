@@ -111,6 +111,9 @@ import RecruitmentPage from './pages/labor/RecruitmentPage';
 import SalaryBudgetPage from './pages/labor/SalaryBudgetPage';
 import HrApprovalDetail from './pages/hr/HrApprovalDetail';
 import { DispatchPage } from './components/dispatch';
+import SeedSource from './pages/crop/SeedSource';
+import Seedling from './pages/crop/Seedling';
+import Planting from './pages/crop/Planting';
 
 // 带侧边栏的布局组件（种植管理系统）
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -219,6 +222,11 @@ function AppContent() {
       <Routes>
         <Route path="/park-archive" element={<ParkArchive />} />
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* 作物管理 */}
+        <Route path="/crop/seed-source" element={<SeedSource />} />
+        <Route path="/crop/seedling" element={<Seedling />} />
+        <Route path="/crop/planting" element={<Planting />} />
         <Route path="/production" element={<Production />} />
         <Route path="/tech-solution" element={<TechSolution />} />
         <Route path="/purchase-plan" element={<PurchasePlan />} />
