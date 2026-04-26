@@ -4,7 +4,7 @@ import {
   User, CropBatch, Task, Material, MaterialRequest, Greenhouse,
   IoTSensor, InspectionRecord, HarvestRecord, Message,
   DashboardStats, CropType, Process, Department, TempTask, Worker,
-  Equipment, Infrastructure
+  Equipment, Infrastructure, Position
 } from '../types';
 import { Approval } from '../types/approval';
 import { ProduceInventory } from '../types/inventory';
@@ -1621,6 +1621,34 @@ export const departments: Department[] = [
   { id: 'D003', name: '仓储部', managerId: 'U010', managerName: '孙丽娜' },
   { id: 'D004', name: '财务部', managerId: 'U013', managerName: '财务经理' },
   { id: 'D005', name: '综合办', managerId: 'U014', managerName: '行政经理' },
+];
+
+// 岗位数据 - 与部门关联
+export const positions: Position[] = [
+  // 生产部岗位
+  { id: 'P001', name: '生产主管', departmentId: 'D001', level: 1 },
+  { id: 'P002', name: '生产经理', departmentId: 'D001', level: 2 },
+  { id: 'P003', name: '生产组长', departmentId: 'D001', level: 3 },
+  { id: 'P004', name: '种植工', departmentId: 'D001', level: 4 },
+  { id: 'P005', name: '农技员', departmentId: 'D001', level: 3 },
+  { id: 'P006', name: '农机手', departmentId: 'D001', level: 4 },
+  // 技术部岗位
+  { id: 'P007', name: '技术总监', departmentId: 'D002', level: 1 },
+  { id: 'P008', name: '技术员', departmentId: 'D002', level: 3 },
+  { id: 'P009', name: '设备维护员', departmentId: 'D002', level: 4 },
+  // 仓储部岗位
+  { id: 'P010', name: '仓储主管', departmentId: 'D003', level: 1 },
+  { id: 'P011', name: '仓库管理员', departmentId: 'D003', level: 4 },
+  { id: 'P012', name: '搬运工', departmentId: 'D003', level: 5 },
+  // 财务部岗位
+  { id: 'P013', name: '财务经理', departmentId: 'D004', level: 1 },
+  { id: 'P014', name: '会计', departmentId: 'D004', level: 3 },
+  { id: 'P015', name: '出纳', departmentId: 'D004', level: 4 },
+  // 综合办岗位
+  { id: 'P016', name: '行政经理', departmentId: 'D005', level: 1 },
+  { id: 'P017', name: '行政助理', departmentId: 'D005', level: 3 },
+  { id: 'P018', name: '招聘专员', departmentId: 'D005', level: 3 },
+  { id: 'P019', name: '人事专员', departmentId: 'D005', level: 3 },
 ];
 
 // 临时任务数据 - 6条不同状态的模拟数据

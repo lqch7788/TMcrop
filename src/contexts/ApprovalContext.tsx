@@ -340,7 +340,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
       [ApprovalType.LEAVE]: '请假',
       [ApprovalType.OVERTIME]: '加班',
       [ApprovalType.TRANSFER]: '调岗',
-      [ApprovalType.RESIGN]: '离职',
+      [ApprovalType.RESIGNATION]: '离职',
     };
     return typeMap[type] || type;
   }, []);

@@ -6,7 +6,7 @@
 export type LeaveType = '事假' | '病假' | '年假' | '婚假' | '产假' | '陪产假' | '丧假' | '工伤假';
 
 // 请假状态
-export type LeaveStatus = '待审批' | '已审批' | '已驳回' | '已取消';
+export type LeaveStatus = '待审批' | '已通过' | '已拒绝' | '已撤回' | '已取消';
 
 // 请假配额
 export interface LeaveQuota {
