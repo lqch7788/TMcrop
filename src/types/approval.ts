@@ -16,10 +16,16 @@ export enum ApprovalType {
   RETURN_MATERIAL = 'return_material',     // 退料单
 
   // HR审批
-  LEAVE = 'leave',                       // 请假
-  OVERTIME = 'overtime',                 // 加班
-  TRANSFER = 'transfer',                  // 调岗
-  RESIGN = 'resign',                     // 离职
+  LEAVE = 'leave',                       // 请假申请
+  OVERTIME = 'overtime',                 // 加班申请
+  RESIGNATION = 'resignation',           // 离职申请
+  RECRUITMENT = 'recruitment',           // 招聘申请
+  ONBOARDING = 'onboarding',             // 入职办理
+  ATTENDANCE_REPAIR = 'attendance_repair', // 考勤补录
+  SALARY_ADJUSTMENT = 'salary_adjustment', // 调薪申请
+  CONTRACT_RENEWAL = 'contract_renewal',   // 合同续签
+  SALARY_BUDGET = 'salary_budget',       // 工资预算
+  TRANSFER = 'transfer',                  // 转岗申请
 }
 
 // ============================================================
@@ -93,7 +99,7 @@ export interface MaterialItem {
 // ============================================================
 
 export interface BusinessLink {
-  type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' | 'resign' | 'return';
+  type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' | 'resign' | 'return' | 'recruitment';
   requestId: string;
   requestCode: string;
   materials?: MaterialItem[];
@@ -146,6 +152,15 @@ export interface BusinessLink {
   joinDate?: string;
   expectedResignDate?: string;
   handoverNotes?: string;
+  // 招聘相关
+  recruitmentId?: string;
+  department?: string;
+  position?: string;
+  headcount?: number;
+  employmentType?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
 }
 
 // ============================================================
@@ -228,10 +243,16 @@ export const getApprovalTypeName = (type: ApprovalType): string => {
     [ApprovalType.PRODUCTION_PLAN]: '生产计划',
     [ApprovalType.HARVEST_REQUEST]: '采收申请',
     [ApprovalType.RETURN_MATERIAL]: '退料单',
-    [ApprovalType.LEAVE]: '请假',
-    [ApprovalType.OVERTIME]: '加班',
-    [ApprovalType.TRANSFER]: '调岗',
-    [ApprovalType.RESIGN]: '离职',
+    [ApprovalType.LEAVE]: '请假申请',
+    [ApprovalType.OVERTIME]: '加班申请',
+    [ApprovalType.RESIGNATION]: '离职申请',
+    [ApprovalType.RECRUITMENT]: '招聘申请',
+    [ApprovalType.ONBOARDING]: '入职办理',
+    [ApprovalType.ATTENDANCE_REPAIR]: '考勤补录',
+    [ApprovalType.SALARY_ADJUSTMENT]: '调薪申请',
+    [ApprovalType.CONTRACT_RENEWAL]: '合同续签',
+    [ApprovalType.SALARY_BUDGET]: '工资预算',
+    [ApprovalType.TRANSFER]: '转岗申请',
   };
   return typeNames[type] || type;
 };

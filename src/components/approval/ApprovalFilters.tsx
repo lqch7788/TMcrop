@@ -23,7 +23,7 @@ const approvalTypeOptions: { value: ApprovalType; label: string }[] = [
   { value: ApprovalType.LEAVE, label: '请假' },
   { value: ApprovalType.OVERTIME, label: '加班' },
   { value: ApprovalType.TRANSFER, label: '调岗' },
-  { value: ApprovalType.RESIGN, label: '离职' },
+  { value: ApprovalType.RESIGNATION, label: '离职' },
 ];
 
 const statusOptions: { value: ApprovalStatus; label: string }[] = [

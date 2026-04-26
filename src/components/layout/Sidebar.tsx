@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap, Clipboard, Play, Bot
+  Briefcase, GraduationCap, Clipboard, Play, Bot, UserMinus, FileSpreadsheet
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -39,6 +39,9 @@ const laborSubItems = [
   { icon: UserPlus, label: '人事管理', path: '/labor/personnel' },
   { icon: Banknote, label: '薪酬管理', path: '/labor/compensation' },
   { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
+  { icon: UserMinus, label: '离职申请', path: '/labor/resignation' },
+  { icon: Search, label: '招聘申请', path: '/labor/recruitment' },
+  { icon: FileSpreadsheet, label: '工资预算', path: '/labor/salary-budget' },
 ];
 
 // 生产汇总表（问题分派、每日工单汇总已移出到农事管理）

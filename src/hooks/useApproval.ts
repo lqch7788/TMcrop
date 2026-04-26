@@ -212,7 +212,7 @@ export function useHrApprovals() {
   const leaveApprovals = hrApprovals.filter(a => a.type === ApprovalType.LEAVE);
   const overtimeApprovals = hrApprovals.filter(a => a.type === ApprovalType.OVERTIME);
   const transferApprovals = hrApprovals.filter(a => a.type === ApprovalType.TRANSFER);
-  const resignApprovals = hrApprovals.filter(a => a.type === ApprovalType.RESIGN);
+  const resignApprovals = hrApprovals.filter(a => a.type === ApprovalType.RESIGNATION);
 
   return {
     hrApprovals,

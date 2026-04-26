@@ -77,4 +77,3 @@ export const CostDetailModal: React.FC<CostDetailModalProps> = ({
 };
 
 export default CostDetailModal;
-console.log('组件创建成功: CostDetailModal');
