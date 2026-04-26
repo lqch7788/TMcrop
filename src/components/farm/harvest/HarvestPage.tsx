@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
-import { harvestRecords as initialRecords, cropBatches, greenhouses, users } from '../../../data/mockData';
+import { cropBatches, greenhouses, users } from '../../../data/mockData';
 import { warehouseOptions } from '../../../data/farmMockData';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal, AddModal } from './modals';
 import {
   produceCategories,
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
+import * as harvestService from '../../../services/harvestService';
+import * as cropInstanceService from '../../../services/cropInstanceService';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -78,7 +80,7 @@ export default function HarvestPage() {
   });
 
   // Harvest Records State
-  const [harvestRecords, setHarvestRecords] = useState([...initialRecords]);
+  const [harvestRecords, setHarvestRecords] = useState(() => harvestService.getHarvestRecords());
 
   // Export state
   const [exportMode, setExportMode] = useState(false);
@@ -495,8 +497,7 @@ export default function HarvestPage() {
 
     productRecords.forEach((product) => {
       const record = {
-        id: harvestRecords.length + 1,
-        harvestCode: newRecord.harvestCode || generateHarvestCode(),
+        harvestCode: newRecord.harvestCode || harvestService.generateHarvestCode(),
         batchCode: newRecord.batchCode,
         cropName: selectedBatch?.cropName || product.cropName,
         greenhouseId: newRecord.greenhouseId,
@@ -504,7 +505,7 @@ export default function HarvestPage() {
         harvestDate: newRecord.harvestDate,
         harvestQuantity: product.harvestQuantity || totalHarvestQuantity,
         unit: '公斤',
-        grade: product.grade,
+        grade: product.grade as 'A' | 'B' | 'C',
         warehouseId: newRecord.warehouseId,
         warehouseName: selectedWarehouse?.name || '',
         harvesterIds: newRecord.harvesterIds,
@@ -515,9 +516,16 @@ export default function HarvestPage() {
         variety: product.variety || selectedBatch?.variety || '',
         plantingMode: product.plantingMode || selectedBatch?.plantingMode || '',
         targetYield: product.targetYield || selectedBatch?.targetYield || 0,
+        quality: 'good' as const,
       };
 
-      setHarvestRecords(prev => [record, ...prev]);
+      // 使用 harvestService 添加记录
+      const newRecord = harvestService.addHarvestRecord(record);
+      // 更新作物实例的采收数量
+      if (selectedBatch?.instanceId) {
+        cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);
+      }
+      setHarvestRecords(harvestService.getHarvestRecords());
     });
 
     setIsCreateModalOpen(false);
