@@ -5,8 +5,9 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
-import { SourceType, StockStatus } from '../../../../types/crop';
-import { addSeedSource } from '../../../../services/seedSourceService';
+import { SourceType, StockStatus, SourceOrigin } from '../../../../types/crop';
+import { addSeedSource, updateSeedSource } from '../../../../services/seedSourceService';
+import * as cropInstanceService from '../../../../services/cropInstanceService';
 import { findProduceCodeByName } from '../../../../data/produceCodeRule';
 
 interface AddModalProps {
@@ -68,7 +69,7 @@ export function AddModal({
     // 生成溯源码
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
 
-    // 生成作物编码
+    // 生成作物编码（来自品种编码）
     const cropInfo = findProduceCodeByName(formData.cropName);
     let cropCode = '';
     if (cropInfo) {
@@ -76,7 +77,8 @@ export function AddModal({
       cropCode = `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}${String(seq).padStart(3, '0')}`;
     }
 
-    addSeedSource({
+    // 创建种源记录
+    const newSeedSource = addSeedSource({
       seedCode: 'ZZ' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
       sourceType: formData.sourceType,
       cropCategory: formData.cropCategory,
@@ -99,6 +101,28 @@ export function AddModal({
       printCount: 0,
       createBy: '当前用户'
     });
+
+    // 同时创建作物实例记录（实现统一追踪）
+    try {
+      // 确定来源类型：如果是外部采购，使用 external_purchase
+      const sourceOrigin: SourceOrigin = 'external_purchase';
+      const instance = cropInstanceService.createInstance(
+        {
+          cropCategory: formData.cropCategory,
+          cropName: formData.cropName,
+          cropVariety: formData.cropVariety,
+        },
+        sourceOrigin,
+        initialCount,
+        {
+          sourceDescription: `种源入库-${supplierName || '未知供应商'}`,
+        }
+      );
+      // 更新种源记录的 instanceId
+      updateSeedSource(newSeedSource.id, { instanceId: instance.id });
+    } catch (error) {
+      console.error('创建作物实例失败:', error);
+    }
 
     onClose();
     onSuccess?.();

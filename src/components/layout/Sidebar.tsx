@@ -40,6 +40,9 @@ const cropSubItems = [
   { icon: Sprout, label: '种源管理', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
+  { icon: Box, label: '采收入库', path: '/crop/harvest' },
+  { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
+  { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
 
 // 人工管理5大模块（任务中心已移出到农事管理）
@@ -71,11 +74,10 @@ const approvalSubItems = [
   { icon: Users, label: 'HR审批单', path: '/hr-approval' },
 ];
 
-// 库存管理子菜单（仓库物料拆分为库存总览和物料入库，采收入库从农事管理移入）
+// 库存管理子菜单（仓库物料拆分为库存总览和物料入库，采收入库已迁移到作物管理）
 const materialsSubItems = [
   { icon: Archive, label: '库存总览', path: '/warehouse-overview' },
   { icon: Warehouse, label: '物料入库', path: '/warehouse-inbound' },
-  { icon: Box, label: '采收入库', path: '/harvest' },
   { icon: Package, label: '产品库存', path: '/produce-inventory' },
   { icon: Truck, label: '供应商管理', path: '/supplier-management' },
   { icon: ClipboardList, label: '生产领料', path: '/material-receiving' },

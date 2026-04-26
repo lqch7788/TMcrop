@@ -7,7 +7,8 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SeedSource, SeedlingStatus } from '../../../../types/crop';
 import { addSeedling } from '../../../../services/seedlingService';
-import { decreaseAvailableCount } from '../../../../services/seedSourceService';
+import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/seedSourceService';
+import * as cropInstanceService from '../../../../services/cropInstanceService';
 import { findProduceCodeByName } from '../../../../data/produceCodeRule';
 
 interface AddModalProps {
@@ -102,6 +103,11 @@ export function AddModal({
 
     // 扣减种源可用数量
     decreaseAvailableCount(formData.sourceId, formData.initialCount);
+
+    // 更新作物实例状态为育苗中
+    if (source?.instanceId) {
+      cropInstanceService.updateQuantity(source.instanceId, 'seedling', 0);
+    }
 
     onClose();
     onSuccess?.();

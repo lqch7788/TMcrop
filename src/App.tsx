@@ -114,6 +114,9 @@ import { DispatchPage } from './components/dispatch';
 import SeedSource from './pages/crop/SeedSource';
 import Seedling from './pages/crop/Seedling';
 import Planting from './pages/crop/Planting';
+import Order from './pages/crop/Order';
+import Instance from './pages/crop/Instance';
+import CropHarvest from './pages/crop/Harvest';
 
 // 带侧边栏的布局组件（种植管理系统）
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -227,6 +230,9 @@ function AppContent() {
         <Route path="/crop/seed-source" element={<SeedSource />} />
         <Route path="/crop/seedling" element={<Seedling />} />
         <Route path="/crop/planting" element={<Planting />} />
+        <Route path="/crop/harvest" element={<CropHarvest />} />
+        <Route path="/crop/order" element={<Order />} />
+        <Route path="/crop/instance" element={<Instance />} />
         <Route path="/production" element={<Production />} />
         <Route path="/tech-solution" element={<TechSolution />} />
         <Route path="/purchase-plan" element={<PurchasePlan />} />

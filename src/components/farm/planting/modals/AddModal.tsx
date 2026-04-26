@@ -9,6 +9,7 @@ import { SourceType, PlantingStatus } from '../../../../types/crop';
 import { addPlanting } from '../../../../services/plantingService';
 import { getSeedSources } from '../../../../services/seedSourceService';
 import { getSeedlings } from '../../../../services/seedlingService';
+import * as cropInstanceService from '../../../../services/cropInstanceService';
 import { findProduceCodeByName } from '../../../../data/produceCodeRule';
 
 interface AddModalProps {
@@ -107,6 +108,25 @@ export function AddModal({
       status: PlantingStatus.PLANTED,
       createBy: '当前用户'
     });
+
+    // 更新作物实例的定植数量
+    // 尝试从种源或育苗获取关联的实例ID
+    let instanceId: string | undefined;
+    if (formData.sourceType === SourceType.SEED) {
+      // 来自种源
+      const source = seedSources.find(s => s.id === formData.sourceId);
+      instanceId = source?.instanceId;
+    } else {
+      // 来自育苗（育苗关联的种源有instanceId）
+      const seedling = seedlings.find(s => s.id === formData.sourceId);
+      if (seedling) {
+        const source = seedSources.find(s => s.id === seedling.sourceId);
+        instanceId = source?.instanceId;
+      }
+    }
+    if (instanceId) {
+      cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
+    }
 
     onClose();
     onSuccess?.();

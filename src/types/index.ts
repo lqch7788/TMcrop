@@ -302,6 +302,11 @@ export interface HarvestRecord {
   relatedTaskCode?: string; // 关联任务编号
   // 产品明细数组
   products?: HarvestProduct[];
+  // 作物实例关联字段（新增）
+  instanceId?: string;     // 关联的作物实例ID
+  orderId?: string;        // 关联的订单ID
+  orderCode?: string;       // 关联的订单编号
+  cropCode?: string;        // 作物编码（从instance继承）
 }
 
 // 采收产品明细
