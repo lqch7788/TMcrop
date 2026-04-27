@@ -1,5 +1,8 @@
 /**
- * 农产品编码规则管理页面
+ * 作物编码规则管理页面
+ *
+ * 编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位
+ * 示例：FR0101001001 = 水果类-浆果类-草莓-红颜
  */
 
 import React, { useState } from 'react';
@@ -24,6 +27,7 @@ export default function ProduceCodeRule() {
   const [categories, setCategories] = useState<ProduceCategory[]>(deepClone(initialCategories));
   const [expandedCategory, setExpandedCategory] = useState<Set<string>>(new Set(initialCategories.map(c => c.code)));
   const [expandedType, setExpandedType] = useState<Set<string>>(new Set());
+  const [expandedSub, setExpandedSub] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showCodeRuleInfo, setShowCodeRuleInfo] = useState(false);
@@ -40,11 +44,14 @@ export default function ProduceCodeRule() {
   // 添加状态
   const [showAddType, setShowAddType] = useState<string | null>(null);
   const [showAddSub, setShowAddSub] = useState<{ categoryCode: string; typeCode: string } | null>(null);
+  const [showAddSubVariety1, setShowAddSubVariety1] = useState<{ categoryCode: string; typeCode: string; subCode: string } | null>(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newTypeCode, setNewTypeCode] = useState('');
   const [newTypeName, setNewTypeName] = useState('');
   const [newSubCode, setNewSubCode] = useState('');
   const [newSubName, setNewSubName] = useState('');
+  const [newSubVariety1Code, setNewSubVariety1Code] = useState('');
+  const [newSubVariety1Name, setNewSubVariety1Name] = useState('');
   const [newCategoryCode, setNewCategoryCode] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -69,6 +76,18 @@ export default function ProduceCodeRule() {
       newExpanded.add(key);
     }
     setExpandedType(newExpanded);
+  };
+
+  // 展开/折叠品种
+  const toggleSub = (categoryCode: string, typeCode: string, subCode: string) => {
+    const key = `${categoryCode}-${typeCode}-${subCode}`;
+    const newExpanded = new Set(expandedSub);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
+    }
+    setExpandedSub(newExpanded);
   };
 
   // 开始编辑
@@ -212,6 +231,65 @@ export default function ProduceCodeRule() {
     }));
   };
 
+  // 添加子品种1
+  const addSubVariety1 = (categoryCode: string, typeCode: string, subCode: string) => {
+    if (!newSubVariety1Code.trim() || !newSubVariety1Name.trim()) return;
+    // 确保代码是3位数字
+    const code = newSubVariety1Code.trim().padStart(3, '0').slice(0, 3);
+    setCategories(prev => prev.map(cat => {
+      if (cat.code !== categoryCode) return cat;
+      return {
+        ...cat,
+        types: cat.types.map(type => {
+          if (type.code !== typeCode) return type;
+          return {
+            ...type,
+            subCategories: type.subCategories.map(sub => {
+              if (sub.code !== subCode) return sub;
+              const existingSubVarieties = sub.subVarieties || [];
+              // 检查是否已存在相同代码
+              if (existingSubVarieties.some(sv => sv.code === code)) {
+                alert('该子品种1代码已存在！');
+                return sub;
+              }
+              return {
+                ...sub,
+                subVarieties: [...existingSubVarieties, { code, name: newSubVariety1Name.trim() }]
+              };
+            })
+          };
+        })
+      };
+    }));
+    setNewSubVariety1Code('');
+    setNewSubVariety1Name('');
+    setShowAddSubVariety1(null);
+  };
+
+  // 删除子品种1
+  const deleteSubVariety1 = (categoryCode: string, typeCode: string, subCode: string, subVariety1Code: string) => {
+    if (!confirm(`确定要删除子品种1 "${subVariety1Code}" 吗？`)) return;
+    setCategories(prev => prev.map(cat => {
+      if (cat.code !== categoryCode) return cat;
+      return {
+        ...cat,
+        types: cat.types.map(type => {
+          if (type.code !== typeCode) return type;
+          return {
+            ...type,
+            subCategories: type.subCategories.map(sub => {
+              if (sub.code !== subCode) return sub;
+              return {
+                ...sub,
+                subVarieties: (sub.subVarieties || []).filter(sv => sv.code !== subVariety1Code)
+              };
+            })
+          };
+        })
+      };
+    }));
+  };
+
   // 保存所有修改
   const handleSave = () => {
     alert('编码规则已保存！（演示模式）');
@@ -290,8 +368,8 @@ export default function ProduceCodeRule() {
               <Hash className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">农产品编码规则</h1>
-              <p className="text-gray-500">编码结构：大类代码(2位) + 类型代码(2位) + 品种代码(2位) + 流水号(3位)</p>
+              <h1 className="text-2xl font-bold text-gray-900">作物编码规则</h1>
+              <p className="text-gray-500">编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -349,19 +427,21 @@ export default function ProduceCodeRule() {
           {showCodeRuleInfo && (
             <div className="grid grid-cols-2 gap-4 text-sm text-emerald-700 mt-3">
               <div>
-                <p><strong>编码结构：</strong>大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位) = 9位</p>
-                <p><strong>示例：</strong>PD01010001</p>
+                <p><strong>编码结构：</strong>类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位</p>
+                <p><strong>示例：</strong>FR010100101</p>
                 <ul className="ml-4 mt-1 space-y-0.5">
-                  <li>• PD - 果蔬产品类</li>
-                  <li>• 01 - 叶菜类</li>
-                  <li>• 01 - 菠菜</li>
-                  <li>• 001 - 第1个产品</li>
+                  <li>• FR - 水果类</li>
+                  <li>• 01 - 浆果类</li>
+                  <li>• 01 - 草莓</li>
+                  <li>• 001 - 红颜（子品种1）</li>
+                  <li>• 01 - 大叶红颜（详细品种序号）</li>
                 </ul>
+                <p className="mt-2 text-xs"><strong>注：</strong>详细品种名称（如"大叶红颜"）由用户在录入时手工输入，系统自动分配2位序号</p>
               </div>
               <div>
                 <p><strong>大类代码：</strong></p>
                 <ul className="ml-4 mt-1 space-y-0.5">
-                  <li>• PD - 果蔬产品类</li>
+                  <li>• PD - 蔬菜类</li>
                   <li>• FR - 水果类</li>
                   <li>• GR - 粮食类</li>
                   <li>• FL - 花卉类</li>
@@ -380,12 +460,14 @@ export default function ProduceCodeRule() {
         <table className="w-full">
           <thead className="bg-emerald-600">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">大类代码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-40">大类名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">类型代码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-60">类型名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">品种代码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">品种名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">类别代码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">类别名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">类型代码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">类型名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">品种代码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">品种名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">子品种1代码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">子品种1名称</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -415,6 +497,8 @@ export default function ProduceCodeRule() {
                         </div>
                       )}
                     </td>
+                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3"></td>
                     <td className="px-4 py-3"></td>
                     <td className="px-4 py-3"></td>
                     <td className="px-4 py-3"></td>
@@ -467,42 +551,155 @@ export default function ProduceCodeRule() {
                           </td>
                           <td className="px-4 py-2"></td>
                           <td className="px-4 py-2"></td>
+                          <td className="px-4 py-2"></td>
+                          <td className="px-4 py-2"></td>
                         </tr>
 
                         {/* 品种行 */}
-                        {isTypeExpanded && type.subCategories.map((sub) => (
-                          <tr key={`sub-${typeKey}-${sub.code}`} className="hover:bg-blue-50">
-                            <td className="px-4 py-1"></td>
-                            <td className="px-4 py-1"></td>
-                            <td className="px-4 py-1"></td>
-                            <td className="px-4 py-1"></td>
-                            <td className="px-4 py-1">
-                              <span className="font-mono text-blue-600 text-sm ml-8">{sub.code}</span>
-                            </td>
-                            <td className="px-4 py-1">
-                              <div className="flex items-center gap-2">
-                                {isEditing ? (
-                                  renderEditCell('sub', category.code, type.code, sub.code, sub.name)
-                                ) : (
-                                  <span className="text-sm text-gray-600 ml-12">{sub.name}</span>
-                                )}
-                                {isEditing && (
+                        {isTypeExpanded && type.subCategories.map((sub) => {
+                          const subKey = `${category.code}-${type.code}-${sub.code}`;
+                          const isSubExpanded = expandedSub.has(subKey);
+                          const hasSubVarieties = sub.subVarieties && sub.subVarieties.length > 0;
+                          return (
+                          <React.Fragment key={`sub-${typeKey}-${sub.code}`}>
+                            {/* 品种行 */}
+                            <tr className="hover:bg-blue-50">
+                              <td className="px-4 py-1"></td>
+                              <td className="px-4 py-1"></td>
+                              <td className="px-4 py-1"></td>
+                              <td className="px-4 py-1"></td>
+                              <td className="px-4 py-1">
+                                <div className="flex items-center gap-1">
+                                  {hasSubVarieties ? (
+                                    <button
+                                      onClick={() => toggleSub(category.code, type.code, sub.code)}
+                                      className="p-0.5 hover:bg-gray-200 rounded"
+                                      title={isSubExpanded ? '点击折叠' : '点击展开'}
+                                    >
+                                      {isSubExpanded ? (
+                                        <ChevronDown className="w-3 h-3 text-emerald-600" />
+                                      ) : (
+                                        <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <span className="w-4"></span>
+                                  )}
+                                  <span className="font-mono text-blue-600 text-sm">{sub.code}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-1">
+                                <div className="flex items-center gap-2">
+                                  {isEditing ? (
+                                    renderEditCell('sub', category.code, type.code, sub.code, sub.name)
+                                  ) : (
+                                    <span className="text-sm text-gray-600">{sub.name}</span>
+                                  )}
+                                  {isEditing && (
+                                    <button
+                                      onClick={() => deleteSub(category.code, type.code, sub.code)}
+                                      className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 ml-2"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-1"></td>
+                              <td className="px-4 py-1"></td>
+                            </tr>
+
+                            {/* 子品种1行 */}
+                            {isSubExpanded && hasSubVarieties && sub.subVarieties.map((subVar) => (
+                              <tr key={`subVar-${typeKey}-${sub.code}-${subVar.code}`} className="hover:bg-green-50">
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1"></td>
+                                <td className="px-4 py-1">
+                                  <div className="flex items-center gap-2 ml-6">
+                                    <span className="font-mono text-green-600 text-sm">{subVar.code}</span>
+                                    {isEditing && (
+                                      <button
+                                        onClick={() => deleteSubVariety1(category.code, type.code, sub.code, subVar.code)}
+                                        className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-1">
+                                  <span className="text-sm text-gray-600">{subVar.name}</span>
+                                </td>
+                              </tr>
+                            ))}
+
+                            {/* 子品种1添加按钮 */}
+                            {isEditing && isTypeExpanded && isSubExpanded && (
+                              <tr className="bg-green-50 hover:bg-green-100">
+                                <td colSpan={6} className="px-4 py-1"></td>
+                                <td colSpan={2} className="px-4 py-1">
                                   <button
-                                    onClick={() => deleteSub(category.code, type.code, sub.code)}
-                                    className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 ml-2"
+                                    onClick={() => setShowAddSubVariety1({ categoryCode: category.code, typeCode: type.code, subCode: sub.code })}
+                                    className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Plus className="w-3 h-3" /> 添加子品种1
                                   </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* 添加子品种1弹窗 */}
+                            {showAddSubVariety1?.categoryCode === category.code && showAddSubVariety1?.typeCode === type.code && showAddSubVariety1?.subCode === sub.code && isSubExpanded && (
+                              <tr className="bg-green-50">
+                                <td colSpan={8} className="px-4 py-2">
+                                  <div className="flex items-center gap-2" style={{ marginLeft: '704px' }}>
+                                    <input
+                                      type="text"
+                                      value={newSubVariety1Code}
+                                      onChange={(e) => setNewSubVariety1Code(e.target.value)}
+                                      placeholder="代码(3位)"
+                                      maxLength={3}
+                                      className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={newSubVariety1Name}
+                                      onChange={(e) => setNewSubVariety1Name(e.target.value)}
+                                      placeholder="子品种1名称"
+                                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    />
+                                    <button
+                                      onClick={() => addSubVariety1(category.code, type.code, sub.code)}
+                                      className="px-3 py-1 bg-emerald-600 text-white rounded text-sm"
+                                    >
+                                      添加
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setShowAddSubVariety1(null);
+                                        setNewSubVariety1Code('');
+                                        setNewSubVariety1Name('');
+                                      }}
+                                      className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                                    >
+                                      取消
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                        })}
 
                         {/* 品种列表下方添加品种按钮 */}
                         {isEditing && isTypeExpanded && (
                           <tr className="bg-blue-50 hover:bg-blue-100">
-                            <td colSpan={6} className="px-4 py-2">
+                            <td colSpan={8} className="px-4 py-2">
                               <button
                                 onClick={() => setShowAddSub({ categoryCode: category.code, typeCode: type.code })}
                                 className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
@@ -516,8 +713,8 @@ export default function ProduceCodeRule() {
                         {/* 添加品种弹窗 */}
                         {showAddSub?.categoryCode === category.code && showAddSub?.typeCode === type.code && (
                           <tr className="bg-blue-50">
-                            <td colSpan={6} className="px-4 py-2">
-                              <div className="flex items-center gap-2">
+                            <td colSpan={8} className="px-4 py-2">
+                              <div className="flex items-center gap-2" style={{ marginLeft: '480px' }}>
                                 <input
                                   type="text"
                                   value={newSubCode}
@@ -572,14 +769,16 @@ export default function ProduceCodeRule() {
                       <td className="px-4 py-2"></td>
                       <td className="px-4 py-2"></td>
                       <td className="px-4 py-2"></td>
+                      <td className="px-4 py-2"></td>
+                      <td className="px-4 py-2"></td>
                     </tr>
                   )}
 
                   {/* 添加类型弹窗 */}
                   {showAddType === category.code && (
                     <tr className="bg-blue-50">
-                      <td colSpan={6} className="px-4 py-2">
-                        <div className="flex items-center gap-2">
+                      <td colSpan={8} className="px-4 py-2">
+                        <div className="flex items-center gap-2" style={{ marginLeft: '240px' }}>
                           <input
                             type="text"
                             value={newTypeCode}
