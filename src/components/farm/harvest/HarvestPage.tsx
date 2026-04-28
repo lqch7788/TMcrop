@@ -12,6 +12,7 @@ import {
 } from '../../../data/produceCodeRule';
 import * as harvestService from '../../../services/harvestService';
 import * as cropInstanceService from '../../../services/cropInstanceService';
+import * as cropVarietyService from '../../../services/cropVarietyService';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -20,41 +21,23 @@ import {
   HarvestFilterToolbar,
   HarvestTableToolbar,
   HarvestTabSwitch,
-  ProduceCodeGenerator,
 } from './components';
+import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 
-// 作物名称到大类代码的映射
-const cropToCategoryMap: Record<string, string> = {
-  '番茄': 'PD', '黄瓜': 'PD', '菠菜': 'PD', '生菜': 'PD', '草莓': 'FR',
-  '辣椒': 'PD', '茄子': 'PD', '白菜': 'PD', '萝卜': 'PD', '胡萝卜': 'PD',
-  '土豆': 'GR', '红薯': 'GR', '玉米': 'GR', '小麦': 'GR', '水稻': 'GR',
-  '苹果': 'FR', '梨': 'FR', '桃': 'FR', '葡萄': 'FR', '西瓜': 'PD',
-  '玫瑰': 'FL', '菊花': 'FL', '百合': 'FL', '郁金香': 'FL',
-  '人参': 'HB', '枸杞': 'HB', '黄芪': 'HB', '当归': 'HB',
-  '香菇': 'MG', '平菇': 'MG', '金针菇': 'MG', '杏鲍菇': 'MG',
-};
+// 初始化品种库
+cropVarietyService.initVarieties();
 
-// 品种名称到类型和品种代码的映射（基于cropName）
-const varietyToCodesMap: Record<string, { typeCode: string; subCode: string }> = {
-  // 番茄
-  '红果番茄': { typeCode: '04', subCode: '01' }, '水果黄瓜': { typeCode: '02', subCode: '02' },
-  // 叶菜类
-  '菠菜': { typeCode: '01', subCode: '01' }, '散叶生菜': { typeCode: '01', subCode: '02' },
-  '圆叶菠菜': { typeCode: '01', subCode: '01' }, '生菜': { typeCode: '01', subCode: '02' },
-  // 瓜果类
-  '黄瓜': { typeCode: '02', subCode: '01' }, '红颜': { typeCode: '03', subCode: '01' },
-  // 水果类
-  '草莓': { typeCode: '01', subCode: '01' },
-  // 辣椒
-  '青椒': { typeCode: '05', subCode: '01' }, '红椒': { typeCode: '05', subCode: '02' },
-};
-
-// 根据作物名称和品种生成产品编码
+// 根据作物品种生成产品编码（使用品种库服务）
 const generateProductCode = (cropName: string, variety: string, index: number): string => {
-  const categoryCode = cropToCategoryMap[cropName] || 'PD';
-  const varietyInfo = varietyToCodesMap[variety] || varietyToCodesMap[cropName] || { typeCode: '01', subCode: '01' };
+  // 使用品种库服务查找品种信息
+  const varietyInfo = cropVarietyService.findVarietyByCropName(cropName);
+  if (varietyInfo) {
+    const seq = String(index + 1).padStart(3, '0');
+    return `${varietyInfo.categoryCode}${varietyInfo.typeCode}${varietyInfo.varietyCode}${seq}`;
+  }
+  // 如果找不到，返回默认编码
   const seq = String(index + 1).padStart(3, '0');
-  return `${categoryCode}${varietyInfo.typeCode}${varietyInfo.subCode}${seq}`;
+  return `PD0101001${seq}`;
 };
 
 export default function HarvestPage() {
@@ -166,7 +149,7 @@ export default function HarvestPage() {
     const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
 
     // 导出表头
-    const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物名称', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
+    const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物品种', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
 
     // 展开产品明细生成导出数据
     const exportData: Record<string, string>[] = [];
@@ -181,7 +164,7 @@ export default function HarvestPage() {
             '入库仓库': record.warehouseName,
             '采收人员': record.harvesterNames.join(', '),
             '产品编码': product.productCode || generateProductCode(product.cropName, product.variety, recordIdx * 100 + productIdx),
-            '作物名称': product.cropName || record.cropName,
+            '作物品种': product.cropName || record.cropName,
             '作物品种': product.variety || record.variety,
             '批次号': product.batchCode || record.batchCode,
             '种植模式': record.plantingMode,
@@ -203,7 +186,7 @@ export default function HarvestPage() {
           '入库仓库': record.warehouseName,
           '采收人员': record.harvesterNames.join(', '),
           '产品编码': generateProductCode(record.cropName, record.variety, recordIdx),
-          '作物名称': record.cropName,
+          '作物品种': record.cropName,
           '作物品种': record.variety,
           '批次号': record.batchCode,
           '种植模式': record.plantingMode,
@@ -722,7 +705,7 @@ export default function HarvestPage() {
                               <thead className="bg-emerald-600 text-white">
                                 <tr>
                                   <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">产品编码</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物名称</th>
+                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物品种</th>
                                   <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物品种</th>
                                   <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">生产计划批次号</th>
                                   <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">种植模式</th>

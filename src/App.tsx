@@ -69,6 +69,7 @@ import HrApproval from './pages/HrApproval';
 import PlantingModeManagement from './pages/PlantingModeManagement';
 import PlantAreaManagement from './pages/PlantAreaManagement';
 import CropManagement from './pages/CropManagement';
+import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
 import MaterialManagement from './pages/MaterialManagement';
 import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
@@ -155,7 +156,7 @@ function SimpleLayout({ children }: { children: React.ReactNode }) {
         <Header onMenuClick={() => {}} />
       </div>
       <div className="pt-12 px-4 lg:px-8">
-        <div className="max-w-6xl mx-auto pt-6">
+        <div className="pt-6">
           {children}
         </div>
       </div>
@@ -200,6 +201,7 @@ function AppContent() {
             <Route path="modes" element={<PlantingModeManagement />} />
             <Route path="regions" element={<PlantAreaManagement />} />
             <Route path="crops" element={<CropManagement />} />
+            <Route path="crop-variety" element={<CropVarietyManagement />} />
             <Route path="materials" element={<MaterialManagement />} />
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />

@@ -8,7 +8,7 @@ import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check } from 'lu
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
-import { PlantingCodeToolbar } from './components/PlantingCodeToolbar';
+import { CodeToolbar } from '../common/CodeToolbar';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
@@ -18,14 +18,13 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
-  cropNames,
-  cropVarieties,
   areas,
   sourceTypeOptions,
   plantingStatusOptions
 } from '../../../data/cropData';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/plantingService';
+import * as cropVarietyService from '../../../services/cropVarietyService';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
@@ -51,6 +50,16 @@ export default function PlantingPage() {
   const [plantings, setPlantings] = useState<Planting[]>(() =>
     plantingService.initPlantings()
   );
+
+  // 作物品种数据（从品种库服务获取）
+  const cropVarietyOptions = useMemo(() => {
+    cropVarietyService.initVarieties();
+    return cropVarietyService.getVarietyOptions();
+  }, []);
+
+  // 将品种库选项转换为旧格式以兼容现有组件（仅用于页面筛选）
+  const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
+  const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
   // 刷新数据
   const refreshData = useCallback(() => {
@@ -220,14 +229,14 @@ export default function PlantingPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['种植批号', '来源类型', '来源批号', '作物名称', '品种', '种植区域', '大棚名称', '种植数量', '种植日期', '土壤PH', '土壤EC', '移栽数量', '移栽日期', '是否采收', '采收日期', '损耗率', '溯源码', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['种植批号', '来源类型', '来源批号', '作物品种', '品种', '种植区域', '大棚名称', '种植数量', '种植日期', '土壤PH', '土壤EC', '移栽数量', '移栽日期', '是否采收', '采收日期', '损耗率', '溯源码', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
       '种植批号': record.plantCode,
       '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
       '来源批号': record.sourceCode,
-      '作物名称': record.cropName,
+      '作物品种': record.cropName,
       '品种': record.cropVariety,
       '种植区域': record.areaName,
       '大棚名称': record.rootName,
@@ -331,7 +340,7 @@ export default function PlantingPage() {
       </div>
 
       {/* 产品编码生成工具栏 */}
-      <PlantingCodeToolbar
+      <CodeToolbar
         codeGenExpanded={codeGenExpanded}
         onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
         onCodeRuleClick={() => navigate('/produce-code-rule')}
@@ -395,8 +404,7 @@ export default function PlantingPage() {
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           record={currentRecord}
-          cropNames={cropNames}
-          cropVarieties={cropVarieties}
+          cropVarietyOptions={cropVarietyOptions}
           areas={areas}
         />
       )}

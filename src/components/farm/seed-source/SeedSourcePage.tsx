@@ -4,19 +4,16 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image } from 'lucide-react';
 import { SeedSourceStats } from './components/SeedSourceStats';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
-import { SeedSourceCodeToolbar } from './components/SeedSourceCodeToolbar';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
   cropCategories,
   cropNames,
@@ -29,10 +26,6 @@ import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../..
 import * as seedSourceService from '../../../services/seedSourceService';
 
 export default function SeedSourcePage() {
-  const navigate = useNavigate();
-
-  // 产品编码生成器状态
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   // 状态
   const [filters, setFilters] = useState<SeedSourceFilters>({
     cropCategory: '',
@@ -237,14 +230,22 @@ export default function SeedSourcePage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['种源批号', '来源类型', '作物类别', '作物名称', '作物品种', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
+    const headers = ['种源批号', '种源类型', '作物类别', '作物品种', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
       '种源批号': record.seedCode,
-      '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
+      '种源类型': record.sourceType === SourceType.SEED ? '种子' :
+                  record.sourceType === SourceType.SEEDLING ? '种苗/实生苗' :
+                  record.sourceType === SourceType.CUTTING ? '扦插苗' :
+                  record.sourceType === SourceType.GRAFTING ? '嫁接苗' :
+                  record.sourceType === SourceType.TISSUE_CULTURE ? '组培苗' :
+                  record.sourceType === SourceType.SPLIT ? '分株苗' :
+                  record.sourceType === SourceType.BULB ? '种球/球根' :
+                  record.sourceType === SourceType.SELF_PRODUCED ? '自繁苗' :
+                  record.sourceType === SourceType.EXTERNAL ? '外购苗' : '其他',
       '作物类别': record.cropCategory,
-      '作物名称': record.cropName,
+      '作物品种（最细化）': record.cropName,
       '作物品种': record.cropVariety,
       '供应商': record.supplierName,
       '采购日期': record.purchaseDate,
@@ -344,16 +345,6 @@ export default function SeedSourcePage() {
         </div>
       </div>
 
-      {/* 产品编码生成工具栏 */}
-      <SeedSourceCodeToolbar
-        codeGenExpanded={codeGenExpanded}
-        onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
-        onCodeRuleClick={() => navigate('/produce-code-rule')}
-      />
-
-      {/* 产品编码生成器 */}
-      <ProduceCodeGenerator codeGenExpanded={codeGenExpanded} />
-
       {/* 统计卡片 */}
       <SeedSourceStats data={statsData} />
 
@@ -397,10 +388,6 @@ export default function SeedSourcePage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSuccess={refreshData}
-        cropCategories={cropCategories}
-        cropNames={cropNames}
-        cropVarieties={cropVarieties}
-        suppliers={suppliers}
         units={units}
       />
 

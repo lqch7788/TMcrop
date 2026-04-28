@@ -7,4 +7,4 @@ export { HarvestStatsCards } from './HarvestStatsCards';
 export { HarvestFilterToolbar } from './HarvestFilterToolbar';
 export { HarvestTableToolbar } from './HarvestTableToolbar';
 export { default as HarvestTabSwitch } from './HarvestTabSwitch';
-export { default as ProduceCodeGenerator } from './ProduceCodeGenerator';
+// ProduceCodeGenerator 已移除，使用 common/ProduceCodeGenerator

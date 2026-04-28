@@ -112,7 +112,7 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
                   <p className="text-sm font-medium text-gray-900">{record.cropCategory || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">作物名称</p>
+                  <p className="text-xs text-gray-500 mb-1">作物品种</p>
                   <p className="text-sm font-medium text-gray-900">{record.cropName}</p>
                 </div>
                 <div>

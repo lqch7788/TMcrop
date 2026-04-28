@@ -131,9 +131,9 @@ export function BatchEditModal({
               <div className="text-sm font-medium text-gray-900">{currentRecord.harvestCode}</div>
             </div>
 
-            {/* 作物名称 - 不可编辑 */}
+            {/* 作物品种 - 不可编辑 */}
             <div className="bg-gray-100 rounded-lg p-3">
-              <div className="text-xs text-gray-500 mb-1">作物名称</div>
+              <div className="text-xs text-gray-500 mb-1">作物品种</div>
               <div className="text-sm font-medium text-gray-900">{currentRecord.cropName}</div>
             </div>
 

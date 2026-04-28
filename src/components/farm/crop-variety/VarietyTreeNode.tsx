@@ -131,6 +131,46 @@ export function VarietyTreeNode({
     e.stopPropagation();
     if (node.recordedVariety) {
       onEdit(node.recordedVariety);
+    } else if (node.level === 'variety' && node.isRecorded) {
+      // variety级别节点（无子品种预定义但有已录入的详细品种）
+      const { categoryCode, typeCode, varietyCode, categoryName, typeName, varietyName } = node.path;
+      const mockVariety: CropVariety = {
+        id: node.key,
+        cropCode: `${categoryCode}${typeCode}${varietyCode}00000`,
+        categoryCode,
+        categoryName: categoryName || '',
+        typeCode,
+        typeName: typeName || '',
+        varietyCode,
+        varietyName: varietyName || node.name,
+        detailVarietyCode: '00',
+        alias: [],
+        status: 'active',
+        createTime: '',
+        updateTime: ''
+      };
+      onEdit(mockVariety);
+    } else if (node.level === 'subVariety1' && node.isRecorded) {
+      // subVariety1级别节点，构建完整的CropVariety对象
+      const { categoryCode, typeCode, varietyCode, subVariety1Code, subVariety1Name, categoryName, typeName } = node.path;
+      const mockVariety: CropVariety = {
+        id: node.key,
+        cropCode: `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || node.code}00`,
+        categoryCode,
+        categoryName: categoryName || '',
+        typeCode,
+        typeName: typeName || '',
+        varietyCode,
+        subVariety1Code: subVariety1Code || node.code,
+        subVariety1Name: subVariety1Name || node.name,
+        varietyName: subVariety1Name || node.name,
+        detailVarietyCode: '00',
+        alias: [],
+        status: 'active',
+        createTime: '',
+        updateTime: ''
+      };
+      onEdit(mockVariety);
     }
   };
 

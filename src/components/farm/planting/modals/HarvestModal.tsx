@@ -56,7 +56,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
               <p className="text-sm font-mono text-blue-600">{record.plantCode}</p>
             </div>
             <div>
-              <span className="text-xs text-gray-500">作物名称</span>
+              <span className="text-xs text-gray-500">作物品种</span>
               <p className="text-sm text-gray-900">{record.cropName}</p>
             </div>
             <div>

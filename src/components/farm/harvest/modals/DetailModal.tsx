@@ -101,7 +101,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">批次与作物信息</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs text-gray-500">作物名称</span>
+                    <span className="text-xs text-gray-500">作物品种</span>
                     <span className="text-sm text-gray-900">{record.cropName}</span>
                   </div>
                   <div className="flex justify-between">

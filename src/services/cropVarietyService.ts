@@ -21,6 +21,8 @@ import {
 
 // localStorage 存储键
 const STORAGE_KEY = 'crop_varieties';
+const STORAGE_VERSION_KEY = 'crop_varieties_version';
+const CURRENT_VERSION = 2;
 
 // 品种库初始化状态
 let isInitialized = false;
@@ -48,7 +50,8 @@ function importDefaultVarieties(): CropVariety[] {
           // 有子品种1配置
           for (const subVar of sub.subVarieties) {
             const sub1Code = subVar.code.padStart(3, '0');
-            const cropCode = `${category.code}${type.code}${sub.code}${sub1Code}`;
+            // 编码结构：类别(2) + 类型(2) + 品种(2) + 子品种1(3) + 详细品种(2) = 11位
+            const cropCode = `${category.code}${type.code}${sub.code}${sub1Code}00`;
             varieties.push({
               id: `CV${String(index).padStart(4, '0')}`,
               cropCode,
@@ -60,6 +63,7 @@ function importDefaultVarieties(): CropVariety[] {
               varietyName: sub.name,
               subVariety1Code: sub1Code,
               subVariety1Name: subVar.name,
+              detailVarietyCode: '00',
               status: 'active',
               createTime: new Date().toLocaleString('zh-CN'),
               updateTime: new Date().toLocaleString('zh-CN')
@@ -68,7 +72,8 @@ function importDefaultVarieties(): CropVariety[] {
           }
         } else {
           // 没有子品种的基础品种
-          const cropCode = `${category.code}${type.code}${sub.code}000`;
+          // 编码结构：类别(2) + 类型(2) + 品种(2) + 子品种1(3) + 详细品种(2) = 11位
+          const cropCode = `${category.code}${type.code}${sub.code}00000`;
           varieties.push({
             id: `CV${String(index).padStart(4, '0')}`,
             cropCode,
@@ -78,6 +83,7 @@ function importDefaultVarieties(): CropVariety[] {
             typeName: type.name,
             varietyCode: sub.code,
             varietyName: sub.name,
+            detailVarietyCode: '00',
             status: 'active',
             createTime: new Date().toLocaleString('zh-CN'),
             updateTime: new Date().toLocaleString('zh-CN')
@@ -96,13 +102,50 @@ function importDefaultVarieties(): CropVariety[] {
 // ============================================
 
 /**
+ * 迁移旧版本数据到新版本
+ * v1 -> v2: 编码从9位扩展到11位（添加 detailVarietyCode）
+ */
+function migrateDataToV2(varieties: CropVariety[]): CropVariety[] {
+  return varieties.map(v => {
+    // 如果编码已经是11位（包含 detailVarietyCode），跳过
+    if (v.cropCode && v.cropCode.length === 11) {
+      return v;
+    }
+    // 旧编码格式：类别(2) + 类型(2) + 品种(2) + 子品种(3) = 9位
+    // 新编码格式：类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细品种(2) = 11位
+    if (v.cropCode && v.cropCode.length === 9) {
+      // 在末尾添加 00 表示详细品种序号
+      const newCropCode = v.cropCode + '00';
+      return {
+        ...v,
+        cropCode: newCropCode,
+        detailVarietyCode: '00'
+      };
+    }
+    return v;
+  });
+}
+
+/**
  * 获取本地存储的品种数据
  */
 function getStoredVarieties(): CropVariety[] {
   const stored = localStorage.getItem(STORAGE_KEY);
+  const version = localStorage.getItem(STORAGE_VERSION_KEY);
+
   if (stored) {
     try {
-      return JSON.parse(stored);
+      let varieties: CropVariety[] = JSON.parse(stored);
+
+      // 检测版本并迁移数据
+      if (!version || parseInt(version, 10) < CURRENT_VERSION) {
+        // 迁移到当前版本
+        varieties = migrateDataToV2(varieties);
+        saveVarieties(varieties);
+        localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+      }
+
+      return varieties;
     } catch {
       return importDefaultVarieties();
     }
@@ -135,6 +178,17 @@ export function initVarieties(): CropVariety[] {
     // 首次使用，导入默认数据
     const defaultData = importDefaultVarieties();
     saveVarieties(defaultData);
+    localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+  } else {
+    // 存储中有数据，检查是否需要迁移
+    const version = localStorage.getItem(STORAGE_VERSION_KEY);
+    if (!version || parseInt(version, 10) < CURRENT_VERSION) {
+      // 需要迁移数据
+      const varieties = JSON.parse(stored);
+      const migratedVarieties = migrateDataToV2(varieties);
+      saveVarieties(migratedVarieties);
+      localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+    }
   }
 
   isInitialized = true;
@@ -200,9 +254,15 @@ export function searchVarieties(keyword: string): CropVarietySearchResult[] {
       continue;
     }
 
-    // 匹配品种名称
+    // 匹配品种名称（最细分作物品种）
     if (variety.varietyName.toLowerCase().includes(lowerKeyword)) {
       results.push({ variety, matchField: 'varietyName', matchText: variety.varietyName });
+      continue;
+    }
+
+    // 匹配子品种名称（如"红颜"）
+    if (variety.subVariety1Name && variety.subVariety1Name.toLowerCase().includes(lowerKeyword)) {
+      results.push({ variety, matchField: 'subVariety1Name', matchText: variety.subVariety1Name });
       continue;
     }
 

@@ -69,12 +69,14 @@ export type DisplayMode = 'recorded' | 'all';
  * 树形组件Props
  */
 export interface VarietyTreeProps {
+  /** 视图模式 */
+  viewMode: 'table' | 'tree';
+  /** 视图模式切换回调 */
+  onViewModeChange: (mode: 'table' | 'tree') => void;
   /** 搜索关键词 */
   searchKeyword?: string;
   /** 类别筛选 */
   categoryFilter?: string;
-  /** 显示模式 */
-  displayMode: DisplayMode;
   /** 选中回调 */
   onSelect: (variety: CropVariety) => void;
   /** 新增回调 */

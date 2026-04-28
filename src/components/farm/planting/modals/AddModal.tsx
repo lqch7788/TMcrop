@@ -10,7 +10,7 @@ import { addPlanting } from '../../../../services/plantingService';
 import { getSeedSources } from '../../../../services/seedSourceService';
 import { getSeedlings } from '../../../../services/seedlingService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
-import { findProduceCodeByName } from '../../../../data/produceCodeRule';
+import * as cropVarietyService from '../../../../services/cropVarietyService';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ export function AddModal({
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
 
     // 生成作物编码
-    const cropInfo = findProduceCodeByName(formData.cropName);
+    const cropInfo = cropVarietyService.getCropCodeInfo(formData.cropName);
     let cropCode = '';
     if (cropInfo) {
       const seq = Math.floor(Math.random() * 999) + 1;
@@ -248,9 +248,9 @@ export function AddModal({
           </select>
         </div>
 
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物名称</label>
+          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
           <input
             type="text"
             value={formData.cropName}

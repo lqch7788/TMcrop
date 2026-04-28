@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { SeedSource, SourceType, StockStatus } from '../../../../types/crop';
+import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
 import { updateSeedSource } from '../../../../services/seedSourceService';
 
 interface EditModalProps {
@@ -32,6 +32,7 @@ export function EditModal({
 }: EditModalProps) {
   const [formData, setFormData] = useState({
     sourceType: record.sourceType,
+    sourceOrigin: record.sourceOrigin || 'external_purchase',
     cropCategory: record.cropCategory,
     cropName: record.cropName,
     cropVariety: record.cropVariety,
@@ -49,6 +50,7 @@ export function EditModal({
   useEffect(() => {
     setFormData({
       sourceType: record.sourceType,
+      sourceOrigin: record.sourceOrigin || 'external_purchase',
       cropCategory: record.cropCategory,
       cropName: record.cropName,
       cropVariety: record.cropVariety,
@@ -64,6 +66,17 @@ export function EditModal({
   }, [record]);
 
   const handleSubmit = () => {
+    // 验证：选择"其他"时备注必填
+    if (formData.sourceType === SourceType.OTHER && !formData.remarks.trim()) {
+      alert('选择"其他"种源类型时，备注为必填项，请输入详细说明');
+      return;
+    }
+    // 外部采购时供应商必填
+    if (formData.sourceOrigin === 'external_purchase' && !formData.supplierId) {
+      alert('请选择供应商');
+      return;
+    }
+
     // 获取供应商名称
     const supplier = suppliers.find(s => s.value === formData.supplierId);
     const supplierName = supplier?.label || formData.supplierName;
@@ -83,6 +96,7 @@ export function EditModal({
 
     updateSeedSource(record.id, {
       sourceType: formData.sourceType,
+      sourceOrigin: formData.sourceOrigin,
       cropCategory: formData.cropCategory,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
@@ -114,6 +128,17 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {/* 种源批号 - 只读显示 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">种源批号</label>
+          <input
+            type="text"
+            value={record.seedCode}
+            readOnly
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600 font-mono"
+          />
+        </div>
+
         {/* 作物类型 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">作物类型</label>
@@ -129,9 +154,9 @@ export function EditModal({
           </select>
         </div>
 
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物名称</label>
+          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
           <select
             value={formData.cropName}
             onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
@@ -159,38 +184,66 @@ export function EditModal({
           </select>
         </div>
 
-        {/* 来源类型 */}
+        {/* 种源类型 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种源类型</label>
-          <div className="flex gap-4 mt-2">
-            <label className="flex items-center gap-2">
+          <select
+            value={formData.sourceType}
+            onChange={(e) => setFormData({ ...formData, sourceType: e.target.value as SourceType })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value={SourceType.SEED}>种子</option>
+            <option value={SourceType.SEEDLING}>种苗/实生苗</option>
+            <option value={SourceType.CUTTING}>扦插苗</option>
+            <option value={SourceType.GRAFTING}>嫁接苗</option>
+            <option value={SourceType.TISSUE_CULTURE}>组培苗</option>
+            <option value={SourceType.SPLIT}>分株苗</option>
+            <option value={SourceType.BULB}>种球/球根</option>
+            <option value={SourceType.OTHER}>其他</option>
+          </select>
+          {/* 选择"其他"时显示补充说明输入框 */}
+          {formData.sourceType === SourceType.OTHER && (
+            <div className="mt-2">
               <input
-                type="radio"
-                name="sourceType"
-                value={SourceType.SEED}
-                checked={formData.sourceType === SourceType.SEED}
-                onChange={() => setFormData({ ...formData, sourceType: SourceType.SEED })}
-                className="w-4 h-4 text-emerald-600"
+                type="text"
+                value={formData.remarks}
+                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="请输入其他种源类型的详细说明"
+                autoFocus
               />
-              <span className="text-sm">种子</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="sourceType"
-                value={SourceType.SEEDLING}
-                checked={formData.sourceType === SourceType.SEEDLING}
-                onChange={() => setFormData({ ...formData, sourceType: SourceType.SEEDLING })}
-                className="w-4 h-4 text-emerald-600"
-              />
-              <span className="text-sm">种苗</span>
-            </label>
-          </div>
+              <p className="mt-1 text-xs text-red-500">必填：选择"其他"时必须填写详细说明</p>
+            </div>
+          )}
         </div>
 
-        {/* 供应商 */}
+        {/* 来源途径 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">供应商</label>
+          <label className="block text-sm font-medium text-gray-900 mb-1">来源途径</label>
+          <select
+            value={formData.sourceOrigin}
+            onChange={(e) => setFormData({ ...formData, sourceOrigin: e.target.value as SourceOrigin })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="external_purchase">外部采购</option>
+            <option value="self_produced">内部自繁</option>
+            <option value="commissioned">委托培育</option>
+            <option value="gift">政府/机构赠送</option>
+            <option value="self_retained">自留种</option>
+            <option value="other">其他</option>
+          </select>
+          {/* 选择"其他"时显示补充说明 */}
+          {formData.sourceOrigin === 'other' && (
+            <p className="mt-1 text-xs text-gray-400">请在备注中说明具体来源</p>
+          )}
+        </div>
+
+        {/* 供应商 - 外部采购时必填，其他来源可选 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            {formData.sourceOrigin === 'external_purchase' && <span className="text-red-500">*</span>}
+            {formData.sourceOrigin === 'external_purchase' ? '供应商' : '供应商（可选）'}
+          </label>
           <select
             value={formData.supplierId}
             onChange={(e) => {
@@ -199,16 +252,22 @@ export function EditModal({
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">请选择</option>
-            {suppliers.map(s => (
+            <option value="">{
+              formData.sourceOrigin === 'external_purchase'
+                ? '请选择'
+                : '内部自留/无需填写'
+            }</option>
+            {formData.sourceOrigin === 'external_purchase' && suppliers.map(s => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </div>
 
-        {/* 购买日期 */}
+        {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">购买日期</label>
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
+          </label>
           <input
             type="date"
             value={formData.purchaseDate}

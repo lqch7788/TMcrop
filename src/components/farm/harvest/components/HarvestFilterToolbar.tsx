@@ -76,14 +76,14 @@ export function HarvestFilterToolbar({
           </select>
         </div>
 
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
           <input
             type="text"
             value={searchFilters.cropName}
             onChange={(e) => onFiltersChange({ ...searchFilters, cropName: e.target.value })}
-            placeholder="请输入作物名称"
+            placeholder="请输入作物品种"
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>

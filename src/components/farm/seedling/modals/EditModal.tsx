@@ -6,6 +6,8 @@ import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedSource } from '../../../../types/crop';
 import { updateSeedling } from '../../../../services/seedlingService';
+import CropCodeSelector from '../../common/CropCodeSelector';
+import { CropVarietyOption } from '../../../../types/cropVariety';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -13,8 +15,7 @@ interface EditModalProps {
   onSuccess?: () => void;
   record: Seedling;
   seedSources: SeedSource[];
-  cropNames: Array<{ value: string; label: string }>;
-  cropVarieties: Array<{ value: string; label: string }>;
+  cropVarietyOptions: CropVarietyOption[];
   seedlingTypes: Array<{ value: string; label: string }>;
   sites: Array<{ value: string; label: string }>;
 }
@@ -25,14 +26,14 @@ export function EditModal({
   onSuccess,
   record,
   seedSources,
-  cropNames,
-  cropVarieties,
+  cropVarietyOptions,
   seedlingTypes,
   sites
 }: EditModalProps) {
   const [formData, setFormData] = useState({
     sourceId: record.sourceId,
     sourceCode: record.sourceCode,
+    selectedCropCode: record.cropCode || '',
     cropName: record.cropName,
     cropVariety: record.cropVariety,
     seedlingType: record.seedlingType,
@@ -52,6 +53,7 @@ export function EditModal({
     setFormData({
       sourceId: record.sourceId,
       sourceCode: record.sourceCode,
+      selectedCropCode: record.cropCode || '',
       cropName: record.cropName,
       cropVariety: record.cropVariety,
       seedlingType: record.seedlingType,
@@ -88,6 +90,7 @@ export function EditModal({
       sourceCode,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
+      cropCode: formData.selectedCropCode,
       seedlingType: formData.seedlingType,
       siteId: formData.siteId,
       siteName,
@@ -115,10 +118,21 @@ export function EditModal({
         ...formData,
         sourceId,
         sourceCode: source.seedCode,
+        selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
         cropVariety: source.cropVariety
       });
     }
+  };
+
+  // 处理作物品种选择
+  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
+    setFormData({
+      ...formData,
+      selectedCropCode: cropCode,
+      cropName: varietyInfo?.varietyName || '',
+      cropVariety: varietyInfo?.subVariety1Name || varietyInfo?.varietyName || ''
+    });
   };
 
   return (
@@ -150,34 +164,15 @@ export function EditModal({
           </select>
         </div>
 
-        {/* 作物名称 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物名称</label>
-          <select
-            value={formData.cropName}
-            onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 品种 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
-          <select
-            value={formData.cropVariety}
-            onChange={(e) => setFormData({ ...formData, cropVariety: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropVarieties.map(v => (
-              <option key={v.value} value={v.value}>{v.label}</option>
-            ))}
-          </select>
+        {/* 作物品种选择 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <CropCodeSelector
+            value={formData.selectedCropCode}
+            onChange={handleCropCodeChange}
+            placeholder="搜索或选择作物品种..."
+            size="md"
+          />
         </div>
 
         {/* 育苗方式 */}

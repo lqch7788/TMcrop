@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 
 // 操作模式类型（用于批量操作）
@@ -80,7 +80,23 @@ export function SeedSourceTable({
   // 类型映射
   const sourceTypeMap = {
     [SourceType.SEED]: '种子',
-    [SourceType.SEEDLING]: '种苗'
+    [SourceType.SEEDLING]: '种苗/实生苗',
+    [SourceType.CUTTING]: '扦插苗',
+    [SourceType.GRAFTING]: '嫁接苗',
+    [SourceType.TISSUE_CULTURE]: '组培苗',
+    [SourceType.SPLIT]: '分株苗',
+    [SourceType.BULB]: '种球/球根',
+    [SourceType.OTHER]: '其他'
+  };
+
+  // 来源途径映射
+  const sourceOriginMap: Record<string, string> = {
+    'external_purchase': '外部采购',
+    'self_produced': '内部自繁',
+    'commissioned': '委托培育',
+    'gift': '政府/机构赠送',
+    'self_retained': '自留种',
+    'other': '其他'
   };
 
   // 获取选中的第一条记录
@@ -266,23 +282,35 @@ export function SeedSourceTable({
           <thead className="bg-emerald-600">
             <tr>
               {showCheckbox && (
-                <th className="px-4 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">
-                  选择
+                <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.length === data.length && data.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onSelectionChange(data.map(item => item.id));
+                      } else {
+                        onSelectionChange([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种源批号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">来源类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种源类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">来源途径</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">采购日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">采购/入库日期</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
                 <td colSpan={showCheckbox ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
@@ -291,9 +319,9 @@ export function SeedSourceTable({
               </tr>
             ) : (
               currentData.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.id} className="hover:bg-emerald-50">
                   {showCheckbox && (
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
@@ -304,58 +332,49 @@ export function SeedSourceTable({
                             onSelectionChange(selectedRows.filter(k => k !== record.id));
                           }
                         }}
-                        className="w-4 h-4 text-emerald-600 rounded border-gray-300"
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm">
-                    <span className="font-mono text-blue-600">{record.seedCode}</span>
+                  <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                    <button
+                      onClick={() => onDetail(record)}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      title="点击查看详情"
+                    >
+                      {record.seedCode}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.cropName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.cropVariety}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.cropName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <span className="text-gray-400">{record.cropCategory}</span>
+                    <span className="text-gray-400 mx-0.5">-</span>
+                    <span className="text-gray-700">{record.typeName}</span>
+                    <span className="text-gray-400 mx-0.5">-</span>
+                    <span className="text-gray-700">{record.varietyName}</span>
+                    <span className="text-gray-400 mx-0.5">-</span>
+                    <span className="text-gray-900 font-medium">{record.cropName}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {sourceTypeMap[record.sourceType] || record.sourceType}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.supplierName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.purchaseDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {sourceOriginMap[record.sourceOrigin] || record.sourceOrigin || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.availableCount.toLocaleString()} {record.unit}
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
                       {statusMap[record.status]?.label || record.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => onDetail(record)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="详情"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => onPrint(record)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="打印标签"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
-                      {record.pictures && record.pictures.length > 0 && (
-                        <button
-                          onClick={() => onImageClick(record.pictures)}
-                          className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
-                          title="查看图片"
-                        >
-                          <Image className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
                 </tr>
               ))
             )}

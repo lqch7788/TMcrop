@@ -1,7 +1,7 @@
 /**
  * 作物编码规则管理页面
  *
- * 编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位
+ * 编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
  * 示例：FR0101001001 = 水果类-浆果类-草莓-红颜
  */
 
@@ -369,7 +369,7 @@ export default function ProduceCodeRule() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">作物编码规则</h1>
-              <p className="text-gray-500">编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位</p>
+              <p className="text-gray-500">编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -427,13 +427,13 @@ export default function ProduceCodeRule() {
           {showCodeRuleInfo && (
             <div className="grid grid-cols-2 gap-4 text-sm text-emerald-700 mt-3">
               <div>
-                <p><strong>编码结构：</strong>类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位</p>
+                <p><strong>编码结构：</strong>类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位</p>
                 <p><strong>示例：</strong>FR010100101</p>
                 <ul className="ml-4 mt-1 space-y-0.5">
                   <li>• FR - 水果类</li>
                   <li>• 01 - 浆果类</li>
                   <li>• 01 - 草莓</li>
-                  <li>• 001 - 红颜（子品种1）</li>
+                  <li>• 001 - 红颜（子品种）</li>
                   <li>• 01 - 大叶红颜（详细品种序号）</li>
                 </ul>
                 <p className="mt-2 text-xs"><strong>注：</strong>详细品种名称（如"大叶红颜"）由用户在录入时手工输入，系统自动分配2位序号</p>
@@ -466,8 +466,8 @@ export default function ProduceCodeRule() {
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">类型名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">品种代码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">品种名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">子品种1代码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">子品种1名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">子品种代码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">子品种名称</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -646,7 +646,7 @@ export default function ProduceCodeRule() {
                                     onClick={() => setShowAddSubVariety1({ categoryCode: category.code, typeCode: type.code, subCode: sub.code })}
                                     className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
                                   >
-                                    <Plus className="w-3 h-3" /> 添加子品种1
+                                    <Plus className="w-3 h-3" /> 添加子品种
                                   </button>
                                 </td>
                               </tr>
@@ -669,7 +669,7 @@ export default function ProduceCodeRule() {
                                       type="text"
                                       value={newSubVariety1Name}
                                       onChange={(e) => setNewSubVariety1Name(e.target.value)}
-                                      placeholder="子品种1名称"
+                                      placeholder="子品种名称"
                                       className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
                                     />
                                     <button

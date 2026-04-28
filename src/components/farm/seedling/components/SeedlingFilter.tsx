@@ -33,9 +33,9 @@ export function SeedlingFilter({
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
           <select
             value={filters.cropName}
             onChange={(e) => onChange({ ...filters, cropName: e.target.value })}

@@ -5,13 +5,14 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting } from '../../../../types/crop';
+import CropCodeSelector from '../../common/CropCodeSelector';
+import { CropVarietyOption } from '../../../../types/cropVariety';
 
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: Planting;
-  cropNames: Array<{ value: string; label: string }>;
-  cropVarieties: Array<{ value: string; label: string }>;
+  cropVarietyOptions: CropVarietyOption[];
   areas: Array<{ value: string; label: string; parent?: string }>;
 }
 
@@ -19,11 +20,11 @@ export function EditModal({
   isOpen,
   onClose,
   record,
-  cropNames,
-  cropVarieties,
+  cropVarietyOptions,
   areas
 }: EditModalProps) {
   const [formData, setFormData] = useState({
+    selectedCropCode: record.cropCode || '',
     cropName: record.cropName,
     cropVariety: record.cropVariety,
     areaId: record.areaId,
@@ -39,6 +40,16 @@ export function EditModal({
     onClose();
   };
 
+  // 处理作物品种选择
+  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
+    setFormData({
+      ...formData,
+      selectedCropCode: cropCode,
+      cropName: varietyInfo?.varietyName || '',
+      cropVariety: varietyInfo?.subVariety1Name || varietyInfo?.varietyName || ''
+    });
+  };
+
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -51,34 +62,15 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 作物名称 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物名称</label>
-          <select
-            value={formData.cropName}
-            onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 品种 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
-          <select
-            value={formData.cropVariety}
-            onChange={(e) => setFormData({ ...formData, cropVariety: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropVarieties.map(v => (
-              <option key={v.value} value={v.value}>{v.label}</option>
-            ))}
-          </select>
+        {/* 作物品种选择 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <CropCodeSelector
+            value={formData.selectedCropCode}
+            onChange={handleCropCodeChange}
+            placeholder="搜索或选择作物品种..."
+            size="md"
+          />
         </div>
 
         {/* 种植区域 */}

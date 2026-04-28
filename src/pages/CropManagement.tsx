@@ -95,10 +95,10 @@ export default function CropManagement() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
             <input
               type="text"
-              placeholder="搜索作物名称..."
+              placeholder="搜索作物品种..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"

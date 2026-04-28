@@ -247,7 +247,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <div className="text-sm font-medium text-emerald-700 mb-2">批次信息（自动填充）</div>
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <div className="text-xs text-emerald-600">作物名称</div>
+              <div className="text-xs text-emerald-600">作物品种</div>
               <div className="text-sm text-gray-900">{selectedBatch.cropName}</div>
             </div>
             <div>

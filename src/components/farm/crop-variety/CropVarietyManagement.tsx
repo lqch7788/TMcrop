@@ -453,73 +453,22 @@ export default function CropVarietyManagement() {
 
       {/* 品种列表 */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {/* 视图切换工具栏 */}
-        <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 font-medium">显示模式：</span>
-            <button
-              onClick={() => setDisplayMode('recorded')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                displayMode === 'recorded'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <GitBranch className="w-4 h-4" />
-              仅已录入
-            </button>
-            <button
-              onClick={() => setDisplayMode('all')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                displayMode === 'all'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              显示全部
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 font-medium">视图：</span>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                viewMode === 'table'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              表格
-            </button>
-            <button
-              onClick={() => setViewMode('tree')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                viewMode === 'tree'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <GitBranch className="w-4 h-4" />
-              树形
-            </button>
-          </div>
-        </div>
-
         {/* 列表内容 */}
         <div className="flex-1 min-h-0">
           {viewMode === 'table' ? (
             <CropVarietyTable
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
               onSelect={handleSelect}
               onAdd={() => setIsAddModalOpen(true)}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               selectedId={selectedVariety?.id}
             />
           ) : (
             <VarietyTree
-              displayMode={displayMode}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
               onSelect={handleSelect}
               onAdd={(node: VarietyTreeNodeType) => {
                 // 从节点获取预填充数据
@@ -572,7 +521,7 @@ export default function CropVarietyManagement() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         title="品种详情"
-        size="lg"
+        size="xxl"
         showFooter={false}
       >
         <CropVarietyDetail
