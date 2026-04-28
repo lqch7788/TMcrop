@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Leaf, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { CropVariety, CropVarietyOption } from '../../../types/cropVariety';
 import {
   getVarietyOptions,
@@ -55,7 +55,7 @@ export function CropVarietyTable({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedVarieties, setExpandedVarieties] = useState<Set<string>>(new Set());
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   // 从 produceCodeRule 读取预定义品种
   const predefinedVarieties = useMemo((): PredefinedVariety[] => {
@@ -186,7 +186,7 @@ export function CropVarietyTable({
       typeCode: variety.typeCode,
       typeName: variety.typeName,
       varietyCode: variety.varietyCode,
-      varietyName: subVariety ? `${subVariety.name}（${variety.varietyName}）` : variety.varietyName,
+      varietyName: subVariety ? subVariety.name : variety.varietyName,
       subVariety1Code: subVariety ? subVariety.code.padStart(3, '0') : undefined,
       subVariety1Name: subVariety ? subVariety.name : undefined,
       alias: [],
@@ -237,52 +237,57 @@ export function CropVarietyTable({
             新增品种
           </button>
         </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            共 {filteredVarieties.length} 个品种
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={expandAll}
-              className="text-xs text-emerald-600 hover:text-emerald-700"
-            >
-              全部展开
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              onClick={collapseAll}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              全部折叠
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 列表 */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-emerald-600">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-8"></th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-36">品种编码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">类别</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-32">子品种1</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white w-20">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedVarieties.length === 0 ? (
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+        {/* 表头和标题区域 */}
+        <div className="flex-shrink-0 border-b border-gray-200">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <span className="text-base font-semibold text-gray-700">作物编码列表</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">共 {filteredVarieties.length} 个品种</span>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={expandAll}
+                className="text-xs text-emerald-600 hover:text-emerald-700"
+              >
+                全部展开
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={collapseAll}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                全部折叠
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* 表格内容 */}
+        <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1 }}>
+          <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'fixed' }}>
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                  暂无数据
-                </td>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">展开</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">类别</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">子品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">详情作物名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">作物编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
               </tr>
-            ) : (
+            </thead>
+            <tbody className="divide-y divide-gray-300">
+              {paginatedVarieties.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                    暂无数据
+                  </td>
+                </tr>
+              ) : (
               paginatedVarieties.map((variety) => {
                 const existingSubs = getExistingSubVarieties(variety);
                 const hasSub = hasSubVarieties(variety);
@@ -291,10 +296,8 @@ export function CropVarietyTable({
                 return (
                   <React.Fragment key={variety.varietyKey}>
                     {/* 品种主行 */}
-                    <tr
-                      className={`hover:bg-gray-50 ${selectedId === variety.varietyKey ? 'bg-emerald-50' : ''}`}
-                    >
-                      <td className="px-4 py-3">
+                    <tr className="hover:bg-blue-50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button
                           onClick={() => toggleVariety(variety.varietyKey)}
                           className="p-1 hover:bg-gray-200 rounded"
@@ -307,60 +310,26 @@ export function CropVarietyTable({
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => toggleVariety(variety.varietyKey)}
-                            className="p-0.5 hover:bg-gray-200 rounded"
-                            title={isExpanded ? '点击折叠' : '点击展开'}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-3 h-3 text-emerald-600" />
-                            ) : (
-                              <ChevronRightIcon className="w-3 h-3 text-emerald-600" />
-                            )}
-                          </button>
-                          <span className="font-mono text-blue-600 text-sm">
-                            {variety.categoryCode}{variety.typeCode}{variety.varietyCode}
-                            {hasSub ? 'XXXXX' : '00000'}
-                          </span>
-                        </div>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{variety.categoryName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{variety.typeName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {variety.varietyName}
+                        {hasSub && <span className="text-xs text-gray-400 ml-1">({variety.subVarieties.length})</span>}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-gray-600 text-sm">{variety.categoryName}</span>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {isExpanded ? '点击折叠' : (hasSub ? `点击展开 ${variety.subVarieties.length} 个子品种` : '暂无子品种')}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-sm">{variety.typeName}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => toggleVariety(variety.varietyKey)}
-                            className="p-0.5 hover:bg-gray-200 rounded"
-                            title={hasSub ? (isExpanded ? '点击折叠' : '点击展开') : '暂无子品种'}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-4 h-4 text-emerald-600" />
-                            ) : (
-                              <ChevronRightIcon className="w-4 h-4 text-emerald-600" />
-                            )}
-                          </button>
-                          <Leaf className="w-4 h-4 text-emerald-500" />
-                          <span className="text-gray-900 font-medium">{variety.varietyName}</span>
-                          {hasSub && (
-                            <span className="text-xs text-gray-400">({variety.subVarieties.length})</span>
-                          )}
-                        </div>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">-</td>
+                      <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">
+                        {variety.categoryCode}{variety.typeCode}{variety.varietyCode}
+                        {hasSub ? 'XXXXX' : '00000'}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs text-emerald-600">
-                          {isExpanded ? '点击折叠' : (hasSub ? `点击展开 ${variety.subVarieties.length} 个子品种` : '暂无子品种')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
                           启用
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleSelectVariety(variety)}
@@ -382,7 +351,6 @@ export function CropVarietyTable({
 
                     {/* 子品种1展开行 */}
                     {isExpanded && hasSub && variety.subVarieties.map((sub, idx) => {
-                      // 检查该子品种是否有已录入的数据
                       const existingForSub = existingSubs.find(es =>
                         es.subVariety1Code === sub.code.padStart(3, '0')
                       );
@@ -390,58 +358,47 @@ export function CropVarietyTable({
                       return (
                         <tr
                           key={`${variety.varietyKey}-${sub.code}`}
-                          className="bg-blue-50 hover:bg-blue-100"
+                          className="hover:bg-blue-50 transition-colors"
                         >
-                          <td className="px-4 py-2"></td>
-                          <td className="px-4 py-2">
-                            <span className="font-mono text-blue-600 text-sm">
-                              {variety.categoryCode}{variety.typeCode}{variety.varietyCode}{sub.code.padStart(3, '0')}00
-                            </span>
+                          <td className="px-4 py-3 whitespace-nowrap"></td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{variety.categoryName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{variety.typeName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            <span className="ml-4 mr-1">└</span>{variety.varietyName}
                           </td>
-                          <td className="px-4 py-2 text-gray-500 text-sm">{variety.categoryName}</td>
-                          <td className="px-4 py-2 text-gray-500 text-sm">{variety.typeName}</td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2 ml-6">
-                              <ChevronRightIcon className="w-3 h-3 text-gray-400" />
-                              <span className="text-gray-700 text-sm">{variety.varietyName}</span>
-                            </div>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {sub.name}
+                            {existingForSub && <span className="text-xs text-green-600 ml-1">✓ 已录入</span>}
+                            {!existingForSub && <span className="text-xs text-orange-500 ml-1">待录入</span>}
                           </td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2 ml-3">
-                              <span className="text-gray-700 text-sm font-medium">{sub.name}</span>
-                              {existingForSub ? (
-                                <span className="text-xs text-green-600">✓ 已录入</span>
-                              ) : (
-                                <span className="text-xs text-orange-500">待录入</span>
-                              )}
-                            </div>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {existingForSub?.varietyName || '-'}
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">
+                            {variety.categoryCode}{variety.typeCode}{variety.varietyCode}{sub.code.padStart(3, '0')}00
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
                             {existingForSub ? (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
-                                启用
-                              </span>
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">启用</span>
                             ) : (
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs font-medium">
-                                待录入
-                              </span>
+                              <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium">待录入</span>
                             )}
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => handleSelectVariety(variety, sub)}
-                                className="p-1 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                                 title="查看详情"
                               >
-                                <Eye className="w-3 h-3" />
+                                <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => onAdd()}
-                                className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
                                 title="录入此品种"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -451,44 +408,41 @@ export function CropVarietyTable({
                   </React.Fragment>
                 );
               })
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-        <div className="text-sm text-gray-500">
-          第 {currentPage} / {totalPages || 1} 页
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">每页</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+            className="px-2 py-1 border border-gray-200 rounded text-sm"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">共 {filteredVarieties.length} 条</span>
           <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          {[...Array(Math.min(5, totalPages))].map((_, i) => {
-            const page = i + 1;
-            return (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium ${
-                  currentPage === page
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {page}
-              </button>
-            );
-          })}
+          <span className="text-sm">{currentPage} / {totalPages}</span>
           <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

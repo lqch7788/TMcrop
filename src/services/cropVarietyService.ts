@@ -411,7 +411,7 @@ export function addVariety(input: CreateCropVarietyInput): CropVariety {
 }
 
 /**
- * 更新品种（仅允许更新 alias, growthCycle, targetYield, status, remarks）
+ * 更新品种（仅允许更新 alias, growthCycle, targetYield, yieldUnit, status, remarks, varietyName）
  */
 export function updateVariety(id: string, updates: UpdateCropVarietyInput): CropVariety | null {
   const varieties = getStoredVarieties();

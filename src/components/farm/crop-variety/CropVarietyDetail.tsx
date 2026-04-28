@@ -96,11 +96,15 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               </div>
               {variety.subVariety1Name && (
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <label className="block text-xs text-gray-500 mb-1">子品种1</label>
+                  <label className="block text-xs text-gray-500 mb-1">子品种</label>
                   <p className="text-gray-900">{variety.subVariety1Name}</p>
                   <p className="text-xs text-gray-400 font-mono">{variety.subVariety1Code}</p>
                 </div>
               )}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <label className="block text-xs text-gray-500 mb-1">作物名称</label>
+                <p className="text-gray-900">{variety.varietyName}</p>
+              </div>
             </div>
           </div>
 
