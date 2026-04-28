@@ -21,6 +21,7 @@ export function EditCropVarietyModal({
   variety
 }: EditCropVarietyModalProps) {
   const [formData, setFormData] = useState({
+    varietyName: variety.varietyName || '',
     alias: variety.alias?.join(', ') || '',
     growthCycle: variety.growthCycle,
     targetYield: variety.targetYield,
@@ -32,6 +33,7 @@ export function EditCropVarietyModal({
   // 当 variety 变化时重置表单
   useEffect(() => {
     setFormData({
+      varietyName: variety.varietyName || '',
       alias: variety.alias?.join(', ') || '',
       growthCycle: variety.growthCycle,
       targetYield: variety.targetYield,
@@ -50,6 +52,7 @@ export function EditCropVarietyModal({
   // 提交
   const handleSubmit = () => {
     updateVariety(variety.id, {
+      varietyName: formData.varietyName,
       alias: parseAlias(formData.alias),
       growthCycle: formData.growthCycle,
       targetYield: formData.targetYield,
@@ -81,7 +84,7 @@ export function EditCropVarietyModal({
             <div>
               <label className="block text-xs text-gray-500 mb-1">作物编码</label>
               <p className="font-mono text-emerald-600 font-medium">{variety.cropCode}</p>
-              <p className="text-xs text-gray-400 mt-1">格式：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位)</p>
+              <p className="text-xs text-gray-400 mt-1">格式：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位)</p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">类别</label>
@@ -97,7 +100,7 @@ export function EditCropVarietyModal({
             </div>
             {variety.subVariety1Name && (
               <div>
-                <label className="block text-xs text-gray-500 mb-1">子品种1</label>
+                <label className="block text-xs text-gray-500 mb-1">子品种</label>
                 <p className="text-gray-900 font-medium">{variety.subVariety1Name}</p>
               </div>
             )}
@@ -106,6 +109,20 @@ export function EditCropVarietyModal({
 
         {/* 可编辑字段 */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          {/* 作物名称 */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              作物名称
+            </label>
+            <input
+              type="text"
+              value={formData.varietyName}
+              onChange={(e) => setFormData({ ...formData, varietyName: e.target.value })}
+              placeholder="如：红颜草莓、红颜草莓-A"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+
           {/* 别名 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">

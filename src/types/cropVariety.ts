@@ -1,6 +1,6 @@
 /**
  * 作物品种库类型定义
- * 编码规则：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位
+ * 编码规则：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
  * 示例：FR010100101 = 水果类-浆果类-草莓-红颜-大叶红颜
  * 注意：详细品种名称（如"大叶红颜"）在录入时由用户手工输入，自动分配2位序号
  */
@@ -45,7 +45,7 @@ export type CreateCropVarietyInput = Omit<CropVariety, 'id' | 'cropCode' | 'crea
 /**
  * 更新品种的输入数据（仅允许部分字段）
  */
-export type UpdateCropVarietyInput = Partial<Pick<CropVariety, 'alias' | 'growthCycle' | 'targetYield' | 'yieldUnit' | 'status' | 'remarks'>>;
+export type UpdateCropVarietyInput = Partial<Pick<CropVariety, 'alias' | 'growthCycle' | 'targetYield' | 'yieldUnit' | 'status' | 'remarks' | 'varietyName'>>;
 
 /**
  * 品种下拉选项格式

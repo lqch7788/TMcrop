@@ -3,7 +3,7 @@
  * 支持多级子品种选择和动态新增
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
@@ -22,12 +22,24 @@ interface AddCropVarietyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  // 预填充数据（从树形节点新增时）
+  prefillData?: {
+    categoryCode: string;
+    categoryName: string;
+    typeCode: string;
+    typeName: string;
+    varietyCode: string;
+    varietyName: string;
+    subVariety1Code?: string;
+    subVariety1Name?: string;
+  };
 }
 
 export function AddCropVarietyModal({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  prefillData
 }: AddCropVarietyModalProps) {
   const [formData, setFormData] = useState({
     categoryCode: '',
@@ -61,6 +73,49 @@ export function AddCropVarietyModal({
 
   // 编码已生成标志
   const [codeGenerated, setCodeGenerated] = useState(false);
+
+  // 处理预填充数据
+  useEffect(() => {
+    if (prefillData) {
+      setFormData(prev => ({
+        ...prev,
+        categoryCode: prefillData.categoryCode,
+        categoryName: prefillData.categoryName,
+        typeCode: prefillData.typeCode,
+        typeName: prefillData.typeName,
+        varietyCode: prefillData.varietyCode,
+        varietyName: prefillData.varietyName,
+        subVariety1Code: prefillData.subVariety1Code || '',
+        subVariety1Name: prefillData.subVariety1Name || '',
+        detailVarietyName: ''
+      }));
+      // 自动获取下一个详细品种序号
+      if (prefillData.subVariety1Code) {
+        const maxCode = getMaxDetailVarietyCode(
+          prefillData.categoryCode,
+          prefillData.typeCode,
+          prefillData.varietyCode,
+          prefillData.subVariety1Code
+        );
+        setDetailVarietyCode(maxCode);
+      }
+      // 自动生成编码
+      const code = generateCropCode(
+        prefillData.categoryCode,
+        prefillData.typeCode,
+        prefillData.varietyCode,
+        prefillData.subVariety1Code,
+        prefillData.subVariety1Code ? getMaxDetailVarietyCode(
+          prefillData.categoryCode,
+          prefillData.typeCode,
+          prefillData.varietyCode,
+          prefillData.subVariety1Code
+        ) : undefined
+      );
+      setCropCode(code);
+      setCodeGenerated(true);
+    }
+  }, [prefillData]);
 
   // 获取选项数据
   const categoryOptions = useMemo(() => getCategoryOptions(), []);
@@ -251,17 +306,14 @@ export function AddCropVarietyModal({
       alert('请先生成作物编码');
       return;
     }
-    if (!formData.detailVarietyName.trim()) {
-      alert('请输入详细品种名称');
-      return;
-    }
     if (duplicateCheckResult?.hasDuplicate) {
       alert('存在重复的品种，请修改后重试');
       return;
     }
 
-    // 使用用户输入的详细名称作为最终品种名称
-    const finalVarietyName = formData.detailVarietyName.trim();
+    // 如果没有输入详细品种名称，使用品种名称作为最终品种名称，详细品种序号默认为00
+    const finalVarietyName = formData.detailVarietyName.trim() || formData.varietyName;
+    const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
 
     // 添加品种
     addVariety({
@@ -270,10 +322,10 @@ export function AddCropVarietyModal({
       typeCode: formData.typeCode,
       typeName: formData.typeName,
       varietyCode: formData.varietyCode,
-      varietyName: finalVarietyName,  // 使用用户输入的详细名称
+      varietyName: finalVarietyName,
       subVariety1Code: formData.subVariety1Code || undefined,
       subVariety1Name: formData.subVariety1Name || undefined,
-      detailVarietyCode: detailVarietyCode || undefined,
+      detailVarietyCode: finalDetailCode || undefined,
       alias: parseAlias(formData.alias),
       growthCycle: formData.growthCycle,
       targetYield: formData.targetYield,
@@ -403,10 +455,10 @@ export function AddCropVarietyModal({
           </select>
         </div>
 
-        {/* 子品种1 */}
+        {/* 子品种 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">
-            子品种1 <span className="text-xs text-gray-400">(可选)</span>
+            子品种
           </label>
           <select
             value={formData.subVariety1Code}
@@ -434,19 +486,15 @@ export function AddCropVarietyModal({
         {/* 详细品种名称 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">
-            详细品种名称 <span className="text-red-500">*</span>
-            <span className="text-xs text-gray-400 ml-2">(用户手工输入)</span>
+            详细品种名称
           </label>
           <input
             type="text"
             value={formData.detailVarietyName}
             onChange={(e) => handleDetailVarietyNameChange(e.target.value)}
-            placeholder="如：大叶红颜、小叶章姬等具体品种名称"
+            placeholder="输入详细品种名称"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <p className="mt-1 text-xs text-gray-400">
-            注：详细品种名称由用户在录入时手工输入，用于区分同一种类下的不同具体品种。同一子品种1下的详细品种名称不能重复。
-          </p>
         </div>
 
         {/* 作物编码 */}
@@ -472,52 +520,43 @@ export function AddCropVarietyModal({
               <RefreshCw className="w-4 h-4" />
               生成
             </button>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">
-            格式：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位) = 11位
-          </p>
-          {formData.subVariety1Code && (
-            <p className="mt-1 text-xs text-blue-600">
-              当前子品种1「{formData.subVariety1Name}」下已有详细品种，系统将自动分配下一个序号
-              {detailVarietyCode && `（当前序号：${detailVarietyCode}）`}
-            </p>
-          )}
-        </div>
-
-        {/* 查重按钮和结果 */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            查重检测
-          </label>
-          <div className="flex gap-2 items-center">
             <button
               type="button"
               onClick={handleCheckDuplicate}
-              disabled={!cropCode && !formData.detailVarietyName}
+              disabled={!cropCode}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <Search className="w-4 h-4" />
               查重
             </button>
-            {duplicateCheckResult && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                duplicateCheckResult.hasDuplicate
-                  ? 'bg-red-50 border border-red-200'
-                  : 'bg-green-50 border border-green-200'
-              }`}>
-                {duplicateCheckResult.hasDuplicate ? (
-                  <X className="w-4 h-4 text-red-500" />
-                ) : (
-                  <Check className="w-4 h-4 text-green-500" />
-                )}
-                <span className={`text-sm ${
-                  duplicateCheckResult.hasDuplicate ? 'text-red-700' : 'text-green-700'
-                }`}>
-                  {duplicateCheckResult.message}
-                </span>
-              </div>
-            )}
           </div>
+          {duplicateCheckResult && (
+            <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${
+              duplicateCheckResult.hasDuplicate
+                ? 'bg-red-50 border border-red-200'
+                : 'bg-green-50 border border-green-200'
+            }`}>
+              {duplicateCheckResult.hasDuplicate ? (
+                <X className="w-4 h-4 text-red-500" />
+              ) : (
+                <Check className="w-4 h-4 text-green-500" />
+              )}
+              <span className={`text-sm ${
+                duplicateCheckResult.hasDuplicate ? 'text-red-700' : 'text-green-700'
+              }`}>
+                {duplicateCheckResult.message}
+              </span>
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-400">
+            格式：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
+          </p>
+          {formData.subVariety1Code && (
+            <p className="mt-1 text-xs text-blue-600">
+              当前子品种「{formData.subVariety1Name}」下已有详细品种，系统将自动分配下一个序号
+              {detailVarietyCode && `（当前序号：${detailVarietyCode}）`}
+            </p>
+          )}
         </div>
 
         {/* 别名 */}

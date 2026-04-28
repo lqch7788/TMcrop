@@ -6,12 +6,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Leaf, Sprout, Copy, Check, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Leaf, Sprout, Copy, Check, RefreshCw, ChevronDown, ChevronRight, List, GitBranch } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import { CropVarietyTable } from './CropVarietyTable';
+import { VarietyTree } from './VarietyTree';
 import { CropVarietyDetail } from './CropVarietyDetail';
 import { AddCropVarietyModal } from './modals/AddCropVarietyModal';
 import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
+import { UnifiedModal } from '../../ui/UnifiedModal';
+import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
   initVarieties,
   getVarietyStats,
@@ -19,7 +22,9 @@ import {
   getTypeOptionsByCategory,
   getVarietyOptionsByType,
   getSubVariety1Options,
-  generateCropCode
+  generateCropCode,
+  getMaxDetailVarietyCode,
+  deleteVariety
 } from '../../../services/cropVarietyService';
 import {
   getProduceTypesByCategory,
@@ -29,15 +34,33 @@ export default function CropVarietyManagement() {
   const navigate = useNavigate();
   const [selectedVariety, setSelectedVariety] = useState<CropVariety | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [prefillAddData, setPrefillAddData] = useState<{
+    categoryCode: string;
+    categoryName: string;
+    typeCode: string;
+    typeName: string;
+    varietyCode: string;
+    varietyName: string;
+    subVariety1Code?: string;
+    subVariety1Name?: string;
+  } | undefined>(undefined);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, byCategory: {} as Record<string, number> });
+
+  // 视图模式状态：表格 or 树形
+  const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
+  // 显示模式状态：仅已录入 or 显示全部
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('recorded');
 
   // 编码生成器状态
   const [codeGenCategory, setCodeGenCategory] = useState('');
   const [codeGenType, setCodeGenType] = useState('');
   const [codeGenVariety, setCodeGenVariety] = useState('');
   const [codeGenSubVariety1, setCodeGenSubVariety1] = useState(''); // 子品种1（3位码）
+  const [detailVarietyName, setDetailVarietyName] = useState(''); // 详细品种名称（用户手工输入）
+  const [detailVarietyCode, setDetailVarietyCode] = useState(''); // 详细品种序号（自动生成）
   const [generatedCode, setGeneratedCode] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -89,7 +112,6 @@ export default function CropVarietyManagement() {
       setVarietyOptions(varieties);
       setCodeGenVariety('');
       setCodeGenSubVariety1('');
-      setCodeGenSubVariety2Name('');
       setGeneratedCode('');
     } else {
       setVarietyOptions([]);
@@ -105,23 +127,45 @@ export default function CropVarietyManagement() {
       const subVarieties = getSubVariety1Options(codeGenCategory, codeGenType, codeGenVariety);
       setSubVariety1Options(subVarieties);
       setCodeGenSubVariety1('');
+      setDetailVarietyName('');
+      setDetailVarietyCode('');
       setGeneratedCode('');
     } else {
       setSubVariety1Options([]);
       setCodeGenSubVariety1('');
+      setDetailVarietyName('');
+      setDetailVarietyCode('');
       setGeneratedCode('');
     }
   }, [codeGenCategory, codeGenType, codeGenVariety]);
+
+  // 子品种1变化时自动分配详细品种序号
+  useEffect(() => {
+    if (codeGenCategory && codeGenType && codeGenVariety && codeGenSubVariety1) {
+      // 自动分配下一个序号
+      const nextCode = getMaxDetailVarietyCode(
+        codeGenCategory,
+        codeGenType,
+        codeGenVariety,
+        codeGenSubVariety1
+      );
+      setDetailVarietyCode(nextCode);
+    } else {
+      setDetailVarietyCode('');
+    }
+  }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1]);
 
   // 生成编码
   const handleGenerateCode = useCallback(() => {
     if (codeGenCategory && codeGenType && codeGenVariety) {
       // 子品种1使用3位码（如001红颜）
       const sub1Code = codeGenSubVariety1 || '000';
-      const code = generateCropCode(codeGenCategory, codeGenType, codeGenVariety, sub1Code);
+      // 详细品种序号（2位）
+      const detailCode = detailVarietyCode || '00';
+      const code = generateCropCode(codeGenCategory, codeGenType, codeGenVariety, sub1Code, detailCode);
       setGeneratedCode(code);
     }
-  }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1]);
+  }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1, detailVarietyCode]);
 
   // 复制编码
   const handleCopyCode = useCallback(() => {
@@ -138,15 +182,15 @@ export default function CropVarietyManagement() {
     setStats(getVarietyStats());
   };
 
-  // 选择品种
+  // 选择品种（查看详情）
   const handleSelect = (variety: CropVariety) => {
     setSelectedVariety(variety);
+    setIsDetailModalOpen(true);
   };
 
   // 新增成功
   const handleAddSuccess = () => {
     handleRefresh();
-    setSelectedVariety(null);
   };
 
   // 编辑成功
@@ -158,7 +202,33 @@ export default function CropVarietyManagement() {
   // 编辑品种
   const handleEdit = (variety: CropVariety) => {
     setSelectedVariety(variety);
+    setIsDetailModalOpen(false);
     setIsEditModalOpen(true);
+  };
+
+  // 删除品种
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    variety: CropVariety | null;
+  }>({ isOpen: false, variety: null });
+
+  const handleDelete = (variety: CropVariety) => {
+    setDeleteConfirm({ isOpen: true, variety });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.variety) {
+      deleteVariety(deleteConfirm.variety.id);
+      handleRefresh();
+      if (selectedVariety?.id === deleteConfirm.variety.id) {
+        setSelectedVariety(null);
+      }
+    }
+    setDeleteConfirm({ isOpen: false, variety: null });
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({ isOpen: false, variety: null });
   };
 
   // 跳转到完整编码规则页面
@@ -167,66 +237,69 @@ export default function CropVarietyManagement() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
       {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Sprout className="w-6 h-6 text-white" />
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          {/* 左侧标题 */}
+          <div className="flex items-center gap-3">
+            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </Link>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Sprout className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">作物品种库管理</h1>
+              <p className="text-gray-500 text-sm">统一管理系统中所有作物品种的编码和分类信息</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">作物品种库管理</h1>
-            <p className="text-gray-500">统一管理系统中所有作物品种的编码和分类信息</p>
-          </div>
-        </div>
-      </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white">
+          {/* 右侧统计卡片 - 同一行显示 */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <Leaf className="w-5 h-5" />
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg px-3 py-2 text-white">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                  <Leaf className="w-3 h-3" />
+                </div>
+                <div>
+                  <p className="text-base font-bold">{stats.total}</p>
+                  <p className="text-xs text-white/80">品种总数</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-3xl font-bold">{stats.total}</p>
-              <p className="text-sm text-white/80">品种总数</p>
+            <div className="bg-white rounded-lg px-3 py-2 border border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-green-50 flex items-center justify-center">
+                  <span className="text-green-600 text-xs">✓</span>
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">{stats.active}</p>
+                  <p className="text-xs text-gray-500">启用中</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
+            <div className="bg-white rounded-lg px-3 py-2 border border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center">
+                  <span className="text-gray-600 text-xs">○</span>
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">{stats.inactive}</p>
+                  <p className="text-xs text-gray-500">已停用</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-              <p className="text-xs text-gray-500">启用中</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-              <span className="text-gray-600 text-lg">○</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.inactive}</p>
-              <p className="text-xs text-gray-500">已停用</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <span className="text-blue-600 text-lg">类</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{Object.keys(stats.byCategory).length}</p>
-              <p className="text-xs text-gray-500">作物类别</p>
+            <div className="bg-white rounded-lg px-3 py-2 border border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <span className="text-blue-600 text-xs">类</span>
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">{Object.keys(stats.byCategory).length}</p>
+                  <p className="text-xs text-gray-500">作物类别</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -309,9 +382,9 @@ export default function CropVarietyManagement() {
                 </select>
               </div>
 
-              {/* 子品种1（3位码） */}
+              {/* 子品种（3位码） */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">子品种1</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">子品种</label>
                 <select
                   value={codeGenSubVariety1}
                   onChange={(e) => setCodeGenSubVariety1(e.target.value)}
@@ -325,15 +398,34 @@ export default function CropVarietyManagement() {
                 </select>
               </div>
 
-              {/* 生成按钮和结果 */}
-              <div className="md:col-span-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1">生成结果</label>
+              {/* 详细品种名称（用户手工输入） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">详细品种名称</label>
+                <input
+                  type="text"
+                  value={detailVarietyName}
+                  onChange={(e) => setDetailVarietyName(e.target.value)}
+                  placeholder="输入详细品种名称"
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* 详细品种序号（自动生成）和生成结果 */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">详细品种序号</label>
                 <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={detailVarietyCode}
+                    readOnly
+                    placeholder="自动分配"
+                    className="w-20 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
+                  />
                   <input
                     type="text"
                     value={generatedCode}
                     readOnly
-                    placeholder="选择分类后点击生成，编码示例：FR0101001001"
+                    placeholder="生成结果"
                     className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
                   />
                   <button
@@ -359,32 +451,108 @@ export default function CropVarietyManagement() {
         )}
       </div>
 
-      {/* 主内容区域 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左侧：品种列表 */}
-        <div className="lg:col-span-2">
-          <CropVarietyTable
-            onSelect={handleSelect}
-            onAdd={() => setIsAddModalOpen(true)}
-            onEdit={handleEdit}
-            selectedId={selectedVariety?.id}
-          />
+      {/* 品种列表 */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* 视图切换工具栏 */}
+        <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 font-medium">显示模式：</span>
+            <button
+              onClick={() => setDisplayMode('recorded')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                displayMode === 'recorded'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              仅已录入
+            </button>
+            <button
+              onClick={() => setDisplayMode('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                displayMode === 'all'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              显示全部
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 font-medium">视图：</span>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                viewMode === 'table'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              表格
+            </button>
+            <button
+              onClick={() => setViewMode('tree')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                viewMode === 'tree'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              树形
+            </button>
+          </div>
         </div>
 
-        {/* 右侧：品种详情 */}
-        <div className="lg:col-span-1">
-          <CropVarietyDetail
-            variety={selectedVariety}
-            onEdit={handleEdit}
-          />
+        {/* 列表内容 */}
+        <div className="flex-1 min-h-0">
+          {viewMode === 'table' ? (
+            <CropVarietyTable
+              onSelect={handleSelect}
+              onAdd={() => setIsAddModalOpen(true)}
+              onEdit={handleEdit}
+              selectedId={selectedVariety?.id}
+            />
+          ) : (
+            <VarietyTree
+              displayMode={displayMode}
+              onSelect={handleSelect}
+              onAdd={(node: VarietyTreeNodeType) => {
+                // 从节点获取预填充数据
+                if (node && node.path) {
+                  setPrefillAddData({
+                    categoryCode: node.path.categoryCode,
+                    categoryName: node.path.categoryName,
+                    typeCode: node.path.typeCode,
+                    typeName: node.path.typeName,
+                    varietyCode: node.path.varietyCode,
+                    varietyName: node.path.varietyName,
+                    subVariety1Code: node.path.subVariety1Code,
+                    subVariety1Name: node.path.subVariety1Name
+                  });
+                }
+                setIsAddModalOpen(true);
+              }}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          )}
         </div>
       </div>
 
       {/* 弹窗 */}
       <AddCropVarietyModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setPrefillAddData(undefined);
+        }}
         onSuccess={handleAddSuccess}
+        prefillData={prefillAddData}
       />
 
       {selectedVariety && (
@@ -398,6 +566,54 @@ export default function CropVarietyManagement() {
           variety={selectedVariety}
         />
       )}
+
+      {/* 品种详情弹窗 */}
+      <UnifiedModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        title="品种详情"
+        size="lg"
+        showFooter={false}
+      >
+        <CropVarietyDetail
+          variety={selectedVariety}
+          onEdit={handleEdit}
+        />
+      </UnifiedModal>
+
+      {/* 删除确认弹窗 */}
+      <UnifiedModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={handleDeleteCancel}
+        title="确认删除"
+        size="md"
+        showFooter={true}
+        onSubmit={handleDeleteConfirm}
+        submitText="确认删除"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 font-medium mb-2">警告：删除操作不可逆！</p>
+            <p className="text-red-600 text-sm">
+              删除编码 <span className="font-mono font-bold">{deleteConfirm.variety?.cropCode}</span> 可能导致以下问题：
+            </p>
+            <ul className="text-red-600 text-sm mt-2 list-disc list-inside space-y-1">
+              <li>之前引用此编码的订单、种植记录等将无法识别该品种</li>
+              <li>历史数据中显示的品种信息可能显示异常</li>
+              <li>相关的统计报表数据可能出现偏差</li>
+            </ul>
+            <p className="text-red-600 text-sm mt-3">
+              请确认此编码未被任何业务数据使用后再删除。
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-gray-600 text-sm">
+              要删除的品种：<span className="font-medium">{deleteConfirm.variety?.varietyName}</span>
+            </p>
+          </div>
+        </div>
+      </UnifiedModal>
     </div>
   );
 }
