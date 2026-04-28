@@ -2,18 +2,16 @@
  * 新增订单弹窗
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import * as cropOrderService from '@/services/cropOrderService';
+import * as cropVarietyService from '@/services/cropVarietyService';
 
 interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  cropCategories: string[];
-  cropNames: string[];
-  cropVarieties: string[];
   orderTypeOptions: { value: string; label: string }[];
 }
 
@@ -21,11 +19,41 @@ export function AddModal({
   isOpen,
   onClose,
   onSuccess,
-  cropCategories,
-  cropNames,
-  cropVarieties,
   orderTypeOptions,
 }: AddModalProps) {
+  // 初始化品种数据
+  cropVarietyService.initVarieties();
+
+  // 品种选项
+  const varietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
+
+  // 将品种选项转换为级联选择所需格式
+  const cropCategories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    varietyOptions.forEach(opt => uniqueCategories.add(opt.categoryName));
+    return Array.from(uniqueCategories);
+  }, [varietyOptions]);
+
+  const filteredCropNames = useMemo(() => {
+    if (!formData.cropCategory) return [];
+    const uniqueNames = new Map<string, string>();
+    varietyOptions
+      .filter(opt => opt.categoryName === formData.cropCategory)
+      .forEach(opt => {
+        if (!uniqueNames.has(opt.value)) {
+          uniqueNames.set(opt.value, opt.label);
+        }
+      });
+    return Array.from(uniqueNames.entries()).map(([value, label]) => ({ value, label }));
+  }, [varietyOptions, formData.cropCategory]);
+
+  const filteredCropVarieties = useMemo(() => {
+    if (!formData.cropName) return [];
+    return varietyOptions
+      .filter(opt => opt.value === formData.cropName)
+      .map(opt => ({ value: opt.varietyCode, label: opt.label }));
+  }, [varietyOptions, formData.cropName]);
+
   const [formData, setFormData] = useState({
     orderName: '',
     orderType: 'production' as 'production' | 'seed' | 'research',
@@ -196,10 +224,11 @@ export function AddModal({
                 className={`w-full h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
                   errors.cropName ? 'border-red-500' : 'border-gray-200'
                 }`}
+                disabled={!formData.cropCategory}
               >
                 <option value="">请选择</option>
-                {cropNames.map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                {filteredCropNames.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
                 ))}
               </select>
               {errors.cropName && <p className="text-xs text-red-500 mt-1">{errors.cropName}</p>}
@@ -216,10 +245,11 @@ export function AddModal({
                 className={`w-full h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
                   errors.cropVariety ? 'border-red-500' : 'border-gray-200'
                 }`}
+                disabled={!formData.cropName}
               >
                 <option value="">请选择</option>
-                {cropVarieties.map((variety) => (
-                  <option key={variety} value={variety}>{variety}</option>
+                {filteredCropVarieties.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
                 ))}
               </select>
               {errors.cropVariety && <p className="text-xs text-red-500 mt-1">{errors.cropVariety}</p>}

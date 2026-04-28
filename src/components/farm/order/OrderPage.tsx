@@ -15,12 +15,11 @@ import { ExportFormatModal } from './modals/ExportFormatModal';
 import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
   cropCategories,
-  cropNames,
-  cropVarieties,
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import * as cropOrderService from '@/services/cropOrderService';
 import * as cropInstanceService from '@/services/cropInstanceService';
+import * as cropVarietyService from '@/services/cropVarietyService';
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -44,6 +43,16 @@ export default function OrderPage() {
   const [orders, setOrders] = useState<CropOrder[]>(() =>
     cropOrderService.initOrders()
   );
+
+  // 作物品种数据（从品种库服务获取）
+  const cropVarietyOptions = useMemo(() => {
+    cropVarietyService.initVarieties();
+    return cropVarietyService.getVarietyOptions();
+  }, []);
+
+  // 将品种库选项转换为旧格式以兼容现有组件
+  const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
+  const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
   // 刷新数据
   const refreshData = useCallback(() => {
@@ -318,9 +327,6 @@ export default function OrderPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSuccess={refreshData}
-        cropCategories={cropCategories}
-        cropNames={cropNames}
-        cropVarieties={cropVarieties}
         orderTypeOptions={orderTypeOptions}
       />
 
