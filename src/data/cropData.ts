@@ -8,6 +8,7 @@ import {
   Seedling,
   Planting,
   SourceType,
+  SourceOrigin,
   SeedlingStatus,
   PlantingStatus,
   StockStatus,
@@ -18,15 +19,17 @@ import {
 
 // ========== Mock数据 ==========
 
-/** 种源数据 */
+/** 种源数据 - 种源批号格式：ZZ + 年月日(8位) + "-" + 流水号(3位) */
 export const seedSources: SeedSource[] = [
   {
     id: 'SS001',
-    seedCode: 'ZZ2026-001',
+    seedCode: 'ZZ20260115-001',
     sourceType: SourceType.SEED,
+    sourceOrigin: 'external_purchase' as SourceOrigin,
     cropCategory: '茄果类',
     cropName: '番茄',
     cropVariety: '红果番茄',
+    cropCode: 'PD0301001',  // 作物编码：蔬菜类-茄果类-番茄-001
     supplierId: 'SUP001',
     supplierName: '金色稻种有限公司',
     purchaseDate: '2026-01-15',
@@ -46,11 +49,13 @@ export const seedSources: SeedSource[] = [
   },
   {
     id: 'SS002',
-    seedCode: 'ZZ2026-002',
+    seedCode: 'ZZ20260201-001',
     sourceType: SourceType.SEEDLING,
+    sourceOrigin: 'external_purchase' as SourceOrigin,
     cropCategory: '叶菜类',
     cropName: '生菜',
     cropVariety: '大叶生菜',
+    cropCode: 'PD0102001',  // 作物编码：蔬菜类-叶菜类-生菜-001
     supplierId: 'SUP002',
     supplierName: '丰收种业公司',
     purchaseDate: '2026-02-01',
@@ -70,11 +75,13 @@ export const seedSources: SeedSource[] = [
   },
   {
     id: 'SS003',
-    seedCode: 'ZZ2026-003',
+    seedCode: 'ZZ20260215-001',
     sourceType: SourceType.SEED,
+    sourceOrigin: 'external_purchase' as SourceOrigin,
     cropCategory: '瓜类',
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
+    cropCode: 'PD0201001',  // 作物编码：蔬菜类-瓜菜类-黄瓜-001
     supplierId: 'SUP001',
     supplierName: '金色稻种有限公司',
     purchaseDate: '2026-02-15',
@@ -94,11 +101,13 @@ export const seedSources: SeedSource[] = [
   },
   {
     id: 'SS004',
-    seedCode: 'ZZ2026-004',
+    seedCode: 'ZZ20260301-001',
     sourceType: SourceType.SEED,
+    sourceOrigin: 'external_purchase' as SourceOrigin,
     cropCategory: '茄果类',
     cropName: '茄子',
     cropVariety: '紫长茄子',
+    cropCode: 'PD0303001',  // 作物编码：蔬菜类-茄果类-茄子-001
     supplierId: 'SUP003',
     supplierName: '绿野种苗公司',
     purchaseDate: '2026-03-01',

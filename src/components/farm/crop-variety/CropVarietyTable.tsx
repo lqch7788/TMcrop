@@ -197,7 +197,7 @@ export function CropVarietyTable({
             <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-64">作物品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-64">品种路径</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">作物品种</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>

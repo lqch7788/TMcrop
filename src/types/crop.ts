@@ -5,13 +5,21 @@
 
 // ========== 枚举定义 ==========
 
-/** 种源类型 */
+/** 种源类型 - 基于繁殖方式分类 */
 export enum SourceType {
-  SEEDLING = 'seedling',  // 种苗
-  SEED = 'seed'           // 种子
+  SEED = 'seed',                    // 种子
+  SEEDLING = 'seedling',            // 种苗/实生苗
+  CUTTING = 'cutting',              // 扦插苗
+  GRAFTING = 'grafting',            // 嫁接苗
+  TISSUE_CULTURE = 'tissue_culture', // 组培苗
+  SPLIT = 'split',                  // 分株苗
+  BULB = 'bulb',                    // 种球/球根
+  OTHER = 'other'                   // 其他
 }
 
-/** 作物来源类型（灵活支持多种来源） */
+/** 种源来源途径 - 基于获取渠道分类
+ * 注意：此类型使用 string literal union，不再使用 enum
+ */
 export type SourceOrigin =
   | 'internal_seed'       // 内部种源
   | 'external_purchase'   // 外部采购（种子/种苗）
@@ -66,11 +74,14 @@ export enum StockStatus {
 export interface SeedSource {
   id: string;
   seedCode: string;           // 种源批号
-  sourceType: SourceType;     // 来源类型（种子/种苗）
-  cropCategory: string;        // 作物类别
-  cropName: string;           // 作物名称
-  cropVariety: string;        // 作物品种
-  cropCode: string;           // 作物编码（9位）
+  sourceType: SourceType;     // 种源类型（基于繁殖方式）
+  sourceOrigin: SourceOrigin;  // 来源途径（基于获取渠道）
+  cropCategory: string;        // 作物类别（如：蔬菜类）
+  typeName: string;          // 类型名称（如：叶菜类）
+  varietyName: string;        // 品种名称（如：菠菜）
+  cropName: string;           // 作物名称（最细化，如：圆叶菠菜）
+  cropVariety: string;        // 作物品种（对应数据库字段，存储上一级品种名）
+  cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   supplierId: string;          // 供应商ID
   supplierName: string;        // 供应商名称
   purchaseDate: string;        // 采购日期
@@ -122,7 +133,7 @@ export interface Seedling {
   sourceCode: string;          // 关联种源批号
   cropName: string;            // 作物名称
   cropVariety: string;         // 作物品种
-  cropCode: string;           // 作物编码（9位）
+  cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   seedlingType: string;        // 育苗方式
   siteId: string;             // 场地ID
   siteName: string;            // 场地名称
@@ -164,7 +175,7 @@ export interface Planting {
   sourceCode: string;         // 来源批号
   cropName: string;           // 作物名称
   cropVariety: string;         // 作物品种
-  cropCode: string;           // 作物编码（9位）
+  cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   areaId: string;            // 区域ID
   areaName: string;           // 区域名称
   rootName: string;           // 大棚/根区名称

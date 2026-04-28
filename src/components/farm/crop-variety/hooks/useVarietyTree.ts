@@ -86,7 +86,7 @@ const buildTreeNode = (
     }
     isRecorded = hasRecordedVariety(code, '', '', undefined, recordedMap);
   } else if (level === 'type') {
-    // 类型节点 - 构建品种子节点
+    // 类型节点 - 构建品种子节点（始终添加所有品种）
     const category = produceCategories.find(c => c.code === path.categoryCode);
     if (category) {
       const types = getProduceTypesByCategory(category.code);
@@ -100,8 +100,9 @@ const buildTreeNode = (
             { ...path, varietyCode: variety.code, varietyName: variety.name },
             recordedMap
           );
+          // 始终添加品种节点到树中，无论是否有子节点
+          children.push(varietyNode);
           if (varietyNode.hasChildren || varietyNode.isRecorded) {
-            children.push(varietyNode);
             hasChildren = true;
           }
           childCount++;
@@ -132,11 +133,36 @@ const buildTreeNode = (
           }
           isRecorded = hasRecordedVariety(path.categoryCode, path.typeCode, code, undefined, recordedMap);
         } else {
-          // 无子品种，检查是否有已录入的详细品种
+          // 无预定义子品种，检查是否有已录入的详细品种
           const key = `${path.categoryCode}${path.typeCode}${code}000`;
-          isRecorded = recordedMap.has(key) && recordedMap.get(key)!.length > 0;
-          hasChildren = isRecorded;
-          childCount = recordedMap.get(key)?.length || 0;
+          const recordedVarieties = recordedMap.get(key) || [];
+          if (recordedVarieties.length > 0) {
+            // 有已录入品种，添加到子节点
+            for (const rv of recordedVarieties) {
+              const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
+                ? rv.subVariety1Name
+                : rv.varietyName;
+              const detailNode: VarietyTreeNode = {
+                key: `${key}${rv.detailVarietyCode || '00'}`,
+                name: detailName,
+                code: rv.detailVarietyCode || '00',
+                level: 'detail',
+                children: [],
+                isLeaf: true,
+                isRecorded: true,
+                fullCropCode: rv.cropCode,
+                recordedVariety: rv,
+                path,
+                hasChildren: false,
+                childCount: 0
+              };
+              children.push(detailNode);
+              hasChildren = true;
+              childCount++;
+            }
+            isRecorded = true;
+          }
+          // 如果既没有预定义子品种也没有已录入品种，仍然添加品种节点（hasChildren=false, isRecorded=false）
         }
       }
     }
@@ -227,6 +253,10 @@ const filterTreeByMode = (nodes: VarietyTreeNode[], mode: DisplayMode): VarietyT
 
 /**
  * 根据关键词搜索树形节点
+ * 规则：
+ * 1. 如果节点名称匹配关键词，显示该节点及其所有子节点
+ * 2. 如果节点名称不匹配但子节点有匹配，连同父节点一起显示
+ * 3. 搜索时保留预定义结构，即使父节点匹配也显示所有子节点
  */
 const searchTree = (nodes: VarietyTreeNode[], keyword: string): VarietyTreeNode[] => {
   if (!keyword.trim()) return nodes;
@@ -235,11 +265,11 @@ const searchTree = (nodes: VarietyTreeNode[], keyword: string): VarietyTreeNode[
 
   const searchNode = (node: VarietyTreeNode): VarietyTreeNode | null => {
     // 检查当前节点名称是否匹配
-    const nameMatch = node.name.toLowerCase().includes(lowerKeyword);
+    const nameMatch = (node.name || '').toLowerCase().includes(lowerKeyword);
     // 检查已录入品种信息是否匹配
     const recordedMatch = node.recordedVariety
-      ? node.recordedVariety.varietyName.toLowerCase().includes(lowerKeyword) ||
-        node.recordedVariety.alias?.some(a => a.toLowerCase().includes(lowerKeyword))
+      ? (node.recordedVariety.varietyName || '').toLowerCase().includes(lowerKeyword) ||
+        node.recordedVariety.alias?.some(a => (a || '').toLowerCase().includes(lowerKeyword))
       : false;
 
     // 递归搜索子节点
@@ -249,12 +279,21 @@ const searchTree = (nodes: VarietyTreeNode[], keyword: string): VarietyTreeNode[
       if (matched) matchedChildren.push(matched);
     }
 
-    // 如果当前节点匹配或者有匹配的子节点，返回节点
-    if (nameMatch || recordedMatch || matchedChildren.length > 0) {
+    // 如果当前节点匹配，保留所有子节点结构（即使子节点不匹配）
+    if (nameMatch || recordedMatch) {
       return {
         ...node,
-        children: matchedChildren.length > 0 ? matchedChildren : node.children,
-        hasChildren: matchedChildren.length > 0 ? matchedChildren.length > 0 : node.hasChildren
+        children: node.children, // 保留所有预定义子节点
+        hasChildren: node.hasChildren
+      };
+    }
+
+    // 如果当前节点不匹配但有匹配的子节点，返回带匹配子节点的父节点
+    if (matchedChildren.length > 0) {
+      return {
+        ...node,
+        children: matchedChildren,
+        hasChildren: matchedChildren.length > 0
       };
     }
 

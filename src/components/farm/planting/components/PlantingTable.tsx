@@ -109,7 +109,7 @@ export function PlantingTable({
       )
     },
     {
-      title: '作物名称',
+      title: '作物品种',
       dataIndex: 'cropName',
       width: 100
     },

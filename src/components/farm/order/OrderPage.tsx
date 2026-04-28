@@ -165,7 +165,7 @@ export default function OrderPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['订单编号', '订单名称', '订单类型', '作物类别', '作物名称', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['订单编号', '订单名称', '订单类型', '作物类别', '作物品种', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -173,7 +173,7 @@ export default function OrderPage() {
       '订单名称': record.orderName,
       '订单类型': record.orderType === 'production' ? '生产订单' : record.orderType === 'seed' ? '种子订单' : '研发订单',
       '作物类别': record.cropCategory,
-      '作物名称': record.cropName,
+      '作物品种': record.cropName,
       '作物品种': record.cropVariety,
       '计划数量': record.plannedQuantity,
       '实际数量': record.actualQuantity,

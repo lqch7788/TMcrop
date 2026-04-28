@@ -31,29 +31,14 @@ export function SeedSourceFilter({
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
-        {/* 作物类别 */}
-        <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物类别</label>
-          <select
-            value={filters.cropCategory}
-            onChange={(e) => onChange({ ...filters, cropCategory: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">全部</option>
-            {cropCategories.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
           <input
             type="text"
             value={filters.cropName}
             onChange={(e) => onChange({ ...filters, cropName: e.target.value })}
-            placeholder="请输入作物名称"
+            placeholder="请输入作物品种"
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -70,9 +55,9 @@ export function SeedSourceFilter({
           />
         </div>
 
-        {/* 来源类型 */}
+        {/* 种源类型 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">来源类型</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">种源类型</label>
           <select
             value={filters.sourceType}
             onChange={(e) => onChange({ ...filters, sourceType: e.target.value })}

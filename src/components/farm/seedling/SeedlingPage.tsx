@@ -8,7 +8,7 @@ import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, FileText,
 import { SeedlingStats } from './components/SeedlingStats';
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
-import { SeedlingCodeToolbar } from './components/SeedlingCodeToolbar';
+import { CodeToolbar } from '../common/CodeToolbar';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
@@ -19,8 +19,6 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
-  cropNames,
-  cropVarieties,
   seedlingTypes,
   sites,
   seedlingStatusOptions,
@@ -29,6 +27,7 @@ import {
 import { Seedling, SeedlingFilters, SeedlingStatus } from '../../../types/crop';
 import * as seedlingService from '../../../services/seedlingService';
 import * as seedSourceService from '../../../services/seedSourceService';
+import * as cropVarietyService from '../../../services/cropVarietyService';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
@@ -54,6 +53,17 @@ export default function SeedlingPage() {
   const [seedlings, setSeedlings] = useState<Seedling[]>(() =>
     seedlingService.initSeedlings()
   );
+
+  // 作物品种数据（从品种库服务获取）
+  const cropVarietyOptions = useMemo(() => {
+    cropVarietyService.initVarieties();
+    return cropVarietyService.getVarietyOptions();
+  }, []);
+
+  // 用于页面筛选的作物品种选项（从品种库转换）
+  const cropNames = useMemo(() => {
+    return cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
+  }, [cropVarietyOptions]);
 
   // 刷新数据
   const refreshData = useCallback(() => {
@@ -229,13 +239,13 @@ export default function SeedlingPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['育苗批号', '关联种源', '作物名称', '品种', '育苗方式', '场地', '开始日期', '预计结束日期', '实际结束日期', '初始数量', '成活数量', '已定植数量', '成苗率', '损耗数量', '损耗率', '状态', '品质等级', '创建人', '创建时间', '备注'];
+    const headers = ['育苗批号', '关联种源', '作物品种', '品种', '育苗方式', '场地', '开始日期', '预计结束日期', '实际结束日期', '初始数量', '成活数量', '已定植数量', '成苗率', '损耗数量', '损耗率', '状态', '品质等级', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
       '育苗批号': record.seedlingCode,
       '关联种源': record.sourceCode,
-      '作物名称': record.cropName,
+      '作物品种': record.cropName,
       '品种': record.cropVariety,
       '育苗方式': record.seedlingType,
       '场地': record.siteName,
@@ -339,7 +349,7 @@ export default function SeedlingPage() {
       </div>
 
       {/* 产品编码生成工具栏 */}
-      <SeedlingCodeToolbar
+      <CodeToolbar
         codeGenExpanded={codeGenExpanded}
         onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
         onCodeRuleClick={() => navigate('/produce-code-rule')}
@@ -395,8 +405,7 @@ export default function SeedlingPage() {
         onClose={() => setAddModalOpen(false)}
         onSuccess={refreshData}
         seedSources={seedSourceService.getSeedSources()}
-        cropNames={cropNames}
-        cropVarieties={cropVarieties}
+        cropVarietyOptions={cropVarietyOptions}
         seedlingTypes={seedlingTypes}
         sites={sites}
       />
@@ -408,8 +417,7 @@ export default function SeedlingPage() {
           onSuccess={refreshData}
           record={currentRecord}
           seedSources={seedSourceService.getSeedSources()}
-          cropNames={cropNames}
-          cropVarieties={cropVarieties}
+          cropVarietyOptions={cropVarietyOptions}
           seedlingTypes={seedlingTypes}
           sites={sites}
         />

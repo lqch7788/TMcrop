@@ -54,10 +54,10 @@ export function OrderFilter({
           />
         </div>
 
-        {/* 作物名称 */}
+        {/* 作物品种 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            作物名称
+            作物品种
           </label>
           <select
             value={filters.cropName}

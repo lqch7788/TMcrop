@@ -21,6 +21,24 @@ export function AddModal({
   onSuccess,
   orderTypeOptions,
 }: AddModalProps) {
+  // 表单状态必须放在最前面
+  const [formData, setFormData] = useState({
+    orderName: '',
+    orderType: 'production' as 'production' | 'seed' | 'research',
+    cropCategory: '',
+    cropName: '',
+    cropVariety: '',
+    plannedQuantity: 0,
+    actualQuantity: 0,
+    unit: '株',
+    supplierName: '',
+    orderDate: new Date().toISOString().split('T')[0],
+    expectedHarvestDate: '',
+    remarks: '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // 初始化品种数据
   cropVarietyService.initVarieties();
 
@@ -54,28 +72,11 @@ export function AddModal({
       .map(opt => ({ value: opt.varietyCode, label: opt.label }));
   }, [varietyOptions, formData.cropName]);
 
-  const [formData, setFormData] = useState({
-    orderName: '',
-    orderType: 'production' as 'production' | 'seed' | 'research',
-    cropCategory: '',
-    cropName: '',
-    cropVariety: '',
-    plannedQuantity: 0,
-    actualQuantity: 0,
-    unit: '株',
-    supplierName: '',
-    orderDate: new Date().toISOString().split('T')[0],
-    expectedHarvestDate: '',
-    remarks: '',
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   const handleSubmit = () => {
     // 验证
     const newErrors: Record<string, string> = {};
     if (!formData.orderName) newErrors.orderName = '请输入订单名称';
-    if (!formData.cropName) newErrors.cropName = '请选择作物名称';
+    if (!formData.cropName) newErrors.cropName = '请选择作物品种';
     if (!formData.cropVariety) newErrors.cropVariety = '请选择作物品种';
     if (formData.plannedQuantity <= 0) newErrors.plannedQuantity = '请输入计划数量';
 
@@ -213,10 +214,10 @@ export function AddModal({
               </select>
             </div>
 
-            {/* 作物名称 */}
+            {/* 作物品种 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                作物名称 <span className="text-red-500">*</span>
+                作物品种 <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.cropName}

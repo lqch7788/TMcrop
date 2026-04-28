@@ -28,9 +28,23 @@ export interface CropVariety {
   // 详细品种序号（第9-10位，如01大叶红颜，02小叶红颜），自动生成
   detailVarietyCode?: string;    // 详细品种代码 (2位，如 '01')
   alias?: string[];             // 别名/俗名
-  growthCycle?: number;         // 生长周期(天)
-  targetYield?: number;         // 目标产量(kg/亩)
-  yieldUnit?: string;           // 产量单位
+  image?: string;              // 作物图片URL
+  description?: string;         // 特性描述
+  // 生长周期各阶段（天）
+  germinationPeriod?: number;  // 发芽期(天)
+  seedlingPeriod?: number;      // 育苗期(天)
+  floweringPeriod?: number;     // 开花期(天)
+  fruitingPeriod?: number;      // 结果期(天)
+  harvestPeriod?: number;       // 摘收期(天)
+  // 适宜环境参数
+  airTemperature?: number;      // 空气温度(℃)
+  airHumidity?: number;        // 空气湿度(%)
+  co2Content?: number;          // CO₂含量(ppm)
+  lightIntensity?: number;      // 光照度(lx)
+  soilTemperature?: number;     // 土壤温度(℃)
+  soilHumidity?: number;       // 土壤湿度(%)
+  soilPh?: number;             // 土壤PH值
+  soilEc?: number;             // 土壤EC值
   status: CropVarietyStatus;    // 状态：启用/停用
   remarks?: string;             // 备注说明
   createTime: string;           // 创建时间
@@ -45,7 +59,7 @@ export type CreateCropVarietyInput = Omit<CropVariety, 'id' | 'cropCode' | 'crea
 /**
  * 更新品种的输入数据（仅允许部分字段）
  */
-export type UpdateCropVarietyInput = Partial<Pick<CropVariety, 'alias' | 'growthCycle' | 'targetYield' | 'yieldUnit' | 'status' | 'remarks' | 'varietyName'>>;
+export type UpdateCropVarietyInput = Partial<Pick<CropVariety, 'alias' | 'image' | 'description' | 'germinationPeriod' | 'seedlingPeriod' | 'floweringPeriod' | 'fruitingPeriod' | 'harvestPeriod' | 'airTemperature' | 'airHumidity' | 'co2Content' | 'lightIntensity' | 'soilTemperature' | 'soilHumidity' | 'soilPh' | 'soilEc' | 'status' | 'remarks' | 'varietyName'>>;
 
 /**
  * 品种下拉选项格式

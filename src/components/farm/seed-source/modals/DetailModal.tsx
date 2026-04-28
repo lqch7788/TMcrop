@@ -53,7 +53,7 @@ export function DetailModal({
               <span className="text-sm font-mono text-blue-600">{record.seedCode}</span>
             </div>
             <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">作物名称：</span>
+              <span className="text-sm text-gray-500 w-24">作物品种：</span>
               <span className="text-sm text-gray-900">{record.cropName}</span>
             </div>
             <div className="flex items-center">
@@ -65,7 +65,7 @@ export function DetailModal({
               <span className="text-sm text-gray-900">{record.cropVariety}</span>
             </div>
             <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">来源类型：</span>
+              <span className="text-sm text-gray-500 w-24">种源类型：</span>
               <span className="text-sm text-gray-900">{sourceTypeMap[record.sourceType]}</span>
             </div>
             <div className="flex items-center">

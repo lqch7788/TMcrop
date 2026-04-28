@@ -9,15 +9,15 @@ import { SeedSource, SeedlingStatus } from '../../../../types/crop';
 import { addSeedling } from '../../../../services/seedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/seedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
-import { findProduceCodeByName } from '../../../../data/produceCodeRule';
+import CropCodeSelector from '../../common/CropCodeSelector';
+import { CropVarietyOption } from '../../../../types/cropVariety';
 
 interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   seedSources: SeedSource[];
-  cropNames: Array<{ value: string; label: string }>;
-  cropVarieties: Array<{ value: string; label: string }>;
+  cropVarietyOptions: CropVarietyOption[];
   seedlingTypes: Array<{ value: string; label: string }>;
   sites: Array<{ value: string; label: string }>;
 }
@@ -27,14 +27,14 @@ export function AddModal({
   onClose,
   onSuccess,
   seedSources,
-  cropNames,
-  cropVarieties,
+  cropVarietyOptions,
   seedlingTypes,
   sites
 }: AddModalProps) {
   const [formData, setFormData] = useState({
     sourceId: '',
     sourceCode: '',
+    selectedCropCode: '',
     cropName: '',
     cropVariety: '',
     seedlingType: '',
@@ -50,7 +50,7 @@ export function AddModal({
   const [pictures, setPictures] = useState<string[]>([]);
 
   const handleSubmit = () => {
-    if (!formData.sourceId || !formData.cropName || !formData.siteId || !formData.initialCount) {
+    if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId || !formData.initialCount) {
       alert('请填写完整信息');
       return;
     }
@@ -67,20 +67,12 @@ export function AddModal({
     const survivalRate = 0;
     const lossRate = 0;
 
-    // 生成作物编码
-    const cropInfo = findProduceCodeByName(formData.cropName);
-    let cropCode = '';
-    if (cropInfo) {
-      const seq = Math.floor(Math.random() * 999) + 1;
-      cropCode = `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}${String(seq).padStart(3, '0')}`;
-    }
-
     addSeedling({
       sourceId: formData.sourceId,
       sourceCode,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
-      cropCode,
+      cropCode: formData.selectedCropCode,
       seedlingType: formData.seedlingType,
       siteId: formData.siteId,
       siteName,
@@ -121,10 +113,21 @@ export function AddModal({
         ...formData,
         sourceId,
         sourceCode: source.seedCode,
+        selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
         cropVariety: source.cropVariety
       });
     }
+  };
+
+  // 处理作物品种选择
+  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
+    setFormData({
+      ...formData,
+      selectedCropCode: cropCode,
+      cropName: varietyInfo?.varietyName || '',
+      cropVariety: varietyInfo?.subVariety1Name || varietyInfo?.varietyName || ''
+    });
   };
 
   // 场地选择时获取名称
@@ -162,34 +165,15 @@ export function AddModal({
           </select>
         </div>
 
-        {/* 作物名称 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物名称</label>
-          <select
-            value={formData.cropName}
-            onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 品种 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
-          <select
-            value={formData.cropVariety}
-            onChange={(e) => setFormData({ ...formData, cropVariety: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropVarieties.map(v => (
-              <option key={v.value} value={v.value}>{v.label}</option>
-            ))}
-          </select>
+        {/* 作物品种选择 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <CropCodeSelector
+            value={formData.selectedCropCode}
+            onChange={handleCropCodeChange}
+            placeholder="搜索或选择作物品种..."
+            size="md"
+          />
         </div>
 
         {/* 育苗方式 */}

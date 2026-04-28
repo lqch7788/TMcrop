@@ -80,13 +80,13 @@ export default function InstancePage() {
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              搜索实例编码/作物名称
+              搜索实例编码/作物品种
             </label>
             <input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              placeholder="请输入实例编码、作物名称或品种"
+              placeholder="请输入实例编码、作物品种或品种"
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
@@ -173,7 +173,7 @@ export default function InstancePage() {
                       <p>{getStatusBadge(selectedInstance.status)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">作物名称</p>
+                      <p className="text-xs text-gray-500">作物品种</p>
                       <p className="font-medium">{selectedInstance.cropName}</p>
                     </div>
                     <div>

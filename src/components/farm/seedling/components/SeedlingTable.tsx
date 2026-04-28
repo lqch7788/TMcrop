@@ -272,7 +272,7 @@ export function SeedlingTable({
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">育苗批号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">场地</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">成苗率</th>
