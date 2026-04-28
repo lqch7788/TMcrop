@@ -59,58 +59,82 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
       {/* 内容 */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="space-y-6">
-          {/* 基本信息 */}
+          {/* 编码信息 - 绿色主题 */}
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3 border-b border-gray-100 pb-2">
-              基本信息
+            <h4 className="text-sm font-bold text-emerald-700 mb-3 border-b-2 border-emerald-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              编码信息
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">作物编码</label>
-                <p className="font-mono text-emerald-600 font-medium">{variety.cropCode}</p>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">作物编码</label>
+                <p className="font-mono text-emerald-700 font-bold text-lg">{variety.cropCode}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">状态</label>
-                <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">状态</label>
+                <span className={`inline-flex px-3 py-1 rounded text-sm font-bold ${
                   variety.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-400 text-white'
                 }`}>
                   {variety.status === 'active' ? '启用' : '停用'}
                 </span>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">类别</label>
-                <p className="text-gray-900">{variety.categoryName}</p>
-                <p className="text-xs text-gray-400 font-mono">{variety.categoryCode}</p>
+            </div>
+          </div>
+
+          {/* 分类信息 - 蓝色主题 */}
+          <div>
+            <h4 className="text-sm font-bold text-blue-700 mb-3 border-b-2 border-blue-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              分类信息
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <label className="block text-xs font-medium text-blue-600 mb-1">类别</label>
+                <p className="text-blue-900 font-medium">
+                  <span className="font-mono text-blue-500 mr-2">{variety.categoryCode}</span>
+                  {variety.categoryName}
+                </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">类型</label>
-                <p className="text-gray-900">{variety.typeName}</p>
-                <p className="text-xs text-gray-400 font-mono">{variety.typeCode}</p>
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <label className="block text-xs font-medium text-blue-600 mb-1">类型</label>
+                <p className="text-blue-900 font-medium">
+                  <span className="font-mono text-blue-500 mr-2">{variety.typeCode}</span>
+                  {variety.typeName}
+                </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">品种</label>
-                <p className="text-gray-900">{variety.varietyName}</p>
-                <p className="text-xs text-gray-400 font-mono">{variety.varietyCode}</p>
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <label className="block text-xs font-medium text-blue-600 mb-1">品种</label>
+                <p className="text-blue-900 font-medium">
+                  <span className="font-mono text-blue-500 mr-2">{variety.varietyCode}</span>
+                  {variety.varietyName}
+                </p>
               </div>
               {variety.subVariety1Name && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <label className="block text-xs text-gray-500 mb-1">子品种</label>
-                  <p className="text-gray-900">{variety.subVariety1Name}</p>
-                  <p className="text-xs text-gray-400 font-mono">{variety.subVariety1Code}</p>
+                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  <label className="block text-xs font-medium text-blue-600 mb-1">子品种</label>
+                  <p className="text-blue-900 font-medium">
+                    <span className="font-mono text-blue-500 mr-2">{variety.subVariety1Code}</span>
+                    {variety.subVariety1Name}
+                  </p>
                 </div>
               )}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">作物名称</label>
-                <p className="text-gray-900">{variety.varietyName}</p>
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <label className="block text-xs font-medium text-blue-600 mb-1">作物品种</label>
+                <p className="text-blue-900 font-bold text-lg">
+                  {variety.detailVarietyCode && variety.detailVarietyCode !== '00'
+                    ? variety.varietyName
+                    : (variety.subVariety1Name || variety.varietyName)}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* 别名 */}
+          {/* 别名 - 紫色主题 */}
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3 border-b border-gray-100 pb-2">
+            <h4 className="text-sm font-bold text-purple-700 mb-3 border-b-2 border-purple-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
               别名
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -118,65 +142,166 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
                 variety.alias.map((alias, index) => (
                   <span
                     key={index}
-                    className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm"
+                    className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium border border-purple-200"
                   >
                     {alias}
                   </span>
                 ))
               ) : (
-                <span className="text-gray-400 text-sm">暂无别名</span>
+                <span className="text-gray-400 text-sm bg-gray-100 px-3 py-1 rounded-full">暂无别名</span>
               )}
             </div>
           </div>
 
-          {/* 种植信息 */}
+          {/* 图片与特性描述 - 橙色主题 */}
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3 border-b border-gray-100 pb-2">
-              种植信息
+            <h4 className="text-sm font-bold text-orange-700 mb-3 border-b-2 border-orange-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+              图片与特性
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">生长周期</label>
-                <p className="text-gray-900">
-                  {variety.growthCycle ? `${variety.growthCycle} 天` : '-'}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">目标产量</label>
-                <p className="text-gray-900">
-                  {variety.targetYield
-                    ? `${variety.targetYield} ${variety.yieldUnit || 'kg/亩'}`
-                    : '-'}
+              {variety.image && (
+                <div className="bg-white rounded-lg p-3 border-2 border-orange-300">
+                  <label className="block text-xs font-medium text-orange-600 mb-2">作物图片</label>
+                  <div className="w-full h-40 rounded-lg overflow-hidden bg-gray-50 border border-orange-200">
+                    <img src={variety.image} alt="作物图片" className="w-full h-full object-contain" />
+                  </div>
+                </div>
+              )}
+              <div className={`bg-white rounded-lg p-3 border-2 border-orange-300 ${!variety.image ? 'col-span-2' : ''}`}>
+                <label className="block text-xs font-medium text-orange-600 mb-2">特性描述</label>
+                <p className="text-orange-900 whitespace-pre-wrap">
+                  {variety.description || '暂无特性描述'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 备注 */}
+          {/* 作物生长周期 - 绿色主题 */}
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3 border-b border-gray-100 pb-2">
+            <h4 className="text-sm font-bold text-emerald-700 mb-3 border-b-2 border-emerald-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              作物生长周期
+            </h4>
+            <div className="grid grid-cols-5 gap-3">
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">发芽期</label>
+                <p className="text-emerald-900 font-bold text-lg">
+                  {variety.germinationPeriod ? `${variety.germinationPeriod}天` : '-'}
+                </p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">育苗期</label>
+                <p className="text-emerald-900 font-bold text-lg">
+                  {variety.seedlingPeriod ? `${variety.seedlingPeriod}天` : '-'}
+                </p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">开花期</label>
+                <p className="text-emerald-900 font-bold text-lg">
+                  {variety.floweringPeriod ? `${variety.floweringPeriod}天` : '-'}
+                </p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">结果期</label>
+                <p className="text-emerald-900 font-bold text-lg">
+                  {variety.fruitingPeriod ? `${variety.fruitingPeriod}天` : '-'}
+                </p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
+                <label className="block text-xs font-medium text-emerald-600 mb-1">摘收期</label>
+                <p className="text-emerald-900 font-bold text-lg">
+                  {variety.harvestPeriod ? `${variety.harvestPeriod}天` : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 备注 - 灰色主题 */}
+          <div>
+            <h4 className="text-sm font-bold text-gray-600 mb-3 border-b-2 border-gray-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
               备注
             </h4>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
               <p className="text-gray-700 text-sm">
                 {variety.remarks || '暂无备注'}
               </p>
             </div>
           </div>
 
-          {/* 时间信息 */}
+          {/* 作物适宜环境参数 - 青色主题 */}
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3 border-b border-gray-100 pb-2">
+            <h4 className="text-sm font-bold text-cyan-700 mb-3 border-b-2 border-cyan-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-cyan-500 rounded-full"></span>
+              作物适宜环境参数
+            </h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">空气温度(℃)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.airTemperature != null ? `${variety.airTemperature}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">空气湿度(%)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.airHumidity != null ? `${variety.airHumidity}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">CO₂含量(ppm)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.co2Content != null ? `${variety.co2Content}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">光照度(lx)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.lightIntensity != null ? `${variety.lightIntensity}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤温度(℃)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.soilTemperature != null ? `${variety.soilTemperature}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤湿度(%)</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.soilHumidity != null ? `${variety.soilHumidity}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤PH值</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.soilPh != null ? `${variety.soilPh}` : '-'}
+                </p>
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
+                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤EC值</label>
+                <p className="text-cyan-900 font-bold text-lg">
+                  {variety.soilEc != null ? `${variety.soilEc}` : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 时间信息 - 蓝灰色主题 */}
+          <div>
+            <h4 className="text-sm font-bold text-slate-600 mb-3 border-b-2 border-slate-200 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
               时间信息
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">创建时间</label>
-                <p className="text-gray-700 text-sm">{variety.createTime || '-'}</p>
+              <div className="bg-slate-100 rounded-lg p-3 border border-slate-200">
+                <label className="block text-xs font-medium text-slate-600 mb-1">创建时间</label>
+                <p className="text-slate-700 font-medium">{variety.createTime || '-'}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="block text-xs text-gray-500 mb-1">更新时间</label>
-                <p className="text-gray-700 text-sm">{variety.updateTime || '-'}</p>
+              <div className="bg-slate-100 rounded-lg p-3 border border-slate-200">
+                <label className="block text-xs font-medium text-slate-600 mb-1">更新时间</label>
+                <p className="text-slate-700 font-medium">{variety.updateTime || '-'}</p>
               </div>
             </div>
           </div>

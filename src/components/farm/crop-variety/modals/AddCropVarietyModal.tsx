@@ -52,9 +52,22 @@ export function AddCropVarietyModal({
     subVariety1Name: '',   // 子品种1名称
     detailVarietyName: '', // 详细品种名称（用户手工输入）
     alias: '',
-    growthCycle: undefined as number | undefined,
-    targetYield: undefined as number | undefined,
-    yieldUnit: 'kg/亩',
+    image: '',            // 作物图片URL
+    description: '',     // 特性描述
+    germinationPeriod: undefined as number | undefined,  // 发芽期(天)
+    seedlingPeriod: undefined as number | undefined,     // 育苗期(天)
+    floweringPeriod: undefined as number | undefined,    // 开花期(天)
+    fruitingPeriod: undefined as number | undefined,    // 结果期(天)
+    harvestPeriod: undefined as number | undefined,     // 摘收期(天)
+    // 适宜环境参数
+    airTemperature: undefined as number | undefined,    // 空气温度(℃)
+    airHumidity: undefined as number | undefined,      // 空气湿度(%)
+    co2Content: undefined as number | undefined,       // CO₂含量(ppm)
+    lightIntensity: undefined as number | undefined,    // 光照度(lx)
+    soilTemperature: undefined as number | undefined,   // 土壤温度(℃)
+    soilHumidity: undefined as number | undefined,      // 土壤湿度(%)
+    soilPh: undefined as number | undefined,           // 土壤PH值
+    soilEc: undefined as number | undefined,            // 土壤EC值
     remarks: ''
   });
 
@@ -194,7 +207,7 @@ export function AddCropVarietyModal({
       ...prev,
       subVariety1Code: code,
       subVariety1Name: name,
-      detailVarietyName: ''
+      detailVarietyName: name  // 默认使用子品种名称作为作物品种
     }));
     // 获取该子品种1下的最大详细品种序号
     const maxCode = getMaxDetailVarietyCode(
@@ -311,8 +324,8 @@ export function AddCropVarietyModal({
       return;
     }
 
-    // 如果没有输入详细品种名称，使用品种名称作为最终品种名称，详细品种序号默认为00
-    const finalVarietyName = formData.detailVarietyName.trim() || formData.varietyName;
+    // 如果没有输入作物品种，使用子品种名称作为最终品种名称，详细品种序号默认为00
+    const finalVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || formData.varietyName;
     const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
 
     // 添加品种
@@ -327,9 +340,21 @@ export function AddCropVarietyModal({
       subVariety1Name: formData.subVariety1Name || undefined,
       detailVarietyCode: finalDetailCode || undefined,
       alias: parseAlias(formData.alias),
-      growthCycle: formData.growthCycle,
-      targetYield: formData.targetYield,
-      yieldUnit: formData.yieldUnit,
+      image: formData.image || undefined,
+      description: formData.description || undefined,
+      germinationPeriod: formData.germinationPeriod,
+      seedlingPeriod: formData.seedlingPeriod,
+      floweringPeriod: formData.floweringPeriod,
+      fruitingPeriod: formData.fruitingPeriod,
+      harvestPeriod: formData.harvestPeriod,
+      airTemperature: formData.airTemperature,
+      airHumidity: formData.airHumidity,
+      co2Content: formData.co2Content,
+      lightIntensity: formData.lightIntensity,
+      soilTemperature: formData.soilTemperature,
+      soilHumidity: formData.soilHumidity,
+      soilPh: formData.soilPh,
+      soilEc: formData.soilEc,
       status: 'active' as CropVarietyStatus,
       remarks: formData.remarks
     });
@@ -349,9 +374,13 @@ export function AddCropVarietyModal({
       subVariety1Name: '',
       detailVarietyName: '',
       alias: '',
-      growthCycle: undefined,
-      targetYield: undefined,
-      yieldUnit: 'kg/亩',
+      image: '',
+      description: '',
+      germinationPeriod: undefined,
+      seedlingPeriod: undefined,
+      floweringPeriod: undefined,
+      fruitingPeriod: undefined,
+      harvestPeriod: undefined,
       remarks: ''
     });
     setCropCode('');
@@ -373,9 +402,13 @@ export function AddCropVarietyModal({
       subVariety1Name: '',
       detailVarietyName: '',
       alias: '',
-      growthCycle: undefined,
-      targetYield: undefined,
-      yieldUnit: 'kg/亩',
+      image: '',
+      description: '',
+      germinationPeriod: undefined,
+      seedlingPeriod: undefined,
+      floweringPeriod: undefined,
+      fruitingPeriod: undefined,
+      harvestPeriod: undefined,
       remarks: ''
     });
     setCropCode('');
@@ -389,23 +422,28 @@ export function AddCropVarietyModal({
     <UnifiedModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="新增作物品种"
-      size="lg"
+      title="新增作物"
+      size="xxl"
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="确认新增"
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {/* 分类标题 */}
+        <div className="col-span-2 -mt-2">
+          <span className="inline-block bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-medium">编码分类</span>
+        </div>
+
         {/* 类别 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-blue-700 mb-1">
             类别 <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.categoryCode}
             onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
           >
             <option value="">请选择类别</option>
             {categoryOptions.map(opt => (
@@ -416,14 +454,14 @@ export function AddCropVarietyModal({
 
         {/* 类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-blue-700 mb-1">
             类型 <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.typeCode}
             onChange={(e) => handleTypeChange(e.target.value)}
             disabled={!formData.categoryCode}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300"
           >
             <option value="">请选择类型</option>
             {typeOptions.map(opt => (
@@ -434,7 +472,7 @@ export function AddCropVarietyModal({
 
         {/* 品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-blue-700 mb-1">
             品种 <span className="text-red-500">*</span>
           </label>
           <select
@@ -446,7 +484,7 @@ export function AddCropVarietyModal({
               }
             }}
             disabled={!formData.typeCode}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300"
           >
             <option value="">请选择品种</option>
             {varietyOptions.map(opt => (
@@ -457,7 +495,7 @@ export function AddCropVarietyModal({
 
         {/* 子品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-medium text-gray-600 mb-1">
             子品种
           </label>
           <select
@@ -483,23 +521,28 @@ export function AddCropVarietyModal({
           )}
         </div>
 
-        {/* 详细品种名称 */}
+        {/* 作物品种 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            详细品种名称
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            作物品种 <span className="text-xs text-gray-400">(可选，不填则使用子品种名称)</span>
           </label>
           <input
             type="text"
             value={formData.detailVarietyName}
             onChange={(e) => handleDetailVarietyNameChange(e.target.value)}
-            placeholder="输入详细品种名称"
+            placeholder="输入作物品种"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
+        {/* 分类标题 */}
+        <div className="col-span-2">
+          <span className="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium">编码生成</span>
+        </div>
+
         {/* 作物编码 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-emerald-700 mb-1">
             作物编码 <span className="text-red-500">*</span>
             <span className="text-xs text-gray-400 ml-2">(点击生成按钮自动生成)</span>
           </label>
@@ -509,7 +552,7 @@ export function AddCropVarietyModal({
               value={cropCode}
               onChange={(e) => setCropCode(e.target.value.toUpperCase())}
               placeholder="点击生成按钮获取编码"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm font-mono text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50"
             />
             <button
               type="button"
@@ -559,62 +602,242 @@ export function AddCropVarietyModal({
           )}
         </div>
 
+        {/* 分类标题 */}
+        <div className="col-span-2">
+          <span className="inline-block bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-lg font-medium">品种信息</span>
+        </div>
+
         {/* 别名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            别名 <span className="text-xs text-gray-400">(可选，多个用逗号分隔)</span>
+          <label className="block text-sm font-medium text-amber-700 mb-1">
+            别名 <span className="text-xs text-gray-400">(多个用逗号分隔)</span>
           </label>
           <input
             type="text"
             value={formData.alias}
             onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
             placeholder="如：西红柿、洋柿子"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
           />
         </div>
 
-        {/* 生长周期 */}
+        {/* 图片 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            生长周期 <span className="text-xs text-gray-400">(天)</span>
+          <label className="block text-sm font-medium text-amber-700 mb-1">
+            图片
           </label>
-          <input
-            type="number"
-            value={formData.growthCycle || ''}
-            onChange={(e) => setFormData({ ...formData, growthCycle: Number(e.target.value) || undefined })}
-            placeholder="如：120"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <div className="flex items-center gap-3">
+            {formData.image && (
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-amber-200 flex-shrink-0">
+                <img src={formData.image} alt="预览" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <label className="flex-1 px-3 py-2 border border-amber-200 rounded-lg text-sm bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors flex items-center justify-center">
+              <span className="text-amber-600">
+                {formData.image ? '更换图片' : '上传图片'}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // 使用 FileReader 将图片转为 base64
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      setFormData({ ...formData, image: event.target?.result as string });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </label>
+            {formData.image && (
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, image: '' })}
+                className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm border border-red-200"
+              >
+                删除
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 特性描述 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-amber-700 mb-1">
+            特性描述
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={2}
+            placeholder="简要描述该作物品种的主要特性..."
+            className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white resize-none"
           />
         </div>
 
-        {/* 目标产量 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            目标产量
+        {/* 作物生长周期 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-bold text-amber-700 mb-2">
+            作物生长周期
           </label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={formData.targetYield || ''}
-              onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) || undefined })}
-              placeholder="如：5000"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <select
-              value={formData.yieldUnit}
-              onChange={(e) => setFormData({ ...formData, yieldUnit: e.target.value })}
-              className="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="kg/亩">kg/亩</option>
-              <option value="斤/亩">斤/亩</option>
-              <option value="吨/亩">吨/亩</option>
-            </select>
+          <div className="grid grid-cols-5 gap-3">
+            <div>
+              <label className="block text-xs text-amber-600 mb-1">发芽期(天)</label>
+              <input
+                type="number"
+                value={formData.germinationPeriod || ''}
+                onChange={(e) => setFormData({ ...formData, germinationPeriod: Number(e.target.value) || undefined })}
+                placeholder="0"
+                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-amber-600 mb-1">育苗期(天)</label>
+              <input
+                type="number"
+                value={formData.seedlingPeriod || ''}
+                onChange={(e) => setFormData({ ...formData, seedlingPeriod: Number(e.target.value) || undefined })}
+                placeholder="0"
+                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-amber-600 mb-1">开花期(天)</label>
+              <input
+                type="number"
+                value={formData.floweringPeriod || ''}
+                onChange={(e) => setFormData({ ...formData, floweringPeriod: Number(e.target.value) || undefined })}
+                placeholder="0"
+                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-amber-600 mb-1">结果期(天)</label>
+              <input
+                type="number"
+                value={formData.fruitingPeriod || ''}
+                onChange={(e) => setFormData({ ...formData, fruitingPeriod: Number(e.target.value) || undefined })}
+                placeholder="0"
+                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-amber-600 mb-1">摘收期(天)</label>
+              <input
+                type="number"
+                value={formData.harvestPeriod || ''}
+                onChange={(e) => setFormData({ ...formData, harvestPeriod: Number(e.target.value) || undefined })}
+                placeholder="0"
+                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 作物适宜环境参数 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-bold text-cyan-700 mb-2">
+            作物适宜环境参数
+          </label>
+          <div className="grid grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">空气温度(℃)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.airTemperature || ''}
+                onChange={(e) => setFormData({ ...formData, airTemperature: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">空气湿度(%)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.airHumidity || ''}
+                onChange={(e) => setFormData({ ...formData, airHumidity: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">CO₂含量(ppm)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.co2Content || ''}
+                onChange={(e) => setFormData({ ...formData, co2Content: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">光照度(lx)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.lightIntensity || ''}
+                onChange={(e) => setFormData({ ...formData, lightIntensity: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">土壤温度(℃)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.soilTemperature || ''}
+                onChange={(e) => setFormData({ ...formData, soilTemperature: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">土壤湿度(%)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.soilHumidity || ''}
+                onChange={(e) => setFormData({ ...formData, soilHumidity: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">土壤PH值</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.soilPh || ''}
+                onChange={(e) => setFormData({ ...formData, soilPh: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-cyan-600 mb-1">土壤EC值</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.soilEc || ''}
+                onChange={(e) => setFormData({ ...formData, soilEc: Number(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              />
+            </div>
           </div>
         </div>
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-medium text-gray-500 mb-1">
             备注
           </label>
           <textarea
@@ -622,7 +845,7 @@ export function AddCropVarietyModal({
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
             placeholder="请输入备注信息..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
           />
         </div>
       </div>
