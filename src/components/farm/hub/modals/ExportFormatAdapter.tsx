@@ -17,8 +17,6 @@ export function ExportFormatAdapter({ taskIds, onClose }: ExportFormatAdapterPro
   const [exportFormat, setExportFormat] = useState('excel');
 
   const handleConfirm = () => {
-    console.log('[ExportFormatAdapter] 导出任务:', { taskIds, format: exportFormat });
-
     // 获取选中的任务数据
     const selectedTasks = tasksHook.tasks.filter(t => taskIds.includes(t.id));
 

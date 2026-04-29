@@ -15,22 +15,10 @@ import { Plus, Upload } from 'lucide-react';
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
 import { taskDispatchStaff } from '../../../data/farmMockData';
-import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES } from './constants_taskDispatch';
+import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
 
-// 状态配置（与 taskDispatch 保持一致）
-const STATUS_FILTERS = [
-  { value: 'all', label: '全部状态' },
-  { value: 'draft', label: '草稿' },
-  { value: 'pending', label: '待接受' },
-  { value: 'accepted', label: '已接受' },
-  { value: 'in_progress', label: '处理中' },
-  { value: 'waiting_acceptance', label: '待验收' },
-  { value: 'completed', label: '已完成' },
-  { value: 'rejected', label: '返工中' },
-  { value: 'failed', label: '任务失败' },
-  { value: 'cancelled', label: '已取消' },
-  { value: 'abandoned', label: '已放弃' },
-];
+// 状态配置（从常量文件导入，与 taskDispatch 保持一致）
+const STATUS_FILTERS = STATUS_OPTIONS;
 
 // BATCH_DISPATCH_STATUSES 已从 constants_taskDispatch 导入
 

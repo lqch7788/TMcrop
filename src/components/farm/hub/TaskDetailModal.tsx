@@ -67,7 +67,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
       const taskRecords = getTaskRecordsByTaskId(taskId);
       setRecords(taskRecords);
     } catch (error) {
-      console.error('[TaskDetailModal] 加载数据失败:', error);
+      // 加载数据失败，无需额外处理
     }
   }, [taskId, getTaskRecordsByTaskId]);
 

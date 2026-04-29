@@ -51,7 +51,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
         }
       }
     } catch (error) {
-      // 加载数据失败，无需额外处理
+      console.error('[ProblemDispatchModal] 加载数据失败:', error);
     }
   }, [problemId]);
 
@@ -87,7 +87,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
         }
       }
     } catch (error) {
-      // 提交分派失败
+      console.error('[ProblemDispatchModal] 提交分派失败:', error);
     } finally {
       setIsSubmitting(false);
     }

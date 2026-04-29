@@ -47,7 +47,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModal
         setRecords(taskRecords.filter((r: TaskRecord) => r.taskId === taskId));
       }
     } catch (error) {
-      // 加载数据失败，无需额外处理
+      console.error('[VerifyTaskModal] 加载数据失败:', error);
     }
   }, [taskId]);
 
@@ -92,7 +92,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModal
         }
       }
     } catch (error) {
-      // 提交验收失败
+      console.error('[VerifyTaskModal] 提交验收失败:', error);
     } finally {
       setIsSubmitting(false);
     }

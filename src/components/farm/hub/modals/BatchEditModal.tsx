@@ -1,6 +1,6 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import { NumberInput } from '../../../ui/NumberInput';
-import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
+import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS, WEATHER_OPTIONS } from '../../../../types/farm/common';
 
 interface InspectionRecord {
   id: string;
@@ -55,7 +55,8 @@ interface BatchEditModalProps {
   infrastructureRecords: { id: string; name: string; type: string }[];
 }
 
-const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '雾', '大风'];
+// 天气选项（从常量文件导入）
+const weatherOptions = WEATHER_OPTIONS;
 const inspectionTypeOptions = [
   { value: 'farm', label: '种植区域巡查' },
   { value: 'equipment', label: '设备保养巡查' },
@@ -183,7 +184,7 @@ export function BatchEditModal({
               <Select
                 value={editedData.weather ?? currentRecord.weather}
                 onChange={(e) => handleFieldChange('weather', e.target.value)}
-                options={weatherOptions.map(w => ({ value: w, label: w }))}
+                options={weatherOptions}
               />
             </FormField>
 

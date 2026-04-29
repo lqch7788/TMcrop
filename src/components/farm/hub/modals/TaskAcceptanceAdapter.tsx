@@ -45,8 +45,7 @@ export function TaskAcceptanceAdapter({
         const allRecords: TaskRecord[] = Array.isArray(parsed) ? parsed : (parsed.data || []);
         const taskRecords = allRecords.filter((r: TaskRecord) => r.taskId === taskId);
         setRecords(taskRecords);
-      } catch (error) {
-        console.error('[TaskAcceptanceAdapter] 加载记录失败:', error);
+      } catch {
         setRecords([]);
       }
     }
@@ -54,16 +53,12 @@ export function TaskAcceptanceAdapter({
 
   const handleAccept = (comments?: string) => {
     if (!task) return;
-    console.log('[TaskAcceptanceAdapter] 验收通过:', { taskId: task.id, comments });
-    // 调用 useTasks 的验收通过功能
     tasksHook.acceptCompletion(task.id, comments);
     onVerified();
   };
 
   const handleReject = (reason: string) => {
     if (!task) return;
-    console.log('[TaskAcceptanceAdapter] 验收驳回:', { taskId: task.id, reason });
-    // 调用 useTasks 的验收驳回功能
     tasksHook.rejectForRework(task.id, reason);
     onVerified();
   };

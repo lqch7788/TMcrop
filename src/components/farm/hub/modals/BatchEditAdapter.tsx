@@ -65,7 +65,6 @@ export function BatchEditAdapter({
   const selectedRows = selectedTasks.map((_, idx) => idx);
 
   const handleConfirm = () => {
-    console.log('[BatchEditAdapter] 确认批量编辑:', { editedTasks, editedTaskIds });
     // 调用实际的批量编辑逻辑
     Object.entries(editedTasks).forEach(([taskId, updates]) => {
       tasksHook.updateTask(taskId, updates);
