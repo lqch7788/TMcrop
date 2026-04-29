@@ -34,7 +34,7 @@ const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
 
 // 导入初始任务数据（用于空状态时显示）
 import { taskDispatchTasks } from '../data/farmMockData';
-import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks } from '../data/mockData';
+import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, inspectionRecords as mockInspectionRecords } from '../data/mockData';
 
 // ============================================
 // 类型定义
@@ -171,7 +171,7 @@ export function useFarmHub(): UseFarmHubReturn {
 
   // 其他数据使用独立状态
   const [problems, setProblems] = useState<ProblemEntry[]>([]);
-  const [inspections, setInspections] = useState<InspectionRecord[]>([]);
+  const [inspections, setInspections] = useState<InspectionRecord[]>(mockInspectionRecords);
   const [operationRecords, setOperationRecords] = useState<WorkLogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

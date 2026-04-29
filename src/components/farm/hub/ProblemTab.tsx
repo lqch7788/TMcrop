@@ -7,6 +7,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { usePersistentProblems, ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
+import { useTasks } from '../../../hooks/useTasks';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals';
@@ -31,12 +32,14 @@ import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 interface ProblemTabProps {
   // 问题数据（来自外部的回调）
   onProblemDispatched?: () => void;
+  // 可选的外部任务数据（如果传入则使用，否则使用内部hooks）
+  externalTasks?: import('../../../hooks/useTasks').Task[];
 }
 
 /**
  * 问题管理Tab组件 - 完整功能版
  */
-export function ProblemTab({ onProblemDispatched }: ProblemTabProps) {
+export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabProps) {
   // ========== 数据Hooks ==========
   // 使用 usePersistentProblems 获取实时问题数据
   const { problems, addProblem, deleteProblem } = usePersistentProblems();
@@ -44,6 +47,11 @@ export function ProblemTab({ onProblemDispatched }: ProblemTabProps) {
   const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, handledProblems, totalCount } = useProblemDispatch();
   // 使用 useComprehensiveDispatch 获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
+  // 使用 useTasks 获取任务数据（用于关联任务标签页）
+  const { tasks } = useTasks();
+
+  // ========== 标签页状态 ==========
+  const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
 
   // ========== 筛选状态 ==========
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'handled'>('all');
@@ -995,109 +1003,268 @@ export function ProblemTab({ onProblemDispatched }: ProblemTabProps) {
   };
 
   // ========== 主渲染 ==========
+  // 获取关联任务列表（sourceProblemId 不为空的任务）
+  const linkedTasks = useMemo(() => {
+    const allTasks = externalTasks || tasks || [];
+    return allTasks.filter((t: any) => t.sourceProblemId);
+  }, [externalTasks, tasks]);
+
   return (
     <div className="space-y-6">
-      {/* 筛选工具栏 */}
-      <ProblemFilterToolbar
-        timeFilter={timeFilter}
-        dateRange={dateRange}
-        statusFilter={statusFilter}
-        severityFilter={severityFilter}
-        sourceModuleFilter={sourceModuleFilter}
-        exportMode={exportMode}
-        batchDeleteMode={batchDeleteMode}
-        batchDispatchMode={batchDispatchMode}
-        selectedRowsLength={selectedRows.length}
-        selectedProblemsLength={selectedProblems.length}
-        onTimeFilterChange={setTimeFilter}
-        onDateRangeChange={setDateRange}
-        onStatusFilterChange={setStatusFilter}
-        onSeverityFilterChange={setSeverityFilter}
-        onSourceModuleChange={setSourceModuleFilter}
-        onBatchDispatch={() => {
-          setBatchDispatchMode(true);
-          setSelectedProblems([]);
-          setStatusFilter('pending');
-        }}
-        onBatchDelete={() => setShowDeleteWarning(true)}
-        onShowDeleteWarning={() => setShowDeleteWarning(true)}
-        onExport={() => {
-          setExportMode(true);
-          setSelectedRows([]);
-        }}
-        onCancelExport={() => {
-          setExportMode(false);
-          setSelectedRows([]);
-        }}
-        onCancelBatchDelete={() => {
-          setBatchDeleteMode(false);
-          setSelectedRows([]);
-        }}
-        onCancelBatchDispatch={() => {
-          setBatchDispatchMode(false);
-          setSelectedProblems([]);
-        }}
-        onCreate={() => setShowCreateModal(true)}
-      />
+      {/* 标签页切换 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('problems')}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'problems'
+                ? 'border-orange-500 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            问题列表
+            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
+              {totalCount}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'tasks'
+                ? 'border-orange-500 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <List className="w-4 h-4" />
+            关联任务
+            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
+              {linkedTasks.length}
+            </span>
+          </button>
+        </div>
+      </div>
 
-      {/* 问题表格 */}
-      <ProblemTable
-        problems={filteredProblems}
-        selectedRows={selectedRows}
-        selectedProblems={selectedProblems}
-        batchDeleteMode={batchDeleteMode}
-        batchDispatchMode={batchDispatchMode}
-        exportMode={exportMode}
-        pendingProblems={pendingProblems}
-        onViewDetail={(problem) => setDetailModal({ isOpen: true, problem })}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={handleBatchSelectAll}
-        onBatchSelectAll={toggleSelectAll}
-        onBatchDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
-        onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
-        onBatchDelete={() => setShowDeleteWarning(true)}
-        onExport={() => setExportMode(true)}
-        onCancelBatchDelete={() => {
-          setBatchDeleteMode(false);
-          setSelectedRows([]);
-        }}
-        onCancelBatchDispatch={() => {
-          setBatchDispatchMode(false);
-          setSelectedProblems([]);
-        }}
-        onCancelExport={() => {
-          setExportMode(false);
-          setSelectedRows([]);
-        }}
-        onShowExportModal={() => setShowExportModal(true)}
-      />
+      {/* 问题列表标签页 */}
+      {activeTab === 'problems' && (
+        <div className="space-y-4">
+        {/* 筛选工具栏 */}
+        <ProblemFilterToolbar
+          timeFilter={timeFilter}
+          dateRange={dateRange}
+          statusFilter={statusFilter}
+          severityFilter={severityFilter}
+          sourceModuleFilter={sourceModuleFilter}
+          exportMode={exportMode}
+          batchDeleteMode={batchDeleteMode}
+          batchDispatchMode={batchDispatchMode}
+          selectedRowsLength={selectedRows.length}
+          selectedProblemsLength={selectedProblems.length}
+          onTimeFilterChange={setTimeFilter}
+          onDateRangeChange={setDateRange}
+          onStatusFilterChange={setStatusFilter}
+          onSeverityFilterChange={setSeverityFilter}
+          onSourceModuleChange={setSourceModuleFilter}
+          onBatchDispatch={() => {
+            setBatchDispatchMode(true);
+            setSelectedProblems([]);
+            setStatusFilter('pending');
+          }}
+          onBatchDelete={() => setShowDeleteWarning(true)}
+          onShowDeleteWarning={() => setShowDeleteWarning(true)}
+          onExport={() => {
+            setExportMode(true);
+            setSelectedRows([]);
+          }}
+          onCancelExport={() => {
+            setExportMode(false);
+            setSelectedRows([]);
+          }}
+          onCancelBatchDelete={() => {
+            setBatchDeleteMode(false);
+            setSelectedRows([]);
+          }}
+          onCancelBatchDispatch={() => {
+            setBatchDispatchMode(false);
+            setSelectedProblems([]);
+          }}
+          onCreate={() => setShowCreateModal(true)}
+        />
 
-      {/* AI推荐面板 - 当有待分派问题时显示 */}
-      {problems.some(p => p.status === '待处理') && (
-        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">🤖</span>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-purple-700 mb-2">AI智能推荐</h4>
-              <p className="text-sm text-gray-600 mb-3">
-                系统检测到 <span className="font-medium text-purple-600">{problems.filter(p => p.status === '待处理').length}</span> 个待分派问题，AI已自动分析最优执行人匹配方案
-              </p>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600">
-                  查看AI推荐
-                </button>
-                <button className="px-3 py-1 text-sm text-purple-600 hover:text-purple-800">
-                  手动选择执行人
-                </button>
+        {/* 问题表格 */}
+        <ProblemTable
+          problems={filteredProblems}
+          selectedRows={selectedRows}
+          selectedProblems={selectedProblems}
+          batchDeleteMode={batchDeleteMode}
+          batchDispatchMode={batchDispatchMode}
+          exportMode={exportMode}
+          pendingProblems={pendingProblems}
+          onViewDetail={(problem) => setDetailModal({ isOpen: true, problem })}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={handleBatchSelectAll}
+          onBatchSelectAll={toggleSelectAll}
+          onBatchDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
+          onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
+          onBatchDelete={() => setShowDeleteWarning(true)}
+          onExport={() => setExportMode(true)}
+          onCancelBatchDelete={() => {
+            setBatchDeleteMode(false);
+            setSelectedRows([]);
+          }}
+          onCancelBatchDispatch={() => {
+            setBatchDispatchMode(false);
+            setSelectedProblems([]);
+          }}
+          onCancelExport={() => {
+            setExportMode(false);
+            setSelectedRows([]);
+          }}
+          onShowExportModal={() => setShowExportModal(true)}
+        />
+
+        {/* AI推荐面板 - 当有待分派问题时显示 */}
+        {problems.some(p => p.status === '待处理') && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">🤖</span>
               </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-purple-700 mb-2">AI智能推荐</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  系统检测到 <span className="font-medium text-purple-600">{problems.filter(p => p.status === '待处理').length}</span> 个待分派问题，AI已自动分析最优执行人匹配方案
+                </p>
+                <div className="flex gap-2">
+                  <button className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600">
+                    查看AI推荐
+                  </button>
+                  <button className="px-3 py-1 text-sm text-purple-600 hover:text-purple-800">
+                    手动选择执行人
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+      )}
+
+      {/* 关联任务标签页 */}
+      {activeTab === 'tasks' && (
+        <div className="space-y-4">
+          {/* 提示信息 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <List className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <div className="text-sm font-medium text-blue-800">关联任务说明</div>
+                <div className="text-sm text-blue-600 mt-1">
+                  这些任务是由问题分派创建的。完成任务后，问题状态会自动更新为"已处理"。
+                  请前往 <span className="font-medium">任务中心</span> 或 <span className="font-medium">任务工单管理</span> 页面完成任务。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 任务列表 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">任务编号</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">任务标题</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">温室</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">执行人</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">截止日期</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">优先级</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">来源问题</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {linkedTasks.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                        暂无分派任务
+                      </td>
+                    </tr>
+                  ) : (
+                    linkedTasks.map((task: any) => {
+                      const problem = [...pendingProblems, ...dispatchedProblems, ...handledProblems].find(
+                        p => p.id === task.sourceProblemId
+                      );
+                      return (
+                        <tr key={task.id} className="hover:bg-emerald-50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-mono text-gray-600">
+                            {task.taskCode}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">
+                            {task.title}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {task.greenhouseName}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {task.assigneeName}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {task.dueDate}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              task.priority === 'high' || task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                              task.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {task.priority === 'high' || task.priority === 'urgent' ? '高' :
+                               task.priority === 'medium' ? '中' :
+                               task.priority === 'low' ? '低' : '普通'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              task.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                              task.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
+                              task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {task.status === 'pending' ? '待执行' :
+                               task.status === 'in_progress' ? '进行中' :
+                               task.status === 'completed' ? '已完成' :
+                               task.status === 'cancelled' ? '已取消' :
+                               task.status === 'not_started' ? '未开始' :
+                               task.status === 'paused' ? '已暂停' : '未知'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {problem ? (
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  problem.status === '已处理' ? 'bg-green-100 text-green-700' :
+                                  problem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
+                                  problem.status === '待验收' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {problem.status}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       )}
-
-      {/* 分派弹窗 */}
       {renderDispatchModal()}
 
       {/* 详情弹窗 */}

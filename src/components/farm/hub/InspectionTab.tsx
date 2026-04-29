@@ -175,6 +175,7 @@ export function InspectionTab({
     issueText: '',
     issueSeverity: '中等' as '轻微' | '中等' | '严重',
     issuePhotos: [] as string[],
+    newImages: [] as string[],  // 新建时上传的图片
     feedbackUsers: [] as string[],
     remarks: '',
     equipmentId: '',
@@ -377,6 +378,7 @@ export function InspectionTab({
       issueText: '',
       issueSeverity: '中等',
       issuePhotos: [],
+      newImages: [],
       feedbackUsers: [],
       remarks: '',
       equipmentId: '',
@@ -394,6 +396,43 @@ export function InspectionTab({
     });
     setErrors({});
     onCloseCreateModal();
+  };
+
+  // 处理图片上传
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const currentCount = newRecord.newImages.length;
+    const remainingSlots = 6 - currentCount;
+    if (remainingSlots <= 0) {
+      alert('最多只能添加6张照片');
+      return;
+    }
+
+    const filesToAdd = Array.from(files).slice(0, remainingSlots);
+
+    filesToAdd.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setNewRecord(prev => ({
+          ...prev,
+          newImages: [...prev.newImages, result]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  // 移除图片
+  const removeImage = (index: number) => {
+    setNewRecord(prev => ({
+      ...prev,
+      newImages: prev.newImages.filter((_, i) => i !== index)
+    }));
   };
 
   // 验证表单
@@ -783,8 +822,8 @@ export function InspectionTab({
         onNewRecordChange={setNewRecord}
         errors={errors}
         generateRecordCode={generateRecordCode}
-        onImageUpload={() => {}}
-        onRemoveImage={() => {}}
+        onImageUpload={handleImageUpload}
+        onRemoveImage={removeImage}
         greenhouses={greenhouses}
         users={users}
         cropTypes={cropTypes}
