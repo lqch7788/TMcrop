@@ -19,7 +19,7 @@ export const users: User[] = [
   { id: 'U008', name: '吴美丽', avatar: 'WML', role: 'worker', department: '生产部', position: '种植工' },
   { id: 'U009', name: '郑胜利', avatar: 'ZSL', role: 'worker', department: '生产部', position: '农机手' },
   { id: 'U012', name: '黄敏', avatar: 'HM', role: 'supervisor', department: '生产部', position: '生产组长' },
-  { id: 'U013', name: '陆启闯', avatar: 'LQC', role: 'technician', department: '生产部', position: '农技员' },
+  { id: 'U013', name: '陆启闯', avatar: 'LQC', role: 'admin', department: '管理层', position: '管理员' },
 ];
 
 // 温室大棚数据
