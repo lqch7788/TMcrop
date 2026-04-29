@@ -25,7 +25,7 @@ export interface StorageStats extends StorageInfo {
 export function getStorageInfo(): StorageInfo {
   let used = 0;
   for (const key in localStorage) {
-    if (localStorage.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
       const size = localStorage.getItem(key)?.length || 0;
       used += size;
     }
@@ -45,7 +45,7 @@ export function getStorageStats(): StorageStats {
   const keys: { key: string; size: number }[] = [];
 
   for (const key in localStorage) {
-    if (localStorage.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
       const value = localStorage.getItem(key);
       if (value) {
         keys.push({ key, size: value.length });

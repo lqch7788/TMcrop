@@ -388,7 +388,7 @@ export default function AttendanceRepairPage() {
       '备注': row.remarks || '',
     }));
 
-    let content = headers.join(',') + '\n' + exportData.map(row =>
+    const content = headers.join(',') + '\n' + exportData.map(row =>
       headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
     ).join('\n');
 

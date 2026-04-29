@@ -13,6 +13,58 @@ import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
 import { ProduceDetailModal } from './ProduceDetailModal';
 import { ProduceInventoryBatchEditModal } from './ProduceInventoryBatchEditModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { getAllVarieties } from '../../services/cropVarietyService';
+
+/**
+ * 根据作物名称和品种生成11位作物编码
+ * 编码规则：类别(2位) + 类型(2位) + 品种(2位) + 子品种1(3位) + 详细品种(2位)
+ * @param cropName 作物名称（如：草莓、番茄）
+ * @param variety 品种（如：红颜、红果番茄）
+ * @returns 11位作物编码，找不到则使用其他类(OT)编码
+ */
+function generateCropCode(cropName: string, variety: string): string {
+  const allVarieties = getAllVarieties();
+
+  // 精确匹配：variety 匹配 subVariety1Name 且 cropName 匹配 varietyName
+  const exactMatch = allVarieties.find(v => {
+    const varietyMatch = v.subVariety1Name === variety || v.varietyName === variety;
+    const cropMatch = v.varietyName === cropName || v.typeName === cropName || v.categoryName === cropName;
+    return varietyMatch && cropMatch;
+  });
+
+  if (exactMatch && exactMatch.cropCode && exactMatch.cropCode.length >= 9) {
+    // 补齐到11位
+    return exactMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  }
+
+  // 模糊匹配1：只用 variety 匹配 subVariety1Name
+  const subMatch = allVarieties.find(v => v.subVariety1Name === variety);
+  if (subMatch && subMatch.cropCode && subMatch.cropCode.length >= 9) {
+    return subMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  }
+
+  // 模糊匹配2：variety 匹配 varietyName
+  const varietyMatch = allVarieties.find(v => v.varietyName === variety);
+  if (varietyMatch && varietyMatch.cropCode && varietyMatch.cropCode.length >= 9) {
+    return varietyMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  }
+
+  // 模糊匹配3：cropName 匹配 varietyName
+  const cropMatch = allVarieties.find(v => v.varietyName === cropName);
+  if (cropMatch && cropMatch.cropCode && cropMatch.cropCode.length >= 9) {
+    return cropMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  }
+
+  // 模糊匹配4：cropName 匹配 typeName
+  const typeMatch = allVarieties.find(v => v.typeName === cropName);
+  if (typeMatch && typeMatch.cropCode && typeMatch.cropCode.length >= 9) {
+    return typeMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  }
+
+  // 找不到匹配，使用其他类(OT)编码
+  // OT + 00 + 00 + 000 + 00 = OT0000000000
+  return 'OT0000000000';
+}
 
 /**
  * 预警状态徽章组件
@@ -145,8 +197,8 @@ function DetailModal({ isOpen, inventory, onClose }: { isOpen: boolean; inventor
         <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <span className="text-xs text-emerald-600 block font-medium">产品编码</span>
-              <span className="text-lg font-mono font-bold text-emerald-700">{inventory.productCode}</span>
+              <span className="text-xs text-emerald-600 block font-medium">作物编码</span>
+              <span className="text-lg font-mono font-bold text-emerald-700">{generateCropCode(inventory.cropName, inventory.variety) || inventory.productCode}</span>
             </div>
             <div>
               <span className="text-xs text-emerald-600 block font-medium">作物名称</span>
@@ -541,7 +593,9 @@ export default function ProduceInventoryPage() {
       // 搜索过滤
       if (searchText) {
         const search = searchText.toLowerCase();
+        const cropCode = generateCropCode(item.cropName, item.variety) || '';
         if (
+          !cropCode.toLowerCase().includes(search) &&
           !item.productCode.toLowerCase().includes(search) &&
           !item.cropName.toLowerCase().includes(search) &&
           !item.batchCode.toLowerCase().includes(search)
@@ -731,9 +785,9 @@ export default function ProduceInventoryPage() {
     const exportData = selectedData.length > 0 ? selectedData : filteredData;
 
     // 生成Excel HTML内容
-    const headers = ['产品编码', '产品名称', '品种', '等级', '库存数量', '单位', '库存限值', '仓库', '存放位置', '入库时间', '保质期(天)', '过期时间', '存储时间', '预警状态', '备注'];
+    const headers = ['作物编码', '作物品种', '品种路径', '等级', '库存数量', '单位', '库存限值', '仓库', '存放位置', '入库时间', '保质期(天)', '过期时间', '存储时间', '预警状态', '备注'];
     const rows = exportData.map(item => [
-      item.productCode, item.cropName, item.variety, item.grade,
+      generateCropCode(item.cropName, item.variety) || item.productCode, item.variety, item.cropName, item.grade,
       item.quantity, item.unit,
       `${item.alertSettings.minStock}~${item.alertSettings.maxStock}`,
       item.warehouseName, item.storageLocation,
@@ -753,41 +807,47 @@ export default function ProduceInventoryPage() {
     const extension = 'xls';
     const fileName = `产品库存汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
 
-    try {
+    // 统一的导出函数（处理 File System Access API 和 fallback）
+    const doExport = async () => {
       if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [
-            {
-              description: 'Excel Files',
-              accept: { [mimeType]: ['.' + extension] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [
+              {
+                description: 'Excel Files',
+                accept: { [mimeType]: ['.' + extension] },
+              },
+            ],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(content);
+          await writable.close();
+        } catch (err) {
+          // 用户取消选择不算错误
+          if ((err as Error).name !== 'AbortError') {
+            console.error('Export failed:', err);
+            // 降级到 fallback 下载方式
+            downloadAsBlob();
+          }
+        }
       } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadAsBlob();
       }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('Export failed:', err);
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    }
+    };
+
+    // Fallback 下载方式（兼容不支持 File System Access API 的浏览器）
+    const downloadAsBlob = () => {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    doExport();
 
     setShowExportModal(false);
     setExportMode(false);
@@ -960,9 +1020,9 @@ export default function ProduceInventoryPage() {
                     />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">产品编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">产品名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">作物编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">作物品种</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">品种路径</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-16">等级</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">库存数量</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">库存限值</th>
@@ -1001,10 +1061,10 @@ export default function ProduceInventoryPage() {
                       className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline whitespace-nowrap"
                       onClick={() => handleViewDetail(item)}
                     >
-                      {item.productCode}
+                      {generateCropCode(item.cropName, item.variety) || item.productCode}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.cropName}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.variety}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.cropName}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <GradeBadge grade={item.grade} />
                     </td>

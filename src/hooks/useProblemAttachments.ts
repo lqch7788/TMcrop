@@ -31,7 +31,9 @@ try {
   if (stored) {
     attachmentsState = JSON.parse(stored);
   }
-} catch {}
+} catch {
+  // 忽略解析错误，使用默认空状态
+}
 
 // 通知所有监听器
 const notifyListeners = () => {

@@ -4,31 +4,30 @@
  * 巡查编号, 巡查类型, 提交人, 位置/对象, 巡查日期, 巡查结果, 问题分类, 严重程度, 问题照片, 反馈状态, 反馈人员, 处理进度, 操作
  */
 
-imp ort { inspectionRecords } from './mockData';
+import { inspectionRecords } from './mockData';
 
 export interface InspectionFeedbackTaskData {
-id: string;
-recordCode: string;
-inspectionType: string;
-submitterId: string;
-submitterName: string;
+  id: string;
+  recordCode: string;
+  inspectionType: string;
+  submitterId: string;
+  submitterName: string;
   location: string;
-  checkDate: st ring;
-checkTime: string; 
-checkResult: string;
+  checkDate: string;
+  checkTime: string;
+  checkResult: string;
   issueCategories: string[];
-    issueSeverity: string;
+  issueSeverity: string;
   issueText: string;
   photos: string[];
   feedbackStatus: string;
   feedbackUsers: string[];
-processProgress: string;
-    problemId: number;
-insp ectionId: string;   
-greenhouseN
-    me: string;
-      cropName:  s tring;    
-    remarks: string;
+  processProgress: string;
+  problemId: number;
+  inspectionId: string;
+  greenhouseName: string;
+  cropName: string;
+  remarks: string;
   status: string;
   priority: string;
 }
@@ -73,26 +72,25 @@ export function generateInspectionFeedbackTasks(): InspectionFeedbackTaskData[] 
       farm: '农场巡查',
       equipment: '设备巡查',
       infrastructure: '设施巡查',
-      other: '其他巡查', 
-   ;  
+      other: '其他巡查',
+    };
 
-    
-    const location = record.greenhouseName | | record.equipmentNam e  | | record.infrastructureName || '园区';
-        nst issueCats = (record.issueCategories || []).map((c: string) => CATEGORY_MAP[c] || c);
-     
-        turn {
-        id: record.id,
-          recordCode: record.recordCode,
-              inspectionType: typeMap[record.inspectionType || 'farm'] || '农场巡查',
-        submitterId: record.inspectorId,
-              submitterName: record.inspectorName,
+    const location = record.greenhouseName || record.equipmentName || record.infrastructureName || '园区';
+    const issueCats = (record.issueCategories || []).map((c: string) => CATEGORY_MAP[c] || c);
+
+    return {
+      id: record.id,
+      recordCode: record.recordCode,
+      inspectionType: typeMap[record.inspectionType || 'farm'] || '农场巡查',
+      submitterId: record.inspectorId,
+      submitterName: record.inspectorName,
       location,
       checkDate: record.checkDate,
       checkTime: record.checkTime,
-          checkResult,
-          issu e Categories: issueCats,
-        issueSeverity: record.issueSeverity,
-              issueText: record.issueText || record.remarks || '',
+      checkResult,
+      issueCategories: issueCats,
+      issueSeverity: record.issueSeverity,
+      issueText: record.issueText || record.remarks || '',
       photos: record.images || [],
       feedbackStatus: feedbackStatusMap[status] || status,
       feedbackUsers: [record.inspectorName],

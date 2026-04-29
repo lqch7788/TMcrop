@@ -131,8 +131,6 @@ interface InboundEditModalProps {
 }
 
 export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEditModalProps) {
-  if (!isOpen || !record) return null;
-
   const [editedMaterials, setEditedMaterials] = useState<InboundMaterial[]>([]);
 
   useEffect(() => {
@@ -140,6 +138,8 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
       setEditedMaterials(record.materials);
     }
   }, [record]);
+
+  if (!isOpen || !record) return null;
 
   const handleMaterialChange = (materialId: number, field: keyof InboundMaterial, value: string | number) => {
     const updated = editedMaterials.map(m =>

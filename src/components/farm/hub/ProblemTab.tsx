@@ -8,6 +8,7 @@ import { usePersistentProblems, ProblemEntry } from '../../../hooks/usePersisten
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
 import { useTasks } from '../../../hooks/useTasks';
+import { users } from '../../../data/mockData';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals';
@@ -49,6 +50,13 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
   const { tasks } = useTasks();
+
+  // 获取默认巡查人员（避免硬编码）
+  const defaultInspector = useMemo(() => {
+    // 优先使用 admin 用户，否则使用第一个用户
+    const adminUser = users.find(u => u.id === 'U001' || u.name.includes('管理员'));
+    return adminUser || users[0] || { id: 'U001', name: '系统管理员' };
+  }, []);
 
   // ========== 标签页状态 ==========
   const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
@@ -99,8 +107,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
     greenhouseId: '',
     greenhouseName: '',
     cropName: '',
-    inspectorId: 'U001',
-    inspectorName: '系统管理员',
+    inspectorId: defaultInspector.id,
+    inspectorName: defaultInspector.name,
     checkDate: new Date().toISOString().slice(0, 10),
     checkTime: new Date().toTimeString().slice(0, 5),
     issueText: '',
@@ -247,24 +255,28 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
     switch (expectedCompletion) {
       case 'today':
         return today.toISOString().slice(0, 10);
-      case 'tomorrow':
+      case 'tomorrow': {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().slice(0, 10);
-      case '3days':
+      }
+      case '3days': {
         const threeDays = new Date(today);
         threeDays.setDate(threeDays.getDate() + 3);
         return threeDays.toISOString().slice(0, 10);
-      case 'week':
+      }
+      case 'week': {
         const week = new Date(today);
         week.setDate(week.getDate() + 7);
         return week.toISOString().slice(0, 10);
+      }
       case 'custom':
         return customDueDate;
-      default:
+      default: {
         const defaultDate = new Date(today);
         defaultDate.setDate(defaultDate.getDate() + 3);
         return defaultDate.toISOString().slice(0, 10);
+      }
     }
   };
 
@@ -450,7 +462,6 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
   // ========== 处理导出确认 ==========
   const handleConfirmExport = async () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
       return;
     }
     const allProblems = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
@@ -513,7 +524,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // 导出失败时仍尝试使用备用方式下载
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

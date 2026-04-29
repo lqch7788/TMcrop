@@ -1362,7 +1362,7 @@ export const getProduceTypesByCategory = (categoryCode: ProduceCategoryCode): Pr
 };
 
 // 生成产品编码
-let produceSerialCounters: Record<string, number> = {};
+const produceSerialCounters: Record<string, number> = {};
 
 // 初始化计数器（从已有最大序号开始）
 export const initProduceSerialCounter = (categoryCode: string, typeCode: string, varietyCode: string, currentMax: number = 0) => {

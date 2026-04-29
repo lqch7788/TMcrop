@@ -421,7 +421,7 @@ export default function RecruitmentPage() {
       '申请日期': row.applyDate,
     }));
 
-    let content = headers.join(',') + '\n' + exportData.map(row =>
+    const content = headers.join(',') + '\n' + exportData.map(row =>
       headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
     ).join('\n');
 

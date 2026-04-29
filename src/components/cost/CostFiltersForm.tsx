@@ -107,21 +107,23 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
     let end = '';
 
     switch (period) {
-      case 'week':
+      case 'week': {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
         start = weekStart.toISOString().split('T')[0];
         end = now.toISOString().split('T')[0];
         break;
+      }
       case 'month':
         start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
         end = now.toISOString().split('T')[0];
         break;
-      case 'quarter':
+      case 'quarter': {
         const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
         start = `${now.getFullYear()}-${String(quarterMonth + 1).padStart(2, '0')}-01`;
         end = now.toISOString().split('T')[0];
         break;
+      }
       case 'year':
         start = `${now.getFullYear()}-01-01`;
         end = now.toISOString().split('T')[0];

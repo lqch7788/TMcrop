@@ -304,21 +304,23 @@ export default function MaterialReceiving() {
     let end = '';
 
     switch (period) {
-      case 'currentWeek':
+      case 'currentWeek': {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
         start = weekStart.toISOString().split('T')[0];
         end = now.toISOString().split('T')[0];
         break;
+      }
       case 'currentMonth':
         start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
         end = now.toISOString().split('T')[0];
         break;
-      case 'currentQuarter':
+      case 'currentQuarter': {
         const quarter = Math.floor(now.getMonth() / 3);
         start = `${now.getFullYear()}-${String(quarter * 3 + 1).padStart(2, '0')}-01`;
         end = now.toISOString().split('T')[0];
         break;
+      }
       case 'currentYear':
         start = `${now.getFullYear()}-01-01`;
         end = `${now.getFullYear()}-12-31`;
