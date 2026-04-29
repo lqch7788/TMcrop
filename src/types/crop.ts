@@ -59,6 +59,29 @@ export enum PrintTemplate {
   LARGE = 'large'    // 大标签
 }
 
+/** 标签打印类型 */
+export enum LabelPrintType {
+  NEW = 'new',           // 新建标签
+  REPRINT = 'reprint',   // 重打印
+  BATCH = 'batch'        // 批量打印
+}
+
+/** 定植记录状态 */
+export enum TransplantRecordStatus {
+  IN_STOCK = 'in_stock',       // 库存中
+  TRANSPLANTING = 'transplanting', // 定植中
+  GROWING = 'growing',         // 生长期
+  HARVESTED = 'harvested'      // 已采收
+}
+
+/** 栽种操作类型 */
+export enum TransplantAction {
+  MOVE_IN = 'move_in',         // 移入
+  MOVE_OUT = 'move_out',       // 移出
+  TRANSPLANT = 'transplant',   // 定植
+  MARK = 'mark'                // 标记
+}
+
 /** 种源库存状态 */
 export enum StockStatus {
   SUFFICIENT = 'sufficient',  // 充足
@@ -118,7 +141,83 @@ export interface DailyRecord {
   humidity?: number;          // 湿度
   watering: boolean;          // 是否浇水
   abnormality?: string;       // 异常情况
+  // 数量变化字段
+  survivalCountChange?: number;  // 成活数量变化（正数增加，负数减少）
+  plantedCountChange?: number;  // 定植数量变化
+  lossCountChange?: number;    // 损耗数量
   remarks?: string;           // 备注
+  // 水质参数（补充）
+  phValue?: number;          // pH值
+  ecValue?: number;           // EC值 (电导率)
+  // 操作信息（补充）
+  operator?: string;          // 操作人员
+}
+
+// ========== 打印记录类型（新增） ==========
+
+/**
+ * 标签打印记录
+ */
+export interface PrintRecord {
+  id: string;                  // 打印记录ID
+  printTime: string;          // 打印时间
+  printType: LabelPrintType;  // 打印类型：新建/重打印/批量
+  printCount: number;          // 打印数量
+  operator: string;           // 操作人员
+  labelNumbers?: string[];     // 二维码编号列表（重打印时）
+  seedlingId: string;         // 关联的育苗ID
+}
+
+// ========== 栽种记录类型（新增） ==========
+
+/**
+ * 栽种记录 - 记录每次定植操作
+ */
+export interface TransplantRecord {
+  id: string;                  // 栽种记录ID
+  seedlingId: string;         // 关联的育苗ID
+  transplantDate: string;      // 栽种日期
+  areaId: string;             // 场地ID
+  areaName: string;           // 场地名称
+  zoneId?: string;           // 区域ID
+  zoneName?: string;          // 区域名称
+  bedId?: string;            // 苗床ID
+  bedName?: string;           // 苗床名称
+  transplantCount: number;     // 本次定植数量
+  remainingCount: number;     // 剩余数量
+  status: TransplantRecordStatus; // 状态
+  remarks?: string;           // 备注
+  createTime: string;         // 创建时间
+}
+
+/**
+ * 栽种历史条目
+ */
+export interface TransplantHistoryItem {
+  id: string;                  // 历史条目ID
+  action: TransplantAction;   // 操作类型：移入/移出/定植/标记
+  fromArea?: string;          // 来源位置
+  toArea?: string;            // 目标位置
+  count?: number;             // 操作数量
+  date: string;               // 操作日期
+  operator?: string;          // 操作人员
+  remarks?: string;           // 备注
+  // 标记相关
+  markName?: string;          // 标记状态名称
+  markColor?: string;         // 标记颜色
+  markIcon?: string;          // 标记图标
+}
+
+/**
+ * 栽种历史 - 完整操作轨迹
+ */
+export interface TransplantHistory {
+  id: string;                  // 历史记录ID
+  seedlingId: string;         // 关联的育苗ID
+  labelNumber: string;         // 二维码编号
+  currentArea: string;        // 当前位置
+  status: TransplantRecordStatus; // 当前状态
+  history: TransplantHistoryItem[]; // 操作历史
 }
 
 // ========== 育苗类型 ==========
@@ -160,6 +259,14 @@ export interface Seedling {
   instanceId?: string;         // 关联的作物实例ID
   orderId?: string;           // 关联的订单ID
   orderCode?: string;         // 关联的订单编号
+  // 补充字段
+  orgName?: string;           // 所属组织名称
+  seedlingTaskTime?: number;  // 育苗工时(小时)
+  // 打印记录（新增）
+  printRecords?: PrintRecord[];  // 打印历史
+  // 栽种记录（新增）
+  transplantRecords?: TransplantRecord[];  // 栽种记录列表
+  transplantHistory?: TransplantHistory[]; // 定植履历列表
 }
 
 // ========== 种植类型 ==========
@@ -228,6 +335,19 @@ export interface SeedlingFilters {
   seedlingType: string;   // 育苗方式
   createBy: string;       // 记录人员
   status: string;        // 状态
+  // 更多筛选条件（新增）
+  initialCountMin?: number;   // 初始数量最小值
+  initialCountMax?: number;   // 初始数量最大值
+  survivalCountMin?: number;   // 成苗数量最小值
+  survivalCountMax?: number;   // 成苗数量最大值
+  lossCountMin?: number;      // 损耗数量最小值
+  lossCountMax?: number;      // 损耗数量最大值
+  surplusMin?: number;        // 剩余数量最小值
+  surplusMax?: number;        // 剩余数量最大值
+  survivalRateMin?: number;   // 成苗率最小值
+  survivalRateMax?: number;   // 成苗率最大值
+  lossRateMin?: number;       // 损耗率最小值
+  lossRateMax?: number;       // 损耗率最大值
 }
 
 /** 种植筛选条件 */

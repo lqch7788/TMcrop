@@ -1,9 +1,11 @@
 /**
  * 种源统计卡片组件
+ * 使用公共StatsCard组件统一渲染
  */
 
 import React from 'react';
 import { Package, Warehouse, TrendingUp, AlertTriangle } from 'lucide-react';
+import { StatsCard, StatItem } from '../../common/StatsCard';
 
 interface SeedSourceStatsProps {
   data: {
@@ -15,7 +17,8 @@ interface SeedSourceStatsProps {
 }
 
 export function SeedSourceStats({ data }: SeedSourceStatsProps) {
-  const stats = [
+  // 构建统计项数组，适配StatsCard组件格式
+  const stats: StatItem[] = [
     {
       label: '总种源数',
       value: data.total,
@@ -43,24 +46,5 @@ export function SeedSourceStats({ data }: SeedSourceStatsProps) {
     }
   ];
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat, index) => (
-        <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-              <stat.icon className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {stat.value}
-                {stat.unit && <span className="text-sm text-gray-500 ml-1">{stat.unit}</span>}
-              </p>
-              <p className="text-sm text-gray-500">{stat.label}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <StatsCard stats={stats} />;
 }

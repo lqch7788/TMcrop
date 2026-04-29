@@ -139,12 +139,17 @@ export default function InspectionPage() {
 
   // 打开新增弹窗时自动生成编号
   const handleOpenCreateModal = () => {
+    // 获取当前用户名，然后从users数组中找到对应的用户ID
+    const currentUsername = localStorage.getItem('username') || '';
+    const currentUser = users.find(u => u.name === currentUsername);
+    const defaultInspectorId = currentUser?.id || '';
+
     setNewRecord(prev => ({
       ...prev,
       recordCode: generateRecordCode(),
       checkDate: new Date().toISOString().split('T')[0],
       checkTime: new Date().toTimeString().slice(0, 5),
-      inspectorId: 'U013', // 默认巡查人员：陆启闯
+      inspectorId: defaultInspectorId,
     }));
     setIsCreateModalOpen(true);
   };
