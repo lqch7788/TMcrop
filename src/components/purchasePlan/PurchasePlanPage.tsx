@@ -181,8 +181,8 @@ export function PurchasePlanPage() {
     .sort((a, b) => {
       if (!sortConfig) return 0;
       const { field, direction } = sortConfig;
-      let aValue: any = a[field as keyof typeof a];
-      let bValue: any = b[field as keyof typeof b];
+      const aValue: any = a[field as keyof typeof a];
+      const bValue: any = b[field as keyof typeof b];
       if (aValue < bValue) return direction === 'asc' ? -1 : 1;
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;

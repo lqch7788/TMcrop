@@ -285,14 +285,14 @@ export function getTraceChain(id: string): CropTraceChain | null {
   if (!instance) return null;
 
   // 获取关联的订单
-  let order = undefined;
+  const order = undefined;
   if (instance.orderId) {
     // 暂时注释，因为CropOrderService还未创建
     // order = cropOrderService.getOrderById(instance.orderId);
   }
 
   // 获取关联的种源
-  let seedSource = undefined;
+  const seedSource = undefined;
   if (instance.sourceOrigin === 'internal_seed') {
     const seedSources = seedSourceService.getSeedSources();
     seedSource = seedSources.find(s => s.instanceId === id);

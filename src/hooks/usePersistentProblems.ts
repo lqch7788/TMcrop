@@ -294,7 +294,9 @@ try {
     const maxId = Math.max(0, ...problemsState.map(p => p.id));
     nextProblemId = maxId + 1;
   }
-} catch {}
+} catch {
+  // 忽略解析错误，使用默认空状态
+}
 
 // 通知所有监听器
 const notifyListeners = () => {

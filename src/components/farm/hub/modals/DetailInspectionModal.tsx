@@ -80,10 +80,11 @@ function getStatusBadge(status: string) {
  * 巡查记录详情弹窗组件
  */
 export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem }: DetailInspectionModalProps) {
+  // 通过 problemId 获取关联的问题数据和流转记录 - Hook需在条件返回之前调用
+  const { problems } = usePersistentProblems();
+
   if (!record) return null;
 
-  // 通过 problemId 获取关联的问题数据和流转记录
-  const { problems } = usePersistentProblems();
   const problem = record.problemId
     ? problems.find(p => p.id === record.problemId)
     : undefined;

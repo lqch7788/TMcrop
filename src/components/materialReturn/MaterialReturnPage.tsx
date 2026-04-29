@@ -20,12 +20,12 @@ export function MaterialReturnPage() {
   const hook = useMaterialReturn();
 
   const handleEditFormChange = useCallback((field: string, value: string) => {
-    // @ts-ignore
+    // @ts-expect-error - hook.setEditForm 类型暂未定义
     hook.setEditForm((prev: any) => ({ ...prev, [field]: value }));
   }, []);
 
   const handleAddFormChange = useCallback((field: string, value: string) => {
-    // @ts-ignore
+    // @ts-expect-error - hook.setAddForm 类型暂未定义
     hook.setAddForm((prev: any) => ({ ...prev, [field]: value }));
   }, []);
 
