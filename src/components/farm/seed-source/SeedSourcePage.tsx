@@ -4,8 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image } from 'lucide-react';
-import { SeedSourceStats } from './components/SeedSourceStats';
+import { Edit2, Trash2, Printer, Eye, Image, Package } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
@@ -320,33 +319,18 @@ export default function SeedSourcePage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 标题 */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">种源管理</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={handleAdd}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新增
-          </button>
-          <button
-            onClick={exportMode ? handleExportClickConfirm : handleExportClick}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              exportMode
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Download className="w-4 h-4" />
-            {exportMode ? `导出选中 (${selectedRows.length})` : '导出'}
-          </button>
+      {/* 标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Package className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">种源管理</h1>
+            <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
+          </div>
         </div>
       </div>
-
-      {/* 统计卡片 */}
-      <SeedSourceStats data={statsData} />
 
       {/* 筛选工具栏 */}
       <SeedSourceFilter

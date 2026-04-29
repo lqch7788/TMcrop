@@ -15,6 +15,7 @@ import * as supplierService from '../../../../services/supplierService';
 import { CropVariety, CropVarietySearchResult } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
+import { currentUser } from '../../../../data/mockData';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -45,7 +46,8 @@ export function AddModal({
     unit: '袋',
     unitPrice: 0,
     pictures: [] as string[],
-    remarks: ''
+    remarks: '',
+    createBy: currentUser.name // 默认当前登录用户
   });
 
   // 作物编码
@@ -228,7 +230,7 @@ export function AddModal({
       status,
       traceabilityCode,
       printCount: 0,
-      createBy: '当前用户'
+      createBy: formData.createBy
     });
 
     // 同时创建作物实例记录

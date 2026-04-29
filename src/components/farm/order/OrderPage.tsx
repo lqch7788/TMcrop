@@ -3,16 +3,13 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Eye, X } from 'lucide-react';
+import { Plus, Download, Eye, X, ShoppingCart } from 'lucide-react';
 import { OrderStats } from './components/OrderStats';
 import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
-import { OrderCodeToolbar } from './components/OrderCodeToolbar';
 import { AddModal } from './modals/AddModal';
 import { DetailModal } from './modals/DetailModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
   cropCategories,
 } from '@/data/cropData';
@@ -22,10 +19,6 @@ import * as cropInstanceService from '@/services/cropInstanceService';
 import * as cropVarietyService from '@/services/cropVarietyService';
 
 export default function OrderPage() {
-  const navigate = useNavigate();
-
-  // 产品编码生成器状态
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   const [filters, setFilters] = useState<CropOrderFilters>({
     orderCode: '',
     orderName: '',
@@ -258,40 +251,18 @@ export default function OrderPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 标题 */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setAddModalOpen(true)}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新增订单
-          </button>
-          <button
-            onClick={exportMode ? handleExportClickConfirm : handleExportClick}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              exportMode
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Download className="w-4 h-4" />
-            {exportMode ? `导出选中 (${selectedRows.length})` : '导出'}
-          </button>
+      {/* 标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <ShoppingCart className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
+            <p className="text-gray-500">管理订单、交付安排和客户追溯</p>
+          </div>
         </div>
       </div>
-
-      {/* 产品编码生成工具栏 */}
-      <OrderCodeToolbar
-        codeGenExpanded={codeGenExpanded}
-        onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
-        onCodeRuleClick={() => navigate('/produce-code-rule')}
-      />
-
-      {/* 产品编码生成器 */}
-      <ProduceCodeGenerator codeGenExpanded={codeGenExpanded} />
 
       {/* 统计卡片 */}
       <OrderStats data={statsData} />

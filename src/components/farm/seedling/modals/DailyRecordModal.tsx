@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { addDailyRecord } from '../../../../services/seedlingService';
+import { OPERATORS } from '../../../../data/cropData';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -21,7 +22,16 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     humidity: undefined as number | undefined,
     watering: false,
     abnormality: '',
-    remarks: ''
+    // 数量变化字段
+    survivalCountChange: undefined as number | undefined,
+    plantedCountChange: undefined as number | undefined,
+    lossCountChange: undefined as number | undefined,
+    remarks: '',
+    // 水质参数（新增）
+    phValue: undefined as number | undefined,
+    ecValue: undefined as number | undefined,
+    // 操作人员（新增）
+    operator: ''
   });
 
   const handleSubmit = () => {
@@ -36,8 +46,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       temperature: formData.temperature,
       humidity: formData.humidity,
       watering: formData.watering,
-      abnormality: formData.abnormality,
-      remarks: formData.remarks
+      abnormality: formData.abnormality || undefined,
+      // 数量变化字段
+      survivalCountChange: formData.survivalCountChange,
+      plantedCountChange: formData.plantedCountChange,
+      lossCountChange: formData.lossCountChange,
+      remarks: formData.remarks || undefined,
+      // 水质参数（新增）
+      phValue: formData.phValue,
+      ecValue: formData.ecValue,
+      // 操作人员（新增）
+      operator: formData.operator || undefined
     });
 
     onClose();
@@ -99,6 +118,36 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 <span className="ml-2 text-sm text-gray-600">{formData.watering ? '是' : '否'}</span>
               </div>
             </div>
+            {/* pH值（新增） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">pH值</label>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.phValue ?? ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  phValue: e.target.value ? Number(e.target.value) : undefined
+                })}
+                placeholder="如：6.5"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            {/* EC值（新增） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">EC值（mS/cm）</label>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.ecValue ?? ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  ecValue: e.target.value ? Number(e.target.value) : undefined
+                })}
+                placeholder="如：2.0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">异常情况</label>
               <input
@@ -109,6 +158,51 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+            {/* 数量变化输入 */}
+            <div className="col-span-2 mt-4">
+              <h5 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200">数量变化（选填）</h5>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">成活变化</label>
+                  <input
+                    type="number"
+                    value={formData.survivalCountChange ?? ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      survivalCountChange: e.target.value ? Number(e.target.value) : undefined
+                    })}
+                    placeholder="正数增加，负数减少"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">定植变化</label>
+                  <input
+                    type="number"
+                    value={formData.plantedCountChange ?? ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      plantedCountChange: e.target.value ? Number(e.target.value) : undefined
+                    })}
+                    placeholder="正数增加，负数减少"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">损耗数量</label>
+                  <input
+                    type="number"
+                    value={formData.lossCountChange ?? ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      lossCountChange: e.target.value ? Number(e.target.value) : undefined
+                    })}
+                    placeholder="正数增加"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
               <textarea
@@ -118,6 +212,20 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 placeholder="请输入备注信息"
               />
+            </div>
+            {/* 操作人员（新增） */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
+              <select
+                value={formData.operator}
+                onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择操作人员</option>
+                {OPERATORS.map(op => (
+                  <option key={op.value} value={op.value}>{op.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -139,11 +247,34 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">已浇水</span>
                     )}
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                  <div className="grid grid-cols-4 gap-2 text-xs text-gray-600">
                     {r.temperature && <span>温度: {r.temperature}℃</span>}
                     {r.humidity && <span>湿度: {r.humidity}%</span>}
-                    {r.abnormality && <span className="text-red-600">异常: {r.abnormality}</span>}
+                    {r.phValue && <span>pH: {r.phValue}</span>}
+                    {r.ecValue && <span>EC: {r.ecValue}</span>}
+                    {r.abnormality && <span className="text-red-600 col-span-2">异常: {r.abnormality}</span>}
+                    {r.operator && <span className="text-blue-600">操作员: {r.operator}</span>}
                   </div>
+                  {/* 数量变化显示 */}
+                  {(r.survivalCountChange !== undefined || r.plantedCountChange !== undefined || r.lossCountChange !== undefined) && (
+                    <div className="grid grid-cols-3 gap-2 text-xs mt-2 pt-2 border-t border-gray-100">
+                      {r.survivalCountChange !== undefined && (
+                        <span className={r.survivalCountChange > 0 ? 'text-green-600' : r.survivalCountChange < 0 ? 'text-red-600' : 'text-gray-500'}>
+                          成活: {r.survivalCountChange > 0 ? '+' : ''}{r.survivalCountChange}
+                        </span>
+                      )}
+                      {r.plantedCountChange !== undefined && (
+                        <span className={r.plantedCountChange > 0 ? 'text-green-600' : r.plantedCountChange < 0 ? 'text-red-600' : 'text-gray-500'}>
+                          定植: {r.plantedCountChange > 0 ? '+' : ''}{r.plantedCountChange}
+                        </span>
+                      )}
+                      {r.lossCountChange !== undefined && (
+                        <span className="text-red-600">
+                          损耗: +{r.lossCountChange}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {r.remarks && (
                     <div className="mt-2 text-xs text-gray-500">{r.remarks}</div>
                   )}

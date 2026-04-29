@@ -20,8 +20,8 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
+  { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
   { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
   { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },

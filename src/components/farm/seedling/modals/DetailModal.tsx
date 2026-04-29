@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Seedling, SeedlingStatus } from '../../../../types/crop';
+import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -25,6 +25,18 @@ export function DetailModal({
   };
 
   const status = statusMap[record.status] || statusMap[SeedlingStatus.IN_PROGRESS];
+
+  // 获取栽种记录状态名称
+  const getTransplantStatusLabel = (s?: TransplantRecordStatus) => {
+    if (!s) return '-';
+    switch (s) {
+      case TransplantRecordStatus.IN_STOCK: return '库存';
+      case TransplantRecordStatus.TRANSPLANTING: return '定植中';
+      case TransplantRecordStatus.GROWING: return '生长期';
+      case TransplantRecordStatus.HARVESTED: return '已采收';
+      default: return s;
+    }
+  };
 
   return (
     <UnifiedModal
@@ -51,7 +63,7 @@ export function DetailModal({
               <span className="text-sm text-gray-900">{record.cropName}</span>
             </div>
             <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">品种：</span>
+              <span className="text-sm text-gray-500 w-24">品种路径：</span>
               <span className="text-sm text-gray-900">{record.cropVariety}</span>
             </div>
             <div className="flex items-center">
@@ -66,6 +78,20 @@ export function DetailModal({
               <span className="text-sm text-gray-500 w-24">温室场地：</span>
               <span className="text-sm text-gray-900">{record.siteName}</span>
             </div>
+            {/* 新增字段：所属组织 */}
+            {record.orgName && (
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">所属组织：</span>
+                <span className="text-sm text-gray-900">{record.orgName}</span>
+              </div>
+            )}
+            {/* 新增字段：育苗工时 */}
+            {record.seedlingTaskTime !== undefined && (
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">育苗工时：</span>
+                <span className="text-sm text-gray-900">{record.seedlingTaskTime} 小时</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -80,6 +106,10 @@ export function DetailModal({
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">结束日期：</span>
               <span className="text-sm text-gray-900">{record.endDate || '-'}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">预计结束：</span>
+              <span className="text-sm text-gray-900">{record.expectedEndDate || '-'}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">初始数量：</span>
@@ -106,6 +136,16 @@ export function DetailModal({
               <span className="text-sm text-red-600">{record.lossRate}%</span>
             </div>
             <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">剩余总数：</span>
+              <span className="text-sm text-purple-600 font-medium">
+                {(record.initialCount - record.lossCount).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">育苗结束：</span>
+              <span className="text-sm text-gray-900">{record.isFinished ? '是' : '否'}</span>
+            </div>
+            <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">状态：</span>
               <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>
                 {status.label}
@@ -120,6 +160,38 @@ export function DetailModal({
           </div>
         </div>
 
+        {/* 栽种记录（新增） */}
+        {record.transplantRecords && record.transplantRecords.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">
+              栽种记录 ({record.transplantRecords.length} 条)
+            </h4>
+            <div className="max-h-40 overflow-y-auto space-y-2">
+              {record.transplantRecords.map((tr, index) => (
+                <div key={tr.id || index} className="bg-gray-50 rounded p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{tr.transplantDate}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      tr.status === TransplantRecordStatus.GROWING ? 'bg-green-100 text-green-700' :
+                      tr.status === TransplantRecordStatus.HARVESTED ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {getTransplantStatusLabel(tr.status)}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-gray-600 grid grid-cols-2 gap-1 text-xs">
+                    <span>场地: {tr.areaName}</span>
+                    {tr.zoneName && <span>区域: {tr.zoneName}</span>}
+                    {tr.bedName && <span>苗床: {tr.bedName}</span>}
+                    <span>定植数量: {tr.transplantCount}</span>
+                    <span>剩余: {tr.remainingCount}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 其他信息 */}
         <div>
           <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">其他信息</h4>
@@ -133,12 +205,23 @@ export function DetailModal({
               <span className="text-sm text-gray-900">{record.createTime}</span>
             </div>
             <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">更新时间：</span>
+              <span className="text-sm text-gray-900">{record.updateTime}</span>
+            </div>
+            <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">打印次数：</span>
               <span className="text-sm text-gray-900">{record.printCount} 次</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">每日记录：</span>
               <span className="text-sm text-gray-900">{record.dailyRecords.length} 条</span>
+            </div>
+            {/* 新增：打印记录数量 */}
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">打印记录：</span>
+              <span className="text-sm text-gray-900">
+                {record.printRecords ? `${record.printRecords.length} 条` : '0 条'}
+              </span>
             </div>
             {record.remarks && (
               <div className="col-span-2 flex items-start">

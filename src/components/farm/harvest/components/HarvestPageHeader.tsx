@@ -15,7 +15,7 @@ export function HarvestPageHeader({
   subtitle = '管理采收记录、品质分级和入库操作'
 }: HarvestPageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="bg-white rounded-xl p-6 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
           <Warehouse className="w-6 h-6 text-white" />

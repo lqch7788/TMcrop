@@ -159,7 +159,7 @@ export function OrderTable({
               <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={exportMode ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
