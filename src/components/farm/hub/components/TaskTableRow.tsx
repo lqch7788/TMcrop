@@ -25,6 +25,7 @@ interface TaskTableRowProps {
   onReassign?: () => void;
   onRemind?: () => void;
   onSelectExecutor?: () => void;
+  onPublish?: () => void;  // 发布草稿任务
   // 标识是否为"我的任务"视图（true=执行人视图，显示接受/拒绝；false=管理者视图，显示撤回/取消）
   isMyTasksView?: boolean;
   remindProps?: {
@@ -61,6 +62,7 @@ export function TaskTableRow({
   onReassign,
   onRemind,
   onSelectExecutor,
+  onPublish,
   isMyTasksView = false,
   remindProps,
   canRemind,
@@ -187,6 +189,16 @@ export function TaskTableRow({
       {/* 操作按钮 */}
       <td className="px-3 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1 flex-wrap">
+          {/* 草稿状态 - 发布按钮 */}
+          {task.status === 'draft' && onPublish && (
+            <button
+              onClick={onPublish}
+              className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+            >
+              发布
+            </button>
+          )}
+
           {/* 待验收 - 验收按钮 */}
           {task.status === 'waiting_acceptance' && onAccept && (
             <button

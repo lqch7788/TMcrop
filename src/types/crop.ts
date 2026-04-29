@@ -45,6 +45,19 @@ export enum SeedlingStatus {
   ABNORMAL = 'abnormal'             // 异常
 }
 
+/** 育苗计划类型 */
+export enum SeedlingPlanType {
+  ROUTINE = 'routine',            // 常规
+  URGENT = 'urgent',              // 加急
+  EXPERIMENT = 'experiment'       // 实验
+}
+
+/** 育苗计算模式 */
+export enum SeedlingCalculateMode {
+  SINGLE = 'single',              // 单株育苗
+  PROPAGATION = 'propagation'     // 扩繁育苗
+}
+
 /** 种植状态 */
 export enum PlantingStatus {
   PLANTED = 'planted',      // 已定植
@@ -262,6 +275,20 @@ export interface Seedling {
   // 补充字段
   orgName?: string;           // 所属组织名称
   seedlingTaskTime?: number;  // 育苗工时(小时)
+  // 新增字段
+  planType?: SeedlingPlanType; // 计划类型（常规/加急/实验）
+  targetSurvivalRate?: number; // 目标成苗率
+  targetSurvivalCount?: number; // 目标成苗数
+  qualityGrade?: string;      // 品质等级预判
+  chargePerson?: string;      // 负责人
+  // 关联字段
+  productionPlanId?: string;   // 关联生产计划ID
+  productionPlanCode?: string;  // 关联生产计划批次号
+  // 扩繁计算模式
+  calculateMode?: SeedlingCalculateMode; // 计算模式：单株育苗/扩繁育苗
+  motherPlantCount?: number;     // 母株数量（扩繁模式用）
+  propagationMultiple?: number;   // 扩繁倍数（扩繁模式用）
+  theoreticalYield?: number;     // 理论产量（扩繁模式用）
   // 打印记录（新增）
   printRecords?: PrintRecord[];  // 打印历史
   // 栽种记录（新增）

@@ -361,7 +361,13 @@ export function SeedlingTable({
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm">
-                    <span className="font-mono text-blue-600">{record.seedlingCode}</span>
+                    <button
+                      onClick={() => onDetail(record)}
+                      className="font-mono text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      title="点击查看详情"
+                    >
+                      {record.seedlingCode}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
@@ -409,13 +415,6 @@ export function SeedlingTable({
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => onDetail(record)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="详情"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => onDailyRecord(record)}
                         className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"

@@ -116,6 +116,99 @@ const defaultData: Seedling[] = [
     createBy: '李明辉',
     createTime: '2026-03-10 08:00:00',
     updateTime: '2026-04-20 15:00:00'
+  },
+  // ========== 新增模拟数据 ==========
+  {
+    id: 'SD004',
+    seedlingCode: 'YM20260420-001',
+    sourceId: '',  // 不关联种源
+    sourceCode: '',
+    cropCode: 'FR0101001001',  // 水果类-浆果类-草莓-红颜草莓
+    cropName: '红颜草莓',
+    cropVariety: '红颜草莓',
+    seedlingType: '扦插育苗',  // 扩繁育苗方式
+    siteId: 'SITE001',
+    siteName: '育苗温室A区',
+    startDate: '2026-04-20',
+    expectedEndDate: '2026-06-20',
+    initialCount: 0,
+    survivalCount: 0,
+    plantedCount: 0,
+    survivalRate: 0,
+    lossCount: 0,
+    lossRate: 0,
+    isFinished: false,
+    status: SeedlingStatus.IN_PROGRESS,
+    dailyRecords: [],
+    pictures: [],
+    printCount: 0,
+    remarks: '扩繁育苗：母株50株，扩繁倍数50倍，目标产量2500株',
+    createBy: '张伟',
+    createTime: '2026-04-20 09:00:00',
+    updateTime: '2026-04-20 09:00:00',
+    // 扩繁育苗字段
+    calculateMode: 'propagation',  // 扩繁育苗模式
+    motherPlantCount: 50,  // 母株数量
+    propagationMultiple: 50,  // 扩繁倍数
+    theoreticalYield: 2500  // 理论产量
+  },
+  {
+    id: 'SD005',
+    seedlingCode: 'YM20260422-001',
+    sourceId: '',  // 不关联种源
+    sourceCode: '',
+    cropCode: 'FR0201001001',  // 水果类-核果类-桃子-水蜜桃
+    cropName: '桃子',
+    cropVariety: '水蜜桃',
+    seedlingType: '嫁接育苗',
+    siteId: 'SITE002',
+    siteName: '育苗温室B区',
+    startDate: '2026-04-22',
+    expectedEndDate: '2026-05-15',
+    initialCount: 5000,
+    survivalCount: 4500,
+    plantedCount: 0,
+    survivalRate: 90,
+    lossCount: 500,
+    lossRate: 10,
+    isFinished: false,
+    status: SeedlingStatus.IN_PROGRESS,
+    dailyRecords: [],
+    pictures: [],
+    printCount: 0,
+    remarks: '水蜜桃育苗，长势良好',
+    createBy: '刘洋',
+    createTime: '2026-04-22 10:00:00',
+    updateTime: '2026-04-22 10:00:00'
+  },
+  {
+    id: 'SD006',
+    seedlingCode: 'YM20260425-001',
+    sourceId: '',  // 不关联种源
+    sourceCode: '',
+    cropCode: 'PD0302001001',  // 蔬菜类-茄果类-小番茄-千禧小番茄
+    cropName: '小番茄',
+    cropVariety: '千禧小番茄',
+    seedlingType: '穴盘育苗',
+    siteId: 'SITE003',
+    siteName: '育苗温室C区',
+    startDate: '2026-04-25',
+    expectedEndDate: '2026-05-20',
+    initialCount: 8000,
+    survivalCount: 7600,
+    plantedCount: 0,
+    survivalRate: 95,
+    lossCount: 400,
+    lossRate: 5,
+    isFinished: false,
+    status: SeedlingStatus.IN_PROGRESS,
+    dailyRecords: [],
+    pictures: [],
+    printCount: 0,
+    remarks: '出苗整齐，长势良好',
+    createBy: '陈静',
+    createTime: '2026-04-25 08:30:00',
+    updateTime: '2026-04-25 08:30:00'
   }
 ];
 
@@ -182,20 +275,48 @@ export function getSeedlingsBySourceId(sourceId: string): Seedling[] {
  */
 export function generateSeedlingCode(): string {
   const today = new Date();
-  // 获取年月日 YYYYMMDD格式
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const dateStr = `${year}${month}${day}`;
+  return generateSeedlingCodeByDate(today);
+}
 
-  // 按日期存储流水号
-  const counterKey = `crop_seedling_code_${dateStr}`;
-  let counter = parseInt(localStorage.getItem(counterKey) || '0', 10);
-  counter++;
-  localStorage.setItem(counterKey, counter.toString());
+/**
+ * 根据指定日期生成育苗批号（自动检查重码）
+ * 格式：YM + 年月日(YYYYMMDD) + "-" + 3位流水号
+ * @param date 指定日期（可以是过去或未来的日期）
+ */
+export function generateSeedlingCodeByDate(date: Date | string): string {
+  let dateStr: string;
+
+  if (typeof date === 'string') {
+    // 如果是字符串（来自表单的YYYY-MM-DD格式），转换为YYYYMMDD
+    dateStr = date.replace(/-/g, '');
+  } else {
+    // 如果是Date对象
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    dateStr = `${year}${month}${day}`;
+  }
+
+  // 从已有育苗记录中检查当天的最大流水号
+  const seedlings = getSeedlings();
+  let maxSeq = 0;
+
+  for (const seedling of seedlings) {
+    // 匹配格式：YM20260429-001
+    const match = seedling.seedlingCode.match(/^YM(\d{8})-(\d{3})$/);
+    if (match && match[1] === dateStr) {
+      const seq = parseInt(match[2], 10);
+      if (seq > maxSeq) {
+        maxSeq = seq;
+      }
+    }
+  }
+
+  // 新流水号 = 当天最大流水号 + 1
+  const nextSeq = maxSeq + 1;
 
   // 格式：YM + YYYYMMDD + "-" + 3位流水号
-  return `YM${dateStr}-${counter.toString().padStart(3, '0')}`;
+  return `YM${dateStr}-${nextSeq.toString().padStart(3, '0')}`;
 }
 
 /**

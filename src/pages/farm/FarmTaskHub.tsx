@@ -712,6 +712,16 @@ export function FarmTaskHub() {
     setSelectExecutorTask(task);
   };
 
+  // 发布草稿任务（draft → pending），并弹出选择执行人界面
+  const handlePublish = (task: import('../../types/task').Task) => {
+    if (task.status === 'draft') {
+      tasksHook.publishTask(task.id);
+      // 发布后立即弹出选择执行人界面，引导分派
+      setSelectExecutorTask(task);
+      hub.refresh();
+    }
+  };
+
   // 确认选择执行人
   const handleConfirmSelectExecutor = (assigneeId: string, assigneeName: string) => {
     if (selectExecutorTask) {
@@ -842,6 +852,7 @@ export function FarmTaskHub() {
                 onAccept={handleTaskAccept}
                 onRemind={handleTaskRemind}
                 onSelectExecutor={handleSelectExecutor}
+                onPublish={handlePublish}
                 onViewSop={(task) => {
                   setSelectedSopContent((task as any).sopContent || '');
                   setShowSopModal(true);

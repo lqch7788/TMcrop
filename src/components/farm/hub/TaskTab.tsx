@@ -53,6 +53,7 @@ interface TaskTabProps {
   onRemind?: (task: Task) => void;
   onViewSop?: (sopContent: string) => void;
   onSelectExecutor?: (task: Task) => void;
+  onPublish?: (task: Task) => void;  // 发布草稿任务
   // 批量操作回调
   onBatchDispatch?: (taskIds: string[]) => void;
   onBatchVerify?: (taskIds: string[]) => void;
@@ -88,6 +89,7 @@ export function TaskTab({
   onRemind,
   onViewSop,
   onSelectExecutor,
+  onPublish,
   onBatchDispatch,
   onBatchVerify,
   onBatchDelete,
@@ -123,6 +125,13 @@ export function TaskTab({
   // 过滤后的任务
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
+      // ========== 特殊状态过滤：pending状态且没有执行人的任务始终隐藏 ==========
+      // pending状态表示等待分派执行人，如果没有执行人则说明还没分派
+      // 无论什么筛选条件，这类任务都应对所有人隐藏
+      if (task.status === 'pending' && !task.assigneeId) {
+        return false;
+      }
+
       // 状态筛选
       if (filters.status !== 'all' && task.status !== filters.status) {
         return false;
@@ -209,6 +218,13 @@ export function TaskTab({
       onSelectExecutor(task);
     }
   }, [onSelectExecutor]);
+
+  // 处理发布草稿任务
+  const handlePublish = useCallback((task: Task) => {
+    if (onPublish) {
+      onPublish(task);
+    }
+  }, [onPublish]);
 
   // 处理导出确认
   const handleConfirmExport = useCallback(() => {
@@ -474,6 +490,7 @@ export function TaskTab({
         onContinue={handleContinue}
         onReassign={handleReassign}
         onSelectExecutor={handleSelectExecutor}
+        onPublish={handlePublish}
         isMyTasksView={false}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
