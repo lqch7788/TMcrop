@@ -12,6 +12,7 @@ import {
 import * as harvestService from '../../../services/harvestService';
 import * as cropInstanceService from '../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
+import { getCurrentUsername } from '../../../hooks/farm';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -19,6 +20,8 @@ import {
   HarvestStatsCards,
   HarvestFilterToolbar,
   HarvestTableToolbar,
+  HarvestTable,
+  HarvestPagination,
 } from './components';
 
 // 初始化品种库
@@ -366,6 +369,9 @@ export default function HarvestPage() {
 
   // Create Harvest Record Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // 获取当前用户名作为默认审核员
+  const currentAuditor = getCurrentUsername();
+
   const [newRecord, setNewRecord] = useState({
     harvestCode: '',
     batchCode: '',
@@ -374,7 +380,7 @@ export default function HarvestPage() {
     warehouseId: '',
     harvesterIds: [] as string[],
     harvesterNames: [] as string[],
-    auditor: '陆启闯',
+    auditor: currentAuditor,
     remarks: '',
     products: [] as Array<{
       productCode: string;
@@ -513,7 +519,7 @@ export default function HarvestPage() {
       warehouseId: '',
       harvesterIds: [],
       harvesterNames: [],
-      auditor: '陆启闯',
+      auditor: currentAuditor,
       remarks: '',
       products: [],
     });
@@ -542,26 +548,6 @@ export default function HarvestPage() {
       remarks: '',
     });
     setErrors({});
-  };
-
-  const getGradeBadge = (grade: string) => {
-    switch (grade) {
-      case 'A': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">A级</span>;
-      case 'B': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">B级</span>;
-      case 'C': return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">C级</span>;
-      default: return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending': return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">待采收</span>;
-      case 'harvesting': return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">采收中</span>;
-      case 'harvested': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已采收</span>;
-      case 'graded': return <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">已分级</span>;
-      case 'stored': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已入库</span>;
-      default: return null;
-    }
   };
 
   return (
@@ -607,126 +593,23 @@ export default function HarvestPage() {
           onConfirmBatchDelete={() => setShowDeleteWarning(true)}
           onCancelBatchDelete={handleCancelBatchDelete}
         />
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
-                {(exportMode || batchEditMode || batchDeleteMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                  </th>
-                )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库仓库</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收人员</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">产品数量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人员</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
-              {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record, idx) => (
-                <React.Fragment key={record.id}>
-                  {/* 主行：采收单号信息 */}
-                  <tr className="hover:bg-blue-100 transition-colors">
-                    {(exportMode || batchEditMode || batchDeleteMode) && (
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(idx)}
-                          onChange={() => handleSelectRow(idx)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                      </td>
-                    )}
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleExpandRow(idx)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                      >
-                        {expandedRows.has(idx) ? (
-                          <ChevronDown className="w-4 h-4 text-gray-500" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-gray-500" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => { setSelectedDetailRecord(record); setShowDetailModal(true); }}>
-                      {record.harvestCode}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col items-center gap-1">
-                        {record.harvesterNames.map((name, i) => (
-                          <span key={i} className="text-sm text-gray-900">{name}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</td>
-                  </tr>
-                  {/* 展开行：产品明细 */}
-                  {expandedRows.has(idx) && (
-                    <tr>
-                      <td colSpan={(exportMode || batchEditMode || batchDeleteMode) ? 10 : 9} className="px-4 py-3 bg-gray-50">
-                        <div className="text-sm">
-                          <p className="font-medium text-gray-700 mb-2">产品明细：</p>
-                          <div className="overflow-x-auto rounded border">
-                            <table className="w-full bg-white">
-                              <thead className="bg-emerald-600 text-white">
-                                <tr>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">产品编码</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物品种</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">作物品种</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">生产计划批次号</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">种植模式</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">采收量</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">目标产量</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">完成率</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">品质等级</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">备注</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr className="border-t">
-                                  <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
-                                    {generateProductCode(record.cropName, record.variety, idx)}
-                                  </td>
-                                  <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
-                                    {Math.round(record.harvestQuantity / record.targetYield * 100)}%
-                                  </td>
-                                  <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade)}</td>
-                                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-          {(exportMode || batchEditMode || batchDeleteMode) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <HarvestTable
+            records={filteredRecords}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            expandedRows={expandedRows}
+            selectedRows={selectedRows}
+            exportMode={exportMode}
+            batchEditMode={batchEditMode}
+            batchDeleteMode={batchDeleteMode}
+            onToggleRow={toggleExpandRow}
+            onSelectRow={handleSelectRow}
+            onSelectAll={handleSelectAll}
+            onViewDetail={(record) => { setSelectedDetailRecord(record); setShowDetailModal(true); }}
+            generateProductCode={generateProductCode}
+          />
+          {(exportMode || batchEditMode || batchDeleteMode) && selectedRows.length > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
                 <button
@@ -739,32 +622,13 @@ export default function HarvestPage() {
               </div>
             </div>
           )}
-        </div>
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-500">条</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {filteredRecords.length} 条</span>
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm">{currentPage} / {Math.ceil(filteredRecords.length / pageSize) || 1}</span>
-            <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredRecords.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredRecords.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <HarvestPagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredRecords.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </div>
 

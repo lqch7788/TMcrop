@@ -9,6 +9,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import {
   getProduceCategoryInfo,
 } from '../../../../data/produceCodeRule';
+import { getCurrentUsername } from '../../../../hooks/farm';
 
 interface ProductDetail {
   productCode: string;
@@ -76,7 +77,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   errors,
 }) => {
   // 获取当前登录用户
-  const currentOperator = localStorage.getItem('username') || '陆启闯';
+  const currentOperator = getCurrentUsername() || '未知用户';
 
   // 获取选中的批次信息
   const selectedBatch = cropBatches.find(b => b.batchCode === addForm.batchCode);

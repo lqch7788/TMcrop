@@ -154,7 +154,112 @@ hongzhiyun/
 
 ---
 
+## 作物品种术语定义（重要！）
+
+> **强制规则**：作物品种 = 最细化后的名称，是系统中最低层级的品种名称。
+
+### 层级结构（从高到低）
+
+| 层级 | 名称 | 示例 |
+|------|------|------|
+| 1 | 类别 | 水果类、蔬菜类 |
+| 2 | 类型 | 浆果类、茄果类 |
+| 3 | 品种 | 草莓、番茄 |
+| 4 | 子品种 | 红颜 |
+| 5 | **作物品种** | **99红颜、大叶红颜、红果番茄** |
+
+### 编码规则
+
+11位编码：类别(2) + 类型(2) + 品种(2) + 子品种(3) + 作物品种(2)
+
+示例：`PD030100400` = 蔬菜类-茄果类-番茄-004红果番茄-00
+
+### 数据字段对应关系
+
+| 字段 | 含义 | 示例 |
+|------|------|------|
+| `cropName` | 作物品种（最细分） | 红果番茄 |
+| `cropVariety` | 品种 | 番茄 |
+| `subVariety1Name` | 子品种 | 红颜 |
+| `varietyName` | 最终显示的作物品种名称 | 红果番茄 |
+
+### 界面显示规则
+
+- 表格中"作物品种"列必须显示最细化的名称（如红果番茄）
+- "品种"列显示上一级（如番茄）
+- 搜索、筛选、导出等场景都按此规则执行
+
+---
+
 ## 最近更新
+
+### 2026-04-29 - 作物管理模块重构（第一阶段+第二阶段完成）
+**目标**: 减少重复代码，消除硬编码，建立公共组件体系
+
+#### 已完成的重构工作
+
+**第一阶段：抽取公共组件**
+
+1. **StatsCard公共组件** ✅
+   - 位置: `src/components/farm/common/StatsCard.tsx`
+   - 已重构的模块Stats:
+     - `SeedSourceStats.tsx` - 种源统计
+     - `SeedlingStats.tsx` - 育苗统计
+     - `PlantingStats.tsx` - 种植统计
+     - `HarvestStatsCards.tsx` - 采收统计
+     - `OrderStats.tsx` - 订单统计
+   - 预估减少: ~300行
+
+2. **FilterToolbar公共组件** ✅
+   - 位置: `src/components/farm/common/FilterToolbar.tsx`
+   - 提供统一的筛选区域布局样式和按钮
+   - 导出组件: FilterToolbar, FilterButton, filterFieldClasses, filterLabelClasses, filterInputClasses
+
+3. **Export工具函数** ✅
+   - 位置: `src/hooks/farm/useExport.ts`
+   - 已存在，直接使用
+
+**第二阶段：消除硬编码**
+
+4. **修复审核员硬编码** ✅
+   - `HarvestPage.tsx` - 将 `auditor: '陆启闯'` 改为动态获取 `currentAuditor = getCurrentUsername()`
+   - `AddModal.tsx` - 将 fallback值改为 `getCurrentUsername() || '未知用户'`
+   - `InspectionPage.tsx` - 将 `inspectorId: 'U013'` 改为根据当前用户名查找用户ID
+
+5. **新建useCurrentUser Hook** ✅
+   - 位置: `src/hooks/farm/useCurrentUser.ts`
+   - 导出: `useCurrentUser`, `getDefaultAuditor`, `getCurrentUsername`
+   - 从localStorage获取当前用户信息
+
+#### 验证结果
+- `npm run build` 构建成功 ✅
+
+#### 第三阶段：代码优化
+
+6. **HarvestPage.tsx 表格拆分** ✅
+   - 位置: `src/components/farm/harvest/components/HarvestTable.tsx`
+   - 新增组件: HarvestTable, HarvestPagination, BatchActionBar
+   - 状态徽章工具: `statusBadgeUtils.tsx`
+   - 减少行数: 834行 → 698行 (减少136行)
+
+7. **StatusBadge 状态徽章** ✅
+   - 采收状态徽章已抽取到 `statusBadgeUtils.tsx`
+   - 审批状态使用 `src/components/common/badge/StatusBadge.tsx`
+   - 两个组件职责分离，各自服务不同领域
+
+#### 验证结果
+- `npm run build` 构建成功 ✅
+- HarvestPage.tsx 从 834行减少到 698行
+
+8. **ImageUploader 公共组件** ✅
+   - 位置: `src/components/farm/common/ImageUploader.tsx`
+   - 支持多图片上传、预览、删除
+   - 支持配置最大数量限制
+   - 支持相机/上传两种图标模式
+   - 提供 SimpleImageUploader 单图片版本
+
+#### 验证结果
+- `npm run build` 构建成功 ✅
 
 ### 2026-04-09 - 基地总览页面表格样式统一
 **文件**: `src/pages/Dashboard.tsx`
