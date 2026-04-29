@@ -226,6 +226,40 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
               </div>
             </div>
 
+            {/* 来源信息 - 当有 sourceId 时显示 */}
+            {task.sourceId && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">来源信息</h4>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-500">来源类型</label>
+                      <p className="font-semibold text-gray-900">
+                        {task.type === 'seedling' ? '育苗任务' : task.sourceType === 'dispatch' ? '任务派工' : task.sourceType === 'tempTask' ? '临时任务' : task.sourceType === 'inspection' ? '巡查任务' : '-'}
+                      </p>
+                    </div>
+                    {task.sourceCode && (
+                      <div>
+                        <label className="text-xs text-gray-500">来源编号</label>
+                        <p className="font-semibold text-gray-900">{task.sourceCode}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-xs text-gray-500">关联ID</label>
+                      <p className="font-semibold text-gray-900 text-xs">{task.sourceId}</p>
+                    </div>
+                  </div>
+                  {/* 显示详细工作内容（如果有） */}
+                  {task.remarks && (
+                    <div className="mt-3 pt-3 border-t border-blue-100">
+                      <label className="text-xs text-gray-500 block mb-1">工作内容</label>
+                      <p className="text-sm text-gray-700 whitespace-pre-line bg-white rounded p-2">{task.remarks}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 任务类型配置 */}
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>

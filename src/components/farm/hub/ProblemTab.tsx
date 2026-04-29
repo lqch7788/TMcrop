@@ -232,7 +232,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       title: `【问题处理】${problem.issueText.slice(0, 30)}`,
       type: typeInfo.type,
       typeName: typeInfo.typeName,
-      priority: severityToPriority[problem.issueSeverity] || 'normal',
+      priority: SEVERITY_TO_PRIORITY[problem.issueSeverity] || 'normal',
       workZone: problem.greenhouseName || '',
       greenhouse: problem.greenhouseName || '',
       cropName: problem.cropName || '',

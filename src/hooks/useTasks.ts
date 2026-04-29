@@ -32,6 +32,10 @@ import {
 
 // 导入原始任务数据（保留原有数据）
 import { taskDispatchTasks, TaskDispatchTask } from '../data/farmMockData';
+
+// 导入育苗服务（用于任务验收后回传更新育苗状态）
+import { updateSeedling, getSeedlings } from '../services/seedlingService';
+import { SeedlingStatus } from '../types/crop';
 // 导入临时任务数据和巡查反馈处理任务数据
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, InspectionFeedbackTaskData } from '../data/mockData';
 import { TempTask } from '../hooks/useTempTasks';
@@ -848,11 +852,13 @@ export function useTasks(): UseTasksReturn {
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, addAttendance]);
 
-  // 选择执行人（用于待派工任务）- 只设置执行人，状态保持 pending
+  // 选择执行人（用于待派工任务）- 设置执行人，状态变为 pending（待接受）
   const acceptAndAssign = useCallback((id: string, assigneeId: string, assigneeName: string) => {
     setTasks(prev => {
       const updated = prev.map(task => {
         if (task.id !== id) return task;
+
+        const now = new Date().toISOString();
 
         // 创建操作记录
         const record = createTaskRecord(
@@ -867,7 +873,8 @@ export function useTasks(): UseTasksReturn {
           ...task,
           assigneeId,
           assigneeName,
-          updatedAt: new Date().toISOString(),
+          status: 'pending',  // 状态变为待接受，执行人可见并可接受/拒绝
+          updatedAt: now,
           version: task.version + 1,
         };
       });
@@ -1110,6 +1117,16 @@ export function useTasks(): UseTasksReturn {
             statusClass: 'success',
           });
         }
+
+        // ========== 回传更新育苗状态 ==========
+        // 如果是育苗任务，验收通过后更新育苗状态为已完成
+        if (task.type === 'seedling' && task.sourceId) {
+          updateSeedling(task.sourceId, {
+            status: SeedlingStatus.COMPLETED,
+            isFinished: true
+          });
+        }
+        // ==========================================
 
         return {
           ...task,

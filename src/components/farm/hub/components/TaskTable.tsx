@@ -69,6 +69,7 @@ interface TaskTableProps {
   onContinue?: (taskId: string) => void;
   onReassign?: (task: Task) => void;
   onSelectExecutor?: (task: Task) => void;
+  onPublish?: (task: Task) => void;  // 发布草稿任务
   // 是否为"我的任务"视图（true=执行人视图，显示接受/拒绝；false=管理者视图，显示撤回/取消）
   isMyTasksView?: boolean;
   onPageChange: (page: number) => void;
@@ -112,6 +113,7 @@ export function TaskTable({
   onContinue,
   onReassign,
   onSelectExecutor,
+  onPublish,
   isMyTasksView = false,
   onPageChange,
   onPageSizeChange,
@@ -348,6 +350,7 @@ export function TaskTable({
                   onContinue={onContinue ? () => onContinue(task.id) : undefined}
                   onReassign={onReassign ? () => onReassign(task) : undefined}
                   onSelectExecutor={onSelectExecutor ? () => onSelectExecutor(task) : undefined}
+                  onPublish={onPublish ? () => onPublish(task) : undefined}
                   isMyTasksView={isMyTasksView}
                   canRemind={canRemind}
                   sendReminder={sendReminder}

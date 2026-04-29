@@ -1,16 +1,20 @@
 /**
- * 育苗新增弹窗
+ * 育苗新增弹窗 - 重新规划版本
+ * 三区段式布局：关联种源信息 | 场地与计划 | 数量与品质
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { X, Upload } from 'lucide-react';
-import { SeedSource, SeedlingStatus } from '../../../../types/crop';
-import { addSeedling, generateSeedlingCode } from '../../../../services/seedlingService';
+import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
+import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
+import { addSeedling, generateSeedlingCodeByDate } from '../../../../services/seedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/seedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
+import { survivalRateOptions, seedlingPlanTypes, propagationMultiples, OPERATORS } from '../../../../data/cropData';
+import { cropBatches } from '../../../../data/mockData';
+import { useTasks } from '../../../../hooks/useTasks';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -31,27 +35,157 @@ export function AddModal({
   seedlingTypes,
   sites
 }: AddModalProps) {
+  // 使用任务管理hook，用于创建草稿任务
+  const tasksHook = useTasks();
+
   const [formData, setFormData] = useState({
     sourceId: '',
     sourceCode: '',
+    sourceType: '',           // 来源类型（自动带入）
+    supplierName: '',        // 供应商（自动带入）
     selectedCropCode: '',
     cropName: '',
     cropVariety: '',
     seedlingType: '',
+    seedlingTypeOther: '',   // 当选择"其他"时的自定义输入
     siteId: '',
     siteName: '',
+    seedlingCode: '',        // 育苗批次号（可手动编辑）
+    productionPlanId: '',    // 关联生产计划批次号
     startDate: '',
     expectedEndDate: '',
     initialCount: 0,
-    remarks: ''
+    targetSurvivalRate: 90,  // 目标成苗率默认值90%（可手动输入0-100）
+    planType: SeedlingPlanType.ROUTINE, // 计划类型默认常规
+    chargePerson: '',         // 负责人
+    remarks: '',
+    // 扩繁计算模式
+    calculateMode: SeedlingCalculateMode.SINGLE,  // 计算模式：单株育苗/扩繁育苗
+    motherPlantCount: 0,       // 母株数量（扩繁模式用）
+    propagationMultiple: 0,   // 扩繁倍数（扩繁模式用）
+    customMultiple: 0,        // 自定义扩繁倍数
+    theoreticalYield: 0        // 理论产量（扩繁模式用）
   });
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
 
+  // 自动计算目标成苗数
+  const targetSurvivalCount = useMemo(() => {
+    if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
+      // 扩繁模式：理论产量 × 目标成苗率
+      if (formData.theoreticalYield && formData.targetSurvivalRate) {
+        return Math.round(formData.theoreticalYield * (formData.targetSurvivalRate / 100));
+      }
+    } else {
+      // 单株育苗模式：初始数量 × 目标成苗率
+      if (formData.initialCount && formData.targetSurvivalRate) {
+        return Math.round(formData.initialCount * (formData.targetSurvivalRate / 100));
+      }
+    }
+    return 0;
+  }, [formData.calculateMode, formData.initialCount, formData.theoreticalYield, formData.targetSurvivalRate]);
+
+  // 自动计算理论产量（扩繁模式）
+  const theoreticalYield = useMemo(() => {
+    if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
+      if (formData.motherPlantCount) {
+        const multiple = formData.propagationMultiple === 0
+          ? formData.customMultiple  // 自定义倍数
+          : formData.propagationMultiple;
+        if (multiple > 0) {
+          return formData.motherPlantCount * multiple;
+        }
+      }
+    }
+    return 0;
+  }, [formData.calculateMode, formData.motherPlantCount, formData.propagationMultiple, formData.customMultiple]);
+
+  // 同步理论产量到formData
+  useEffect(() => {
+    if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION && theoreticalYield > 0 && formData.theoreticalYield !== theoreticalYield) {
+      setFormData(prev => ({ ...prev, theoreticalYield }));
+    }
+  }, [theoreticalYield, formData.calculateMode, formData.theoreticalYield]);
+
+  // 自动计算育苗周期（天）
+  const seedlingCycle = useMemo(() => {
+    if (formData.startDate && formData.expectedEndDate) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.expectedEndDate);
+      const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return diff > 0 ? diff : 0;
+    }
+    return 0;
+  }, [formData.startDate, formData.expectedEndDate]);
+
+  // 点击生成批次号按钮（直接用当天日期）
+  const handleGenerateSeedlingCode = () => {
+    const today = new Date();
+    const code = generateSeedlingCodeByDate(today);
+    setFormData({ ...formData, seedlingCode: code });
+  };
+
+  // 筛选可用的生产计划批次（已发布和执行中）
+  const availableProductionPlans = useMemo(() => {
+    return cropBatches.filter(batch =>
+      batch.batchStatus === 'published' || batch.batchStatus === 'in_progress'
+    );
+  }, []);
+
+  // 来源类型映射（枚举值 -> 中文）
+  const sourceTypeLabels: Record<string, string> = {
+    'seed': '种子',
+    'seedling': '种苗',
+    'cutting': '扦插苗',
+    'grafting': '嫁接苗',
+    'tissue_culture': '组培苗',
+    'split': '分株苗',
+    'bulb': '种球',
+    'other': '其他'
+  };
+
   const handleSubmit = () => {
-    if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId || !formData.initialCount) {
-      alert('请填写完整信息');
+    // 基本信息验证
+    if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId) {
+      alert('请填写完整信息：关联种源、作物品种、育苗区域为必填项');
+      return;
+    }
+
+    if (!formData.seedlingCode) {
+      alert('请先生成育苗批次号');
+      return;
+    }
+
+    // 单株育苗模式验证
+    if (formData.calculateMode === SeedlingCalculateMode.SINGLE) {
+      if (!formData.initialCount || formData.initialCount <= 0) {
+        alert('请输入初始数量');
+        return;
+      }
+    }
+
+    // 扩繁育苗模式验证
+    if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
+      if (!formData.motherPlantCount || formData.motherPlantCount <= 0) {
+        alert('请输入母株数量');
+        return;
+      }
+      if (formData.propagationMultiple === 0) {
+        if (!formData.customMultiple || formData.customMultiple <= 0) {
+          alert('请输入扩繁倍数');
+          return;
+        }
+      }
+    }
+
+    // 处理"其他"选项
+    const finalSeedlingType = formData.seedlingType === '其他'
+      ? formData.seedlingTypeOther
+      : formData.seedlingType;
+
+    if (formData.seedlingType === '其他' && !formData.seedlingTypeOther.trim()) {
+      alert('请输入其他育苗方式的具体描述');
       return;
     }
 
@@ -63,20 +197,14 @@ export function AddModal({
     const source = seedSources.find(s => s.id === formData.sourceId);
     const sourceCode = source?.seedCode || '';
 
-    // 生成育苗批号
-    const seedlingCode = generateSeedlingCode();
-
-    // 计算成苗率（初始为0）
-    const survivalRate = 0;
-    const lossRate = 0;
-
-    addSeedling({
-      seedlingCode,
+    // 构建育苗数据
+    const seedlingData = {
+      seedlingCode: formData.seedlingCode,
       sourceCode,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
       cropCode: formData.selectedCropCode,
-      seedlingType: formData.seedlingType,
+      seedlingType: finalSeedlingType,
       siteId: formData.siteId,
       siteName,
       startDate: formData.startDate,
@@ -93,11 +221,56 @@ export function AddModal({
       pictures: pictures,
       printCount: 0,
       remarks: formData.remarks,
-      createBy: '当前用户'
-    });
+      createBy: '当前用户',
+      planType: formData.planType,
+      targetSurvivalRate: formData.targetSurvivalRate,
+      targetSurvivalCount: targetSurvivalCount,
+      chargePerson: formData.chargePerson || undefined,
+      productionPlanCode: formData.productionPlanId || undefined,
+      calculateMode: formData.calculateMode,
+      motherPlantCount: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? formData.motherPlantCount : undefined,
+      propagationMultiple: formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+        ? (formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple)
+        : undefined,
+      theoreticalYield: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? theoreticalYield : undefined
+    };
+
+    // 保存育苗数据
+    const addedSeedling = addSeedling(seedlingData);
+
+    // 创建草稿任务（供任务中心分派执行人）
+    if (addedSeedling?.id) {
+      // 构建详细的工作内容描述
+      const workContent = `作物品种：${formData.cropVariety || formData.cropName}
+育苗方式：${formData.seedlingType}
+初始数量：${formData.initialCount}株
+目标成活率：${formData.targetSurvivalRate}%
+目标成活数量：${targetSurvivalCount}株
+${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式：母株${formData.motherPlantCount}株 × ${formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple}倍` : ''}`;
+
+      tasksHook.createTask({
+        title: `【育苗】${formData.cropName}-${formData.seedlingCode}`,
+        type: 'seedling',
+        typeName: '育苗任务',
+        sourceType: 'dispatch',
+        sourceId: addedSeedling.id,  // 关联育苗ID
+        sourceCode: formData.seedlingCode,  // 育苗批号（来源编号）
+        remarks: workContent,
+        siteName: siteName,
+        startDate: formData.startDate,
+        endDate: formData.expectedEndDate,
+        initialCount: formData.initialCount,
+        targetSurvivalCount: targetSurvivalCount,
+      }, 'farm', 'draft');
+    }
 
     // 扣减种源可用数量
-    decreaseAvailableCount(formData.sourceId, formData.initialCount);
+    // 单株育苗模式：扣减 initialCount
+    // 扩繁育苗模式：扣减 motherPlantCount
+    const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+      ? formData.motherPlantCount
+      : formData.initialCount;
+    decreaseAvailableCount(formData.sourceId, deductCount);
 
     // 更新作物实例状态为育苗中
     if (source?.instanceId) {
@@ -112,13 +285,20 @@ export function AddModal({
   const handleSourceChange = (sourceId: string) => {
     const source = seedSources.find(s => s.id === sourceId);
     if (source) {
+      // 转换来源类型枚举值为中文
+      const sourceTypeLabel = source.sourceType ? (sourceTypeLabels[source.sourceType] || source.sourceType) : '';
+      // 供应商为空时显示"无"
+      const supplierName = source.supplierName?.trim() || '无';
+
       setFormData({
         ...formData,
         sourceId,
         sourceCode: source.seedCode,
+        sourceType: sourceTypeLabel,
+        supplierName: supplierName,
         selectedCropCode: source.cropCode || '',
-        cropName: source.cropName,
-        cropVariety: source.cropVariety
+        cropName: source.cropName || '',
+        cropVariety: source.cropVariety || ''
       });
     }
   };
@@ -139,6 +319,33 @@ export function AddModal({
     setFormData({ ...formData, siteId, siteName: site?.label || '' });
   };
 
+  // 育苗方式选择
+  const handleSeedlingTypeChange = (type: string) => {
+    setFormData({ ...formData, seedlingType: type, seedlingTypeOther: '' });
+  };
+
+  // 处理计算模式切换
+  const handleCalculateModeChange = (mode: SeedlingCalculateMode) => {
+    setFormData({
+      ...formData,
+      calculateMode: mode,
+      // 切换时重置扩繁相关字段
+      motherPlantCount: 0,
+      propagationMultiple: 0,
+      customMultiple: 0,
+      theoreticalYield: 0
+    });
+  };
+
+  // 处理扩繁倍数选择
+  const handlePropagationMultipleChange = (value: number) => {
+    setFormData({
+      ...formData,
+      propagationMultiple: value,
+      customMultiple: value === 0 ? formData.customMultiple : 0
+    });
+  };
+
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -150,160 +357,521 @@ export function AddModal({
       submitText="保存"
       cancelText="取消"
     >
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 关联种源 */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">关联种源</label>
-          <select
-            value={formData.sourceId}
-            onChange={(e) => handleSourceChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {seedSources.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.seedCode} - {s.cropName} ({s.cropVariety})
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-6">
+        {/* ========== 育苗批次号（最顶层） ========== */}
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="w-4 h-4 text-purple-600" />
+            <h3 className="text-sm font-semibold text-purple-900">育苗批次号</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* 育苗批次号 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                育苗批次号 <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.seedlingCode}
+                  onChange={(e) => setFormData({ ...formData, seedlingCode: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  placeholder="点击生成获取批次号"
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateSeedlingCode}
+                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  生成
+                </button>
+              </div>
+            </div>
 
-        {/* 作物品种选择 */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
-          <CropCodeSelector
-            value={formData.selectedCropCode}
-            onChange={handleCropCodeChange}
-            placeholder="搜索或选择作物品种..."
-            size="md"
-          />
-        </div>
-
-        {/* 育苗方式 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">育苗方式</label>
-          <select
-            value={formData.seedlingType}
-            onChange={(e) => setFormData({ ...formData, seedlingType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {seedlingTypes.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 温室场地 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">温室场地</label>
-          <select
-            value={formData.siteId}
-            onChange={(e) => handleSiteChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {sites.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 开始日期 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">开始日期</label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-
-        {/* 预计结束日期 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">预计结束日期</label>
-          <input
-            type="date"
-            value={formData.expectedEndDate}
-            onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-
-        {/* 初始数量 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">初始数量</label>
-          <input
-            type="number"
-            value={formData.initialCount || ''}
-            onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-
-        {/* 备注 - 占两列 */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-          <textarea
-            value={formData.remarks}
-            onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            placeholder="请输入备注信息"
-          />
-        </div>
-
-        {/* 图片上传 - 占两列 */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
-          <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
-            {/* 已上传的图片预览 */}
-            {pictures.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {pictures.map((pic, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={pic}
-                      alt={`预览${index + 1}`}
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPictures(pictures.filter((_, i) => i !== index))}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+            {/* 关联生产计划批次号 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                关联生产计划批次号
+              </label>
+              <select
+                value={formData.productionPlanId}
+                onChange={(e) => setFormData({ ...formData, productionPlanId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">不关联（独立批次）</option>
+                {availableProductionPlans.map(plan => (
+                  <option key={plan.id} value={plan.batchCode}>
+                    {plan.batchCode} - {plan.cropName}
+                  </option>
                 ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 关联种源信息区 ========== */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 className="w-4 h-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-blue-900">关联种源信息</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* 关联种源 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                关联种源 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.sourceId}
+                onChange={(e) => handleSourceChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择</option>
+                {seedSources.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.seedCode} - {s.cropName} ({s.cropVariety})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 来源类型（只读自动带入） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">来源类型</label>
+              <input
+                type="text"
+                value={formData.sourceType || '请先选择种源'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* 供应商（只读自动带入） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
+              <input
+                type="text"
+                value={formData.supplierName || '请先选择种源'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* 作物品种选择 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                作物品种 <span className="text-red-500">*</span>
+              </label>
+              <CropCodeSelector
+                value={formData.selectedCropCode}
+                onChange={handleCropCodeChange}
+                placeholder="搜索或选择作物品种..."
+                size="md"
+              />
+            </div>
+
+            {/* 作物名称（只读显示） */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+              <input
+                type="text"
+                value={formData.cropName ? `${formData.cropName} - ${formData.cropVariety}` : '请选择作物品种'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 场地与计划区 ========== */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-sm font-semibold text-emerald-900">场地与计划</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* 育苗区域 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                育苗区域 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.siteId}
+                onChange={(e) => handleSiteChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择</option>
+                {sites.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 育苗方式 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                育苗方式 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.seedlingType}
+                onChange={(e) => handleSeedlingTypeChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择</option>
+                {seedlingTypes.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 其他育苗方式输入框（占满整行） */}
+            {formData.seedlingType === '其他' && (
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  其他方式说明 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.seedlingTypeOther}
+                  onChange={(e) => setFormData({ ...formData, seedlingTypeOther: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="请输入具体的育苗方式"
+                />
               </div>
             )}
-            {/* 上传按钮 */}
-            <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
-              <Upload className="w-8 h-8 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-500">点击上传图片</span>
+
+            {/* 计划类型 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                计划类型 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.planType}
+                onChange={(e) => setFormData({ ...formData, planType: e.target.value as SeedlingPlanType })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {seedlingPlanTypes.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 开始日期 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                开始日期 <span className="text-red-500">*</span>
+              </label>
               <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = e.target.files;
-                  if (files) {
-                    Array.from(files).forEach(file => {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const result = event.target?.result as string;
-                        setPictures([...pictures, result]);
-                      };
-                      reader.readAsDataURL(file);
-                    });
-                  }
-                  e.target.value = '';
-                }}
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+            </div>
+
+            {/* 预计结束日期 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">预计结束日期</label>
+              <input
+                type="date"
+                value={formData.expectedEndDate}
+                onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* 育苗周期（自动计算） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">育苗周期（天）</label>
+              <input
+                type="text"
+                value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 数量与品质区 ========== */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">数量与品质</h3>
+          </div>
+
+          {/* 育苗计算模式切换 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              育苗计算模式 <span className="text-red-500">*</span>
             </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="calculateMode"
+                  value={SeedlingCalculateMode.SINGLE}
+                  checked={formData.calculateMode === SeedlingCalculateMode.SINGLE}
+                  onChange={() => handleCalculateModeChange(SeedlingCalculateMode.SINGLE)}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">单株育苗</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="calculateMode"
+                  value={SeedlingCalculateMode.PROPAGATION}
+                  checked={formData.calculateMode === SeedlingCalculateMode.PROPAGATION}
+                  onChange={() => handleCalculateModeChange(SeedlingCalculateMode.PROPAGATION)}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">扩繁育苗</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 单株育苗模式 */}
+          {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* 初始数量 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  初始数量 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.initialCount || ''}
+                  onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="请输入播种数量"
+                />
+              </div>
+
+              {/* 目标成苗率 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  目标成苗率（%）<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.targetSurvivalRate || ''}
+                  onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
+                  onBlur={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val) && val > 0) {
+                      setFormData({ ...formData, targetSurvivalRate: Math.round(val * 100) / 100 });
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="0-100%"
+                  step="0.01"
+                />
+              </div>
+
+              {/* 目标成苗数（自动计算） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">目标成苗数</label>
+                <input
+                  type="text"
+                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 扩繁育苗模式 */}
+          {formData.calculateMode === SeedlingCalculateMode.PROPAGATION && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* 母株数量 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    母株数量 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.motherPlantCount || ''}
+                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="投入的基础种苗数量"
+                  />
+                </div>
+
+                {/* 扩繁倍数 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    扩繁倍数 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.propagationMultiple}
+                    onChange={(e) => handlePropagationMultipleChange(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value={0}>请选择扩繁倍数</option>
+                    {propagationMultiples.map(p => (
+                      <option key={p.value} value={p.value}>{p.label} - {p.description}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 自定义扩繁倍数输入（当选择"其他"时显示） */}
+              {formData.propagationMultiple === 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    自定义扩繁倍数 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.customMultiple || ''}
+                    onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="请输入扩繁倍数"
+                  />
+                </div>
+              )}
+
+              {/* 理论产量（自动计算） */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">理论产量</label>
+                  <input
+                    type="text"
+                    value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
+                </div>
+
+                {/* 目标成苗率 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    目标成苗率（%）<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.targetSurvivalRate || ''}
+                    onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="0-100%"
+                  step="0.01"
+                  />
+                </div>
+              </div>
+
+              {/* 目标成苗数（自动计算） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">目标成苗数</label>
+                <input
+                  type="text"
+                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
+              </div>
+            </div>
+          )}
+
+          {/* 负责人 */}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {/* 负责人 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">负责人</label>
+              <select
+                value={formData.chargePerson}
+                onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择</option>
+                {OPERATORS.map(op => (
+                  <option key={op.value} value={op.value}>{op.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 备注与附件区 ========== */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-900">备注与附件</h3>
+          </div>
+          <div className="space-y-4">
+            {/* 备注 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+              <textarea
+                value={formData.remarks}
+                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                placeholder="请输入备注信息"
+              />
+            </div>
+
+            {/* 图片上传 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
+              <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
+                {/* 已上传的图片预览 */}
+                {pictures.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {pictures.map((pic, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={pic}
+                          alt={`预览${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPictures(pictures.filter((_, i) => i !== index))}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 上传按钮 */}
+                <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 rounded-lg py-4">
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-500">点击上传图片</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) {
+                        Array.from(files).forEach(file => {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            setPictures([...pictures, result]);
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
