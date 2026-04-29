@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SeedSource, SeedlingStatus } from '../../../../types/crop';
-import { addSeedling } from '../../../../services/seedlingService';
+import { addSeedling, generateSeedlingCode } from '../../../../services/seedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/seedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
@@ -63,12 +63,15 @@ export function AddModal({
     const source = seedSources.find(s => s.id === formData.sourceId);
     const sourceCode = source?.seedCode || '';
 
+    // 生成育苗批号
+    const seedlingCode = generateSeedlingCode();
+
     // 计算成苗率（初始为0）
     const survivalRate = 0;
     const lossRate = 0;
 
     addSeedling({
-      sourceId: formData.sourceId,
+      seedlingCode,
       sourceCode,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
@@ -77,13 +80,13 @@ export function AddModal({
       siteId: formData.siteId,
       siteName,
       startDate: formData.startDate,
-      expectedEndDate: formData.expectedEndDate,
+      expectedEndDate: formData.expectedEndDate || undefined,
       initialCount: formData.initialCount,
       survivalCount: 0,
       plantedCount: 0,
-      survivalRate,
+      survivalRate: 0,
       lossCount: 0,
-      lossRate,
+      lossRate: 0,
       isFinished: false,
       status: SeedlingStatus.IN_PROGRESS,
       dailyRecords: [],
@@ -154,7 +157,7 @@ export function AddModal({
           <select
             value={formData.sourceId}
             onChange={(e) => handleSourceChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择</option>
             {seedSources.map(s => (
@@ -182,7 +185,7 @@ export function AddModal({
           <select
             value={formData.seedlingType}
             onChange={(e) => setFormData({ ...formData, seedlingType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择</option>
             {seedlingTypes.map(t => (
@@ -197,7 +200,7 @@ export function AddModal({
           <select
             value={formData.siteId}
             onChange={(e) => handleSiteChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择</option>
             {sites.map(s => (
@@ -213,7 +216,7 @@ export function AddModal({
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -224,7 +227,7 @@ export function AddModal({
             type="date"
             value={formData.expectedEndDate}
             onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -235,7 +238,7 @@ export function AddModal({
             type="number"
             value={formData.initialCount || ''}
             onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -246,7 +249,7 @@ export function AddModal({
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="请输入备注信息"
           />
         </div>
@@ -254,7 +257,7 @@ export function AddModal({
         {/* 图片上传 - 占两列 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+          <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
             {/* 已上传的图片预览 */}
             {pictures.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">

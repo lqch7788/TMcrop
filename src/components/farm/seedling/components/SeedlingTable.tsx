@@ -4,9 +4,10 @@
  * 行内按钮逻辑：查看详情/每日记录/定植操作/打印/图片 → 直接执行
  */
 
-import React from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
+import * as cropVarietyService from '../../../../services/cropVarietyService';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -15,6 +16,7 @@ interface SeedlingTableProps {
   data: Seedling[];
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   selectedRows: string[];
   onSelectionChange: (keys: string[]) => void;
   // 批量操作回调（选中后执行）
@@ -45,6 +47,7 @@ export function SeedlingTable({
   data,
   pagination,
   onChange,
+  onPageSizeChange,
   selectedRows,
   onSelectionChange,
   onEdit,
@@ -65,6 +68,12 @@ export function SeedlingTable({
   onPrintModeChange,
   onConfirmPrint
 }: SeedlingTableProps) {
+  // 确保品种库数据正确初始化
+  useEffect(() => {
+    // 强制重置品种库数据，确保数据完整正确
+    cropVarietyService.resetVarieties();
+  }, []);
+
   // 计算分页
   const totalPages = Math.ceil(data.length / pagination.pageSize);
   const startIndex = (pagination.current - 1) * pagination.pageSize;
@@ -130,6 +139,50 @@ export function SeedlingTable({
     onConfirmPrint(selectedRecords);
     onPrintModeChange(false);
     onSelectionChange([]);
+  };
+
+  // 获取作物品种路径显示（参照种源管理页面格式）
+  // 格式：类别 - 类型 - 品种 - 作物品种
+  const getCropVarietyPath = (record: Seedling) => {
+    if (!record.cropCode || record.cropCode.length < 6) {
+      return { categoryName: '', typeName: '', varietyName: '', subVarietyName: '' };
+    }
+    // 初始化品种库
+    cropVarietyService.initVarieties();
+    // 尝试精确匹配11位编码
+    let variety = cropVarietyService.getVarietyByCode(record.cropCode);
+    // 如果精确匹配失败，尝试用前9位匹配（去掉最后2位详细编码）
+    if (!variety && record.cropCode.length >= 9) {
+      const prefix9 = record.cropCode.substring(0, 9) + '00'; // 假设详细编码为00
+      variety = cropVarietyService.getVarietyByCode(prefix9);
+    }
+    // 如果仍然失败，遍历品种库查找匹配的记录
+    if (!variety) {
+      const allVarieties = cropVarietyService.getAllVarieties();
+      // 查找前9位匹配的记录
+      variety = allVarieties.find(v =>
+        v.cropCode && record.cropCode &&
+        (record.cropCode.startsWith(v.cropCode.substring(0, Math.min(9, v.cropCode.length))) ||
+         v.cropCode.startsWith(record.cropCode.substring(0, Math.min(9, record.cropCode.length))))
+      );
+    }
+
+    if (variety && variety.categoryName) {
+      return {
+        categoryName: variety.categoryName,
+        typeName: variety.typeName,
+        varietyName: variety.varietyName,
+        subVarietyName: variety.subVariety1Name || ''
+      };
+    }
+
+    // 如果品种库查询失败，使用数据本身的字段
+    return {
+      categoryName: '',
+      typeName: '',
+      varietyName: record.cropVariety || '',
+      subVarietyName: ''
+    };
   };
 
   return (
@@ -262,7 +315,7 @@ export function SeedlingTable({
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-emerald-600">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">
@@ -273,14 +326,15 @@ export function SeedlingTable({
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">场地</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">成苗率</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余总数</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
                 <td colSpan={showCheckbox ? 11 : 10} className="px-4 py-8 text-center text-gray-500">
@@ -313,10 +367,41 @@ export function SeedlingTable({
                     <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{record.sourceCode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.cropName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.cropVariety}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {/* 作物品种列：从品种库获取最细化名称，参照种源管理页面格式显示 */}
+                    {(() => {
+                      cropVarietyService.initVarieties();
+                      const variety = cropVarietyService.getVarietyByCode(record.cropCode);
+                      if (variety) {
+                        // 显示品种库中的完整品种名称（最后一级）
+                        return variety.subVariety1Name || variety.varietyName;
+                      }
+                      // 找不到时显示cropVariety
+                      return record.cropVariety || record.cropName;
+                    })()}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {/* 品种路径列，参照种源管理页面格式：类别-类型-品种-作物名称 */}
+                    {(() => {
+                      const pathInfo = getCropVarietyPath(record);
+                      return (
+                        <>
+                          <span className="text-gray-400">{pathInfo.categoryName}</span>
+                          <span className="text-gray-400 mx-0.5">-</span>
+                          <span className="text-gray-700">{pathInfo.typeName}</span>
+                          <span className="text-gray-400 mx-0.5">-</span>
+                          <span className="text-gray-700">{pathInfo.varietyName}</span>
+                          <span className="text-gray-400 mx-0.5">-</span>
+                          <span className="text-gray-900 font-medium">{pathInfo.subVarietyName || record.cropName}</span>
+                        </>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{record.siteName}</td>
                   <td className="px-4 py-3 text-sm text-emerald-600 font-medium">{record.survivalRate}%</td>
+                  <td className="px-4 py-3 text-sm text-purple-600 font-medium">
+                    {(record.initialCount - record.lossCount).toLocaleString()}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
                       {statusMap[record.status]?.label || record.status}
@@ -373,7 +458,7 @@ export function SeedlingTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         {/* 操作模式下显示选择状态和全选按钮 */}
         {(operationMode !== 'normal' || exportMode || printMode) && (
           <div className="flex items-center gap-4">
@@ -386,26 +471,39 @@ export function SeedlingTable({
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
-        <div className="text-sm text-gray-500">
-          共 {data.length} 条
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">每页</span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => {
+              const newSize = Number(e.target.value);
+              onPageSizeChange?.(newSize);
+              onChange({ ...pagination, pageSize: newSize, current: 1 });
+            }}
+            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-500">条</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current - 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            上一页
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 py-1 text-sm">
-            {pagination.current} / {totalPages || 1}
-          </span>
+          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current + 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
             disabled={pagination.current >= totalPages}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            下一页
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -2,8 +2,8 @@
  * 种源筛选工具栏组件
  */
 
-import React, { useState } from 'react';
-import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import React from 'react';
+import { Search, RotateCcw } from 'lucide-react';
 import { SeedSourceFilters, SourceType } from '../../../../types/crop';
 
 interface SeedSourceFilterProps {
@@ -25,9 +25,6 @@ export function SeedSourceFilter({
   suppliers,
   statusOptions
 }: SeedSourceFilterProps) {
-  // More展开状态
-  const [showMore, setShowMore] = useState(false);
-
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
@@ -71,7 +68,7 @@ export function SeedSourceFilter({
 
         {/* 供应商 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采购厂商</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
           <select
             value={filters.supplierName}
             onChange={(e) => onChange({ ...filters, supplierName: e.target.value })}
@@ -99,24 +96,31 @@ export function SeedSourceFilter({
           </select>
         </div>
 
+        {/* 采购/入库日期 */}
+        <div className="min-w-[150px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">采购/入库日期</label>
+          <input
+            type="date"
+            value={filters.startDate}
+            onChange={(e) => onChange({ ...filters, startDate: e.target.value, endDate: e.target.value })}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        {/* 创建人 */}
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">创建人</label>
+          <input
+            type="text"
+            value={filters.createBy}
+            onChange={(e) => onChange({ ...filters, createBy: e.target.value })}
+            placeholder="请输入创建人"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
         {/* 按钮行 */}
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowMore(!showMore)}
-            className="h-10 px-4 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-2"
-          >
-            {showMore ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                收起
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                More
-              </>
-            )}
-          </button>
           <button
             onClick={onReset}
             className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
@@ -133,47 +137,6 @@ export function SeedSourceFilter({
           </button>
         </div>
       </div>
-
-      {/* 展开的更多筛选条件 */}
-      {showMore && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex flex-wrap gap-4 items-end">
-            {/* 记录人员 */}
-            <div className="min-w-[120px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">记录人员</label>
-              <input
-                type="text"
-                value={filters.createBy}
-                onChange={(e) => onChange({ ...filters, createBy: e.target.value })}
-                placeholder="请输入记录人员"
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 开始日期 */}
-            <div className="min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">采购日期（开始）</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 结束日期 */}
-            <div className="min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">采购日期（结束）</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

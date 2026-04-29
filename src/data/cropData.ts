@@ -127,13 +127,16 @@ export const seedSources: SeedSource[] = [
   }
 ];
 
-/** 育苗数据 */
+/** 育苗数据 - 按新增弹窗字段更新，cropCode使用品种库完整11位编码
+ * 育苗批号格式：YM + 年月日(YYYYMMDD) + "-" + 3位流水号，如 YM20260201-001
+ */
 export const seedlings: Seedling[] = [
   {
     id: 'SD001',
-    seedlingCode: 'YM2026-001',
+    seedlingCode: 'YM20260201-001',
     sourceId: 'SS001',
-    sourceCode: 'ZZ2026-001',
+    sourceCode: 'ZZ20260115-001',
+    cropCode: 'PD0301004001',  // 蔬菜类-茄果类-番茄-红果番茄
     cropName: '番茄',
     cropVariety: '红果番茄',
     seedlingType: '穴盘育苗',
@@ -180,9 +183,10 @@ export const seedlings: Seedling[] = [
   },
   {
     id: 'SD002',
-    seedlingCode: 'YM2026-002',
+    seedlingCode: 'YM20260301-001',
     sourceId: 'SS002',
-    sourceCode: 'ZZ2026-002',
+    sourceCode: 'ZZ20260201-001',
+    cropCode: 'PD0102005001',  // 蔬菜类-叶菜类-生菜-大叶生菜
     cropName: '生菜',
     cropVariety: '大叶生菜',
     seedlingType: '直播育苗',
@@ -208,9 +212,10 @@ export const seedlings: Seedling[] = [
   },
   {
     id: 'SD003',
-    seedlingCode: 'YM2026-003',
+    seedlingCode: 'YM20260310-001',
     sourceId: 'SS003',
-    sourceCode: 'ZZ2026-003',
+    sourceCode: 'ZZ20260215-001',
+    cropCode: 'PD0201001001',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
     seedlingType: '穴盘育苗',
@@ -396,4 +401,13 @@ export const plantingStatusOptions = [
 export const sourceTypeOptions = [
   { value: SourceType.SEED, label: '种子' },
   { value: SourceType.SEEDLING, label: '种苗' }
+];
+
+/** 操作人员选项（新增） */
+export const OPERATORS = [
+  { value: '李明辉', label: '李明辉' },
+  { value: '王建国', label: '王建国' },
+  { value: '张伟', label: '张伟' },
+  { value: '刘洋', label: '刘洋' },
+  { value: '陈静', label: '陈静' }
 ];

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
@@ -20,9 +19,7 @@ import {
   HarvestStatsCards,
   HarvestFilterToolbar,
   HarvestTableToolbar,
-  HarvestTabSwitch,
 } from './components';
-import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 
 // 初始化品种库
 cropVarietyService.initVarieties();
@@ -41,14 +38,10 @@ const generateProductCode = (cropName: string, variety: string, index: number): 
 };
 
 export default function HarvestPage() {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // 产品编码生成器状态
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
 
   // Search state
   const [searchFilters, setSearchFilters] = useState({
@@ -578,17 +571,6 @@ export default function HarvestPage() {
 
       {/* Stats */}
       <HarvestStatsCards records={harvestRecords} />
-
-      {/* Tab切换和编码生成器 */}
-      <HarvestTabSwitch
-        showCodeGen={true}
-        codeGenExpanded={codeGenExpanded}
-        onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
-        onCodeRuleClick={() => navigate('/produce-code-rule')}
-      />
-
-      {/* 产品编码生成器 */}
-      <ProduceCodeGenerator codeGenExpanded={codeGenExpanded} />
 
       {/* 搜索卡片 */}
       <HarvestFilterToolbar

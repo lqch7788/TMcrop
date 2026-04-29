@@ -4,11 +4,10 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check } from 'lucide-react';
+import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
-import { CodeToolbar } from '../common/CodeToolbar';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
@@ -16,7 +15,6 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import ProduceCodeGenerator from '../common/ProduceCodeGenerator';
 import {
   areas,
   sourceTypeOptions,
@@ -314,43 +312,18 @@ export default function PlantingPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 标题 */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">种植管理</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setAddModalOpen(true)}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新增
-          </button>
-          <button
-            onClick={exportMode ? handleExportClickConfirm : handleExportClick}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              exportMode
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Download className="w-4 h-4" />
-            {exportMode ? `导出选中 (${selectedRows.length})` : '导出'}
-          </button>
+      {/* 标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <TreePine className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">种植管理</h1>
+            <p className="text-gray-500">管理种植批次、生产计划和技术方案</p>
+          </div>
         </div>
       </div>
-
-      {/* 产品编码生成工具栏 */}
-      <CodeToolbar
-        codeGenExpanded={codeGenExpanded}
-        onCodeGenToggle={() => setCodeGenExpanded(!codeGenExpanded)}
-        onCodeRuleClick={() => navigate('/produce-code-rule')}
-      />
-
-      {/* 产品编码生成器 */}
-      <ProduceCodeGenerator codeGenExpanded={codeGenExpanded} />
-
-      {/* 统计卡片 */}
-      <PlantingStats data={statsData} />
 
       {/* 筛选工具栏 */}
       <PlantingFilter
@@ -368,6 +341,7 @@ export default function PlantingPage() {
         data={filteredData}
         pagination={pagination}
         onChange={setPagination}
+        onPageSizeChange={(pageSize) => setPagination(p => ({ ...p, pageSize }))}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         onEdit={handleEdit}

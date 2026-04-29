@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 
 // 操作模式类型（用于批量操作）
@@ -15,6 +15,7 @@ interface SeedSourceTableProps {
   data: SeedSource[];
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   selectedRows: string[];
   onSelectionChange: (keys: string[]) => void;
   // 批量操作回调（选中后执行）
@@ -43,6 +44,7 @@ export function SeedSourceTable({
   data,
   pagination,
   onChange,
+  onPageSizeChange,
   selectedRows,
   onSelectionChange,
   onEdit,
@@ -279,7 +281,7 @@ export function SeedSourceTable({
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-emerald-600">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-12">
@@ -308,12 +310,13 @@ export function SeedSourceTable({
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">创建人</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 13 : 12} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -375,6 +378,7 @@ export function SeedSourceTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</td>
                 </tr>
               ))
             )}
@@ -382,40 +386,41 @@ export function SeedSourceTable({
         </table>
       </div>
 
-      {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-        {/* 操作模式下显示选择状态和全选按钮 */}
-        {(operationMode !== 'normal' || exportMode || printMode) && (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onExportSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-            >
-              {selectedRows.length === data.length ? '全不选' : '全选'}
-            </button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-          </div>
-        )}
-        <div className="text-sm text-gray-500">
-          共 {data.length} 条
+      {/* Pagination - 固定在表格外部底部 */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">每页</span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => {
+              const newSize = Number(e.target.value);
+              onPageSizeChange?.(newSize);
+              onChange({ ...pagination, pageSize: newSize, current: 1 });
+            }}
+            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-500">条</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current - 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            上一页
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 py-1 text-sm">
-            {pagination.current} / {totalPages || 1}
-          </span>
+          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current + 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
             disabled={pagination.current >= totalPages}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            下一页
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

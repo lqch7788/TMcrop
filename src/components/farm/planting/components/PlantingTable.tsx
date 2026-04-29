@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, CheckCircle, Download } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, CheckCircle, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 
 // 操作模式类型
@@ -13,6 +13,7 @@ interface PlantingTableProps {
   data: Planting[];
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   selectedRows: string[];
   onSelectionChange: (keys: string[]) => void;
   onEdit: (record: Planting) => void;
@@ -412,7 +413,7 @@ export function PlantingTable({
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-emerald-600">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600">
             <tr>
               {columns.map((col, index) => (
                 <th
@@ -425,7 +426,7 @@ export function PlantingTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
@@ -450,7 +451,7 @@ export function PlantingTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         {/* 操作模式下显示选择状态和全选按钮 */}
         {(operationMode !== 'normal' || exportMode || printMode) && onExportSelectAll ? (
           <div className="flex items-center gap-4">
@@ -462,28 +463,40 @@ export function PlantingTable({
             </button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
-        ) : (
-          <div className="text-sm text-gray-500">
-            共 {data.length} 条
-          </div>
-        )}
-        <div className="flex gap-2">
+        ) : null}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">每页</span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => {
+              const newSize = Number(e.target.value);
+              onPageSizeChange?.(newSize);
+              onChange({ ...pagination, pageSize: newSize, current: 1 });
+            }}
+            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-500">条</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current - 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            上一页
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 py-1 text-sm">
-            {pagination.current} / {totalPages || 1}
-          </span>
+          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
           <button
-            onClick={() => onChange({ ...pagination, current: pagination.current + 1 })}
+            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
             disabled={pagination.current >= totalPages}
-            className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
-            下一页
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

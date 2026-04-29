@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle } from 'lucide-react';
+import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle, Barcode } from 'lucide-react';
 import * as cropInstanceService from '@/services/cropInstanceService';
 import { CropInstance, CropInstanceStatus, SourceOrigin } from '@/types/crop';
 
@@ -70,9 +70,17 @@ export default function InstancePage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 标题 */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">作物实例追溯</h1>
+      {/* 标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Barcode className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">作物实例追溯</h1>
+            <p className="text-gray-500">追溯作物全生命周期和供应链信息</p>
+          </div>
+        </div>
       </div>
 
       {/* 搜索栏 */}

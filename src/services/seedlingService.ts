@@ -3,17 +3,19 @@
  * 使用 localStorage 实现数据持久化
  */
 
-import { Seedling, SeedlingStatus, DailyRecord } from '../types/crop';
+import { Seedling, SeedlingStatus, DailyRecord, PrintRecord, LabelPrintType, TransplantRecord, TransplantHistory, TransplantRecordStatus } from '../types/crop';
 
 const STORAGE_KEY = 'crop_seedlings';
 
-// 初始化默认数据
+// 初始化默认数据 - 按新增弹窗字段更新，cropCode使用品种库完整11位编码
+// 育苗批号格式：YM + 年月日(YYYYMMDD) + "-" + 3位流水号，如 YM20260201-001
 const defaultData: Seedling[] = [
   {
     id: 'SD001',
-    seedlingCode: 'YM2026-001',
+    seedlingCode: 'YM20260201-001',
     sourceId: 'SS001',
-    sourceCode: 'ZZ2026-001',
+    sourceCode: 'ZZ20260115-001',
+    cropCode: 'PD0301004001',  // 蔬菜类-茄果类-番茄-红果番茄
     cropName: '番茄',
     cropVariety: '红果番茄',
     seedlingType: '穴盘育苗',
@@ -60,9 +62,10 @@ const defaultData: Seedling[] = [
   },
   {
     id: 'SD002',
-    seedlingCode: 'YM2026-002',
+    seedlingCode: 'YM20260301-001',
     sourceId: 'SS002',
-    sourceCode: 'ZZ2026-002',
+    sourceCode: 'ZZ20260201-001',
+    cropCode: 'PD0102005001',  // 蔬菜类-叶菜类-生菜-大叶生菜
     cropName: '生菜',
     cropVariety: '大叶生菜',
     seedlingType: '直播育苗',
@@ -88,9 +91,10 @@ const defaultData: Seedling[] = [
   },
   {
     id: 'SD003',
-    seedlingCode: 'YM2026-003',
+    seedlingCode: 'YM20260310-001',
     sourceId: 'SS003',
-    sourceCode: 'ZZ2026-003',
+    sourceCode: 'ZZ20260215-001',
+    cropCode: 'PD0201001001',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
     seedlingType: '穴盘育苗',
@@ -171,6 +175,30 @@ export function getSeedlingsBySourceId(sourceId: string): Seedling[] {
 }
 
 /**
+ * 生成育苗批号
+ * 格式：YM + 年月日(YYYYMMDD) + "-" + 3位流水号
+ * 例如：YM20260429-001
+ * 参照种源批号规则（ZZ20260426-001）设计
+ */
+export function generateSeedlingCode(): string {
+  const today = new Date();
+  // 获取年月日 YYYYMMDD格式
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
+
+  // 按日期存储流水号
+  const counterKey = `crop_seedling_code_${dateStr}`;
+  let counter = parseInt(localStorage.getItem(counterKey) || '0', 10);
+  counter++;
+  localStorage.setItem(counterKey, counter.toString());
+
+  // 格式：YM + YYYYMMDD + "-" + 3位流水号
+  return `YM${dateStr}-${counter.toString().padStart(3, '0')}`;
+}
+
+/**
  * 添加新育苗记录
  */
 export function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>): Seedling {
@@ -230,24 +258,77 @@ export function deleteSeedlings(ids: string[]): boolean {
 
 /**
  * 添加每日记录
+ * 如果记录中包含数量变化，会自动更新主记录的对应数量并重算比率
+ * 同时根据数量变化自动转换状态
  */
 export function addDailyRecord(seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>): DailyRecord | null {
   const seedlings = getSeedlings();
   const index = seedlings.findIndex(s => s.id === seedlingId);
   if (index === -1) return null;
 
+  const seedling = seedlings[index];
   const newRecord: DailyRecord = {
     ...record,
     id: 'DR' + Date.now(),
     seedlingId
   };
 
-  const dailyRecords = seedlings[index].dailyRecords || [];
+  const dailyRecords = seedling.dailyRecords || [];
   dailyRecords.push(newRecord);
 
+  // 如果有数量变化，更新主记录
+  let updates: Partial<Seedling> = { dailyRecords };
+  let newSurvivalCount = seedling.survivalCount || 0;
+  let newPlantedCount = seedling.plantedCount || 0;
+  let newLossCount = seedling.lossCount || 0;
+
+  if (record.survivalCountChange !== undefined && record.survivalCountChange !== 0) {
+    newSurvivalCount = Math.max(0, newSurvivalCount + record.survivalCountChange);
+    const newSurvivalRate = seedling.initialCount > 0 ? (newSurvivalCount / seedling.initialCount) * 100 : 0;
+    updates = {
+      ...updates,
+      survivalCount: newSurvivalCount,
+      survivalRate: Math.round(newSurvivalRate * 100) / 100
+    };
+  }
+  if (record.plantedCountChange !== undefined && record.plantedCountChange !== 0) {
+    newPlantedCount = Math.max(0, newPlantedCount + record.plantedCountChange);
+    updates = {
+      ...updates,
+      plantedCount: newPlantedCount
+    };
+  }
+  if (record.lossCountChange !== undefined && record.lossCountChange !== 0) {
+    newLossCount = Math.max(0, newLossCount + record.lossCountChange);
+    const newLossRate = seedling.initialCount > 0 ? (newLossCount / seedling.initialCount) * 100 : 0;
+    updates = {
+      ...updates,
+      lossCount: newLossCount,
+      lossRate: Math.round(newLossRate * 100) / 100
+    };
+  }
+
+  // 状态自动转换逻辑
+  let newStatus = seedling.status;
+  if (record.abnormality && seedling.status !== SeedlingStatus.ABNORMAL) {
+    // 有异常情况，标记为异常
+    newStatus = SeedlingStatus.ABNORMAL;
+    updates.status = newStatus;
+  } else if (seedling.status === SeedlingStatus.IN_PROGRESS && newSurvivalCount > 0) {
+    // 成活数量 > 0，从进行中转为待定植
+    newStatus = SeedlingStatus.TRANSPLANT_READY;
+    updates.status = newStatus;
+  } else if (newPlantedCount >= newSurvivalCount && newSurvivalCount > 0) {
+    // 定植数量 >= 成活数量，且有成活，从待定植转为已完成
+    newStatus = SeedlingStatus.COMPLETED;
+    updates.status = newStatus;
+    updates.isFinished = true;
+    updates.endDate = new Date().toISOString().slice(0, 10);
+  }
+
   seedlings[index] = {
-    ...seedlings[index],
-    dailyRecords,
+    ...seedling,
+    ...updates,
     updateTime: new Date().toLocaleString('zh-CN')
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(seedlings));
@@ -342,4 +423,276 @@ export function getAvailableTransplantCount(id: string): number {
  */
 export function resetSeedlings(): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+}
+
+// ==================== 标签打印相关函数（新增） ====================
+
+/**
+ * 生成单个二维码编号
+ * 格式：YM + 育苗批号 + 序号（3位）
+ */
+export function generateLabelNumber(seedlingCode: string, index: number): string {
+  return `${seedlingCode}-${String(index).padStart(3, '0')}`;
+}
+
+/**
+ * 打印标签
+ * @param seedlingId 育苗ID
+ * @param printType 打印类型
+ * @param printCount 打印数量
+ * @param operator 操作人员
+ * @param labelNumbers 指定二维码编号（重打印时）
+ */
+export function printLabel(
+  seedlingId: string,
+  printType: LabelPrintType,
+  printCount: number,
+  operator: string,
+  labelNumbers?: string[]
+): PrintRecord | null {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling) return null;
+
+  // 生成打印记录
+  const printRecord: PrintRecord = {
+    id: 'PR' + Date.now(),
+    printTime: new Date().toLocaleString('zh-CN'),
+    printType,
+    printCount,
+    operator,
+    labelNumbers: labelNumbers || [],
+    seedlingId
+  };
+
+  // 初始化打印记录数组
+  if (!seedling.printRecords) {
+    seedling.printRecords = [];
+  }
+  seedling.printRecords.push(printRecord);
+
+  // 更新打印次数
+  const newPrintCount = seedling.printCount + printCount;
+  updateSeedling(seedlingId, {
+    printRecords: seedling.printRecords,
+    printCount: newPrintCount
+  });
+
+  return printRecord;
+}
+
+/**
+ * 批量打印标签
+ * @param seedlingIds 育苗ID列表
+ * @param operator 操作人员
+ */
+export function batchPrintLabel(seedlingIds: string[], operator: string): PrintRecord[] {
+  const results: PrintRecord[] = [];
+  for (const id of seedlingIds) {
+    const seedling = getSeedlingById(id);
+    if (seedling) {
+      const record = printLabel(id, LabelPrintType.BATCH, 1, operator);
+      if (record) results.push(record);
+    }
+  }
+  return results;
+}
+
+/**
+ * 获取打印记录
+ * @param seedlingId 育苗ID
+ */
+export function getPrintRecords(seedlingId: string): PrintRecord[] {
+  const seedling = getSeedlingById(seedlingId);
+  return seedling?.printRecords || [];
+}
+
+/**
+ * 更新打印记录（用于追加二维码编号）
+ * @param seedlingId 育苗ID
+ * @param printRecordId 打印记录ID
+ * @param labelNumbers 二维码编号列表
+ */
+export function updatePrintRecordLabelNumbers(seedlingId: string, printRecordId: string, labelNumbers: string[]): boolean {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling?.printRecords) return false;
+
+  const recordIndex = seedling.printRecords.findIndex(r => r.id === printRecordId);
+  if (recordIndex === -1) return false;
+
+  seedling.printRecords[recordIndex].labelNumbers = labelNumbers;
+  updateSeedling(seedlingId, { printRecords: seedling.printRecords });
+  return true;
+}
+
+// ==================== 栽种记录相关函数（新增） ====================
+
+/**
+ * 添加栽种记录
+ * @param seedlingId 育苗ID
+ * @param record 栽种记录
+ */
+export function addTransplantRecord(seedlingId: string, record: Omit<TransplantRecord, 'id' | 'createTime'>): TransplantRecord | null {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling) return null;
+
+  const newRecord: TransplantRecord = {
+    ...record,
+    id: 'TR' + Date.now(),
+    createTime: new Date().toLocaleString('zh-CN')
+  };
+
+  if (!seedling.transplantRecords) {
+    seedling.transplantRecords = [];
+  }
+  seedling.transplantRecords.push(newRecord);
+
+  // 更新已定植数量
+  const newPlantedCount = seedling.plantedCount + record.transplantCount;
+  const newStatus = newPlantedCount >= seedling.survivalCount
+    ? SeedlingStatus.COMPLETED
+    : SeedlingStatus.TRANSPLANT_READY;
+
+  updateSeedling(seedlingId, {
+    transplantRecords: seedling.transplantRecords,
+    plantedCount: newPlantedCount,
+    status: newStatus
+  });
+
+  return newRecord;
+}
+
+/**
+ * 获取栽种记录列表
+ * @param seedlingId 育苗ID
+ */
+export function getTransplantRecords(seedlingId: string): TransplantRecord[] {
+  const seedling = getSeedlingById(seedlingId);
+  return seedling?.transplantRecords || [];
+}
+
+/**
+ * 更新栽种记录状态
+ * @param seedlingId 育苗ID
+ * @param recordId 栽种记录ID
+ * @param status 新状态
+ */
+export function updateTransplantRecordStatus(
+  seedlingId: string,
+  recordId: string,
+  status: TransplantRecordStatus
+): boolean {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling?.transplantRecords) return false;
+
+  const recordIndex = seedling.transplantRecords.findIndex(r => r.id === recordId);
+  if (recordIndex === -1) return false;
+
+  seedling.transplantRecords[recordIndex].status = status;
+  updateSeedling(seedlingId, { transplantRecords: seedling.transplantRecords });
+  return true;
+}
+
+// ==================== 栽种履历相关函数（新增） ====================
+
+/**
+ * 添加栽种履历条目
+ * @param seedlingId 育苗ID
+ * @param labelNumber 二维码编号
+ * @param historyItem 履历条目
+ */
+export function addTransplantHistoryItem(
+  seedlingId: string,
+  labelNumber: string,
+  historyItem: Omit<TransplantHistory['history'][0], 'id'>
+): TransplantHistory | null {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling) return null;
+
+  if (!seedling.transplantHistory) {
+    seedling.transplantHistory = [];
+  }
+
+  // 查找或创建该二维码的履历记录
+  let historyRecord = seedling.transplantHistory.find(h => h.labelNumber === labelNumber);
+  if (!historyRecord) {
+    historyRecord = {
+      id: 'TH' + Date.now(),
+      seedlingId,
+      labelNumber,
+      currentArea: historyItem.toArea || '',
+      status: TransplantRecordStatus.IN_STOCK,
+      history: []
+    };
+    seedling.transplantHistory.push(historyRecord);
+  }
+
+  // 添加履历条目
+  historyRecord.history.push({
+    ...historyItem,
+    id: 'THI' + Date.now()
+  });
+
+  // 更新当前位置
+  if (historyItem.toArea) {
+    historyRecord.currentArea = historyItem.toArea;
+  }
+
+  updateSeedling(seedlingId, { transplantHistory: seedling.transplantHistory });
+  return historyRecord;
+}
+
+/**
+ * 获取栽种履历列表
+ * @param seedlingId 育苗ID
+ */
+export function getTransplantHistory(seedlingId: string): TransplantHistory[] {
+  const seedling = getSeedlingById(seedlingId);
+  return seedling?.transplantHistory || [];
+}
+
+/**
+ * 获取指定二维码的履历
+ * @param seedlingId 育苗ID
+ * @param labelNumber 二维码编号
+ */
+export function getLabelTransplantHistory(seedlingId: string, labelNumber: string): TransplantHistory | undefined {
+  const history = getTransplantHistory(seedlingId);
+  return history.find(h => h.labelNumber === labelNumber);
+}
+
+/**
+ * 更新履历中二维码的状态
+ * @param seedlingId 育苗ID
+ * @param labelNumber 二维码编号
+ * @param status 新状态
+ */
+export function updateLabelStatus(
+  seedlingId: string,
+  labelNumber: string,
+  status: TransplantRecordStatus
+): boolean {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling?.transplantHistory) return false;
+
+  const historyRecord = seedling.transplantHistory.find(h => h.labelNumber === labelNumber);
+  if (!historyRecord) return false;
+
+  historyRecord.status = status;
+  updateSeedling(seedlingId, { transplantHistory: seedling.transplantHistory });
+  return true;
+}
+
+/**
+ * 生成育苗批号对应的所有二维码编号
+ * @param seedlingId 育苗ID
+ */
+export function generateAllLabelNumbers(seedlingId: string): string[] {
+  const seedling = getSeedlingById(seedlingId);
+  if (!seedling) return [];
+
+  const labels: string[] = [];
+  for (let i = 0; i < seedling.initialCount; i++) {
+    labels.push(generateLabelNumber(seedling.seedlingCode, i + 1));
+  }
+  return labels;
 }
