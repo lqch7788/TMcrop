@@ -10,7 +10,6 @@ import Dashboard from './pages/Dashboard';
 import Production from './pages/Production';
 import Tasks from './pages/Tasks';
 import Materials from './pages/Materials';
-import Inspection from './pages/Inspection';
 import EnvironmentMonitor from './pages/EnvironmentMonitor';
 import Harvest from './pages/Harvest';
 import ProduceInventory from './pages/ProduceInventory';
@@ -53,7 +52,6 @@ import MonthlyReport from './pages/MonthlyReport';
 import DailyProblemSummary from './pages/DailyProblemSummary';
 import DailyWorkSummary from './pages/farm/DailyWorkSummary';
 import PlanSummary from './pages/PlanSummary';
-import ProblemDispatch from './pages/ProblemDispatch';
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
 import MaterialCategory from './pages/MaterialCategory';
@@ -80,7 +78,6 @@ import PositionManagement from './pages/PositionManagement';
 import HrAttendance from './pages/HrAttendance';
 import HrApprovalDocuments from './pages/HrApprovalDocuments';
 import ParkArchive from './pages/ParkArchive';
-import TaskDispatch from './pages/TaskDispatch';
 import Profile from './pages/Profile';
 import Leave from './pages/Leave';
 import Schedule from './pages/Schedule';
@@ -252,7 +249,7 @@ function AppContent() {
         {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
         <Route path="/task-center" element={<TaskCenterPage />} />
         <Route path="/farm-hub" element={<FarmTaskHub />} />
-        <Route path="/problem-dispatch" element={<ProblemDispatch />} />
+        <Route path="/problem-dispatch" element={<FarmTaskHub />} />
         <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
         <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
         <Route path="/plan-summary" element={<PlanSummary />} />
@@ -288,7 +285,7 @@ function AppContent() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/contract" element={<Contract />} />
         <Route path="/materials" element={<Materials />} />
-        <Route path="/inspection" element={<Inspection />} />
+        <Route path="/inspection" element={<FarmTaskHub />} />
         <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
         <Route path="/harvest" element={<Harvest />} />
         <Route path="/produce-inventory" element={<ProduceInventory />} />
@@ -297,7 +294,7 @@ function AppContent() {
         <Route path="/env-control" element={<EnvControl />} />
         <Route path="/agriculture-record" element={<AgricultureRecord />} />
         <Route path="/dispatch" element={<DispatchPage />} />
-        <Route path="/task-dispatch" element={<TaskDispatch />} />
+        <Route path="/task-dispatch" element={<FarmTaskHub />} />
         <Route path="/traceability" element={<Traceability />} />
         <Route path="/device-monitor" element={<DeviceMonitor />} />
         <Route path="/alert-info" element={<AlertInfo />} />
