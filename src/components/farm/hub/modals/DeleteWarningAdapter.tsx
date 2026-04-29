@@ -17,7 +17,6 @@ export function DeleteWarningAdapter({ taskIds, onClose, onConfirmed }: DeleteWa
   const tasksHook = useTasks();
 
   const handleConfirm = () => {
-    console.log('[DeleteWarningAdapter] 确认删除任务:', taskIds);
     taskIds.forEach(id => {
       tasksHook.deleteTask(id);
     });

@@ -51,7 +51,7 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
         }
       }
     } catch (error) {
-      console.error('[InspectionDetailModal] 加载数据失败:', error);
+      // 加载数据失败，无需额外处理
     }
   }, [recordId]);
 

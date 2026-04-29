@@ -20,11 +20,6 @@ export function ReassignTaskAdapter({ task, onClose, onConfirmed }: ReassignTask
 
   const handleConfirm = (newAssigneeId: string, newAssigneeName: string) => {
     if (!localTask) return;
-    console.log('[ReassignTaskAdapter] 确认重新派发:', {
-      task: localTask,
-      newAssigneeId,
-      newAssigneeName
-    });
     tasksHook.reassignTask(localTask.id, newAssigneeId, newAssigneeName);
     onConfirmed();
   };

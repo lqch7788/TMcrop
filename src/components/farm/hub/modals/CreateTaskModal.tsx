@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { TASK_PRIORITY_MAP } from '../../../data/farmMockData';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface CreateTaskModalProps {
     estimatedHours: number;
   };
   errors: Record<string, string>;
-  onFormChange: (field: string, value: any) => void;
+  onFormChange: (field: string, value: unknown) => void;
   fields: { id: number; name: string; type: string; crop: string; area: number }[];
   staff: { id: number; name: string; status: string }[];
   taskTypes: { value: string; label: string }[];
@@ -91,11 +92,10 @@ export function CreateTaskModal({
             <Select
               value={formData.priority}
               onChange={(e) => onFormChange('priority', e.target.value)}
-              options={[
-                { value: 'urgent', label: '紧急' },
-                { value: 'high', label: '高' },
-                { value: 'normal', label: '普通' },
-              ]}
+              options={Object.entries(TASK_PRIORITY_MAP).map(([value, info]) => ({
+                value,
+                label: info.label,
+              }))}
             />
           </FormField>
 

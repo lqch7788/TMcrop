@@ -73,8 +73,7 @@ export function SelectExecutorModal({
 
       const recommendations = getRecommendations(taskInfo, 5);
       setAiRecommendations(recommendations || []);
-    } catch (error) {
-      console.error('[SelectExecutorModal] AI推荐失败:', error);
+    } catch {
       setAiRecommendations([]);
     } finally {
       setIsLoadingAI(false);

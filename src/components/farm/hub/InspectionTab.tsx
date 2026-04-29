@@ -122,15 +122,9 @@ export function InspectionTab({
   onBatchDelete,
   onBatchEdit,
 }: InspectionTabProps) {
-  // 使用 hub 传来的 inspections 作为数据源（与 hub 保持同步）
-  // 同时保留本地状态用于本地更新
-  const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(inspections);
-
-  // 当 hub 的 inspections 变化时，同步到本地状态
-  // 这确保了 hub 侧的数据变化能反映到当前组件
-  React.useEffect(() => {
-    setInspectionRecords(inspections);
-  }, [inspections]);
+  // 使用 hub 传来的 inspections 作为数据源，通过 useMemo 派生本地状态
+  // 避免状态同步反模式：不再用 useEffect 复制 prop 到 state
+  const inspectionRecords = useMemo(() => inspections, [inspections]);
 
   // 问题相关 Hook
   const { addProblem, forceRefresh } = usePersistentProblems();
@@ -138,6 +132,12 @@ export function InspectionTab({
 
   // 任务数据（用于获取实际处理进度）
   const [tasks] = useLocalStorage<any[]>(STORAGE_KEYS.TASKS, []);
+
+  // 获取默认巡查人员（避免硬编码）
+  const defaultInspector = useMemo(() => {
+    // 优先使用第一个用户，避免硬编码特定ID
+    return users[0] || { id: 'U001', name: '待分配' };
+  }, []);
 
   // 弹窗状态
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
@@ -342,7 +342,7 @@ export function InspectionTab({
       recordCode: prev.recordCode || generateRecordCode(),
       checkDate: prev.checkDate || new Date().toISOString().split('T')[0],
       checkTime: prev.checkTime || new Date().toTimeString().slice(0, 5),
-      inspectorId: prev.inspectorId || 'U013', // 默认巡查人员
+      inspectorId: prev.inspectorId || defaultInspector.id, // 默认巡查人员
     }));
     onOpenCreateModal();
   };
@@ -406,7 +406,6 @@ export function InspectionTab({
     const currentCount = newRecord.newImages.length;
     const remainingSlots = 6 - currentCount;
     if (remainingSlots <= 0) {
-      alert('最多只能添加6张照片');
       return;
     }
 
@@ -576,7 +575,6 @@ export function InspectionTab({
   // 导出处理
   const handleConfirmExport = () => {
     if (selectedIds.length === 0) {
-      alert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -643,8 +641,8 @@ export function InspectionTab({
         a.click();
         URL.revokeObjectURL(url);
       }
-    } catch (err) {
-      console.error('Export failed:', err);
+    } catch {
+      // 导出失败时仍尝试使用备用方式下载
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

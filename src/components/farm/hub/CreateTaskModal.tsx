@@ -81,7 +81,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
 
       onCreated();
     } catch (error) {
-      console.error('[CreateTaskModal] 创建任务失败:', error);
+      // 创建任务失败
       alert('创建任务失败');
     } finally {
       setIsSubmitting(false);

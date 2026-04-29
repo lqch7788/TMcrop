@@ -4,6 +4,11 @@ import { NumberInput } from '../../../ui/NumberInput';
 import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
+// 天气选项常量（组件外部计算一次）
+const WEATHER_OPTION_LABELS = WEATHER_OPTIONS.map(w => w.label);
+// 作物状态选项常量（组件外部计算一次）
+const CROP_STATUS_LABELS = CROP_STATUS_OPTIONS.map(s => s.label);
+
 // 巡查记录类型（用于表单）
 interface InspectionRecordFormData {
   recordCode: string;
@@ -90,8 +95,6 @@ export function CreateInspectionModal({
   infrastructureRecords,
   onOpenQRScanner,
 }: CreateInspectionModalProps) {
-  const weatherOptions = WEATHER_OPTIONS.map(w => w.label);
-  const cropStatusOptions = CROP_STATUS_OPTIONS.map(s => s.label);
   const issueCategories = ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label }));
   const completionTimeOptions = COMPLETION_TIME_OPTIONS.map(t => ({ value: t.value, label: t.label }));
 
@@ -354,7 +357,7 @@ export function CreateInspectionModal({
                 onChange={(e) => updateField('cropStatus', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                {cropStatusOptions.map(s => (
+                {CROP_STATUS_LABELS.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>

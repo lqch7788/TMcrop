@@ -23,7 +23,6 @@ export function WithdrawCancelAdapter({ task, onClose, onConfirmed }: WithdrawCa
 
   const handleConfirm = (reason: string) => {
     if (!localTask) return;
-    console.log('[WithdrawCancelAdapter] 确认操作:', { task: localTask, reason, type });
     if (type === 'withdraw') {
       tasksHook.withdrawTask(localTask.id, reason);
     } else {

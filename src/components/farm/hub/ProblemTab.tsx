@@ -30,6 +30,24 @@ import {
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
+// 必填反馈选项常量（避免在组件内重复定义）
+const FEEDBACK_OPTIONS = [
+  { key: 'workload_confirm', label: '工作量确认', icon: Clock },
+  { key: 'gps', label: '位置打卡', icon: MapPin },
+  { key: 'photo_before', label: '作业前照片', icon: Camera },
+  { key: 'photo_after', label: '作业后照片', icon: Camera },
+  { key: 'material', label: '物资扫码', icon: Package },
+  { key: 'voice', label: '语音备注', icon: Mic },
+] as const;
+
+// 问题创建默认值常量
+const DEFAULT_PROBLEM_VALUES = {
+  weather: '晴',
+  temperature: 25,
+  humidity: 60,
+  cropStatus: '正常',
+} as const;
+
 interface ProblemTabProps {
   // 问题数据（来自外部的回调）
   onProblemDispatched?: () => void;
@@ -55,7 +73,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
   const defaultInspector = useMemo(() => {
     // 优先使用 admin 用户，否则使用第一个用户
     const adminUser = users.find(u => u.id === 'U001' || u.name.includes('管理员'));
-    return adminUser || users[0] || { id: 'U001', name: '系统管理员' };
+    return adminUser || users[0] || null;
   }, []);
 
   // ========== 标签页状态 ==========
@@ -115,16 +133,6 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
     issueSeverity: '中等' as '轻微' | '中等' | '严重',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // ========== 必填反馈选项 ==========
-  const feedbackOptions = [
-    { key: 'workload_confirm', label: '工作量确认', icon: Clock },
-    { key: 'gps', label: '位置打卡', icon: MapPin },
-    { key: 'photo_before', label: '作业前照片', icon: Camera },
-    { key: 'photo_after', label: '作业后照片', icon: Camera },
-    { key: 'material', label: '物资扫码', icon: Package },
-    { key: 'voice', label: '语音备注', icon: Mic },
-  ];
 
   // ========== 根据筛选过滤问题 ==========
   const filteredProblems = useMemo(() => {
@@ -189,17 +197,25 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
     return list;
   }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
 
-  // ========== 问题类型到任务类型的映射 ==========
+  // ========== 问题类型到任务类型的映射（避免硬编码） ==========
+  const PROBLEM_TYPE_MAPPING = [
+    { keywords: ['虫', '蚜'], type: 'spraying', typeName: '病虫防治' },
+    { keywords: ['病', '斑', '灰霉'], type: 'spraying', typeName: '病害处理' },
+    { keywords: ['水', '旱'], type: 'irrigation', typeName: '灌溉处理' },
+    { keywords: ['肥'], type: 'fertilization', typeName: '施肥处理' },
+  ] as const;
+
   const getProblemType = (issueText: string): { type: string; typeName: string } => {
-    if (issueText.includes('虫') || issueText.includes('蚜')) return { type: 'spraying', typeName: '病虫防治' };
-    if (issueText.includes('病') || issueText.includes('斑') || issueText.includes('灰霉')) return { type: 'spraying', typeName: '病害处理' };
-    if (issueText.includes('水') || issueText.includes('旱')) return { type: 'irrigation', typeName: '灌溉处理' };
-    if (issueText.includes('肥')) return { type: 'fertilization', typeName: '施肥处理' };
+    for (const mapping of PROBLEM_TYPE_MAPPING) {
+      if (mapping.keywords.some(kw => issueText.includes(kw))) {
+        return { type: mapping.type, typeName: mapping.typeName };
+      }
+    }
     return { type: 'scouting', typeName: '问题处理' };
   };
 
   // ========== 严重程度转优先级 ==========
-  const severityToPriority: Record<string, 'urgent' | 'high' | 'normal'> = {
+  const SEVERITY_TO_PRIORITY: Record<string, 'urgent' | 'high' | 'normal'> = {
     '严重': 'urgent',
     '中等': 'high',
     '轻微': 'normal',
@@ -288,8 +304,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       dispatchModal.problem.id,
       selectedWorker.id,
       selectedWorker.name,
-      'U001',
-      '系统管理员',
+      defaultInspector?.id || 'U001',
+      defaultInspector?.name || '系统管理员',
       calculateDueDate(),
       requiredFeedback,
       selectedPriority
@@ -400,10 +416,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       inspectorName: formData.inspectorName,
       checkDate: formData.checkDate,
       checkTime: formData.checkTime,
-      weather: '晴',
-      temperature: 25,
-      humidity: 60,
-      cropStatus: '正常',
+      weather: DEFAULT_PROBLEM_VALUES.weather,
+      temperature: DEFAULT_PROBLEM_VALUES.temperature,
+      humidity: DEFAULT_PROBLEM_VALUES.humidity,
+      cropStatus: DEFAULT_PROBLEM_VALUES.cropStatus,
       issueText: formData.issueText,
       issueSeverity: formData.issueSeverity,
       status: '待处理',
@@ -415,8 +431,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       greenhouseId: '',
       greenhouseName: '',
       cropName: '',
-      inspectorId: 'U001',
-      inspectorName: '系统管理员',
+      inspectorId: defaultInspector?.id || 'U001',
+      inspectorName: defaultInspector?.name || '系统管理员',
       checkDate: new Date().toISOString().slice(0, 10),
       checkTime: new Date().toTimeString().slice(0, 5),
       issueText: '',
@@ -433,8 +449,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       greenhouseId: '',
       greenhouseName: '',
       cropName: '',
-      inspectorId: 'U001',
-      inspectorName: '系统管理员',
+      inspectorId: defaultInspector?.id || 'U001',
+      inspectorName: defaultInspector?.name || '系统管理员',
       checkDate: new Date().toISOString().slice(0, 10),
       checkTime: new Date().toTimeString().slice(0, 5),
       issueText: '',
@@ -814,7 +830,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
             必填反馈要求
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {feedbackOptions.map(item => (
+            {FEEDBACK_OPTIONS.map(item => (
               <label
                 key={item.key}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 cursor-pointer transition-all ${

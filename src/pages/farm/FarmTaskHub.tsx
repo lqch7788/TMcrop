@@ -4,7 +4,7 @@
  * 样式与 TaskDispatchPage 统一
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { FarmHubHeader } from '../../components/farm/hub/FarmHubHeader';
@@ -215,6 +215,12 @@ export function FarmTaskHub() {
   // AI推荐 Hook
   const smartRecommend = useSmartRecommendation();
 
+  // 从 cropBatches 提取唯一作物列表（避免硬编码）
+  const uniqueCrops = useMemo(() => {
+    const crops = cropBatches.map(b => b.cropName).filter(Boolean);
+    return [...new Set(crops)] as string[];
+  }, [cropBatches]);
+
   // 批量导入相关状态
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -280,8 +286,7 @@ export function FarmTaskHub() {
     try {
       const recommendations = await smartRecommend.getRecommendations(taskInfo);
       setAiRecommendations(recommendations || []);
-    } catch (error) {
-      console.error('[FarmTaskHub] 获取AI推荐失败:', error);
+    } catch {
       setAiRecommendations([]);
     }
   }, [newTask, smartRecommend]);
@@ -393,8 +398,6 @@ export function FarmTaskHub() {
       return;
     }
 
-    console.log('导入数据:', importData);
-
     // 使用 tasksHook.createTask 创建任务
     importData.forEach(row => {
       const typeLabels = row.typeLabel || row.type;
@@ -406,7 +409,7 @@ export function FarmTaskHub() {
 
       const defaultDispatcher = users.find(u => u.id === 'U001');
       const assignerId = defaultDispatcher?.id || 'U001';
-      const assignerName = defaultDispatcher?.name || '张建国';
+      const assignerName = defaultDispatcher?.name || '系统';
 
       const matchedField = taskDispatchFields.find(f => f.name === row.field);
       const greenhouseId = matchedField?.id?.toString() || '';
@@ -509,7 +512,7 @@ export function FarmTaskHub() {
 
     const defaultDispatcher = users.find(u => u.id === 'U001');
     const assignerId = defaultDispatcher?.id || 'U001';
-    const assignerName = defaultDispatcher?.name || '张建国';
+    const assignerName = defaultDispatcher?.name || '系统';
 
     const firstFieldName = fieldValue.split(',')[0]?.trim() || '';
     const matchedField = taskDispatchFields.find(f => f.name === firstFieldName);
@@ -528,7 +531,6 @@ export function FarmTaskHub() {
       taskStatus = 'pending';
     }
 
-    console.log('[handleCreateTask] 创建任务备注:', newTask.toolsRemarks);
     tasksHook.createTask({
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
@@ -691,7 +693,6 @@ export function FarmTaskHub() {
   };
 
   const handleTaskContinue = (taskId: string) => {
-    console.log('[FarmTaskHub] 继续执行任务:', taskId);
     tasksHook.continueExecution(taskId);
     hub.refresh();
   };
@@ -703,7 +704,7 @@ export function FarmTaskHub() {
 
   // 催办任务
   const handleTaskRemind = (task: import('../../types/task').Task) => {
-    console.log('[FarmTaskHub] 催办任务:', task);
+    // 催办功能后续实现
   };
 
   // 选择执行人
@@ -893,7 +894,6 @@ export function FarmTaskHub() {
                 }}
                 onBatchEdit={(ids) => {
                   // 调用 hub 的巡查批量编辑（打开编辑弹窗）
-                  console.log('[FarmTaskHub] 巡查批量编辑:', ids);
                 }}
               />
             )}
@@ -1279,7 +1279,7 @@ export function FarmTaskHub() {
                     </div>
                     {showCropDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {['番茄', '黄瓜', '草莓', '辣椒'].map(crop => (
+                        {uniqueCrops.map(crop => (
                           <label
                             key={crop}
                             className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
@@ -1828,12 +1828,10 @@ export function FarmTaskHub() {
           task={overtimeTask}
           onClose={() => setOvertimeTask(null)}
           onContinue={(taskId, reason, newDeadline) => {
-            console.log('[FarmTaskHub] 超时继续执行:', { taskId, reason, newDeadline });
             setOvertimeTask(null);
             hub.refresh();
           }}
           onAbandon={(taskId, reason) => {
-            console.log('[FarmTaskHub] 超时放弃执行:', { taskId, reason });
             setOvertimeTask(null);
             hub.refresh();
           }}

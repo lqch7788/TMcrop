@@ -241,38 +241,22 @@ export function useFarmHub(): UseFarmHubReturn {
       if (stored) {
         const parsed = JSON.parse(stored);
         const allTasks: Task[] = parsed.data || parsed || [];
-        // 调试日志
-        console.log('[useFarmHub] 从localStorage读取任务，数量:', allTasks.length);
 
         // 过滤农事任务
         const farmTasks = allTasks.filter(t => {
           const dispatchMode = t.dispatchMode || 'farm';
           return dispatchMode === 'farm';
         });
-        console.log('[useFarmHub] 过滤后农事任务数量:', farmTasks.length);
-
-        // 排序前检查
-        if (farmTasks.length > 0) {
-          console.log('[useFarmHub] 排序前第一个任务:', { id: farmTasks[0].id, createdAt: farmTasks[0].createdAt });
-          console.log('[useFarmHub] 排序前最后一个任务:', { id: farmTasks[farmTasks.length - 1].id, createdAt: farmTasks[farmTasks.length - 1].createdAt });
-        }
 
         // 排序
         const sortedTasks = [...farmTasks].sort(sortByCreatedAt);
 
-        // 排序后检查
-        if (sortedTasks.length > 0) {
-          console.log('[useFarmHub] 排序后第一个任务:', { id: sortedTasks[0].id, createdAt: sortedTasks[0].createdAt });
-          console.log('[useFarmHub] 排序后最后一个任务:', { id: sortedTasks[sortedTasks.length - 1].id, createdAt: sortedTasks[sortedTasks.length - 1].createdAt });
-        }
-
         return sortedTasks;
       }
     } catch (e) {
-      console.warn('[useFarmHub] 读取任务数据失败:', e);
+      // 读取任务数据失败
     }
     // 备用：从 useTasksData 获取
-    console.log('[useFarmHub] 使用 useTasksData，任务数量:', useTasksData.length);
     return useTasksData
       .filter(t => {
         const dispatchMode = t.dispatchMode || 'farm';
@@ -354,7 +338,7 @@ export function useFarmHub(): UseFarmHubReturn {
         setOperationRecords(Array.isArray(parsed) ? parsed : []);
       }
     } catch (error) {
-      console.error('[useFarmHub] 加载数据失败:', error);
+      // 加载数据失败
     } finally {
       setIsLoading(false);
     }
@@ -536,7 +520,7 @@ export function useFarmHub(): UseFarmHubReturn {
           });
         });
       } catch (e) {
-        console.warn('[useFarmHub] 解析任务记录失败', e);
+        // 解析任务记录失败
       }
     }
 
