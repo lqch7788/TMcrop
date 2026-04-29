@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Cloud } from 'lucide-react';
+import { users } from '../data/mockData';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,11 +9,32 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [rememberPassword, setRememberPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = () => {
-    // 模拟登录成功，存储登录状态
+    setError('');
+
+    // 查找用户
+    const user = users.find(u => u.name === username);
+
+    if (!user) {
+      setError('用户不存在');
+      return;
+    }
+
+    // 验证密码（默认123456）
+    if (password !== '123456') {
+      setError('密码错误');
+      return;
+    }
+
+    // 登录成功，存储登录状态
     localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', username || '陆启闯');
+    localStorage.setItem('username', user.name);
+    localStorage.setItem('userId', user.id);
+    localStorage.setItem('realName', user.name);
+    localStorage.setItem('department', user.department || '');
+
     // 跳转到基地总览页面
     navigate('/dashboard');
   };
@@ -120,6 +142,13 @@ export default function Login() {
             </label>
             <a href="#" className="text-sm text-emerald-600 hover:text-emerald-700">忘记密码？</a>
           </div>
+
+          {/* 错误提示 */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
 
           {/* 登录按钮 */}
           <button
