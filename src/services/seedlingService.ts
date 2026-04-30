@@ -520,6 +520,24 @@ export function increasePlantedCount(id: string, count: number): boolean {
 }
 
 /**
+ * V3.1 增加成活数量（入库时调用）
+ * @param id 育苗ID
+ * @param quantity 入库数量
+ * @returns 是否成功
+ */
+export function addSeedlingSurvivalCount(id: string, quantity: number): boolean {
+  const seedling = getSeedlingById(id);
+  if (!seedling) return false;
+
+  const newSurvivalCount = (seedling.survivalCount || 0) + quantity;
+
+  updateSeedling(id, {
+    survivalCount: newSurvivalCount
+  });
+  return true;
+}
+
+/**
  * 获取可定植的育苗列表
  */
 export function getTransplantReadySeedlings(): Seedling[] {

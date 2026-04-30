@@ -1,6 +1,7 @@
 /**
  * 种源新增弹窗
  * 支持作物搜索和快速新增品种
+ * V3.1: 支持补录申请功能
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,6 +18,8 @@ import { CropVariety, CropVarietySearchResult } from '../../../../types/cropVari
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { currentUser, bases, cropBatches } from '../../../../data/mockData';
+import { useApprovalContext } from '../../../../contexts/ApprovalContext';
+import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -31,6 +34,9 @@ export function AddModal({
   onSuccess,
   units
 }: AddModalProps) {
+  // 使用审批Context
+  const { addApproval } = useApprovalContext();
+
   // 表单数据
   const [formData, setFormData] = useState({
     sourceType: SourceType.SEED,
@@ -55,6 +61,9 @@ export function AddModal({
     supplierIsInternal: false, // true=自产, false=外购
     baseId: '',              // 基地ID
     baseName: '',            // 基地名称
+    // V3.1 补录相关字段
+    isSupplementary: false,  // 是否补录
+    supplementaryReason: '',  // 补录原因
   });
 
   // 作物编码
@@ -265,6 +274,51 @@ export function AddModal({
       console.error('创建作物实例失败:', error);
     }
 
+    // V3.1 补录申请：如果勾选了补录，创建审批记录
+    if (formData.isSupplementary) {
+      const approvalCode = `SS-SUP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      const approval = {
+        id: 'APPROVAL-' + Date.now(),
+        code: approvalCode,
+        type: ApprovalType.SEED_SOURCE_SUPPLEMENTARY,
+        title: `种源补录申请 - ${seedCode}`,
+        description: `种源补录入库申请：${formData.cropName}，数量：${formData.quantity}${formData.unit}，补录原因：${formData.supplementaryReason}`,
+        status: ApprovalStatus.PENDING,
+        applicantId: currentUser.id,
+        applicantName: currentUser.name,
+        applicantDept: currentUser.department || '生产部',
+        createTime: new Date().toLocaleString('zh-CN'),
+        updateTime: new Date().toLocaleString('zh-CN'),
+        steps: [
+          {
+            id: 'STEP-001',
+            name: '生产主管',
+            status: 'pending' as const,
+            order: 1,
+          },
+          {
+            id: 'STEP-002',
+            name: '基地负责人',
+            status: 'pending' as const,
+            order: 2,
+          },
+        ],
+        currentStep: 1,
+        businessLink: {
+          type: 'seed_source' as const,
+          requestCode: seedCode,
+          requestId: newSeedSource.id,
+        },
+        supplementaryData: {
+          reason: formData.supplementaryReason,
+          quantity: formData.quantity,
+          unit: formData.unit,
+          cropName: formData.cropName,
+        },
+      };
+      addApproval(approval);
+    }
+
     // 重置表单
     resetForm();
     onClose();
@@ -293,6 +347,9 @@ export function AddModal({
       supplierIsInternal: false,
       baseId: '',
       baseName: '',
+      // V3.1 补录相关字段
+      isSupplementary: false,
+      supplementaryReason: '',
     });
     setCropCode('');
     setSeedCode('');
@@ -792,6 +849,36 @@ export function AddModal({
               placeholder="请输入备注信息"
             />
           </div>
+
+          {/* V3.1 补录字段 - 占两列 */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
+            <select
+              value={formData.isSupplementary ? 'true' : 'false'}
+              onChange={(e) => setFormData({ ...formData, isSupplementary: e.target.value === 'true' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="false">否</option>
+              <option value="true">是</option>
+            </select>
+            <p className="mt-1 text-xs text-amber-500">选择"是"时，该入库记录将提交审批审核</p>
+          </div>
+
+          {/* V3.1 补录原因 */}
+          {formData.isSupplementary && (
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                补录原因 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={formData.supplementaryReason}
+                onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                placeholder="请输入补录原因，说明为什么需要补录此入库记录"
+              />
+            </div>
+          )}
         </div>
       </UnifiedModal>
 

@@ -1021,9 +1021,13 @@ export function PurchasePlanPage() {
                 value={createForm.relatedBatchCode || ''}
                 onChange={(e) => setCreateForm({...createForm, relatedBatchCode: e.target.value || undefined})}
                 options={[
-                  { value: 'SC202603001', label: 'SC202603001 - 番茄种植批次' },
-                  { value: 'SC202603002', label: 'SC202603002 - 黄瓜种植批次' },
-                  { value: 'SC202603003', label: 'SC202603003 - 茄子种植批次' },
+                  { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
+                  { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
+                  { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
+                  { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
+                  { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
+                  { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
+                  { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
                   { value: 'other', label: '其他' },
                 ]}
               />
@@ -1554,10 +1558,13 @@ export function PurchasePlanPage() {
                   className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
                 >
                   <option value="">不关联批次</option>
-                  <option value="SC202603001">SC202603001 - 番茄种植批次</option>
-                  <option value="SC202603002">SC202603002 - 黄瓜种植批次</option>
-                  <option value="SC202603003">SC202603003 - 茄子种植批次</option>
-                  <option value="SC202604001">SC202604001 - 辣椒种植批次</option>
+                  <option value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</option>
+                  <option value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</option>
+                  <option value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</option>
+                  <option value="YMB2026-001">YMB2026-001 - 番茄育苗批次</option>
+                  <option value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</option>
+                  <option value="JZB2026-001">JZB2026-001 - 番茄种源批次</option>
+                  <option value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</option>
                 </select>
               </div>
 

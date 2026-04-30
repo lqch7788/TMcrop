@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 
 // 操作模式类型（用于批量操作）
@@ -26,6 +26,8 @@ interface SeedSourceTableProps {
   onDetail: (record: SeedSource) => void;
   onPrint: (record: SeedSource) => void;
   onImageClick: (images: string[]) => void;
+  // 结束相关回调
+  onEnd: (record: SeedSource, endType: 'normal' | 'abnormal') => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -53,6 +55,7 @@ export function SeedSourceTable({
   onDetail,
   onPrint,
   onImageClick,
+  onEnd,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -300,6 +303,7 @@ export function SeedSourceTable({
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种源批号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联生产计划</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
@@ -307,8 +311,11 @@ export function SeedSourceTable({
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">来源途径</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">供应商</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">采购/入库日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">入库数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">完成比例</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">创建人</th>
             </tr>
@@ -316,7 +323,7 @@ export function SeedSourceTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 13 : 12} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 17 : 16} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -348,6 +355,13 @@ export function SeedSourceTable({
                       {record.seedCode}
                     </button>
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {record.productionPlanCode ? (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
+                        {record.productionPlanCode}
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
                   </td>
@@ -369,13 +383,56 @@ export function SeedSourceTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
+                  <td className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
+                    {record.initialCount.toLocaleString()} {record.unit}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.availableCount.toLocaleString()} {record.unit}
+                  </td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {record.initialCount > 0 ? (
+                      <span className={`font-medium ${
+                        record.availableCount / record.initialCount >= 0.8
+                          ? 'text-green-600'
+                          : record.availableCount / record.initialCount >= 0.5
+                          ? 'text-amber-600'
+                          : 'text-red-600'
+                      }`}>
+                        {Math.round(record.availableCount / record.initialCount * 100)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
                       {statusMap[record.status]?.label || record.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => onDetail(record)}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        title="查看详情"
+                      >
+                        <Image className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onEnd(record, 'normal')}
+                        className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+                        title="正常结束"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onEnd(record, 'abnormal')}
+                        className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        title="异常结束"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</td>

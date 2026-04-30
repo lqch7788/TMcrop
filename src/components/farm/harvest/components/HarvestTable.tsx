@@ -87,7 +87,7 @@ export function HarvestTableRow({
   const isExpanded = expandedRows.has(idx);
   const isSelected = selectedRows.includes(idx);
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
-  const colSpan = showCheckbox ? 10 : 9;
+  const colSpan = showCheckbox ? 11 : 10;
 
   return (
     <React.Fragment key={record.id}>
@@ -117,6 +117,27 @@ export function HarvestTableRow({
           onClick={onViewDetail}
         >
           {record.harvestCode}
+        </td>
+        <td className="px-4 py-3 text-sm whitespace-nowrap">
+          {record.inboundType === 'seed_source' && (
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">种源入库</span>
+          )}
+          {record.inboundType === 'seedling' && (
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">育苗成活</span>
+          )}
+          {record.inboundType === 'planting_harvest' && (
+            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">种植采收</span>
+          )}
+          {!record.inboundType && (
+            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">-</span>
+          )}
+          {record.isSupplementary && (
+            <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
+              {record.supplementaryStatus === 'pending' ? '待审核' :
+               record.supplementaryStatus === 'approved' ? '已通过' :
+               record.supplementaryStatus === 'rejected' ? '已驳回' : '补录'}
+            </span>
+          )}
         </td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate}</td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
@@ -208,6 +229,7 @@ export function HarvestTable({
             )}
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收单号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库类型</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收日期</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库仓库</th>

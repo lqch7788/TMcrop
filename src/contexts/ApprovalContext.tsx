@@ -23,6 +23,9 @@ import {
   purchaseApprovalHandler,
   productionApprovalHandler,
   leaveApprovalHandler,
+  harvestApprovalHandler,
+  seedSourceSupplementaryHandler,
+  seedlingSupplementaryHandler,
 } from '../types/approvalIntegration';
 
 // ============================================================
@@ -142,6 +145,9 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     registerApprovalIntegration(purchaseApprovalHandler);
     registerApprovalIntegration(productionApprovalHandler);
     registerApprovalIntegration(leaveApprovalHandler);
+    registerApprovalIntegration(harvestApprovalHandler);
+    registerApprovalIntegration(seedSourceSupplementaryHandler);
+    registerApprovalIntegration(seedlingSupplementaryHandler);
   }, []);
 
   // 监听审批数据变化，自动保存到 localStorage

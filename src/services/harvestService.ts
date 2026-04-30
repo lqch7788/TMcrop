@@ -211,3 +211,49 @@ export function generateHarvestCode(): string {
 export function resetHarvestRecords(): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
 }
+
+/**
+ * 更新补录记录状态（审批通过后调用）
+ * @param harvestCode 采收单号
+ * @param supplementaryStatus 补录状态：approved-已通过，rejected-已驳回
+ * @param supplementaryApprover 审核人
+ * @param supplementaryDate 审核日期
+ */
+export function updateSupplementaryStatus(
+  harvestCode: string,
+  supplementaryStatus: 'approved' | 'rejected',
+  supplementaryApprover: string,
+  supplementaryDate: string
+): HarvestRecord | null {
+  const records = getHarvestRecords();
+  const index = records.findIndex(r => r.harvestCode === harvestCode && r.isSupplementary);
+  if (index === -1) return null;
+
+  records[index] = {
+    ...records[index],
+    supplementaryStatus,
+    supplementaryApprover,
+    supplementaryDate,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  return records[index];
+}
+
+/**
+ * 根据补录状态获取记录
+ * @param status 补录状态
+ */
+export function getHarvestRecordsBySupplementaryStatus(
+  status: 'pending' | 'approved' | 'rejected'
+): HarvestRecord[] {
+  const records = getHarvestRecords();
+  return records.filter(r => r.isSupplementary && r.supplementaryStatus === status);
+}
+
+/**
+ * 获取所有待审核的补录记录
+ */
+export function getPendingSupplementaryRecords(): HarvestRecord[] {
+  return getHarvestRecordsBySupplementaryStatus('pending');
+}
+

@@ -343,6 +343,35 @@ export function decreaseAvailableCount(id: string, count: number): boolean {
 }
 
 /**
+ * V3.1 增加种源库存（入库时调用）
+ * @param id 种源ID
+ * @param quantity 入库数量
+ * @returns 是否成功
+ */
+export function addSeedSourceStock(id: string, quantity: number): boolean {
+  const source = getSeedSourceById(id);
+  if (!source) return false;
+
+  const newInitial = (source.initialCount || 0) + quantity;
+  const newAvailable = (source.availableCount || 0) + quantity;
+
+  // 更新库存状态为充足
+  let newStatus = StockStatus.SUFFICIENT;
+  if (newAvailable === 0) {
+    newStatus = StockStatus.DEPLETED;
+  } else if (newAvailable < newInitial * 0.2) {
+    newStatus = StockStatus.LOW;
+  }
+
+  updateSeedSource(id, {
+    initialCount: newInitial,
+    availableCount: newAvailable,
+    status: newStatus
+  });
+  return true;
+}
+
+/**
  * 重置数据到默认状态
  */
 export function resetSeedSources(): void {
