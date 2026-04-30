@@ -315,7 +315,7 @@ export function CropVarietyTable({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
+          <span className="text-sm">{totalPages > 0 ? `${currentPage} / ${totalPages}` : '0 / 0'}</span>
           <button
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}

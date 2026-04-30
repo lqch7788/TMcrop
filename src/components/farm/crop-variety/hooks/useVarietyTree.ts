@@ -456,7 +456,7 @@ export function useVarietyTree(
   }, [treeData]);
 
   // 初始化时展开到默认级别（仅展开第一级，让用户自己选择展开哪一级的子节点）
-  useMemo(() => {
+  useEffect(() => {
     // 只展开第一级（类别级别），不展开更深层级
     const initialKeys = treeData.map(node => node.key);
     setExpandedKeys(new Set(initialKeys));

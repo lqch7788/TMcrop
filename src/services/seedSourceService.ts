@@ -212,35 +212,37 @@ const defaultData: SeedSource[] = [
 ];
 
 /**
- * 初始化数据 - 从localStorage读取或使用默认数据
+ * 统一的数据读取函数 - 从localStorage读取并解析
  */
-export function initSeedSources(): SeedSource[] {
+function getStoredData(): SeedSource[] {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
       return JSON.parse(stored);
-    } catch {
+    } catch (error) {
+      console.error('种源数据解析失败:', error);
       return defaultData;
     }
   }
-  // 首次使用默认数据
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
   return defaultData;
+}
+
+/**
+ * 初始化数据 - 从localStorage读取或使用默认数据
+ */
+export function initSeedSources(): SeedSource[] {
+  const data = getStoredData();
+  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+  }
+  return data.length > 0 ? data : defaultData;
 }
 
 /**
  * 获取所有种源数据
  */
 export function getSeedSources(): SeedSource[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return defaultData;
-    }
-  }
-  return initSeedSources();
+  return getStoredData();
 }
 
 /**

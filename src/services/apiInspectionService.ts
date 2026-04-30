@@ -203,7 +203,11 @@ export async function getInspectionStats(filters?: {
   critical: number;
 }> {
   if (USE_API) {
-    return apiClient.get('/inspections/stats');
+    const params: Record<string, string> = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.greenhouseId) params.greenhouseId = filters.greenhouseId;
+    return apiClient.get('/inspections/stats', { params });
   }
   throw new Error('本地服务 inspectionService 尚未实现');
 }

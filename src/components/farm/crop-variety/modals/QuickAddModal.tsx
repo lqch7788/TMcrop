@@ -106,9 +106,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
     const typeName = typeOptions.find(t => t.value === selectedType)?.label || '';
     const varietyName = varietyOptions.find(v => v.value === selectedVariety)?.label || '';
 
-    // 处理别名
+    // 处理别名（统一使用四种分隔符：逗号、顿号、分号）
     const aliasList = alias
-      .split(/[,，]/)
+      .split(/[,，;；]/)
       .map(a => a.trim())
       .filter(a => a.length > 0);
 
