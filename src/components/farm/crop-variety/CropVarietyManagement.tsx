@@ -168,11 +168,15 @@ export default function CropVarietyManagement() {
   }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1, detailVarietyCode]);
 
   // 复制编码
-  const handleCopyCode = useCallback(() => {
+  const handleCopyCode = useCallback(async () => {
     if (generatedCode) {
-      navigator.clipboard.writeText(generatedCode);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      try {
+        await navigator.clipboard.writeText(generatedCode);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (error) {
+        console.error('复制编码失败:', error);
+      }
     }
   }, [generatedCode]);
 

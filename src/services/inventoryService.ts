@@ -255,6 +255,11 @@ class LocalStorageFreezeRepository implements IInventoryFreezeRepository {
     return newFreeze;
   }
 
+  async findById(id: string): Promise<InventoryFreeze | null> {
+    const freezes = this.getAll();
+    return freezes.find(f => f.id === id) || null;
+  }
+
   async findByInstanceId(instanceId: string): Promise<InventoryFreeze[]> {
     return this.getAll().filter(f => f.instanceId === instanceId);
   }
@@ -526,7 +531,7 @@ export async function unfreezeInventory(
   freezeId: string
 ): Promise<InventoryOperationResult> {
   try {
-    const freeze = (await freezeRepo.findByInstanceId('')).find(f => f.id === freezeId);
+    const freeze = await freezeRepo.findById(freezeId);
     if (!freeze) {
       return { success: false, error: `冻结记录 ${freezeId} 不存在` };
     }

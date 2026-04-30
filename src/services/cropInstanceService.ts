@@ -18,6 +18,7 @@ import { findProduceCodeByName } from '../data/produceCodeRule';
 import * as seedSourceService from './seedSourceService';
 import * as seedlingService from './seedlingService';
 import * as plantingService from './plantingService';
+import * as cropOrderService from './cropOrderService';
 
 const STORAGE_KEY = 'crop_instances';
 
@@ -57,34 +58,37 @@ function generateInstanceCode(cropName: string): string {
 const defaultData: CropInstance[] = [];
 
 /**
- * 初始化数据 - 从localStorage读取或使用默认数据
+ * 统一的数据读取函数 - 从localStorage读取并解析
  */
-export function initInstances(): CropInstance[] {
+function getStoredData(): CropInstance[] {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
       return JSON.parse(stored);
-    } catch {
+    } catch (error) {
+      console.error('作物实例数据解析失败:', error);
       return defaultData;
     }
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
   return defaultData;
+}
+
+/**
+ * 初始化数据 - 从localStorage读取或使用默认数据
+ */
+export function initInstances(): CropInstance[] {
+  const data = getStoredData();
+  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+  }
+  return data.length > 0 ? data : defaultData;
 }
 
 /**
  * 获取所有作物实例
  */
 export function getInstances(): CropInstance[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return defaultData;
-    }
-  }
-  return initInstances();
+  return getStoredData();
 }
 
 /**
@@ -285,14 +289,13 @@ export function getTraceChain(id: string): CropTraceChain | null {
   if (!instance) return null;
 
   // 获取关联的订单
-  const order = undefined;
+  let order;
   if (instance.orderId) {
-    // 暂时注释，因为CropOrderService还未创建
-    // order = cropOrderService.getOrderById(instance.orderId);
+    order = cropOrderService.getOrderById(instance.orderId);
   }
 
   // 获取关联的种源
-  const seedSource = undefined;
+  let seedSource;
   if (instance.sourceOrigin === 'internal_seed') {
     const seedSources = seedSourceService.getSeedSources();
     seedSource = seedSources.find(s => s.instanceId === id);
@@ -303,9 +306,6 @@ export function getTraceChain(id: string): CropTraceChain | null {
 
   // 获取关联的种植记录
   const plantings = plantingService.getPlantings().filter(p => p.instanceId === id);
-
-  // 获取关联的采收记录
-  // TODO: 等harvestService创建后完善
 
   return {
     instance,

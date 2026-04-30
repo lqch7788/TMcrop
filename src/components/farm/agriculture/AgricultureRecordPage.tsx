@@ -55,6 +55,7 @@ export default function AgricultureRecordPage() {
   // 使用统一操作记录 Hook
   const {
     records,
+    setRecords,
     expandedIds,
     toggleChildren,
     getFilteredRecords,
@@ -211,8 +212,8 @@ export default function AgricultureRecordPage() {
       return;
     }
 
-    // 刷新页面
-    window.location.reload();
+    // 触发刷新 - 通过 setRecords 重新渲染组件
+    setRecords(r => [...r]);
   };
 
   // 驳回记录
@@ -231,7 +232,8 @@ export default function AgricultureRecordPage() {
     } else if (record.sourceType === 'tempTask') {
       // 使用 hook 返回的 rejectCompletion
       rejectCompletion(record.sourceId, reason);
-      window.location.reload();
+      // 触发刷新 - 通过 setRecords 重新渲染组件
+      setRecords(r => [...r]);
     }
   };
 

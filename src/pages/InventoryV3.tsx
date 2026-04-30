@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink } from 'lucide-react';
+import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink, X } from 'lucide-react';
 import {
   getInventoryList,
   getInventoryStats,
@@ -431,6 +431,3 @@ export default function InventoryV3Page() {
     </div>
   );
 }
-
-// 需要导入 X 图标
-import { X } from 'lucide-react';

@@ -359,6 +359,9 @@ export interface IInventoryFreezeRepository {
   /** 创建冻结记录 */
   create(freeze: Omit<InventoryFreeze, 'id'>): Promise<InventoryFreeze>;
 
+  /** 根据ID查询冻结记录 */
+  findById(id: string): Promise<InventoryFreeze | null>;
+
   /** 根据实例ID查询冻结记录 */
   findByInstanceId(instanceId: string): Promise<InventoryFreeze[]>;
 
