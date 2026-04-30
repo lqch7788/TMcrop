@@ -2,7 +2,7 @@
  * 种植新增弹窗
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus } from '../../../../types/crop';
@@ -11,6 +11,8 @@ import { getSeedSources } from '../../../../services/seedSourceService';
 import { getSeedlings } from '../../../../services/seedlingService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
+import { cropBatches } from '../../../../data/mockData';
+import { PlanType } from '../../../../types';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -44,8 +46,18 @@ export function AddModal({
     plantingDate: '',
     soilPH: 6.5,
     soilEC: 1.0,
-    remarks: ''
+    remarks: '',
+    productionPlanId: '',     // 关联生产计划ID
+    productionPlanCode: ''   // 关联生产计划批次号
   });
+
+  // 筛选可用的生产计划批次（已发布和执行中，且只显示种植计划类型）
+  const availableProductionPlans = useMemo(() => {
+    return cropBatches.filter(batch =>
+      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress') &&
+      batch.planType === PlanType.PLANTING
+    );
+  }, []);
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
@@ -106,7 +118,9 @@ export function AddModal({
       pictures: pictures,
       remarks: formData.remarks,
       status: PlantingStatus.PLANTED,
-      createBy: '当前用户'
+      createBy: '当前用户',
+      productionPlanId: formData.productionPlanId || undefined,
+      productionPlanCode: formData.productionPlanCode || undefined
     });
 
     // 更新作物实例的定植数量
@@ -213,6 +227,31 @@ export function AddModal({
               </label>
             ))}
           </div>
+        </div>
+
+        {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+          <select
+            value={formData.productionPlanId}
+            onChange={(e) => {
+              const plan = cropBatches.find(b => b.id === e.target.value);
+              setFormData(prev => ({
+                ...prev,
+                productionPlanId: e.target.value,
+                productionPlanCode: plan?.batchCode || ''
+              }));
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">不关联</option>
+            {availableProductionPlans.map(plan => (
+              <option key={plan.id} value={plan.id}>
+                [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-400">只显示种植计划类型的生产批次</p>
         </div>
 
         {/* 来源选择（种源或育苗） */}

@@ -2,9 +2,10 @@
  * 种植详情弹窗
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export function DetailModal({
   onClose,
   record
 }: DetailModalProps) {
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+
   const statusMap = {
     [PlantingStatus.PLANTED]: { label: '已定植', color: 'text-blue-600 bg-blue-50' },
     [PlantingStatus.GROWING]: { label: '生长期', color: 'text-amber-600 bg-amber-50' },
@@ -25,6 +28,28 @@ export function DetailModal({
   };
 
   const status = statusMap[record.status] || statusMap[PlantingStatus.GROWING];
+
+  const images = record.pictures || [];
+
+  const openImageViewer = (index: number) => {
+    setSelectedImageIndex(index);
+  };
+
+  const closeImageViewer = () => {
+    setSelectedImageIndex(null);
+  };
+
+  const goToPreviousImage = () => {
+    if (selectedImageIndex !== null && selectedImageIndex > 0) {
+      setSelectedImageIndex(selectedImageIndex - 1);
+    }
+  };
+
+  const goToNextImage = () => {
+    if (selectedImageIndex !== null && selectedImageIndex < images.length - 1) {
+      setSelectedImageIndex(selectedImageIndex + 1);
+    }
+  };
 
   return (
     <UnifiedModal
@@ -153,7 +178,74 @@ export function DetailModal({
             )}
           </div>
         </div>
+
+        {/* 图片信息 */}
+        {images.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">图片信息</h4>
+            <div className="grid grid-cols-4 gap-3">
+              {images.map((img, index) => (
+                <div
+                  key={index}
+                  onClick={() => openImageViewer(index)}
+                  className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 border border-gray-200"
+                >
+                  <img
+                    src={img}
+                    alt={`图片${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* 图片放大查看器 */}
+      {selectedImageIndex !== null && images.length > 0 && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center">
+          {/* 关闭按钮 */}
+          <button
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* 上一张 */}
+          {selectedImageIndex > 0 && (
+            <button
+              onClick={goToPreviousImage}
+              className="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* 图片 */}
+          <img
+            src={images[selectedImageIndex]}
+            alt={`图片${selectedImageIndex + 1}`}
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+          />
+
+          {/* 下一张 */}
+          {selectedImageIndex < images.length - 1 && (
+            <button
+              onClick={goToNextImage}
+              className="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* 图片计数 */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+            {selectedImageIndex + 1} / {images.length}
+          </div>
+        </div>
+      )}
     </UnifiedModal>
   );
 }

@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, RotateCcw, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 
 interface PlantingFilterProps {
@@ -11,6 +11,7 @@ interface PlantingFilterProps {
   onChange: (filters: PlantingFilters) => void;
   onSearch: () => void;
   onReset: () => void;
+  onAdd?: () => void;  // 新增回调
   cropNames: Array<{ value: string; label: string }>;
   areas: Array<{ value: string; label: string; parent?: string }>;
   statusOptions: Array<{ value: string; label: string }>;
@@ -21,6 +22,7 @@ export function PlantingFilter({
   onChange,
   onSearch,
   onReset,
+  onAdd,
   cropNames,
   areas,
   statusOptions
@@ -100,7 +102,16 @@ export function PlantingFilter({
         </div>
 
         {/* 按钮行 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 ml-auto">
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              新增
+            </button>
+          )}
           <button
             onClick={() => setShowMore(!showMore)}
             className="h-10 px-4 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-2"
