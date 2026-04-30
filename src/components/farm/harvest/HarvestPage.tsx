@@ -382,6 +382,9 @@ export default function HarvestPage() {
     harvesterNames: [] as string[],
     auditor: currentAuditor,
     remarks: '',
+    // V3.0 新增字段
+    harvestType: 'product' as 'seed' | 'seedling' | 'product',  // 采收类型
+    targetInventory: 'product' as 'seed' | 'seedling' | 'product',  // 目标库存
     products: [] as Array<{
       productCode: string;
       cropName: string;

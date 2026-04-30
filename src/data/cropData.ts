@@ -364,7 +364,16 @@ export const units = [
 export const seedlingTypes = [
   { value: '穴盘育苗', label: '穴盘育苗' },
   { value: '直播育苗', label: '直播育苗' },
-  { value: '嫁接育苗', label: '嫁接育苗' }
+  { value: '嫁接育苗', label: '嫁接育苗' },
+  { value: '组培育苗', label: '组培育苗' },
+  { value: '地栽育苗', label: '地栽育苗' },
+  { value: '漂浮育苗', label: '漂浮育苗' },
+  { value: '潮汐育苗', label: '潮汐育苗' },
+  { value: '纸袋育苗', label: '纸袋育苗' },
+  { value: '营养杯育苗', label: '营养杯育苗' },
+  { value: '扦插育苗', label: '扦插育苗' },
+  { value: '分株育苗', label: '分株育苗' },
+  { value: '其他', label: '其他' }
 ];
 
 /** 品质等级选项 */
@@ -372,6 +381,32 @@ export const qualityGrades = [
   { value: 'A级', label: 'A级（优良）' },
   { value: 'B级', label: 'B级（良好）' },
   { value: 'C级', label: 'C级（一般）' }
+];
+
+/** 目标成苗率选项 */
+export const survivalRateOptions = [
+  { value: 85, label: '85%（保守）' },
+  { value: 90, label: '90%（标准）' },
+  { value: 95, label: '95%（乐观）' }
+];
+
+/** 育苗计划类型选项 */
+export const seedlingPlanTypes = [
+  { value: 'routine', label: '常规' },
+  { value: 'urgent', label: '加急' },
+  { value: 'experiment', label: '实验' }
+];
+
+/** 扩繁倍数预设选项 */
+export const propagationMultiples = [
+  { value: 5, label: '3-5倍', description: '多肉植物等' },
+  { value: 10, label: '5-10倍', description: '吊兰、吊竹梅等' },
+  { value: 20, label: '10-20倍', description: '菊花分株等' },
+  { value: 50, label: '30-50倍', description: '普通草莓扩繁' },
+  { value: 80, label: '50-80倍', description: '草莓优良品种' },
+  { value: 500, label: '100-500倍', description: '普通组培' },
+  { value: 1000, label: '500-1000倍', description: '高品质组培' },
+  { value: 0, label: '其他', description: '自定义倍数' }
 ];
 
 /** 种源状态选项 */

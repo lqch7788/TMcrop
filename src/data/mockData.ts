@@ -22,6 +22,23 @@ export const users: User[] = [
   { id: 'U013', name: '陆启闯', avatar: 'LQC', role: 'admin', department: '管理层', position: '管理员' },
 ];
 
+// 基地数据
+export interface Base {
+  id: string;
+  name: string;
+  location: string;
+  type: 'glass' | 'solar' | 'open';
+  area: number;
+  status: 'active' | 'inactive';
+}
+
+export const bases: Base[] = [
+  { id: 'BASE001', name: '总部基地', location: 'A区', type: 'glass', area: 50000, status: 'active' },
+  { id: 'BASE002', name: '东区基地', location: 'B区', type: 'solar', area: 30000, status: 'active' },
+  { id: 'BASE003', name: '南区基地', location: 'C区', type: 'open', area: 40000, status: 'active' },
+  { id: 'BASE004', name: '西区基地', location: 'D区', type: 'glass', area: 25000, status: 'inactive' },
+];
+
 // 温室大棚数据
 export const greenhouses: Greenhouse[] = [
   { id: 'G001', code: 'BLT-001', name: '玻璃温室A区', type: 'glass', area: 5000, location: 'A区东侧', status: 'active' },

@@ -1,0 +1,317 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" width="1200" height="850">
+  <style>
+    text { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+  </style>
+  <defs>
+    <marker id="a-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+    </marker>
+    <marker id="a-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#16a34a"/>
+    </marker>
+    <marker id="a-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+    </marker>
+    <marker id="a-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ea580c"/>
+    </marker>
+    <marker id="a-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#dc2626"/>
+    </marker>
+    <marker id="a-cyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#0891b2"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="850" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2937">问题反馈订单思维导图</text>
+
+  <!-- ========== CENTER: 问题反馈订单 ========== -->
+  <g transform="translate(600, 90)">
+    <circle cx="0" cy="0" r="45" fill="#7c3aed"/>
+    <text x="0" y="-5" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">问题反馈</text>
+    <text x="0" y="12" text-anchor="middle" font-size="11" fill="#e9d5ff">订单</text>
+  </g>
+
+  <!-- ========== TOP-LEFT: 巡查记录创建 ========== -->
+  <path d="M560,75 Q480,55 400,75" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(330, 75)">
+    <rect x="-60" y="-18" width="120" height="36" rx="18" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#5b21b6">巡查记录创建</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M270,95 Q200,105 140,130" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(100, 140)">
+    <rect x="-50" y="-14" width="100" height="28" rx="14" fill="#f3e8ff" stroke="#a78bfa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#5b21b6">InspectionPage</text>
+  </g>
+
+  <path d="M270,95 Q240,115 220,140" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(200, 155)">
+    <rect x="-50" y="-14" width="100" height="28" rx="14" fill="#f3e8ff" stroke="#a78bfa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#5b21b6">feedbackRequired</text>
+  </g>
+
+  <path d="M270,95 Q300,115 320,140" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(360, 155)">
+    <rect x="-50" y="-14" width="100" height="28" rx="14" fill="#f3e8ff" stroke="#a78bfa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#5b21b6">feedbackUsers</text>
+  </g>
+
+  <!-- ========== TOP-RIGHT: 问题单创建 ========== -->
+  <path d="M640,75 Q720,55 800,75" stroke="#16a34a" stroke-width="2" fill="none" marker-end="url(#a-green)"/>
+  <g transform="translate(870, 75)">
+    <rect x="-55" y="-18" width="110" height="36" rx="18" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">问题单创建</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M930,95 Q980,110 1020,135" stroke="#4ade80" stroke-width="1.5" fill="none" marker-end="url(#a-green)"/>
+  <g transform="translate(1050, 145)">
+    <rect x="-45" y="-14" width="90" height="28" rx="14" fill="#f0fdf4" stroke="#4ade80"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#15803d">PD+日期+序号</text>
+  </g>
+
+  <path d="M930,95 Q950,115 930,140" stroke="#4ade80" stroke-width="1.5" fill="none" marker-end="url(#a-green)"/>
+  <g transform="translate(910, 155)">
+    <rect x="-45" y="-14" width="90" height="28" rx="14" fill="#f0fdf4" stroke="#4ade80"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#15803d">状态: 待处理</text>
+  </g>
+
+  <path d="M930,95 Q900,115 880,140" stroke="#4ade80" stroke-width="1.5" fill="none" marker-end="url(#a-green)"/>
+  <g transform="translate(850, 155)">
+    <rect x="-50" y="-14" width="100" height="28" rx="14" fill="#f0fdf4" stroke="#4ade80"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#15803d">sourceModule</text>
+  </g>
+
+  <!-- ========== LEFT: 问题分派 ========== -->
+  <path d="M560,110 Q460,130 360,170" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-blue)"/>
+  <g transform="translate(270, 180)">
+    <rect x="-50" y="-18" width="100" height="36" rx="18" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#1d4ed8">问题分派</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M220,200 Q150,220 90,255" stroke="#60a5fa" stroke-width="1.5" fill="none" marker-end="url(#a-blue)"/>
+  <g transform="translate(50, 270)">
+    <rect x="-45" y="-14" width="90" height="28" rx="14" fill="#eff6ff" stroke="#60a5fa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#1d4ed8">选择执行人</text>
+  </g>
+
+  <path d="M220,200 Q190,230 190,265" stroke="#60a5fa" stroke-width="1.5" fill="none" marker-end="url(#a-blue)"/>
+  <g transform="translate(165, 285)">
+    <rect x="-55" y="-14" width="110" height="28" rx="14" fill="#eff6ff" stroke="#60a5fa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#1d4ed8">设置期望完成时间</text>
+  </g>
+
+  <path d="M220,200 Q270,230 300,265" stroke="#60a5fa" stroke-width="1.5" fill="none" marker-end="url(#a-blue)"/>
+  <g transform="translate(340, 285)">
+    <rect x="-45" y="-14" width="90" height="28" rx="14" fill="#eff6ff" stroke="#60a5fa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#1d4ed8">设置反馈项</text>
+  </g>
+
+  <path d="M220,200 Q330,200 410,210" stroke="#60a5fa" stroke-width="1.5" fill="none" marker-end="url(#a-blue)"/>
+  <g transform="translate(460, 220)">
+    <rect x="-55" y="-14" width="110" height="28" rx="14" fill="#eff6ff" stroke="#60a5fa"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#1d4ed8">dispatchProblem</text>
+  </g>
+
+  <!-- ========== RIGHT: 执行人处理 ========== -->
+  <path d="M640,110 Q740,130 840,170" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-orange)"/>
+  <g transform="translate(930, 180)">
+    <rect x="-55" y="-18" width="110" height="36" rx="18" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#c2410c">执行人处理</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M980,200 Q1040,220 1090,255" stroke="#fb923c" stroke-width="1.5" fill="none" marker-end="url(#a-orange)"/>
+  <g transform="translate(1120, 270)">
+    <rect x="-35" y="-14" width="70" height="28" rx="14" fill="#fff7ed" stroke="#fb923c"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#c2410c">接单</text>
+  </g>
+
+  <path d="M980,200 Q1000,230 980,265" stroke="#fb923c" stroke-width="1.5" fill="none" marker-end="url(#a-orange)"/>
+  <g transform="translate(960, 285)">
+    <rect x="-40" y="-14" width="80" height="28" rx="14" fill="#fff7ed" stroke="#fb923c"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#c2410c">开始处理</text>
+  </g>
+
+  <path d="M980,200 Q940,230 910,265" stroke="#fb923c" stroke-width="1.5" fill="none" marker-end="url(#a-orange)"/>
+  <g transform="translate(860, 285)">
+    <rect x="-65" y="-14" width="130" height="28" rx="14" fill="#fff7ed" stroke="#fb923c"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#c2410c">submitProblemFeedback</text>
+  </g>
+
+  <!-- ========== BOTTOM-LEFT: 验收 ========== -->
+  <path d="M560,130 Q470,200 380,270" stroke="#dc2626" stroke-width="2" fill="none" marker-end="url(#a-red)"/>
+  <g transform="translate(270, 290)">
+    <rect x="-40" y="-18" width="80" height="36" rx="18" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#b91c1c">验收</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M230,310 Q160,340 100,385" stroke="#f87171" stroke-width="1.5" fill="none" marker-end="url(#a-red)"/>
+  <g transform="translate(60, 405)">
+    <rect x="-60" y="-14" width="120" height="28" rx="14" fill="#fef2f2" stroke="#f87171"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#b91c1c">approveProblemCompletion</text>
+  </g>
+
+  <path d="M230,310 Q270,350 300,395" stroke="#f87171" stroke-width="1.5" fill="none" marker-end="url(#a-red)"/>
+  <g transform="translate(340, 415)">
+    <rect x="-55" y="-14" width="110" height="28" rx="14" fill="#fef2f2" stroke="#f87171"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#b91c1c">rejectAcceptance</text>
+  </g>
+
+  <path d="M230,310 Q200,350 180,395" stroke="#f87171" stroke-width="1.5" fill="none" marker-end="url(#a-red)"/>
+  <g transform="translate(150, 415)">
+    <rect x="-40" y="-14" width="80" height="28" rx="14" fill="#fef2f2" stroke="#f87171"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#b91c1c">返工规则</text>
+  </g>
+
+  <!-- ========== BOTTOM-RIGHT: 问题关闭 ========== -->
+  <path d="M640,130 Q730,200 820,270" stroke="#9333ea" stroke-width="2" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(930, 290)">
+    <rect x="-50" y="-18" width="100" height="36" rx="18" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#7e22ce">问题关闭</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M980,310 Q1040,340 1100,385" stroke="#c084fc" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(1130, 405)">
+    <rect x="-35" y="-14" width="70" height="28" rx="14" fill="#faf5ff" stroke="#c084fc"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#7e22ce">已处理</text>
+  </g>
+
+  <path d="M980,310 Q1000,350 980,395" stroke="#c084fc" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(960, 415)">
+    <rect x="-60" y="-14" width="120" height="28" rx="14" fill="#faf5ff" stroke="#c084fc"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#7e22ce">flowRecords更新</text>
+  </g>
+
+  <path d="M980,310 Q940,350 910,395" stroke="#c084fc" stroke-width="1.5" fill="none" marker-end="url(#a-purple)"/>
+  <g transform="translate(860, 415)">
+    <rect x="-45" y="-14" width="90" height="28" rx="14" fill="#faf5ff" stroke="#c084fc"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#7e22ce">保存记录</text>
+  </g>
+
+  <!-- ========== BOTTOM: 问题类型 ========== -->
+  <path d="M600,135 Q600,230 600,320" stroke="#0891b2" stroke-width="2" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(600, 350)">
+    <rect x="-45" y="-18" width="90" height="36" rx="18" fill="#cffafe" stroke="#0891b2" stroke-width="1.5"/>
+    <text x="0" y="5" text-anchor="middle" font-size="11" font-weight="600" fill="#0e7490">问题类型</text>
+  </g>
+
+  <!-- Sub-nodes -->
+  <path d="M555,365 Q480,400 400,450" stroke="#22d3ee" stroke-width="1.5" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(360, 470)">
+    <rect x="-40" y="-14" width="80" height="28" rx="14" fill="#ecfeff" stroke="#22d3ee"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#0e7490">虫害/病害</text>
+  </g>
+
+  <path d="M555,365 Q530,420 510,470" stroke="#22d3ee" stroke-width="1.5" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(490, 490)">
+    <rect x="-30" y="-14" width="60" height="28" rx="14" fill="#ecfeff" stroke="#22d3ee"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#0e7490">环境</text>
+  </g>
+
+  <path d="M600,386 Q600,440 600,490" stroke="#22d3ee" stroke-width="1.5" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(600, 510)">
+    <rect x="-30" y="-14" width="60" height="28" rx="14" fill="#ecfeff" stroke="#22d3ee"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#0e7490">水肥</text>
+  </g>
+
+  <path d="M645,365 Q720,400 800,450" stroke="#22d3ee" stroke-width="1.5" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(840, 470)">
+    <rect x="-30" y="-14" width="60" height="28" rx="14" fill="#ecfeff" stroke="#22d3ee"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#0e7490">其他</text>
+  </g>
+
+  <path d="M645,365 Q670,420 690,470" stroke="#22d3ee" stroke-width="1.5" fill="none" marker-end="url(#a-cyan)"/>
+  <g transform="translate(710, 490)">
+    <rect x="-30" y="-14" width="60" height="28" rx="14" fill="#ecfeff" stroke="#22d3ee"/>
+    <text x="0" y="5" text-anchor="middle" font-size="10" fill="#0e7490">设备</text>
+  </g>
+
+  <!-- ========== LEGEND (BOTTOM LEFT) ========== -->
+  <g transform="translate(50, 560)">
+    <rect x="0" y="0" width="180" height="160" rx="6" fill="#f9fafb" stroke="#e5e7eb"/>
+    <text x="15" y="22" font-size="11" font-weight="600" fill="#111827">图例</text>
+
+    <circle cx="25" cy="45" r="10" fill="#7c3aed"/>
+    <text x="45" y="50" font-size="10" fill="#6b7280">中心主题</text>
+
+    <rect x="12" y="62" width="25" height="16" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1"/>
+    <text x="45" y="74" font-size="10" fill="#6b7280">一级分支</text>
+
+    <rect x="12" y="88" width="25" height="14" rx="7" fill="#f3e8ff" stroke="#a78bfa"/>
+    <text x="45" y="98" font-size="10" fill="#6b7280">二级分支</text>
+
+    <line x1="12" y1="120" x2="40" y2="120" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
+    <text x="50" y="124" font-size="10" fill="#6b7280">连接线</text>
+  </g>
+
+  <!-- ========== KEY RULES (BOTTOM CENTER) ========== -->
+  <g transform="translate(260, 560)">
+    <rect x="0" y="0" width="220" height="160" rx="6" fill="#fef2f2" stroke="#fecaca"/>
+    <text x="15" y="22" font-size="11" font-weight="600" fill="#991b1b">业务规则</text>
+
+    <text x="15" y="45" font-size="10" fill="#6b7280">问题生成条件:</text>
+    <text x="15" y="60" font-size="10" fill="#6b7280">feedbackRequired=true</text>
+    <text x="15" y="73" font-size="10" fill="#6b7280">+ feedbackUsers.length>0</text>
+    <text x="15" y="86" font-size="10" fill="#6b7280">+ inspectionResult≠normal</text>
+
+    <text x="15" y="108" font-size="10" fill="#6b7280">问题编号: PD+日期+序号</text>
+    <text x="15" y="126" font-size="10" fill="#6b7280">严重程度截止日期:</text>
+    <text x="15" y="140" font-size="10" fill="#6b7280">严重=1天, 中等=3天, 轻微=7天</text>
+    <text x="15" y="156" font-size="10" fill="#dc2626">返工: 第1次给原执行人</text>
+  </g>
+
+  <!-- ========== STATUS FLOW (BOTTOM RIGHT) ========== -->
+  <g transform="translate(510, 560)">
+    <rect x="0" y="0" width="240" height="160" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="15" y="22" font-size="11" font-weight="600" fill="#1e40af">状态流转</text>
+
+    <g transform="translate(15, 40)">
+      <rect x="0" y="0" width="55" height="24" rx="4" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="27" y="16" text-anchor="middle" font-size="9" fill="#b45309">待处理</text>
+
+      <line x1="60" y1="12" x2="80" y2="12" stroke="#16a34a" stroke-width="2" marker-end="url(#a-green)"/>
+
+      <rect x="85" y="0" width="55" height="24" rx="4" fill="#dbeafe" stroke="#2563eb"/>
+      <text x="112" y="16" text-anchor="middle" font-size="9" fill="#1d4ed8">处理中</text>
+    </g>
+
+    <g transform="translate(15, 75)">
+      <line x1="27" y1="-5" x2="27" y2="10" stroke="#16a34a" stroke-width="1.5" marker-end="url(#a-green)"/>
+
+      <rect x="0" y="0" width="55" height="24" rx="4" fill="#ede9fe" stroke="#9333ea"/>
+      <text x="27" y="16" text-anchor="middle" font-size="9" fill="#7e22ce">待验收</text>
+
+      <line x1="60" y1="12" x2="80" y2="12" stroke="#16a34a" stroke-width="2" marker-end="url(#a-green)"/>
+
+      <rect x="85" y="0" width="55" height="24" rx="4" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="112" y="16" text-anchor="middle" font-size="9" fill="#15803d">已处理</text>
+    </g>
+
+    <text x="15" y="125" font-size="10" fill="#dc2626">返工退回: 第2次返工退回调派</text>
+    <text x="15" y="145" font-size="10" fill="#6b7280">ProblemEntry: problemCode, status</text>
+  </g>
+
+  <!-- ========== DATA MODELS (FAR RIGHT) ========== -->
+  <g transform="translate(780, 560)">
+    <rect x="0" y="0" width="220" height="160" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="15" y="22" font-size="11" font-weight="600" fill="#166534">核心数据模型</text>
+
+    <text x="15" y="45" font-size="10" fill="#6b7280">ProblemEntry:</text>
+    <text x="15" y="60" font-size="10" fill="#6b7280">  id, problemCode, greenhouseId</text>
+    <text x="15" y="74" font-size="10" fill="#6b7280">  cropName, inspectorName</text>
+    <text x="15" y="88" font-size="10" fill="#6b7280">  issueSeverity, status, handler</text>
+    <text x="15" y="102" font-size="10" fill="#6b7280">  flowRecords</text>
+
+    <text x="15" y="126" font-size="10" fill="#6b7280">Task:</text>
+    <text x="15" y="140" font-size="10" fill="#6b7280">  id, problemId, executorId</text>
+    <text x="15" y="154" font-size="10" fill="#6b7280">  expectedCompletionTime</text>
+  </g>
+</svg>

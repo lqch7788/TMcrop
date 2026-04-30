@@ -1,0 +1,363 @@
+import { Eye, Edit, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Edit2, Pencil, Download } from 'lucide-react';
+import { RecruitmentRequest, RecruitmentStatus } from './types';
+
+interface RecruitmentTableProps {
+  recruitments: RecruitmentRequest[];
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onView: (recruitment: RecruitmentRequest) => void;
+  onEdit: (recruitment: RecruitmentRequest) => void;
+  onDelete: (recruitment: RecruitmentRequest) => void;
+  onApprove: (recruitment: RecruitmentRequest) => void;
+  onComplete: (recruitment: RecruitmentRequest) => void;
+  onCancel: (recruitment: RecruitmentRequest) => void;
+  showCheckbox?: boolean;
+  exportMode?: boolean;
+  batchEditMode?: boolean;
+  batchDeleteMode?: boolean;
+  selectedRows?: string[];
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
+  onAddClick?: () => void;
+  onBatchEditClick?: () => void;
+  onBatchDeleteClick?: () => void;
+  onBatchExportClick?: () => void;
+  onCancelBatchEdit?: () => void;
+  onCancelBatchDelete?: () => void;
+  onCancelExport?: () => void;
+}
+
+// 状态标签组件
+function StatusBadge({ status }: { status: RecruitmentStatus }) {
+  const styles: Record<RecruitmentStatus, { bg: string; text: string; label: string }> = {
+    '待审批': { bg: 'bg-amber-100', text: 'text-amber-700', label: '待审批' },
+    '招聘中': { bg: 'bg-blue-100', text: 'text-blue-700', label: '招聘中' },
+    '已完成': { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '已完成' },
+    '已取消': { bg: 'bg-gray-100', text: 'text-gray-500', label: '已取消' },
+  };
+  const style = styles[status];
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+      {style.label}
+    </span>
+  );
+}
+
+export function RecruitmentTable({
+  recruitments,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  onView,
+  onEdit,
+  onDelete,
+  onApprove,
+  onComplete,
+  onCancel,
+  showCheckbox = false,
+  exportMode = false,
+  batchEditMode = false,
+  batchDeleteMode = false,
+  selectedRows = [],
+  onSelectAll,
+  onSelectRow,
+  onAddClick,
+  onBatchEditClick,
+  onBatchDeleteClick,
+  onBatchExportClick,
+  onCancelBatchEdit,
+  onCancelBatchDelete,
+  onCancelExport,
+}: RecruitmentTableProps) {
+  const totalPages = Math.ceil(recruitments.length / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, recruitments.length);
+  const paginatedData = recruitments.slice(startIndex, endIndex);
+  const allSelected = selectedRows.length === recruitments.length && recruitments.length > 0;
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">招聘记录</h3>
+        <div className="flex gap-2">
+          {(batchEditMode || batchDeleteMode || exportMode) ? (
+            <>
+              {batchEditMode && (
+                <>
+                  <button
+                    onClick={onBatchEditClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    批量编辑
+                  </button>
+                  <button
+                    onClick={onCancelBatchEdit}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {batchDeleteMode && (
+                <>
+                  <button
+                    onClick={onBatchDeleteClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    确认删除
+                  </button>
+                  <button
+                    onClick={onCancelBatchDelete}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+              {exportMode && (
+                <>
+                  <button
+                    onClick={onBatchExportClick}
+                    disabled={selectedRows.length === 0}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    确认导出
+                  </button>
+                  <button
+                    onClick={onCancelExport}
+                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {onAddClick && (
+                <button
+                  onClick={onAddClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {onBatchEditClick && (
+                <button
+                  onClick={onBatchEditClick}
+                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {onBatchDeleteClick && (
+                <button
+                  onClick={onBatchDeleteClick}
+                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {onBatchExportClick && (
+                <button
+                  onClick={onBatchExportClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1200px]">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <tr>
+              {(exportMode || batchEditMode || batchDeleteMode) && (
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
+              )}
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘岗位</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">需求部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">期望到岗</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-300">
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
+                  暂无数据
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((rec) => (
+                <tr key={rec.id} className="hover:bg-blue-100 transition-colors">
+                  {(exportMode || batchEditMode || batchDeleteMode) && (
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.includes(rec.id)}
+                        onChange={() => onSelectRow?.(rec.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm font-medium text-gray-900">{rec.requestCode}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">{rec.position}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-700">{rec.department}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-700">{rec.quantity}人</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-700">{rec.source}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-600">{rec.expectedDate}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <StatusBadge status={rec.status} />
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
+                        {rec.applicantName.charAt(0)}
+                      </div>
+                      <span className="text-sm text-gray-700">{rec.applicantName}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-sm text-gray-600">{rec.applyDate}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onView(rec)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title="查看详情"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {rec.status === '待审批' && (
+                        <>
+                          <button
+                            onClick={() => onApprove(rec)}
+                            className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                            title="审批通过"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onCancel(rec)}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            title="取消"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      {rec.status === '招聘中' && (
+                        <button
+                          onClick={() => onComplete(rec)}
+                          className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                          title="完成招聘"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      {rec.status === '待审批' && (
+                        <button
+                          onClick={() => onEdit(rec)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="编辑"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onDelete(rec)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>每页</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
+            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value={10}>10条</option>
+            <option value={20}>20条</option>
+            <option value={50}>50条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>共 {recruitments.length} 条</span>
+          <button
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            &lt;
+          </button>
+          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
+          <button
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RecruitmentTable;

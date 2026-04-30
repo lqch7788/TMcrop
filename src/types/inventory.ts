@@ -1,90 +1,479 @@
 /**
- * 采收产品库存管理系统类型定义
+ * 统一库存管理系统 V3.0 类型定义
+ * 基于架构设计：双核心驱动 + 循环闭环 + instance_id 追溯
  */
 
-// 库存交易记录
-export interface InventoryTransaction {
-  id: string;
-  type: 'inbound' | 'outbound' | 'transfer';
-  quantity: number;
-  date: string;
-  operator: string;
-  remarks: string;
+// ============================================
+// 枚举定义
+// ============================================
+
+/** 库存实例状态 */
+export enum InventoryStatus {
+  /** 正常库存 */
+  IN_STOCK = 'in_stock',
+  /** 低库存警告 */
+  LOW_STOCK = 'low_stock',
+  /** 冻结中 */
+  FROZEN = 'frozen',
+  /** 已出库 */
+  OUTBOUND = 'outbound',
+  /** 已用完 */
+  EMPTY = 'empty',
 }
 
-// 预警类型
-export type AlertType = 'storage_time' | 'low_stock' | 'high_stock' | 'expiration';
-
-// 预警等级
-export type AlertLevel = 'info' | 'warning' | 'critical';
-
-// 库存状态
-export type InventoryStatus = 'in_stock' | 'low_stock' | 'expired' | 'out_of_stock';
-
-// 预警设置
-export interface AlertSettings {
-  enableStorageTimeAlert: boolean;  // 启用存储时间预警
-  storageTimeThreshold: number;     // 存储时间阈值（天）
-  enableQuantityAlert: boolean;      // 启用库存量预警
-  minQuantityThreshold: number;       // 最小库存预警量
-  maxQuantityThreshold: number;       // 最大库存预警量
-  minStock: number;                  // 最低库存限值
-  maxStock: number;                  // 最高库存限值
-  expirationDays: number;             // 保质期天数
+/** 库存类型（种源/种苗/成品） */
+export enum StockType {
+  /** 种源 */
+  SEED = 'seed',
+  /** 种苗 */
+  SEEDLING = 'seedling',
+  /** 成品 */
+  PRODUCT = 'product',
 }
 
-// 采收产品库存
-export interface ProduceInventory {
-  id: string;                    // 唯一标识
-  harvestRecordId: string;        // 关联采收入库记录ID
+/** 来源类型（自产/外购） */
+export enum SourceType {
+  /** 自产 */
+  SELF_PRODUCED = 'self_produced',
+  /** 外购 */
+  EXTERNAL_PURCHASED = 'external_purchased',
+}
 
-  // 产品识别
-  productCode: string;            // 产品编码（可由采收单号生成）
-  cropName: string;                // 作物名称（如：番茄、黄瓜）
-  variety: string;                // 品种（如：红果番茄、水果黄瓜）
+/** 库存交易类型 */
+export enum TransactionType {
+  /** 入库 */
+  INBOUND = 'inbound',
+  /** 出库 */
+  OUTBOUND = 'outbound',
+  /** 调拨 */
+  TRANSFER = 'transfer',
+  /** 冻结 */
+  FREEZE = 'freeze',
+  /** 解冻 */
+  UNFREEZE = 'unfreeze',
+  /** 调整 */
+  ADJUST = 'adjust',
+}
 
-  // 数量与质量
-  quantity: number;              // 当前库存数量
-  unit: string;                   // 单位（公斤、盒、箱）
-  grade: 'A' | 'B' | 'C';         // 品质等级
-  quality: 'excellent' | 'good' | 'average' | 'poor'; // 品质评定
+/** 业务类型（关联的业务模块） */
+export enum BusinessType {
+  /** 种源管理 */
+  SEED_SOURCE = 'seed_source',
+  /** 育苗管理 */
+  SEEDLING = 'seedling',
+  /** 种植管理 */
+  PLANTING = 'planting',
+  /** 采收入库 */
+  HARVEST = 'harvest',
+  /** 采购入库 */
+  PURCHASE = 'purchase',
+  /** 其他 */
+  OTHER = 'other',
+}
 
-  // 仓库位置
-  warehouseId: string;            // 仓库ID
-  warehouseName: string;          // 仓库名称
-  storageLocation: string;        // 具体存放位置（如：A区-01-03）
+/** 冻结类型 */
+export enum FrozenType {
+  /** 任务冻结（农事任务占用） */
+  TASK = 'task',
+  /** 预留冻结（预分配） */
+  RESERVED = 'reserved',
+  /** 质检冻结（待质检） */
+  QC = 'qc',
+  /** 其他冻结 */
+  OTHER = 'other',
+}
 
-  // 时间追踪
-  harvestDate: string;            // 采收日期
-  storageDate: string;            // 入库日期
-  expirationDate: string;          // 过期日期（可计算：入库日期 + 保质期）
+/** 冻结状态 */
+export enum FreezeStatus {
+  /** 已冻结 */
+  FROZEN = 'frozen',
+  /** 部分解冻 */
+  PARTIAL_UNFROZEN = 'partial_unfrozen',
+  /** 已解冻 */
+  UNFROZEN = 'unfrozen',
+}
 
-  // 预警设置
-  alertSettings: AlertSettings;
+// ============================================
+// 接口定义
+// ============================================
 
-  // 批次追溯
-  batchCode: string;              // 生产计划批次号
-  greenhouseName: string;          // 种植区域
-  plantingMode: string;            // 种植模式
+/**
+ * 库存中心表 - instance_id 为唯一标识
+ */
+export interface InventoryStock {
+  /** 库存实例ID（格式：类型-日期-序号，如 INS-20260430-001） */
+  instanceId: string;
 
-  // 状态
+  /** 库存类型 */
+  stockType: StockType;
+
+  /** 关联的业务ID（如种源ID、采收ID等） */
+  businessId: string;
+  businessType: BusinessType;
+
+  /** 品种信息 */
+  cropId: string;
+  cropName: string;
+  varietyId?: string;
+  varietyName?: string;
+
+  /** 数量信息 */
+  currentQuantity: number;    // 当前库存数量
+  frozenQuantity: number;    // 已冻结数量
+  availableQuantity: number; // 可用数量 = current - frozen
+  unit: string;              // 单位
+
+  /** 来源信息 */
+  sourceType: SourceType;
+  supplierId?: string;        // 供应商ID（外购时必填）
+  supplierName?: string;     // 供应商名称
+  baseId?: string;           // 基地ID（自产时必填）
+  baseName?: string;         // 基地名称
+
+  /** 关联的生产计划 */
+  productionPlanId?: string;
+  productionPlanCode?: string;
+
+  /** 溯源信息（上游来源） */
+  sourceInstanceId?: string;      // 来源库存实例ID
+  sourceBusinessId?: string;      // 来源业务ID
+  sourceBusinessType?: BusinessType;
+
+  /** 状态 */
   status: InventoryStatus;
 
-  // 操作记录
-  inboundRecords: InventoryTransaction[];
-  outboundRecords: InventoryTransaction[];
+  /** 时间信息 */
+  inboundDate: string;        // 入库日期
+  lastOutboundDate?: string;  // 最后出库日期
+  expiryDate?: string;        // 过期/保质期日期
+
+  /** 版本号（乐观锁） */
+  version: number;
+
+  /** 扩展字段（JSON格式存储） */
+  extensions?: Record<string, unknown>;
 }
 
-// 预警信息
+/**
+ * 库存流水表 - 记录所有库存变动
+ */
+export interface InventoryTransaction {
+  id: string;
+
+  /** 关联的库存实例ID */
+  instanceId: string;
+
+  /** 库存类型 */
+  stockType: StockType;
+
+  /** 交易类型 */
+  transactionType: TransactionType;
+
+  /** 数量变化（正数表示增加，负数表示减少） */
+  quantity: number;
+
+  /** 交易前余额 */
+  balanceBefore: number;
+  /** 交易后余额 */
+  balanceAfter: number;
+
+  /** 关联的业务信息 */
+  businessId?: string;
+  businessType: BusinessType;
+  businessCode?: string;      // 业务单号
+
+  /** 操作信息 */
+  operatorId: string;
+  operatorName: string;
+  operateDate: string;
+
+  /** 备注 */
+  remarks?: string;
+
+  /** 扩展字段 */
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * 库存冻结表 - 记录冻结详情
+ */
+export interface InventoryFreeze {
+  id: string;
+
+  /** 关联的库存实例ID */
+  instanceId: string;
+
+  /** 冻结类型 */
+  frozenType: FrozenType;
+
+  /** 冻结数量 */
+  frozenQuantity: number;
+
+  /** 关联的业务ID（如任务ID） */
+  businessId?: string;
+  businessType?: BusinessType;
+
+  /** 冻结状态 */
+  status: FreezeStatus;
+
+  /** 冻结时间 */
+  frozenDate: string;
+  /** 解冻时间 */
+  unfrozenDate?: string;
+
+  /** 操作信息 */
+  operatorId: string;
+  operatorName: string;
+
+  /** 备注 */
+  remarks?: string;
+}
+
+// ============================================
+// Repository 接口定义（依赖注入，支持后续切换数据库）
+// ============================================
+
+/** 库存操作返回结果 */
+export interface InventoryOperationResult {
+  success: boolean;
+  instanceId?: string;
+  newQuantity?: number;
+  error?: string;
+}
+
+/** 可用数量计算结果 */
+export interface AvailableQuantityResult {
+  instanceId: string;
+  currentQuantity: number;
+  frozenQuantity: number;
+  availableQuantity: number;
+}
+
+/** 业务关联信息 */
+export interface BusinessInfo {
+  businessId: string;
+  businessType: BusinessType;
+  businessCode: string;
+  [key: string]: unknown;
+}
+
+/** 溯源结果 */
+export interface TraceResult {
+  instanceId: string;
+  stockType: StockType;
+  businessType: BusinessType;
+  businessId: string;
+  cropName: string;
+  varietyName?: string;
+  quantity: number;
+  inboundDate: string;
+  sourceInstanceId?: string;
+}
+
+/** 下游追溯结果 */
+export interface DownstreamTraceResult {
+  instanceId: string;
+  stockType: StockType;
+  businessType: BusinessType;
+  businessId: string;
+  outboundQuantity: number;
+  outboundDate: string;
+  targetInstanceId?: string;
+}
+
+/** 库存统计结果 */
+export interface InventoryStats {
+  totalInstances: number;
+  totalQuantity: number;
+  byStockType: Record<StockType, { count: number; quantity: number }>;
+  lowStockCount: number;
+  expiringCount: number;
+}
+
+// ============================================
+// Repository 接口（定义标准操作，支持依赖注入）
+// ============================================
+
+export interface IInventoryStockRepository {
+  /** 创建库存实例 */
+  create(stock: Omit<InventoryStock, 'version'>): Promise<InventoryStock>;
+
+  /** 根据ID查询 */
+  findById(instanceId: string): Promise<InventoryStock | null>;
+
+  /** 根据业务ID查询 */
+  findByBusinessId(businessId: string): Promise<InventoryStock | null>;
+
+  /** 条件查询列表 */
+  findAll(filters?: {
+    stockType?: StockType;
+    status?: InventoryStatus;
+    sourceType?: SourceType;
+    productionPlanId?: string;
+    baseId?: string;
+    supplierId?: string;
+  }): Promise<InventoryStock[]>;
+
+  /** 更新库存（带乐观锁） */
+  update(
+    instanceId: string,
+    updates: Partial<InventoryStock>,
+    expectedVersion: number
+  ): Promise<InventoryStock>;
+
+  /** 更新数量（出库/扣减） */
+  updateQuantity(
+    instanceId: string,
+    newQuantity: number,
+    expectedVersion: number
+  ): Promise<InventoryStock>;
+
+  /** 统计 */
+  getStats(filters?: {
+    stockType?: StockType;
+    baseId?: string;
+  }): Promise<InventoryStats>;
+}
+
+export interface IInventoryTransactionRepository {
+  /** 创建交易记录 */
+  create(transaction: Omit<InventoryTransaction, 'id'>): Promise<InventoryTransaction>;
+
+  /** 根据实例ID查询交易记录 */
+  findByInstanceId(instanceId: string): Promise<InventoryTransaction[]>;
+
+  /** 根据业务ID查询交易记录 */
+  findByBusinessId(businessId: string): Promise<InventoryTransaction[]>;
+
+  /** 条件查询 */
+  findAll(filters?: {
+    stockType?: StockType;
+    transactionType?: TransactionType;
+    businessType?: BusinessType;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<InventoryTransaction[]>;
+}
+
+export interface IInventoryFreezeRepository {
+  /** 创建冻结记录 */
+  create(freeze: Omit<InventoryFreeze, 'id'>): Promise<InventoryFreeze>;
+
+  /** 根据实例ID查询冻结记录 */
+  findByInstanceId(instanceId: string): Promise<InventoryFreeze[]>;
+
+  /** 根据业务ID查询冻结记录 */
+  findByBusinessId(businessId: string): Promise<InventoryFreeze[]>;
+
+  /** 解冻 */
+  unfreeze(id: string): Promise<InventoryFreeze>;
+
+  /** 更新冻结状态 */
+  updateStatus(id: string, status: FreezeStatus): Promise<InventoryFreeze>;
+}
+
+// ============================================
+// 辅助类型定义
+// ============================================
+
+/** 入库请求 */
+export interface InboundRequest {
+  stockType: StockType;
+  businessId: string;
+  businessType: BusinessType;
+  cropId: string;
+  cropName: string;
+  varietyId?: string;
+  varietyName?: string;
+  quantity: number;
+  unit: string;
+  sourceType: SourceType;
+  supplierId?: string;
+  supplierName?: string;
+  baseId?: string;
+  baseName?: string;
+  productionPlanId?: string;
+  productionPlanCode?: string;
+  sourceInstanceId?: string;
+  sourceBusinessId?: string;
+  sourceBusinessType?: BusinessType;
+  remarks?: string;
+  extensions?: Record<string, unknown>;
+}
+
+/** 出库请求 */
+export interface OutboundRequest {
+  instanceId: string;
+  businessId: string;
+  businessType: BusinessType;
+  businessCode?: string;
+  quantity: number;
+  operatorId: string;
+  operatorName: string;
+  remarks?: string;
+}
+
+/** 冻结请求 */
+export interface FreezeRequest {
+  instanceId: string;
+  frozenType: FrozenType;
+  frozenQuantity: number;
+  businessId?: string;
+  businessType?: BusinessType;
+  operatorId: string;
+  operatorName: string;
+  remarks?: string;
+}
+
+/** 预警信息 */
 export interface AlertInfo {
-  type: AlertType;
-  level: AlertLevel;
+  type: 'storage_time' | 'low_stock' | 'high_stock' | 'expiration';
+  level: 'info' | 'warning' | 'critical';
+  instanceId: string;
   message: string;
   threshold: number;
   currentValue: number;
 }
 
-// 预警统计
+/** 预警设置 */
+export interface AlertSettings {
+  enableStorageTimeAlert: boolean;
+  storageTimeThreshold: number;
+  enableQuantityAlert: boolean;
+  minQuantityThreshold: number;
+  maxQuantityThreshold: number;
+  minStock: number;
+  maxStock: number;
+  expirationDays: number;
+}
+
+/** 采收产品库存（兼容V2.0） */
+export interface ProduceInventory {
+  id: string;
+  harvestRecordId: string;
+  productCode: string;
+  cropName: string;
+  variety: string;
+  quantity: number;
+  unit: string;
+  grade: 'A' | 'B' | 'C';
+  quality: 'excellent' | 'good' | 'average' | 'poor';
+  warehouseId: string;
+  warehouseName: string;
+  storageLocation: string;
+  harvestDate: string;
+  storageDate: string;
+  expirationDate: string;
+  alertSettings: AlertSettings;
+  batchCode: string;
+  greenhouseName: string;
+  plantingMode: string;
+  status: InventoryStatus;
+  inboundRecords: InventoryTransaction[];
+  outboundRecords: InventoryTransaction[];
+}
+
+/** 预警统计 */
 export interface AlertStats {
   totalAlerts: number;
   storageTimeAlerts: number;

@@ -8,6 +8,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, RefreshCw, Search, Plus, Check, Leaf } from 'lucide-react';
 import { SourceType, StockStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
+import { PlanType } from '../../../../types';
 import { addSeedSource, updateSeedSource, generateSeedCode } from '../../../../services/seedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
@@ -15,7 +16,7 @@ import * as supplierService from '../../../../services/supplierService';
 import { CropVariety, CropVarietySearchResult } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
-import { currentUser } from '../../../../data/mockData';
+import { currentUser, bases, cropBatches } from '../../../../data/mockData';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -47,7 +48,13 @@ export function AddModal({
     unitPrice: 0,
     pictures: [] as string[],
     remarks: '',
-    createBy: currentUser.name // 默认当前登录用户
+    createBy: currentUser.name, // 默认当前登录用户
+    // V3.0 新增字段
+    productionPlanId: '',    // 关联生产计划ID
+    productionPlanCode: '',   // 关联生产计划批次号
+    supplierIsInternal: false, // true=自产, false=外购
+    baseId: '',              // 基地ID
+    baseName: '',            // 基地名称
   });
 
   // 作物编码
@@ -230,7 +237,13 @@ export function AddModal({
       status,
       traceabilityCode,
       printCount: 0,
-      createBy: formData.createBy
+      createBy: formData.createBy,
+      // V3.0 新增字段
+      productionPlanId: formData.productionPlanId,
+      productionPlanCode: formData.productionPlanCode,
+      supplierIsInternal: formData.supplierIsInternal,
+      baseId: formData.baseId,
+      baseName: formData.baseName,
     });
 
     // 同时创建作物实例记录
@@ -273,7 +286,13 @@ export function AddModal({
       unit: '袋',
       unitPrice: 0,
       pictures: [],
-      remarks: ''
+      remarks: '',
+      // V3.0 新增字段
+      productionPlanId: '',
+      productionPlanCode: '',
+      supplierIsInternal: false,
+      baseId: '',
+      baseName: '',
     });
     setCropCode('');
     setSeedCode('');
@@ -579,6 +598,85 @@ export function AddModal({
               />
             </div>
           )}
+
+          {/* V3.0 自产/外购标识 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">来源类型</label>
+            <select
+              value={formData.supplierIsInternal ? 'internal' : 'external'}
+              onChange={(e) => {
+                const isInternal = e.target.value === 'internal';
+                setFormData(prev => ({
+                  ...prev,
+                  supplierIsInternal: isInternal,
+                  // 切换时清空基地信息
+                  baseId: isInternal ? prev.baseId : '',
+                  baseName: isInternal ? prev.baseName : '',
+                }));
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="external">外购</option>
+              <option value="internal">自产</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              {formData.supplierIsInternal ? '自产种源：必选选择所属基地' : '外购种源：必选选择供应商'}
+            </p>
+          </div>
+
+          {/* V3.0 基地选择（自产时必填） */}
+          {formData.supplierIsInternal && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                <span className="text-red-500">*</span> 所属基地
+              </label>
+              <select
+                value={formData.baseId}
+                onChange={(e) => {
+                  const base = bases.find(b => b.id === e.target.value);
+                  setFormData(prev => ({
+                    ...prev,
+                    baseId: e.target.value,
+                    baseName: base?.name || '',
+                  }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择基地</option>
+                {bases.filter(b => b.status === 'active').map(base => (
+                  <option key={base.id} value={base.id}>{base.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* V3.0 生产计划关联 - 只显示育种计划类型 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+            <select
+              value={formData.productionPlanId}
+              onChange={(e) => {
+                const plan = cropBatches.find(b => b.id === e.target.value);
+                setFormData(prev => ({
+                  ...prev,
+                  productionPlanId: e.target.value,
+                  productionPlanCode: plan?.batchCode || '',
+                }));
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">不关联</option>
+              {cropBatches.filter(b =>
+                (b.batchStatus === 'published' || b.batchStatus === 'in_progress') &&
+                b.planType === PlanType.SEED_BREEDING
+              ).map(batch => (
+                <option key={batch.id} value={batch.id}>
+                  [{batch.planTypeName || '育种计划'}] {batch.batchCode} - {batch.cropName}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">只显示育种计划类型的生产批次</p>
+          </div>
 
           {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
           <div>

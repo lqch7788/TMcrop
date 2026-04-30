@@ -1,6 +1,6 @@
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
-import { CropBatch, Greenhouse, CropType } from '../../../types';
-import { RESPONSIBLE_PERSONS, batchStatusLabels } from '../constants';
+import { CropBatch, Greenhouse, CropType, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
+import { RESPONSIBLE_PERSONS, batchStatusLabels, planTypeOptions } from '../constants';
 import { useRef } from 'react';
 import { Upload } from 'lucide-react';
 
@@ -10,6 +10,8 @@ interface CreateBatchModalProps {
   onSubmit: () => void;
   formData: {
     batchCode: string;
+    planType: PlanType;  // 计划类型
+    planTypeName: string;  // 计划类型名称
     cropName: string;
     variety: string;
     greenhouseId: string;
@@ -59,6 +61,39 @@ export function CreateBatchModal({
       onSubmit={onSubmit}
     >
       <div className="space-y-4 modal-form-inputs">
+        {/* 计划类型选择 */}
+        <FormField label="计划类型" required>
+          <div className="flex gap-4 flex-wrap">
+            {planTypeOptions.map((option) => {
+              const isSelected = formData.planType === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={`
+                    flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border-2 transition-all
+                    ${isSelected
+                      ? `border-emerald-500 ${option.color.bg} ${option.color.text}`
+                      : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'}
+                  `}
+                >
+                  <input
+                    type="radio"
+                    name="planType"
+                    value={option.value}
+                    checked={isSelected}
+                    onChange={(e) => {
+                      onFormChange('planType', e.target.value as PlanType);
+                      onFormChange('planTypeName', option.label);
+                    }}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">{option.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </FormField>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="生产计划批次号" required error={errors.batchCode}>
             <div className="flex gap-2">

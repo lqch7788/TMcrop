@@ -1,0 +1,131 @@
+/**
+ * 种源标签打印弹窗
+ */
+
+import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { SeedSource } from '../../../../types/crop';
+
+interface PrintLabelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  record: SeedSource;
+}
+
+export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
+  const [template, setTemplate] = useState<'small' | 'large'>('small');
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // 生成二维码内容
+  const qrCodeValue = JSON.stringify({
+    type: 'seed-source',
+    code: record.seedCode,
+    date: record.purchaseDate,
+    cropName: record.cropName
+  });
+
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="打印标签"
+      size="md"
+      showFooter={true}
+      onSubmit={handlePrint}
+      submitText="打印"
+      cancelText="取消"
+    >
+      <div className="space-y-4">
+        {/* 模板选择 */}
+        <div className="flex gap-4 mb-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="template"
+              value="small"
+              checked={template === 'small'}
+              onChange={() => setTemplate('small')}
+              className="w-4 h-4 text-emerald-600"
+            />
+            <span className="text-sm">小标签</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="template"
+              value="large"
+              checked={template === 'large'}
+              onChange={() => setTemplate('large')}
+              className="w-4 h-4 text-emerald-600"
+            />
+            <span className="text-sm">大标签</span>
+          </label>
+        </div>
+
+        {/* 标签预览 */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+          {template === 'small' ? (
+            /* 小标签 */
+            <div className="flex flex-col items-center">
+              <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                <QRCodeSVG value={qrCodeValue} size={80} />
+              </div>
+              <div className="mt-3 text-center">
+                <div className="text-sm font-bold text-gray-900">{record.seedCode}</div>
+                <div className="text-xs text-gray-600 mt-1">{record.cropName}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {record.availableCount.toLocaleString()} {record.unit}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 大标签 */
+            <div className="flex flex-col items-center">
+              <div className="bg-white p-4 border border-gray-200 rounded-lg">
+                <QRCodeSVG value={qrCodeValue} size={120} />
+              </div>
+              <div className="mt-4 text-center">
+                <div className="text-lg font-bold text-gray-900">{record.seedCode}</div>
+                <div className="text-sm text-gray-600 mt-2">{record.cropName} - {record.cropVariety}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  数量：{record.availableCount.toLocaleString()} {record.unit}
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                  供应商：{record.supplierName}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  采购日期：{record.purchaseDate}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="text-sm text-gray-500 text-center">
+          点击"打印"按钮使用浏览器打印功能
+        </div>
+      </div>
+
+      {/* 打印样式 */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-label, .print-label * {
+            visibility: visible;
+          }
+          .print-label {
+            position: absolute;
+            left: 0;
+            top: 0;
+          }
+        }
+      `}</style>
+    </UnifiedModal>
+  );
+}

@@ -1,0 +1,236 @@
+<mxfile host="Electron" agent="Claude">
+  <diagram name="作物管理数据流转图" id="crop-management-flow">
+    <mxGraphModel dx="936" dy="687" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" value="作物管理模块数据流转图" vertex="1">
+          <mxGeometry height="40" width="400" x="400" y="20" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="20" fontStyle="1" align="center" bold="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="order" parent="1" value="订单管理&#xa;CropOrder" vertex="1">
+          <mxGeometry height="60" width="200" x="500" y="80" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#E3F2FD" strokeColor="#1976D2" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow1" edge="1" parent="1" source="order" target="seedSource">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="500" y="160" as="sourcePoint" />
+            <mxPoint x="500" y="200" as="targetPoint" />
+          </mxGeometry>
+          <mxStyle as="style">
+            <mxCellStyle dashed="1" strokeColor="#666666" fontColor="#666666" fontSize="10" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label1" connectable="0" parent="1" value="（可选）关联" vertex="1">
+          <mxGeometry height="20" width="80" x="520" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="seedSource" parent="1" value="种源管理&#xa;SeedSource" vertex="1">
+          <mxGeometry height="60" width="180" x="100" y="200" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#E8F5E9" strokeColor="#388E3C" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow2" edge="1" parent="1" source="seedSource" target="cropInstance">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="350" y="230" as="sourcePoint" />
+            <mxPoint x="400" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label2" connectable="0" parent="1" value="创建实例" vertex="1">
+          <mxGeometry height="20" width="60" x="360" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="cropInstance" parent="1" value="CropInstance&#xa;作物实例（核心）" vertex="1">
+          <mxGeometry height="60" width="180" x="350" y="200" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#FFF3E0" strokeColor="#F57C00" rounded="1" bold="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label3" connectable="0" parent="1" value="消耗&#xa;availableCount" vertex="1">
+          <mxGeometry height="30" width="80" x="100" y="280" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="9" align="center" fontColor="#666666" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow3" edge="1" parent="1" source="seedSource" target="seedling">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="190" y="260" />
+              <mxPoint x="280" y="260" />
+              <mxPoint x="280" y="320" />
+            </Array>
+            <mxPoint x="280" y="260" as="sourcePoint" />
+            <mxPoint x="280" y="320" as="targetPoint" />
+          </mxGeometry>
+          <mxStyle as="style">
+            <mxCellStyle strokeColor="#388E3C" fontColor="#388E3C" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="seedling" parent="1" value="育苗管理&#xa;Seedling" vertex="1">
+          <mxGeometry height="60" width="180" x="190" y="320" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#E3F2FD" strokeColor="#1976D2" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label4" connectable="0" parent="1" value="扣减&#xa;availableCount" vertex="1">
+          <mxGeometry height="30" width="80" x="70" y="280" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="9" align="center" fontColor="#666666" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow4" edge="1" parent="1" source="seedling" target="planting">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="380" />
+              <mxPoint x="490" y="380" />
+              <mxPoint x="490" y="440" />
+            </Array>
+            <mxPoint x="370" y="380" as="sourcePoint" />
+            <mxPoint x="370" y="440" as="targetPoint" />
+          </mxGeometry>
+          <mxStyle as="style">
+            <mxCellStyle strokeColor="#1976D2" fontColor="#1976D2" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label5" connectable="0" parent="1" value="定植操作" vertex="1">
+          <mxGeometry height="20" width="60" x="390" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="planting" parent="1" value="种植管理&#xa;Planting" vertex="1">
+          <mxGeometry height="60" width="180" x="400" y="440" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#E8F5E9" strokeColor="#388E3C" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow5" edge="1" parent="1" source="planting" target="harvest">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="500" as="sourcePoint" />
+            <mxPoint x="580" y="560" as="targetPoint" />
+          </mxGeometry>
+          <mxStyle as="style">
+            <mxCellStyle strokeColor="#388E3C" fontColor="#388E3C" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label6" connectable="0" parent="1" value="采收" vertex="1">
+          <mxGeometry height="20" width="50" x="600" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="harvest" parent="1" value="采收入库&#xa;HarvestRecord" vertex="1">
+          <mxGeometry height="60" width="180" x="500" y="560" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#FCE4EC" strokeColor="#C2185B" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="arrow6" edge="1" parent="1" source="harvest" target="orderSale">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="680" y="620" as="sourcePoint" />
+            <mxPoint x="800" y="620" as="targetPoint" />
+          </mxGeometry>
+          <mxStyle as="style">
+            <mxCellStyle strokeColor="#C2185B" fontColor="#C2185B" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label7" connectable="0" parent="1" value="销售出库" vertex="1">
+          <mxGeometry height="20" width="60" x="710" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="orderSale" parent="1" value="订单管理&#xa;（销售）" vertex="1">
+          <mxGeometry height="60" width="160" x="800" y="560" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" align="center" verticalAlign="middle" fillColor="#E1F5FE" strokeColor="#0277BD" rounded="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="label8" connectable="0" parent="1" value="更新&#xa;harvestedQuantity&#xa;currentQuantity" vertex="1">
+          <mxGeometry height="40" width="100" x="620" y="470" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="9" align="center" fontColor="#F57C00" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="codeRuleTitle" parent="1" value="编码生成规则" vertex="1">
+          <mxGeometry height="30" width="300" x="850" y="80" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="14" fontStyle="1" align="center" fillColor="#FAFAFA" strokeColor="#BDBDBD" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="codeRuleBox" parent="1" value="种源批号：ZZ + 日期 + 流水号&#xa;例：ZZ20260426-001&#xa;&#xa;育苗批号：YM + 年月日 + 流水号&#xa;例：YM20260426-001&#xa;&#xa;种植批号：来源批号 + 日期&#xa;例：YM20260426-001-20260301&#xa;&#xa;采收单号：HS + 年月日 + 流水号&#xa;例：HS20260426001&#xa;&#xa;订单编号：DD + 年月日 + 流水号&#xa;例：DD20260426001&#xa;&#xa;作物编码：9位（PD + 类型 + 品种 + 序号）&#xa;例：PD03010001&#xa;&#xa;实例编码：作物编码(9位) + 年月日(6位) + 流水号(3位) = 18位&#xa;例：PD0301000100240426001&#xa;&#xa;溯源码：TR + 日期 + 作物名前2字&#xa;例：TR20260426番茄" vertex="1">
+          <mxGeometry height="300" width="320" x="850" y="110" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" verticalAlign="top" fillColor="#FAFAFA" strokeColor="#BDBDBD" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="qtyRuleTitle" parent="1" value="数量变化规则" vertex="1">
+          <mxGeometry height="25" width="120" x="60" y="385" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" fontStyle="1" align="center" fillColor="#FFF8E1" strokeColor="#F9A825" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="qtyRuleBox" parent="1" value="种源入库：&#xa;  initialCount = quantity × 1000&#xa;  availableCount = initialCount&#xa;&#xa;育苗创建：&#xa;  availableCount -= 育苗数量&#xa;&#xa;定植操作：&#xa;  plantedQuantity += 定植数量&#xa;&#xa;采收入库：&#xa;  harvestedQuantity += 采收数量&#xa;  currentQuantity -= 采收数量&#xa;  currentQuantity ≤ 0 → status=&#39;harvested&#39;" vertex="1">
+          <mxGeometry height="220" width="230" x="50" y="410" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="9" align="left" verticalAlign="top" fillColor="#FFFDE7" strokeColor="#F9A825" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="traceTitle" parent="1" value="溯源链结构 CropTraceChain" vertex="1">
+          <mxGeometry height="30" width="300" x="850" y="440" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" fontStyle="1" align="center" fillColor="#E8F5E9" strokeColor="#388E3C" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="traceBox" parent="1" value="CropTraceChain {&#xa;  instance: CropInstance,    // 作物实例&#xa;  order?: CropOrder,        // 关联订单&#xa;  seedSource?: SeedSource,   // 种源记录&#xa;  seedlings?: Seedling[],   // 育苗记录列表&#xa;  plantings?: Planting[],     // 种植记录列表&#xa;  harvests?: HarvestRecord[] // 采收记录列表&#xa;}" vertex="1">
+          <mxGeometry height="150" width="320" x="850" y="470" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" verticalAlign="top" fillColor="#E8F5E9" strokeColor="#388E3C" fontFamily="Courier New" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="storageTitle" parent="1" value="localStorage 存储" vertex="1">
+          <mxGeometry height="30" width="300" x="50" y="640" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="12" fontStyle="1" align="center" fillColor="#ECEFF1" strokeColor="#607D8B" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="storageBox" parent="1" value="localStorage = {&#xa;  &#39;crop_instances&#39;: [...],       // 作物实例&#xa;  &#39;crop_orders&#39;: [...],         // 订单&#xa;  &#39;crop_seed_sources&#39;: [...],   // 种源&#xa;  &#39;crop_seedlings&#39;: [...],      // 育苗&#xa;  &#39;crop_plantings&#39;: [...],      // 种植&#xa;  &#39;harvest_records&#39;: [...]      // 采收记录&#xa;}" vertex="1">
+          <mxGeometry height="120" width="300" x="50" y="670" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" verticalAlign="top" fillColor="#ECEFF1" strokeColor="#607D8B" fontFamily="Courier New" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="stepTitle" parent="1" value="操作流程示例" vertex="1">
+          <mxGeometry height="30" width="600" x="50" y="800" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="14" fontStyle="1" align="center" fillColor="#E3F2FD" strokeColor="#1976D2" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="stepBox" parent="1" value="完整生命周期流程：&#xa;&#xa;① 种源入库 → 在【种源管理】新增种源，系统自动创建 CropInstance&#xa;&#xa;② 育苗创建 → 在【育苗管理】新增育苗，扣减种源 availableCount，更新实例状态&#xa;&#xa;③ 定植操作 → 在【育苗管理】点击【定植】，跳转到【种植管理】创建种植记录&#xa;               更新 CropInstance.plantedQuantity&#xa;&#xa;④ 采收入库 → 在【采收入库】新增采收记录，更新实例 harvestedQuantity&#xa;               当 currentQuantity ≤ 0 时，状态更新为 &#39;harvested&#39;&#xa;&#xa;⑤ 销售出库 → 在【订单管理】关联实例，完成订单，状态更新为 &#39;outbound&#39;" vertex="1">
+          <mxGeometry height="180" width="600" x="50" y="830" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="11" align="left" verticalAlign="top" fillColor="#E3F2FD" strokeColor="#1976D2" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="legendTitle" parent="1" value="图例" vertex="1">
+          <mxGeometry height="25" width="100" x="700" y="800" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="11" fontStyle="1" align="center" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="legend1" parent="1" value="━━ 实线：正常数据流" vertex="1">
+          <mxGeometry height="20" width="150" x="700" y="830" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="legend2" parent="1" value="-- - 虚线：可选/关联关系" vertex="1">
+          <mxGeometry height="20" width="150" x="700" y="855" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" dashed="1" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="legend3" parent="1" value="━━ 彩色线：数量更新" vertex="1">
+          <mxGeometry height="20" width="150" x="700" y="880" as="geometry" />
+          <mxStyle as="style">
+            <mxCellStyle fontSize="10" align="left" strokeColor="#F57C00" />
+          </mxStyle>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

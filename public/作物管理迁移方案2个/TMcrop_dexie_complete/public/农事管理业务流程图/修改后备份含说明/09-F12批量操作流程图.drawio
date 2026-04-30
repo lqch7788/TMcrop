@@ -1,0 +1,182 @@
+<mxfile host="Electron">
+  <diagram name="F12批量操作流程图" updated="2026-04-23" id="0">
+    <mxGraphModel dx="1873" dy="1375" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" value="F12 批量操作流程图" vertex="1">
+          <mxGeometry height="40" width="400" x="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="area1_title" parent="1" style="text;html=1;strokeColor=none;fillColor=#e6f7ff;fontColor=#000000;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" value="批量派发" vertex="1">
+          <mxGeometry height="30" width="200" x="120" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="start_dispatch" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=12;fontColor=#ffffff;fontStyle=1;align=center" value="开始" vertex="1">
+          <mxGeometry height="35" width="80" x="160" y="185.5" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="TaskTab点击&#xa;【批量派发】" vertex="1">
+          <mxGeometry height="50" width="120" x="140" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="勾选任务&#xa;（仅draft/rejected状态）" vertex="1">
+          <mxGeometry height="50" width="120" x="140" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fa8c16;strokeColor=#d46b08;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="已选任务？" vertex="1">
+          <mxGeometry height="60" width="100" x="150" y="448" as="geometry" />
+        </mxCell>
+        <mxCell id="no_select" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=10;fontColor=#ffffff;align=center;verticalAlign=middle" value="提示：请先勾选任务" vertex="1">
+          <mxGeometry height="35" width="100" x="150" y="588" as="geometry" />
+        </mxCell>
+        <mxCell id="yes_select" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="打开BatchDispatchModal" vertex="1">
+          <mxGeometry height="40" width="120" x="320" y="458" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="选择执行人" vertex="1">
+          <mxGeometry height="40" width="120" x="320" y="523" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="确认批量派发" vertex="1">
+          <mxGeometry height="40" width="120" x="320" y="588" as="geometry" />
+        </mxCell>
+        <mxCell id="p5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="批量更新状态&#xa;draft/rejected → pending" vertex="1">
+          <mxGeometry height="50" width="120" x="320" y="653" as="geometry" />
+        </mxCell>
+        <mxCell id="p6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#722ed1;strokeColor=#531d93;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="批量记录操作日志" vertex="1">
+          <mxGeometry height="40" width="120" x="320" y="728" as="geometry" />
+        </mxCell>
+        <mxCell id="end_dispatch" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ff4d4f;strokeColor=#a8071a;fontSize=12;fontColor=#ffffff;fontStyle=1;align=center" value="派发完成" vertex="1">
+          <mxGeometry height="35" width="80" x="340" y="808" as="geometry" />
+        </mxCell>
+        <mxCell id="area2_title" parent="1" style="text;html=1;strokeColor=none;fillColor=#b7eb8f;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#090909;" value="批量验收" vertex="1">
+          <mxGeometry height="30" width="200" x="550" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="start_verify" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=12;fontColor=#ffffff;fontStyle=1;align=center" value="开始" vertex="1">
+          <mxGeometry height="35" width="80" x="610" y="185.5" as="geometry" />
+        </mxCell>
+        <mxCell id="v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="TaskTab点击&#xa;【批量验收】" vertex="1">
+          <mxGeometry height="50" width="120" x="590" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="勾选任务&#xa;（仅waiting_acceptance状态）" vertex="1">
+          <mxGeometry height="50" width="120" x="590" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fa8c16;strokeColor=#d46b08;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="已选任务？" vertex="1">
+          <mxGeometry height="60" width="100" x="600" y="448" as="geometry" />
+        </mxCell>
+        <mxCell id="no_select2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=10;fontColor=#ffffff;align=center;verticalAlign=middle" value="提示：请先勾选任务" vertex="1">
+          <mxGeometry height="35" width="100" x="600" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="yes_select2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="打开BatchAcceptModal" vertex="1">
+          <mxGeometry height="40" width="120" x="770" y="458" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fa8c16;strokeColor=#d46b08;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="验收结果？" vertex="1">
+          <mxGeometry height="60" width="100" x="780" y="518" as="geometry" />
+        </mxCell>
+        <mxCell id="v3_pass" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="批量通过" vertex="1">
+          <mxGeometry height="35" width="90" x="980" y="528" as="geometry" />
+        </mxCell>
+        <mxCell id="v4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=10;fontColor=#ffffff;align=center;verticalAlign=middle" value="状态→completed&#xa;自动创建WorkLog" vertex="1">
+          <mxGeometry height="50" width="90" x="980" y="603" as="geometry" />
+        </mxCell>
+        <mxCell id="v3_reject" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="批量驳回" vertex="1">
+          <mxGeometry height="35" width="90" x="785" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="v5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=10;fontColor=#ffffff;align=center;verticalAlign=middle" value="填写驳回原因" vertex="1">
+          <mxGeometry height="35" width="90" x="785" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="v6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=10;fontColor=#ffffff;align=center;verticalAlign=middle" value="状态→rejected/failed" vertex="1">
+          <mxGeometry height="40" width="90" x="785" y="808" as="geometry" />
+        </mxCell>
+        <mxCell id="v7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#722ed1;strokeColor=#531d93;fontSize=11;fontColor=#ffffff;align=center;verticalAlign=middle" value="批量记录操作日志" vertex="1">
+          <mxGeometry height="40" width="110" x="970" y="705.5" as="geometry" />
+        </mxCell>
+        <mxCell id="end_verify" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ff4d4f;strokeColor=#a8071a;fontSize=12;fontColor=#ffffff;fontStyle=1;align=center" value="验收完成" vertex="1">
+          <mxGeometry height="35" width="80" x="985" y="798" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="start_dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="p1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="p2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="d1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="no_select" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="yes_select" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" edge="1" parent="1" source="yes_select" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" edge="1" parent="1" source="p3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" edge="1" parent="1" source="p4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l9" edge="1" parent="1" source="p5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l10" edge="1" parent="1" source="p6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="end_dispatch" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l11" edge="1" parent="1" source="start_verify" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="v1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l12" edge="1" parent="1" source="v1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="v2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l13" edge="1" parent="1" source="v2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="d2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l14" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="no_select2" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l15" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="yes_select2" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l16" edge="1" parent="1" source="yes_select2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="d3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l17" edge="1" parent="1" source="d3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="v3_pass" value="通过">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l18" edge="1" parent="1" source="v3_pass" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="v4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l19" edge="1" parent="1" source="v4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="v7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l20" edge="1" parent="1" source="d3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="v3_reject" value="驳回">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l21" edge="1" parent="1" source="v3_reject" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="v5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l22" edge="1" parent="1" source="v5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="v6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l23" edge="1" parent="1" source="v6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="v7" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="990" y="783" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l24" edge="1" parent="1" source="v7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="end_verify" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="comp_title" parent="1" style="text;html=1;strokeColor=#666;fillColor=#f5f5f5;fontColor=#000000;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" value="涉及组件：" vertex="1">
+          <mxGeometry height="20" width="80" x="1100" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="comp" parent="1" style="text;html=1;strokeColor=#999;fillColor=#f0f5ff;fontColor=#000000;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" value="TaskTab&#xa;BatchDispatchModal&#xa;BatchAcceptModal&#xa;useTasks" vertex="1">
+          <mxGeometry height="60" width="140" x="1100" y="165" as="geometry" />
+        </mxCell>
+        <mxCell id="limit_title" parent="1" style="text;html=1;strokeColor=#666;fillColor=#f5f5f5;fontColor=#000000;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" value="操作限制：" vertex="1">
+          <mxGeometry height="20" width="80" x="1100" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="limits" parent="1" style="text;html=1;strokeColor=#999;fillColor=#fffbe6;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#090909;" value="批量派发：仅支持draft/rejected状态&#xa;批量验收：仅支持waiting_acceptance状态&#xa;驳回后状态由rejected次数决定" vertex="1">
+          <mxGeometry height="60" width="250" x="1100" y="275" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

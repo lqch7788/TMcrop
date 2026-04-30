@@ -275,8 +275,8 @@ export default function WarehouseOverviewPage() {
     });
     content += '</table></body></html>';
 
-    let mimeType = 'application/vnd.ms-excel;charset=utf-8';
-    let extension = 'xls';
+    const mimeType = 'application/vnd.ms-excel;charset=utf-8';
+    const extension = 'xls';
     const fileName = `物料汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
 
     try {

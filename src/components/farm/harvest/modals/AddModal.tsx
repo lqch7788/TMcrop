@@ -39,6 +39,9 @@ interface AddModalProps {
     harvesterNames: string[];
     auditor: string;
     remarks: string;
+    // V3.0 新增字段
+    harvestType: 'seed' | 'seedling' | 'product';  // 采收类型
+    targetInventory: 'seed' | 'seedling' | 'product';  // 目标库存
     products: ProductDetail[];
   };
   onFormChange: (field: string, value: any) => void;
@@ -204,6 +207,43 @@ export const AddModal: React.FC<AddModalProps> = ({
             placeholder="请输入审核人员"
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+        </div>
+        {/* V3.0 采收类型 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">采收类型</label>
+          <select
+            value={addForm.harvestType}
+            onChange={(e) => {
+              const value = e.target.value as 'seed' | 'seedling' | 'product';
+              onFormChange('harvestType', value);
+              // 联动更新目标库存
+              onFormChange('targetInventory', value);
+            }}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="product">成品采收</option>
+            <option value="seed">种子采收</option>
+            <option value="seedling">种苗采收</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-400">种子/种苗采收将入库到相应库存</p>
+        </div>
+        {/* V3.0 目标库存 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">目标库存</label>
+          <select
+            value={addForm.targetInventory}
+            onChange={(e) => onFormChange('targetInventory', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="product">产品库存</option>
+            <option value="seed">种源库存</option>
+            <option value="seedling">育苗库存</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-400">
+            {addForm.targetInventory === 'seed' && '采收种子将回到种源库存，形成循环'}
+            {addForm.targetInventory === 'seedling' && '采收购苗将回到育苗库存，待下次定植'}
+            {addForm.targetInventory === 'product' && '采收成品将进入产品库存'}
+          </p>
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">采收人员</label>

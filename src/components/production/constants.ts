@@ -7,6 +7,20 @@ export const batchStatusColors: Record<string, string> = {
   cancelled: 'bg-gray-300 text-gray-600',    // 已作废 - 深灰色
 };
 
+// 计划类型选项配置
+import { PlanType, PlanTypeLabels, PlanTypeColors } from '../../types';
+
+export { PlanType, PlanTypeLabels, PlanTypeColors };
+
+/**
+ * 计划类型下拉选项
+ */
+export const planTypeOptions = Object.entries(PlanTypeLabels).map(([value, label]) => ({
+  value: value as PlanType,
+  label,
+  color: PlanTypeColors[value as PlanType],
+}));
+
 // 批次状态文本配置
 export const batchStatusLabels: Record<string, string> = {
   draft: '草稿',

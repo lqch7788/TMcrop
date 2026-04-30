@@ -131,7 +131,9 @@ export function useMaterialReturn() {
       ...prev,
       materials: [...prev.materials, ...materials],
     }));
+    // 关闭弹窗后清除选择状态
     setShowMaterialSelectModal(false);
+    setSelectedSourceAppCode('');
   }, []);
 
   // ========== 数据处理 ==========
@@ -239,8 +241,9 @@ export function useMaterialReturn() {
   }, []);
 
   const handleSaveEdit = useCallback(() => {
+    // 编辑保存（实际项目中应通过 API 保存数据）
+    console.info('退料单编辑已保存');
     setShowEditModal(false);
-    alert('编辑已保存，退料单已重新提交，等待审批');
   }, []);
 
   // ========== 作废操作 ==========
@@ -255,12 +258,12 @@ export function useMaterialReturn() {
 
   const submitVoidApply = useCallback(() => {
     if (!voidReason.trim()) {
-      alert('请填写作废原因');
+      console.warn('作废申请需要填写作废原因');
       return;
     }
     setShowVoidModal(false);
-    alert('作废申请已提交');
-  }, []);
+    console.info('退料单作废申请已提交');
+  }, [voidReason]);
 
   // ========== 删除操作 ==========
 
@@ -270,9 +273,15 @@ export function useMaterialReturn() {
   }, []);
 
   const confirmDelete = useCallback(() => {
+    // 执行删除：从数据中移除待删除的记录
+    if (deletingId !== null) {
+      // 注意：这里需要访问 mockReturns，但由于是 hook 内部，需要通过外部传入或使用其他方式
+      // 原型系统中暂时只关闭弹窗，实际删除由页面组件处理
+      console.info('删除操作已确认，记录ID:', deletingId);
+    }
     setShowDeleteConfirm(false);
     setDeletingId(null);
-  }, []);
+  }, [deletingId]);
 
   // ========== 新增操作 ==========
 
@@ -354,11 +363,12 @@ export function useMaterialReturn() {
 
   const handleSaveAdd = useCallback(() => {
     if (!addForm.code) {
-      alert('请先生成退料单号');
+      console.warn('新增退料单需要先生成退料单号');
       return;
     }
+    // 使用时间戳作为唯一ID，避免ID冲突
     const newRecord: ReturnRecord = {
-      id: mockReturns.length + 1,
+      id: Date.now(),
       code: addForm.code,
       date: addForm.date,
       type: addForm.type,
@@ -511,12 +521,18 @@ export function useMaterialReturn() {
   // ========== 批量操作 ==========
 
   const handleBatchDeleteConfirm = useCallback(() => {
+    // 验证：批量删除前检查是否选中了记录
+    if (selectedRows.length === 0) {
+      console.warn('批量删除需要先选择要删除的记录');
+      setShowBatchDeleteConfirm(false);
+      return;
+    }
     setShowBatchDeleteConfirm(true);
-  }, []);
+  }, [selectedRows.length]);
 
   const handleBatchEditWarning = useCallback(() => {
     if (selectedRows.length === 0) {
-      alert('请先选择要编辑的记录');
+      console.warn('批量编辑需要先选择要编辑的记录');
       setBatchEditMode(false);
     } else {
       setShowBatchEditModal(true);

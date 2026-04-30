@@ -1,0 +1,853 @@
+<mxfile host="app.diagrams.net" modified="2026-04-23T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram name="农事管理模块-整体架构" guid="architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title1" value="农事管理模块-整体架构图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 农事任务中心 -->
+        <mxCell id="farmHub" value="农事任务中心&#xa;FarmTaskHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="640" y="100" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- 任务管理Tab -->
+        <mxCell id="taskTab" value="任务管理&#xa;TaskTab" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="200" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 问题管理Tab -->
+        <mxCell id="problemTab" value="问题管理&#xa;ProblemTab" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="360" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 巡查记录Tab -->
+        <mxCell id="inspectionTab" value="巡查记录&#xa;InspectionTab" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="520" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 每日规划 -->
+        <mxCell id="dailyPlanning" value="每日规划&#xa;DailyPlanningPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="680" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 月度规划 -->
+        <mxCell id="monthlyPlanning" value="月度规划&#xa;MonthlyPlanningPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="840" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 智能派工 -->
+        <mxCell id="smartDispatch" value="智能派工&#xa;SmartDispatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1000" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 巡查管理 -->
+        <mxCell id="inspectionMgmt" value="巡查管理&#xa;InspectionPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1160" y="220" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线 -->
+        <mxCell id="conn1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="taskTab">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="problemTab">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="inspectionTab">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="dailyPlanning">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="monthlyPlanning">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="smartDispatch">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="conn7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666" edge="1" parent="1" source="farmHub" target="inspectionMgmt">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 弹窗组件层 -->
+        <mxCell id="modalLayer" value="弹窗组件层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="320" width="1080" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 弹窗组件 -->
+        <mxCell id="createTaskModal" value="新建任务&#xa;CreateTaskModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="220" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="taskDetailModal" value="任务详情&#xa;TaskDetailModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="350" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="verifyTaskModal" value="验收任务&#xa;VerifyTaskModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="480" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="problemDispatchModal" value="问题派发&#xa;ProblemDispatchModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#b85450;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="610" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="batchDispatchModal" value="批量派发&#xa;BatchDispatchModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="740" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="batchAcceptModal" value="批量验收&#xa;BatchAcceptModal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="870" y="380" width="100" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- 数据层 -->
+        <mxCell id="dataLayer" value="数据层 (localStorage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="470" width="1080" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 数据存储 -->
+        <mxCell id="tasksData" value="Tasks&#xa;农事任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="240" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="tempTasksData" value="TempTasks&#xa;临时任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="370" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="problemsData" value="Problems&#xa;问题记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="500" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="inspectionsData" value="Inspections&#xa;巡查记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="630" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="workLogsData" value="WorkLogs&#xa;工作日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="760" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="attendanceData" value="Attendance&#xa;考勤记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="890" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="recordsData" value="TaskRecords&#xa;操作记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1020" y="530" width="100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Hooks层 -->
+        <mxCell id="hooksLayer" value="Hooks 层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="600" width="1080" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 核心Hooks -->
+        <mxCell id="useTasks" value="useTasks&#xa;任务管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="220" y="660" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="useFarmHub" value="useFarmHub&#xa;Hub状态" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="350" y="660" width="100" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="useComprehensiveDispatch" value="useComprehensiveDispatch&#xa;智能派工" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="480" y="660" width="130" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="useDailyPlanning" value="useDailyTaskPlanning&#xa;每日规划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="640" y="660" width="130" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="useMonthlyPlanning" value="useMonthlyTaskPlanning&#xa;月度规划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="800" y="660" width="130" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="useAIOptimization" value="useAIOptimization&#xa;AI优化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="960" y="660" width="100" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- 图例 -->
+        <mxCell id="legend" value="图例" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#000;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1200" y="100" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend1" value="页面组件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="140" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend2" value="Tab组件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="170" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend3" value="弹窗组件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="200" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend4" value="数据存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="230" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend5" value="Hooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="260" width="80" height="25" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="任务状态流转图" guid="task-status">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title2" value="任务状态流转图 (10种状态)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 草稿 -->
+        <mxCell id="status_draft" value="草稿&#xa;draft" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 待接受 -->
+        <mxCell id="status_pending" value="待接受&#xa;pending" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="200" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 已接受 -->
+        <mxCell id="status_accepted" value="已接受&#xa;accepted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="300" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 处理中 -->
+        <mxCell id="status_in_progress" value="处理中&#xa;in_progress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="400" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 待验收 -->
+        <mxCell id="status_waiting" value="待验收&#xa;waiting_acceptance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="500" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 已完成 -->
+        <mxCell id="status_completed" value="已完成&#xa;completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 返工中 -->
+        <mxCell id="status_rejected" value="返工中&#xa;rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="400" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 任务失败 -->
+        <mxCell id="status_failed" value="任务失败&#xa;failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="450" y="300" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 已取消 -->
+        <mxCell id="status_cancelled" value="已取消&#xa;cancelled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ccc;strokeColor=#666;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="100" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 已放弃 -->
+        <mxCell id="status_abandoned" value="已放弃&#xa;abandoned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="450" y="500" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 流转箭头和标签 -->
+        <!-- draft -> pending -->
+        <mxCell id="flow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;endArrow=classic;endFill=1" edge="1" parent="1" source="status_draft" target="status_pending">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label1" value="发布 publish" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="210" y="140" width="100" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- draft -> cancelled -->
+        <mxCell id="flow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1" edge="1" parent="1" source="status_draft" target="status_cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label2" value="删除" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="210" y="80" width="60" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- pending -> accepted -->
+        <mxCell id="flow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;endArrow=classic;endFill=1" edge="1" parent="1" source="status_pending" target="status_accepted">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label3" value="接受 accept" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="210" y="240" width="100" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- pending -> cancelled -->
+        <mxCell id="flow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1" edge="1" parent="1" source="status_pending" target="status_cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label4" value="撤回 withdraw" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="200" y="175" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- accepted -> in_progress -->
+        <mxCell id="flow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;endArrow=classic;endFill=1" edge="1" parent="1" source="status_accepted" target="status_in_progress">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label5" value="开始 start" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="210" y="340" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- accepted -> cancelled -->
+        <mxCell id="flow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1" edge="1" parent="1" source="status_accepted" target="status_cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label6" value="取消 cancel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="200" y="270" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- in_progress -> waiting -->
+        <mxCell id="flow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;endArrow=classic;endFill=1" edge="1" parent="1" source="status_in_progress" target="status_waiting">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label7" value="提交 submit" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#d79b00" vertex="1" parent="1">
+          <mxGeometry x="210" y="440" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- in_progress -> cancelled -->
+        <mxCell id="flow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1" edge="1" parent="1" source="status_in_progress" target="status_cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label8" value="取消 cancel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="200" y="370" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- in_progress -> rejected -->
+        <mxCell id="flow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;endArrow=classic;endFill=1" edge="1" parent="1" source="status_in_progress" target="status_rejected">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label9" value="驳回 reject" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="210" y="390" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- waiting -> completed -->
+        <mxCell id="flow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;endArrow=classic;endFill=1" edge="1" parent="1" source="status_waiting" target="status_completed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label10" value="验收 complete" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="210" y="540" width="100" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- waiting -> rejected -->
+        <mxCell id="flow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;endArrow=classic;endFill=1" edge="1" parent="1" source="status_waiting" target="status_rejected">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label11" value="驳回 reject" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="210" y="490" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- rejected -> in_progress -->
+        <mxCell id="flow12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;endArrow=classic;endFill=1" edge="1" parent="1" source="status_rejected" target="status_in_progress">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label12" value="继续 continue" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#6c8ebf" vertex="1" parent="1">
+          <mxGeometry x="310" y="425" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- rejected -> failed (2次返工) -->
+        <mxCell id="flow13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;endArrow=classic;endFill=1" edge="1" parent="1" source="status_rejected" target="status_failed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label13" value="2次返工" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#9673a6" vertex="1" parent="1">
+          <mxGeometry x="370" y="365" width="60" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- failed -> pending -->
+        <mxCell id="flow14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;endArrow=classic;endFill=1" edge="1" parent="1" source="status_failed" target="status_pending">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label14" value="重新派发 reassign" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#9673a6" vertex="1" parent="1">
+          <mxGeometry x="420" y="230" width="100" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- in_progress -> abandoned -->
+        <mxCell id="flow15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;endArrow=classic;endFill=1" edge="1" parent="1" source="status_in_progress" target="status_abandoned">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="label15" value="超时放弃" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="210" y="460" width="80" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- 状态说明 -->
+        <mxCell id="note1" value="状态说明:&#xa;• draft(草稿): 任务创建后未发布&#xa;• pending(待接受): 已发布，等待执行人接受&#xa;• accepted(已接受): 执行人已接受任务&#xa;• in_progress(处理中): 任务正在执行&#xa;• waiting_acceptance(待验收): 执行人提交，等待验收&#xa;• completed(已完成): 验收通过&#xa;• rejected(返工中): 验收驳回，需返工&#xa;• failed(任务失败): 2次返工后仍不通过&#xa;• cancelled(已取消): 任务被取消&#xa;• abandoned(已放弃): 超时后执行人放弃" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="600" y="100" width="280" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- 操作说明 -->
+        <mxCell id="note2" value="核心操作:&#xa;• publish - 发布任务 (draft→pending)&#xa;• withdraw - 撤回任务 (pending→cancelled)&#xa;• cancel - 取消任务 (accepted/in_progress→cancelled)&#xa;• accept - 接受任务 (pending→accepted)&#xa;• start - 开始执行 (accepted→in_progress)&#xa;• progress - 提交进度 (in_progress更新)&#xa;• submit - 申请验收 (in_progress→waiting)&#xa;• complete - 验收通过 (waiting→completed)&#xa;• reject - 验收驳回 (waiting→rejected)&#xa;• continue - 继续执行 (rejected→in_progress)&#xa;• reassign - 重新派发 (failed→pending)&#xa;• extend_deadline - 延期&#xa;• remind - 催办&#xa;• overtime_continue/abandon - 超时处理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="600" y="320" width="320" height="280" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="任务操作流程图" guid="task-operations">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title3" value="任务操作流程图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 新建任务流程 -->
+        <mxCell id="create_flow" value="新建任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_step1" value="1. 填写任务信息(标题、类型、优先级等)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="140" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_step2" value="2. 设置执行人(可选)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="180" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_step3" value="3. 设置反馈要求(GPS/照片/物料)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="220" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_step4" value="4. 保存为草稿(draft)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="260" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_step5" value="5. 发布任务(pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="300" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 派发任务流程 -->
+        <mxCell id="dispatch_flow" value="派发任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="350" y="80" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="dispatch_step1" value="1. 选择待派发任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="140" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="dispatch_step2" value="2. 选择执行人/AI推荐" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="180" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="dispatch_step3" value="3. 确认派发" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="220" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="dispatch_step4" value="4. 任务状态→pending" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="260" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="dispatch_step5" value="5. 执行人接受(accepted)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="300" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 执行任务流程 -->
+        <mxCell id="execute_flow" value="执行任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="620" y="80" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute_step1" value="1. 开始执行(start)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="140" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute_step2" value="2. 定期提交进度(progress)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="180" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute_step3" value="3. 填写工作日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="220" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute_step4" value="4. 上传照片/物料使用记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="260" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute_step5" value="5. 申请验收(submit)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="300" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 验收流程 -->
+        <mxCell id="verify_flow" value="验收任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="890" y="80" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify_step1" value="1. 查看任务执行情况" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#b85450;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="140" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify_step2" value="2. 检查照片/物料记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#b85450;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="180" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify_step3" value="3. 通过→completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="220" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify_step4" value="4. 驳回→rejected(可返工)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="260" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify_step5" value="5. 2次返工→failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="300" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 批量操作 -->
+        <mxCell id="batch_flow" value="批量操作" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="350" y="380" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="batch_step1" value="1. 勾选多个任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="440" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="batch_step2" value="2. 选择批量派发/验收" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="480" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="batch_step3" value="3. 批量操作确认对话框" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="520" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="batch_step4" value="4. 执行批量操作" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="560" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 智能派工 -->
+        <mxCell id="ai_flow" value="智能派工" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="620" y="380" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_step1" value="1. 整合任务池(农事/临时/巡查)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="440" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_step2" value="2. AI多因子评分" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="480" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_step3" value="3. 生成派工建议" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="520" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_step4" value="4. 人工确认/自动派发" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="620" y="560" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 流程说明 -->
+        <mxCell id="flow_note" value="AI派工7因子权重:&#xa;• 技能匹配度 30%&#xa;• 地理位置 20%&#xa;• 当前负荷 20%&#xa;• 历史表现 15%&#xa;• 紧急程度 10%&#xa;• 批次熟悉度 3%&#xa;• 周期适配 2%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left" vertex="1" parent="1">
+          <mxGeometry x="890" y="380" width="200" height="140" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="智能派工流程图" guid="smart-dispatch">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title4" value="智能派工流程图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 任务池 -->
+        <mxCell id="pool_start" value="任务池" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="pool_farm" value="农事任务&#xa;(pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="80" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="pool_temp" value="临时任务&#xa;(pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="160" y="140" width="80" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="pool_inspect" value="巡查问题&#xa;(待处理)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="260" y="140" width="80" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- 统一任务 -->
+        <mxCell id="normalize" value="统一任务格式&#xa;UnifiedDispatchTask" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="100" y="210" width="120" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- 任务筛选 -->
+        <mxCell id="filter" value="任务筛选&#xa;filterBySource" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="100" y="280" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- AI评分引擎 -->
+        <mxCell id="ai_engine" value="AI综合评分引擎" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="350" y="80" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 评分因素 -->
+        <mxCell id="factor1" value="技能匹配度&#xa;30%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="140" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor2" value="地理位置&#xa;20%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="390" y="140" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor3" value="当前负荷&#xa;20%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="480" y="140" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor4" value="历史表现&#xa;15%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="195" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor5" value="紧急程度&#xa;10%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="390" y="195" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor6" value="批次熟悉度&#xa;3%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="480" y="195" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="factor7" value="天气影响&#xa;5%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="390" y="250" width="80" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 置信度 -->
+        <mxCell id="confidence" value="置信度评估" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="350" y="310" width="200" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="conf_high" value="高置信度(≥80)&#xa;→ dispatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="360" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="conf_mid" value="中置信度(60-80)&#xa;→ manual" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="410" y="360" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="conf_low" value="低置信度(&lt;60)&#xa;→ split/delay" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="520" y="360" width="100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 派工决策 -->
+        <mxCell id="decision" value="派工决策" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="350" y="430" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="decision_dispatch" value="直接派发&#xa;dispatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="280" y="490" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="decision_manual" value="人工确认&#xa;manual" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="490" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="decision_delay" value="延后处理&#xa;delay" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="520" y="490" width="100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 批量派发建议 -->
+        <mxCell id="batch_suggest" value="批量派发建议&#xa;(同一区域≥3任务)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="680" y="80" width="150" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 执行派发 -->
+        <mxCell id="execute" value="executeDispatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="680" y="200" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_farm" value="农事任务&#xa;→ status='accepted'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="650" y="260" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_temp" value="临时任务&#xa;→ status='in_progress'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="760" y="260" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_inspect" value="巡查问题&#xa;→ 标记已处理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="650" y="315" width="100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线 -->
+        <mxCell id="c1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666" edge="1" parent="1" source="pool_start" target="pool_farm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666" edge="1" parent="1" source="pool_start" target="pool_temp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666" edge="1" parent="1" source="pool_start" target="pool_inspect">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 数据说明 -->
+        <mxCell id="data_note" value="数据源:&#xa;• useTasks - 农事任务(pending)&#xa;• useTempTasks - 临时任务(pending)&#xa;• useProblemDispatch - 巡查问题&#xa;• usePersistentAttendance - 考勤数据&#xa;• useEnvironmentData - 天气/告警" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left" vertex="1" parent="1">
+          <mxGeometry x="900" y="80" width="180" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- 返回值说明 -->
+        <mxCell id="return_note" value="返回值:&#xa;• taskPool - 待派发任务列表&#xa;• workers - 员工综合状态&#xa;• getRecommendations() - 获取推荐&#xa;• executeDispatch() - 执行派发&#xa;• batchSuggestions - 批量建议&#xa;• stats - 统计信息" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left" vertex="1" parent="1">
+          <mxGeometry x="900" y="220" width="180" height="120" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="每日月度规划流程" guid="planning">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title5" value="每日/月度规划流程图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 每日规划 -->
+        <mxCell id="daily_main" value="每日规划 (DailyPlanningPage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="250" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="daily_step1" value="1. 选择日期" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="140" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step2" value="2. useDailyWorkOrderAnalysis 生成报告" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="180" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step3" value="3. 统计数据(总/待处理/进行中/已完成/超期)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="220" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step4" value="4. 任务进度分析(提前/推迟/未完成)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="260" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step5" value="5. 人员负荷分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="300" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step6" value="6. AI智能分析建议" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="340" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step7" value="7. useDailyTaskPlanning 获取派工计划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="380" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="daily_step8" value="8. 一键确认派发" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="420" width="250" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 月度规划 -->
+        <mxCell id="monthly_main" value="月度规划 (MonthlyPlanningPage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="80" width="250" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="monthly_step1" value="1. 选择月份" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="140" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step2" value="2. useMonthlyTaskPlanning 生成计划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="180" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step3" value="3. 月度任务规划甘特图" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="220" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step4" value="4. 物资需求计划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="260" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step5" value="5. 人员需求计划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="300" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step6" value="6. 成本预估" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="340" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="monthly_step7" value="7. AI优化建议" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="400" y="380" width="250" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 数据统计 -->
+        <mxCell id="daily_report" value="DailyWorkOrderReport&#xa;每日工单报告" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="720" y="140" width="150" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="report_data1" value="• totalTasks 总任务数&#xa;• pendingTasks 待处理&#xa;• inProgressTasks 进行中&#xa;• completedTasks 已完成&#xa;• overdueTasks 超期数" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="880" y="100" width="180" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="task_analysis" value="TaskProgressAnalysis&#xa;任务进度分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="720" y="210" width="150" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="analysis_data1" value="• aheadTasks 提前完成&#xa;• delayedTasks 已推迟&#xa;• unfinishedTasks 未完成&#xa;• 状态/延迟天数/执行人" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="880" y="180" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="worker_load" value="WorkerLoadAnalysis&#xa;人员负荷分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="720" y="280" width="150" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="load_data1" value="• todayTasks 今日任务数&#xa;• completedTasks 已完成&#xa;• completionRate 完成率&#xa;• loadStatus 负荷状态" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="880" y="260" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- 规划数据 -->
+        <mxCell id="monthly_plan" value="MonthlyTaskPlan&#xa;月度任务计划" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="720" y="380" width="150" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="plan_data1" value="• plannedTasks 计划任务&#xa;• materialNeeds 物资需求&#xa;• laborNeeds 人员需求&#xa;• costEstimate 成本预估" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="880" y="360" width="180" height="70" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="数据模型关系图" guid="data-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title6" value="农事管理-数据模型关系图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Task主表 -->
+        <mxCell id="task_entity" value="Task 任务表" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="task_fields" value="id, taskCode, title, type&#xa;status, priority, progress&#xa;assigneeId, assigneeName&#xa;assignerId, assignerName&#xa;dueDate, feedbackRequirements&#xa;reworkCount, deadlineExtensions&#xa;sourceType, dispatchMode" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="200" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- TaskRecord 操作记录 -->
+        <mxCell id="record_entity" value="TaskRecord 操作记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="100" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="record_fields" value="id, taskId, taskCode&#xa;operatorId, operatorName&#xa;action, actionName&#xa;fromStatus, toStatus&#xa;progress, feedback&#xa;comment, reason&#xa;actionTime" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="400" y="150" width="200" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- ReminderRecord 催办记录 -->
+        <mxCell id="reminder_entity" value="ReminderRecord 催办记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="700" y="100" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="reminder_fields" value="id, taskId, taskCode&#xa;remindedBy, remindedByName&#xa;remindedTo, remindedToName&#xa;remindType, message&#xa;remindedAt, acknowledgedAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="700" y="150" width="200" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- WorkLog 工作日志 -->
+        <mxCell id="worklog_entity" value="WorkLog 工作日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="350" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="worklog_fields" value="id, taskCode, title&#xa;assigneeName, greenhouseName&#xa;progress, notes&#xa;workload, workloadHours&#xa;startTime, endTime&#xa;date" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="100" y="400" width="200" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Attendance 考勤记录 -->
+        <mxCell id="attendance_entity" value="Attendance 考勤记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="350" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="attendance_fields" value="id, workerId, name&#xa;dept, date&#xa;checkIn, checkOut, hours&#xa;status, taskId, batchId" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="400" y="400" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- TempTask 临时任务 -->
+        <mxCell id="temptask_entity" value="TempTask 临时任务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="700" y="350" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="temptask_fields" value="id, taskCode, title&#xa;tempTaskType, priority&#xa;assigneeId, assigneeName&#xa;workLocation, estimatedHours&#xa;dueDate, status" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="700" y="400" width="200" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Problem 问题 -->
+        <mxCell id="problem_entity" value="Problem 问题记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="550" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="problem_fields" value="id, issueText&#xa;greenhouseId, greenhouseName&#xa;cropName, issueSeverity&#xa;batchId, status" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Inspection 巡查记录 -->
+        <mxCell id="inspection_entity" value="Inspection 巡查记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="550" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="inspection_fields" value="id, recordCode&#xa;inspectorId, inspectorName&#xa;greenhouseId, greenhouseName&#xa;checkDate, checkTime&#xa;issueSeverity, status" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#333" vertex="1" parent="1">
+          <mxGeometry x="400" y="600" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- 关系线 -->
+        <mxCell id="rel1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1;dashed=1" edge="1" parent="1" source="task_entity" target="record_entity">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel1_label" value="1:N&#xa;TaskRecord.taskId" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=8;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="300" y="115" width="80" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1;dashed=1" edge="1" parent="1" source="task_entity" target="worklog_entity">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel2_label" value="1:N&#xa;WorkLog.taskCode" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=8;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="240" y="280" width="80" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1;dashed=1" edge="1" parent="1" source="task_entity" target="attendance_entity">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel3_label" value="1:N&#xa;Attendance.taskId" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=8;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="340" y="290" width="80" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666;endArrow=classic;endFill=1;dashed=1" edge="1" parent="1" source="task_entity" target="temptask_entity">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel4_label" value="1:N&#xa;(独立TempTask)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=8;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="580" y="330" width="80" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- STORAGE_KEYS -->
+        <mxCell id="storage_note" value="localStorage 存储键:&#xa;• TASKS - 任务数据&#xa;• TEMP_TASKS - 临时任务&#xa;• PROBLEMS - 问题记录&#xa;• INSPECTIONS - 巡查记录&#xa;• WORK_LOGS - 工作日志&#xa;• ATTENDANCE - 考勤记录&#xa;• TASK_RECORDS - 操作记录&#xa;• TASK_REMINDERS - 催办记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666;fontSize=10;align=left" vertex="1" parent="1">
+          <mxGeometry x="1000" y="100" width="200" height="160" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

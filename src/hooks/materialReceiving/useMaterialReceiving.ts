@@ -434,9 +434,13 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   }, []);
 
   const confirmDelete = useCallback(() => {
+    // 执行删除：从数据中移除待删除的记录
+    if (deletingId !== null) {
+      setMaterialData(prev => prev.filter(r => r.id !== deletingId));
+    }
     setShowDeleteConfirm(false);
     setDeletingId(null);
-  }, []);
+  }, [deletingId]);
 
   const handleSaveEdit = useCallback(() => {
     if (!selectedRecord) return;
@@ -459,7 +463,8 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     setMaterialData((prev) => prev.map((r) => r.id === selectedRecord.id ? updatedRecord : r));
 
     setShowEditModal(false);
-    alert('编辑已保存，领料单已重新提交，等待审批');
+    // 编辑保存成功提示（实际项目中应使用 Toast 组件）
+    console.info('领料单编辑已保存，状态已更新为待审批');
   }, [selectedRecord, editForm]);
 
   const handleVoidApply = useCallback(() => {
@@ -470,7 +475,8 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
 
   const submitVoidApply = useCallback(() => {
     if (!voidReason.trim()) {
-      alert('请填写作废原因');
+      // 验证作废原因是否填写（实际项目中应使用 Toast 组件提示）
+      console.warn('作废申请需要填写作废原因');
       return;
     }
     if (!selectedRecord) return;
@@ -524,11 +530,12 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   const handleSaveAdd = useCallback(() => {
     // 1. 验证表单
     if (!addForm.applicant) {
-      alert('请选择申请人');
+      // 验证申请人是否填写（实际项目中应使用 Toast 组件提示）
+      console.warn('新增领料单需要选择申请人');
       return;
     }
     if (addForm.materials.length === 0) {
-      alert('请添加至少一个物料');
+      console.warn('新增领料单需要添加至少一个物料');
       return;
     }
 

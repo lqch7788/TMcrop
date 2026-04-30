@@ -1,0 +1,151 @@
+<mxfile host="Electron">
+  <diagram name="考勤记录同步流程图" updated="2026-04-23" id="0">
+    <mxGraphModel dx="1717" dy="1260" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" value="考勤记录同步流程图" vertex="1">
+          <mxGeometry height="40" width="400" x="520" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="trigger_title" parent="1" style="text;html=1;strokeColor=none;fillColor=#e6f7ff;fontColor=#000000;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" value="同步触发场景" vertex="1">
+          <mxGeometry height="30" width="180" x="320" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b7eb8f;strokeColor=#389e0d;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle" value="任务接受&#xa;(pending→accepted)" vertex="1">
+          <mxGeometry height="50" width="140" x="320" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#91d5ff;strokeColor=#096dd9;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle" value="开始执行&#xa;(accepted→in_progress)" vertex="1">
+          <mxGeometry height="50" width="140" x="320" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle" value="GPS签到&#xa;(位置打卡)" vertex="1">
+          <mxGeometry height="50" width="140" x="320" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle" value="任务完成&#xa;(任务提交)" vertex="1">
+          <mxGeometry height="50" width="140" x="320" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="merge" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#722ed1;strokeColor=#531d93;fontSize=20;fontColor=#ffffff;align=center;verticalAlign=middle" value="⚙️" vertex="1">
+          <mxGeometry height="50" width="50" x="510" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#722ed1;strokeColor=#531d93;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="usePersistentAttendance&#xa;自动同步" vertex="1">
+          <mxGeometry height="50" width="140" x="700" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fa8c16;strokeColor=#d46b08;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="考勤类型？" vertex="1">
+          <mxGeometry height="70" width="100" x="720" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="clock_in" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b7eb8f;strokeColor=#389e0d;fontSize=11;align=center;verticalAlign=middle;fontColor=#000000;" value="上班打卡&#xa;(clockIn)" vertex="1">
+          <mxGeometry height="40" width="90" x="860" y="477" as="geometry" />
+        </mxCell>
+        <mxCell id="clock_out" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ff7875;strokeColor=#cf1322;fontSize=11;align=center;verticalAlign=middle;fontColor=#060606;" value="下班打卡&#xa;(clockOut)" vertex="1">
+          <mxGeometry height="40" width="90" x="600" y="477" as="geometry" />
+        </mxCell>
+        <mxCell id="gps" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#91d5ff;strokeColor=#096dd9;fontSize=11;align=center;verticalAlign=middle;fontColor=#000000;" value="GPS签到" vertex="1">
+          <mxGeometry height="35" width="90" x="725" y="482" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#52c41a;strokeColor=#237804;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="保存到localStorage&#xa;ATTENDANCE" vertex="1">
+          <mxGeometry height="50" width="140" x="700" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#096dd9;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="关联Task" vertex="1">
+          <mxGeometry height="40" width="140" x="700" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#722ed1;strokeColor=#531d93;fontSize=12;fontColor=#ffffff;align=center;verticalAlign=middle" value="记录操作日志" vertex="1">
+          <mxGeometry height="40" width="140" x="700" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="end" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ff4d4f;strokeColor=#a8071a;fontSize=14;fontColor=#ffffff;fontStyle=1;align=center" value="同步完成" vertex="1">
+          <mxGeometry height="40" width="100" x="720" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="t1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b7eb8f;strokeWidth=2;endArrow=classic;endFill=1" target="merge" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="t2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#91d5ff;strokeWidth=2;endArrow=classic;endFill=1" target="merge" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="t3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="merge" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" source="t4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="merge" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" edge="1" parent="1" source="merge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#722ed1;strokeWidth=2;endArrow=classic;endFill=1" target="p1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="355" />
+              <mxPoint x="600" y="225" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l6" edge="1" parent="1" source="p1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fa8c16;strokeWidth=2;endArrow=classic;endFill=1" target="d1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="clock_in" value="上班">
+          <mxGeometry relative="1" x="0.4214" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l8" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=classic;endFill=1" target="clock_out" value="下班">
+          <mxGeometry relative="1" x="0.3903" y="-5" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l9" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=classic;endFill=1" target="gps" value="GPS">
+          <mxGeometry relative="1" x="-0.5122" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l10" edge="1" parent="1" source="clock_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p2" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="905" y="605" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l11" edge="1" parent="1" source="clock_out" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p2" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="645" y="605" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l12" edge="1" parent="1" source="gps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p2" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="780" y="493" />
+              <mxPoint x="760" y="493" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l13" edge="1" parent="1" source="p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l14" edge="1" parent="1" source="p3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="p4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l15" edge="1" parent="1" source="p4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#52c41a;strokeWidth=2;endArrow=classic;endFill=1" target="end" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="display_title" parent="1" style="text;html=1;strokeColor=none;fillColor=#b7eb8f;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#060606;" value="考勤记录展示" vertex="1">
+          <mxGeometry height="25" width="140" x="990" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="disp1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#060606;fontSize=11;align=center;verticalAlign=middle" value="按人员统计" vertex="1">
+          <mxGeometry height="30" width="80" x="990" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="disp2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#060606;fontSize=11;align=center;verticalAlign=middle" value="按日期统计" vertex="1">
+          <mxGeometry height="30" width="80" x="1080" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="disp3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b7eb8f;strokeColor=#389e0d;fontSize=11;align=center;verticalAlign=middle;fontColor=#060606;" value="出勤率分析" vertex="1">
+          <mxGeometry height="30" width="80" x="990" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="disp4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b7eb8f;strokeColor=#389e0d;fontSize=11;align=center;verticalAlign=middle;fontColor=#060606;" value="工时统计" vertex="1">
+          <mxGeometry height="30" width="80" x="1080" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="field_title" parent="1" style="text;html=1;strokeColor=#666;fillColor=#f5f5f5;fontColor=#060606;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" value="Attendance字段：" vertex="1">
+          <mxGeometry height="20" width="120" x="990" y="395" as="geometry" />
+        </mxCell>
+        <mxCell id="fields" parent="1" style="text;html=1;strokeColor=#999;fillColor=#e6fffb;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#060606;" value="id - 记录ID&#xa;workerId - 工人ID&#xa;workerName - 工人姓名&#xa;taskId - 关联任务ID&#xa;taskCode - 关联任务编号&#xa;date - 日期&#xa;clockInTime - 上班时间&#xa;clockOutTime - 下班时间&#xa;location - 打卡位置&#xa;gpsLat - GPS纬度&#xa;gpsLng - GPS经度" vertex="1">
+          <mxGeometry height="160" width="180" x="990" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="text;html=1;strokeColor=#666;fillColor=#fffbe6;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#595959" value="说明：&#xa;1. 任务接受时自动创建考勤记录（上班打卡）&#xa;2. 任务完成时自动更新下班时间&#xa;3. GPS签到可单独触发考勤记录创建&#xa;4. 考勤数据用于工时统计和出勤率分析" vertex="1">
+          <mxGeometry height="90" width="250" x="980" y="605" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

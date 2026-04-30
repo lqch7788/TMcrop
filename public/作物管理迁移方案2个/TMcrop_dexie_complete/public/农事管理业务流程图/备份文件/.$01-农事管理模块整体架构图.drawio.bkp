@@ -1,0 +1,173 @@
+<mxfile>
+  <diagram name="农事管理模块整体架构图" updated="2026-04-23">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- 标题 -->
+        <mxCell id="title" value="农事管理模块整体架构图" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 一级容器：农事任务中心 -->
+        <mxCell id="c1" value="农事任务中心&#xa;(FarmTaskHub)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#0066cc;fontColor=#ffffff;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;spacing=10;arcSize=10" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- 一级容器：任务中心 -->
+        <mxCell id="c2" value="任务中心&#xa;(TaskCenterPage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#0066cc;fontColor=#ffffff;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;spacing=10;arcSize=10" vertex="1" parent="1">
+          <mxGeometry x="360" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- 一级容器：规划管理 -->
+        <mxCell id="c3" value="规划管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#0066cc;fontColor=#ffffff;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;spacing=10;arcSize=10" vertex="1" parent="1">
+          <mxGeometry x="640" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- 一级容器：智能派工 -->
+        <mxCell id="c4" value="智能派工&#xa;(SmartDispatch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#0066cc;fontColor=#ffffff;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;spacing=10;arcSize=10" vertex="1" parent="1">
+          <mxGeometry x="920" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- 一级容器：问题管理 -->
+        <mxCell id="c5" value="问题管理&#xa;(ProblemDispatch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1890ff;strokeColor=#0066cc;fontColor=#ffffff;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;spacing=10;arcSize=10" vertex="1" parent="1">
+          <mxGeometry x="1200" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- FarmTaskHub 子模块 -->
+        <mxCell id="s1_1" value="任务管理&#xa;(TaskTab)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="60" y="200" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s1_2" value="问题管理&#xa;(ProblemTab)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff1f0;strokeColor=#ff4d4f;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="60" y="270" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s1_3" value="巡查记录&#xa;(InspectionTab)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#fa8c16;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="60" y="340" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- TaskCenterPage 子模块 -->
+        <mxCell id="s2_1" value="临时任务&#xa;(TempTaskPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="340" y="200" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2_2" value="任务执行&#xa;(TasksPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="340" y="270" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2_3" value="工作日志&#xa;(WorkLogPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="340" y="340" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2_4" value="智能派工&#xa;(SmartDispatchPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="340" y="410" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2_5" value="我的任务&#xa;(MyTasksPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="340" y="480" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 规划管理 子模块 -->
+        <mxCell id="s3_1" value="每日规划&#xa;(DailyPlanningPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="620" y="200" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3_2" value="月度规划&#xa;(MonthlyPlanningPage)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="620" y="270" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 智能派工 子模块 -->
+        <mxCell id="s4_1" value="AI推荐引擎&#xa;(useSmartRecommend)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f9f0ff;strokeColor=#722ed1;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="900" y="200" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s4_2" value="综合派工&#xa;(useComprehensiveDispatch)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f9f0ff;strokeColor=#722ed1;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="900" y="270" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 问题管理 子模块 -->
+        <mxCell id="s5_1" value="问题分派&#xa;(ProblemDispatch)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff1f0;strokeColor=#ff4d4f;fontColor=#000000;fontSize=12;align=center;verticalAlign=middle;spacing=5" vertex="1" parent="1">
+          <mxGeometry x="1180" y="200" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线：FarmTaskHub到子模块 -->
+        <mxCell id="l1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c1" target="s1_1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c1" target="s1_2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c1" target="s1_3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线：TaskCenterPage到子模块 -->
+        <mxCell id="l4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c2" target="s2_1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c2" target="s2_2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c2" target="s2_3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c2" target="s2_4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c2" target="s2_5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线：规划管理到子模块 -->
+        <mxCell id="l9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c3" target="s3_1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1890ff;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c3" target="s3_2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线：智能派工到子模块 -->
+        <mxCell id="l11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#722ed1;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c4" target="s4_1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="l12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#722ed1;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c4" target="s4_2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线：问题管理到子模块 -->
+        <mxCell id="l13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff4d4f;strokeWidth=2;endArrow=none;endFill=0" edge="1" parent="1" source="c5" target="s5_1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 数据层 -->
+        <mxCell id="d1" value="localStorage&#xa;数据持久层" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#f9f0ff;strokeColor=#722ed1;fontColor=#000000;fontSize=12;align=center" vertex="1" parent="1">
+          <mxGeometry x="100" y="500" width="140" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Hooks层 -->
+        <mxCell id="h1" value="useTasks&#xa;useFarmHub&#xa;useComprehensiveDispatch&#xa;useSmartRecommend&#xa;useCropGrowthEngine" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f5ff;strokeColor=#597ef9;fontColor=#000000;fontSize=10;align=left;verticalAlign=top;spacing=5;spacingLeft=10" vertex="1" parent="1">
+          <mxGeometry x="380" y="560" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- 连接线到底层 -->
+        <mxCell id="ld1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#722ed1;strokeWidth=2;strokeDashPattern=1 3;endArrow=none;endFill=0" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="440" as="sourcePoint"/>
+            <mxPoint x="170" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 图例 -->
+        <mxCell id="legend" value="图例说明" style="text;html=1;strokeColor=#999;fillColor=#f5f5f5;fontColor=#000000;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1400" y="200" width="100" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="蓝色：任务相关" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;fontColor=#000000;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="1400" y="240" width="100" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="红色：问题相关" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff1f0;strokeColor=#ff4d4f;fontColor=#000000;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="1400" y="270" width="100" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="橙色：巡查相关" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#fa8c16;fontColor=#000000;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="1400" y="300" width="100" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="紫色：派工/数据" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f9f0ff;strokeColor=#722ed1;fontColor=#000000;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="1400" y="330" width="100" height="25" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

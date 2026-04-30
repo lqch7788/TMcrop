@@ -2,6 +2,7 @@ import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import sourceIdentifierPlugin from 'vite-plugin-source-identifier'
+/// <reference types="vitest" />
 
 const isProd = process.env.BUILD_MODE === 'prod'
 export default defineConfig({
@@ -51,5 +52,23 @@ export default defineConfig({
         manualChunks: undefined,
       },
     },
+  },
+  // Vitest 测试配置
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}', 'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/virtual:.*',
+      ],
+    },
+    setupFiles: [],
   },
 })

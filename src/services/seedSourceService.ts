@@ -159,11 +159,11 @@ const defaultData: SeedSource[] = [
     sourceType: SourceType.GRAFTING,
     sourceOrigin: 'commissioned' as SourceOrigin,
     cropCategory: '蔬菜类',
-    typeName: '瓜菜类',
+    typeName: '瓜类水果',
     varietyName: '西瓜',
     cropName: '黑美人西瓜',
     cropVariety: '西瓜',
-    cropCode: 'PD020299900',  // 蔬菜类-瓜菜类-西瓜-999其他-00
+    cropCode: 'PD0601001001',  // 蔬菜类-瓜类水果-西瓜-001黑美人-00
     supplierId: '',
     supplierName: '委托培育',
     purchaseDate: '2026-03-15',
