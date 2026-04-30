@@ -3,7 +3,7 @@
  * 使用 localStorage 实现数据持久化
  */
 
-import { Planting, PlantingStatus, SourceType } from '../types/crop';
+import { Planting, PlantingStatus, SourceType, LabelPrintType, PrintRecord } from '../types/crop';
 
 const STORAGE_KEY = 'crop_plantings';
 
@@ -225,4 +225,80 @@ export function generatePlantCode(sourceCode: string): string {
  */
 export function resetPlantings(): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+}
+
+/**
+ * 生成单个二维码编号
+ * 格式：ZZ + 种植批号 + 序号（3位）
+ */
+export function generateLabelNumber(plantCode: string, index: number): string {
+  return `${plantCode}-${String(index).padStart(3, '0')}`;
+}
+
+/**
+ * 生成种植批号对应的所有二维码编号
+ * @param plantingId 种植ID
+ */
+export function generateAllLabelNumbers(plantingId: string): string[] {
+  const planting = getPlantingById(plantingId);
+  if (!planting) return [];
+
+  const labels: string[] = [];
+  for (let i = 0; i < planting.plantingCount; i++) {
+    labels.push(generateLabelNumber(planting.plantCode, i + 1));
+  }
+  return labels;
+}
+
+/**
+ * 获取打印记录
+ * @param plantingId 种植ID
+ */
+export function getPrintRecords(plantingId: string): PrintRecord[] {
+  const planting = getPlantingById(plantingId);
+  return planting?.printRecords || [];
+}
+
+/**
+ * 打印标签
+ * @param plantingId 种植ID
+ * @param printType 打印类型
+ * @param printCount 打印数量
+ * @param operator 操作人员
+ * @param labelNumbers 指定二维码编号（重打印时）
+ */
+export function printLabel(
+  plantingId: string,
+  printType: LabelPrintType,
+  printCount: number,
+  operator: string,
+  labelNumbers?: string[]
+): PrintRecord | null {
+  const planting = getPlantingById(plantingId);
+  if (!planting) return null;
+
+  // 生成打印记录
+  const printRecord: PrintRecord = {
+    id: 'PR' + Date.now(),
+    printTime: new Date().toLocaleString('zh-CN'),
+    printType,
+    printCount,
+    operator,
+    labelNumbers: labelNumbers || []
+  };
+
+  // 初始化打印记录数组
+  if (!planting.printRecords) {
+    planting.printRecords = [];
+  }
+  planting.printRecords.push(printRecord);
+
+  // 更新打印次数
+  const newPrintCount = (planting.printCount || 0) + printCount;
+  updatePlanting(plantingId, {
+    printRecords: planting.printRecords,
+    printCount: newPrintCount
+  });
+
+  return printRecord;
 }

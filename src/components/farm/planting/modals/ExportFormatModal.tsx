@@ -64,6 +64,20 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
               <p className="text-xs text-gray-500">适用于数据交换</p>
             </div>
           </label>
+          <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+            <input
+              type="radio"
+              name="exportType"
+              value="word"
+              checked={exportFileType === 'word'}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-4 h-4 text-emerald-600"
+            />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">Word (.docx)</p>
+              <p className="text-xs text-gray-500">适用于文档编辑和分享</p>
+            </div>
+          </label>
         </div>
       </div>
 

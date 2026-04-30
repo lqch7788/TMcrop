@@ -139,6 +139,14 @@ export interface SeedSource {
   instanceId?: string;         // 关联的作物实例ID
   orderId?: string;           // 关联的订单ID
   orderCode?: string;         // 关联的订单编号
+  // 生产计划关联（V3.0 必填）
+  productionPlanId?: string;   // 关联生产计划ID
+  productionPlanCode?: string; // 关联生产计划批次号
+  // 来源类型（V3.0 用于区分自产/外购）
+  supplierIsInternal?: boolean; // true=自产, false=外购
+  // 基地信息（V3.0 自产时必填）
+  baseId?: string;            // 基地ID
+  baseName?: string;          // 基地名称
 }
 
 // ========== 每日记录类型 ==========
@@ -334,6 +342,12 @@ export interface Planting {
   instanceId?: string;        // 关联的作物实例ID
   orderId?: string;          // 关联的订单ID
   orderCode?: string;         // 关联的订单编号
+  // 生产计划关联（V3.0 必填）
+  productionPlanId?: string;   // 关联生产计划ID
+  productionPlanCode?: string; // 关联生产计划批次号
+  // 来源信息（V3.0 追溯用）
+  sourceInstanceId?: string;   // 来源库存实例ID
+  seedlingInstanceId?: string; // 育苗实例ID（如果来源是种苗）
 }
 
 // ========== 筛选状态类型 ==========
