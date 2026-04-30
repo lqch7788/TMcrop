@@ -2,9 +2,11 @@
  * 育苗详情弹窗
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
+import TraceChain from '../../trace/TraceChain';
+import { History } from 'lucide-react';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ export function DetailModal({
   onClose,
   record
 }: DetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'info' | 'trace'>('info');
+
   const statusMap = {
     [SeedlingStatus.IN_PROGRESS]: { label: '进行中', color: 'text-amber-600 bg-amber-50' },
     [SeedlingStatus.TRANSPLANT_READY]: { label: '待定植', color: 'text-blue-600 bg-blue-50' },
@@ -49,6 +53,33 @@ export function DetailModal({
       submitText="关闭"
       cancelText=""
     >
+      {/* 标签页切换 */}
+      <div className="flex border-b border-gray-200 mb-4">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            activeTab === 'info'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          基本信息
+        </button>
+        <button
+          onClick={() => setActiveTab('trace')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1 ${
+            activeTab === 'trace'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          追溯链路
+        </button>
+      </div>
+
+      {/* 标签页内容 */}
+      {activeTab === 'info' ? (
       <div className="space-y-6">
         {/* 基本信息 */}
         <div>
@@ -232,6 +263,23 @@ export function DetailModal({
           </div>
         </div>
       </div>
+      ) : (
+      /* 追溯链路标签页 */
+      <div className="py-2">
+        {record.instanceId ? (
+          <TraceChain
+            type="seedling"
+            businessId={record.instanceId}
+          />
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <History className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>暂无库存实例</p>
+            <p className="text-xs mt-1">该育苗尚未接入库存服务</p>
+          </div>
+        )}
+      </div>
+      )}
     </UnifiedModal>
   );
 }

@@ -3,7 +3,7 @@ import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cropBatches, greenhouses, cropTypes, plantingModes } from '../../data/mockData';
-import { CropBatch } from '../../types';
+import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';
@@ -19,11 +19,19 @@ import {
 
 export default function ProductionPage() {
   const [statusFilter, setStatusFilter] = useState('all');
+  const [planTypeFilter, setPlanTypeFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [batches, setBatches] = useState<CropBatch[]>(cropBatches);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Search filters
+  const [batchCodeSearch, setBatchCodeSearch] = useState('');
+  const [plantingModeSearch, setPlantingModeSearch] = useState('');
+  const [cropNameSearch, setCropNameSearch] = useState('');
+  const [varietySearch, setVarietySearch] = useState('');
+  const [greenhouseSearch, setGreenhouseSearch] = useState('');
 
   // Reset filters
   const resetFilters = () => {
@@ -33,18 +41,14 @@ export default function ProductionPage() {
     setVarietySearch('');
     setGreenhouseSearch('');
     setStatusFilter('all');
+    setPlanTypeFilter('all');
   };
-
-  // Search filters
-  const [batchCodeSearch, setBatchCodeSearch] = useState('');
-  const [plantingModeSearch, setPlantingModeSearch] = useState('');
-  const [cropNameSearch, setCropNameSearch] = useState('');
-  const [varietySearch, setVarietySearch] = useState('');
-  const [greenhouseSearch, setGreenhouseSearch] = useState('');
 
   // Form state
   const [formData, setFormData] = useState(() => ({
     batchCode: '',
+    planType: PlanType.PLANTING as PlanType,  // 默认种植计划
+    planTypeName: '种植计划',
     cropName: '',
     variety: '',
     greenhouseId: '',
@@ -81,7 +85,8 @@ export default function ProductionPage() {
     const matchVariety = !varietySearch || batch.variety.toLowerCase().includes(varietySearch.toLowerCase());
     const matchGreenhouse = !greenhouseSearch || batch.greenhouseName.toLowerCase().includes(greenhouseSearch.toLowerCase());
     const matchStatus = statusFilter === 'all' || batch.batchStatus === statusFilter;
-    return matchBatchCode && matchPlantingMode && matchCropName && matchVariety && matchGreenhouse && matchStatus;
+    const matchPlanType = planTypeFilter === 'all' || batch.planType === planTypeFilter;
+    return matchBatchCode && matchPlantingMode && matchCropName && matchVariety && matchGreenhouse && matchStatus && matchPlanType;
   });
 
   const validateForm = () => {
@@ -129,13 +134,17 @@ export default function ProductionPage() {
       publisher: formData.publisher,
       publishDate: formData.batchStatus === 'published' ? today : undefined,
       lastModifyDate: today,
-      batchStatus: formData.batchStatus
+      batchStatus: formData.batchStatus,
+      planType: formData.planType,
+      planTypeName: formData.planTypeName,
     };
 
     setBatches([newBatch, ...batches]);
     setShowCreateModal(false);
     setFormData({
       batchCode: '',
+      planType: PlanType.PLANTING as PlanType,
+      planTypeName: '种植计划',
       cropName: '',
       variety: '',
       greenhouseId: '',
@@ -145,7 +154,7 @@ export default function ProductionPage() {
       targetYield: '',
       plantingMode: '',
       responsiblePerson: '',
-      publisher: '陆启闯',
+      publisher: localStorage.getItem('username') || '陆启闯',
       batchStatus: 'draft',
       description: ''
     });
@@ -292,7 +301,9 @@ export default function ProductionPage() {
   const generateBatchCode = () => {
     const year = new Date().getFullYear();
     const num = batches.length + 1;
-    const code = `FQ${year}-${String(num).padStart(3, '0')}`;
+    // 根据计划类型使用不同的前缀
+    const prefix = PlanTypeCodePrefix[formData.planType as PlanType] || 'FQ';
+    const code = `${prefix}${year}-${String(num).padStart(3, '0')}`;
     setFormData({ ...formData, batchCode: code });
   };
 
@@ -395,12 +406,14 @@ export default function ProductionPage() {
         varietySearch={varietySearch}
         greenhouseSearch={greenhouseSearch}
         statusFilter={statusFilter}
+        planTypeFilter={planTypeFilter}
         onBatchCodeChange={setBatchCodeSearch}
         onPlantingModeChange={setPlantingModeSearch}
         onCropNameChange={setCropNameSearch}
         onVarietyChange={setVarietySearch}
         onGreenhouseChange={setGreenhouseSearch}
         onStatusChange={setStatusFilter}
+        onPlanTypeChange={setPlanTypeFilter}
         onReset={resetFilters}
         onSearch={() => {}}
       />

@@ -3,7 +3,7 @@
  * 包含临时任务派发的完整功能
  */
 
-import { useState } from 'react';
+import { useState, useReducer, useEffect, useCallback } from 'react';
 import { Plus, AlertTriangle, Edit, Trash2, Download } from 'lucide-react';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { users } from '../../../../data/mockData';
@@ -713,6 +713,14 @@ export const TempTaskTab: React.FC = () => {
   // 统一任务管理 Hook（用于临时任务同步）
   const { createTask, publishTask } = useTasks();
 
+  // Force refresh 机制（替代 window.location.reload()）
+  const [refreshKey, forceRefresh] = useReducer((k: number) => k + 1, 0);
+
+  // 触发刷新的函数（替代 window.location.reload()）
+  const triggerRefresh = useCallback(() => {
+    forceRefresh();
+  }, []);
+
   // 紧急程度映射到优先级
   const mapUrgencyToPriority = (urgency?: string): 'urgent' | 'high' | 'normal' => {
     switch (urgency) {
@@ -790,7 +798,6 @@ export const TempTaskTab: React.FC = () => {
     onSubmit: (taskData, status) => {
       if (editingTask) {
         // 更新逻辑（后续实现）
-        console.log('更新临时任务:', editingTask.id, taskData);
       } else {
         // ========== 数据闭环：新建临时任务 ==========
         // 根据派发模式和状态决定最终状态
@@ -918,7 +925,7 @@ export const TempTaskTab: React.FC = () => {
     });
     closeDetailModal();
     // 刷新页面数据以显示更新
-    window.location.reload();
+    triggerRefresh();
   };
 
   // 提交完成（需要审核）
@@ -942,7 +949,7 @@ export const TempTaskTab: React.FC = () => {
       remarks: remarks || '任务已完成，提交审核',
     });
     closeDetailModal();
-    window.location.reload();
+    triggerRefresh();
   };
 
   // 审核通过
@@ -965,7 +972,7 @@ export const TempTaskTab: React.FC = () => {
       remarks: '临时任务审核通过',
     });
     closeDetailModal();
-    window.location.reload();
+    triggerRefresh();
   };
 
   // 重新派发（驳回2次后）
@@ -992,7 +999,7 @@ export const TempTaskTab: React.FC = () => {
       remarks: `任务被重新派发，原执行人：${task.assigneeName}`,
     });
     closeDetailModal();
-    window.location.reload();
+    triggerRefresh();
   };
 
   // 审核驳回
@@ -1015,7 +1022,7 @@ export const TempTaskTab: React.FC = () => {
       remarks: reason || '任务被驳回',
     });
     closeDetailModal();
-    window.location.reload();
+    triggerRefresh();
   };
 
   // 撤回任务（待接受状态）
@@ -1053,7 +1060,7 @@ export const TempTaskTab: React.FC = () => {
       });
       setShowWithdrawModal(false);
       setWithdrawCancelTask(null);
-      window.location.reload();
+      triggerRefresh();
     }
   };
 
@@ -1080,7 +1087,7 @@ export const TempTaskTab: React.FC = () => {
       });
       setShowCancelModal(false);
       setWithdrawCancelTask(null);
-      window.location.reload();
+      triggerRefresh();
     }
   };
 
@@ -1116,7 +1123,7 @@ export const TempTaskTab: React.FC = () => {
       });
       setShowReassignModal(false);
       setReassignTask(null);
-      window.location.reload();
+      triggerRefresh();
     }
   };
 

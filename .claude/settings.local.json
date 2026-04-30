@@ -45,7 +45,20 @@
       "mcp__plugin_playwright_playwright__browser_evaluate",
       "Bash(npx tsc *)",
       "Bash(tasklist)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "mcp__context7-1__resolve-library-id",
+      "mcp__context7-1__query-docs",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm vite *)",
+      "mcp__excel__read_data_from_excel",
+      "mcp__excel__get_workbook_metadata",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(c['address'], c['value']\\) for c in d['cells'][:50]]\")",
+      "mcp__excel__write_data_to_excel",
+      "mcp__excel__create_workbook",
+      "mcp__MiniMax__web_search",
+      "Bash(npx eslint *)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(npm start *)"
     ]
   }
 }

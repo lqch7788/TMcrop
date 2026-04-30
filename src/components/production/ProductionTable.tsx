@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { CropBatch } from '../../types';
+import { CropBatch, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
 
 interface ProductionTableProps {
@@ -155,13 +155,20 @@ export function ProductionTable({
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                  <button
-                    onClick={() => onBatchCodeClick(batch)}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                    title="点击查看详情"
-                  >
-                    {batch.batchCode}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {batch.planType && (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${PlanTypeColors[batch.planType]?.bg} ${PlanTypeColors[batch.planType]?.text}`}>
+                        {PlanTypeLabels[batch.planType]}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => onBatchCodeClick(batch)}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      title="点击查看详情"
+                    >
+                      {batch.batchCode}
+                    </button>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingMode}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>

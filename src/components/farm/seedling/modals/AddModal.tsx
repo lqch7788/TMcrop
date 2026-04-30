@@ -15,6 +15,7 @@ import { CropVarietyOption } from '../../../../types/cropVariety';
 import { survivalRateOptions, seedlingPlanTypes, propagationMultiples, OPERATORS } from '../../../../data/cropData';
 import { cropBatches } from '../../../../data/mockData';
 import { useTasks } from '../../../../hooks/useTasks';
+import { PlanType } from '../../../../types';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -126,10 +127,11 @@ export function AddModal({
     setFormData({ ...formData, seedlingCode: code });
   };
 
-  // 筛选可用的生产计划批次（已发布和执行中）
+  // 筛选可用的生产计划批次（已发布和执行中，且只显示育苗计划类型）
   const availableProductionPlans = useMemo(() => {
     return cropBatches.filter(batch =>
-      batch.batchStatus === 'published' || batch.batchStatus === 'in_progress'
+      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress') &&
+      batch.planType === PlanType.SEEDLING
     );
   }, []);
 
@@ -402,7 +404,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <option value="">不关联（独立批次）</option>
                 {availableProductionPlans.map(plan => (
                   <option key={plan.id} value={plan.batchCode}>
-                    {plan.batchCode} - {plan.cropName}
+                    [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.cropName}
                   </option>
                 ))}
               </select>

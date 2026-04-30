@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
-import { batchStatusLabels } from './constants';
+import { batchStatusLabels, PlanTypeLabels } from './constants';
+import { PlanType } from '../../types';
 
 interface ProductionFiltersProps {
   batchCodeSearch: string;
@@ -8,12 +9,14 @@ interface ProductionFiltersProps {
   varietySearch: string;
   greenhouseSearch: string;
   statusFilter: string;
+  planTypeFilter: string;
   onBatchCodeChange: (value: string) => void;
   onPlantingModeChange: (value: string) => void;
   onCropNameChange: (value: string) => void;
   onVarietyChange: (value: string) => void;
   onGreenhouseChange: (value: string) => void;
   onStatusChange: (value: string) => void;
+  onPlanTypeChange: (value: string) => void;
   onReset: () => void;
   onSearch: () => void;
 }
@@ -25,18 +28,33 @@ export function ProductionFilters({
   varietySearch,
   greenhouseSearch,
   statusFilter,
+  planTypeFilter,
   onBatchCodeChange,
   onPlantingModeChange,
   onCropNameChange,
   onVarietyChange,
   onGreenhouseChange,
   onStatusChange,
+  onPlanTypeChange,
   onReset,
   onSearch,
 }: ProductionFiltersProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
       <div className="flex flex-col lg:flex-row gap-4 items-end">
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 text-center mb-1">计划类型</label>
+          <select
+            value={planTypeFilter}
+            onChange={(e) => onPlanTypeChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">全部类型</option>
+            {Object.entries(PlanTypeLabels).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex-1 min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 text-center mb-1">批次编号</label>
           <input

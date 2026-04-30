@@ -501,13 +501,15 @@ export default function WarehouseMaterialsPage() {
   };
 
   const handleConfirmDelete = () => {
-    console.log('Delete material:', selectedMaterial);
+    // 删除物料：从仓库数据中移除选中的物料
+    setWarehouseData(prev => prev.filter(m => m.id !== selectedMaterial?.id));
     setShowDeleteModal(false);
     setSelectedMaterial(null);
   };
 
   const handleSaveEdit = (material: Material) => {
-    console.log('Save edit:', material);
+    // 保存编辑后的物料数据
+    setWarehouseData(prev => prev.map(m => m.id === material.id ? material : m));
     setShowEditModal(false);
     setSelectedMaterial(null);
   };
@@ -542,7 +544,8 @@ export default function WarehouseMaterialsPage() {
   };
 
   const handleSaveInboundEdit = (record: InboundRecord) => {
-    console.log('Save inbound edit:', record);
+    // 保存编辑后的入库记录
+    setInboundRecords(prev => prev.map(r => r.id === record.id ? record : r));
     setShowInboundEditModal(false);
     setSelectedInboundRecord(null);
   };
@@ -557,7 +560,7 @@ export default function WarehouseMaterialsPage() {
   };
 
   const handleAddRecord = () => {
-    console.log('Add new inbound record');
+    // 打开新增入库记录弹窗
     setShowInboundAddModal(true);
   };
 
@@ -577,8 +580,8 @@ export default function WarehouseMaterialsPage() {
     
     const newSeq = maxSeq + 1;
     if (newSeq > 9999) {
-      console.error('今日入库单号已达上限9999');
-      return `${todayPrefix}ERR`;
+      // 序号超过上限，返回错误提示
+      return `${todayPrefix}9999-WARN`;
     }
     
     return `${todayPrefix}${String(newSeq).padStart(4, '0')}`;
@@ -882,7 +885,14 @@ export default function WarehouseMaterialsPage() {
           });
         }}
         onSaveAll={() => {
-          console.log('Saving all batch edits:', batchEditedMaterials);
+          // 批量保存所有编辑的物料数据
+          setWarehouseData(prev => {
+            const editedIds = Object.keys(batchEditedMaterials).map(id => parseInt(id));
+            return prev.map(m => {
+              const edited = batchEditedMaterials[m.id];
+              return edited ? { ...m, ...edited } : m;
+            });
+          });
           setShowBatchEditModal(false);
           setBatchEditMode(false);
           setSelectedRows([]);

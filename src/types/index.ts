@@ -1,5 +1,42 @@
 // 智慧种植生产管理系统类型定义
 
+/**
+ * 生产计划类型枚举
+ * 用于区分育种计划、育苗计划和种植计划
+ */
+export enum PlanType {
+  SEED_BREEDING = 'seed_breeding', // 育种计划（种源采购）
+  SEEDLING = 'seedling',           // 育苗计划
+  PLANTING = 'planting'            // 种植计划
+}
+
+/**
+ * 生产计划类型标签配置
+ */
+export const PlanTypeLabels: Record<PlanType, string> = {
+  [PlanType.SEED_BREEDING]: '育种计划',
+  [PlanType.SEEDLING]: '育苗计划',
+  [PlanType.PLANTING]: '种植计划',
+};
+
+/**
+ * 生产计划类型颜色配置
+ */
+export const PlanTypeColors: Record<PlanType, { bg: string; text: string }> = {
+  [PlanType.SEED_BREEDING]: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  [PlanType.SEEDLING]: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  [PlanType.PLANTING]: { bg: 'bg-orange-100', text: 'text-orange-700' },
+};
+
+/**
+ * 生产计划类型批次号前缀
+ */
+export const PlanTypeCodePrefix: Record<PlanType, string> = {
+  [PlanType.SEED_BREEDING]: 'JZ', // JZ = 种子/Ji Zhong
+  [PlanType.SEEDLING]: 'YM',      // YM = 育苗/Yang Yu
+  [PlanType.PLANTING]: 'ZZ',      // ZZ = 种植/Zhong Zhi
+};
+
 export interface User {
   id: string;
   name: string;
@@ -34,6 +71,9 @@ export interface CropBatch {
   batchStatus?: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
   planDetailFileName?: string; // 计划详情文件名
   planDetail?: string; // 计划详情内容
+  // 计划类型（用于区分育种/育苗/种植）
+  planType?: PlanType;
+  planTypeName?: string;
 }
 
 export interface Task {
@@ -307,6 +347,18 @@ export interface HarvestRecord {
   orderId?: string;        // 关联的订单ID
   orderCode?: string;       // 关联的订单编号
   cropCode?: string;        // 作物编码（从instance继承）
+  // V3.0 扩展字段
+  productionPlanId?: string;   // 关联生产计划ID
+  productionPlanCode?: string; // 关联生产计划批次号
+  // 采收类型（V3.0 用于区分种子/种苗/成品采收）
+  harvestType?: 'seed' | 'seedling' | 'product'; // 采收类型
+  // 目标库存（V3.0 循环闭环用）
+  targetInventory?: 'seed' | 'seedling' | 'product'; // 目标库存类型
+  // 来源实例ID（V3.0 追溯用）
+  sourceInstanceId?: string;   // 来源库存实例ID
+  plantingInstanceId?: string; // 种植实例ID
+  // 溯源码
+  traceCode?: string;         // 追溯码
 }
 
 // 采收产品明细
@@ -583,3 +635,35 @@ export {
   TASK_ACTION_CONFIG,
 } from './task';
 
+// 统一库存管理 V3.0 类型导出
+export {
+  InventoryStatus,
+  StockType,
+  SourceType,
+  TransactionType,
+  BusinessType,
+  FrozenType,
+  FreezeStatus,
+} from './inventory';
+
+export type {
+  InventoryStock,
+  InventoryTransaction,
+  InventoryFreeze,
+  InventoryOperationResult,
+  AvailableQuantityResult,
+  BusinessInfo,
+  TraceResult,
+  DownstreamTraceResult,
+  InventoryStats,
+  IInventoryStockRepository,
+  IInventoryTransactionRepository,
+  IInventoryFreezeRepository,
+  InboundRequest,
+  OutboundRequest,
+  FreezeRequest,
+  AlertInfo,
+  AlertSettings,
+  ProduceInventory,
+  AlertStats,
+} from './inventory';
