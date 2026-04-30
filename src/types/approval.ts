@@ -14,6 +14,8 @@ export enum ApprovalType {
   PRODUCTION_PLAN = 'production_plan',   // 生产计划
   HARVEST_REQUEST = 'harvest_request',    // 采收申请
   RETURN_MATERIAL = 'return_material',     // 退料单
+  SEED_SOURCE_SUPPLEMENTARY = 'seed_source_supplementary',  // 种源补录申请
+  SEEDLING_SUPPLEMENTARY = 'seedling_supplementary',      // 育苗补录申请
 
   // HR审批
   LEAVE = 'leave',                       // 请假申请
@@ -99,7 +101,7 @@ export interface MaterialItem {
 // ============================================================
 
 export interface BusinessLink {
-  type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' | 'resign' | 'return' | 'recruitment';
+  type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' | 'resign' | 'return' | 'recruitment' | 'harvest' | 'seed_source' | 'seedling';
   requestId: string;
   requestCode: string;
   materials?: MaterialItem[];
@@ -243,6 +245,8 @@ export const getApprovalTypeName = (type: ApprovalType): string => {
     [ApprovalType.PRODUCTION_PLAN]: '生产计划',
     [ApprovalType.HARVEST_REQUEST]: '采收申请',
     [ApprovalType.RETURN_MATERIAL]: '退料单',
+    [ApprovalType.SEED_SOURCE_SUPPLEMENTARY]: '种源补录申请',
+    [ApprovalType.SEEDLING_SUPPLEMENTARY]: '育苗补录申请',
     [ApprovalType.LEAVE]: '请假申请',
     [ApprovalType.OVERTIME]: '加班申请',
     [ApprovalType.RESIGNATION]: '离职申请',

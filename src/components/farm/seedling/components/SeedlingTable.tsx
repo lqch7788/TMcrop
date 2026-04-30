@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 
@@ -29,6 +29,8 @@ interface SeedlingTableProps {
   onTransplant: (record: Seedling) => void;
   onPrint: (record: Seedling) => void;
   onImageClick: (images: string[]) => void;
+  // 结束相关回调
+  onEnd: (record: Seedling, endType: 'normal' | 'abnormal') => void;
   // 模式状态
   operationMode: SeedlingOperationMode;
   onOperationModeChange: (mode: SeedlingOperationMode) => void;
@@ -58,6 +60,7 @@ export function SeedlingTable({
   onTransplant,
   onPrint,
   onImageClick,
+  onEnd,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -314,30 +317,49 @@ export function SeedlingTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            {showCheckbox && <col className="w-12" />}
+            <col className="w-44" />
+            <col className="w-36" />
+            <col className="w-36" />
+            <col className="w-52" />
+            <col className="w-28" />
+            <col className="w-52" />
+            <col className="w-28" />
+            <col className="w-16" />
+            <col className="w-20" />
+            <col className="w-20" />
+            <col className="w-20" />
+            <col className="w-16" />
+            <col className="w-40" />
+          </colgroup>
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
-                <th className="px-4 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">
+                <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">
                   选择
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">育苗批号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">场地</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">成苗率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余总数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">育苗批号</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联生产计划</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">场地</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">成苗率</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">入库数量</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余总数</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">完成比例</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 11 : 10} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 14 : 13} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -345,7 +367,7 @@ export function SeedlingTable({
               currentData.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
                   {showCheckbox && (
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       <input
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
@@ -360,7 +382,7 @@ export function SeedlingTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-3 py-2 text-sm">
                     <button
                       onClick={() => onDetail(record)}
                       className="font-mono text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -369,11 +391,18 @@ export function SeedlingTable({
                       {record.seedlingCode}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-3 py-2 text-sm text-gray-600 whitespace-nowrap truncate" title={record.productionPlanCode || ''}>
+                    {record.productionPlanCode ? (
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">
+                        {record.productionPlanCode}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td className="px-3 py-2 text-sm">
                     <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.sourceCode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                  <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.sourceCode}</td>
+                  <td className="px-3 py-2 text-sm text-gray-900 truncate" title={record.cropVariety || record.cropName}>
                     {/* 作物品种列：从品种库获取最细化名称，参照种源管理页面格式显示 */}
                     {(() => {
                       cropVarietyService.initVarieties();
@@ -386,7 +415,7 @@ export function SeedlingTable({
                       return record.cropVariety || record.cropName;
                     })()}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-3 py-2 text-sm text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis">
                     {/* 品种路径列，参照种源管理页面格式：类别-类型-品种-作物名称 */}
                     {(() => {
                       const pathInfo = getCropVarietyPath(record);
@@ -403,17 +432,35 @@ export function SeedlingTable({
                       );
                     })()}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{record.siteName}</td>
-                  <td className="px-4 py-3 text-sm text-emerald-600 font-medium">{record.survivalRate}%</td>
-                  <td className="px-4 py-3 text-sm text-purple-600 font-medium">
+                  <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.siteName}</td>
+                  <td className="px-3 py-2 text-sm text-emerald-600 font-medium">{record.survivalRate}%</td>
+                  <td className="px-3 py-2 text-sm text-blue-600 font-medium">
+                    {(record.survivalCount || 0).toLocaleString()}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-purple-600 font-medium">
                     {(record.initialCount - record.lossCount).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-3 py-2 text-sm whitespace-nowrap">
+                    {record.targetSurvivalCount > 0 ? (
+                      <span className={`font-medium ${
+                        (record.survivalCount || 0) / record.targetSurvivalCount >= 0.8
+                          ? 'text-green-600'
+                          : (record.survivalCount || 0) / record.targetSurvivalCount >= 0.5
+                          ? 'text-amber-600'
+                          : 'text-red-600'
+                      }`}>
+                        {Math.round((record.survivalCount || 0) / record.targetSurvivalCount * 100)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
                       {statusMap[record.status]?.label || record.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-3 py-2 text-sm">
                     <div className="flex gap-1">
                       <button
                         onClick={() => onDailyRecord(record)}
@@ -447,6 +494,20 @@ export function SeedlingTable({
                           <Image className="w-4 h-4" />
                         </button>
                       )}
+                      <button
+                        onClick={() => onEnd(record, 'normal')}
+                        className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+                        title="正常结束"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onEnd(record, 'abnormal')}
+                        className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        title="异常结束"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>

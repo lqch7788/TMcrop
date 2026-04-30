@@ -3624,7 +3624,7 @@ export default function MaterialReceiving() {
                 warehouseOptions={['仓库A区', '仓库B区', '仓库C区']}
                 supplierOptions={['有机肥供应商A', '化肥供应商B', '农药供应商C', '种子供应商D', '劳保用品供应商E', '农机供应商F', '包装材料供应商G', '监测设备供应商H']}
                 batchCodeOptions={['YC20260301', 'HF20260315', 'NY20260220', 'NY20260110', 'ZZ20260201', 'ZZ20260115', 'LB20260228', 'LB20260305', 'NJ20260120', 'NJ20260210', 'BZ20260320', 'JC20260105']}
-                productionPlanOptions={['FQ2026-001', 'FQ2026-002', 'FQ2026-003', 'FQ2026-004', 'FQ2026-005', 'FQ2026-006', 'FQ2026-007', 'FQ2026-008', 'FQ2026-009', 'FQ2026-010', 'FQ2026-011', 'FQ2026-012']}
+                productionPlanOptions={['ZZB2026-001', 'ZZB2026-002', 'ZZB2026-003', 'YMB2026-001', 'YMB2026-002', 'YMB2026-003', 'JZB2026-001', 'JZB2026-002']}
                 usageAreaOptions={['玻璃温室A区', '日光温室1号', '塑料大棚1号', '露天种植区', '大田A区', '玻璃温室B区', '全园区', '日光温室2号', '设备维修间', '滴灌系统', '采后处理车间', '监测室']}
                 requisitionerOptions={['张伟民', '李明轩', '王建国', '赵俊杰', '郑志远', '陈思远', '吴海龙', '孙晓峰', '郑志明', '周志刚']}
                 onMaterialSearchChange={setStatMaterialSearch}

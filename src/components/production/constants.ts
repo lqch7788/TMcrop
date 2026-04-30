@@ -42,3 +42,59 @@ export const stageProgress: Record<string, number> = {
 export const RESPONSIBLE_PERSONS = [
   '郭靖', '黄蓉', '张无忌', '令狐冲', '萧峰', '段誉', '虚竹', '杨过'
 ];
+
+// ============================================
+// 各类计划的模式配置
+// ============================================
+
+/**
+ * 育种计划（种源采购）模式
+ */
+export const SEED_BREEDING_MODES = [
+  { value: 'supplier_direct', label: '供应商直供' },
+  { value: 'bidding', label: '招标采购' },
+  { value: 'designated', label: '定点采购' },
+  { value: 'commissioned', label: '委托培育' },
+  { value: 'self_produced', label: '自繁自育' },
+];
+
+/**
+ * 育苗计划模式
+ */
+export const SEEDLING_MODES = [
+  { value: 'plug_seedling', label: '穴盘育苗' },
+  { value: 'floating', label: '漂浮育苗' },
+  { value: 'nutrient_block', label: '营养钵育苗' },
+  { value: 'grafting', label: '嫁接育苗' },
+  { value: 'tissue_culture', label: '组培育苗' },
+  { value: 'direct_seeding', label: '直播育苗' },
+];
+
+/**
+ * 种植计划模式
+ */
+export const PLANTING_MODES = [
+  { value: 'open_field', label: '露天栽培' },
+  { value: 'greenhouse', label: '大棚栽培' },
+  { value: 'mulch', label: '地膜覆盖' },
+  { value: 'intercropping', label: '套种轮作' },
+  { value: 'vertical', label: '立体栽培' },
+  { value: 'hydroponic', label: '水培' },
+  { value: 'substrate', label: '基质栽培' },
+];
+
+/**
+ * 根据计划类型获取对应的模式列表
+ */
+export const getModesByPlanType = (planType: PlanType) => {
+  switch (planType) {
+    case PlanType.SEED_BREEDING:
+      return SEED_BREEDING_MODES;
+    case PlanType.SEEDLING:
+      return SEEDLING_MODES;
+    case PlanType.PLANTING:
+      return PLANTING_MODES;
+    default:
+      return PLANTING_MODES;
+  }
+};

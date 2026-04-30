@@ -23,6 +23,7 @@ import {
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/plantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
+import * as cropBatchService from '../../../services/cropBatchService';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
@@ -152,6 +153,43 @@ export default function PlantingPage() {
       plantingService.deletePlantings(ids);
       refreshData();
       setSelectedRows([]);
+    }
+  };
+
+  // 处理结束计划
+  const handleEnd = (record: Planting, endType: 'normal' | 'abnormal') => {
+    if (!record.productionPlanCode) {
+      alert('该种植没有关联的生产计划，无法结束');
+      return;
+    }
+
+    const batch = cropBatchService.getCropBatchByCode(record.productionPlanCode);
+    if (!batch) {
+      alert('未找到关联的生产计划');
+      return;
+    }
+
+    if (batch.batchStatus === 'completed') {
+      alert('该生产计划已完成结束，不能重复结束');
+      return;
+    }
+
+    const completionRate = cropBatchService.getCompletionRate(batch, record.harvestQuantity || 0);
+    const isNormal = endType === 'normal';
+    const confirmMsg = isNormal
+      ? `确认正常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
+      : `确认异常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
+
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    const result = cropBatchService.endCropBatch(batch.id, endType);
+    if (result) {
+      alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      window.location.reload();
+    } else {
+      alert('结束失败');
     }
   };
 
@@ -355,6 +393,7 @@ export default function PlantingPage() {
         onPrint={handlePrint}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
+        onEnd={handleEnd}
         onAdd={() => setAddModalOpen(true)}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}

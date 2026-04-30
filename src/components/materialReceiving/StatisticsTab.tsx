@@ -807,14 +807,13 @@ export default function StatisticsTab({
                       className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[280px]"
                     >
                       <option value="">全部批次</option>
-                      <option value="FQ2024-001">FQ2024-001（番茄-玻璃温室A区）</option>
-                      <option value="FQ2024-002">FQ2024-002（黄瓜-玻璃温室B区）</option>
-                      <option value="FQ2024-003">FQ2024-003（草莓-日光温室1号）</option>
-                      <option value="FQ2024-004">FQ2024-004（生菜-日光温室2号）</option>
-                      <option value="FQ2024-005">FQ2024-005（辣椒-玻璃温室C区）</option>
-                      <option value="FQ2024-006">FQ2024-006（菠菜-塑料大棚1号）</option>
-                      <option value="FQ2024-007">FQ2024-007（西瓜-露天种植区）</option>
-                      <option value="FQ2024-008">FQ2024-008（茄子-日光温室4号）</option>
+                      <option value="ZZB2026-001">ZZB2026-001（番茄-玻璃温室A区）</option>
+                      <option value="ZZB2026-002">ZZB2026-002（黄瓜-玻璃温室B区）</option>
+                      <option value="ZZB2026-003">ZZB2026-003（草莓-日光温室1号）</option>
+                      <option value="YMB2026-001">YMB2026-001（番茄育苗-育苗基地A区）</option>
+                      <option value="YMB2026-002">YMB2026-002（黄瓜育苗-育苗基地B区）</option>
+                      <option value="JZB2026-001">JZB2026-001（番茄种源-先正达种业）</option>
+                      <option value="JZB2026-002">JZB2026-002（黄瓜种源-圣尼斯种业）</option>
                     </select>
                   </div>
                 </div>

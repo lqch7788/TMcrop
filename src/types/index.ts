@@ -74,6 +74,23 @@ export interface CropBatch {
   // 计划类型（用于区分育种/育苗/种植）
   planType?: PlanType;
   planTypeName?: string;
+  // ========== 三阶段通用字段（根据planType显示不同内容）==========
+  // 场地/区域字段 - 种源=供应商, 育苗=育苗场地, 种植=种植区域
+  locationName?: string;        // 通用场地名称
+  // 目标数量字段 - 种源=采购数量, 育苗=目标成苗数, 种植=目标产量
+  targetQuantity?: number;      // 通用目标数量
+  unit?: string;                // 单位（kg、株、m²等）
+  // 供应商（种源计划专用）
+  supplierName?: string;
+  // 采购数量（种源计划专用）
+  seedQuantity?: number;
+  // 育苗场地（育苗计划专用）
+  seedlingSiteName?: string;
+  // 目标成苗数（育苗计划专用）
+  targetSeedlingCount?: number;
+  // ========== V3.1 结束类型字段 ==========
+  // 结束类型：区分正常结束和异常结束
+  endType?: 'normal' | 'abnormal';
 }
 
 export interface Task {
@@ -359,6 +376,17 @@ export interface HarvestRecord {
   plantingInstanceId?: string; // 种植实例ID
   // 溯源码
   traceCode?: string;         // 追溯码
+  // ========== V3.1 采收入库扩展字段 ==========
+  // 入库类型：区分种源入库、育苗成活入库、种植采收入库
+  inboundType?: 'seed_source' | 'seedling' | 'planting_harvest';
+  // 补录相关字段
+  isSupplementary?: boolean;           // 是否为补录
+  supplementaryReason?: string;        // 补录原因（必填）
+  supplementaryStatus?: 'pending' | 'approved' | 'rejected';  // 审核状态
+  supplementaryApplicant?: string;      // 申请人
+  supplementaryApprover?: string;       // 审核人
+  supplementaryDate?: string;         // 审核日期
+  originalRecordDate?: string;         // 原入库日期（补录时填写）
 }
 
 // 采收产品明细

@@ -23,6 +23,7 @@ import {
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
 import * as seedSourceService from '../../../services/seedSourceService';
+import * as cropBatchService from '../../../services/cropBatchService';
 
 export default function SeedSourcePage() {
   // 状态
@@ -173,6 +174,51 @@ export default function SeedSourcePage() {
   const handleBatchDelete = () => {
     if (selectedRows.length > 0) {
       handleDelete(selectedRows);
+    }
+  };
+
+  // 处理结束计划
+  const handleEnd = (record: SeedSource, endType: 'normal' | 'abnormal') => {
+    // 获取关联的生产计划批次号
+    if (!record.productionPlanCode) {
+      alert('该种源没有关联的生产计划，无法结束');
+      return;
+    }
+
+    // 查找对应的生产计划
+    const batch = cropBatchService.getCropBatchByCode(record.productionPlanCode);
+    if (!batch) {
+      alert('未找到关联的生产计划');
+      return;
+    }
+
+    // 检查是否已完成
+    if (batch.batchStatus === 'completed') {
+      alert('该生产计划已完成结束，不能重复结束');
+      return;
+    }
+
+    // 计算完成比例
+    const completionRate = cropBatchService.getCompletionRate(batch, record.initialCount);
+
+    // 确认对话框
+    const isNormal = endType === 'normal';
+    const confirmMsg = isNormal
+      ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
+      : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
+
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    // 执行结束
+    const result = cropBatchService.endCropBatch(batch.id, endType);
+    if (result) {
+      alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      // 刷新页面数据
+      window.location.reload();
+    } else {
+      alert('结束失败');
     }
   };
 
@@ -355,6 +401,7 @@ export default function SeedSourcePage() {
         onPrint={handlePrint}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
+        onEnd={handleEnd}
         onAdd={handleAdd}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}

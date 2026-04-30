@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -49,6 +49,7 @@ export default function ProductionPage() {
     batchCode: '',
     planType: PlanType.PLANTING as PlanType,  // 默认种植计划
     planTypeName: '种植计划',
+    cropCode: '',  // 作物编码（11位）
     cropName: '',
     variety: '',
     greenhouseId: '',
@@ -63,6 +64,11 @@ export default function ProductionPage() {
     description: '',
     planDetail: ''
   }));
+
+  // 使用useCallback确保onFormChange引用稳定
+  const handleFormChange = useCallback((field: string, value: unknown) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [exportMode, setExportMode] = useState(false);
@@ -547,7 +553,7 @@ export default function ProductionPage() {
         greenhouses={greenhouses}
         cropTypes={cropTypes}
         plantingModes={plantingModes}
-        onFormChange={(field, value) => setFormData({ ...formData, [field]: value })}
+        onFormChange={handleFormChange}
         onGenerateCode={generateBatchCode}
       />
 

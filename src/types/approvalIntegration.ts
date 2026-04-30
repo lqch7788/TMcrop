@@ -30,6 +30,12 @@ export interface ApprovalIntegrationHandler {
   // 处理采收申请审批通过
   onHarvestApprovalApproved?: (approval: Approval, harvestLink: Extract<BusinessLink, { type: 'harvest' }>) => void;
 
+  // 处理种源补录申请审批通过
+  onSeedSourceSupplementaryApproved?: (approval: Approval, seedSourceLink: Extract<BusinessLink, { type: 'seed_source' }>) => void;
+
+  // 处理育苗补录申请审批通过
+  onSeedlingSupplementaryApproved?: (approval: Approval, seedlingLink: Extract<BusinessLink, { type: 'seedling' }>) => void;
+
   // 处理请假审批通过
   onLeaveApprovalApproved?: (approval: Approval, leaveLink: Extract<BusinessLink, { type: 'leave' }>) => void;
 
@@ -82,6 +88,12 @@ export function executeApprovalIntegration(
         }
         if (businessLink?.type === 'harvest' && handler.onHarvestApprovalApproved) {
           handler.onHarvestApprovalApproved(approval, businessLink as Extract<BusinessLink, { type: 'harvest' }>);
+        }
+        if (businessLink?.type === 'seed_source' && handler.onSeedSourceSupplementaryApproved) {
+          handler.onSeedSourceSupplementaryApproved(approval, businessLink as Extract<BusinessLink, { type: 'seed_source' }>);
+        }
+        if (businessLink?.type === 'seedling' && handler.onSeedlingSupplementaryApproved) {
+          handler.onSeedlingSupplementaryApproved(approval, businessLink as Extract<BusinessLink, { type: 'seedling' }>);
         }
         if (businessLink?.type === 'leave' && handler.onLeaveApprovalApproved) {
           handler.onLeaveApprovalApproved(approval, businessLink as Extract<BusinessLink, { type: 'leave' }>);
@@ -190,10 +202,87 @@ export const leaveApprovalHandler: ApprovalIntegrationHandler = {
   },
 };
 
+// 场景5：采收补录审批通过 → 更新采收记录状态
+export const harvestApprovalHandler: ApprovalIntegrationHandler = {
+  onHarvestApprovalApproved: (approval, harvestLink) => {
+    console.log('【联动】采收补录审批通过', {
+      approvalCode: approval.code,
+      harvestCode: harvestLink.requestCode,
+    });
+    // 更新采收记录的补录状态为已通过
+    // import('../services/harvestService').then(({ updateSupplementaryStatus }) => {
+    //   updateSupplementaryStatus(
+    //     harvestLink.requestCode,
+    //     'approved',
+    //     approval.approvers[approval.currentStep - 1]?.name || '系统',
+    //     new Date().toLocaleString('zh-CN')
+    //   );
+    // });
+  },
+  onApprovalRejected: (approval, reason) => {
+    // 采收补录被驳回时，更新记录状态
+    if (approval.businessLink?.type === 'harvest') {
+      console.log('【联动】采收补录审批驳回', {
+        approvalCode: approval.code,
+        reason,
+      });
+      // import('../services/harvestService').then(({ updateSupplementaryStatus }) => {
+      //   updateSupplementaryStatus(
+      //     approval.businessLink!.requestCode,
+      //     'rejected',
+      //     approval.approvers[approval.currentStep - 1]?.name || '系统',
+      //     new Date().toLocaleString('zh-CN')
+      //   );
+      // });
+    }
+  },
+};
+
+// 场景6：种源补录审批通过 → 更新种源记录状态
+export const seedSourceSupplementaryHandler: ApprovalIntegrationHandler = {
+  onSeedSourceSupplementaryApproved: (approval, seedSourceLink) => {
+    console.log('【联动】种源补录审批通过', {
+      approvalCode: approval.code,
+      seedSourceCode: seedSourceLink.requestCode,
+    });
+    // 种源补录审批通过后的业务逻辑可以在此处扩展
+  },
+  onApprovalRejected: (approval, reason) => {
+    if (approval.businessLink?.type === 'seed_source') {
+      console.log('【联动】种源补录审批驳回', {
+        approvalCode: approval.code,
+        reason,
+      });
+    }
+  },
+};
+
+// 场景7：育苗补录审批通过 → 更新育苗记录状态
+export const seedlingSupplementaryHandler: ApprovalIntegrationHandler = {
+  onSeedlingSupplementaryApproved: (approval, seedlingLink) => {
+    console.log('【联动】育苗补录审批通过', {
+      approvalCode: approval.code,
+      seedlingCode: seedlingLink.requestCode,
+    });
+    // 育苗补录审批通过后的业务逻辑可以在此处扩展
+  },
+  onApprovalRejected: (approval, reason) => {
+    if (approval.businessLink?.type === 'seedling') {
+      console.log('【联动】育苗补录审批驳回', {
+        approvalCode: approval.code,
+        reason,
+      });
+    }
+  },
+};
+
 // 注册所有示例处理器
 export function registerAllHandlers(): void {
   registerApprovalIntegration(materialApprovalHandler);
   registerApprovalIntegration(purchaseApprovalHandler);
   registerApprovalIntegration(productionApprovalHandler);
   registerApprovalIntegration(leaveApprovalHandler);
+  registerApprovalIntegration(harvestApprovalHandler);
+  registerApprovalIntegration(seedSourceSupplementaryHandler);
+  registerApprovalIntegration(seedlingSupplementaryHandler);
 }

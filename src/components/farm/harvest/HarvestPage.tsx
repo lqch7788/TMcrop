@@ -397,6 +397,11 @@ export default function HarvestPage() {
       auditor: string;
       remarks: string;
     }>,
+    // V3.1 入库类型
+    inboundType: 'planting_harvest' as 'seed_source' | 'seedling' | 'planting_harvest',  // 入库类型
+    // V3.1 补录相关字段
+    isSupplementary: false,  // 是否补录
+    supplementaryReason: '',  // 补录原因
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

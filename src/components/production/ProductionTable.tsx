@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { CropBatch, PlanTypeColors, PlanTypeLabels } from '../../types';
+import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
 
 interface ProductionTableProps {
@@ -93,18 +93,16 @@ export function ProductionTable({
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植面积</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">场地/供应商</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标产量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">初次发布时间</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">最后修改时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
@@ -155,33 +153,42 @@ export function ProductionTable({
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {batch.planType && (
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${PlanTypeColors[batch.planType]?.bg} ${PlanTypeColors[batch.planType]?.text}`}>
-                        {PlanTypeLabels[batch.planType]}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => onBatchCodeClick(batch)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                      title="点击查看详情"
-                    >
-                      {batch.batchCode}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => onBatchCodeClick(batch)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                    title="点击查看详情"
+                  >
+                    {batch.batchCode}
+                  </button>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingMode}</td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  {batch.planType && (
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${PlanTypeColors[batch.planType]?.bg} ${PlanTypeColors[batch.planType]?.text}`}>
+                      {PlanTypeLabels[batch.planType]}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.greenhouseName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.plantingArea} m²</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {batch.planType === PlanType.SEED_BREEDING
+                    ? batch.supplierName || '-'
+                    : batch.planType === PlanType.SEEDLING
+                    ? batch.seedlingSiteName || batch.greenhouseName || '-'
+                    : batch.greenhouseName || '-'}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
-                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.targetYield} kg</td>
+                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap font-medium">
+                  {batch.planType === PlanType.SEED_BREEDING
+                    ? `${batch.seedQuantity || 0} ${batch.unit || 'kg'}`
+                    : batch.planType === PlanType.SEEDLING
+                    ? `${batch.targetSeedlingCount || 0} 株`
+                    : `${batch.targetYield || 0} kg`}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.lastModifyDate || '-'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
                     {batchStatusLabels[batch.batchStatus || 'draft']}

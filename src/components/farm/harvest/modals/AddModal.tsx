@@ -43,6 +43,11 @@ interface AddModalProps {
     harvestType: 'seed' | 'seedling' | 'product';  // 采收类型
     targetInventory: 'seed' | 'seedling' | 'product';  // 目标库存
     products: ProductDetail[];
+    // V3.1 入库类型
+    inboundType: 'seed_source' | 'seedling' | 'planting_harvest';  // 入库类型
+    // V3.1 补录相关字段
+    isSupplementary: boolean;  // 是否补录
+    supplementaryReason: string;  // 补录原因
   };
   onFormChange: (field: string, value: any) => void;
   onAddProduct: () => void;
@@ -51,7 +56,7 @@ interface AddModalProps {
   onGenerateCode: () => void;
   greenhouses: Array<{ id: string; name: string }>;
   warehouseOptions: Array<{ value: string; label: string }>;
-  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number }>;
+  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string }>;
   users: Array<{ id: string; name: string; role: string }>;
   errors: Record<string, string>;
 }
@@ -84,6 +89,33 @@ export const AddModal: React.FC<AddModalProps> = ({
 
   // 获取选中的批次信息
   const selectedBatch = cropBatches.find(b => b.batchCode === addForm.batchCode);
+
+  // 根据入库类型过滤批次号列表
+  const filteredBatches = cropBatches.filter(batch => {
+    // 已正常结束的批次不允许入库
+    if (batch.batchStatus === 'completed' && batch.endType === 'normal') return false;
+    // 根据入库类型过滤
+    if (addForm.inboundType === 'seed_source') {
+      return batch.planType === 'seed_breeding';
+    } else if (addForm.inboundType === 'seedling') {
+      return batch.planType === 'seedling';
+    } else {
+      return batch.planType === 'planting';
+    }
+  });
+
+  // 入库类型对应的标签
+  const inboundTypeLabels = {
+    'seed_source': '种源入库',
+    'seedling': '育苗成活入库',
+    'planting_harvest': '种植采收入库'
+  };
+
+  // 根据种源类型获取单位
+  const getUnitBySourceType = (sourceType: string): string => {
+    // 默认单位，实际应根据作物类型
+    return '株';
+  };
 
   // 处理采收人员选择
   const toggleHarvester = (userId: string, userName: string) => {
@@ -157,6 +189,24 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">入库类型</label>
+          <select
+            value={addForm.inboundType}
+            onChange={(e) => {
+              const value = e.target.value as 'seed_source' | 'seedling' | 'planting_harvest';
+              onFormChange('inboundType', value);
+              // 切换入库类型时清空已选的批次
+              onFormChange('batchCode', '');
+            }}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="planting_harvest">种植采收入库</option>
+            <option value="seedling">育苗成活入库</option>
+            <option value="seed_source">种源入库</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-400">{inboundTypeLabels[addForm.inboundType]}</p>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
           <select
             value={addForm.batchCode}
@@ -164,7 +214,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择批次</option>
-            {cropBatches.map(batch => (
+            {filteredBatches.map(batch => (
               <option key={batch.id} value={batch.batchCode}>{batch.batchCode} - {batch.cropName}</option>
             ))}
           </select>
@@ -245,6 +295,32 @@ export const AddModal: React.FC<AddModalProps> = ({
             {addForm.targetInventory === 'product' && '采收成品将进入产品库存'}
           </p>
         </div>
+        {/* V3.1 补录字段 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
+          <select
+            value={addForm.isSupplementary ? 'true' : 'false'}
+            onChange={(e) => onFormChange('isSupplementary', e.target.value === 'true')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="false">否</option>
+            <option value="true">是</option>
+          </select>
+        </div>
+        {addForm.isSupplementary && (
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              补录原因 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={addForm.supplementaryReason}
+              onChange={(e) => onFormChange('supplementaryReason', e.target.value)}
+              placeholder="请输入补录原因"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        )}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">采收人员</label>
           <div className="relative">

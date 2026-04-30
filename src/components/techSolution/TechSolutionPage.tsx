@@ -26,11 +26,11 @@ export interface TechSolution {
 
 // 模拟数据
 const techSolutions: TechSolution[] = [
-  { id: 1, code: 'T202601001', title: '番茄春季高产栽培技术方案', crop: '番茄', plantingMode: '水培', stage: '生长全周期', author: '李建国', createDate: '2026-01-10', status: '已发布', statusClass: 'normal', version: 'V2.1', approveStatus: '已审批', content: '本方案针对春季番茄栽培，从品种选择、育苗、定植、田间管理、病虫害防治等方面进行详细介绍，旨在提高番茄产量和品质。', approvalDate: '2026-01-12', approver: 'Susan', relatedBatchCode: 'FQ2026-001', planDetailFileName: '番茄春季高产栽培技术方案-T202601001.md' },
-  { id: 2, code: 'T202601002', title: '黄瓜设施栽培技术方案', crop: '黄瓜', plantingMode: '土培', stage: '设施栽培', author: '王建华', createDate: '2026-01-15', status: '已发布', statusClass: 'normal', version: 'V1.5', approveStatus: '已审批', content: '本方案介绍黄瓜设施栽培的关键技术，包括温室环境调控、水肥管理、植株调整等内容，适用于温室大棚种植。', approvalDate: '2026-01-18', approver: 'Susan', relatedBatchCode: 'FQ2026-002', planDetailFileName: '黄瓜设施栽培技术方案-T202601002.docx' },
-  { id: 3, code: 'T202602001', title: '草莓冬季促成栽培技术方案', crop: '草莓', plantingMode: '基质培', stage: '冬季促成', author: '李建国', createDate: '2026-02-01', status: '审核中', statusClass: 'pending', version: 'V1.0', approveStatus: '审核中', content: '本方案针对草莓冬季促成栽培技术，包括保温措施、光照调控、肥水管理等进行详细说明。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'FQ2026-003', planDetailFileName: '草莓冬季促成栽培技术方案-T202602001.md' },
-  { id: 4, code: 'T202602002', title: '辣椒越夏栽培技术方案', crop: '辣椒', plantingMode: '土培', stage: '越夏管理', author: '王建华', createDate: '2026-02-20', status: '已发布', statusClass: 'normal', version: 'V1.2', approveStatus: '已审批', content: '本方案介绍辣椒越夏栽培技术，重点解决夏季高温对辣椒生长的影响，确保高产稳产。', approvalDate: '2026-02-25', approver: 'Susan', relatedBatchCode: 'FQ2026-005', planDetailFileName: '辣椒越夏栽培技术方案-T202602002.docx' },
-  { id: 5, code: 'T202603001', title: '番茄灰霉病防治方案', crop: '番茄', plantingMode: '水培', stage: '病虫害防治', author: '张技术', createDate: '2026-03-01', status: '草稿', statusClass: 'draft', version: 'V1.0', approveStatus: '未提交', content: '本方案针对番茄灰霉病的预防和治理措施，包括农业防治、化学防治等技术要点。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'FQ2026-001', planDetailFileName: '番茄灰霉病防治方案-T202603001.md' },
+  { id: 1, code: 'T202601001', title: '番茄春季高产栽培技术方案', crop: '番茄', plantingMode: '水培', stage: '生长全周期', author: '李建国', createDate: '2026-01-10', status: '已发布', statusClass: 'normal', version: 'V2.1', approveStatus: '已审批', content: '本方案针对春季番茄栽培，从品种选择、育苗、定植、田间管理、病虫害防治等方面进行详细介绍，旨在提高番茄产量和品质。', approvalDate: '2026-01-12', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '番茄春季高产栽培技术方案-T202601001.md' },
+  { id: 2, code: 'T202601002', title: '黄瓜设施栽培技术方案', crop: '黄瓜', plantingMode: '土培', stage: '设施栽培', author: '王建华', createDate: '2026-01-15', status: '已发布', statusClass: 'normal', version: 'V1.5', approveStatus: '已审批', content: '本方案介绍黄瓜设施栽培的关键技术，包括温室环境调控、水肥管理、植株调整等内容，适用于温室大棚种植。', approvalDate: '2026-01-18', approver: 'Susan', relatedBatchCode: 'ZZB2026-002', planDetailFileName: '黄瓜设施栽培技术方案-T202601002.docx' },
+  { id: 3, code: 'T202602001', title: '草莓冬季促成栽培技术方案', crop: '草莓', plantingMode: '基质培', stage: '冬季促成', author: '李建国', createDate: '2026-02-01', status: '审核中', statusClass: 'pending', version: 'V1.0', approveStatus: '审核中', content: '本方案针对草莓冬季促成栽培技术，包括保温措施、光照调控、肥水管理等进行详细说明。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'ZZB2026-003', planDetailFileName: '草莓冬季促成栽培技术方案-T202602001.md' },
+  { id: 4, code: 'T202602002', title: '辣椒越夏栽培技术方案', crop: '辣椒', plantingMode: '土培', stage: '越夏管理', author: '王建华', createDate: '2026-02-20', status: '已发布', statusClass: 'normal', version: 'V1.2', approveStatus: '已审批', content: '本方案介绍辣椒越夏栽培技术，重点解决夏季高温对辣椒生长的影响，确保高产稳产。', approvalDate: '2026-02-25', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '辣椒越夏栽培技术方案-T202602002.docx' },
+  { id: 5, code: 'T202603001', title: '番茄灰霉病防治方案', crop: '番茄', plantingMode: '水培', stage: '病虫害防治', author: '张技术', createDate: '2026-03-01', status: '草稿', statusClass: 'draft', version: 'V1.0', approveStatus: '未提交', content: '本方案针对番茄灰霉病的预防和治理措施，包括农业防治、化学防治等技术要点。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '番茄灰霉病防治方案-T202603001.md' },
 ];
 
 const plantingModes = ['水培', '土培', '基质培', '雾培'];
@@ -124,6 +124,7 @@ export function TechSolutionPage() {
     version: 'V1.0',
     content: '',
     planDetailFileName: '',
+    relatedBatchCode: '',
   });
 
   const generateCode = () => {
@@ -167,6 +168,8 @@ export function TechSolutionPage() {
       stage: '',
       version: 'V1.0',
       content: '',
+      planDetailFileName: '',
+      relatedBatchCode: '',
     });
   };
 
@@ -891,6 +894,23 @@ export function TechSolutionPage() {
                 value={newPlanForm.plantingMode}
                 onChange={(e) => setNewPlanForm({...newPlanForm, plantingMode: e.target.value})}
                 options={plantingModes.map(mode => ({ value: mode, label: mode }))}
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="关联生产批次号">
+              <Select
+                value={newPlanForm.relatedBatchCode}
+                onChange={(e) => setNewPlanForm({...newPlanForm, relatedBatchCode: e.target.value})}
+                options={[
+                  { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
+                  { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
+                  { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
+                  { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
+                  { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
+                  { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
+                  { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
+                ]}
               />
             </FormField>
           </div>

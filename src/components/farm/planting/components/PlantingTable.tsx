@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle } from 'lucide-react';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 
 // 操作模式类型
@@ -23,6 +23,8 @@ interface PlantingTableProps {
   onPrint: (record: Planting) => void;
   onDelete: (ids: string[]) => void;
   onImageClick: (images: string[]) => void;
+  // 结束相关回调
+  onEnd: (record: Planting, endType: 'normal' | 'abnormal') => void;
   // 模式状态
   operationMode?: PlantingOperationMode;
   onOperationModeChange?: (mode: PlantingOperationMode) => void;
@@ -51,6 +53,7 @@ export function PlantingTable({
   onPrint,
   onDelete,
   onImageClick,
+  onEnd,
   operationMode = 'normal',
   onOperationModeChange,
   exportMode = false,
@@ -125,6 +128,18 @@ export function PlantingTable({
         )
       },
       {
+        title: '关联生产计划',
+        dataIndex: 'productionPlanCode',
+        width: 140,
+        render: (code: string) => (
+          code ? (
+            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">
+              {code}
+            </span>
+          ) : '-'
+        )
+      },
+      {
         title: '作物编码',
         dataIndex: 'cropCode',
         width: 120,
@@ -159,6 +174,39 @@ export function PlantingTable({
         title: '种植日期',
         dataIndex: 'plantingDate',
         width: 120
+      },
+      {
+        title: '已采收',
+        dataIndex: 'harvestQuantity',
+        width: 100,
+        render: (quantity: number, record: Planting) => (
+          <span className="text-blue-600 font-medium">
+            {quantity ? `${quantity.toLocaleString()}${record.unit || ''}` : '0'}
+          </span>
+        )
+      },
+      {
+        title: '完成比例',
+        dataIndex: 'targetYield',
+        width: 100,
+        render: (target: number, record: Planting) => {
+          const harvestQty = record.harvestQuantity || 0;
+          if (!target || target === 0) {
+            return <span className="text-gray-400">-</span>;
+          }
+          const rate = harvestQty / target;
+          return (
+            <span className={`font-medium ${
+              rate >= 0.8
+                ? 'text-green-600'
+                : rate >= 0.5
+                ? 'text-amber-600'
+                : 'text-red-600'
+            }`}>
+              {Math.round(rate * 100)}%
+            </span>
+          );
+        }
       },
       {
         title: '状态',
@@ -216,6 +264,20 @@ export function PlantingTable({
               title="删除"
             >
               <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onEnd(record, 'normal')}
+              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+              title="正常结束"
+            >
+              <CheckCircle className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onEnd(record, 'abnormal')}
+              className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+              title="异常结束"
+            >
+              <XCircle className="w-4 h-4" />
             </button>
           </div>
         )
