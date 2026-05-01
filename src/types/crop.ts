@@ -528,7 +528,8 @@ export interface CropOrder {
 export interface CropTraceChain {
   instance: CropInstance;
   order?: CropOrder;
-  seedSource?: SeedSource;
+  seedSource?: SeedSource;     // 兼容：保留第一条种源记录
+  seedSources?: SeedSource[];  // 新增：所有关联的种源记录
   seedlings?: Seedling[];
   plantings?: Planting[];
   harvests?: HarvestRecord[];

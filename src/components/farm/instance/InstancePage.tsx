@@ -294,10 +294,12 @@ export default function InstancePage() {
                 {/* 关联记录 */}
                 {traceChain && (
                   <div className="space-y-3">
-                    {traceChain.seedSource && (
+                    {traceChain.seedSources && traceChain.seedSources.length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 mb-1">关联种源</p>
-                        <p className="text-sm font-medium text-gray-900">{traceChain.seedSource.seedCode}</p>
+                        <p className="text-xs text-gray-500 mb-1">关联种源（{traceChain.seedSources.length}条）</p>
+                        {traceChain.seedSources.map(s => (
+                          <p key={s.id} className="text-sm font-medium text-gray-900">{s.seedCode}</p>
+                        ))}
                       </div>
                     )}
                     {traceChain.seedlings && traceChain.seedlings.length > 0 && (
@@ -313,6 +315,14 @@ export default function InstancePage() {
                         <p className="text-xs text-gray-500 mb-1">关联种植</p>
                         {traceChain.plantings.map(p => (
                           <p key={p.id} className="text-sm font-medium text-gray-900">{p.plantCode}</p>
+                        ))}
+                      </div>
+                    )}
+                    {traceChain.harvests && traceChain.harvests.length > 0 && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">关联采收</p>
+                        {traceChain.harvests.map(h => (
+                          <p key={h.id} className="text-sm font-medium text-gray-900">{h.harvestCode}</p>
                         ))}
                       </div>
                     )}
