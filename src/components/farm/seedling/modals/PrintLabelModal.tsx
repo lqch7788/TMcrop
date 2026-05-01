@@ -1,14 +1,15 @@
 /**
  * 育苗标签打印弹窗
- * 支持新建打印和重打印功能
+ * 支持单标签打印、多标签打印、批量生成、导出Excel
  */
 
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Download, Printer } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, LabelPrintType, PrintRecord } from '../../../../types/crop';
-import { getPrintRecords, printLabel, generateAllLabelNumbers } from '../../../../services/seedlingService';
-import { OPERATORS } from '../../../../data/cropData';
+import { getPrintRecords, printLabel, generateAllLabelNumbers, generateLabelNumber } from '../../../../services/seedlingService';
+import { currentUser } from '../../../../data/mockData';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -18,53 +19,110 @@ interface PrintLabelModalProps {
 
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
   const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('detail');
-  const [printType, setPrintType] = useState<'new' | 'reprint'>('new');
+  const [printMode, setPrintMode] = useState<'single' | 'multi' | 'batch'>('single');
   const [printCount, setPrintCount] = useState(1);
-  const [operator, setOperator] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [printHistory, setPrintHistory] = useState<PrintRecord[]>([]);
+  const [previewLabel, setPreviewLabel] = useState<string>('');
+
+  // 获取当前操作员
+  const currentOperator = currentUser.name;
 
   // 加载打印记录
   useEffect(() => {
     if (isOpen) {
       const history = getPrintRecords(record.id);
       setPrintHistory(history);
+      // 默认预览第一个标签
+      const allLabels = generateAllLabelNumbers(record.id);
+      if (allLabels.length > 0) {
+        setPreviewLabel(allLabels[0]);
+      }
     }
   }, [isOpen, record.id]);
 
   // 获取所有可打印的二维码编号
   const allLabelNumbers = generateAllLabelNumbers(record.id);
 
-  const handlePrint = () => {
-    if (!operator) {
-      alert('请选择操作人员');
-      return;
-    }
+  // 计算剩余数量
+  const remainingCount = record.initialCount - record.lossCount;
 
-    if (printType === 'new') {
-      // 新建打印
-      printLabel(record.id, LabelPrintType.NEW, printCount, operator);
-    } else {
-      // 重打印
-      if (selectedLabels.length === 0) {
-        alert('请选择要重打印的二维码编号');
+  // 生成指定数量的标签编号（批量生成）
+  const getBatchLabels = (count: number): string[] => {
+    const labels: string[] = [];
+    for (let i = 0; i < Math.min(count, record.survivalCount); i++) {
+      labels.push(generateLabelNumber(record.seedlingCode, i + 1));
+    }
+    return labels;
+  };
+
+  // 处理打印
+  const handlePrint = () => {
+    if (printMode === 'single') {
+      // 单标签打印
+      if (!previewLabel) {
+        alert('请选择要打印的标签');
         return;
       }
-      printLabel(record.id, LabelPrintType.REPRINT, selectedLabels.length, operator, selectedLabels);
+      printLabel(record.id, LabelPrintType.NEW, 1, currentOperator, [previewLabel]);
+    } else if (printMode === 'multi') {
+      // 多标签打印
+      if (selectedLabels.length === 0) {
+        alert('请选择要打印的标签');
+        return;
+      }
+      printLabel(record.id, LabelPrintType.BATCH, selectedLabels.length, currentOperator, selectedLabels);
+    } else {
+      // 批量生成打印
+      const labels = getBatchLabels(printCount);
+      printLabel(record.id, LabelPrintType.NEW, printCount, currentOperator, labels);
     }
 
     // 刷新历史记录
     setPrintHistory(getPrintRecords(record.id));
-
     // 触发浏览器打印
     window.print();
   };
 
-  // 切换打印类型
-  const handlePrintTypeChange = (type: 'new' | 'reprint') => {
-    setPrintType(type);
-    setSelectedLabels([]);
-    setPrintCount(1);
+  // 导出Excel
+  const handleExportExcel = () => {
+    const labelsToExport = printMode === 'single' && previewLabel
+      ? [previewLabel]
+      : printMode === 'multi' && selectedLabels.length > 0
+        ? selectedLabels
+        : getBatchLabels(printCount);
+
+    // 生成Excel内容（HTML格式）
+    const headers = ['标签编号', '育苗批号', '作物名称', '作物品种', '场地', '初始数量', '成活数量', '剩余数量', '育苗日期', '溯源码'];
+    const rows = labelsToExport.map(label => [
+      label,
+      record.seedlingCode,
+      record.cropName,
+      record.cropVariety,
+      record.siteName,
+      record.initialCount.toString(),
+      record.survivalCount.toString(),
+      remainingCount.toString(),
+      record.startDate,
+      record.traceabilityCode || ''
+    ]);
+
+    const htmlContent = `<html><head><meta charset="utf-8"><style>
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #4a90d9; color: white; }
+    </style></head><body>
+    <table><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+    ${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+    </table></body></html>`;
+
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `育苗标签_${record.seedlingCode}_${new Date().toISOString().slice(0, 10)}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // 选择/取消选择二维码编号
@@ -86,9 +144,9 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   };
 
   // 二维码内容：包含完整溯源信息
-  const qrCodeValue = JSON.stringify({
+  const getQrCodeValue = (label: string) => JSON.stringify({
     type: 'seedling',
-    code: record.seedlingCode,
+    code: label,
     sourceCode: record.sourceCode,
     cropCode: record.cropCode,
     cropName: record.cropName,
@@ -98,83 +156,97 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     date: record.startDate
   });
 
-  // 计算剩余数量
-  const remainingCount = record.initialCount - record.lossCount;
+  // 获取当前预览的二维码值
+  const currentQrCodeValue = previewLabel ? getQrCodeValue(previewLabel) : '';
 
   return (
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title="打印标签"
-      size="md"
+      title="标签打印与导出"
+      size="lg"
       showFooter={true}
       onSubmit={handlePrint}
       submitText="打印"
       cancelText="取消"
     >
       <div className="space-y-4">
-        {/* 打印类型选择 */}
+        {/* 打印模式选择 */}
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="flex gap-4 mb-4">
             <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="printType"
-                value="new"
-                checked={printType === 'new'}
-                onChange={() => handlePrintTypeChange('new')}
+                name="printMode"
+                value="single"
+                checked={printMode === 'single'}
+                onChange={() => { setPrintMode('single'); setSelectedLabels([]); }}
                 className="w-4 h-4 text-emerald-600"
               />
-              <span className="text-sm font-medium">新建打印</span>
+              <span className="text-sm font-medium">单标签打印</span>
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="printType"
-                value="reprint"
-                checked={printType === 'reprint'}
-                onChange={() => handlePrintTypeChange('reprint')}
+                name="printMode"
+                value="multi"
+                checked={printMode === 'multi'}
+                onChange={() => { setPrintMode('multi'); setPreviewLabel(''); }}
                 className="w-4 h-4 text-emerald-600"
               />
-              <span className="text-sm font-medium">重打印</span>
+              <span className="text-sm font-medium">多标签打印</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="printMode"
+                value="batch"
+                checked={printMode === 'batch'}
+                onChange={() => { setPrintMode('batch'); setSelectedLabels([]); }}
+                className="w-4 h-4 text-emerald-600"
+              />
+              <span className="text-sm font-medium">批量生成</span>
             </label>
           </div>
 
-          {/* 新建打印选项 */}
-          {printType === 'new' && (
+          {/* 单标签模式 */}
+          {printMode === 'single' && (
             <div className="flex items-center gap-4">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">打印数量</label>
-                <input
-                  type="number"
-                  min="1"
-                  max={record.initialCount}
-                  value={printCount}
-                  onChange={(e) => setPrintCount(Math.max(1, Math.min(record.initialCount, Number(e.target.value))))}
-                  className="w-24 px-3 py-1 border border-gray-300 rounded text-sm"
-                />
+                <label className="block text-xs text-gray-600 mb-1">选择标签编号</label>
+                <select
+                  value={previewLabel}
+                  onChange={(e) => setPreviewLabel(e.target.value)}
+                  className="w-48 px-3 py-1 border border-gray-300 rounded text-sm"
+                >
+                  {allLabelNumbers.map(label => (
+                    <option key={label} value={label}>{label}</option>
+                  ))}
+                </select>
               </div>
               <div className="text-xs text-gray-500">
-                育苗批号将生成 {printCount} 个二维码编号
+                共 {allLabelNumbers.length} 个标签
               </div>
             </div>
           )}
 
-          {/* 重打印选项 */}
-          {printType === 'reprint' && (
+          {/* 多标签模式 */}
+          {printMode === 'multi' && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-gray-600">选择要重打印的二维码（已选 {selectedLabels.length} 个）</label>
-                <button
-                  onClick={toggleSelectAll}
-                  className="text-xs text-blue-600 hover:text-blue-700"
-                >
-                  {selectedLabels.length === allLabelNumbers.length ? '取消全选' : '全选'}
-                </button>
+                <label className="text-xs text-gray-600">选择要打印的标签（已选 {selectedLabels.length} 个）</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    {selectedLabels.length === allLabelNumbers.length ? '取消全选' : '全选'}
+                  </button>
+                </div>
               </div>
               <div className="max-h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-white">
                 <div className="grid grid-cols-4 gap-1">
-                  {allLabelNumbers.slice(0, 50).map(label => (
+                  {allLabelNumbers.slice(0, 100).map(label => (
                     <label
                       key={label}
                       className={`flex items-center gap-1 p-1 rounded cursor-pointer text-xs ${
@@ -191,174 +263,170 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                     </label>
                   ))}
                 </div>
-                {allLabelNumbers.length > 50 && (
+                {allLabelNumbers.length > 100 && (
                   <div className="text-xs text-gray-500 mt-2">
-                    共 {allLabelNumbers.length} 个二维码，已显示前50个
+                    共 {allLabelNumbers.length} 个标签，已显示前100个
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
 
-        {/* 操作人员 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
-          <select
-            value={operator}
-            onChange={(e) => setOperator(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-          >
-            <option value="">请选择操作人员</option>
-            {OPERATORS.map(op => (
-              <option key={op.value} value={op.value}>{op.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 模板选择 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">标签模板</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="template"
-                value="small"
-                checked={template === 'small'}
-                onChange={() => setTemplate('small')}
-                className="w-4 h-4 text-emerald-600"
-              />
-              <span className="text-sm">小标签</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="template"
-                value="large"
-                checked={template === 'large'}
-                onChange={() => setTemplate('large')}
-                className="w-4 h-4 text-emerald-600"
-              />
-              <span className="text-sm">大标签</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="template"
-                value="detail"
-                checked={template === 'detail'}
-                onChange={() => setTemplate('detail')}
-                className="w-4 h-4 text-emerald-600"
-              />
-              <span className="text-sm">详情标签</span>
-            </label>
-          </div>
-        </div>
-
-        {/* 标签预览 */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
-          {template === 'small' ? (
-            /* 小标签 */
-            <div className="flex flex-col items-center print-label">
-              <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
-                <QRCodeSVG value={qrCodeValue} size={80} />
+          {/* 批量生成模式 */}
+          {printMode === 'batch' && (
+            <div className="flex items-center gap-4">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">生成数量</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={remainingCount}
+                  value={printCount}
+                  onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
+                  className="w-24 px-3 py-1 border border-gray-300 rounded text-sm"
+                />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-sm font-bold text-gray-900">{record.seedlingCode}</div>
-                <div className="text-xs text-gray-600 mt-1">{record.cropName}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {remainingCount.toLocaleString()} 株
-                </div>
-              </div>
-            </div>
-          ) : template === 'large' ? (
-            /* 大标签 */
-            <div className="flex flex-col items-center print-label">
-              <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
-                <QRCodeSVG value={qrCodeValue} size={100} />
-              </div>
-              <div className="mt-4 text-center">
-                <div className="text-lg font-bold text-gray-900">{record.seedlingCode}</div>
-                <div className="text-sm text-gray-600 mt-2">{record.cropName} - {record.cropVariety}</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  剩余：{remainingCount.toLocaleString()} 株
-                </div>
-                <div className="text-xs text-gray-400 mt-2">
-                  场地：{record.siteName}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* 详情标签 - 完整信息 */
-            <div className="flex print-label">
-              <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
-                <QRCodeSVG value={qrCodeValue} size={100} />
-              </div>
-              <div className="ml-4 flex flex-col justify-center">
-                <div className="text-lg font-bold text-gray-900 mb-2">{record.seedlingCode}</div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <div className="text-gray-500">作物名称：</div>
-                  <div className="text-gray-900 font-medium">{record.cropName}</div>
-                  <div className="text-gray-500">作物品种：</div>
-                  <div className="text-gray-900">{record.cropVariety}</div>
-                  <div className="text-gray-500">作物编码：</div>
-                  <div className="text-gray-900 font-mono text-xs">{record.cropCode || '-'}</div>
-                  <div className="text-gray-500">育苗方式：</div>
-                  <div className="text-gray-900">{record.seedlingType || '-'}</div>
-                  <div className="text-gray-500">场地：</div>
-                  <div className="text-gray-900">{record.siteName}</div>
-                  <div className="text-gray-500">种源批号：</div>
-                  <div className="text-gray-900 font-mono text-xs">{record.sourceCode}</div>
-                </div>
-              </div>
-              <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <div className="text-gray-500">初始数量：</div>
-                  <div className="text-gray-900">{record.initialCount.toLocaleString()}</div>
-                  <div className="text-gray-500">剩余数量：</div>
-                  <div className="text-emerald-600 font-bold">{remainingCount.toLocaleString()}</div>
-                  <div className="text-gray-500">成苗率：</div>
-                  <div className="text-emerald-600">{record.survivalRate}%</div>
-                  <div className="text-gray-500">育苗日期：</div>
-                  <div className="text-gray-900">{record.startDate}</div>
-                </div>
+              <div className="text-xs text-gray-500">
+                将生成 {printCount} 个标签编号（剩余：{remainingCount}）
               </div>
             </div>
           )}
         </div>
 
-        <div className="text-sm text-gray-500 text-center">
-          点击"打印"按钮使用浏览器打印功能
-        </div>
-        <div className="text-xs text-gray-400 text-center">
-          标签包含二维码，扫描可获取完整溯源信息
+        {/* 模板选择 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
+            <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50">
+              {currentOperator}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">模板选择</label>
+            <select
+              value={template}
+              onChange={(e) => setTemplate(e.target.value as 'small' | 'large' | 'detail')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="small">小标签</option>
+              <option value="large">大标签</option>
+              <option value="detail">详情标签</option>
+            </select>
+          </div>
         </div>
 
-        {/* 打印历史记录（新增） */}
+        {/* 标签预览 */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">标签预览 {previewLabel && `- ${previewLabel}`}</span>
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700"
+            >
+              <Download className="w-3 h-3" />
+              导出Excel
+            </button>
+          </div>
+          <div className="flex justify-center">
+            {template === 'small' ? (
+              /* 小标签 */
+              <div className="flex flex-col items-center print-label">
+                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
+                  <QRCodeSVG value={currentQrCodeValue} size={80} />
+                </div>
+                <div className="mt-2 text-center">
+                  <div className="text-sm font-bold text-gray-900">{previewLabel || record.seedlingCode}</div>
+                  <div className="text-xs text-gray-600">{record.cropName}</div>
+                </div>
+              </div>
+            ) : template === 'large' ? (
+              /* 大标签 */
+              <div className="flex flex-col items-center print-label">
+                <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
+                  <QRCodeSVG value={currentQrCodeValue} size={100} />
+                </div>
+                <div className="mt-3 text-center">
+                  <div className="text-lg font-bold text-gray-900">{previewLabel || record.seedlingCode}</div>
+                  <div className="text-sm text-gray-600 mt-1">{record.cropName} - {record.cropVariety}</div>
+                </div>
+              </div>
+            ) : (
+              /* 详情标签 */
+              <div className="flex print-label bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
+                <div className="flex-shrink-0">
+                  <QRCodeSVG value={currentQrCodeValue} size={100} />
+                </div>
+                <div className="ml-4 flex flex-col justify-center">
+                  <div className="text-lg font-bold text-gray-900 mb-2">{previewLabel || record.seedlingCode}</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div className="text-gray-500">作物名称：</div>
+                    <div className="text-gray-900 font-medium">{record.cropName}</div>
+                    <div className="text-gray-500">作物品种：</div>
+                    <div className="text-gray-900">{record.cropVariety}</div>
+                    <div className="text-gray-500">场地：</div>
+                    <div className="text-gray-900">{record.siteName}</div>
+                    <div className="text-gray-500">种源批号：</div>
+                    <div className="text-gray-900 font-mono text-xs">{record.sourceCode}</div>
+                  </div>
+                </div>
+                <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div className="text-gray-500">初始数量：</div>
+                    <div className="text-gray-900">{record.initialCount.toLocaleString()}</div>
+                    <div className="text-gray-500">剩余数量：</div>
+                    <div className="text-emerald-600 font-bold">{remainingCount.toLocaleString()}</div>
+                    <div className="text-gray-500">成活率：</div>
+                    <div className="text-emerald-600">{record.survivalRate}%</div>
+                    <div className="text-gray-500">育苗日期：</div>
+                    <div className="text-gray-900">{record.startDate}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-gray-400">
+            点击"打印"按钮使用浏览器打印功能
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            >
+              <Download className="w-4 h-4" />
+              导出Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
+            >
+              <Printer className="w-4 h-4" />
+              打印
+            </button>
+          </div>
+        </div>
+
+        {/* 打印历史记录 */}
         {printHistory.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <h4 className="text-sm font-semibold text-gray-900 mb-2">打印历史</h4>
-            <div className="max-h-40 overflow-y-auto space-y-2">
-              {printHistory.slice(-5).reverse().map((record) => (
-                <div key={record.id} className="bg-gray-50 rounded p-2 text-xs">
+            <div className="max-h-32 overflow-y-auto space-y-2">
+              {printHistory.slice(-5).reverse().map((item) => (
+                <div key={item.id} className="bg-gray-50 rounded p-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className={`px-2 py-0.5 rounded ${
-                      record.printType === 'new' ? 'bg-green-100 text-green-700' :
-                      record.printType === 'reprint' ? 'bg-orange-100 text-orange-700' :
+                      item.printType === 'new' ? 'bg-green-100 text-green-700' :
+                      item.printType === 'reprint' ? 'bg-orange-100 text-orange-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>
-                      {record.printType === 'new' ? '新建' : record.printType === 'reprint' ? '重打印' : '批量'}
+                      {item.printType === 'new' ? '新建' : item.printType === 'reprint' ? '重打印' : '批量'}
                     </span>
-                    <span className="text-gray-500">{record.printTime}</span>
+                    <span className="text-gray-500">{item.printTime}</span>
                   </div>
                   <div className="mt-1 text-gray-600">
-                    操作员: {record.operator} | 数量: {record.printCount}
-                    {record.labelNumbers && record.labelNumbers.length > 0 && (
-                      <span className="ml-2">标签: {record.labelNumbers.slice(0, 3).join(', ')}
-                        {record.labelNumbers.length > 3 && `...等${record.labelNumbers.length}个`}
-                      </span>
-                    )}
+                    操作员: {item.operator} | 数量: {item.printCount}
                   </div>
                 </div>
               ))}

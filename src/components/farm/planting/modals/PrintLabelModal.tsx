@@ -9,7 +9,7 @@ import { Download, Printer } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, LabelPrintType, PrintRecord } from '../../../../types/crop';
 import { getPrintRecords, printLabel, generateAllLabelNumbers, generateLabelNumber } from '../../../../services/plantingService';
-import { OPERATORS } from '../../../../data/cropData';
+import { currentUser } from '../../../../data/mockData';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -18,14 +18,15 @@ interface PrintLabelModalProps {
 }
 
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
-  const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('small');
+  const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('detail');
   const [printMode, setPrintMode] = useState<'single' | 'multi' | 'batch'>('single');
-  const [printType, setPrintType] = useState<'new' | 'reprint'>('new');
   const [printCount, setPrintCount] = useState(1);
-  const [operator, setOperator] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [printHistory, setPrintHistory] = useState<PrintRecord[]>([]);
   const [previewLabel, setPreviewLabel] = useState<string>('');
+
+  // 获取当前操作员
+  const currentOperator = currentUser.name;
 
   // 加载打印记录
   useEffect(() => {
@@ -54,29 +55,24 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
   // 处理打印
   const handlePrint = () => {
-    if (!operator) {
-      alert('请选择操作人员');
-      return;
-    }
-
     if (printMode === 'single') {
       // 单标签打印
       if (!previewLabel) {
         alert('请选择要打印的标签');
         return;
       }
-      printLabel(record.id, LabelPrintType.NEW, 1, operator, [previewLabel]);
+      printLabel(record.id, LabelPrintType.NEW, 1, currentOperator, [previewLabel]);
     } else if (printMode === 'multi') {
       // 多标签打印
       if (selectedLabels.length === 0) {
         alert('请选择要打印的标签');
         return;
       }
-      printLabel(record.id, LabelPrintType.BATCH, selectedLabels.length, operator, selectedLabels);
+      printLabel(record.id, LabelPrintType.BATCH, selectedLabels.length, currentOperator, selectedLabels);
     } else {
       // 批量生成打印
       const labels = getBatchLabels(printCount);
-      printLabel(record.id, LabelPrintType.NEW, printCount, operator, labels);
+      printLabel(record.id, LabelPrintType.NEW, printCount, currentOperator, labels);
     }
 
     // 刷新历史记录
@@ -292,20 +288,13 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           )}
         </div>
 
-        {/* 操作人员 */}
+        {/* 模板选择 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
-            <select
-              value={operator}
-              onChange={(e) => setOperator(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="">请选择操作人员</option>
-              {OPERATORS.map(op => (
-                <option key={op.value} value={op.value}>{op.label}</option>
-              ))}
-            </select>
+            <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50">
+              {currentOperator}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">模板选择</label>

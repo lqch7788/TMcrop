@@ -3,7 +3,7 @@
  * 使用 localStorage 实现数据持久化
  */
 
-import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../types/crop';
+import { SeedSource, SourceType, SourceOrigin, StockStatus, LabelPrintType, PrintRecord } from '../types/crop';
 
 const STORAGE_KEY = 'crop_seed_sources';
 
@@ -413,4 +413,79 @@ export function generateSeedCode(dateStr: string): string {
   const maxSerial = getTodayMaxSeedCodeSerial(dateStr);
   const newSerial = maxSerial + 1;
   return `ZZ${dateStr}-${String(newSerial).padStart(3, '0')}`;
+}
+
+/**
+ * 生成单个标签编号
+ * @param seedCode 种源批号
+ * @param index 序号
+ */
+export function generateLabelNumber(seedCode: string, index: number): string {
+  return `${seedCode}-${String(index).padStart(4, '0')}`;
+}
+
+/**
+ * 生成种源对应的所有二维码编号
+ * @param seedSourceId 种源ID
+ */
+export function generateAllLabelNumbers(seedSourceId: string): string[] {
+  const source = getSeedSourceById(seedSourceId);
+  if (!source) return [];
+
+  const labels: string[] = [];
+  for (let i = 0; i < source.availableCount; i++) {
+    labels.push(generateLabelNumber(source.seedCode, i + 1));
+  }
+  return labels;
+}
+
+/**
+ * 获取打印记录
+ * @param seedSourceId 种源ID
+ */
+export function getPrintRecords(seedSourceId: string): PrintRecord[] {
+  const source = getSeedSourceById(seedSourceId);
+  return source?.printRecords || [];
+}
+
+/**
+ * 记录标签打印
+ * @param seedSourceId 种源ID
+ * @param printType 打印类型
+ * @param printCount 打印数量
+ * @param operator 操作人员
+ * @param labelNumbers 指定二维码编号（重打印时）
+ */
+export function printLabel(
+  seedSourceId: string,
+  printType: LabelPrintType,
+  printCount: number,
+  operator: string,
+  labelNumbers?: string[]
+): PrintRecord | null {
+  const source = getSeedSourceById(seedSourceId);
+  if (!source) return null;
+
+  // 生成打印记录
+  const printRecord: PrintRecord = {
+    id: 'SPR' + Date.now(),
+    printTime: new Date().toLocaleString('zh-CN'),
+    printType,
+    printCount,
+    operator,
+    labelNumbers,
+    seedlingId: seedSourceId  // 复用字段，种源ID存储在此
+  };
+
+  // 更新打印记录
+  const printRecords = source.printRecords || [];
+  printRecords.push(printRecord);
+
+  // 更新打印次数
+  updateSeedSource(seedSourceId, {
+    printRecords,
+    printCount: (source.printCount || 0) + printCount
+  });
+
+  return printRecord;
 }

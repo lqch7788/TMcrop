@@ -88,7 +88,8 @@ export function getDefaultAuditor(): string {
  * 获取当前用户名
  */
 export function getCurrentUsername(): string {
-  return localStorage.getItem('username') || '';
+  // 优先获取 username，其次 realName，最后使用默认值
+  return localStorage.getItem('username') || localStorage.getItem('realName') || '未知用户';
 }
 
 export default useCurrentUser;
