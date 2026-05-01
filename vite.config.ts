@@ -9,7 +9,7 @@ export default defineConfig({
   base: './',
   server: {
     port: 5188,
-    strictPort: true,
+    strictPort: false,
     // 自动打开浏览器
     open: true,
     // HMR配置优化

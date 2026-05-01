@@ -3,7 +3,7 @@
  * 样式参照 ActionToolbar（库存总览）
  */
 
-import { Download } from 'lucide-react';
+import { Download, Plus } from 'lucide-react';
 
 interface ProduceInventoryToolbarProps {
   title: string;
@@ -17,6 +17,7 @@ interface ProduceInventoryToolbarProps {
   onBatchEdit: () => void;
   onDelete: () => void;
   onExport: () => void;
+  onAdd: () => void;
   onConfirmBatchEdit: () => void;
   onCancelBatchEdit: () => void;
   onConfirmDelete: () => void;
@@ -37,6 +38,7 @@ export default function ProduceInventoryToolbar({
   onBatchEdit,
   onDelete,
   onExport,
+  onAdd,
   onConfirmBatchEdit,
   onCancelBatchEdit,
   onConfirmDelete,
@@ -45,12 +47,19 @@ export default function ProduceInventoryToolbar({
   onCancelExport,
 }: ProduceInventoryToolbarProps) {
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
+    <div className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
       <div className="flex gap-2">
-        {/* 默认模式：库存不足、编辑、删除、导出 */}
+        {/* 默认模式：新增、库存不足、编辑、删除、导出 */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
+            <button
+              onClick={onAdd}
+              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              新增
+            </button>
             <button
               onClick={onLowStockToggle}
               className={`h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
