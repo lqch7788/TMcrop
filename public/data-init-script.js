@@ -11,7 +11,7 @@
  * - 一键初始化测试数据（6订单+12实例+24种源+12育苗+12种植+6采收）
  * - 可以多次运行，每次会先清理旧数据再创建新数据
  *
- * 版本：v1.1
+ * 版本：v1.2（修复采收数据字段完整性）
  * 生成时间：2026-05-01
  */
 
@@ -412,20 +412,30 @@ function initData() {
     const harvest = {
       id: generateId('HV'),
       harvestCode: generateHarvestCode(),
+      batchId: generateId('BA'),
       batchCode: `HS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
       instanceId: inst.id,
       orderId: inst.orderId,
       orderCode: inst.orderCode,
       cropCategory: inst.cropCategory,
       cropName: inst.cropName,
-      cropVariety: inst.cropVariety,
+      variety: inst.cropVariety,
       greenhouseId: 'G001',
       greenhouseName: '1号大棚',
       harvestDate: new Date().toISOString().slice(0, 10),
+      harvestArea: 1000,
       harvestQuantity: config.quantity,
       unit: '公斤',
       quality: config.quality,
-      status: config.status,
+      grade: config.quality === 'excellent' ? 'A' : 'B',
+      harvesterIds: ['U001', 'U002'],
+      harvesterNames: ['张三', '李四'],
+      warehouseId: 'W001',
+      warehouseName: '冷库1号',
+      status: 'stored',
+      auditor: '陆启闯',
+      plantingMode: '温室种植',
+      targetYield: config.quantity * 1.2,
       storageLocation: '冷库1号',
       createBy: '陆启闯',
       createTime: now(),

@@ -12,6 +12,8 @@ import {
 import * as harvestService from '../../../services/harvestService';
 import * as cropInstanceService from '../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
+import { inbound as inventoryInbound } from '../../../services/inventoryService';
+import { StockType, BusinessType, SourceType } from '../../../types/inventory';
 import { getCurrentUsername } from '../../../hooks/farm';
 
 // ========== 引入组件（组件化重构） ==========
@@ -511,6 +513,27 @@ export default function HarvestPage() {
 
       // 使用 harvestService 添加记录
       const newRecord = harvestService.addHarvestRecord(record);
+
+      // 同步到库存中心（V3.0统一库存）
+      inventoryInbound({
+        stockType: StockType.PRODUCT,
+        businessId: newRecord.id,
+        businessType: BusinessType.HARVEST,
+        cropId: selectedBatch?.cropId || '',
+        cropName: record.cropName,
+        varietyId: selectedBatch?.varietyId,
+        varietyName: record.variety,
+        quantity: product.harvestQuantity || totalHarvestQuantity,
+        unit: '公斤',
+        sourceType: SourceType.SELF_PRODUCED,
+        baseName: selectedGreenhouse?.name,
+        productionPlanId: selectedBatch?.productionPlanId,
+        productionPlanCode: selectedBatch?.productionPlanCode,
+        businessCode: record.harvestCode,
+      }, 'system', '系统管理员').catch(err => {
+        console.error('同步库存失败:', err);
+      });
+
       // 更新作物实例的采收数量
       if (selectedBatch?.instanceId) {
         cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);

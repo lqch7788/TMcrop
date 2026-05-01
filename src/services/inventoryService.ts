@@ -21,6 +21,7 @@ import {
   FreezeRequest,
   TraceResult,
   DownstreamTraceResult,
+  CropInventoryAggregation,
 } from '../types/inventory';
 
 import type {
@@ -100,6 +101,8 @@ class LocalStorageStockRepository implements IInventoryStockRepository {
     productionPlanId?: string;
     baseId?: string;
     supplierId?: string;
+    cropName?: string;       // 作物名称模糊匹配
+    cropId?: string;         // 作物ID精确匹配
   }): Promise<InventoryStock[]> {
     let stocks = this.getAll();
     if (filters) {
@@ -109,6 +112,11 @@ class LocalStorageStockRepository implements IInventoryStockRepository {
       if (filters.productionPlanId) stocks = stocks.filter(s => s.productionPlanId === filters.productionPlanId);
       if (filters.baseId) stocks = stocks.filter(s => s.baseId === filters.baseId);
       if (filters.supplierId) stocks = stocks.filter(s => s.supplierId === filters.supplierId);
+      if (filters.cropName) {
+        const name = filters.cropName.toLowerCase();
+        stocks = stocks.filter(s => s.cropName.toLowerCase().includes(name));
+      }
+      if (filters.cropId) stocks = stocks.filter(s => s.cropId === filters.cropId);
     }
     return stocks;
   }
@@ -724,6 +732,124 @@ export async function getInventoryStats(filters?: {
   baseId?: string;
 }) {
   return stockRepo.getStats(filters);
+}
+
+// ============================================
+// 本地存储聚合查询（纯前端模式）
+// ============================================
+
+/**
+ * 按作物名称聚合查询库存（多形态搜索）- 本地版本
+ * 用于纯前端模式（不启动后端时）
+ */
+export async function searchInventoryByCropNameLocal(cropName?: string): Promise<CropInventoryAggregation> {
+  const stocks = await stockRepo.findAll({
+    cropName: cropName,
+  });
+
+  const grouped = {
+    seed: stocks.filter(s => s.stockType === StockType.SEED),
+    seedling: stocks.filter(s => s.stockType === StockType.SEEDLING),
+    product: stocks.filter(s => s.stockType === StockType.PRODUCT),
+  };
+
+  return {
+    cropName: cropName || '',
+    seed: grouped.seed as any[],
+    seedling: grouped.seedling as any[],
+    product: grouped.product as any[],
+    total: stocks.length,
+    totalQuantity: {
+      seed: grouped.seed.reduce((sum, s) => sum + s.currentQuantity, 0),
+      seedling: grouped.seedling.reduce((sum, s) => sum + s.currentQuantity, 0),
+      product: grouped.product.reduce((sum, s) => sum + s.currentQuantity, 0),
+    },
+  };
+}
+
+/**
+ * 获取库存列表 - 本地版本（支持 cropName 过滤）
+ */
+export async function getInventoryListLocal(filters?: {
+  cropName?: string;
+  stockType?: StockType;
+  status?: InventoryStatus;
+  sourceType?: SourceType;
+  productionPlanId?: string;
+  baseId?: string;
+  supplierId?: string;
+}): Promise<InventoryStock[]> {
+  return stockRepo.findAll(filters);
+}
+
+// ============================================
+// 后端 API 调用（支持多形态聚合查询）
+// ============================================
+
+const API_BASE_URL = '/api';
+
+/**
+ * 按作物名称聚合查询库存（多形态搜索）
+ * 调用后端 /api/inventory/aggregate/by-crop 接口
+ */
+export async function searchInventoryByCropName(cropName?: string): Promise<CropInventoryAggregation> {
+  const params = new URLSearchParams();
+  if (cropName) {
+    params.append('crop_name', cropName);
+  }
+
+  const url = `${API_BASE_URL}/inventory/aggregate/by-crop${params.toString() ? `?${params.toString()}` : ''}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`聚合查询失败: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(result.error || '聚合查询失败');
+  }
+
+  return result.data;
+}
+
+/**
+ * 获取库存列表（支持 stock_type 过滤）
+ * 调用后端 /api/inventory 接口
+ */
+export async function getInventoryListFromServer(filters?: {
+  crop_name?: string;
+  stock_type?: StockType;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: InventoryStock[];
+  meta: { total: number; page: number; limit: number };
+}> {
+  const params = new URLSearchParams();
+  if (filters?.crop_name) params.append('crop_name', filters.crop_name);
+  if (filters?.stock_type) params.append('stock_type', filters.stock_type);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.limit) params.append('limit', String(filters.limit));
+
+  const url = `${API_BASE_URL}/inventory${params.toString() ? `?${params.toString()}` : ''}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`获取库存列表失败: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(result.error || '获取库存列表失败');
+  }
+
+  return {
+    data: result.data,
+    meta: result.meta,
+  };
 }
 
 // ============================================

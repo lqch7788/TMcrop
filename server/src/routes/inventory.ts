@@ -12,7 +12,7 @@ const router = Router();
  */
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { crop_name, status, page = 1, limit = 50 } = req.query;
+    const { crop_name, stock_type, status, page = 1, limit = 50 } = req.query;
     const db = getDatabase();
 
     let sql = 'SELECT * FROM inventory WHERE 1=1';
@@ -21,6 +21,11 @@ router.get('/', (req: Request, res: Response) => {
     if (crop_name) {
       sql += ' AND crop_name LIKE ?';
       params.push(`%${crop_name}%`);
+    }
+
+    if (stock_type) {
+      sql += ' AND stock_type = ?';
+      params.push(stock_type);
     }
 
     if (status) {
@@ -68,6 +73,70 @@ router.get('/', (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: '获取库存记录失败'
+    });
+  }
+});
+
+/**
+ * 按作物名称聚合查询库存（多形态搜索）
+ */
+router.get('/aggregate/by-crop', (req: Request, res: Response) => {
+  try {
+    const { crop_name } = req.query;
+    const db = getDatabase();
+
+    let sql = 'SELECT * FROM inventory WHERE 1=1';
+    const params: any[] = [];
+
+    if (crop_name) {
+      sql += ' AND crop_name LIKE ?';
+      params.push(`%${crop_name}%`);
+    }
+
+    const results = db.exec(sql);
+    let items: any[] = [];
+
+    if (results.length > 0) {
+      const { columns, values } = results[0];
+      items = values.map((row: any[]) => {
+        const obj: any = {};
+        columns.forEach((col: string, i: number) => {
+          obj[col] = row[i];
+        });
+        return obj;
+      });
+    }
+
+    // 按 stock_type 分组
+    const grouped = {
+      seed: items.filter((item: any) => item.stock_type === 'seed'),
+      seedling: items.filter((item: any) => item.stock_type === 'seedling'),
+      product: items.filter((item: any) => item.stock_type === 'product')
+    };
+
+    // 计算各形态总数量
+    const totalQuantity = {
+      seed: grouped.seed.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+      seedling: grouped.seedling.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+      product: grouped.product.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+    };
+
+    res.json({
+      success: true,
+      data: {
+        crop_name: crop_name || '',
+        seed: grouped.seed,
+        seedling: grouped.seedling,
+        product: grouped.product,
+        total: items.length,
+        totalQuantity
+      }
+    });
+  } catch (error) {
+    console.error('聚合查询失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '聚合查询失败'
     });
   }
 });
