@@ -7,7 +7,7 @@ import {
   Equipment, Infrastructure, Position, PlanType
 } from '../types';
 import { Approval } from '../types/approval';
-import { ProduceInventory } from '../types/inventory';
+import { ProduceInventory, StockType } from '../types/inventory';
 
 // 用户数据
 export const users: User[] = [
@@ -2400,6 +2400,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'FR0101001',
     cropName: '草莓',
     variety: '红颜',
+    stockType: StockType.PRODUCT,
     quantity: 150,
     unit: '公斤',
     grade: 'A',
@@ -2438,6 +2439,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0301001',
     cropName: '番茄',
     variety: '红果番茄',
+    stockType: StockType.PRODUCT,
     quantity: 80,
     unit: '公斤',
     grade: 'A',
@@ -2476,6 +2478,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0201001',
     cropName: '黄瓜',
     variety: '水果黄瓜',
+    stockType: StockType.PRODUCT,
     quantity: 450,
     unit: '公斤',
     grade: 'B',
@@ -2514,6 +2517,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0102001',
     cropName: '生菜',
     variety: '玻璃生菜',
+    stockType: StockType.PRODUCT,
     quantity: 30,
     unit: '公斤',
     grade: 'A',
@@ -2552,6 +2556,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0101001',
     cropName: '菠菜',
     variety: '尖叶菠菜',
+    stockType: StockType.PRODUCT,
     quantity: 120,
     unit: '公斤',
     grade: 'B',
@@ -2590,6 +2595,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0304001',
     cropName: '辣椒',
     variety: '螺丝椒',
+    stockType: StockType.PRODUCT,
     quantity: 200,
     unit: '公斤',
     grade: 'A',
@@ -2628,6 +2634,7 @@ export const produceInventory: ProduceInventory[] = [
     productCode: 'PD0302001',
     cropName: '小番茄',
     variety: '千禧果',
+    stockType: StockType.PRODUCT,
     quantity: 350,
     unit: '公斤',
     grade: 'A',

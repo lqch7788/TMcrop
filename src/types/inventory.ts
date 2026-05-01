@@ -312,6 +312,8 @@ export interface IInventoryStockRepository {
     productionPlanId?: string;
     baseId?: string;
     supplierId?: string;
+    cropName?: string;       // 作物名称模糊匹配
+    cropId?: string;        // 作物ID精确匹配
   }): Promise<InventoryStock[]>;
 
   /** 更新库存（带乐观锁） */
@@ -457,6 +459,8 @@ export interface ProduceInventory {
   productCode: string;
   cropName: string;
   variety: string;
+  /** 库存类型：种子/种苗/成品 */
+  stockType?: StockType;
   quantity: number;
   unit: string;
   grade: 'A' | 'B' | 'C';
@@ -474,6 +478,20 @@ export interface ProduceInventory {
   status: InventoryStatus;
   inboundRecords: InventoryTransaction[];
   outboundRecords: InventoryTransaction[];
+}
+
+/** 作物库存聚合查询结果 */
+export interface CropInventoryAggregation {
+  cropName: string;
+  seed: ProduceInventory[];
+  seedling: ProduceInventory[];
+  product: ProduceInventory[];
+  total: number;
+  totalQuantity: {
+    seed: number;
+    seedling: number;
+    product: number;
+  };
 }
 
 /** 预警统计 */

@@ -36,6 +36,7 @@ export function initializeDatabase() {
       product_code TEXT,
       crop_name TEXT,
       variety TEXT,
+      stock_type TEXT DEFAULT 'product',
       quantity REAL DEFAULT 0,
       unit TEXT,
       grade TEXT,
@@ -48,6 +49,7 @@ export function initializeDatabase() {
       batch_code TEXT,
       greenhouse_name TEXT,
       planting_mode TEXT,
+      production_plan_code TEXT,
       status TEXT DEFAULT 'active',
       alert_settings TEXT,
       inbound_records TEXT,
@@ -99,6 +101,7 @@ export function initializeDatabase() {
       crop_variety TEXT,
       supplier_id TEXT,
       supplier_name TEXT,
+      production_plan_code TEXT,
       quantity INTEGER DEFAULT 0,
       unit TEXT,
       purchase_date TEXT,
@@ -121,6 +124,7 @@ export function initializeDatabase() {
       seedling_code TEXT NOT NULL,
       source_id TEXT,
       source_name TEXT,
+      production_plan_code TEXT,
       crop_name TEXT,
       crop_variety TEXT,
       seedling_type TEXT,
@@ -301,6 +305,19 @@ export function initializeDatabase() {
       update_time TEXT
     )
   `);
+
+  // 为已有表添加新列（如果列不存在则添加）
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN production_plan_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN production_plan_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   console.log('数据库表初始化完成');
 }

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { autoInitializeData } from './utils/dataInitializer';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -230,6 +231,7 @@ function AppContent() {
         <Route path="/crop/seedling" element={<Seedling />} />
         <Route path="/crop/planting" element={<Planting />} />
         <Route path="/crop/harvest" element={<CropHarvest />} />
+        <Route path="/crop-inventory" element={<ProduceInventory />} />
         <Route path="/crop/order" element={<Order />} />
         <Route path="/crop/instance" element={<Instance />} />
         <Route path="/production" element={<Production />} />
@@ -318,6 +320,11 @@ function AppContent() {
 }
 
 function App() {
+  // 应用启动时自动初始化作物管理模拟数据
+  useEffect(() => {
+    autoInitializeData().catch(console.error);
+  }, []);
+
   return (
     <BrowserRouter>
       <ToastProvider>

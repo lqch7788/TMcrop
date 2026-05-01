@@ -40,7 +40,7 @@ const cropSubItems = [
   { icon: Sprout, label: '种源管理', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
-  { icon: Box, label: '采收入库', path: '/crop/harvest' },
+  { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];

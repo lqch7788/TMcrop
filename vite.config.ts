@@ -10,6 +10,8 @@ export default defineConfig({
   server: {
     port: 5188,
     strictPort: true,
+    // 自动打开浏览器
+    open: true,
     // HMR配置优化
     hmr: {
       // HMR连接超时时间
