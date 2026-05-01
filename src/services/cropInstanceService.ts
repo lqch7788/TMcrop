@@ -300,9 +300,8 @@ export function getTraceChain(id: string): CropTraceChain | null {
   }
 
   // 获取关联的种源（不限制 sourceOrigin，查询所有关联到该实例的种源）
-  let seedSource;
-  const seedSources = seedSourceService.getSeedSources();
-  seedSource = seedSources.find(s => s.instanceId === id);
+  const allSeedSources = seedSourceService.getSeedSources().filter(s => s.instanceId === id);
+  const seedSource = allSeedSources[0]; // 保留第一条（兼容）
 
   // 获取关联的育苗记录
   const seedlings = seedlingService.getSeedlings().filter(s => s.instanceId === id);
@@ -317,7 +316,8 @@ export function getTraceChain(id: string): CropTraceChain | null {
   return {
     instance,
     order,
-    seedSource: seedSource || undefined,
+    seedSource: seedSource || undefined,          // 保留第一条（兼容）
+    seedSources: allSeedSources.length > 0 ? allSeedSources : undefined,  // 新增：所有种源
     seedlings: seedlings.length > 0 ? seedlings : undefined,
     plantings: plantings.length > 0 ? plantings : undefined,
     harvests: harvests.length > 0 ? harvests : undefined,
