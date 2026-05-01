@@ -13,6 +13,7 @@ import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
 import { ProduceDetailModal } from './ProduceDetailModal';
 import { ProduceInventoryBatchEditModal } from './ProduceInventoryBatchEditModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { ProduceInventoryAddModal } from './ProduceInventoryAddModal';
 import { getAllVarieties } from '../../services/cropVarietyService';
 
 /**
@@ -503,6 +504,7 @@ export default function ProduceInventoryPage() {
   const [showAlertSettingsModal, setShowAlertSettingsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
   // 工具栏模式状态
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -805,7 +807,7 @@ export default function ProduceInventoryPage() {
 
     const mimeType = 'application/vnd.ms-excel;charset=utf-8';
     const extension = 'xls';
-    const fileName = `产品库存汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `作物库存汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
 
     // 统一的导出函数（处理 File System Access API 和 fallback）
     const doExport = async () => {
@@ -862,7 +864,7 @@ export default function ProduceInventoryPage() {
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">产品库存管理</h1>
+            <h1 className="text-2xl font-bold text-gray-900">作物库存</h1>
             <p className="text-sm text-gray-500 mt-1">管理采收入库产品的库存状态和预警设置</p>
           </div>
         </div>
@@ -970,7 +972,7 @@ export default function ProduceInventoryPage() {
 
       {/* 工具栏 */}
       <ProduceInventoryToolbar
-        title="产品库存汇总表"
+        title="作物库存汇总表"
         batchEditMode={batchEditMode}
         deleteMode={deleteMode}
         exportMode={exportMode}
@@ -981,6 +983,7 @@ export default function ProduceInventoryPage() {
         onBatchEdit={handleBatchEdit}
         onDelete={handleDelete}
         onExport={handleExport}
+        onAdd={() => setShowAddModal(true)}
         onConfirmBatchEdit={handleConfirmBatchEdit}
         onCancelBatchEdit={handleCancelSelection}
         onConfirmDelete={() => setShowDeleteModal(true)}
@@ -990,10 +993,10 @@ export default function ProduceInventoryPage() {
       />
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ maxHeight: 'calc(100vh - 420px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ maxHeight: 'calc(100vh - 420px)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {/* 选择操作栏 */}
         {(exportMode || batchEditMode || deleteMode) && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="flex items-center gap-4">
               <button
                 onClick={handleSelectAll}
@@ -1006,8 +1009,9 @@ export default function ProduceInventoryPage() {
           </div>
         )}
 
-        <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'fixed' }}>
+        {/* 表格容器 - 整体横向滚动，底部显示滚动条 */}
+        <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1 }}>
+          <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'fixed' }}>
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 {(exportMode || batchEditMode || deleteMode) && (
@@ -1033,13 +1037,14 @@ export default function ProduceInventoryPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">过期时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">存储时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">预警状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">备注</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {displayedData.length === 0 ? (
                 <tr>
-                  <td colSpan={(exportMode || batchEditMode || deleteMode) ? 15 : 14} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={(exportMode || batchEditMode || deleteMode) ? 16 : 15} className="px-4 py-12 text-center text-gray-500">
                     <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>暂无数据</p>
                   </td>
@@ -1084,6 +1089,9 @@ export default function ProduceInventoryPage() {
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getStorageDays(item.storageDate)} 天</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <AlertBadge status={item.status} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {item.inboundRecords.length > 0 ? item.inboundRecords[item.inboundRecords.length - 1].operator : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       -
@@ -1168,6 +1176,22 @@ export default function ProduceInventoryPage() {
         selectedCount={selectedRows.length}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* 新增库存弹窗 */}
+      <ProduceInventoryAddModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={(newData) => {
+          const newRecord: ProduceInventory = {
+            ...newData,
+            id: `PI${String(produceInventory.length + 1).padStart(3, '0')}`,
+          };
+          // 实际应用中这里会调用API，现在只做模拟
+          console.log('新增库存记录:', newRecord);
+          alert('新增成功！');
+          setShowAddModal(false);
+        }}
       />
     </div>
   );
