@@ -14,24 +14,29 @@ import {
   Planting,
 } from '../types/crop';
 import { HarvestRecord } from '../types/index';
-import { findProduceCodeByName } from '../data/produceCodeRule';
+import * as cropVarietyService from './cropVarietyService';
 import * as seedSourceService from './seedSourceService';
 import * as seedlingService from './seedlingService';
 import * as plantingService from './plantingService';
 import * as cropOrderService from './cropOrderService';
+import * as harvestService from './harvestService';
 
 const STORAGE_KEY = 'crop_instances';
 
 /**
  * 生成作物实例编码
- * 格式: 品种编码(9位) + 年月日(6位) + 流水号(3位)
- * 示例: PD0301000100240426001
+ * 格式: 品种编码(11位) + 年月日(6位) + 流水号(3位) = 20位
+ * 品种编码 = 类别码(2字母) + 类型码(2位) + 品种码(2位) + 子品种码(3位) + 详细码(2位)
+ * 示例: PD0301004001260501001 (PD0301004001=红果番茄 260501=2026年5月1日 001=当日第1条)
  */
 function generateInstanceCode(cropName: string): string {
-  const cropInfo = findProduceCodeByName(cropName);
-  if (!cropInfo) {
-    throw new Error(`找不到作物 ${cropName} 对应的编码信息`);
+  // 使用 cropVarietyService 获取完整的 11 位品种编码
+  const variety = cropVarietyService.getVarietyByName(cropName);
+  if (!variety) {
+    throw new Error(`找不到作物 ${cropName} 对应的品种信息`);
   }
+
+  const cropCode = variety.cropCode; // 11位品种编码
 
   // 获取当前日期
   const now = new Date();
@@ -42,14 +47,14 @@ function generateInstanceCode(cropName: string): string {
 
   // 获取当日该品种的流水号
   const existingInstances = getInstances().filter(inst => {
-    const instDate = inst.instanceCode.slice(-8, -2);
+    const instDate = inst.instanceCode.slice(-6, -2);
     return instDate === dateStr && inst.cropName === cropName;
   });
 
   const seq = existingInstances.length + 1;
   const seqStr = String(seq).padStart(3, '0');
 
-  return `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}${dateStr}${seqStr}`;
+  return `${cropCode}${dateStr}${seqStr}`;
 }
 
 /**
@@ -141,13 +146,13 @@ export function createInstance(
 ): CropInstance {
   const instances = getInstances();
 
-  // 查找作物编码信息
-  const produceInfo = findProduceCodeByName(cropInfo.cropName);
-  if (!produceInfo) {
-    throw new Error(`找不到作物 ${cropInfo.cropName} 对应的编码信息`);
+  // 使用 cropVarietyService 获取完整的品种信息
+  const varietyInfo = cropVarietyService.getVarietyByName(cropInfo.cropName);
+  if (!varietyInfo) {
+    throw new Error(`找不到作物 ${cropInfo.cropName} 对应的品种信息`);
   }
 
-  // 生成实例编码
+  // 生成实例编码（使用完整的 11 位品种编码）
   const instanceCode = generateInstanceCode(cropInfo.cropName);
 
   const now = new Date().toLocaleString('zh-CN');
@@ -160,9 +165,9 @@ export function createInstance(
     cropCategory: cropInfo.cropCategory,
     cropName: cropInfo.cropName,
     cropVariety: cropInfo.cropVariety,
-    categoryCode: produceInfo.categoryCode,
-    typeCode: produceInfo.typeCode,
-    subCode: produceInfo.subCode,
+    categoryCode: varietyInfo.categoryCode,
+    typeCode: varietyInfo.typeCode,
+    subCode: varietyInfo.varietyCode,  // 使用 CropVariety 的 varietyCode 作为 subCode
     sourceOrigin,
     sourceDescription: options?.sourceDescription,
     initialQuantity,
@@ -294,12 +299,10 @@ export function getTraceChain(id: string): CropTraceChain | null {
     order = cropOrderService.getOrderById(instance.orderId);
   }
 
-  // 获取关联的种源
+  // 获取关联的种源（不限制 sourceOrigin，查询所有关联到该实例的种源）
   let seedSource;
-  if (instance.sourceOrigin === 'internal_seed') {
-    const seedSources = seedSourceService.getSeedSources();
-    seedSource = seedSources.find(s => s.instanceId === id);
-  }
+  const seedSources = seedSourceService.getSeedSources();
+  seedSource = seedSources.find(s => s.instanceId === id);
 
   // 获取关联的育苗记录
   const seedlings = seedlingService.getSeedlings().filter(s => s.instanceId === id);
@@ -307,13 +310,17 @@ export function getTraceChain(id: string): CropTraceChain | null {
   // 获取关联的种植记录
   const plantings = plantingService.getPlantings().filter(p => p.instanceId === id);
 
+  // 获取关联的采收记录
+  const allHarvests = harvestService.getHarvestRecords();
+  const harvests = allHarvests.filter(h => h.instanceId === id);
+
   return {
     instance,
     order,
-    seedSource,
+    seedSource: seedSource || undefined,
     seedlings: seedlings.length > 0 ? seedlings : undefined,
     plantings: plantings.length > 0 ? plantings : undefined,
-    harvests: undefined,
+    harvests: harvests.length > 0 ? harvests : undefined,
   };
 }
 
