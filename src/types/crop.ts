@@ -147,6 +147,8 @@ export interface SeedSource {
   // 基地信息（V3.0 自产时必填）
   baseId?: string;            // 基地ID
   baseName?: string;          // 基地名称
+  // 打印记录（新增）
+  printRecords?: PrintRecord[];  // 打印历史
 }
 
 // ========== 每日记录类型 ==========
