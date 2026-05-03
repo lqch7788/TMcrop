@@ -15,6 +15,9 @@ import farmTaskRouter from './farmTask';
 import inspectionRouter from './inspection';
 import problemRouter from './problem';
 import laborRouter from './labor';
+import tempTaskRouter from './tempTask';
+import purchasePlanRouter from './purchasePlan';
+import materialRequestRouter from './materialRequest';
 import basicDataRouter from './basicData';
 import dictionaryRouter from './dictionary';
 import authorityRouter from './authority';
@@ -22,6 +25,8 @@ import notificationRouter from './notification';
 import approvalWorkflowRouter from './approvalWorkflow';
 import approvalRouter from './approval';
 import operationLogRouter from './operationLog';
+import cropOrderRouter from './cropOrder';
+import productionPlanRouter from './productionPlan';
 
 const router = Router();
 
@@ -61,6 +66,15 @@ router.use('/problems', problemRouter);
 // 人工记录路由
 router.use('/labor', laborRouter);
 
+// 临时任务路由
+router.use('/temp-tasks', tempTaskRouter);
+
+// 采购计划路由
+router.use('/purchase-plans', purchasePlanRouter);
+
+// 物料申请路由
+router.use('/material-requests', materialRequestRouter);
+
 // 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）
 router.use('/basic-data', basicDataRouter);
 
@@ -81,6 +95,12 @@ router.use('/approvals', approvalRouter);
 
 // 操作日志路由
 router.use('/operation-logs', operationLogRouter);
+
+// 订单路由
+router.use('/crop-orders', cropOrderRouter);
+
+// 生产计划路由
+router.use('/production-plans', productionPlanRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {

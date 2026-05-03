@@ -589,6 +589,88 @@ export function initializeDatabase() {
     )
   `);
 
+  // 创建临时任务表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS temp_tasks (
+      id TEXT PRIMARY KEY,
+      task_code TEXT NOT NULL,
+      task_title TEXT NOT NULL,
+      task_type TEXT,
+      task_content TEXT,
+      requester_id TEXT,
+      requester_name TEXT,
+      assignee_id TEXT,
+      assignee_name TEXT,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT,
+      area_name TEXT,
+      request_date TEXT,
+      request_time TEXT,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'pending',
+      completion_date TEXT,
+      completion_note TEXT,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 创建采购计划表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS purchase_plans (
+      id TEXT PRIMARY KEY,
+      plan_code TEXT NOT NULL,
+      plan_title TEXT NOT NULL,
+      plan_type TEXT,
+      department_id TEXT,
+      department_name TEXT,
+      applicant_id TEXT,
+      applicant_name TEXT,
+      apply_date TEXT,
+      expected_date TEXT,
+      supplier_id TEXT,
+      supplier_name TEXT,
+      total_amount REAL DEFAULT 0,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'draft',
+      approval_status TEXT DEFAULT 'pending',
+      remarks TEXT,
+      attachments TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 创建物料申请表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_requests (
+      id TEXT PRIMARY KEY,
+      request_code TEXT NOT NULL,
+      request_title TEXT NOT NULL,
+      request_type TEXT,
+      department_id TEXT,
+      department_name TEXT,
+      applicant_id TEXT,
+      applicant_name TEXT,
+      apply_date TEXT,
+      expected_date TEXT,
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      total_amount REAL DEFAULT 0,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'draft',
+      approval_status TEXT DEFAULT 'pending',
+      remarks TEXT,
+      attachments TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // 为已有表添加新列（如果列不存在则添加）
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN production_plan_code TEXT`);
@@ -838,6 +920,59 @@ export function initializeDatabase() {
       permission_oid TEXT NOT NULL,
       created_at TEXT,
       UNIQUE(role_oid, permission_oid)
+    )
+  `);
+
+  // ========== V6.0 Phase 5: 订单与生产计划表 ==========
+
+  // 订单表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_orders (
+      id TEXT PRIMARY KEY,
+      order_code TEXT NOT NULL,
+      order_type TEXT,
+      crop_name TEXT,
+      crop_variety TEXT,
+      quantity INTEGER DEFAULT 0,
+      unit TEXT,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      customer_name TEXT,
+      customer_contact TEXT,
+      delivery_address TEXT,
+      order_date TEXT,
+      expected_delivery_date TEXT,
+      actual_delivery_date TEXT,
+      status TEXT DEFAULT 'pending',
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 生产计划表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS production_plans (
+      id TEXT PRIMARY KEY,
+      plan_code TEXT NOT NULL,
+      plan_name TEXT,
+      plan_type TEXT,
+      crop_name TEXT,
+      crop_variety TEXT,
+      greenhouse_name TEXT,
+      area_name TEXT,
+      planned_quantity INTEGER DEFAULT 0,
+      actual_quantity INTEGER DEFAULT 0,
+      planting_date TEXT,
+      expected_harvest_date TEXT,
+      actual_harvest_date TEXT,
+      status TEXT DEFAULT 'planning',
+      priority TEXT DEFAULT 'normal',
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
     )
   `);
 
