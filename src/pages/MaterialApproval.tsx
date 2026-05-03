@@ -14,10 +14,17 @@ import {
   ChevronDown, X, RefreshCw
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
+import { useAuthPermission } from '../hooks/usePermission';
 import { ApprovalStatus, ApprovalType } from '../types/approval';
 
 export default function MaterialApproval() {
   const { approvals, approve, reject } = useApproval();
+
+  // 审批模块权限控制：PROC_APPROVAL
+  const { can } = useAuthPermission();
+  // 默认权限为 true（兼容无权限数据的场景）
+  const canApprove = can('PROC_APPROVAL', 'approve');
+  const canView = can('PROC_APPROVAL', 'view');
 
   const [activeTab, setActiveTab] = useState<'material' | 'return' | 'purchase'>('material');
   const [searchTerm, setSearchTerm] = useState('');
@@ -474,7 +481,7 @@ export default function MaterialApproval() {
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.description || '-'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-1">
-                            {item.status === ApprovalStatus.PENDING && (
+                            {item.status === ApprovalStatus.PENDING && canApprove && (
                               <>
                                 <button
                                   onClick={() => approve(item.id)}
@@ -618,7 +625,7 @@ export default function MaterialApproval() {
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.description || '-'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-1">
-                            {item.status === ApprovalStatus.PENDING && (
+                            {item.status === ApprovalStatus.PENDING && canApprove && (
                               <>
                                 <button
                                   onClick={() => approve(item.id)}
@@ -753,7 +760,7 @@ export default function MaterialApproval() {
                     <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        {item.status === ApprovalStatus.PENDING && (
+                        {item.status === ApprovalStatus.PENDING && canApprove && (
                           <>
                             <button
                               onClick={() => approve(item.id)}
@@ -980,7 +987,7 @@ export default function MaterialApproval() {
                 >
                   关闭
                 </button>
-                {detailModal.item.status === ApprovalStatus.PENDING && (
+                {detailModal.item.status === ApprovalStatus.PENDING && canApprove && (
                   <>
                     <button
                       onClick={() => handleApprove(detailModal.item)}

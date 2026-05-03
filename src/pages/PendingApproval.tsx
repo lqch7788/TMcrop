@@ -7,11 +7,17 @@
 import { useState, useMemo } from 'react';
 import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApproval, usePendingApprovals } from '../hooks/useApproval';
+import { useAuthPermission } from '../hooks/usePermission';
 import { ApprovalStatus } from '../types/approval';
 
 export default function PendingApproval() {
   const { approve, reject } = useApproval();
   const { pendingApprovals } = usePendingApprovals();
+
+  // 审批模块权限控制：PROC_APPROVAL
+  const { can } = useAuthPermission();
+  // 默认权限为 true（兼容无权限数据的场景）
+  const canApprove = can('PROC_APPROVAL', 'approve');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
@@ -144,20 +150,24 @@ export default function PendingApproval() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => approve(approval.id)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="通过"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => reject(approval.id, '审批拒绝')}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                        title="拒绝"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
+                      {canApprove && (
+                        <>
+                          <button
+                            onClick={() => approve(approval.id)}
+                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                            title="通过"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => reject(approval.id, '审批拒绝')}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="拒绝"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                       <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="查看">
                         <Eye className="w-4 h-4" />
                       </button>

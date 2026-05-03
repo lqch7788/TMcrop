@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { useDictionaries } from '../../../common/settings/SettingsDataProvider';
 
 interface HarvestRecord {
   id: number;
@@ -41,18 +42,6 @@ interface BatchEditModalProps {
   cropBatches: { id: number; batchCode: string; cropName: string }[];
 }
 
-const gradeOptions = [
-  { value: 'A', label: 'A级 (优质)' },
-  { value: 'B', label: 'B级 (良好)' },
-  { value: 'C', label: 'C级 (一般)' },
-];
-
-const statusOptions = [
-  { value: 'harvested', label: '已采收' },
-  { value: 'graded', label: '已分级' },
-  { value: 'stored', label: '已入库' },
-];
-
 export function BatchEditModal({
   isOpen,
   selectedRows,
@@ -70,6 +59,10 @@ export function BatchEditModal({
   users,
   cropBatches,
 }: BatchEditModalProps) {
+  // 获取数据字典（品质等级、采收状态等）
+  const { getDictItems } = useDictionaries();
+  const qualityGradeOptions = getDictItems('quality_grade');
+
   const selectedRecords = selectedRows.map(index => records[index]).filter(Boolean) as HarvestRecord[];
   const currentRecord = selectedRecordId ? records.find(r => r.id.toString() === selectedRecordId) : null;
   const editedData = selectedRecordId ? editedRecords[selectedRecordId] || {} : {};
@@ -198,7 +191,7 @@ export function BatchEditModal({
               <Select
                 value={editedData.grade ?? currentRecord.grade}
                 onChange={(e) => handleFieldChange('grade', e.target.value)}
-                options={gradeOptions}
+                options={qualityGradeOptions.map(g => ({ value: g.code, label: g.name }))}
               />
             </FormField>
 
@@ -216,7 +209,7 @@ export function BatchEditModal({
               <Select
                 value={editedData.status ?? currentRecord.status}
                 onChange={(e) => handleFieldChange('status', e.target.value)}
-                options={statusOptions}
+                options={getDictItems('harvest_status').map(s => ({ value: s.code, label: s.name }))}
               />
             </FormField>
 
