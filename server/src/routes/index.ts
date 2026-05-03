@@ -18,6 +18,7 @@ import laborRouter from './labor';
 import basicDataRouter from './basicData';
 import dictionaryRouter from './dictionary';
 import authorityRouter from './authority';
+import notificationRouter from './notification';
 
 const router = Router();
 
@@ -65,6 +66,9 @@ router.use('/dictionary', dictionaryRouter);
 
 // 组织与权限路由
 router.use('/authority', authorityRouter);
+
+// 通知设置路由
+router.use('/notifications', notificationRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {

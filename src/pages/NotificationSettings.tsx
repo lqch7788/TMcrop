@@ -1,42 +1,33 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Mail, MessageSquare, Phone, AlertTriangle, Search, Plus, Edit2, Trash2, ChevronLeft } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Phone, AlertTriangle, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2 } from 'lucide-react';
+
+// API基础路径
+const API_BASE = '/api/notifications';
 
 interface NotificationChannel {
   id: string;
-  name: string;
-  type: 'email' | 'sms' | 'in-app' | 'wechat';
-  enabled: boolean;
+  oid: string;
+  channelCode: string;
+  channelName: string;
+  channelType: string;
+  isActive: number;
   config: Record<string, string>;
 }
 
 interface NotificationRule {
   id: string;
-  name: string;
-  event: string;
-  channels: string[];
-  recipients: string[];
-  enabled: boolean;
-  frequency: 'immediate' | 'hourly' | 'daily';
+  oid: string;
+  ruleCode: string;
+  ruleName: string;
+  eventType: string;
+  recipientType: string;
+  recipientIds: string[];
+  channelIds: string[];
+  frequency: string;
+  template: string;
+  isActive: number;
 }
-
-const STORAGE_KEY = 'notification_settings_data';
-
-const DEFAULT_CHANNELS: NotificationChannel[] = [
-  { id: '1', name: '系统内消息', type: 'in-app', enabled: true, config: {} },
-  { id: '2', name: '邮件通知', type: 'email', enabled: true, config: { smtpHost: 'smtp.example.com', smtpPort: '587', fromEmail: 'noreply@example.com' } },
-  { id: '3', name: '短信通知', type: 'sms', enabled: false, config: { apiKey: '', provider: 'aliyun' } },
-  { id: '4', name: '企业微信', type: 'wechat', enabled: false, config: { webhook: '', corpId: '' } },
-];
-
-const DEFAULT_RULES: NotificationRule[] = [
-  { id: '1', name: '审批待办通知', event: 'approval_pending', channels: ['1', '2'], recipients: ['approver'], enabled: true, frequency: 'immediate' },
-  { id: '2', name: '审批结果通知', event: 'approval_result', channels: ['1'], recipients: ['applicant'], enabled: true, frequency: 'immediate' },
-  { id: '3', name: '预警通知', event: 'alert', channels: ['1', '2', '3'], recipients: ['admin', 'manager'], enabled: true, frequency: 'immediate' },
-  { id: '4', name: '任务分配通知', event: 'task_assigned', channels: ['1'], recipients: ['assignee'], enabled: true, frequency: 'immediate' },
-  { id: '5', name: '每日汇总', event: 'daily_summary', channels: ['1', '2'], recipients: ['all'], enabled: false, frequency: 'daily' },
-  { id: '6', name: '系统公告', event: 'announcement', channels: ['1', '2', '3'], recipients: ['all'], enabled: true, frequency: 'immediate' },
-];
 
 const EVENT_OPTIONS = [
   { value: 'approval_pending', label: '审批待办' },
@@ -63,57 +54,160 @@ export default function NotificationSettings() {
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
-  const [newRule, setNewRule] = useState<Partial<NotificationRule>>({ enabled: true, channels: [], recipients: [], frequency: 'immediate' });
+  const [newRule, setNewRule] = useState<Partial<NotificationRule>>({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const data = JSON.parse(saved);
-      setChannels(data.channels || DEFAULT_CHANNELS);
-      setRules(data.rules || DEFAULT_RULES);
-    } else {
-      setChannels(DEFAULT_CHANNELS);
-      setRules(DEFAULT_RULES);
+  // 加载通知渠道数据
+  const loadChannels = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/channels`);
+      const result = await response.json();
+      if (result.success) {
+        setChannels(result.data || []);
+      }
+    } catch (err) {
+      console.error('加载通知渠道失败:', err);
+      setError('加载通知渠道失败');
     }
+  };
+
+  // 加载通知规则数据
+  const loadRules = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/rules`);
+      const result = await response.json();
+      if (result.success) {
+        setRules(result.data || []);
+      }
+    } catch (err) {
+      console.error('加载通知规则失败:', err);
+      setError('加载通知规则失败');
+    }
+  };
+
+  // 初始化加载数据
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      await Promise.all([loadChannels(), loadRules()]);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
-  useEffect(() => {
-    if (channels.length > 0 && rules.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ channels, rules }));
-    }
-  }, [channels, rules]);
+  // 筛选规则
+  const filteredRules = rules.filter(r =>
+    r.ruleName.includes(searchTerm) || r.eventType.includes(searchTerm)
+  );
 
-  const filteredRules = rules.filter(r => r.name.includes(searchTerm) || r.event.includes(searchTerm));
+  // 保存规则
+  const handleSaveRule = async () => {
+    try {
+      const payload = {
+        ruleCode: newRule.eventType || `rule_${Date.now()}`,
+        ruleName: newRule.ruleName,
+        eventType: newRule.eventType,
+        recipientType: newRule.recipientType || 'custom',
+        recipientIds: newRule.recipientIds || [],
+        channelIds: newRule.channelIds || [],
+        frequency: newRule.frequency || 'immediate',
+        template: newRule.template || '',
+        isActive: newRule.isActive ? 1 : 0,
+      };
 
-  const handleSaveRule = () => {
-    if (editingRule) {
-      setRules(rules.map(r => r.id === editingRule.id ? { ...r, ...newRule } as NotificationRule : r));
-    } else {
-      setRules([...rules, { ...newRule, id: Date.now().toString() } as NotificationRule]);
+      if (editingRule) {
+        const response = await fetch(`${API_BASE}/rules/${editingRule.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          alert(result.error || '更新失败');
+          return;
+        }
+      } else {
+        const response = await fetch(`${API_BASE}/rules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          alert(result.error || '创建失败');
+          return;
+        }
+      }
+
+      await loadRules();
+      setShowRuleModal(false);
+      setEditingRule(null);
+      setNewRule({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' });
+    } catch (err) {
+      console.error('保存规则失败:', err);
+      alert('保存规则失败');
     }
-    setShowRuleModal(false);
-    setEditingRule(null);
-    setNewRule({ enabled: true, channels: [], recipients: [], frequency: 'immediate' });
   };
 
-  const deleteRule = (id: string) => {
-    if (confirm('确定删除该通知规则吗？')) {
-      setRules(rules.filter(r => r.id !== id));
+  // 删除规则
+  const deleteRule = async (id: string) => {
+    if (!confirm('确定删除该通知规则吗？')) return;
+    try {
+      const response = await fetch(`${API_BASE}/rules/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        await loadRules();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('删除规则失败:', err);
+      alert('删除规则失败');
     }
   };
 
+  // 编辑规则
   const editRule = (rule: NotificationRule) => {
     setEditingRule(rule);
-    setNewRule(rule);
+    setNewRule({
+      ...rule,
+      isActive: rule.isActive ? 1 : 0,
+    });
     setShowRuleModal(true);
   };
 
-  const toggleChannel = (id: string) => {
-    setChannels(channels.map(c => c.id === id ? { ...c, enabled: !c.enabled } : c));
+  // 切换渠道状态
+  const toggleChannel = async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/channels/${id}/toggle`, { method: 'PATCH' });
+      const result = await response.json();
+      if (result.success) {
+        await loadChannels();
+      } else {
+        alert(result.error || '切换状态失败');
+      }
+    } catch (err) {
+      console.error('切换渠道状态失败:', err);
+      alert('切换状态失败');
+    }
   };
 
-  const toggleRule = (id: string) => {
-    setRules(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
+  // 切换规则状态
+  const toggleRule = async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/rules/${id}/toggle`, { method: 'PATCH' });
+      const result = await response.json();
+      if (result.success) {
+        await loadRules();
+      } else {
+        alert(result.error || '切换状态失败');
+      }
+    } catch (err) {
+      console.error('切换规则状态失败:', err);
+      alert('切换状态失败');
+    }
   };
 
   const getChannelIcon = (type: string) => {
@@ -134,6 +228,24 @@ export default function NotificationSettings() {
   const getEventLabel = (event: string) => {
     return EVENT_OPTIONS.find(e => e.value === event)?.label || event;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -181,7 +293,7 @@ export default function NotificationSettings() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button
-              onClick={() => { setEditingRule(null); setNewRule({ enabled: true, channels: [], recipients: [], frequency: 'immediate' }); setShowRuleModal(true); }}
+              onClick={() => { setEditingRule(null); setNewRule({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' }); setShowRuleModal(true); }}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
@@ -194,23 +306,23 @@ export default function NotificationSettings() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      rule.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                      rule.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
                     }`}>
                       <Bell className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{rule.name}</h3>
-                      <p className="text-xs text-gray-500">{getEventLabel(rule.event)}</p>
+                      <h3 className="font-semibold text-gray-900">{rule.ruleName}</h3>
+                      <p className="text-xs text-gray-500">{getEventLabel(rule.eventType)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 text-xs rounded-full ${
-                      rule.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {rule.enabled ? '启用' : '停用'}
+                      {rule.isActive ? '启用' : '停用'}
                     </span>
                     <button onClick={() => toggleRule(rule.id)} className="text-sm text-emerald-600 hover:underline">
-                      {rule.enabled ? '停用' : '启用'}
+                      {rule.isActive ? '停用' : '启用'}
                     </button>
                     <button onClick={() => editRule(rule)} className="p-1.5 hover:bg-gray-100 rounded">
                       <Edit2 className="w-4 h-4 text-gray-600" />
@@ -221,20 +333,20 @@ export default function NotificationSettings() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {rule.channels.map(cid => {
-                    const channel = channels.find(c => c.id === cid);
+                  {(rule.channelIds || []).map(cid => {
+                    const channel = channels.find(c => c.id === cid || c.channelCode === cid);
                     return channel ? (
                       <span key={cid} className={`px-2 py-1 text-xs rounded ${
-                        channel.enabled ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-400'
+                        channel.isActive ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-400'
                       }`}>
-                        {channel.name}
+                        {channel.channelName}
                       </span>
                     ) : null;
                   })}
                 </div>
                 <div className="flex items-center gap-6 text-xs text-gray-500">
                   <span>频率：<span className="font-medium">{FREQUENCY_OPTIONS.find(f => f.value === rule.frequency)?.label}</span></span>
-                  <span>接收人：<span className="font-medium">{rule.recipients.join(', ')}</span></span>
+                  <span>接收人：<span className="font-medium">{(rule.recipientIds || []).join(', ')}</span></span>
                 </div>
               </div>
             ))}
@@ -246,40 +358,42 @@ export default function NotificationSettings() {
       {activeTab === 'channels' && (
         <div className="grid gap-4">
           {channels.map(channel => {
-            const Icon = getChannelIcon(channel.type);
+            const Icon = getChannelIcon(channel.channelType);
             return (
               <div key={channel.id} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className={`p-3 rounded-lg ${
-                      channel.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                      channel.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
                     }`}>
                       <Icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{channel.name}</h3>
-                      <p className="text-xs text-gray-500">{getChannelLabel(channel.type)}</p>
+                      <h3 className="font-semibold text-gray-900">{channel.channelName}</h3>
+                      <p className="text-xs text-gray-500">{getChannelLabel(channel.channelType)}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => toggleChannel(channel.id)}
                     className={`w-12 h-6 rounded-full transition-colors relative ${
-                      channel.enabled ? 'bg-emerald-500' : 'bg-gray-300'
+                      channel.isActive ? 'bg-emerald-500' : 'bg-gray-300'
                     }`}
                   >
                     <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                      channel.enabled ? 'left-7' : 'left-1'
+                      channel.isActive ? 'left-7' : 'left-1'
                     }`} />
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {Object.entries(channel.config).map(([key, value]) => (
-                    <div key={key} className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 capitalize">{key}</p>
-                      <p className="text-sm text-gray-900 mt-1 truncate">{value || '-'}</p>
-                    </div>
-                  ))}
-                </div>
+                {channel.config && Object.keys(channel.config).length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {Object.entries(channel.config).map(([key, value]) => (
+                      <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 capitalize">{key}</p>
+                        <p className="text-sm text-gray-900 mt-1 truncate">{value || '-'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -345,16 +459,16 @@ export default function NotificationSettings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">规则名称</label>
                 <input
                   type="text"
-                  value={newRule.name || ''}
-                  onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
+                  value={newRule.ruleName || ''}
+                  onChange={(e) => setNewRule({ ...newRule, ruleName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">触发事件</label>
                 <select
-                  value={newRule.event || ''}
-                  onChange={(e) => setNewRule({ ...newRule, event: e.target.value })}
+                  value={newRule.eventType || ''}
+                  onChange={(e) => setNewRule({ ...newRule, eventType: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="">请选择事件</option>
@@ -370,16 +484,16 @@ export default function NotificationSettings() {
                     <label key={channel.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
                       <input
                         type="checkbox"
-                        checked={(newRule.channels || []).includes(channel.id)}
+                        checked={(newRule.channelIds || []).includes(channel.id)}
                         onChange={(e) => {
-                          const channels = e.target.checked
-                            ? [...(newRule.channels || []), channel.id]
-                            : (newRule.channels || []).filter(c => c !== channel.id);
-                          setNewRule({ ...newRule, channels });
+                          const channelIds = e.target.checked
+                            ? [...(newRule.channelIds || []), channel.id]
+                            : (newRule.channelIds || []).filter(c => c !== channel.id);
+                          setNewRule({ ...newRule, channelIds });
                         }}
                         className="rounded"
                       />
-                      {channel.name}
+                      {channel.channelName}
                     </label>
                   ))}
                 </div>
@@ -388,8 +502,8 @@ export default function NotificationSettings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">接收人（逗号分隔）</label>
                 <input
                   type="text"
-                  value={(newRule.recipients || []).join(', ')}
-                  onChange={(e) => setNewRule({ ...newRule, recipients: e.target.value.split(',').map(r => r.trim()) })}
+                  value={(newRule.recipientIds || []).join(', ')}
+                  onChange={(e) => setNewRule({ ...newRule, recipientIds: e.target.value.split(',').map(r => r.trim()).filter(r => r) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="approver, admin"
                 />
@@ -398,7 +512,7 @@ export default function NotificationSettings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">发送频率</label>
                 <select
                   value={newRule.frequency || 'immediate'}
-                  onChange={(e) => setNewRule({ ...newRule, frequency: e.target.value as NotificationRule['frequency'] })}
+                  onChange={(e) => setNewRule({ ...newRule, frequency: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   {FREQUENCY_OPTIONS.map(opt => (
