@@ -397,12 +397,20 @@ hongzhiyun/
 | ProblemDispatchModal.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
 | CreateTaskModal.tsx | 使用useUsers()和useGreenhouses()获取数据 | ✅ 已完成 |
 | ReassignTaskModal.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+| FarmTaskHub.tsx | 使用useUsers() | ✅ 已完成 |
+| HarvestPage.tsx | 使用useUsers()+useGreenhouses() | ✅ 已完成 |
+| InspectionTab.tsx | 使用useUsers()+useGreenhouses() | ✅ 已完成 |
+| DetailInspectionModal.tsx | 使用useUsers() | ✅ 已完成 |
+| TempTaskTab.tsx | 使用useUsers() | ✅ 已完成 |
+| TempTaskPage.tsx | 使用useUsers() | ✅ 已完成 |
+| TempTaskFormModal.tsx | 使用useGreenhouses() | ✅ 已完成 |
+| TasksPage.tsx | 使用useUsers()+useGreenhouses() | ✅ 已完成 |
+| CreateProblemModal.tsx | 使用useGreenhouses() | ✅ 已完成 |
+| BatchEditModal.tsx | 使用useGreenhouses() | ✅ 已完成 |
+| ProductionPage.tsx | 使用useGreenhouses() | ✅ 已完成 |
+| Login.tsx | 使用useUsers() | ✅ 已完成 |
 
 #### 待改造文件（主要）
-- HarvestPage.tsx - 使用greenhouses和users
-- TempTaskPage.tsx - 使用greenhouses和users
-- InspectionTab.tsx - 使用greenhouses、users、cropTypes
-- TasksPage.tsx - 使用greenhouses和users
 - 其他业务组件...
 
 #### 改造原则
