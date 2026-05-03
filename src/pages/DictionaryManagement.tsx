@@ -1,1196 +1,555 @@
+/**
+ * 数据字典管理页面
+ * V5.0 折叠面板形式展示分类和字典项
+ */
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Plus, Edit, Trash2, Search, RefreshCw, Tag, ChevronLeft } from 'lucide-react';
-
-interface DictItem {
-  id: string;
-  dictCode: string;
-  dictLabel: string;
-  dictValue: string;
-  dictSort: number;
-  status: 'active' | 'inactive';
-  remark?: string;
-}
-
-interface DictType {
-  dictCode: string;
-  dictName: string;
-  description: string;
-  status: 'active' | 'inactive';
-  items: DictItem[];
-}
-
-// 获取字典类型的中文名称
-function getDictTypeName(code: string): string {
-  const names: Record<string, string> = {
-    approval_status: '审批状态',
-    approval_action: '审批操作',
-    approval_type: '审批类型',
-    task_type: '任务类型',
-    task_status: '任务状态',
-    task_priority: '任务优先级',
-    harvest_status: '采收状态',
-    harvest_grade: '采收等级',
-    seedling_status: '育苗状态',
-    planting_status: '种植状态',
-    supplier_type: '供应商类型',
-    supplier_level: '供应商等级',
-    warehouse_type: '仓库类型',
-    greenhouse_type: '温室类型',
-    greenhouse_status: '温室状态',
-    department_status: '部门状态',
-    position_type: '岗位类型',
-    staff_status: '员工状态',
-    leave_type: '请假类型',
-    overtime_type: '加班类型',
-    attendance_status: '考勤状态',
-    gender: '性别',
-    education: '学历',
-    purchase_status: '采购状态',
-    notification_type: '通知类型',
-    notification_channel: '通知渠道',
-    video_record_type: '录像类型',
-    work_order_status: '工单状态',
-    work_order_type: '工单类型',
-    common_status: '通用状态',
-    boolean_yes_no: '是/否',
-    pagination_size: '分页大小',
-    process_type: '工序类型',
-    crop_category: '作物类别',
-    planting_mode: '种植模式',
-  };
-  return names[code] || code;
-}
-
-// 获取字典类型的描述
-function getDictTypeDescription(code: string): string {
-  const descriptions: Record<string, string> = {
-    approval_status: '所有审批流程的通用状态',
-    approval_action: '审批人可执行的操作类型',
-    approval_type: '系统中所有审批业务类型',
-    task_type: '所有农事任务的类型定义',
-    task_status: '任务的生命周期状态',
-    task_priority: '任务优先级定义',
-    harvest_status: '采收记录的状态',
-    harvest_grade: '采收产品的等级分类',
-    seedling_status: '育苗记录的状态',
-    planting_status: '种植记录的状态',
-    supplier_type: '供应商分类',
-    supplier_level: '供应商评级',
-    warehouse_type: '仓库类型分类',
-    greenhouse_type: '温室大棚类型',
-    greenhouse_status: '温室当前状态',
-    department_status: '部门状态',
-    position_type: '岗位类型分类',
-    staff_status: '员工在职状态',
-    leave_type: '请假类型分类',
-    overtime_type: '加班类型分类',
-    attendance_status: '考勤记录状态',
-    gender: '性别',
-    education: '员工学历',
-    purchase_status: '采购计划状态',
-    notification_type: '消息通知分类',
-    notification_channel: '消息发送渠道',
-    video_record_type: '视频监控录像类型',
-    work_order_status: '工单状态',
-    work_order_type: '工单类型',
-    common_status: '通用状态',
-    boolean_yes_no: '是否布尔值',
-    pagination_size: '分页大小选项',
-    process_type: '农事工序类型',
-    crop_category: '作物类别',
-    planting_mode: '种植模式',
-  };
-  return descriptions[code] || code;
-}
-
-const DEFAULT_DICTS: DictType[] = [
-  // ===== 审批流程字典 =====
-  {
-    dictCode: 'approval_status',
-    dictName: '审批状态',
-    description: '所有审批流程的通用状态',
-    status: 'active',
-    items: [
-      { id: '1', dictCode: 'approval_status', dictLabel: '草稿', dictValue: 'draft', dictSort: 1, status: 'active' },
-      { id: '2', dictCode: 'approval_status', dictLabel: '待审批', dictValue: 'pending', dictSort: 2, status: 'active' },
-      { id: '3', dictCode: 'approval_status', dictLabel: '审批中', dictValue: 'in_progress', dictSort: 3, status: 'active' },
-      { id: '4', dictCode: 'approval_status', dictLabel: '已通过', dictValue: 'approved', dictSort: 4, status: 'active' },
-      { id: '5', dictCode: 'approval_status', dictLabel: '部分通过', dictValue: 'partially_approved', dictSort: 5, status: 'active' },
-      { id: '6', dictCode: 'approval_status', dictLabel: '已拒绝', dictValue: 'rejected', dictSort: 6, status: 'active' },
-      { id: '7', dictCode: 'approval_status', dictLabel: '已撤回', dictValue: 'cancelled', dictSort: 7, status: 'active' },
-      { id: '8', dictCode: 'approval_status', dictLabel: '已超时', dictValue: 'timeout', dictSort: 8, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'approval_action',
-    dictName: '审批操作',
-    description: '审批人可执行的操作类型',
-    status: 'active',
-    items: [
-      { id: '10', dictCode: 'approval_action', dictLabel: '通过', dictValue: 'approve', dictSort: 1, status: 'active' },
-      { id: '11', dictCode: 'approval_action', dictLabel: '拒绝', dictValue: 'reject', dictSort: 2, status: 'active' },
-      { id: '12', dictCode: 'approval_action', dictLabel: '部分通过', dictValue: 'partially_approve', dictSort: 3, status: 'active' },
-      { id: '13', dictCode: 'approval_action', dictLabel: '撤回', dictValue: 'cancel', dictSort: 4, status: 'active' },
-      { id: '14', dictCode: 'approval_action', dictLabel: '转交', dictValue: 'transfer', dictSort: 5, status: 'active' },
-      { id: '15', dictCode: 'approval_action', dictLabel: '加签', dictValue: 'add_sign', dictSort: 6, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'approval_type',
-    dictName: '审批类型',
-    description: '系统中所有审批业务类型',
-    status: 'active',
-    items: [
-      { id: '20', dictCode: 'approval_type', dictLabel: '生产计划审批', dictValue: 'production_plan', dictSort: 1, status: 'active' },
-      { id: '21', dictCode: 'approval_type', dictLabel: '技术方案审批', dictValue: 'tech_solution', dictSort: 2, status: 'active' },
-      { id: '22', dictCode: 'approval_type', dictLabel: '采购计划审批', dictValue: 'purchase_plan', dictSort: 3, status: 'active' },
-      { id: '23', dictCode: 'approval_type', dictLabel: '物料领用审批', dictValue: 'material_usage', dictSort: 4, status: 'active' },
-      { id: '24', dictCode: 'approval_type', dictLabel: '人员入职审批', dictValue: 'hr_onboard', dictSort: 5, status: 'active' },
-      { id: '25', dictCode: 'approval_type', dictLabel: '人员离职审批', dictValue: 'hr_resign', dictSort: 6, status: 'active' },
-      { id: '26', dictCode: 'approval_type', dictLabel: '请假审批', dictValue: 'hr_leave', dictSort: 7, status: 'active' },
-      { id: '27', dictCode: 'approval_type', dictLabel: '费用报销审批', dictValue: 'expense_reimburse', dictSort: 8, status: 'active' },
-      { id: '28', dictCode: 'approval_type', dictLabel: '设备维修审批', dictValue: 'device_repair', dictSort: 9, status: 'active' },
-      { id: '29', dictCode: 'approval_type', dictLabel: '库存调整审批', dictValue: 'inventory_adjust', dictSort: 10, status: 'active' },
-    ],
-  },
-
-  // ===== 任务管理字典 =====
-  {
-    dictCode: 'task_type',
-    dictName: '任务类型',
-    description: '所有农事任务的类型定义',
-    status: 'active',
-    items: [
-      { id: '100', dictCode: 'task_type', dictLabel: '播种', dictValue: 'planting', dictSort: 1, status: 'active' },
-      { id: '101', dictCode: 'task_type', dictLabel: '浇水', dictValue: 'watering', dictSort: 2, status: 'active' },
-      { id: '102', dictCode: 'task_type', dictLabel: '施肥', dictValue: 'fertilizing', dictSort: 3, status: 'active' },
-      { id: '103', dictCode: 'task_type', dictLabel: '修剪', dictValue: 'pruning', dictSort: 4, status: 'active' },
-      { id: '104', dictCode: 'task_type', dictLabel: '病虫害防治', dictValue: 'pest_control', dictSort: 5, status: 'active' },
-      { id: '105', dictCode: 'task_type', dictLabel: '采收', dictValue: 'harvesting', dictSort: 6, status: 'active' },
-      { id: '106', dictCode: 'task_type', dictLabel: '除草', dictValue: 'weeding', dictSort: 7, status: 'active' },
-      { id: '107', dictCode: 'task_type', dictLabel: '设备维护', dictValue: 'device_maintenance', dictSort: 8, status: 'active' },
-      { id: '108', dictCode: 'task_type', dictLabel: '巡检', dictValue: 'inspection', dictSort: 9, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'task_status',
-    dictName: '任务状态',
-    description: '任务的生命周期状态',
-    status: 'active',
-    items: [
-      { id: '110', dictCode: 'task_status', dictLabel: '待分配', dictValue: 'pending', dictSort: 1, status: 'active' },
-      { id: '111', dictCode: 'task_status', dictLabel: '已分配', dictValue: 'assigned', dictSort: 2, status: 'active' },
-      { id: '112', dictCode: 'task_status', dictLabel: '进行中', dictValue: 'in_progress', dictSort: 3, status: 'active' },
-      { id: '113', dictCode: 'task_status', dictLabel: '已完成', dictValue: 'completed', dictSort: 4, status: 'active' },
-      { id: '114', dictCode: 'task_status', dictLabel: '已取消', dictValue: 'cancelled', dictSort: 5, status: 'active' },
-      { id: '115', dictCode: 'task_status', dictLabel: '已逾期', dictValue: 'overdue', dictSort: 6, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'priority',
-    dictName: '优先级',
-    description: '任务/审批/预警的优先级定义',
-    status: 'active',
-    items: [
-      { id: '120', dictCode: 'priority', dictLabel: '低', dictValue: 'low', dictSort: 1, status: 'active' },
-      { id: '121', dictCode: 'priority', dictLabel: '普通', dictValue: 'normal', dictSort: 2, status: 'active' },
-      { id: '122', dictCode: 'priority', dictLabel: '紧急', dictValue: 'urgent', dictSort: 3, status: 'active' },
-      { id: '123', dictCode: 'priority', dictLabel: '特急', dictValue: 'critical', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 作物和种植字典 =====
-  {
-    dictCode: 'crop_type',
-    dictName: '作物类型',
-    description: '种植作物的分类',
-    status: 'active',
-    items: [
-      { id: '130', dictCode: 'crop_type', dictLabel: '叶菜类', dictValue: 'leafy', dictSort: 1, status: 'active' },
-      { id: '131', dictCode: 'crop_type', dictLabel: '果菜类', dictValue: 'fruit', dictSort: 2, status: 'active' },
-      { id: '132', dictCode: 'crop_type', dictLabel: '根茎类', dictValue: 'root', dictSort: 3, status: 'active' },
-      { id: '133', dictCode: 'crop_type', dictLabel: '花卉类', dictValue: 'flower', dictSort: 4, status: 'active' },
-      { id: '134', dictCode: 'crop_type', dictLabel: '瓜果类', dictValue: 'melon', dictSort: 5, status: 'active' },
-      { id: '135', dictCode: 'crop_type', dictLabel: '豆类', dictValue: 'bean', dictSort: 6, status: 'active' },
-      { id: '136', dictCode: 'crop_type', dictLabel: '菌类', dictValue: 'mushroom', dictSort: 7, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'crop_variety',
-    dictName: '作物品种',
-    description: '具体作物品种列表',
-    status: 'active',
-    items: [
-      { id: '140', dictCode: 'crop_variety', dictLabel: '番茄', dictValue: 'tomato', dictSort: 1, status: 'active' },
-      { id: '141', dictCode: 'crop_variety', dictLabel: '黄瓜', dictValue: 'cucumber', dictSort: 2, status: 'active' },
-      { id: '142', dictCode: 'crop_variety', dictLabel: '辣椒', dictValue: 'pepper', dictSort: 3, status: 'active' },
-      { id: '143', dictCode: 'crop_variety', dictLabel: '茄子', dictValue: 'eggplant', dictSort: 4, status: 'active' },
-      { id: '144', dictCode: 'crop_variety', dictLabel: '生菜', dictValue: 'lettuce', dictSort: 5, status: 'active' },
-      { id: '145', dictCode: 'crop_variety', dictLabel: '草莓', dictValue: 'strawberry', dictSort: 6, status: 'active' },
-      { id: '146', dictCode: 'crop_variety', dictLabel: '西瓜', dictValue: 'watermelon', dictSort: 7, status: 'active' },
-      { id: '147', dictCode: 'crop_variety', dictLabel: '甜瓜', dictValue: 'melon', dictSort: 8, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'greenhouse_type',
-    dictName: '温室类型',
-    description: '温室大棚的类型',
-    status: 'active',
-    items: [
-      { id: '150', dictCode: 'greenhouse_type', dictLabel: '玻璃温室', dictValue: 'glass', dictSort: 1, status: 'active' },
-      { id: '151', dictCode: 'greenhouse_type', dictLabel: '薄膜温室', dictValue: 'film', dictSort: 2, status: 'active' },
-      { id: '152', dictCode: 'greenhouse_type', dictLabel: '阳光板温室', dictValue: 'pc', dictSort: 3, status: 'active' },
-      { id: '153', dictCode: 'greenhouse_type', dictLabel: '连栋温室', dictValue: 'multi_span', dictSort: 4, status: 'active' },
-      { id: '154', dictCode: 'greenhouse_type', dictLabel: '日光温室', dictValue: 'solar', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'planting_mode',
-    dictName: '种植模式',
-    description: '农业生产种植模式',
-    status: 'active',
-    items: [
-      { id: '160', dictCode: 'planting_mode', dictLabel: '土壤种植', dictValue: 'soil', dictSort: 1, status: 'active' },
-      { id: '161', dictCode: 'planting_mode', dictLabel: '水培', dictValue: 'hydroponics', dictSort: 2, status: 'active' },
-      { id: '162', dictCode: 'planting_mode', dictLabel: '基质栽培', dictValue: 'substrate', dictSort: 3, status: 'active' },
-      { id: '163', dictCode: 'planting_mode', dictLabel: '气雾培', dictValue: 'aeroponics', dictSort: 4, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'growth_stage',
-    dictName: '生长阶段',
-    description: '作物生长阶段定义',
-    status: 'active',
-    items: [
-      { id: '170', dictCode: 'growth_stage', dictLabel: '育苗期', dictValue: 'seedling', dictSort: 1, status: 'active' },
-      { id: '171', dictCode: 'growth_stage', dictLabel: '定植期', dictValue: 'transplanting', dictSort: 2, status: 'active' },
-      { id: '172', dictCode: 'growth_stage', dictLabel: '营养生长期', dictValue: 'vegetative', dictSort: 3, status: 'active' },
-      { id: '173', dictCode: 'growth_stage', dictLabel: '开花期', dictValue: 'flowering', dictSort: 4, status: 'active' },
-      { id: '174', dictCode: 'growth_stage', dictLabel: '结果期', dictValue: 'fruiting', dictSort: 5, status: 'active' },
-      { id: '175', dictCode: 'growth_stage', dictLabel: '采收期', dictValue: 'harvest', dictSort: 6, status: 'active' },
-    ],
-  },
-
-  // ===== 物料管理字典 =====
-  {
-    dictCode: 'material_type',
-    dictName: '物料类型',
-    description: '农业物料的分类',
-    status: 'active',
-    items: [
-      { id: '200', dictCode: 'material_type', dictLabel: '种子', dictValue: 'seed', dictSort: 1, status: 'active' },
-      { id: '201', dictCode: 'material_type', dictLabel: '肥料', dictValue: 'fertilizer', dictSort: 2, status: 'active' },
-      { id: '202', dictCode: 'material_type', dictLabel: '农药', dictValue: 'pesticide', dictSort: 3, status: 'active' },
-      { id: '203', dictCode: 'material_type', dictLabel: '基质', dictValue: 'substrate', dictSort: 4, status: 'active' },
-      { id: '204', dictCode: 'material_type', dictLabel: '工具', dictValue: 'tool', dictSort: 5, status: 'active' },
-      { id: '205', dictCode: 'material_type', dictLabel: '包装材料', dictValue: 'package', dictSort: 6, status: 'active' },
-      { id: '206', dictCode: 'material_type', dictLabel: '设备配件', dictValue: 'spare_part', dictSort: 7, status: 'active' },
-      { id: '207', dictCode: 'material_type', dictLabel: '耗材', dictValue: 'consumable', dictSort: 8, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'material_unit',
-    dictName: '物料单位',
-    description: '物料计量单位',
-    status: 'active',
-    items: [
-      { id: '210', dictCode: 'material_unit', dictLabel: '千克', dictValue: 'kg', dictSort: 1, status: 'active' },
-      { id: '211', dictCode: 'material_unit', dictLabel: '克', dictValue: 'g', dictSort: 2, status: 'active' },
-      { id: '212', dictCode: 'material_unit', dictLabel: '吨', dictValue: 'ton', dictSort: 3, status: 'active' },
-      { id: '213', dictCode: 'material_unit', dictLabel: '升', dictValue: 'L', dictSort: 4, status: 'active' },
-      { id: '214', dictCode: 'material_unit', dictLabel: '毫升', dictValue: 'mL', dictSort: 5, status: 'active' },
-      { id: '215', dictCode: 'material_unit', dictLabel: '袋', dictValue: 'bag', dictSort: 6, status: 'active' },
-      { id: '216', dictCode: 'material_unit', dictLabel: '箱', dictValue: 'box', dictSort: 7, status: 'active' },
-      { id: '217', dictCode: 'material_unit', dictLabel: '个', dictValue: 'piece', dictSort: 8, status: 'active' },
-      { id: '218', dictCode: 'material_unit', dictLabel: '包', dictValue: 'pack', dictSort: 9, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'warehouse_type',
-    dictName: '仓库类型',
-    description: '仓库分类',
-    status: 'active',
-    items: [
-      { id: '220', dictCode: 'warehouse_type', dictLabel: '原料仓库', dictValue: 'raw_material', dictSort: 1, status: 'active' },
-      { id: '221', dictCode: 'warehouse_type', dictLabel: '成品仓库', dictValue: 'finished_product', dictSort: 2, status: 'active' },
-      { id: '222', dictCode: 'warehouse_type', dictLabel: '耗材仓库', dictValue: 'consumable', dictSort: 3, status: 'active' },
-      { id: '223', dictCode: 'warehouse_type', dictLabel: '农药仓库', dictValue: 'pesticide', dictSort: 4, status: 'active' },
-      { id: '224', dictCode: 'warehouse_type', dictLabel: '化肥仓库', dictValue: 'fertilizer', dictSort: 5, status: 'active' },
-      { id: '225', dictCode: 'warehouse_type', dictLabel: '设备仓库', dictValue: 'equipment', dictSort: 6, status: 'active' },
-    ],
-  },
-
-  // ===== 生产管理字典 =====
-  {
-    dictCode: 'production_status',
-    dictName: '生产状态',
-    description: '生产计划/批次状态',
-    status: 'active',
-    items: [
-      { id: '300', dictCode: 'production_status', dictLabel: '计划中', dictValue: 'planned', dictSort: 1, status: 'active' },
-      { id: '301', dictCode: 'production_status', dictLabel: '进行中', dictValue: 'in_progress', dictSort: 2, status: 'active' },
-      { id: '302', dictCode: 'production_status', dictLabel: '已完成', dictValue: 'completed', dictSort: 3, status: 'active' },
-      { id: '303', dictCode: 'production_status', dictLabel: '已暂停', dictValue: 'paused', dictSort: 4, status: 'active' },
-      { id: '304', dictCode: 'production_status', dictLabel: '已取消', dictValue: 'cancelled', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'batch_status',
-    dictName: '批次状态',
-    description: '生产批次状态',
-    status: 'active',
-    items: [
-      { id: '310', dictCode: 'batch_status', dictLabel: '待播种', dictValue: 'pending_planting', dictSort: 1, status: 'active' },
-      { id: '311', dictCode: 'batch_status', dictLabel: '生长中', dictValue: 'growing', dictSort: 2, status: 'active' },
-      { id: '312', dictCode: 'batch_status', dictLabel: '待采收', dictValue: 'ready_harvest', dictSort: 3, status: 'active' },
-      { id: '313', dictCode: 'batch_status', dictLabel: '已采收', dictValue: 'harvested', dictSort: 4, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'tech_solution_status',
-    dictName: '技术方案状态',
-    description: '农业技术方案的状态',
-    status: 'active',
-    items: [
-      { id: '320', dictCode: 'tech_solution_status', dictLabel: '草稿', dictValue: 'draft', dictSort: 1, status: 'active' },
-      { id: '321', dictCode: 'tech_solution_status', dictLabel: '审核中', dictValue: 'reviewing', dictSort: 2, status: 'active' },
-      { id: '322', dictCode: 'tech_solution_status', dictLabel: '已发布', dictValue: 'published', dictSort: 3, status: 'active' },
-      { id: '323', dictCode: 'tech_solution_status', dictLabel: '已归档', dictValue: 'archived', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 设备管理字典 =====
-  {
-    dictCode: 'device_type',
-    dictName: '设备类型',
-    description: 'IoT设备类型分类',
-    status: 'active',
-    items: [
-      { id: '400', dictCode: 'device_type', dictLabel: '传感器', dictValue: 'sensor', dictSort: 1, status: 'active' },
-      { id: '401', dictCode: 'device_type', dictLabel: '摄像头', dictValue: 'camera', dictSort: 2, status: 'active' },
-      { id: '402', dictCode: 'device_type', dictLabel: '控制器', dictValue: 'controller', dictSort: 3, status: 'active' },
-      { id: '403', dictCode: 'device_type', dictLabel: '气象站', dictValue: 'weather_station', dictSort: 4, status: 'active' },
-      { id: '404', dictCode: 'device_type', dictLabel: '灌溉设备', dictValue: 'irrigation', dictSort: 5, status: 'active' },
-      { id: '405', dictCode: 'device_type', dictLabel: '施肥设备', dictValue: 'fertilizer_device', dictSort: 6, status: 'active' },
-      { id: '406', dictCode: 'device_type', dictLabel: '通风设备', dictValue: 'ventilation', dictSort: 7, status: 'active' },
-      { id: '407', dictCode: 'device_type', dictLabel: '补光设备', dictValue: 'lighting', dictSort: 8, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'device_status',
-    dictName: '设备状态',
-    description: 'IoT设备运行状态',
-    status: 'active',
-    items: [
-      { id: '410', dictCode: 'device_status', dictLabel: '在线', dictValue: 'online', dictSort: 1, status: 'active' },
-      { id: '411', dictCode: 'device_status', dictLabel: '离线', dictValue: 'offline', dictSort: 2, status: 'active' },
-      { id: '412', dictCode: 'device_status', dictLabel: '维护中', dictValue: 'maintenance', dictSort: 3, status: 'active' },
-      { id: '413', dictCode: 'device_status', dictLabel: '故障', dictValue: 'fault', dictSort: 4, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'sensor_type',
-    dictName: '传感器类型',
-    description: '环境传感器类型',
-    status: 'active',
-    items: [
-      { id: '420', dictCode: 'sensor_type', dictLabel: '温度传感器', dictValue: 'temperature', dictSort: 1, status: 'active' },
-      { id: '421', dictCode: 'sensor_type', dictLabel: '湿度传感器', dictValue: 'humidity', dictSort: 2, status: 'active' },
-      { id: '422', dictCode: 'sensor_type', dictLabel: '光照传感器', dictValue: 'light', dictSort: 3, status: 'active' },
-      { id: '423', dictCode: 'sensor_type', dictLabel: 'CO2传感器', dictValue: 'co2', dictSort: 4, status: 'active' },
-      { id: '424', dictCode: 'sensor_type', dictLabel: '土壤湿度传感器', dictValue: 'soil_moisture', dictSort: 5, status: 'active' },
-      { id: '425', dictCode: 'sensor_type', dictLabel: '土壤EC传感器', dictValue: 'soil_ec', dictSort: 6, status: 'active' },
-      { id: '426', dictCode: 'sensor_type', dictLabel: 'pH传感器', dictValue: 'ph', dictSort: 7, status: 'active' },
-    ],
-  },
-
-  // ===== 预警字典 =====
-  {
-    dictCode: 'alert_level',
-    dictName: '预警级别',
-    description: '系统预警等级',
-    status: 'active',
-    items: [
-      { id: '500', dictCode: 'alert_level', dictLabel: '提示', dictValue: 'info', dictSort: 1, status: 'active' },
-      { id: '501', dictCode: 'alert_level', dictLabel: '一般', dictValue: 'normal', dictSort: 2, status: 'active' },
-      { id: '502', dictCode: 'alert_level', dictLabel: '警告', dictValue: 'warning', dictSort: 3, status: 'active' },
-      { id: '503', dictCode: 'alert_level', dictLabel: '严重', dictValue: 'critical', dictSort: 4, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'alert_type',
-    dictName: '预警类型',
-    description: '系统预警类型分类',
-    status: 'active',
-    items: [
-      { id: '510', dictCode: 'alert_type', dictLabel: '温度异常', dictValue: 'temp_abnormal', dictSort: 1, status: 'active' },
-      { id: '511', dictCode: 'alert_type', dictLabel: '湿度异常', dictValue: 'humidity_abnormal', dictSort: 2, status: 'active' },
-      { id: '512', dictCode: 'alert_type', dictLabel: '设备离线', dictValue: 'device_offline', dictSort: 3, status: 'active' },
-      { id: '513', dictCode: 'alert_type', dictLabel: '设备故障', dictValue: 'device_fault', dictSort: 4, status: 'active' },
-      { id: '514', dictCode: 'alert_type', dictLabel: '库存不足', dictValue: 'low_stock', dictSort: 5, status: 'active' },
-      { id: '515', dictCode: 'alert_type', dictLabel: '任务逾期', dictValue: 'task_overdue', dictSort: 6, status: 'active' },
-      { id: '516', dictCode: 'alert_type', dictLabel: '审批超时', dictValue: 'approval_timeout', dictSort: 7, status: 'active' },
-    ],
-  },
-
-  // ===== 人事字典 =====
-  {
-    dictCode: 'employee_status',
-    dictName: '员工状态',
-    description: '员工在职状态',
-    status: 'active',
-    items: [
-      { id: '600', dictCode: 'employee_status', dictLabel: '在职', dictValue: 'active', dictSort: 1, status: 'active' },
-      { id: '601', dictCode: 'employee_status', dictLabel: '试用期', dictValue: 'probation', dictSort: 2, status: 'active' },
-      { id: '602', dictCode: 'employee_status', dictLabel: '离职', dictValue: 'resigned', dictSort: 3, status: 'active' },
-      { id: '603', dictCode: 'employee_status', dictLabel: '请假中', dictValue: 'on_leave', dictSort: 4, status: 'active' },
-      { id: '604', dictCode: 'employee_status', dictLabel: '停职', dictValue: 'suspended', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'attendance_status',
-    dictName: '考勤状态',
-    description: '每日考勤状态',
-    status: 'active',
-    items: [
-      { id: '610', dictCode: 'attendance_status', dictLabel: '正常', dictValue: 'normal', dictSort: 1, status: 'active' },
-      { id: '611', dictCode: 'attendance_status', dictLabel: '迟到', dictValue: 'late', dictSort: 2, status: 'active' },
-      { id: '612', dictCode: 'attendance_status', dictLabel: '早退', dictValue: 'early_leave', dictSort: 3, status: 'active' },
-      { id: '613', dictCode: 'attendance_status', dictLabel: '缺勤', dictValue: 'absent', dictSort: 4, status: 'active' },
-      { id: '614', dictCode: 'attendance_status', dictLabel: '请假', dictValue: 'leave', dictSort: 5, status: 'active' },
-      { id: '615', dictCode: 'attendance_status', dictLabel: '加班', dictValue: 'overtime', dictSort: 6, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'leave_type',
-    dictName: '请假类型',
-    description: '请假类别',
-    status: 'active',
-    items: [
-      { id: '620', dictCode: 'leave_type', dictLabel: '事假', dictValue: 'personal', dictSort: 1, status: 'active' },
-      { id: '621', dictCode: 'leave_type', dictLabel: '病假', dictValue: 'sick', dictSort: 2, status: 'active' },
-      { id: '622', dictCode: 'leave_type', dictLabel: '年假', dictValue: 'annual', dictSort: 3, status: 'active' },
-      { id: '623', dictCode: 'leave_type', dictLabel: '婚假', dictValue: 'marriage', dictSort: 4, status: 'active' },
-      { id: '624', dictCode: 'leave_type', dictLabel: '产假', dictValue: 'maternity', dictSort: 5, status: 'active' },
-      { id: '625', dictCode: 'leave_type', dictLabel: '调休', dictValue: 'compensation', dictSort: 6, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'gender',
-    dictName: '性别',
-    description: '员工性别',
-    status: 'active',
-    items: [
-      { id: '630', dictCode: 'gender', dictLabel: '男', dictValue: 'male', dictSort: 1, status: 'active' },
-      { id: '631', dictCode: 'gender', dictLabel: '女', dictValue: 'female', dictSort: 2, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'education',
-    dictName: '学历',
-    description: '员工学历',
-    status: 'active',
-    items: [
-      { id: '640', dictCode: 'education', dictLabel: '初中及以下', dictValue: 'junior_high', dictSort: 1, status: 'active' },
-      { id: '641', dictCode: 'education', dictLabel: '高中/中专', dictValue: 'high_school', dictSort: 2, status: 'active' },
-      { id: '642', dictCode: 'education', dictLabel: '大专', dictValue: 'college', dictSort: 3, status: 'active' },
-      { id: '643', dictCode: 'education', dictLabel: '本科', dictValue: 'bachelor', dictSort: 4, status: 'active' },
-      { id: '644', dictCode: 'education', dictLabel: '硕士', dictValue: 'master', dictSort: 5, status: 'active' },
-      { id: '645', dictCode: 'education', dictLabel: '博士', dictValue: 'doctor', dictSort: 6, status: 'active' },
-    ],
-  },
-
-  // ===== 采购字典 =====
-  {
-    dictCode: 'purchase_status',
-    dictName: '采购状态',
-    description: '采购计划状态',
-    status: 'active',
-    items: [
-      { id: '700', dictCode: 'purchase_status', dictLabel: '草稿', dictValue: 'draft', dictSort: 1, status: 'active' },
-      { id: '701', dictCode: 'purchase_status', dictLabel: '待审批', dictValue: 'pending_approval', dictSort: 2, status: 'active' },
-      { id: '702', dictCode: 'purchase_status', dictLabel: '已审批', dictValue: 'approved', dictSort: 3, status: 'active' },
-      { id: '703', dictCode: 'purchase_status', dictLabel: '采购中', dictValue: 'purchasing', dictSort: 4, status: 'active' },
-      { id: '704', dictCode: 'purchase_status', dictLabel: '已到货', dictValue: 'delivered', dictSort: 5, status: 'active' },
-      { id: '705', dictCode: 'purchase_status', dictLabel: '已入库', dictValue: 'stored', dictSort: 6, status: 'active' },
-      { id: '706', dictCode: 'purchase_status', dictLabel: '已取消', dictValue: 'cancelled', dictSort: 7, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'supplier_type',
-    dictName: '供应商类型',
-    description: '供应商分类',
-    status: 'active',
-    items: [
-      { id: '710', dictCode: 'supplier_type', dictLabel: '种子供应商', dictValue: 'seed_supplier', dictSort: 1, status: 'active' },
-      { id: '711', dictCode: 'supplier_type', dictLabel: '肥料供应商', dictValue: 'fertilizer_supplier', dictSort: 2, status: 'active' },
-      { id: '712', dictCode: 'supplier_type', dictLabel: '农药供应商', dictValue: 'pesticide_supplier', dictSort: 3, status: 'active' },
-      { id: '713', dictCode: 'supplier_type', dictLabel: '设备供应商', dictValue: 'equipment_supplier', dictSort: 4, status: 'active' },
-      { id: '714', dictCode: 'supplier_type', dictLabel: '包装材料供应商', dictValue: 'package_supplier', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'supplier_level',
-    dictName: '供应商等级',
-    description: '供应商评级',
-    status: 'active',
-    items: [
-      { id: '720', dictCode: 'supplier_level', dictLabel: 'A级（优秀）', dictValue: 'A', dictSort: 1, status: 'active' },
-      { id: '721', dictCode: 'supplier_level', dictLabel: 'B级（良好）', dictValue: 'B', dictSort: 2, status: 'active' },
-      { id: '722', dictCode: 'supplier_level', dictLabel: 'C级（合格）', dictValue: 'C', dictSort: 3, status: 'active' },
-      { id: '723', dictCode: 'supplier_level', dictLabel: 'D级（不合格）', dictValue: 'D', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 通知字典 =====
-  {
-    dictCode: 'notification_type',
-    dictName: '通知类型',
-    description: '消息通知分类',
-    status: 'active',
-    items: [
-      { id: '800', dictCode: 'notification_type', dictLabel: '系统通知', dictValue: 'system', dictSort: 1, status: 'active' },
-      { id: '801', dictCode: 'notification_type', dictLabel: '审批通知', dictValue: 'approval', dictSort: 2, status: 'active' },
-      { id: '802', dictCode: 'notification_type', dictLabel: '任务通知', dictValue: 'task', dictSort: 3, status: 'active' },
-      { id: '803', dictCode: 'notification_type', dictLabel: '预警通知', dictValue: 'alert', dictSort: 4, status: 'active' },
-      { id: '804', dictCode: 'notification_type', dictLabel: '公告', dictValue: 'announcement', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'notification_channel',
-    dictName: '通知渠道',
-    description: '消息发送渠道',
-    status: 'active',
-    items: [
-      { id: '810', dictCode: 'notification_channel', dictLabel: '站内消息', dictValue: 'in_app', dictSort: 1, status: 'active' },
-      { id: '811', dictCode: 'notification_channel', dictLabel: '邮件', dictValue: 'email', dictSort: 2, status: 'active' },
-      { id: '812', dictCode: 'notification_channel', dictLabel: '短信', dictValue: 'sms', dictSort: 3, status: 'active' },
-      { id: '813', dictCode: 'notification_channel', dictLabel: '企业微信', dictValue: 'wechat', dictSort: 4, status: 'active' },
-      { id: '814', dictCode: 'notification_channel', dictLabel: '钉钉', dictValue: 'dingtalk', dictSort: 5, status: 'active' },
-    ],
-  },
-
-  // ===== 视频监控字典 =====
-  {
-    dictCode: 'video_record_type',
-    dictName: '录像类型',
-    description: '视频监控录像类型',
-    status: 'active',
-    items: [
-      { id: '900', dictCode: 'video_record_type', dictLabel: '定时录像', dictValue: 'timed', dictSort: 1, status: 'active' },
-      { id: '901', dictCode: 'video_record_type', dictLabel: '移动侦测', dictValue: 'motion', dictSort: 2, status: 'active' },
-      { id: '902', dictCode: 'video_record_type', dictLabel: '报警录像', dictValue: 'alarm', dictSort: 3, status: 'active' },
-      { id: '903', dictCode: 'video_record_type', dictLabel: '手动录像', dictValue: 'manual', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 追溯字典 =====
-  {
-    dictCode: 'trace_status',
-    dictName: '追溯状态',
-    description: '产品溯源状态',
-    status: 'active',
-    items: [
-      { id: '910', dictCode: 'trace_status', dictLabel: '种植中', dictValue: 'growing', dictSort: 1, status: 'active' },
-      { id: '911', dictCode: 'trace_status', dictLabel: '已采收', dictValue: 'harvested', dictSort: 2, status: 'active' },
-      { id: '912', dictCode: 'trace_status', dictLabel: '已检测', dictValue: 'tested', dictSort: 3, status: 'active' },
-      { id: '913', dictCode: 'trace_status', dictLabel: '已包装', dictValue: 'packaged', dictSort: 4, status: 'active' },
-      { id: '914', dictCode: 'trace_status', dictLabel: '已发货', dictValue: 'shipped', dictSort: 5, status: 'active' },
-      { id: '915', dictCode: 'trace_status', dictLabel: '已签收', dictValue: 'received', dictSort: 6, status: 'active' },
-    ],
-  },
-
-  // ===== 成本核算字典 =====
-  {
-    dictCode: 'cost_type',
-    dictName: '成本类型',
-    description: '成本核算分类',
-    status: 'active',
-    items: [
-      { id: '920', dictCode: 'cost_type', dictLabel: '物料成本', dictValue: 'material', dictSort: 1, status: 'active' },
-      { id: '921', dictCode: 'cost_type', dictLabel: '人工成本', dictValue: 'labor', dictSort: 2, status: 'active' },
-      { id: '922', dictCode: 'cost_type', dictLabel: '设备成本', dictValue: 'equipment', dictSort: 3, status: 'active' },
-      { id: '923', dictCode: 'cost_type', dictLabel: '能源成本', dictValue: 'energy', dictSort: 4, status: 'active' },
-      { id: '924', dictCode: 'cost_type', dictLabel: '其他成本', dictValue: 'other', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'budget_status',
-    dictName: '预算状态',
-    description: '预算执行状态',
-    status: 'active',
-    items: [
-      { id: '930', dictCode: 'budget_status', dictLabel: '进行中', dictValue: 'active', dictSort: 1, status: 'active' },
-      { id: '931', dictCode: 'budget_status', dictLabel: '已完成', dictValue: 'completed', dictSort: 2, status: 'active' },
-      { id: '932', dictCode: 'budget_status', dictLabel: '已超支', dictValue: 'over_budget', dictSort: 3, status: 'active' },
-      { id: '933', dictCode: 'budget_status', dictLabel: '已取消', dictValue: 'cancelled', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 工单字典 =====
-  {
-    dictCode: 'work_order_status',
-    dictName: '工单状态',
-    description: '工单流转状态',
-    status: 'active',
-    items: [
-      { id: '940', dictCode: 'work_order_status', dictLabel: '待处理', dictValue: 'pending', dictSort: 1, status: 'active' },
-      { id: '941', dictCode: 'work_order_status', dictLabel: '处理中', dictValue: 'processing', dictSort: 2, status: 'active' },
-      { id: '942', dictCode: 'work_order_status', dictLabel: '已完成', dictValue: 'completed', dictSort: 3, status: 'active' },
-      { id: '943', dictCode: 'work_order_status', dictLabel: '已关闭', dictValue: 'closed', dictSort: 4, status: 'active' },
-      { id: '944', dictCode: 'work_order_status', dictLabel: '已退回', dictValue: 'returned', dictSort: 5, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'work_order_type',
-    dictName: '工单类型',
-    description: '工单分类',
-    status: 'active',
-    items: [
-      { id: '950', dictCode: 'work_order_type', dictLabel: '维修工单', dictValue: 'repair', dictSort: 1, status: 'active' },
-      { id: '951', dictCode: 'work_order_type', dictLabel: '保养工单', dictValue: 'maintenance', dictSort: 2, status: 'active' },
-      { id: '952', dictCode: 'work_order_type', dictLabel: '巡检工单', dictValue: 'inspection', dictSort: 3, status: 'active' },
-      { id: '953', dictCode: 'work_order_type', dictLabel: '安装工单', dictValue: 'install', dictSort: 4, status: 'active' },
-    ],
-  },
-
-  // ===== 通用状态字典 =====
-  {
-    dictCode: 'common_status',
-    dictName: '通用状态',
-    description: '通用的启用/停用状态',
-    status: 'active',
-    items: [
-      { id: '960', dictCode: 'common_status', dictLabel: '启用', dictValue: 'active', dictSort: 1, status: 'active' },
-      { id: '961', dictCode: 'common_status', dictLabel: '停用', dictValue: 'inactive', dictSort: 2, status: 'active' },
-      { id: '962', dictCode: 'common_status', dictLabel: '草稿', dictValue: 'draft', dictSort: 3, status: 'active' },
-      { id: '963', dictCode: 'common_status', dictLabel: '已发布', dictValue: 'published', dictSort: 4, status: 'active' },
-      { id: '964', dictCode: 'common_status', dictLabel: '已归档', dictValue: 'archived', dictSort: 5, status: 'active' },
-      { id: '965', dictCode: 'common_status', dictLabel: '已删除', dictValue: 'deleted', dictSort: 6, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'boolean_yes_no',
-    dictName: '是/否',
-    description: '布尔值显示',
-    status: 'active',
-    items: [
-      { id: '970', dictCode: 'boolean_yes_no', dictLabel: '是', dictValue: 'true', dictSort: 1, status: 'active' },
-      { id: '971', dictCode: 'boolean_yes_no', dictLabel: '否', dictValue: 'false', dictSort: 2, status: 'active' },
-    ],
-  },
-  {
-    dictCode: 'pagination_size',
-    dictName: '分页大小',
-    description: '表格分页选项',
-    status: 'active',
-    items: [
-      { id: '980', dictCode: 'pagination_size', dictLabel: '10', dictValue: '10', dictSort: 1, status: 'active' },
-      { id: '981', dictCode: 'pagination_size', dictLabel: '20', dictValue: '20', dictSort: 2, status: 'active' },
-      { id: '982', dictCode: 'pagination_size', dictLabel: '50', dictValue: '50', dictSort: 3, status: 'active' },
-      { id: '983', dictCode: 'pagination_size', dictLabel: '100', dictValue: '100', dictSort: 4, status: 'active' },
-    ],
-  },
-];
+import {
+  Book,
+  Plus,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  RefreshCw,
+  X,
+  Save,
+  ChevronUp,
+} from 'lucide-react';
+import {
+  Dictionary,
+  getDictionaries,
+  getDictionaryCategories,
+  saveDictionaries,
+  getCategoryChineseName,
+} from '../services/dictionaryService';
 
 export default function DictionaryManagement() {
-  const [dicts, setDicts] = useState<DictType[]>([]);
-  const [selectedDict, setSelectedDict] = useState<DictType | null>(null);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [showAddDict, setShowAddDict] = useState(false);
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [editingItem, setEditingItem] = useState<DictItem | null>(null);
-  const [newDict, setNewDict] = useState<Partial<DictType>>({});
-  const [newItem, setNewItem] = useState<Partial<DictItem>>({});
+  const [dictionaries, setDictionaries] = useState<Dictionary[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // API基础路径
-  const API_BASE = '/api/dictionary';
+  // 展开的分类集合
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  // 从API加载字典数据
-  const loadFromApi = async () => {
+  // 编辑状态
+  const [editingItem, setEditingItem] = useState<Dictionary | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewItem, setIsNewItem] = useState(false);
+
+  // 新增分类弹窗状态
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryCode, setNewCategoryCode] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // 加载数据
+  const loadData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/dictionaries`);
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          // 将API数据转换为页面使用的格式
-          const dictMap = new Map<string, DictType>();
-          for (const item of data) {
-            const categoryCode = item.category || item.category_code;
-            const dictCode = item.code || item.dict_code;
-            const dictLabel = item.name || item.dict_label;
-            const dictValue = item.name || item.dict_value || item.dict_label;
-            const sortOrder = item.sort_number || item.sort_order || 0;
-
-            if (!dictMap.has(categoryCode)) {
-              dictMap.set(categoryCode, {
-                dictCode: categoryCode,
-                dictName: getDictTypeName(categoryCode),
-                description: getDictTypeDescription(categoryCode),
-                status: 'active',
-                items: [],
-              });
-            }
-            dictMap.get(categoryCode)!.items.push({
-              id: item.id,
-              dictCode: dictCode,
-              dictLabel: dictLabel,
-              dictValue: dictValue,
-              dictSort: sortOrder,
-              status: item.status === 'active' ? 'active' : 'inactive',
-            });
-          }
-          // 对每个字典类型的items按sort排序
-          for (const dict of dictMap.values()) {
-            dict.items.sort((a, b) => a.dictSort - b.dictSort);
-          }
-          return Array.from(dictMap.values());
-        }
-      }
-    } catch (error) {
-      console.error('从API加载字典失败:', error);
-    }
-    return null;
-  };
-
-  // 保存字典到API
-  const saveToApi = async (dictsToSave: DictType[]) => {
-    try {
-      const inserted: any[] = [];
-      const updated: any[] = [];
-      const deleted: string[] = [];
-
-      for (const dict of dictsToSave) {
-        for (const item of dict.items) {
-          const itemData = {
-            category_code: dict.dictCode,
-            dict_code: item.dictCode,
-            dict_label: item.dictLabel,
-            dict_value: item.dictValue || item.dictLabel,
-            sort_order: item.dictSort,
-          };
-
-          if (item.id.startsWith('temp_')) {
-            inserted.push(itemData);
-          } else {
-            updated.push({ id: item.id, ...itemData });
-          }
-        }
-      }
-
-      const response = await fetch(`${API_BASE}/dictionaries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inserted, updated, deleted }),
-      });
-      return response.ok;
-    } catch (error) {
-      console.error('保存字典到API失败:', error);
-      return false;
+      setLoading(true);
+      setError(null);
+      const [dictData, catData] = await Promise.all([
+        getDictionaries(),
+        getDictionaryCategories(),
+      ]);
+      setDictionaries(dictData);
+      setCategories(catData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载数据失败');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 初始化加载数据
   useEffect(() => {
-    const loadData = async () => {
-      // 优先尝试从API加载
-      const apiData = await loadFromApi();
-      if (apiData && apiData.length > 0) {
-        setDicts(apiData);
-      } else {
-        // API失败时使用localStorage
-        const stored = localStorage.getItem('yuanxingtu_dictionaries');
-        if (stored) {
-          try {
-            setDicts(JSON.parse(stored));
-          } catch {
-            setDicts(DEFAULT_DICTS);
-          }
-        } else {
-          setDicts(DEFAULT_DICTS);
-        }
-      }
-    };
     loadData();
   }, []);
 
-  // 数据变化时同步保存
-  useEffect(() => {
-    if (dicts.length > 0) {
-      // 保存到localStorage作为后备
-      localStorage.setItem('yuanxingtu_dictionaries', JSON.stringify(dicts));
+  // 切换分类展开/折叠
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
     }
-  }, [dicts]);
-
-  const filteredDicts = dicts.filter(d =>
-    d.dictName.includes(searchKeyword) ||
-    d.dictCode.includes(searchKeyword) ||
-    d.description.includes(searchKeyword)
-  );
-
-  const handleAddDict = () => {
-    if (!newDict.dictCode || !newDict.dictName) return;
-    const dict: DictType = {
-      dictCode: newDict.dictCode,
-      dictName: newDict.dictName,
-      description: newDict.description || '',
-      status: 'active',
-      items: [],
-    };
-    setDicts([...dicts, dict]);
-    setNewDict({});
-    setShowAddDict(false);
+    setExpandedCategories(newExpanded);
   };
 
-  const handleDeleteDict = (dictCode: string) => {
-    if (confirm(`确定要删除字典"${dicts.find(d => d.dictCode === dictCode)?.dictName}"吗？`)) {
-      setDicts(dicts.filter(d => d.dictCode !== dictCode));
-      if (selectedDict?.dictCode === dictCode) {
-        setSelectedDict(null);
-      }
+  // 展开所有分类
+  const expandAll = async () => {
+    // 如果字典数据为空，先加载数据
+    if (dictionaries.length === 0) {
+      await loadData();
     }
+    setExpandedCategories(new Set(categories));
   };
 
-  const handleSelectDict = (dict: DictType) => {
-    setSelectedDict(dict);
-    setShowAddItem(false);
-    setEditingItem(null);
+  // 折叠所有分类
+  const collapseAll = () => {
+    setExpandedCategories(new Set());
   };
 
-  const handleAddItem = () => {
-    if (!selectedDict || !newItem.dictLabel || !newItem.dictValue) return;
-    const item: DictItem = {
-      id: Date.now().toString(),
-      dictCode: selectedDict.dictCode,
-      dictLabel: newItem.dictLabel,
-      dictValue: newItem.dictValue,
-      dictSort: newItem.dictSort || 0,
-      status: 'active',
-      remark: newItem.remark,
-    };
-    const updatedDict = {
-      ...selectedDict,
-      items: [...selectedDict.items, item].sort((a, b) => a.dictSort - b.dictSort),
-    };
-    setDicts(dicts.map(d => d.dictCode === selectedDict.dictCode ? updatedDict : d));
-    setSelectedDict(updatedDict);
-    setNewItem({});
-    setShowAddItem(false);
+  // 按分类过滤字典项（不受搜索词影响）
+  const getDictionariesByCategory = (category: string) => {
+    return dictionaries
+      .filter(d => d.category === category)
+      .sort((a, b) => (a.sortNumber || 0) - (b.sortNumber || 0));
   };
 
-  const handleEditItem = (item: DictItem) => {
-    setEditingItem(item);
-    setNewItem(item);
+  // 打开新增字典项弹窗
+  const handleAddItem = (category: string) => {
+    setEditingItem({
+      category,
+      code: '',
+      name: '',
+      sortNumber: 0,
+    });
+    setIsNewItem(true);
+    setIsModalOpen(true);
   };
 
-  const handleSaveItem = () => {
-    if (!selectedDict || !editingItem) return;
-    const updatedItems = selectedDict.items.map(i =>
-      i.id === editingItem.id
-        ? { ...i, ...newItem, dictSort: newItem.dictSort || 0 }
-        : i
-    ).sort((a, b) => a.dictSort - b.dictSort);
-    const updatedDict = { ...selectedDict, items: updatedItems };
-    setDicts(dicts.map(d => d.dictCode === selectedDict.dictCode ? updatedDict : d));
-    setSelectedDict(updatedDict);
-    setEditingItem(null);
-    setNewItem({});
+  // 打开编辑字典项弹窗
+  const handleEditItem = (item: Dictionary) => {
+    setEditingItem({ ...item });
+    setIsNewItem(false);
+    setIsModalOpen(true);
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    if (!selectedDict) return;
-    if (confirm('确定要删除这个字典项吗？')) {
-      const updatedDict = {
-        ...selectedDict,
-        items: selectedDict.items.filter(i => i.id !== itemId),
-      };
-      setDicts(dicts.map(d => d.dictCode === selectedDict.dictCode ? updatedDict : d));
-      setSelectedDict(updatedDict);
+  // 保存字典项
+  const handleSave = async () => {
+    if (!editingItem) return;
+    if (!editingItem.name?.trim()) {
+      alert('请输入字典名称');
+      return;
+    }
+    if (!editingItem.code?.trim()) {
+      alert('请输入字典编码');
+      return;
+    }
+    try {
+      setLoading(true);
+      await saveDictionaries({
+        inserted: isNewItem && !editingItem.id ? [editingItem] : [],
+        updated: editingItem.id ? [editingItem] : [],
+        deleted: [],
+      });
+      setIsModalOpen(false);
+      setEditingItem(null);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    if (confirm('确定要恢复默认字典吗？当前自定义的字典将被覆盖。')) {
-      setDicts(DEFAULT_DICTS);
-      setSelectedDict(null);
+  // 删除字典项
+  const handleDelete = async (item: Dictionary) => {
+    if (!confirm(`确定要删除字典项"${item.name}"吗？`)) return;
+    try {
+      setLoading(true);
+      await saveDictionaries({
+        inserted: [],
+        updated: [],
+        deleted: [item.id!],
+      });
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '删除失败');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const totalItems = dicts.reduce((sum, d) => sum + d.items.length, 0);
+  // 保存新分类
+  const handleSaveNewCategory = () => {
+    if (!newCategoryCode.trim() || !newCategoryName.trim()) {
+      alert('请填写完整的分类信息');
+      return;
+    }
+    setEditingItem({
+      category: newCategoryCode.trim(),
+      code: 'NEW',
+      name: newCategoryName.trim(),
+      sortNumber: 0,
+    });
+    setShowAddCategoryModal(false);
+    setIsNewItem(true);
+    setIsModalOpen(true);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <BookOpen className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">数据字典管理</h1>
-            <p className="text-gray-500">管理系统中的所有枚举值、状态、类型等字典数据</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">共 <span className="font-bold text-gray-900">{dicts.length}</span> 个字典类型，<span className="font-bold text-gray-900">{totalItems}</span> 个字典项</span>
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4" />
-            恢复默认
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">字典类型</h2>
-                <button
-                  onClick={() => setShowAddDict(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4" />
-                  新增
-                </button>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="搜索字典..."
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+    <div className="space-y-4">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </Link>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Book className="w-6 h-6 text-white" />
             </div>
-
-            <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
-              {filteredDicts.map(dict => (
-                <div
-                  key={dict.dictCode}
-                  onClick={() => handleSelectDict(dict)}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 ${
-                    selectedDict?.dictCode === dict.dictCode ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium text-gray-900">{dict.dictName}</span>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteDict(dict.dictCode);
-                      }}
-                      className="text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{dict.dictCode}</p>
-                  <p className="text-xs text-gray-400 mt-1">{dict.description}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-gray-500">{dict.items.length} 个字典项</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      dict.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {dict.status === 'active' ? '启用' : '禁用'}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">数据字典</h1>
+              <p className="text-gray-500">管理系统数据字典配置</p>
             </div>
           </div>
-        </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow">
-            {selectedDict ? (
-              <>
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">{selectedDict.dictName}</h2>
-                      <p className="text-sm text-gray-500">{selectedDict.description}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowAddItem(true);
-                        setEditingItem(null);
-                        setNewItem({ dictSort: selectedDict.items.length + 1 });
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4" />
-                      新增字典项
-                    </button>
-                  </div>
-                </div>
-
-                {(showAddItem || editingItem) && (
-                  <div className="p-4 bg-gray-50 border-b border-gray-200">
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">
-                      {editingItem ? '编辑字典项' : '新增字典项'}
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">字典标签</label>
-                        <input
-                          type="text"
-                          value={newItem.dictLabel || ''}
-                          onChange={(e) => setNewItem({ ...newItem, dictLabel: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="如：待审批"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">字典值</label>
-                        <input
-                          type="text"
-                          value={newItem.dictValue || ''}
-                          onChange={(e) => setNewItem({ ...newItem, dictValue: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="如：pending"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
-                        <input
-                          type="number"
-                          value={newItem.dictSort || 0}
-                          onChange={(e) => setNewItem({ ...newItem, dictSort: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                        <input
-                          type="text"
-                          value={newItem.remark || ''}
-                          onChange={(e) => setNewItem({ ...newItem, remark: e.target.value })}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="可选"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-4">
-                      <button
-                        onClick={editingItem ? handleSaveItem : handleAddItem}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                      >
-                        {editingItem ? '保存' : '添加'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowAddItem(false);
-                          setEditingItem(null);
-                          setNewItem({});
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="divide-y divide-gray-200">
-                  {selectedDict.items.map(item => (
-                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-gray-900 w-24">{item.dictLabel}</span>
-                        <code className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.dictValue}</code>
-                        <span className="text-xs text-gray-400">排序: {item.dictSort}</span>
-                        {item.remark && <span className="text-xs text-gray-400">{item.remark}</span>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditItem(item)}
-                          className="text-gray-400 hover:text-blue-600"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteItem(item.id)}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="p-12 text-center">
-                <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">请在左侧选择一个字典类型</p>
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={expandAll}
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+            >
+              <ChevronDown className="w-4 h-4" />
+              全部展开
+            </button>
+            <button
+              onClick={collapseAll}
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+            >
+              <ChevronUp className="w-4 h-4" />
+              全部折叠
+            </button>
+            <button
+              onClick={() => loadData()}
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              刷新
+            </button>
+            <button
+              onClick={() => setShowAddCategoryModal(true)}
+              className="h-10 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 hover:shadow-lg transition-shadow"
+            >
+              <Plus className="w-4 h-4" />
+              新增分类
+            </button>
           </div>
         </div>
       </div>
 
-      {showAddDict && (
+      {/* 搜索栏 */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索字典名称或编码..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* 分类折叠面板列表 */}
+      <div className="space-y-2">
+        {categories
+          .map((category) => {
+            const isExpanded = expandedCategories.has(category);
+            const items = getDictionariesByCategory(category);
+            const chineseName = getCategoryChineseName(category);
+            return { category, isExpanded, items, chineseName };
+          })
+          .filter(item => {
+            // 如果没有搜索词，显示所有分类
+            if (!searchTerm) {
+              return true;
+            }
+            // 如果有搜索词，检查是否匹配分类名称或字典项
+            const searchLower = searchTerm.toLowerCase();
+            // 匹配分类名称
+            if (item.chineseName.toLowerCase().includes(searchLower) ||
+                item.category.toLowerCase().includes(searchLower)) {
+              return true;
+            }
+            // 匹配字典项（检查名称或编码）
+            const hasMatchingItems = item.items.some(d =>
+              d.name.toLowerCase().includes(searchLower) ||
+              d.code.toLowerCase().includes(searchLower)
+            );
+            if (hasMatchingItems) {
+              return true;
+            }
+            return false;
+          })
+          .map(({ category, isExpanded, items, chineseName }) => {
+            return (
+            <div key={category} className="bg-white rounded-xl shadow-sm overflow-hidden w-1/2">
+              {/* 分类头部 */}
+              <div
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleCategory(category)}
+              >
+                <div className="flex items-center gap-3">
+                  {isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  )}
+                  <span className="text-lg font-medium text-gray-900">{chineseName}</span>
+                  <span className="text-sm text-gray-400">({category})</span>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-full">
+                    {items.length} 项
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddItem(category);
+                    }}
+                    className="px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增
+                  </button>
+                </div>
+              </div>
+
+              {/* 字典项列表 */}
+              {isExpanded && (
+                <div className="border-t border-gray-100">
+                  {items.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                      暂无字典项
+                    </div>
+                  ) : (
+                    <table className="table-fixed w-full">
+                      <colgroup>
+                        <col className="w-1/5" />
+                        <col className="w-1/5" />
+                        <col className="w-1/5" />
+                        <col className="w-1/5" />
+                        <col className="w-1/5" />
+                      </colgroup>
+                      <thead>
+                        <tr className="bg-indigo-50 text-left text-xs text-indigo-600 uppercase font-medium">
+                          <th className="py-2 pl-4">编码</th>
+                          <th className="py-2 text-center">名称</th>
+                          <th className="py-2 text-center">排序</th>
+                          <th className="py-2 text-center">状态</th>
+                          <th className="py-2 pr-4 text-right">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {items.map((item) => (
+                          <tr key={item.id} className="hover:bg-blue-50 transition-colors">
+                            <td className="py-1.5 pl-4">
+                              <span className="font-mono text-xs text-gray-700">{item.code}</span>
+                            </td>
+                            <td className="py-1.5 text-center">
+                              <span className="text-sm text-gray-900 truncate block">{item.name}</span>
+                            </td>
+                            <td className="py-1.5 text-center">
+                              <span className="text-sm text-gray-500">{item.sortNumber || 0}</span>
+                            </td>
+                            <td className="py-1.5 text-center">
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                item.status === 'active'
+                                  ? 'bg-green-50 text-green-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {item.status === 'active' ? '启用' : '停用'}
+                              </span>
+                            </td>
+                            <td className="py-1.5 pr-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleEditItem(item)}
+                                  className="p-1 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                  title="编辑"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(item)}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 统计信息 */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>共 {categories.length} 个分类，{dictionaries.length} 个字典项</span>
+        </div>
+      </div>
+
+      {/* 新增/编辑字典项弹窗 */}
+      {isModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">新增字典类型</h3>
-            <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isNewItem && !editingItem.id ? '新增字典项' : '编辑字典项'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* 分类（只读） */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">字典编码</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
                 <input
                   type="text"
-                  value={newDict.dictCode || ''}
-                  onChange={(e) => setNewDict({ ...newDict, dictCode: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="如：crop_type"
+                  value={`${getCategoryChineseName(editingItem.category)} (${editingItem.category})`}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+                  disabled
                 />
               </div>
+
+              {/* 编码 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">字典名称</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  编码 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
-                  value={newDict.dictName || ''}
-                  onChange={(e) => setNewDict({ ...newDict, dictName: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="如：作物类型"
+                  value={editingItem.code || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, code: e.target.value })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：active"
+                  disabled={!isNewItem || !!editingItem.id}
                 />
               </div>
+
+              {/* 名称 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                <textarea
-                  value={newDict.description || ''}
-                  onChange={(e) => setNewDict({ ...newDict, description: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="描述这个字典的用途"
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  名称 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.name || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：启用"
+                  autoFocus
+                />
+              </div>
+
+              {/* 排序 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
+                <input
+                  type="number"
+                  value={editingItem.sortNumber || 0}
+                  onChange={(e) => setEditingItem({ ...editingItem, sortNumber: parseInt(e.target.value) || 0 })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="0"
                 />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 mt-6">
+
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100">
               <button
-                onClick={() => {
-                  setShowAddDict(false);
-                  setNewDict({});
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
               >
                 取消
               </button>
               <button
-                onClick={handleAddDict}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                onClick={handleSave}
+                disabled={loading || !editingItem.code || !editingItem.name}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-1"
               >
-                确定
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新增分类弹窗 */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">新增字典分类</h3>
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  分类编码 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryCode}
+                  onChange={(e) => setNewCategoryCode(e.target.value)}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：custom_category"
+                />
+                <p className="mt-1 text-xs text-gray-400">建议使用英文下划线格式，如 custom_category</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  分类名称 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：自定义分类"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100">
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveNewCategory}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                保存
               </button>
             </div>
           </div>

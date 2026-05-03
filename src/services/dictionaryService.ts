@@ -30,95 +30,80 @@ export interface Dictionary {
 export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   // 审批相关
   approval_status: '审批状态',
-  approval_action: '审批操作',
-  approval_type: '审批类型',
-  // 任务相关
-  task_type: '任务类型',
-  task_status: '任务状态',
   // 考勤相关
   attendance_status: '考勤状态',
   leave_type: '请假类型',
+  // 合同相关
+  contract_status: '合同状态',
+  contract_type: '合同类型',
+  // 成本相关
+  cost_category: '成本分类',
+  // 作物相关
+  crop_category: '作物类别',
   // 人事相关
   employee_status: '员工状态',
   gender: '性别',
-  education: '学历',
   recruitment_source: '招聘来源',
   onboarding_status: '入职状态',
-  resignation_type: '离职类型',
   resignation_reason: '离职原因',
-  return_status: '物品归还状态',
-  // 合同相关
-  contract_type: '合同类型',
-  contract_status: '合同状态',
-  // 岗位相关
-  position_type: '岗位类型',
-  position_level: '岗位职级',
-  // 供应商相关
-  supplier_type: '供应商类型',
-  supplier_status: '供应商状态',
-  supplier_attribute: '供应商属性',
-  supplier_level: '供应商等级',
-  // 仓库相关
-  warehouse_type: '仓库类型',
-  warehouse_location: '仓库位置',
+  resignation_type: '离职类型',
+  return_status: '归还状态',
   // 温室相关
-  greenhouse_type: '温室类型',
   greenhouse_status: '温室状态',
-  // 作物相关
-  crop_category: '作物类别',
-  crop_variety: '作物品种',
-  planting_mode: '种植模式',
-  growth_stage: '生长阶段',
-  // 物料相关
-  material_type: '物料类型',
-  material_unit: '物料单位',
-  material_status: '物料状态',
-  // 生产相关
-  production_status: '生产状态',
-  batch_status: '批次状态',
-  tech_solution_status: '技术方案状态',
+  greenhouse_type: '温室类型',
+  // 采收相关
   harvest_status: '采收状态',
-  // 设备相关
-  device_type: '设备类型',
-  device_status: '设备状态',
-  sensor_type: '传感器类型',
+  // 保险相关
+  insurance_type: '保险类型',
+  // 物料相关
+  material_status: '物料状态',
+  material_type: '物料类型',
+  // 操作相关
+  operator: '操作人员',
+  // 加班相关
+  overtime_type: '加班类型',
+  // 绩效相关
+  performance_status: '考核状态',
+  // 种植相关
+  planting_area: '种植区域',
+  planting_mode: '种植模式',
+  planting_status: '种植状态',
+  // 岗位相关
+  position_level: '岗位职级',
+  position_type: '岗位类型',
+  // 扩繁相关
+  propagation_multiple: '扩繁倍数',
   // 采购相关
   purchase_type: '采购类型',
-  purchase_status: '采购状态',
-  // 成本相关
-  cost_category: '成本分类',
-  cost_type: '成本类型',
-  budget_status: '预算状态',
-  // 通知相关
-  notification_type: '通知类型',
-  notification_channel: '通知渠道',
-  // 预警相关
-  alert_level: '预警级别',
-  alert_type: '预警类型',
-  // 人工相关
-  worker_type: '工人类型',
-  worker_status: '工人状态',
-  insurance_type: '保险类型',
+  // 临时工相关
   temp_worker_source: '临时工来源',
   temp_worker_status: '临时工状态',
-  work_zone: '作业区域',
-  salary_status: '薪资状态',
+  // 技能相关
   skill_status: '技能状态',
-  performance_status: '考核状态',
-  // 工单相关
-  work_order_status: '工单状态',
-  work_order_type: '工单类型',
-  // 视频监控
-  video_record_type: '录像类型',
-  // 追溯相关
-  trace_status: '追溯状态',
-  // 通用
-  priority: '优先级',
-  status: '状态',
-  common_status: '通用状态',
-  boolean_yes_no: '是否',
-  pagination_size: '分页大小',
-  unit: '单位',
+  // 种源相关
+  source_origin: '来源途径',
+  source_type: '种源类型',
+  // 供应商相关
+  supplier_attribute: '供应商属性',
+  supplier_status: '供应商状态',
+  supplier_type: '供应商类型',
+  // 成活率相关
+  survival_rate_target: '目标成活率',
+  // 任务相关
+  task_status: '任务状态',
+  // 仓库相关
+  warehouse_location: '仓库位置',
+  // 作业区域
+  work_zone: '作业区域',
+  // 工人相关
+  worker_status: '工人状态',
+  worker_type: '工人类型',
+  // 薪资相关
+  salary_status: '薪资状态',
+  // 育苗相关
+  seedling_plan_type: '育苗计划类型',
+  seedling_site: '育苗场地',
+  seedling_type: '育苗方式',
 };
 
 // 获取分类的中文名称
@@ -276,6 +261,8 @@ const DEFAULT_DICTIONARIES: Dictionary[] = [
 /**
  * 获取字典列表
  * 优先从API获取，失败时使用本地存储
+ * 后端返回字段: category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at
+ * 前端期望字段: category, code, name, sortNumber, status, createdAt, updatedAt
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
   try {
@@ -285,22 +272,55 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
       url += `?category=${encodeURIComponent(category)}`;
     }
     const response = await fetch(url);
-    const data = await response.json();
-    if (Array.isArray(data)) {
-      localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(data));
-      return data;
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    throw new Error('Invalid response format');
+
+    const data = await response.json();
+
+    // 调试日志
+    console.log('[DictionaryService] API 返回数据量:', Array.isArray(data) ? data.length : '非数组');
+
+    if (Array.isArray(data) && data.length > 0) {
+      // 字段映射：将后端字段转换为前端字段
+      const mappedData: Dictionary[] = data.map((item: Record<string, unknown>) => ({
+        id: item.id as string,
+        category: item.category_code as string,
+        code: item.dict_code as string,
+        name: item.dict_label as string,
+        sortNumber: item.sort_order as number,
+        status: item.status as string,
+        createdAt: item.created_at as string,
+        updatedAt: item.updated_at as string,
+      }));
+
+      console.log('[DictionaryService] 映射后的第一条数据:', mappedData[0]);
+
+      localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(mappedData));
+      return mappedData;
+    }
+
+    // API 返回空数组或无效数据，尝试使用本地存储
+    console.log('[DictionaryService] API 返回空，使用本地存储');
+    throw new Error('API 返回空数据');
+
   } catch (error) {
+    console.log('[DictionaryService] API 调用失败，使用本地存储:', error);
+
     const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        return category ? parsed.filter((d: Dictionary) => d.category === category) : parsed;
+        const result = category ? parsed.filter((d: Dictionary) => d.category === category) : parsed;
+        console.log('[DictionaryService] 本地存储数据量:', result.length);
+        return result;
       } catch {
+        console.log('[DictionaryService] 本地存储解析失败，使用默认数据');
         return DEFAULT_DICTIONARIES;
       }
     }
+    console.log('[DictionaryService] 无本地存储，使用默认数据');
     return DEFAULT_DICTIONARIES;
   }
 }
@@ -335,16 +355,32 @@ export async function getDictionaryCategories(): Promise<string[]> {
 /**
  * 保存字典（新增或更新）
  * 使用 fetch 直接调用，绕过 apiClient 的响应格式验证
+ * 前端字段: category, code, name, sortNumber -> 后端字段: category_code, dict_code, dict_label, sort_order
  */
 export async function saveDictionaries(data: {
   inserted: Dictionary[];
   updated: Dictionary[];
   deleted: string[];
 }): Promise<SaveResult<Dictionary>> {
+  // 转换字段格式：前端 -> 后端
+  const convertToBackend = (dict: Dictionary) => ({
+    category_code: dict.category,
+    dict_code: dict.code,
+    dict_label: dict.name,
+    dict_value: dict.name,
+    sort_order: dict.sortNumber || 0,
+  });
+
+  const backendData = {
+    inserted: data.inserted.map(convertToBackend),
+    updated: data.updated.map(convertToBackend),
+    deleted: data.deleted,
+  };
+
   const response = await fetch('/api/dictionary/dictionaries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(backendData)
   });
 
   if (!response.ok) {
