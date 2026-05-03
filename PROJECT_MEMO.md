@@ -422,9 +422,8 @@ hongzhiyun/
 | ProduceInventoryPage.tsx | 使用useWarehouses() | ✅ 已完成 |
 | ProduceInventoryAddModal.tsx | 使用useWarehouses() | ✅ 已完成 |
 
-#### 待改造文件（其他）
-- Dashboard.tsx - 多个模块
-- 其他业务组件...
+#### Phase 3 完成状态
+✅ **全部完成** - 共改造34个组件/页面
 
 #### 改造原则
 - **硬编码业务配置**（部门、人员、温室、仓库等）→ 从SettingsDataProvider获取
