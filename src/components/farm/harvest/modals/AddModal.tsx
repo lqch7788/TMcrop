@@ -1,6 +1,7 @@
 /**
  * 采收入库新增弹窗组件
  * 参照物料入库新增弹窗设计
+ * V3.1: 使用 API 驱动的 Select 组件替换硬编码选项
  */
 
 import React from 'react';
@@ -10,6 +11,10 @@ import {
   getProduceCategoryInfo,
 } from '../../../../data/produceCodeRule';
 import { getCurrentUsername } from '../../../../hooks/farm';
+import { DictSelect } from '../../../common/settings/DictSelect';
+import { UserSelect } from '../../../common/settings/UserSelect';
+import { GreenhouseSelect } from '../../../common/settings/GreenhouseSelect';
+import { WarehouseSelect } from '../../../common/settings/WarehouseSelect';
 
 interface ProductDetail {
   productCode: string;

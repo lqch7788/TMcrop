@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { UserSelect } from '../common/settings/UserSelect';
 
 export function PurchasePlanPage() {
   // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
@@ -1587,23 +1588,16 @@ export function PurchasePlanPage() {
               {/* 第2行：申请人 + 申请部门 + 需求日期 */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">申请人</label>
-                <select
+                <UserSelect
                   value={currentEditingPlan?.applicant || ''}
-                  onChange={(e) => {
-                    setCurrentEditingPlan({...currentEditingPlan!, applicant: e.target.value});
+                  onChange={(value) => {
+                    setCurrentEditingPlan({...currentEditingPlan!, applicant: value});
                     if (selectedPlanCode) {
-                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicant: e.target.value } }));
+                      setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), applicant: value } }));
                     }
                   }}
-                  className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
-                >
-                  <option value="">请选择</option>
-                  <option value="李建国">李建国</option>
-                  <option value="王建华">王建华</option>
-                  <option value="张建华">张建华</option>
-                  <option value="刘小燕">刘小燕</option>
-                  <option value="刘大海">刘大海</option>
-                </select>
+                  placeholder="请选择"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">申请部门</label>

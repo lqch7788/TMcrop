@@ -16,6 +16,10 @@ export interface CurrentUser {
   realName: string;
   /** 部门 */
   department?: string;
+  /** 角色列表 */
+  roles: string[];
+  /** 是否是管理员 */
+  isAdmin: boolean;
 }
 
 /**
@@ -29,11 +33,33 @@ export function useCurrentUser() {
     const userId = localStorage.getItem('userId') || '';
     const realName = localStorage.getItem('realName') || username || '未知用户';
 
+    // 获取角色信息
+    let roles: string[] = [];
+    try {
+      const rolesStr = localStorage.getItem('userRoles');
+      if (rolesStr) {
+        roles = JSON.parse(rolesStr);
+      }
+    } catch (e) {
+      roles = [];
+    }
+
+    // 检查是否是管理员
+    const isAdmin = localStorage.getItem('isAdmin') === 'true' ||
+      roles.some(roleOid => {
+        const roleOidLower = roleOid?.toLowerCase() || '';
+        return roleOid === 'ROLE001' ||
+               roleOid === 'ROLE_ADMIN' ||
+               roleOidLower.includes('admin');
+      });
+
     return {
       userId,
       username,
       realName,
-      department: localStorage.getItem('department') || undefined
+      department: localStorage.getItem('department') || undefined,
+      roles,
+      isAdmin
     };
   });
 
@@ -44,11 +70,28 @@ export function useCurrentUser() {
       const userId = localStorage.getItem('userId') || '';
       const realName = localStorage.getItem('realName') || username || '未知用户';
 
+      // 获取角色信息
+      let roles: string[] = [];
+      try {
+        const rolesStr = localStorage.getItem('userRoles');
+        if (rolesStr) {
+          roles = JSON.parse(rolesStr);
+        }
+      } catch (e) {
+        roles = [];
+      }
+
+      // 检查是否是管理员
+      const isAdmin = localStorage.getItem('isAdmin') === 'true' ||
+        roles.some(roleOid => roleOid === 'ROLE001' || (roleOid && roleOid.toLowerCase().includes('admin')));
+
       setCurrentUser({
         userId,
         username,
         realName,
-        department: localStorage.getItem('department') || undefined
+        department: localStorage.getItem('department') || undefined,
+        roles,
+        isAdmin
       });
     };
 
@@ -62,11 +105,33 @@ export function useCurrentUser() {
     const userId = localStorage.getItem('userId') || '';
     const realName = localStorage.getItem('realName') || username || '未知用户';
 
+    // 获取角色信息
+    let roles: string[] = [];
+    try {
+      const rolesStr = localStorage.getItem('userRoles');
+      if (rolesStr) {
+        roles = JSON.parse(rolesStr);
+      }
+    } catch (e) {
+      roles = [];
+    }
+
+    // 检查是否是管理员
+    const isAdmin = localStorage.getItem('isAdmin') === 'true' ||
+      roles.some(roleOid => {
+        const roleOidLower = roleOid?.toLowerCase() || '';
+        return roleOid === 'ROLE001' ||
+               roleOid === 'ROLE_ADMIN' ||
+               roleOidLower.includes('admin');
+      });
+
     setCurrentUser({
       userId,
       username,
       realName,
-      department: localStorage.getItem('department') || undefined
+      department: localStorage.getItem('department') || undefined,
+      roles,
+      isAdmin
     });
   }, []);
 

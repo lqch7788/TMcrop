@@ -12,7 +12,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError('');
 
     // 查找用户
@@ -32,9 +32,32 @@ export default function Login() {
     // 登录成功，存储登录状态
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('username', user.name);
-    localStorage.setItem('userId', user.id);
+    localStorage.setItem('userId', user.id || user.oid || '');
     localStorage.setItem('realName', user.name);
     localStorage.setItem('department', user.department || '');
+
+    // 获取并存储用户角色信息
+    try {
+      const userOid = user.oid || user.id;
+      const response = await fetch(`/api/authority/users/${userOid}/roles`);
+      if (response.ok) {
+        const roles = await response.json();
+        localStorage.setItem('userRoles', JSON.stringify(roles));
+        // 检查是否是管理员（拥有系统管理员角色）
+        const isAdmin = roles.some((roleOid: string) => {
+          // 根据角色OID判断是否是管理员（支持多种命名方式）
+          const roleOidLower = roleOid?.toLowerCase() || '';
+          return roleOid === 'ROLE001' ||
+                 roleOid === 'ROLE_ADMIN' ||
+                 roleOidLower.includes('admin');
+        });
+        localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+      }
+    } catch (e) {
+      console.error('获取用户角色失败:', e);
+      // 默认设置为非管理员
+      localStorage.setItem('isAdmin', 'false');
+    }
 
     // 跳转到基地总览页面
     navigate('/dashboard');

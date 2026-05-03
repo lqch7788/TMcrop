@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { StaffSkill, TrainingRecord, SkillFormData, DEPARTMENTS } from '../types';
+import { StaffSkill, TrainingRecord, SkillFormData } from '../types';
 
 // Mock员工技能档案数据
 const mockStaffSkills: StaffSkill[] = [

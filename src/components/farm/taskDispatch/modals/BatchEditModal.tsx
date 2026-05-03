@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface TaskData {
   id: string;
@@ -148,14 +149,11 @@ export function BatchEditModal({
 
             {/* 优先级 - 可编辑 */}
             <FormField label="优先级">
-              <Select
+              <DictSelect
+                category="task_priority"
                 value={editedData.priority ?? currentTask.priority}
-                onChange={(e) => handleFieldChange('priority', e.target.value)}
-                options={[
-                  { value: 'urgent', label: '紧急' },
-                  { value: 'high', label: '高' },
-                  { value: 'normal', label: '普通' },
-                ]}
+                onChange={(value) => handleFieldChange('priority', value)}
+                placeholder="选择优先级"
               />
             </FormField>
 

@@ -1,29 +1,167 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Search, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+/**
+ * 种植区域管理页面（温室大棚管理）
+ * 功能：温室信息的新增、编辑、删除、查询
+ * 使用 API 替代硬编码数据
+ */
 
-const plantAreas = [
-  { id: 1, code: 'A001', name: '1号棚', type: '温室大棚', area: 1500, currentCrop: '番茄', mode: '春季番茄高产模式', manager: '张伟民', status: '使用中', statusClass: 'normal' },
-  { id: 2, code: 'A002', name: '2号棚', type: '温室大棚', area: 1200, currentCrop: '黄瓜', mode: '夏季黄瓜耐热模式', manager: '李明轩', status: '使用中', statusClass: 'normal' },
-  { id: 3, code: 'A003', name: '3号棚', type: '温室大棚', area: 1800, currentCrop: '草莓', mode: '冬季草莓促成模式', manager: '王建国', status: '空闲', statusClass: 'info' },
-  { id: 4, code: 'A004', name: '4号棚', type: '温室大棚', area: 1000, currentCrop: '-', mode: '-', manager: '-', status: '维护中', statusClass: 'warning' },
-  { id: 5, code: 'A005', name: '5号棚', type: '温室大棚', area: 1600, currentCrop: '辣椒', mode: '辣椒越夏栽培模式', manager: '赵俊杰', status: '使用中', statusClass: 'normal' },
-];
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { MapPin, Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
+
+interface Greenhouse {
+  id: string;
+  oid: string;
+  code: string;
+  name: string;
+  greenhouseType: string;
+  area: number;
+  location: string;
+  status: string;
+  createdAt: string;
+}
+
+const API_BASE = '/api/basic-data/greenhouses';
+
+const GREENHOUSE_TYPES = ['温室大棚', '春秋大棚', '日光温室', '智能温室', '其他'];
 
 export default function PlantAreaManagement() {
+  const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [editingGreenhouse, setEditingGreenhouse] = useState<Greenhouse | null>(null);
+  const [newGreenhouse, setNewGreenhouse] = useState<Partial<Greenhouse>>({ status: 'active' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const pageSize = 5;
 
-  const filteredAreas = plantAreas.filter(area => {
-    const matchSearch = area.name.toLowerCase().includes(searchTerm.toLowerCase()) || area.code.includes(searchTerm);
-    const matchStatus = statusFilter === '全部' || area.status === statusFilter;
+  // 加载温室数据
+  const loadGreenhouses = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success) {
+        setGreenhouses(result.data || []);
+      } else {
+        setError('获取温室数据失败');
+      }
+    } catch (err) {
+      console.error('加载温室数据失败:', err);
+      setError('加载温室数据失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGreenhouses();
+  }, [loadGreenhouses]);
+
+  const filteredGreenhouses = greenhouses.filter(gh => {
+    const matchSearch = gh.name?.toLowerCase().includes(searchTerm.toLowerCase()) || gh.code?.includes(searchTerm);
+    const matchStatus = statusFilter === '全部' || gh.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const totalPages = Math.ceil(filteredAreas.length / pageSize);
-  const paginatedAreas = filteredAreas.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(filteredGreenhouses.length / pageSize);
+  const paginatedGreenhouses = filteredGreenhouses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleSaveGreenhouse = async () => {
+    if (!newGreenhouse.name || !newGreenhouse.code) {
+      alert('请填写温室名称和编码');
+      return;
+    }
+    try {
+      if (editingGreenhouse) {
+        const response = await fetch(`${API_BASE}/${editingGreenhouse.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newGreenhouse.name,
+            code: newGreenhouse.code,
+            greenhouseType: newGreenhouse.greenhouseType,
+            area: newGreenhouse.area,
+            location: newGreenhouse.location,
+          }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          await loadGreenhouses();
+          setShowModal(false);
+          setEditingGreenhouse(null);
+          setNewGreenhouse({ status: 'active' });
+        } else {
+          alert(result.error || '更新失败');
+        }
+      } else {
+        const response = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newGreenhouse.name,
+            code: newGreenhouse.code,
+            greenhouseType: newGreenhouse.greenhouseType,
+            area: newGreenhouse.area,
+            location: newGreenhouse.location,
+          }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          await loadGreenhouses();
+          setShowModal(false);
+          setNewGreenhouse({ status: 'active' });
+        } else {
+          alert(result.error || '创建失败');
+        }
+      }
+    } catch (err) {
+      console.error('保存温室失败:', err);
+      alert('保存温室失败');
+    }
+  };
+
+  const deleteGreenhouse = async (id: string) => {
+    if (!confirm('确定删除该温室吗？')) return;
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        await loadGreenhouses();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('删除温室失败:', err);
+      alert('删除温室失败');
+    }
+  };
+
+  const editGreenhouse = (gh: Greenhouse) => {
+    setEditingGreenhouse(gh);
+    setNewGreenhouse(gh);
+    setShowModal(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -49,7 +187,7 @@ export default function PlantAreaManagement() {
               <MapPin className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{plantAreas.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{greenhouses.length}</p>
               <p className="text-xs text-gray-500">区域总数</p>
             </div>
           </div>
@@ -60,7 +198,7 @@ export default function PlantAreaManagement() {
               <span className="text-green-600 text-lg">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{plantAreas.filter(a => a.status === '使用中').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{greenhouses.filter(g => g.status === 'active').length}</p>
               <p className="text-xs text-gray-500">使用中</p>
             </div>
           </div>
@@ -71,7 +209,7 @@ export default function PlantAreaManagement() {
               <span className="text-amber-600 text-lg">!</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{plantAreas.filter(a => a.status === '维护中').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{greenhouses.filter(g => g.status === 'inactive').length}</p>
               <p className="text-xs text-gray-500">维护中</p>
             </div>
           </div>
@@ -82,8 +220,8 @@ export default function PlantAreaManagement() {
               <span className="text-gray-600 text-lg">○</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{plantAreas.filter(a => a.status === '空闲').length}</p>
-              <p className="text-xs text-gray-500">空闲</p>
+              <p className="text-2xl font-bold text-gray-900">{greenhouses.reduce((sum, g) => sum + (g.area || 0), 0)}</p>
+              <p className="text-xs text-gray-500">总面积(㎡)</p>
             </div>
           </div>
         </div>
@@ -109,9 +247,8 @@ export default function PlantAreaManagement() {
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option>全部</option>
-              <option>使用中</option>
-              <option>空闲</option>
-              <option>维护中</option>
+              <option>active</option>
+              <option>inactive</option>
             </select>
           </div>
           <div className="flex gap-2">
@@ -119,7 +256,10 @@ export default function PlantAreaManagement() {
               <Search className="w-4 h-4" />
               搜索
             </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <button
+              onClick={() => { setEditingGreenhouse(null); setNewGreenhouse({ status: 'active' }); setShowModal(true); }}
+              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               新增区域
             </button>
@@ -139,39 +279,41 @@ export default function PlantAreaManagement() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">区域名称</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">区域类型</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">面积(㎡)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">当前作物</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">种植模式</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">位置</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedAreas.map((area) => (
-                <tr key={area.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{area.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.area}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.currentCrop}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.mode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{area.manager}</td>
+              {paginatedGreenhouses.map((gh) => (
+                <tr key={gh.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{gh.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{gh.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{gh.greenhouseType || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{gh.area || 0}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{gh.location || '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      area.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
-                      area.statusClass === 'warning' ? 'bg-amber-100 text-amber-700' :
-                      'bg-blue-100 text-blue-700'
+                      gh.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {area.status}
+                      {gh.status === 'active' ? '使用中' : '停用'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
-                        <Edit className="w-4 h-4" />
+                      <button
+                        onClick={() => editGreenhouse(gh)}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        title="编辑"
+                      >
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
-                        <Eye className="w-4 h-4" />
+                      <button
+                        onClick={() => deleteGreenhouse(gh.id)}
+                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -183,7 +325,7 @@ export default function PlantAreaManagement() {
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
-            共 {filteredAreas.length} 条记录，第 {currentPage}/{totalPages} 页
+            共 {filteredGreenhouses.length} 条记录，第 {currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -216,6 +358,75 @@ export default function PlantAreaManagement() {
           </div>
         </div>
       </div>
+
+      {/* 编辑弹窗 */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingGreenhouse ? '编辑温室' : '新增温室'}</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">温室名称</label>
+                  <input
+                    type="text"
+                    value={newGreenhouse.name || ''}
+                    onChange={(e) => setNewGreenhouse({ ...newGreenhouse, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="如：1号棚"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">温室编码</label>
+                  <input
+                    type="text"
+                    value={newGreenhouse.code || ''}
+                    onChange={(e) => setNewGreenhouse({ ...newGreenhouse, code: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="如：A001"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">温室类型</label>
+                  <select
+                    value={newGreenhouse.greenhouseType || ''}
+                    onChange={(e) => setNewGreenhouse({ ...newGreenhouse, greenhouseType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">请选择</option>
+                    {GREENHOUSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">面积(㎡)</label>
+                  <input
+                    type="number"
+                    value={newGreenhouse.area || 0}
+                    onChange={(e) => setNewGreenhouse({ ...newGreenhouse, area: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">位置</label>
+                <input
+                  type="text"
+                  value={newGreenhouse.location || ''}
+                  onChange={(e) => setNewGreenhouse({ ...newGreenhouse, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="如：A区"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button onClick={() => { setShowModal(false); setEditingGreenhouse(null); setNewGreenhouse({ status: 'active' }); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
+              <button onClick={handleSaveGreenhouse} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

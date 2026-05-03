@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -88,14 +89,11 @@ export function CreateTaskModal({
           </FormField>
 
           <FormField label="优先级" required error={errors.priority}>
-            <Select
+            <DictSelect
+              category="task_priority"
               value={formData.priority}
-              onChange={(e) => onFormChange('priority', e.target.value)}
-              options={[
-                { value: 'urgent', label: '紧急' },
-                { value: 'high', label: '高' },
-                { value: 'normal', label: '普通' },
-              ]}
+              onChange={(value) => onFormChange('priority', value)}
+              placeholder="选择优先级"
             />
           </FormField>
 

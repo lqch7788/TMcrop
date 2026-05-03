@@ -81,6 +81,87 @@ router.get('/warehouses', (req, res) => {
 });
 
 /**
+ * 创建仓库
+ * POST /api/basic-data/warehouses
+ */
+router.post('/warehouses', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { name, code, warehouseType, location, capacity, managerId, managerName } = req.body;
+
+    if (!name || !code) {
+      return res.status(400).json({ success: false, error: '仓库名称和编码不能为空' });
+    }
+
+    const id = `WH${Date.now()}`;
+    const oid = `WH${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO warehouses (id, oid, name, code, warehouse_type, location, capacity, manager_id, manager_name, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, name, code, warehouseType || '', location || '', capacity || 0, managerId || '', managerName || '', now, now]);
+
+    res.json({ success: true, message: '仓库创建成功', data: { id, oid, name, code } });
+  } catch (error) {
+    console.error('创建仓库失败:', error);
+    res.status(500).json({ success: false, error: '创建仓库失败' });
+  }
+});
+
+/**
+ * 更新仓库
+ * PUT /api/basic-data/warehouses/:id
+ */
+router.put('/warehouses/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { name, code, warehouseType, location, capacity, managerId, managerName, status } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE warehouses
+      SET name = COALESCE(?, name),
+          code = COALESCE(?, code),
+          warehouse_type = COALESCE(?, warehouse_type),
+          location = COALESCE(?, location),
+          capacity = COALESCE(?, capacity),
+          manager_id = COALESCE(?, manager_id),
+          manager_name = COALESCE(?, manager_name),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [name, code, warehouseType, location, capacity, managerId, managerName, status, now, id]);
+
+    res.json({ success: true, message: '仓库更新成功' });
+  } catch (error) {
+    console.error('更新仓库失败:', error);
+    res.status(500).json({ success: false, error: '更新仓库失败' });
+  }
+});
+
+/**
+ * 删除仓库（软删除，设置status为inactive）
+ * DELETE /api/basic-data/warehouses/:id
+ */
+router.delete('/warehouses/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE warehouses SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '仓库删除成功' });
+  } catch (error) {
+    console.error('删除仓库失败:', error);
+    res.status(500).json({ success: false, error: '删除仓库失败' });
+  }
+});
+
+/**
  * 获取所有温室
  * GET /api/basic-data/greenhouses
  */
@@ -239,6 +320,86 @@ router.get('/blocks', (req, res) => {
 });
 
 /**
+ * 创建地块
+ * POST /api/basic-data/blocks
+ */
+router.post('/blocks', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { blockName, blockCode, zoneOid, blockType, area, sortOrder, description } = req.body;
+
+    if (!blockName || !blockCode) {
+      return res.status(400).json({ success: false, error: '地块名称和编码不能为空' });
+    }
+
+    const id = `BK${Date.now()}`;
+    const oid = `BK${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO blocks (id, oid, block_code, block_name, zone_oid, block_type, area, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, blockCode, blockName, zoneOid || '', blockType || '', area || 0, sortOrder || 0, now, now]);
+
+    res.json({ success: true, message: '地块创建成功', data: { id, oid, blockCode, blockName } });
+  } catch (error) {
+    console.error('创建地块失败:', error);
+    res.status(500).json({ success: false, error: '创建地块失败' });
+  }
+});
+
+/**
+ * 更新地块
+ * PUT /api/basic-data/blocks/:id
+ */
+router.put('/blocks/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { blockName, blockCode, zoneOid, blockType, area, sortOrder, status, description } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE blocks
+      SET block_name = COALESCE(?, block_name),
+          block_code = COALESCE(?, block_code),
+          zone_oid = COALESCE(?, zone_oid),
+          block_type = COALESCE(?, block_type),
+          area = COALESCE(?, area),
+          sort_order = COALESCE(?, sort_order),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [blockName, blockCode, zoneOid, blockType, area, sortOrder, status, now, id]);
+
+    res.json({ success: true, message: '地块更新成功' });
+  } catch (error) {
+    console.error('更新地块失败:', error);
+    res.status(500).json({ success: false, error: '更新地块失败' });
+  }
+});
+
+/**
+ * 删除地块（软删除）
+ * DELETE /api/basic-data/blocks/:id
+ */
+router.delete('/blocks/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE blocks SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '地块删除成功' });
+  } catch (error) {
+    console.error('删除地块失败:', error);
+    res.status(500).json({ success: false, error: '删除地块失败' });
+  }
+});
+
+/**
  * 获取所有审批规则
  * GET /api/basic-data/approval-rules
  */
@@ -386,6 +547,323 @@ router.get('/teams', (req, res) => {
   } catch (error) {
     console.error('获取班组数据失败:', error);
     res.status(500).json({ success: false, error: '获取班组数据失败' });
+  }
+});
+
+/**
+ * 创建班组
+ * POST /api/basic-data/teams
+ */
+router.post('/teams', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description } = req.body;
+
+    if (!teamName || !teamCode) {
+      return res.status(400).json({ success: false, error: '班组名称和编码不能为空' });
+    }
+
+    const id = `TM${Date.now()}`;
+    const oid = `TM${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO teams (id, oid, team_code, team_name, department_oid, leader_name, shift_type, member_count, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, teamCode, teamName, departmentOid || '', leaderName || '', shiftType || '', memberCount || 0, description || '', now, now]);
+
+    res.json({ success: true, message: '班组创建成功', data: { id, oid, teamCode, teamName } });
+  } catch (error) {
+    console.error('创建班组失败:', error);
+    res.status(500).json({ success: false, error: '创建班组失败' });
+  }
+});
+
+/**
+ * 更新班组
+ * PUT /api/basic-data/teams/:id
+ */
+router.put('/teams/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE teams
+      SET team_name = COALESCE(?, team_name),
+          team_code = COALESCE(?, team_code),
+          department_oid = COALESCE(?, department_oid),
+          leader_name = COALESCE(?, leader_name),
+          shift_type = COALESCE(?, shift_type),
+          member_count = COALESCE(?, member_count),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status, now, id]);
+
+    res.json({ success: true, message: '班组更新成功' });
+  } catch (error) {
+    console.error('更新班组失败:', error);
+    res.status(500).json({ success: false, error: '更新班组失败' });
+  }
+});
+
+/**
+ * 删除班组（软删除）
+ * DELETE /api/basic-data/teams/:id
+ */
+router.delete('/teams/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE teams SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '班组删除成功' });
+  } catch (error) {
+    console.error('删除班组失败:', error);
+    res.status(500).json({ success: false, error: '删除班组失败' });
+  }
+});
+
+/**
+ * 获取所有设备
+ * GET /api/basic-data/devices
+ */
+router.get('/devices', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT d.id, d.oid, d.device_code, d.device_name, d.device_type, d.manufacturer, d.serial_number,
+             d.greenhouse_oid, d.location, d.install_date, d.status, d.last_maintenance_date,
+             d.next_maintenance_date, d.description, d.created_at,
+             g.name as greenhouse_name
+      FROM devices d
+      LEFT JOIN greenhouses g ON d.greenhouse_oid = g.oid
+      WHERE d.status = 'active'
+      ORDER BY d.device_code
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const devices = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: devices });
+  } catch (error) {
+    console.error('获取设备数据失败:', error);
+    res.status(500).json({ success: false, error: '获取设备数据失败' });
+  }
+});
+
+/**
+ * 创建设备
+ * POST /api/basic-data/devices
+ */
+router.post('/devices', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { deviceName, deviceCode, deviceType, manufacturer, serialNumber, greenhouseOid, location, installDate, description } = req.body;
+
+    if (!deviceName || !deviceCode) {
+      return res.status(400).json({ success: false, error: '设备名称和编码不能为空' });
+    }
+
+    const id = `DEV${Date.now()}`;
+    const oid = `DEV${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO devices (id, oid, device_code, device_name, device_type, manufacturer, serial_number, greenhouse_oid, location, install_date, status, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', ?, ?, ?)
+    `, [id, oid, deviceCode, deviceName, deviceType || '', manufacturer || '', serialNumber || '', greenhouseOid || '', location || '', installDate || '', description || '', now, now]);
+
+    res.json({ success: true, message: '设备创建成功', data: { id, oid, deviceCode, deviceName } });
+  } catch (error) {
+    console.error('创建设备失败:', error);
+    res.status(500).json({ success: false, error: '创建设备失败' });
+  }
+});
+
+/**
+ * 更新设备
+ * PUT /api/basic-data/devices/:id
+ */
+router.put('/devices/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { deviceName, deviceCode, deviceType, manufacturer, serialNumber, greenhouseOid, location, installDate, status, description } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE devices
+      SET device_name = COALESCE(?, device_name),
+          device_code = COALESCE(?, device_code),
+          device_type = COALESCE(?, device_type),
+          manufacturer = COALESCE(?, manufacturer),
+          serial_number = COALESCE(?, serial_number),
+          greenhouse_oid = COALESCE(?, greenhouse_oid),
+          location = COALESCE(?, location),
+          install_date = COALESCE(?, install_date),
+          status = COALESCE(?, status),
+          description = COALESCE(?, description),
+          updated_at = ?
+      WHERE id = ?
+    `, [deviceName, deviceCode, deviceType, manufacturer, serialNumber, greenhouseOid, location, installDate, status, description, now, id]);
+
+    res.json({ success: true, message: '设备更新成功' });
+  } catch (error) {
+    console.error('更新设备失败:', error);
+    res.status(500).json({ success: false, error: '更新设备失败' });
+  }
+});
+
+/**
+ * 删除设备（软删除）
+ * DELETE /api/basic-data/devices/:id
+ */
+router.delete('/devices/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE devices SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '设备删除成功' });
+  } catch (error) {
+    console.error('删除设备失败:', error);
+    res.status(500).json({ success: false, error: '删除设备失败' });
+  }
+});
+
+/**
+ * 获取所有温室
+ * GET /api/basic-data/greenhouses
+ */
+router.get('/greenhouses', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, code, name, greenhouse_type, area, location, status, created_at
+      FROM greenhouses
+      WHERE status = 'active'
+      ORDER BY code
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const greenhouses = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: greenhouses });
+  } catch (error) {
+    console.error('获取温室数据失败:', error);
+    res.status(500).json({ success: false, error: '获取温室数据失败' });
+  }
+});
+
+/**
+ * 创建温室
+ * POST /api/basic-data/greenhouses
+ */
+router.post('/greenhouses', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { name, code, greenhouseType, area, location } = req.body;
+
+    if (!name || !code) {
+      return res.status(400).json({ success: false, error: '温室名称和编码不能为空' });
+    }
+
+    const id = `GH${Date.now()}`;
+    const oid = `GH${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO greenhouses (id, oid, code, name, greenhouse_type, area, location, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, code, name, greenhouseType || '', area || 0, location || '', now, now]);
+
+    res.json({ success: true, message: '温室创建成功', data: { id, oid, code, name } });
+  } catch (error) {
+    console.error('创建温室失败:', error);
+    res.status(500).json({ success: false, error: '创建温室失败' });
+  }
+});
+
+/**
+ * 更新温室
+ * PUT /api/basic-data/greenhouses/:id
+ */
+router.put('/greenhouses/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { name, code, greenhouseType, area, location, status } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE greenhouses
+      SET name = COALESCE(?, name),
+          code = COALESCE(?, code),
+          greenhouse_type = COALESCE(?, greenhouse_type),
+          area = COALESCE(?, area),
+          location = COALESCE(?, location),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [name, code, greenhouseType, area, location, status, now, id]);
+
+    res.json({ success: true, message: '温室更新成功' });
+  } catch (error) {
+    console.error('更新温室失败:', error);
+    res.status(500).json({ success: false, error: '更新温室失败' });
+  }
+});
+
+/**
+ * 删除温室（软删除）
+ * DELETE /api/basic-data/greenhouses/:id
+ */
+router.delete('/greenhouses/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE greenhouses SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '温室删除成功' });
+  } catch (error) {
+    console.error('删除温室失败:', error);
+    res.status(500).json({ success: false, error: '删除温室失败' });
   }
 });
 
@@ -603,6 +1081,119 @@ router.get('/approval-nodes', (req, res) => {
   } catch (error) {
     console.error('获取审批节点失败:', error);
     res.status(500).json({ success: false, error: '获取审批节点失败' });
+  }
+});
+
+/**
+ * 获取所有系统配置
+ * GET /api/basic-data/system-configs
+ */
+router.get('/system-configs', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, config_key, config_value, config_type, category, description, is_active, created_at, updated_at
+      FROM system_configs
+      WHERE is_active = 1
+      ORDER BY category, config_key
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const configs = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: configs });
+  } catch (error) {
+    console.error('获取系统配置失败:', error);
+    res.status(500).json({ success: false, error: '获取系统配置失败' });
+  }
+});
+
+/**
+ * 创建系统配置
+ * POST /api/basic-data/system-configs
+ */
+router.post('/system-configs', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { configKey, configValue, configType, category, description } = req.body;
+
+    if (!configKey || !configValue) {
+      return res.status(400).json({ success: false, error: '配置键和配置值不能为空' });
+    }
+
+    const id = `CFG${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO system_configs (id, config_key, config_value, config_type, category, description, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+    `, [id, configKey, configValue, configType || 'string', category || 'system', description || '', now, now]);
+
+    res.json({ success: true, message: '系统配置创建成功', data: { id, configKey, configValue } });
+  } catch (error) {
+    console.error('创建系统配置失败:', error);
+    res.status(500).json({ success: false, error: '创建系统配置失败' });
+  }
+});
+
+/**
+ * 更新系统配置
+ * PUT /api/basic-data/system-configs/:id
+ */
+router.put('/system-configs/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { configKey, configValue, configType, category, description, isActive } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE system_configs
+      SET config_key = COALESCE(?, config_key),
+          config_value = COALESCE(?, config_value),
+          config_type = COALESCE(?, config_type),
+          category = COALESCE(?, category),
+          description = COALESCE(?, description),
+          is_active = COALESCE(?, is_active),
+          updated_at = ?
+      WHERE id = ?
+    `, [configKey, configValue, configType, category, description, isActive, now, id]);
+
+    res.json({ success: true, message: '系统配置更新成功' });
+  } catch (error) {
+    console.error('更新系统配置失败:', error);
+    res.status(500).json({ success: false, error: '更新系统配置失败' });
+  }
+});
+
+/**
+ * 删除系统配置（软删除）
+ * DELETE /api/basic-data/system-configs/:id
+ */
+router.delete('/system-configs/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE system_configs SET is_active = 0, updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '系统配置删除成功' });
+  } catch (error) {
+    console.error('删除系统配置失败:', error);
+    res.status(500).json({ success: false, error: '删除系统配置失败' });
   }
 });
 

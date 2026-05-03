@@ -1409,6 +1409,240 @@ function seedDictionaries() {
 }
 
 /**
+ * 导入系统配置数据
+ */
+function seedSystemConfigs() {
+  const db = getDatabase();
+
+  const configs = [
+    // 农事任务配置
+    { id: 'cfg-001', config_key: 'task_accept_warning_hours', config_value: '12', config_type: 'number', category: 'task', description: '任务接受预警时间（小时）' },
+    { id: 'cfg-002', config_key: 'task_accept_critical_hours', config_value: '24', config_type: 'number', category: 'task', description: '任务接受危急时间（小时）' },
+    { id: 'cfg-003', config_key: 'task_execution_warning_hours', config_value: '24', config_type: 'number', category: 'task', description: '任务执行预警时间（小时）' },
+    { id: 'cfg-004', config_key: 'task_execution_critical_hours', config_value: '48', config_type: 'number', category: 'task', description: '任务执行危急时间（小时）' },
+    { id: 'cfg-005', config_key: 'task_reminder_interval', config_value: '60', config_type: 'number', category: 'task', description: '催办最小间隔（分钟）' },
+    { id: 'cfg-006', config_key: 'task_max_extensions', config_value: '3', config_type: 'number', category: 'task', description: '最大延期次数' },
+    { id: 'cfg-007', config_key: 'task_max_extension_hours', config_value: '72', config_type: 'number', category: 'task', description: '单次最大延期（小时）' },
+
+    // 系统参数配置
+    { id: 'cfg-010', config_key: 'session_timeout_minutes', config_value: '30', config_type: 'number', category: 'system', description: '会话超时时间（分钟）' },
+    { id: 'cfg-011', config_key: 'password_min_length', config_value: '6', config_type: 'number', category: 'system', description: '密码最小长度' },
+    { id: 'cfg-012', config_key: 'password_require_digit', config_value: 'false', config_type: 'boolean', category: 'system', description: '密码必须包含数字' },
+    { id: 'cfg-013', config_key: 'login_max_attempts', config_value: '5', config_type: 'number', category: 'system', description: '登录失败最大次数' },
+    { id: 'cfg-014', config_key: 'backup_auto_enabled', config_value: 'true', config_type: 'boolean', category: 'system', description: '自动备份启用' },
+    { id: 'cfg-015', config_key: 'backup_interval_hours', config_value: '24', config_type: 'number', category: 'system', description: '自动备份间隔（小时）' },
+
+    // 审批流程配置
+    { id: 'cfg-020', config_key: 'approval_timeout_hours', config_value: '72', config_type: 'number', category: 'approval', description: '审批超时时间（小时）' },
+    { id: 'cfg-021', config_key: 'approval_auto_threshold', config_value: '1000', config_type: 'number', category: 'approval', description: '自动审批金额阈值' },
+    { id: 'cfg-022', config_key: 'approval_allow_delegate', config_value: 'true', config_type: 'boolean', category: 'approval', description: '允许委托审批' },
+    { id: 'cfg-023', config_key: 'approval_require_comment', config_value: 'false', config_type: 'boolean', category: 'approval', description: '审批意见是否必填' },
+
+    // 业务参数配置
+    { id: 'cfg-030', config_key: 'inventory_safe_stock', config_value: '10', config_type: 'number', category: 'business', description: '物料安全库存' },
+    { id: 'cfg-031', config_key: 'task_reward_multiplier', config_value: '1.0', config_type: 'number', category: 'business', description: '工序奖励系数' },
+    { id: 'cfg-032', config_key: 'seedling_survival_threshold', config_value: '85', config_type: 'number', category: 'business', description: '育苗成活率阈值（%）' },
+    { id: 'cfg-033', config_key: 'harvest_cycle_days', config_value: '7', config_type: 'number', category: 'business', description: '采收周期（天）' },
+  ];
+
+  for (const config of configs) {
+    db.run(`
+      INSERT OR REPLACE INTO system_configs
+      (id, config_key, config_value, config_type, category, description, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+    `, [
+      config.id,
+      config.config_key,
+      config.config_value,
+      config.config_type,
+      config.category,
+      config.description
+    ]);
+  }
+
+  console.log(`已导入 ${configs.length} 条系统配置数据`);
+}
+
+/**
+ * 导入用户与角色数据
+ * V6.0 Phase 4: 用户权限系统
+ */
+function seedUsersAndRoles() {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+
+  // ========== 角色数据 ==========
+  const roles = [
+    {
+      id: 'role-admin',
+      oid: 'ROLE_ADMIN',
+      role_code: 'admin',
+      role_name: '系统管理员',
+      description: '拥有系统所有权限，可管理所有模块',
+      is_system: 1,
+      status: 'active'
+    },
+    {
+      id: 'role-manager',
+      oid: 'ROLE_MANAGER',
+      role_code: 'manager',
+      role_name: '管理员',
+      description: '拥有大部分管理权限',
+      is_system: 1,
+      status: 'active'
+    },
+    {
+      id: 'role-user',
+      oid: 'ROLE_USER',
+      role_code: 'user',
+      role_name: '普通用户',
+      description: '拥有基本操作权限',
+      is_system: 1,
+      status: 'active'
+    }
+  ];
+
+  for (const role of roles) {
+    db.run(`
+      INSERT OR REPLACE INTO roles
+      (id, oid, role_code, role_name, description, is_system, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [role.id, role.oid, role.role_code, role.role_name, role.description, role.is_system, role.status, now, now]);
+  }
+
+  // ========== 权限数据 ==========
+  // 定义系统所有权限
+  const permissions = [
+    // 系统设置权限
+    { id: 'perm-system-settings', oid: 'PERM_SYSTEM_SETTINGS', permission_code: 'system:settings', permission_name: '系统设置', category: 'system' },
+    { id: 'perm-system-config', oid: 'PERM_SYSTEM_CONFIG', permission_code: 'system:config', permission_name: '系统配置', category: 'system' },
+    { id: 'perm-system-dictionary', oid: 'PERM_SYSTEM_DICTIONARY', permission_code: 'system:dictionary', permission_name: '数据字典', category: 'system' },
+    { id: 'perm-system-user', oid: 'PERM_SYSTEM_USER', permission_code: 'system:user', permission_name: '用户管理', category: 'system' },
+    { id: 'perm-system-role', oid: 'PERM_SYSTEM_ROLE', permission_code: 'system:role', permission_name: '角色管理', category: 'system' },
+    { id: 'perm-system-permission', oid: 'PERM_SYSTEM_PERMISSION', permission_code: 'system:permission', permission_name: '权限管理', category: 'system' },
+
+    // 业务模块权限 - 种源
+    { id: 'perm-seed-source-view', oid: 'PERM_SEED_SOURCE_VIEW', permission_code: 'seed-source:view', permission_name: '查看种源', category: 'seed-source' },
+    { id: 'perm-seed-source-create', oid: 'PERM_SEED_SOURCE_CREATE', permission_code: 'seed-source:create', permission_name: '创建种源', category: 'seed-source' },
+    { id: 'perm-seed-source-update', oid: 'PERM_SEED_SOURCE_UPDATE', permission_code: 'seed-source:update', permission_name: '编辑种源', category: 'seed-source' },
+    { id: 'perm-seed-source-delete', oid: 'PERM_SEED_SOURCE_DELETE', permission_code: 'seed-source:delete', permission_name: '删除种源', category: 'seed-source' },
+
+    // 业务模块权限 - 育苗
+    { id: 'perm-seedling-view', oid: 'PERM_SEEDLING_VIEW', permission_code: 'seedling:view', permission_name: '查看育苗', category: 'seedling' },
+    { id: 'perm-seedling-create', oid: 'PERM_SEEDLING_CREATE', permission_code: 'seedling:create', permission_name: '创建育苗', category: 'seedling' },
+    { id: 'perm-seedling-update', oid: 'PERM_SEEDLING_UPDATE', permission_code: 'seedling:update', permission_name: '编辑育苗', category: 'seedling' },
+    { id: 'perm-seedling-delete', oid: 'PERM_SEEDLING_DELETE', permission_code: 'seedling:delete', permission_name: '删除育苗', category: 'seedling' },
+
+    // 业务模块权限 - 种植
+    { id: 'perm-planting-view', oid: 'PERM_PLANTING_VIEW', permission_code: 'planting:view', permission_name: '查看种植', category: 'planting' },
+    { id: 'perm-planting-create', oid: 'PERM_PLANTING_CREATE', permission_code: 'planting:create', permission_name: '创建种植', category: 'planting' },
+    { id: 'perm-planting-update', oid: 'PERM_PLANTING_UPDATE', permission_code: 'planting:update', permission_name: '编辑种植', category: 'planting' },
+    { id: 'perm-planting-delete', oid: 'PERM_PLANTING_DELETE', permission_code: 'planting:delete', permission_name: '删除种植', category: 'planting' },
+
+    // 业务模块权限 - 采收
+    { id: 'perm-harvest-view', oid: 'PERM_HARVEST_VIEW', permission_code: 'harvest:view', permission_name: '查看采收', category: 'harvest' },
+    { id: 'perm-harvest-create', oid: 'PERM_HARVEST_CREATE', permission_code: 'harvest:create', permission_name: '创建采收', category: 'harvest' },
+    { id: 'perm-harvest-update', oid: 'PERM_HARVEST_UPDATE', permission_code: 'harvest:update', permission_name: '编辑采收', category: 'harvest' },
+    { id: 'perm-harvest-delete', oid: 'PERM_HARVEST_DELETE', permission_code: 'harvest:delete', permission_name: '删除采收', category: 'harvest' },
+
+    // 业务模块权限 - 库存
+    { id: 'perm-inventory-view', oid: 'PERM_INVENTORY_VIEW', permission_code: 'inventory:view', permission_name: '查看库存', category: 'inventory' },
+    { id: 'perm-inventory-create', oid: 'PERM_INVENTORY_CREATE', permission_code: 'inventory:create', permission_name: '创建库存', category: 'inventory' },
+    { id: 'perm-inventory-update', oid: 'PERM_INVENTORY_UPDATE', permission_code: 'inventory:update', permission_name: '编辑库存', category: 'inventory' },
+    { id: 'perm-inventory-delete', oid: 'PERM_INVENTORY_DELETE', permission_code: 'inventory:delete', permission_name: '删除库存', category: 'inventory' },
+
+    // 业务模块权限 - 人工
+    { id: 'perm-labor-view', oid: 'PERM_LABOR_VIEW', permission_code: 'labor:view', permission_name: '查看人工', category: 'labor' },
+    { id: 'perm-labor-create', oid: 'PERM_LABOR_CREATE', permission_code: 'labor:create', permission_name: '创建人工', category: 'labor' },
+    { id: 'perm-labor-update', oid: 'PERM_LABOR_UPDATE', permission_code: 'labor:update', permission_name: '编辑人工', category: 'labor' },
+    { id: 'perm-labor-delete', oid: 'PERM_LABOR_DELETE', permission_code: 'labor:delete', permission_name: '删除人工', category: 'labor' },
+
+    // 农事任务权限
+    { id: 'perm-task-view', oid: 'PERM_TASK_VIEW', permission_code: 'task:view', permission_name: '查看任务', category: 'task' },
+    { id: 'perm-task-create', oid: 'PERM_TASK_CREATE', permission_code: 'task:create', permission_name: '创建任务', category: 'task' },
+    { id: 'perm-task-update', oid: 'PERM_TASK_UPDATE', permission_code: 'task:update', permission_name: '编辑任务', category: 'task' },
+    { id: 'perm-task-delete', oid: 'PERM_TASK_DELETE', permission_code: 'task:delete', permission_name: '删除任务', category: 'task' },
+    { id: 'perm-task-assign', oid: 'PERM_TASK_ASSIGN', permission_code: 'task:assign', permission_name: '分配任务', category: 'task' },
+
+    // 巡查权限
+    { id: 'perm-inspection-view', oid: 'PERM_INSPECTION_VIEW', permission_code: 'inspection:view', permission_name: '查看巡查', category: 'inspection' },
+    { id: 'perm-inspection-create', oid: 'PERM_INSPECTION_CREATE', permission_code: 'inspection:create', permission_name: '创建巡查', category: 'inspection' },
+    { id: 'perm-inspection-update', oid: 'PERM_INSPECTION_UPDATE', permission_code: 'inspection:update', permission_name: '编辑巡查', category: 'inspection' },
+    { id: 'perm-inspection-delete', oid: 'PERM_INSPECTION_DELETE', permission_code: 'inspection:delete', permission_name: '删除巡查', category: 'inspection' },
+
+    // 问题权限
+    { id: 'perm-problem-view', oid: 'PERM_PROBLEM_VIEW', permission_code: 'problem:view', permission_name: '查看问题', category: 'problem' },
+    { id: 'perm-problem-create', oid: 'PERM_PROBLEM_CREATE', permission_code: 'problem:create', permission_name: '创建问题', category: 'problem' },
+    { id: 'perm-problem-update', oid: 'PERM_PROBLEM_UPDATE', permission_code: 'problem:update', permission_name: '编辑问题', category: 'problem' },
+    { id: 'perm-problem-delete', oid: 'PERM_PROBLEM_DELETE', permission_code: 'problem:delete', permission_name: '删除问题', category: 'problem' },
+
+    // 审批权限
+    { id: 'perm-approval-view', oid: 'PERM_APPROVAL_VIEW', permission_code: 'approval:view', permission_name: '查看审批', category: 'approval' },
+    { id: 'perm-approval-create', oid: 'PERM_APPROVAL_CREATE', permission_code: 'approval:create', permission_name: '创建审批', category: 'approval' },
+    { id: 'perm-approval-approve', oid: 'PERM_APPROVAL_APPROVE', permission_code: 'approval:approve', permission_name: '审批通过', category: 'approval' },
+    { id: 'perm-approval-reject', oid: 'PERM_APPROVAL_REJECT', permission_code: 'approval:reject', permission_name: '审批拒绝', category: 'approval' },
+  ];
+
+  for (const perm of permissions) {
+    db.run(`
+      INSERT OR REPLACE INTO permissions
+      (id, oid, permission_code, permission_name, category, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [perm.id, perm.oid, perm.permission_code, perm.permission_name, perm.category, now, now]);
+  }
+
+  // ========== 管理员角色赋于所有权限 ==========
+  for (const perm of permissions) {
+    db.run(`
+      INSERT OR REPLACE INTO role_permissions
+      (id, role_oid, permission_oid, created_at)
+      VALUES (?, 'ROLE_ADMIN', ?, ?)
+    `, [`rp-admin-${perm.id}`, perm.oid, now]);
+  }
+
+  // ========== 用户数据 ==========
+  // 管理员用户：陆启闯
+  const adminUser = {
+    id: 'user-admin',
+    oid: 'USER_ADMIN_001',
+    username: '陆启闯',
+    password_hash: '123456',  // 实际应用中应该哈希存储
+    real_name: '陆启闯',
+    org_oid: 'ORG_DEFAULT',
+    org_name: '默认组织',
+    department_oid: 'DEPT_ADMIN',
+    department_name: '管理层',
+    position: '系统管理员',
+    email: 'admin@tmcloud.com',
+    phone: '13800138000',
+    status: 'active'
+  };
+
+  db.run(`
+    INSERT OR REPLACE INTO users
+    (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    adminUser.id, adminUser.oid, adminUser.username, adminUser.password_hash,
+    adminUser.real_name, adminUser.org_oid, adminUser.org_name,
+    adminUser.department_oid, adminUser.department_name, adminUser.position,
+    adminUser.email, adminUser.phone, adminUser.status, now, now
+  ]);
+
+  // ========== 用户角色关联 ==========
+  // 陆启闯 关联 管理员角色
+  db.run(`
+    INSERT OR REPLACE INTO user_roles
+    (id, user_oid, role_oid, created_at)
+    VALUES (?, 'USER_ADMIN_001', 'ROLE_ADMIN', ?)
+  `, ['ur-admin-001', now]);
+
+  console.log(`已导入 ${roles.length} 个角色`);
+  console.log(`已导入 ${permissions.length} 个权限`);
+  console.log('已导入管理员用户：陆启闯');
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
@@ -1425,6 +1659,8 @@ export function exportDatabase() {
   seedCropInstances();
   seedInventory();
   seedDictionaries();
+  seedSystemConfigs();
+  seedUsersAndRoles();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');

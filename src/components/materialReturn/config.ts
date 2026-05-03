@@ -162,15 +162,9 @@ export const getCategoryByCode = (code: string): string => {
   return subCategoryInfo.name;
 };
 
-// 部门选项
-export const DEPARTMENTS = [
-  '全部部门',
-  '生产部',
-  '种植部',
-  '设备部',
-  '采购部',
-  '仓储部',
-] as const;
+// 注意：部门选项现在通过 useDepartmentOptions hook 从 API 获取
+// 请在组件中使用: import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
+// 然后: const { options } = useDepartmentOptions({ includeAll: true });
 
 // 申请人选项
 export const APPLICANTS = [

@@ -1,28 +1,38 @@
-import { useState, useEffect } from 'react';
+/**
+ * 系统参数配置页面
+ * 功能：系统配置的新增、编辑、删除、查询
+ * 使用 API 替代 localStorage
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Plus, Edit, Trash2, Save, X, ChevronLeft } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 
 interface SystemConfig {
   id: string;
   configKey: string;
-  configName: string;
   configValue: string;
-  configType: 'string' | 'number' | 'boolean' | 'json';
+  configType: string;
+  category: string;
   description: string;
-  category: 'system' | 'ui' | 'feature' | 'demo';
+  isActive: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
+const API_BASE = '/api/basic-data/system-configs';
+
 const DEFAULT_CONFIGS: SystemConfig[] = [
-  { id: '1', configKey: 'system_name', configName: '系统名称', configValue: '智慧种植生产管理系统', configType: 'string', description: '系统显示名称', category: 'system' },
-  { id: '2', configKey: 'system_version', configName: '系统版本', configValue: 'V1.2.0', configType: 'string', description: '当前系统版本', category: 'system' },
-  { id: '3', configKey: 'demo_mode', configName: '演示模式', configValue: 'true', configType: 'boolean', description: '是否启用演示模式', category: 'demo' },
-  { id: '4', configKey: 'show_tutorial', configName: '显示引导', configValue: 'true', configType: 'boolean', description: '是否显示新手引导', category: 'demo' },
-  { id: '5', configKey: 'theme_color', configName: '主题色', configValue: 'emerald', configType: 'string', description: '系统主题色', category: 'ui' },
-  { id: '6', configKey: 'auto_save_interval', configName: '自动保存间隔', configValue: '5000', configType: 'number', description: '自动保存间隔（毫秒）', category: 'system' },
-  { id: '7', configKey: 'page_size', configName: '分页大小', configValue: '10', configType: 'number', description: '列表默认分页大小', category: 'ui' },
-  { id: '8', configKey: 'enable_notifications', configName: '启用通知', configValue: 'true', configType: 'boolean', description: '是否启用系统通知', category: 'feature' },
-  { id: '9', configKey: 'data_retention_days', configName: '数据保留天数', configValue: '365', configType: 'number', description: '本地数据保留天数', category: 'system' },
-  { id: '10', configKey: 'enable_export', configName: '启用导出功能', configValue: 'true', configType: 'boolean', description: '是否启用数据导出功能', category: 'feature' },
+  { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', category: 'system', description: '系统显示名称', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '2', configKey: 'system_version', configValue: 'V1.2.0', configType: 'string', category: 'system', description: '当前系统版本', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否启用演示模式', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '4', configKey: 'show_tutorial', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否显示新手引导', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '5', configKey: 'theme_color', configValue: 'emerald', configType: 'string', category: 'ui', description: '系统主题色', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '6', configKey: 'auto_save_interval', configValue: '5000', configType: 'number', category: 'system', description: '自动保存间隔（毫秒）', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '7', configKey: 'page_size', configValue: '10', configType: 'number', category: 'ui', description: '列表默认分页大小', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '8', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用系统通知', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '9', configKey: 'data_retention_days', configValue: '365', configType: 'number', category: 'system', description: '本地数据保留天数', isActive: 1, createdAt: '', updatedAt: '' },
+  { id: '10', configKey: 'enable_export', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用数据导出功能', isActive: 1, createdAt: '', updatedAt: '' },
 ];
 
 export default function SystemConfig() {
@@ -32,25 +42,33 @@ export default function SystemConfig() {
   const [editValue, setEditValue] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newConfig, setNewConfig] = useState<Partial<SystemConfig>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('yuanxingtu_system_config');
-    if (stored) {
-      try {
-        setConfigs(JSON.parse(stored));
-      } catch {
+  // 加载系统配置
+  const loadConfigs = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success) {
+        // 如果API返回空数据，使用默认配置
+        setConfigs(result.data && result.data.length > 0 ? result.data : DEFAULT_CONFIGS);
+      } else {
         setConfigs(DEFAULT_CONFIGS);
       }
-    } else {
+    } catch (err) {
+      console.error('加载系统配置失败:', err);
       setConfigs(DEFAULT_CONFIGS);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (configs.length > 0) {
-      localStorage.setItem('yuanxingtu_system_config', JSON.stringify(configs));
-    }
-  }, [configs]);
+    loadConfigs();
+  }, [loadConfigs]);
 
   const filteredConfigs = activeCategory === 'all'
     ? configs
@@ -61,10 +79,27 @@ export default function SystemConfig() {
     setEditValue(config.configValue);
   };
 
-  const handleSaveEdit = (id: string) => {
-    setConfigs(configs.map(c => c.id === id ? { ...c, configValue: editValue } : c));
-    setEditingId(null);
-    setEditValue('');
+  const handleSaveEdit = async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configValue: editValue,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        await loadConfigs();
+        setEditingId(null);
+        setEditValue('');
+      } else {
+        alert(result.error || '更新失败');
+      }
+    } catch (err) {
+      console.error('更新配置失败:', err);
+      alert('更新配置失败');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -72,25 +107,50 @@ export default function SystemConfig() {
     setEditValue('');
   };
 
-  const handleAddConfig = () => {
-    if (!newConfig.configKey || !newConfig.configName) return;
-    const config: SystemConfig = {
-      id: Date.now().toString(),
-      configKey: newConfig.configKey,
-      configName: newConfig.configName,
-      configValue: newConfig.configValue || '',
-      configType: (newConfig.configType as SystemConfig['configType']) || 'string',
-      description: newConfig.description || '',
-      category: (newConfig.category as SystemConfig['category']) || 'system',
-    };
-    setConfigs([...configs, config]);
-    setNewConfig({});
-    setShowAddForm(false);
+  const handleAddConfig = async () => {
+    if (!newConfig.configKey || !newConfig.configName) {
+      alert('请填写配置键和配置名称');
+      return;
+    }
+    try {
+      const response = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configKey: newConfig.configKey,
+          configValue: newConfig.configValue || '',
+          configType: newConfig.configType || 'string',
+          category: newConfig.category || 'system',
+          description: newConfig.description || '',
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        await loadConfigs();
+        setNewConfig({});
+        setShowAddForm(false);
+      } else {
+        alert(result.error || '创建失败');
+      }
+    } catch (err) {
+      console.error('创建配置失败:', err);
+      alert('创建配置失败');
+    }
   };
 
-  const handleDeleteConfig = (id: string) => {
-    if (confirm('确定要删除这个配置项吗？')) {
-      setConfigs(configs.filter(c => c.id !== id));
+  const handleDeleteConfig = async (id: string) => {
+    if (!confirm('确定要删除这个配置项吗？')) return;
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        await loadConfigs();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('删除配置失败:', err);
+      alert('删除配置失败');
     }
   };
 
@@ -142,6 +202,24 @@ export default function SystemConfig() {
 
     return <span className="text-sm text-gray-900">{config.configValue}</span>;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -212,16 +290,6 @@ export default function SystemConfig() {
               <label className="block text-sm font-medium text-gray-700 mb-1">配置名称</label>
               <input
                 type="text"
-                value={newConfig.configName || ''}
-                onChange={(e) => setNewConfig({ ...newConfig, configName: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="如：系统名称"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">配置值</label>
-              <input
-                type="text"
                 value={newConfig.configValue || ''}
                 onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -232,7 +300,7 @@ export default function SystemConfig() {
               <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
               <select
                 value={newConfig.configType || 'string'}
-                onChange={(e) => setNewConfig({ ...newConfig, configType: e.target.value as SystemConfig['configType'] })}
+                onChange={(e) => setNewConfig({ ...newConfig, configType: e.target.value })}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="string">文本</option>
@@ -244,7 +312,7 @@ export default function SystemConfig() {
               <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
               <select
                 value={newConfig.category || 'system'}
-                onChange={(e) => setNewConfig({ ...newConfig, category: e.target.value as SystemConfig['category'] })}
+                onChange={(e) => setNewConfig({ ...newConfig, category: e.target.value })}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="system">系统设置</option>
@@ -252,16 +320,6 @@ export default function SystemConfig() {
                 <option value="feature">功能设置</option>
                 <option value="demo">演示设置</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-              <input
-                type="text"
-                value={newConfig.description || ''}
-                onChange={(e) => setNewConfig({ ...newConfig, description: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="配置项描述"
-              />
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 mt-4">
@@ -291,7 +349,7 @@ export default function SystemConfig() {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">{config.configName}</span>
+                  <span className="font-medium text-gray-900">{config.configKey}</span>
                   <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{config.configKey}</code>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     config.category === 'system' ? 'bg-blue-100 text-blue-800' :

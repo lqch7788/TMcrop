@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, FormField } from '@/components/ui/Modal';
-import { StaffSkill, SkillFormData, DEPARTMENTS } from './types';
+import { StaffSkill, SkillFormData } from './types';
 import { SkillTagSelector } from './SkillTagSelector';
+import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface SkillFormModalProps {
   isOpen: boolean;
@@ -12,6 +13,9 @@ interface SkillFormModalProps {
 }
 
 export function SkillFormModal({ isOpen, onClose, onSubmit, title, editingSkill }: SkillFormModalProps) {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
+
   const [formData, setFormData] = useState<SkillFormData>({
     staffId: '',
     staffName: '',
@@ -118,7 +122,7 @@ export function SkillFormModal({ isOpen, onClose, onSubmit, title, editingSkill 
             className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
           >
             <option value="">请选择部门</option>
-            {DEPARTMENTS.map((dept) => (
+            {departmentOptions.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>

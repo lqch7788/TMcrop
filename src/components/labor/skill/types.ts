@@ -68,8 +68,9 @@ export const SKILL_TAGS: SkillTag[] = [
 // 技能等级选项
 export const SKILL_LEVELS: SkillLevel[] = ['初级', '中级', '高级', '技师'];
 
-// 部门选项
-export const DEPARTMENTS = ['生产部', '技术部', '质检部', '仓储部', '设备部'];
+// 注意：部门选项现在通过 useDepartmentOptions hook 从 API 获取
+// 请在组件中使用: import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
+// 然后: const { options } = useDepartmentOptions();
 
 // 培训类型选项
 export const TRAINING_TYPES = ['内部培训', '外部培训', '技能考核', '安全培训', '新技术培训'];

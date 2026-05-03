@@ -1,34 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Search, Filter, Eye, Download, AlertTriangle, ChevronLeft } from 'lucide-react';
 
 interface AuditLog {
   id: string;
-  timestamp: string;
-  user: string;
+  user_id?: string;
+  username: string;
   action: string;
   module: string;
   description: string;
-  ip: string;
-  level: 'info' | 'warning' | 'error';
+  ip_address?: string;
+  status?: 'success' | 'warning' | 'error' | 'info';
+  level?: 'info' | 'warning' | 'error';
+  created_at: string;
+  old_value?: string;
+  new_value?: string;
   details?: Record<string, string>;
 }
 
-const STORAGE_KEY = 'audit_log_data';
+interface LogStats {
+  total: number;
+  today: number;
+  info: number;
+  warning: number;
+  error: number;
+}
 
-const DEFAULT_LOGS: AuditLog[] = [
-  { id: '1', timestamp: '2024-03-15 10:30:45', user: 'admin', action: 'LOGIN', module: '系统', description: '用户登录系统', ip: '192.168.1.100', level: 'info' },
-  { id: '2', timestamp: '2024-03-15 10:32:12', user: 'admin', action: 'CREATE', module: '生产计划', description: '创建生产计划 #P2024001', ip: '192.168.1.100', level: 'info' },
-  { id: '3', timestamp: '2024-03-15 10:35:28', user: '张三', action: 'UPDATE', module: '物料管理', description: '更新物料 #M001 库存数量', ip: '192.168.1.101', level: 'info' },
-  { id: '4', timestamp: '2024-03-15 10:40:15', user: 'system', action: 'ALERT', module: '环境监控', description: '温室温度超过阈值：32°C > 30°C', ip: '-', level: 'warning' },
-  { id: '5', timestamp: '2024-03-15 10:42:30', user: '李四', action: 'APPROVE', module: '审批', description: '通过审批 #A2024001', ip: '192.168.1.102', level: 'info' },
-  { id: '6', timestamp: '2024-03-15 10:45:00', user: 'system', action: 'ERROR', module: '设备', description: '灌溉控制器连接失败', ip: '-', level: 'error' },
-  { id: '7', timestamp: '2024-03-15 10:50:22', user: 'admin', action: 'DELETE', module: '任务', description: '删除任务 #T001', ip: '192.168.1.100', level: 'warning' },
-  { id: '8', timestamp: '2024-03-15 10:55:10', user: '王五', action: 'EXPORT', module: '报表', description: '导出生产报表', ip: '192.168.1.103', level: 'info' },
-];
+const API_BASE = '/api/operation-logs';
 
 export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [stats, setStats] = useState<LogStats>({ total: 0, today: 0, info: 0, warning: 0, error: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
@@ -36,33 +38,65 @@ export default function AuditLog() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
   const pageSize = 10;
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setLogs(JSON.parse(saved));
-    } else {
-      setLogs(DEFAULT_LOGS);
+  // 获取日志列表
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(pageSize),
+      });
+
+      if (searchTerm) params.append('search', searchTerm);
+      if (filterModule !== 'all') params.append('module', filterModule);
+      if (filterLevel !== 'all') params.append('level', filterLevel);
+      if (filterDate) params.append('start_date', filterDate);
+
+      const response = await fetch(`${API_BASE}?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setLogs(result.data);
+        setTotalPages(result.meta?.totalPages || 1);
+      }
+    } catch (error) {
+      console.error('获取日志失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, searchTerm, filterModule, filterLevel, filterDate]);
+
+  // 获取统计数据
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/stats/summary`);
+      const result = await response.json();
+
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error('获取统计数据失败:', error);
     }
   }, []);
 
   useEffect(() => {
-    if (logs.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-    }
-  }, [logs]);
+    fetchLogs();
+    fetchStats();
+  }, [fetchLogs, fetchStats]);
 
+  // 筛选后的日志（前端再做一次筛选，因为API可能没有返回所有数据）
   const filteredLogs = logs.filter(log => {
-    const matchSearch = log.user.includes(searchTerm) || log.description.includes(searchTerm) || log.action.includes(searchTerm);
-    const matchModule = filterModule === 'all' || log.module === filterModule;
-    const matchLevel = filterLevel === 'all' || log.level === filterLevel;
-    const matchDate = !filterDate || log.timestamp.startsWith(filterDate);
-    return matchSearch && matchModule && matchLevel && matchDate;
+    const matchSearch = !searchTerm ||
+      (log.username && log.username.includes(searchTerm)) ||
+      (log.description && log.description.includes(searchTerm)) ||
+      (log.action && log.action.includes(searchTerm));
+    return matchSearch;
   });
-
-  const totalPages = Math.ceil(filteredLogs.length / pageSize);
-  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const viewLogDetails = (log: AuditLog) => {
     setSelectedLog(log);
@@ -73,37 +107,52 @@ export default function AuditLog() {
     const csv = [
       ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'].join(','),
       ...filteredLogs.map(log => [
-        log.timestamp, log.user, log.action, log.module, log.description, log.ip, log.level
+        log.created_at, log.username, log.action, log.module, log.description, log.ip_address || '-', log.status || log.level || 'info'
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
-  const modules = [...new Set(logs.map(l => l.module))];
-  const stats = {
-    total: logs.length,
-    info: logs.filter(l => l.level === 'info').length,
-    warning: logs.filter(l => l.level === 'warning').length,
-    error: logs.filter(l => l.level === 'error').length,
-  };
+  const modules = [...new Set(logs.map(l => l.module).filter(Boolean))];
 
-  const getLevelColor = (level: string) => {
+  const getLevelColor = (status: string | undefined) => {
+    const level = status || 'info';
     switch (level) {
-      case 'info': return 'bg-blue-100 text-blue-700';
-      case 'warning': return 'bg-yellow-100 text-yellow-700';
-      case 'error': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'info':
+      case 'success':
+        return 'bg-blue-100 text-blue-700';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'error':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const getLevelLabel = (level: string) => {
-    const map = { info: '信息', warning: '警告', error: '错误' };
-    return map[level] || level;
+  const getLevelLabel = (status: string | undefined) => {
+    const map: Record<string, string> = {
+      info: '信息',
+      success: '信息',
+      warning: '警告',
+      error: '错误'
+    };
+    return map[status || 'info'] || status || '信息';
+  };
+
+  const getActionColor = (action: string) => {
+    if (action.includes('LOGIN') || action.includes('登录')) return 'bg-emerald-100 text-emerald-700';
+    if (action.includes('CREATE') || action.includes('新建')) return 'bg-blue-100 text-blue-700';
+    if (action.includes('UPDATE') || action.includes('编辑')) return 'bg-amber-100 text-amber-700';
+    if (action.includes('DELETE') || action.includes('删除')) return 'bg-red-100 text-red-700';
+    if (action.includes('APPROVE') || action.includes('审批')) return 'bg-purple-100 text-purple-700';
+    if (action.includes('EXPORT') || action.includes('导出')) return 'bg-cyan-100 text-cyan-700';
+    return 'bg-gray-100 text-gray-700';
   };
 
   return (
@@ -125,10 +174,14 @@ export default function AuditLog() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-sm text-gray-500">日志总数</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <p className="text-sm text-gray-500">今日</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.today}</p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-sm text-blue-600">信息</p>
@@ -151,16 +204,33 @@ export default function AuditLog() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="搜索日志..."
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
           />
         </div>
-        <select value={filterModule} onChange={(e) => setFilterModule(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select
+          value={filterModule}
+          onChange={(e) => {
+            setFilterModule(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
           <option value="all">全部模块</option>
           {modules.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
-        <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select
+          value={filterLevel}
+          onChange={(e) => {
+            setFilterLevel(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
           <option value="all">全部级别</option>
           <option value="info">信息</option>
           <option value="warning">警告</option>
@@ -169,64 +239,91 @@ export default function AuditLog() {
         <input
           type="date"
           value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          onChange={(e) => {
+            setFilterDate(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
+        <button
+          onClick={() => fetchLogs()}
+          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
+        >
+          刷新
+        </button>
       </div>
 
       {/* 日志列表 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">时间</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">用户</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">模块</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">描述</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">级别</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedLogs.map(log => (
-              <tr key={log.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{log.timestamp}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs font-medium">
-                      {log.user[0]}
-                    </div>
-                    <span className="text-sm text-gray-900">{log.user}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">{log.action}</span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{log.module}</td>
-                <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{log.description}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(log.level)}`}>
-                    {getLevelLabel(log.level)}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-end">
-                    <button onClick={() => viewLogDetails(log)} className="p-1.5 hover:bg-gray-100 rounded">
-                      <Eye className="w-4 h-4 text-gray-600" />
-                    </button>
-                  </div>
-                </td>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">加载中...</div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">暂无日志数据</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">时间</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">用户</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">模块</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">描述</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">级别</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredLogs.map(log => (
+                <tr key={log.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                    {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs font-medium">
+                        {(log.username || 'S')[0].toUpperCase()}
+                      </div>
+                      <span className="text-sm text-gray-900">{log.username || '系统'}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{log.module || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={log.description}>
+                    {log.description || '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(log.status || log.level)}`}>
+                      {getLevelLabel(log.status || log.level)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={() => viewLogDetails(log)}
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="查看详情"
+                      >
+                        <Eye className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* 分页 */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">共 {filteredLogs.length} 条记录，第 {currentPage} / {totalPages} 页</p>
+          <p className="text-sm text-gray-500">
+            共 {filteredLogs.length} 条记录，第 {currentPage} / {totalPages} 页
+          </p>
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -255,50 +352,63 @@ export default function AuditLog() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500">时间</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.timestamp}</p>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString('zh-CN') : '-'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">用户</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.user}</p>
+                  <p className="text-sm text-gray-900 mt-1">{selectedLog.username || '系统'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">操作</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.action}</p>
+                  <p className="text-sm text-gray-900 mt-1">{selectedLog.action || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">模块</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.module}</p>
+                  <p className="text-sm text-gray-900 mt-1">{selectedLog.module || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">IP地址</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.ip}</p>
+                  <p className="text-sm text-gray-900 mt-1">{selectedLog.ip_address || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">级别</p>
                   <p className="mt-1">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(selectedLog.level)}`}>
-                      {getLevelLabel(selectedLog.level)}
+                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(selectedLog.status || selectedLog.level)}`}>
+                      {getLevelLabel(selectedLog.status || selectedLog.level)}
                     </span>
                   </p>
                 </div>
               </div>
               <div>
                 <p className="text-xs text-gray-500">描述</p>
-                <p className="text-sm text-gray-900 mt-1">{selectedLog.description}</p>
+                <p className="text-sm text-gray-900 mt-1">{selectedLog.description || '-'}</p>
               </div>
-              {selectedLog.details && (
+              {selectedLog.old_value && (
                 <div>
-                  <p className="text-xs text-gray-500">详细信息</p>
+                  <p className="text-xs text-gray-500">原值</p>
                   <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                      {JSON.stringify(selectedLog.details, null, 2)}
-                    </pre>
+                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{selectedLog.old_value}</pre>
+                  </div>
+                </div>
+              )}
+              {selectedLog.new_value && (
+                <div>
+                  <p className="text-xs text-gray-500">新值</p>
+                  <div className="mt-1 p-3 bg-gray-50 rounded-lg">
+                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{selectedLog.new_value}</pre>
                   </div>
                 </div>
               )}
             </div>
             <div className="flex justify-end mt-6">
-              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">关闭</button>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+              >
+                关闭
+              </button>
             </div>
           </div>
         </div>

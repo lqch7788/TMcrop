@@ -9,8 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SkillFilters, DEPARTMENTS, SKILL_TAGS } from './types';
+import { SkillFilters, SKILL_TAGS } from './types';
 import { cn } from '@/lib/utils';
+import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface SkillFiltersProps {
   filters: SkillFilters;
@@ -20,6 +21,9 @@ interface SkillFiltersProps {
 }
 
 export function SkillFiltersComponent({ filters, onChange, onReset, allSkillTags }: SkillFiltersProps) {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
+
   // 状态选项
   const statusOptions = [
     { value: '', label: '全部状态' },
@@ -66,7 +70,7 @@ export function SkillFiltersComponent({ filters, onChange, onReset, allSkillTags
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">全部部门</SelectItem>
-            {DEPARTMENTS.map((dept) => (
+            {departmentOptions.map((dept) => (
               <SelectItem key={dept} value={dept}>{dept}</SelectItem>
             ))}
           </SelectContent>

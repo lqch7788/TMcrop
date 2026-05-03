@@ -76,8 +76,7 @@ import MaterialManagement from './pages/MaterialManagement';
 import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
-import SettingsPersonnelStaff from './pages/SettingsPersonnelStaff';
-import StaffManagement from './pages/StaffManagement';
+import { StaffManagementPage } from './components/labor/personnel/StaffManagementPage';
 import PositionManagement from './pages/PositionManagement';
 import HrAttendance from './pages/HrAttendance';
 import HrApprovalDocuments from './pages/HrApprovalDocuments';
@@ -212,7 +211,7 @@ function AppContent() {
             <Route path="farm-activity" element={<FarmActivityManagement />} />
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
-          <Route path="/settings/personnel/staff" element={<SettingsPersonnelStaff />} />
+          <Route path="/settings/personnel/staff" element={<StaffManagementPage />} />
           <Route path="/settings/personnel/position" element={<PositionManagement />} />
           <Route path="/settings/personnel/attendance" element={<HrAttendance />} />
           <Route path="/settings/personnel/hr-approval" element={<HrApproval />} />
@@ -270,7 +269,7 @@ function AppContent() {
         <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/temp-task" element={<TempTask />} />
-        <Route path="/personnel/staff" element={<StaffManagement />} />
+        <Route path="/personnel/staff" element={<StaffManagementPage />} />
         <Route path="/leave" element={<Leave />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/temp-worker" element={<TempWorker />} />

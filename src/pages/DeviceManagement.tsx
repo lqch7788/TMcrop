@@ -1,29 +1,35 @@
-import { useState, useEffect } from 'react';
+/**
+ * 设备管理页面
+ * 功能：设备信息的新增、编辑、删除、查询
+ * 使用 API 替代 localStorage
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Power, Settings, ChevronLeft } from 'lucide-react';
+import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Device {
   id: string;
-  name: string;
-  code: string;
-  type: string;
+  oid: string;
+  deviceCode: string;
+  deviceName: string;
+  deviceType: string;
+  manufacturer: string;
+  serialNumber: string;
+  greenhouseOid: string;
+  greenhouseName: string;
   location: string;
-  status: 'online' | 'offline' | 'maintenance';
-  lastSeen: string;
-  parameters: Record<string, string | number>;
+  installDate: string;
+  status: string;
+  lastMaintenanceDate: string;
+  nextMaintenanceDate: string;
+  description: string;
+  createdAt: string;
 }
 
-const STORAGE_KEY = 'device_management_data';
+const API_BASE = '/api/basic-data/devices';
 
 const DEVICE_TYPES = ['传感器', '摄像头', '控制器', '气象站', '灌溉设备', '施肥设备', '其他'];
-
-const DEFAULT_DEVICES: Device[] = [
-  { id: '1', name: '温室1号温度传感器', code: 'TEMP-001', type: '传感器', location: 'A区-温室1', status: 'online', lastSeen: '2024-03-15 10:30', parameters: { '当前温度': '25.6°C', '精度': '±0.5°C' } },
-  { id: '2', name: '温室1号湿度传感器', code: 'HUM-001', type: '传感器', location: 'A区-温室1', status: 'online', lastSeen: '2024-03-15 10:29', parameters: { '当前湿度': '65%', '精度': '±3%' } },
-  { id: '3', name: 'A区高清摄像头', code: 'CAM-001', type: '摄像头', location: 'A区-入口', status: 'online', lastSeen: '2024-03-15 10:30', parameters: { '分辨率': '1080P', '视角': '120°' } },
-  { id: '4', name: '灌溉控制器', code: 'IRR-001', type: '灌溉设备', location: 'A区-灌溉房', status: 'offline', lastSeen: '2024-03-14 18:00', parameters: { '状态': '离线', '模式': '自动' } },
-  { id: '5', name: '气象站', code: 'WS-001', type: '气象站', location: '园区入口', status: 'online', lastSeen: '2024-03-15 10:30', parameters: { '风速': '2.3m/s', '气压': '1013hPa' } },
-];
 
 export default function DeviceManagement() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -32,44 +38,117 @@ export default function DeviceManagement() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [newDevice, setNewDevice] = useState<Partial<Device>>({ status: 'offline', parameters: {} });
+  const [newDevice, setNewDevice] = useState<Partial<Device>>({ status: 'online' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setDevices(JSON.parse(saved));
-    } else {
-      setDevices(DEFAULT_DEVICES);
+  // 加载设备数据
+  const loadDevices = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success) {
+        setDevices(result.data || []);
+      } else {
+        setError('获取设备数据失败');
+      }
+    } catch (err) {
+      console.error('加载设备数据失败:', err);
+      setError('加载设备数据失败');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (devices.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(devices));
-    }
-  }, [devices]);
+    loadDevices();
+  }, [loadDevices]);
 
   const filteredDevices = devices.filter(d => {
-    const matchSearch = d.name.includes(searchTerm) || d.code.includes(searchTerm) || d.location.includes(searchTerm);
-    const matchType = filterType === 'all' || d.type === filterType;
+    const matchSearch = d.deviceName?.includes(searchTerm) || d.deviceCode?.includes(searchTerm) || d.location?.includes(searchTerm);
+    const matchType = filterType === 'all' || d.deviceType === filterType;
     const matchStatus = filterStatus === 'all' || d.status === filterStatus;
     return matchSearch && matchType && matchStatus;
   });
 
-  const handleSaveDevice = () => {
-    if (editingDevice) {
-      setDevices(devices.map(d => d.id === editingDevice.id ? { ...d, ...newDevice } as Device : d));
-    } else {
-      setDevices([...devices, { ...newDevice, id: Date.now().toString(), lastSeen: new Date().toLocaleString('zh-CN') } as Device]);
+  const handleSaveDevice = async () => {
+    if (!newDevice.deviceName || !newDevice.deviceCode) {
+      alert('请填写设备名称和编码');
+      return;
     }
-    setShowModal(false);
-    setEditingDevice(null);
-    setNewDevice({ status: 'offline', parameters: {} });
+    try {
+      if (editingDevice) {
+        const response = await fetch(`${API_BASE}/${editingDevice.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceName: newDevice.deviceName,
+            deviceCode: newDevice.deviceCode,
+            deviceType: newDevice.deviceType,
+            manufacturer: newDevice.manufacturer,
+            serialNumber: newDevice.serialNumber,
+            greenhouseOid: newDevice.greenhouseOid,
+            location: newDevice.location,
+            installDate: newDevice.installDate,
+            status: newDevice.status,
+            description: newDevice.description,
+          }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          await loadDevices();
+          setShowModal(false);
+          setEditingDevice(null);
+          setNewDevice({ status: 'online' });
+        } else {
+          alert(result.error || '更新失败');
+        }
+      } else {
+        const response = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceName: newDevice.deviceName,
+            deviceCode: newDevice.deviceCode,
+            deviceType: newDevice.deviceType,
+            manufacturer: newDevice.manufacturer,
+            serialNumber: newDevice.serialNumber,
+            greenhouseOid: newDevice.greenhouseOid,
+            location: newDevice.location,
+            installDate: newDevice.installDate,
+            description: newDevice.description,
+          }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          await loadDevices();
+          setShowModal(false);
+          setNewDevice({ status: 'online' });
+        } else {
+          alert(result.error || '创建失败');
+        }
+      }
+    } catch (err) {
+      console.error('保存设备失败:', err);
+      alert('保存设备失败');
+    }
   };
 
-  const deleteDevice = (id: string) => {
-    if (confirm('确定删除该设备吗？')) {
-      setDevices(devices.filter(d => d.id !== id));
+  const deleteDevice = async (id: string) => {
+    if (!confirm('确定删除该设备吗？')) return;
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        await loadDevices();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('删除设备失败:', err);
+      alert('删除设备失败');
     }
   };
 
@@ -100,6 +179,24 @@ export default function DeviceManagement() {
     maintenance: devices.filter(d => d.status === 'maintenance').length,
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -110,7 +207,7 @@ export default function DeviceManagement() {
           <h2 className="text-xl font-bold text-gray-900">设备管理</h2>
         </div>
         <button
-          onClick={() => { setEditingDevice(null); setNewDevice({ status: 'offline', parameters: {} }); setShowModal(true); }}
+          onClick={() => { setEditingDevice(null); setNewDevice({ status: 'online' }); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -184,8 +281,8 @@ export default function DeviceManagement() {
                   }`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">{device.name}</h3>
-                  <p className="text-xs text-gray-500">{device.code}</p>
+                  <h3 className="font-semibold text-gray-900 text-sm">{device.deviceName}</h3>
+                  <p className="text-xs text-gray-500">{device.deviceCode}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -196,28 +293,17 @@ export default function DeviceManagement() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">类型</span>
-                <span className="text-gray-900">{device.type}</span>
+                <span className="text-gray-900">{device.deviceType || '-'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">位置</span>
-                <span className="text-gray-900">{device.location}</span>
+                <span className="text-gray-900">{device.location || '-'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">最后在线</span>
-                <span className="text-gray-500 text-xs">{device.lastSeen}</span>
+                <span className="text-gray-500">温室</span>
+                <span className="text-gray-900">{device.greenhouseName || '-'}</span>
               </div>
             </div>
-            {Object.keys(device.parameters).length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(device.parameters).slice(0, 3).map(([key, value]) => (
-                    <span key={key} className="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded">
-                      {key}: {value}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
               <button onClick={() => editDevice(device)} className="p-1.5 hover:bg-gray-100 rounded">
                 <Edit2 className="w-4 h-4 text-gray-600" />
@@ -240,8 +326,8 @@ export default function DeviceManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">设备名称</label>
                 <input
                   type="text"
-                  value={newDevice.name || ''}
-                  onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
+                  value={newDevice.deviceName || ''}
+                  onChange={(e) => setNewDevice({ ...newDevice, deviceName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -250,21 +336,41 @@ export default function DeviceManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">设备编码</label>
                   <input
                     type="text"
-                    value={newDevice.code || ''}
-                    onChange={(e) => setNewDevice({ ...newDevice, code: e.target.value })}
+                    value={newDevice.deviceCode || ''}
+                    onChange={(e) => setNewDevice({ ...newDevice, deviceCode: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">设备类型</label>
                   <select
-                    value={newDevice.type || ''}
-                    onChange={(e) => setNewDevice({ ...newDevice, type: e.target.value })}
+                    value={newDevice.deviceType || ''}
+                    onChange={(e) => setNewDevice({ ...newDevice, deviceType: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">请选择</option>
                     {DEVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">厂商</label>
+                  <input
+                    type="text"
+                    value={newDevice.manufacturer || ''}
+                    onChange={(e) => setNewDevice({ ...newDevice, manufacturer: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">序列号</label>
+                  <input
+                    type="text"
+                    value={newDevice.serialNumber || ''}
+                    onChange={(e) => setNewDevice({ ...newDevice, serialNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
               </div>
               <div>
@@ -279,8 +385,8 @@ export default function DeviceManagement() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
                 <select
-                  value={newDevice.status || 'offline'}
-                  onChange={(e) => setNewDevice({ ...newDevice, status: e.target.value as Device['status'] })}
+                  value={newDevice.status || 'online'}
+                  onChange={(e) => setNewDevice({ ...newDevice, status: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="online">在线</option>
@@ -290,7 +396,7 @@ export default function DeviceManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
+              <button onClick={() => { setShowModal(false); setEditingDevice(null); setNewDevice({ status: 'online' }); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
               <button onClick={handleSaveDevice} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
             </div>
           </div>

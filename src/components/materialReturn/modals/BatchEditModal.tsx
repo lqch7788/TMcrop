@@ -1,7 +1,7 @@
 import { ReturnRecord } from '../types';
 import { mockSourceApplications, mockReturns } from '../mockData';
-import { DEPARTMENTS } from '../config';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface BatchEditModalProps {
   open: boolean;
@@ -26,6 +26,9 @@ export function BatchEditModal({
   onSaveAll,
   onVoidApply,
 }: BatchEditModalProps) {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
+
   const selectedRecordsList = mockReturns.filter(r => selectedRows.includes(r.id));
   const currentRecordId = selectedRows[currentBatchEditIndex];
   const currentRecord = selectedRecordsList.find(r => r.id === currentRecordId);
@@ -138,7 +141,7 @@ export function BatchEditModal({
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">请选择</option>
-              {DEPARTMENTS.filter(d => d !== '全部部门').map((dept) => (
+              {departmentOptions.map((dept) => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>

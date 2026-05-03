@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, X, Check } from 'lucide-react';
+import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
 
 export interface CostFilters {
   dateRange: {
@@ -14,7 +15,7 @@ export interface CostFilters {
 }
 
 // 筛选选项
-export const DEPARTMENTS = ['生产部', '技术部', '设备部', '后勤部', '采后处理部'];
+// 注意：CATEGORIES 和 WAREHOUSES 仍是硬编码，如果需要动态化，后续可以从 API 获取
 export const CATEGORIES = ['种质资源', '肥料与土壤改良剂', '农药与植保产品', '农业机械', '劳保与防护用品', '采收容器', '监测设备', '其他'];
 export const WAREHOUSES = ['仓库A区', '仓库B区', '仓库C区', '仓库D区', '仓库E区'];
 
@@ -92,6 +93,9 @@ interface CostFiltersFormProps {
 }
 
 export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onChange }) => {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
+
   // 快捷周期选项
   const quickPeriods = [
     { label: '本周', value: 'week' },
@@ -210,7 +214,7 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
         {/* 部门下拉 */}
         <MultiSelectDropdown
           label="部门"
-          options={DEPARTMENTS}
+          options={departmentOptions}
           selected={filters.departments}
           onChange={(val) => handleMultiChange('departments', val)}
           color="emerald"

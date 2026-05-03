@@ -659,6 +659,40 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     // 性别
     { id: 'dt-gender-001', category: 'gender', code: 'male', name: '男', sortNumber: 1, status: 'active' },
     { id: 'dt-gender-002', category: 'gender', code: 'female', name: '女', sortNumber: 2, status: 'active' },
+
+    // ========== 业务模块补充字典 ==========
+    // 来源途径（种源）
+    { id: 'biz-origin-001', category: 'source_origin', code: 'external_purchase', name: '外部采购', sortNumber: 1, status: 'active' },
+    { id: 'biz-origin-002', category: 'source_origin', code: 'self_produced', name: '内部自繁', sortNumber: 2, status: 'active' },
+    { id: 'biz-origin-003', category: 'source_origin', code: 'commissioned', name: '委托培育', sortNumber: 3, status: 'active' },
+    { id: 'biz-origin-004', category: 'source_origin', code: 'gift', name: '政府/机构赠送', sortNumber: 4, status: 'active' },
+    { id: 'biz-origin-005', category: 'source_origin', code: 'self_retained', name: '自留种', sortNumber: 5, status: 'active' },
+    { id: 'biz-origin-006', category: 'source_origin', code: 'other', name: '其他', sortNumber: 6, status: 'active' },
+
+    // 采收类型
+    { id: 'biz-harvest-001', category: 'harvest_type', code: 'product', name: '成品采收', sortNumber: 1, status: 'active' },
+    { id: 'biz-harvest-002', category: 'harvest_type', code: 'seed', name: '种子采收', sortNumber: 2, status: 'active' },
+    { id: 'biz-harvest-003', category: 'harvest_type', code: 'seedling', name: '种苗采收', sortNumber: 3, status: 'active' },
+
+    // 目标库存
+    { id: 'biz-target-001', category: 'target_inventory', code: 'product', name: '产品库存', sortNumber: 1, status: 'active' },
+    { id: 'biz-target-002', category: 'target_inventory', code: 'seed', name: '种源库存', sortNumber: 2, status: 'active' },
+    { id: 'biz-target-003', category: 'target_inventory', code: 'seedling', name: '育苗库存', sortNumber: 3, status: 'active' },
+
+    // 品质等级
+    { id: 'biz-grade-001', category: 'quality_grade', code: 'A', name: 'A级', sortNumber: 1, status: 'active' },
+    { id: 'biz-grade-002', category: 'quality_grade', code: 'B', name: 'B级', sortNumber: 2, status: 'active' },
+    { id: 'biz-grade-003', category: 'quality_grade', code: 'C', name: 'C级', sortNumber: 3, status: 'active' },
+
+    // 任务优先级
+    { id: 'biz-priority-001', category: 'task_priority', code: 'urgent', name: '紧急', sortNumber: 1, status: 'active' },
+    { id: 'biz-priority-002', category: 'task_priority', code: 'high', name: '高', sortNumber: 2, status: 'active' },
+    { id: 'biz-priority-003', category: 'task_priority', code: 'normal', name: '普通', sortNumber: 3, status: 'active' },
+
+    // 入库类型
+    { id: 'biz-inbound-001', category: 'inbound_type', code: 'planting_harvest', name: '种植采收入库', sortNumber: 1, status: 'active' },
+    { id: 'biz-inbound-002', category: 'inbound_type', code: 'seedling', name: '育苗成活入库', sortNumber: 2, status: 'active' },
+    { id: 'biz-inbound-003', category: 'inbound_type', code: 'seed_source', name: '种源入库', sortNumber: 3, status: 'active' },
   ];
 
   const refreshDevices = useCallback(async () => {

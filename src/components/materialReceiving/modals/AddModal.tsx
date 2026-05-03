@@ -3,13 +3,7 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { MaterialItem } from '../../../types/materialReceiving';
 import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
-
-// 申请人选项
-const APPLICANTS = [
-  '张伟民', '李明轩', '王建国', '赵俊杰', '钱文涛',
-  '孙晓峰', '周志强', '吴海龙', '郑志远', '陈思远',
-  '刘志伟', '杨文博'
-];
+import { UserSelect } from '../../common/settings/UserSelect';
 
 // 生产计划批次号选项
 const PRODUCTION_BATCH_CODES = [
@@ -128,16 +122,11 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">申请人</label>
-          <select
+          <UserSelect
             value={addForm.applicant}
-            onChange={(e) => onChange('applicant', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择申请人</option>
-            {APPLICANTS.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+            onChange={(value) => onChange('applicant', value)}
+            placeholder="选择申请人"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">部门</label>
@@ -180,17 +169,11 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">审核人</label>
-          <select
+          <UserSelect
             value={addForm.reviewer}
-            onChange={(e) => onChange('reviewer', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="王经理">王经理</option>
-            <option value="李经理">李经理</option>
-            <option value="张经理">张经理</option>
-            <option value="陈经理">陈经理</option>
-            <option value="赵经理">赵经理</option>
-          </select>
+            onChange={(value) => onChange('reviewer', value)}
+            placeholder="选择审核人"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>

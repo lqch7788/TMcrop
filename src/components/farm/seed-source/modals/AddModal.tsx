@@ -1,7 +1,7 @@
 /**
  * 种源新增弹窗
  * 支持作物搜索和快速新增品种
- * V3.1: 支持补录申请功能
+ * V3.1: 支持补录申请功能, 使用 API 驱动的 DictSelect 组件
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -20,6 +20,7 @@ import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { currentUser, bases, cropBatches } from '../../../../data/mockData';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -511,20 +512,12 @@ export function AddModal({
           {/* 种源类型 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">种源类型</label>
-            <select
+            <DictSelect
+              category="source_type"
               value={formData.sourceType}
-              onChange={(e) => setFormData({ ...formData, sourceType: e.target.value as SourceType })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value={SourceType.SEED}>种子</option>
-              <option value={SourceType.SEEDLING}>种苗/实生苗</option>
-              <option value={SourceType.CUTTING}>扦插苗</option>
-              <option value={SourceType.GRAFTING}>嫁接苗</option>
-              <option value={SourceType.TISSUE_CULTURE}>组培苗</option>
-              <option value={SourceType.SPLIT}>分株苗</option>
-              <option value={SourceType.BULB}>种球/球根</option>
-              <option value={SourceType.OTHER}>其他</option>
-            </select>
+              onChange={(value) => setFormData({ ...formData, sourceType: value as SourceType })}
+              placeholder="选择种源类型"
+            />
             {formData.sourceType === SourceType.OTHER && (
               <div className="mt-2">
                 <input
@@ -543,18 +536,12 @@ export function AddModal({
           {/* 来源途径 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">来源途径</label>
-            <select
+            <DictSelect
+              category="source_origin"
               value={formData.sourceOrigin}
-              onChange={(e) => setFormData({ ...formData, sourceOrigin: e.target.value as SourceOrigin })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="external_purchase">外部采购</option>
-              <option value="self_produced">内部自繁</option>
-              <option value="commissioned">委托培育</option>
-              <option value="gift">政府/机构赠送</option>
-              <option value="self_retained">自留种</option>
-              <option value="other">其他</option>
-            </select>
+              onChange={(value) => setFormData({ ...formData, sourceOrigin: value as SourceOrigin })}
+              placeholder="选择来源途径"
+            />
             {formData.sourceOrigin === 'other' && (
               <p className="mt-1 text-xs text-gray-400">请在备注中说明具体来源</p>
             )}

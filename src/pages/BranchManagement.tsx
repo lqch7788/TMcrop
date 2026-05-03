@@ -21,7 +21,7 @@ interface Branch {
   description?: string;
 }
 
-// 模拟数据
+// 模拟数据 - 实际应从API获取
 const mockBranches: Branch[] = [
   { id: '1', code: 'BR001', name: '一号种植基地', location: '北京市通州区', area: 50000, manager: '张建国', contact: '13800138001', status: 'active', blockCount: 12, description: '主产区，种植番茄、黄瓜等' },
   { id: '2', code: 'BR002', name: '二号种植基地', location: '北京市顺义区', area: 35000, manager: '李明辉', contact: '13800138002', status: 'active', blockCount: 8, description: '叶菜类种植区' },
@@ -102,7 +102,7 @@ export default function BranchManagement() {
     } else {
       // 新增
       const newBranch: Branch = {
-        id: String(branches.length + 1),
+        id: String(Date.now()),
         code: formData.code!,
         name: formData.name!,
         location: formData.location!,

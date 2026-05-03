@@ -34,3 +34,4 @@ export { DictSelect, DictTag } from './DictSelect';
 export { DeviceSelect } from './DeviceSelect';
 export { ZoneSelect } from './ZoneSelect';
 export { BlockSelect } from './BlockSelect';
+export { UserSelect } from './UserSelect';
