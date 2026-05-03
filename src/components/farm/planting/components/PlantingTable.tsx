@@ -38,6 +38,12 @@ interface PlantingTableProps {
   printMode?: boolean;
   onPrintModeChange?: (mode: boolean) => void;
   onConfirmPrint?: (records: Planting[]) => void;
+  // 权限控制
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
+  canPrint?: boolean;
 }
 
 export function PlantingTable({
@@ -63,7 +69,12 @@ export function PlantingTable({
   onConfirmExport,
   printMode = false,
   onPrintModeChange,
-  onConfirmPrint
+  onConfirmPrint,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
+  canPrint = true,
 }: PlantingTableProps) {
   const totalPages = Math.ceil(data.length / pagination.pageSize);
   const startIndex = (pagination.current - 1) * pagination.pageSize;
@@ -412,7 +423,7 @@ export function PlantingTable({
           ) : (
             /* 正常模式 */
             <>
-              {onAdd && (
+              {canCreate && onAdd && (
                 <button
                   onClick={onAdd}
                   className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
@@ -421,13 +432,15 @@ export function PlantingTable({
                   新增
                 </button>
               )}
-              <button
-                onClick={onExportClick}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
+              {canExport && onExportClick && (
+                <button
+                  onClick={onExportClick}
+                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
             </>
           )}
         </div>

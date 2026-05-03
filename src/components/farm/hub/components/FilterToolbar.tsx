@@ -32,6 +32,9 @@ interface FilterToolbarProps {
   onImport: () => void;
   onSmartRecommend: () => void;
   onViewModeChange: (mode: 'list' | 'calendar') => void;
+  // 权限控制
+  canImport?: boolean;
+  canSmartRecommend?: boolean;
 }
 
 export function FilterToolbar({
@@ -52,6 +55,8 @@ export function FilterToolbar({
   onImport,
   onSmartRecommend,
   onViewModeChange,
+  canImport = true,
+  canSmartRecommend = true,
 }: FilterToolbarProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -137,20 +142,24 @@ export function FilterToolbar({
           >
             重置
           </button>
-          <button
-            onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            批量导入
-          </button>
-          <button
-            onClick={onSmartRecommend}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white text-sm rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 transition-all duration-300 animate-pulse-subtle"
-          >
-            <Sparkles className="w-4 h-4" />
-            智能推荐
-          </button>
+          {canImport && (
+            <button
+              onClick={onImport}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              批量导入
+            </button>
+          )}
+          {canSmartRecommend && (
+            <button
+              onClick={onSmartRecommend}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white text-sm rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 transition-all duration-300 animate-pulse-subtle"
+            >
+              <Sparkles className="w-4 h-4" />
+              智能推荐
+            </button>
+          )}
 
           {/* 视图切换 */}
           <div className="flex border border-gray-200 rounded-lg overflow-hidden ml-2">

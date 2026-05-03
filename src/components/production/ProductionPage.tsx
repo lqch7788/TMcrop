@@ -5,6 +5,7 @@ import {
 import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
 import { useGreenhouses } from '../common/settings';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
+import { useAuthPermission } from '../../hooks/usePermission';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';
@@ -20,6 +21,13 @@ import {
 
 export default function ProductionPage() {
   const { greenhouses } = useGreenhouses();
+
+  // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_PRODUCTION', 'create');
+  const canEdit = can('PROC_PRODUCTION', 'edit');
+  const canDelete = can('PROC_PRODUCTION', 'delete');
+  const canExport = can('PROC_PRODUCTION', 'export');
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [planTypeFilter, setPlanTypeFilter] = useState<string>('all');
@@ -489,40 +497,48 @@ export default function ProductionPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              <button
-                onClick={() => {
-                  setBatchEditMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-              >
-                <Edit className="w-4 h-4" />
-                编辑
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDeleteMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
-              </button>
-              <button
-                onClick={handleExportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
+              {canCreate && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={() => {
+                    setBatchEditMode(true);
+                    setSelectedRows([]);
+                  }}
+                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Edit className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => {
+                    setBatchDeleteMode(true);
+                    setSelectedRows([]);
+                  }}
+                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {canExport && (
+                <button
+                  onClick={handleExportClick}
+                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 // 审批中心 - 全局审批Context
 // 文件路径：src/contexts/ApprovalContext.tsx
 // 组件化结构：统一管理审批模块的共享数据
-// 支持 localStorage 持久化
+// 支持 API 持久化
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useMemo, useCallback, useEffect, ReactNode } from 'react';
@@ -29,9 +29,9 @@ import {
 } from '../types/approvalIntegration';
 
 // ============================================================
-// LocalStorage 持久化 Key
+// API 配置
 // ============================================================
-const APPROVALS_STORAGE_KEY = 'yuanxingtu_approvals';
+const API_BASE = '/api/approvals';
 
 // ============================================================
 // Context Value 类型定义
@@ -93,51 +93,36 @@ interface ApprovalProviderProps {
 // Provider 实现
 // ============================================================
 
-// 从 localStorage 加载审批数据
-const loadApprovalsFromStorage = (): Approval[] => {
-  try {
-    const stored = localStorage.getItem(APPROVALS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // 合并 mock 数据和新数据，避免丢失初始数据
-      const merged = [...mockApprovals];
-      parsed.forEach((item: Approval) => {
-        if (!merged.find(m => m.id === item.id)) {
-          merged.push(item);
-        }
-      });
-      return merged;
-    }
-  } catch (error) {
-    console.warn('Failed to load approvals from localStorage:', error);
-  }
-  return mockApprovals;
-};
-
-// 保存审批数据到 localStorage
-const saveApprovalsToStorage = (approvals: Approval[]) => {
-  try {
-    localStorage.setItem(APPROVALS_STORAGE_KEY, JSON.stringify(approvals));
-  } catch (error) {
-    console.warn('Failed to save approvals to localStorage:', error);
-  }
-};
-
 // 清除 localStorage（可选，用于重置演示数据）
 export const clearApprovalsStorage = () => {
-  try {
-    localStorage.removeItem(APPROVALS_STORAGE_KEY);
-  } catch (error) {
-    console.warn('Failed to clear approvals from localStorage:', error);
-  }
+  // localStorage 已不再使用，保留接口兼容性
 };
 
 export function ApprovalProvider({ children, initialApprovals }: ApprovalProviderProps) {
-  // 使用 reducer 管理状态，优先从 localStorage 加载
+  // 使用 reducer 管理状态
   const [state, dispatch] = useReducer(approvalReducer, {
     ...initialApprovalState,
-    approvals: loadApprovalsFromStorage(),
+    approvals: initialApprovals || [],
   });
+
+  // 从 API 加载审批数据
+  const loadApprovalsFromAPI = useCallback(async () => {
+    try {
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success) {
+        dispatch({ type: 'SET_APPROVALS', payload: result.data || [] });
+      } else {
+        console.warn('Failed to load approvals from API:', result.error);
+        // 如果 API 加载失败，使用 mock 数据
+        dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
+      }
+    } catch (error) {
+      console.warn('Failed to load approvals from API, using mock data:', error);
+      // 如果 API 加载失败，使用 mock 数据
+      dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
+    }
+  }, []);
 
   // 注册业务联动处理器（仅注册一次）
   useEffect(() => {
@@ -150,10 +135,10 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     registerApprovalIntegration(seedlingSupplementaryHandler);
   }, []);
 
-  // 监听审批数据变化，自动保存到 localStorage
+  // 组件挂载时从 API 加载数据
   useEffect(() => {
-    saveApprovalsToStorage(state.approvals);
-  }, [state.approvals]);
+    loadApprovalsFromAPI();
+  }, [loadApprovalsFromAPI]);
 
   // 计算统计数据
   const stats = useMemo<ApprovalStats>(() => {
@@ -188,51 +173,128 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     dispatch({ type: 'RESET_FILTERS' });
   }, []);
 
-  // CRUD 操作
-  const addApproval = useCallback((approval: Approval) => {
-    dispatch({ type: 'ADD_APPROVAL', payload: approval });
-  }, []);
+  // CRUD 操作（通过 API）
+  const addApproval = useCallback(async (approval: Approval) => {
+    try {
+      const response = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(approval),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // 重新加载数据
+        await loadApprovalsFromAPI();
+      } else {
+        console.error('Failed to add approval via API:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to add approval via API:', error);
+    }
+  }, [loadApprovalsFromAPI]);
 
-  const updateApproval = useCallback((id: string, updates: Partial<Approval>) => {
-    dispatch({ type: 'UPDATE_APPROVAL', payload: { id, updates } });
-  }, []);
+  const updateApproval = useCallback(async (id: string, updates: Partial<Approval>) => {
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // 重新加载数据
+        await loadApprovalsFromAPI();
+      } else {
+        console.error('Failed to update approval via API:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to update approval via API:', error);
+    }
+  }, [loadApprovalsFromAPI]);
 
-  const deleteApproval = useCallback((id: string) => {
-    dispatch({ type: 'DELETE_APPROVAL', payload: id });
-  }, []);
+  const deleteApproval = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        // 重新加载数据
+        await loadApprovalsFromAPI();
+      } else {
+        console.error('Failed to delete approval via API:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to delete approval via API:', error);
+    }
+  }, [loadApprovalsFromAPI]);
 
-  // 审批操作
-  const approve = useCallback((id: string, comment?: string) => {
+  // 审批操作（通过 API）
+  const approve = useCallback(async (id: string, comment?: string) => {
     const approval = state.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('approved', approval, { comment });
     }
-    dispatch({ type: 'APPROVE', payload: { id, comment } });
-  }, [state.approvals]);
+    try {
+      await fetch(`${API_BASE}/${id}/action`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', comment }),
+      });
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to approve via API:', error);
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
 
-  const reject = useCallback((id: string, comment: string) => {
+  const reject = useCallback(async (id: string, comment: string) => {
     const approval = state.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('rejected', approval, { reason: comment });
     }
-    dispatch({ type: 'REJECT', payload: { id, comment } });
-  }, [state.approvals]);
+    try {
+      await fetch(`${API_BASE}/${id}/action`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', comment }),
+      });
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to reject via API:', error);
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
 
-  const partiallyApprove = useCallback((id: string, items: Record<string, number>, comment?: string) => {
+  const partiallyApprove = useCallback(async (id: string, items: Record<string, number>, comment?: string) => {
     const approval = state.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
-    dispatch({ type: 'PARTIALLY_APPROVE', payload: { id, items, comment } });
-  }, [state.approvals]);
+    try {
+      await fetch(`${API_BASE}/${id}/action`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'partially_approve', comment, approvedItems: items }),
+      });
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to partially approve via API:', error);
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
 
-  const cancel = useCallback((id: string, reason?: string) => {
+  const cancel = useCallback(async (id: string, reason?: string) => {
     const approval = state.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('cancelled', approval, { reason });
     }
-    dispatch({ type: 'CANCEL', payload: { id, reason } });
-  }, [state.approvals]);
+    try {
+      await fetch(`${API_BASE}/${id}/action`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', comment: reason }),
+      });
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to cancel via API:', error);
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
 
   // 查询方法
   const getApprovalById = useCallback((id: string) => {

@@ -23,6 +23,10 @@ interface CropVarietyTableProps {
   onEdit: (variety: CropVariety) => void;
   onDelete: (variety: CropVariety) => void;
   selectedId?: string;
+  // 权限控制
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function CropVarietyTable({
@@ -32,7 +36,10 @@ export function CropVarietyTable({
   onAdd,
   onEdit,
   onDelete,
-  selectedId
+  selectedId,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
 }: CropVarietyTableProps) {
   const [searchNameKeyword, setSearchNameKeyword] = useState('');
   const [searchCodeKeyword, setSearchCodeKeyword] = useState('');
@@ -178,13 +185,15 @@ export function CropVarietyTable({
             </div>
           </div>
 
-          <button
-            onClick={onAdd}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            新增作物
-          </button>
+          {canCreate && (
+            <button
+              onClick={onAdd}
+              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 flex-shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              新增作物
+            </button>
+          )}
         </div>
       </div>
 
@@ -268,20 +277,24 @@ export function CropVarietyTable({
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(variety); }}
-                        className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
-                        title="编辑品种"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(variety, e)}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                        title="删除品种"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onEdit(variety); }}
+                          className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                          title="编辑品种"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={(e) => handleDelete(variety, e)}
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                          title="删除品种"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

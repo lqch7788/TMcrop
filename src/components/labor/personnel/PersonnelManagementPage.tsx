@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 interface Position {
   id: number;
@@ -33,6 +34,13 @@ export function PersonnelManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(positions.length / pageSize);
+
+  // 权限检查 - 人工管理模块权限
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_LABOR', 'create');
+  const canEdit = can('PROC_LABOR', 'edit');
+  const canDelete = can('PROC_LABOR', 'delete');
+  const canExport = can('PROC_LABOR', 'export');
 
   // 批量操作状态
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -352,34 +360,42 @@ export function PersonnelManagementPage() {
               </>
             ) : (
               <>
-                <button
-                  onClick={handleAdd}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  新增
-                </button>
-                <button
-                  onClick={handleBatchEditClick}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                >
-                  <Pencil className="w-4 h-4" />
-                  编辑
-                </button>
-                <button
-                  onClick={handleBatchDeleteClick}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </button>
-                <button
-                  onClick={handleBatchExportClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
+                {canCreate && (
+                  <button
+                    onClick={handleAdd}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={handleBatchEditClick}
+                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    编辑
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={handleBatchDeleteClick}
+                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    删除
+                  </button>
+                )}
+                {canExport && (
+                  <button
+                    onClick={handleBatchExportClick}
+                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    导出
+                  </button>
+                )}
               </>
             )}
           </div>

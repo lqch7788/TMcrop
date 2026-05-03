@@ -20,9 +20,19 @@ import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../
 import * as plantingService from '../../../services/plantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/cropBatchService';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
+
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 种植模块权限
+  const canCreate = can('PROC_PLANTING', 'create');
+  const canEdit = can('PROC_PLANTING', 'edit');
+  const canDelete = can('PROC_PLANTING', 'delete');
+  const canExport = can('PROC_PLANTING', 'export');
+  const canPrint = can('PROC_PLANTING', 'print');
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -419,6 +429,11 @@ export default function PlantingPage() {
         printMode={printMode}
         onPrintModeChange={setPrintMode}
         onConfirmPrint={handlePrintConfirm}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canExport={canExport}
+        canPrint={canPrint}
       />
 
       {/* 弹窗 */}

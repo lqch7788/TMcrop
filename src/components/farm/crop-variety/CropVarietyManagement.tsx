@@ -29,9 +29,17 @@ import {
 import {
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function CropVarietyManagement() {
   const navigate = useNavigate();
+
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 品种管理模块权限
+  const canCreate = can('PROC_CROP_VARIETY', 'create');
+  const canEdit = can('PROC_CROP_VARIETY', 'edit');
+  const canDelete = can('PROC_CROP_VARIETY', 'delete');
   const [selectedVariety, setSelectedVariety] = useState<CropVariety | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [prefillAddData, setPrefillAddData] = useState<{
@@ -468,6 +476,9 @@ export default function CropVarietyManagement() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               selectedId={selectedVariety?.id}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
             />
           ) : (
             <VarietyTree

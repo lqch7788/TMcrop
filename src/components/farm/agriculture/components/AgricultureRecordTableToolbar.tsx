@@ -11,6 +11,9 @@ interface AgricultureRecordTableToolbarProps {
   onBatchDelete: () => void;
   onCancelBatchDelete: () => void;
   onExport: () => void;
+  // 权限控制
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function AgricultureRecordTableToolbar({
@@ -19,6 +22,8 @@ export function AgricultureRecordTableToolbar({
   onBatchDelete,
   onCancelBatchDelete,
   onExport,
+  canDelete = true,
+  canExport = true,
 }: AgricultureRecordTableToolbarProps) {
   return (
     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -42,20 +47,24 @@ export function AgricultureRecordTableToolbar({
           </>
         ) : (
           <>
-            <button
-              onClick={onBatchDelete}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-            >
-              <Trash2 className="w-4 h-4" />
-              删除
-            </button>
-            <button
-              onClick={onExport}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            {canDelete && (
+              <button
+                onClick={onBatchDelete}
+                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+            )}
+            {canExport && (
+              <button
+                onClick={onExport}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
           </>
         )}
       </div>

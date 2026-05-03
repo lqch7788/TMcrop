@@ -16,6 +16,10 @@ interface ApprovalListProps {
   onPartialApprove?: (approval: Approval) => void;
   showActions?: boolean;
   emptyText?: string;
+  // 权限控制 props，默认都为 true
+  canApprove?: boolean;
+  canReject?: boolean;
+  canExport?: boolean;
 }
 
 export function ApprovalList({
@@ -26,6 +30,9 @@ export function ApprovalList({
   onPartialApprove,
   showActions = true,
   emptyText = '暂无审批记录',
+  canApprove = true,
+  canReject = true,
+  canExport = true,
 }: ApprovalListProps) {
   const getStatusIcon = (status: ApprovalStatus) => {
     switch (status) {
@@ -131,7 +138,7 @@ export function ApprovalList({
 
           {showActions && approval.status === ApprovalStatus.PENDING && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-              {onApprove && (
+              {onApprove && canApprove && (
                 <button
                   onClick={() => onApprove(approval.id)}
                   className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
@@ -139,7 +146,7 @@ export function ApprovalList({
                   通过
                 </button>
               )}
-              {onPartialApprove && (
+              {onPartialApprove && canApprove && (
                 <button
                   onClick={() => onPartialApprove(approval)}
                   className="h-10 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
@@ -147,7 +154,7 @@ export function ApprovalList({
                   部分通过
                 </button>
               )}
-              {onReject && (
+              {onReject && canReject && (
                 <button
                   onClick={() => onReject(approval.id)}
                   className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"

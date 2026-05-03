@@ -8,12 +8,20 @@ import { SalaryExport } from './SalaryExport';
 import { SalaryFormModal } from './SalaryFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { useSalary } from './hooks/useSalary';
+import { useAuthPermission } from '../../../hooks/usePermission';
 import type { SalaryRecord, SalaryCalculateData } from './types';
 
 /**
  * 工资管理页面容器
  */
 export function SalaryPage() {
+  // 权限检查 - 人工管理模块权限
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_LABOR', 'create');
+  const canEdit = can('PROC_LABOR', 'edit');
+  const canDelete = can('PROC_LABOR', 'delete');
+  const canExport = can('PROC_LABOR', 'export');
+
   const {
     data,
     total,
@@ -245,20 +253,24 @@ export function SalaryPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
-            <button
-              onClick={() => setAddModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-            >
-              <Plus className="w-4 h-4" />
-              新增
-            </button>
+            {canExport && (
+              <button
+                onClick={handleExportClick}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
+            {canCreate && (
+              <button
+                onClick={() => setAddModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                <Plus className="w-4 h-4" />
+                新增
+              </button>
+            )}
           </div>
         </div>
       </div>

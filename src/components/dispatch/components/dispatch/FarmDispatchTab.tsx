@@ -11,12 +11,20 @@ import { FarmTaskForm } from './FarmTaskForm';
 import { TaskDetailModal } from '../modals/TaskDetailModal';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
+import { useAuthPermission } from '../../../../hooks/usePermission';
 
 /**
  * 农事任务Tab组件
  */
 export const FarmDispatchTab: React.FC = () => {
   const { unifiedTasks, publishTask, updateTask, deleteTask, getTaskRecordsByTaskId } = useTasks();
+
+  // 权限检查
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_DISPATCH', 'create');
+  const canEdit = can('PROC_DISPATCH', 'edit');
+  const canDelete = can('PROC_DISPATCH', 'delete');
+  const canPublish = can('PROC_DISPATCH', 'publish');
 
   // 搜索和筛选状态
   const [searchText, setSearchText] = useState('');
@@ -167,13 +175,15 @@ export const FarmDispatchTab: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleCreate}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                新建任务
-              </button>
+              {canCreate && (
+                <button
+                  onClick={handleCreate}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  新建任务
+                </button>
+              )}
             </div>
           </div>
 
@@ -187,6 +197,10 @@ export const FarmDispatchTab: React.FC = () => {
             onEdit={handleEdit}
             onPublish={handlePublish}
             onDelete={handleDelete}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            canPublish={canPublish}
           />
 
           {/* 分页信息 */}

@@ -15,6 +15,8 @@ import { useTempTasks } from '../../../hooks/useTempTasks';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { greenhouseOptions, operatorOptions, materialOptions, workloadUnitOptions } from '../../../data/farmMockData';
 import { AddOperationRecordModal, ExportFormatModal, DeleteWarningModal } from './modals';
+// 引入权限控制 Hook
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -65,6 +67,14 @@ export default function AgricultureRecordPage() {
   const { acceptTaskCompletion } = useTasks();
   // 临时任务验收 Hook
   const { acceptCompletion, rejectCompletion } = useTempTasks();
+
+  // 权限检查 Hook - 农事管理模块权限控制
+  const { can } = useAuthPermission();
+  // PROC_FARM: 农事管理工序权限
+  const canCreate = can('PROC_FARM', 'create');
+  const canEdit = can('PROC_FARM', 'edit');
+  const canDelete = can('PROC_FARM', 'delete');
+  const canExport = can('PROC_FARM', 'export');
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -361,6 +371,7 @@ export default function AgricultureRecordPage() {
         onFiltersChange={setFilters}
         onReset={handleReset}
         onAdd={() => setShowAddModal(true)}
+        canCreate={canCreate}
       />
 
       {/* 数据表格 */}
@@ -372,6 +383,8 @@ export default function AgricultureRecordPage() {
           onBatchDelete={() => setBatchDeleteMode(true)}
           onCancelBatchDelete={() => { setBatchDeleteMode(false); setSelectedRows([]); }}
           onExport={handleExport}
+          canDelete={canDelete}
+          canExport={canExport}
         />
 
         {/* 表格 */}

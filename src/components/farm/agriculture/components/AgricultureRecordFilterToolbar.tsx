@@ -43,6 +43,8 @@ interface AgricultureRecordFilterToolbarProps {
   onFiltersChange: (filters: any) => void;
   onReset: () => void;
   onAdd: () => void;
+  // 权限控制
+  canCreate?: boolean;
 }
 
 export function AgricultureRecordFilterToolbar({
@@ -50,6 +52,7 @@ export function AgricultureRecordFilterToolbar({
   onFiltersChange,
   onReset,
   onAdd,
+  canCreate = true,
 }: AgricultureRecordFilterToolbarProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
@@ -146,13 +149,15 @@ export function AgricultureRecordFilterToolbar({
           >
             重置
           </button>
-          <button
-            onClick={onAdd}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            新增
-          </button>
+          {canCreate && (
+            <button
+              onClick={onAdd}
+              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              新增
+            </button>
+          )}
         </div>
       </div>
     </div>

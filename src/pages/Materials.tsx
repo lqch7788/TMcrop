@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Package, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
 import AddInboundModal from '../components/materials/AddInboundModal';
 import { ExportFormatModal } from '../components/materials/ExportFormatModal';
+import { useAuthPermission } from '../hooks/usePermission';
 
 const warehouseMaterials = [
   { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, price: '30元', supplier: '金种子业公司', location: 'A区-01' },
@@ -243,6 +244,13 @@ export default function Materials() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // 权限检查 - 物料库存管理模块
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_MATERIALS', 'create');
+  const canEdit = can('PROC_MATERIALS', 'edit');
+  const canDelete = can('PROC_MATERIALS', 'delete');
+  const canExport = can('PROC_MATERIALS', 'export');
 
   const [newInbound, setNewInbound] = useState({
     orderCode: '',
@@ -819,10 +827,12 @@ export default function Materials() {
                     </button>
                   </div>
                 ) : (
+                  canExport && (
                   <button onClick={handleExportClick} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
                     <Download className="w-4 h-4" />
                     导出
                   </button>
+                )
                 )}
               </div>
             </div>
@@ -875,8 +885,12 @@ export default function Materials() {
                       {!exportMode && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                            <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
+                            {can.can('PROC_MATERIALS', 'view') && (
+                              <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
+                            )}
+                            {canEdit && (
+                              <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -1045,9 +1059,11 @@ export default function Materials() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
+              {canCreate && (
               <button onClick={() => setShowAddModal(true)} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
                 <Plus className="w-4 h-4" /> 新增入库
               </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -1081,8 +1097,12 @@ export default function Materials() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                          <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
+                          {can.can('PROC_MATERIALS', 'view') && (
+                            <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
+                          )}
+                          {canEdit && (
+                            <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>

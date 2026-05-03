@@ -21,9 +21,19 @@ import * as seedlingService from '../../../services/seedlingService';
 import * as seedSourceService from '../../../services/seedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/cropBatchService';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
+
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 育苗模块权限
+  const canCreate = can('PROC_SEEDLING', 'create');
+  const canEdit = can('PROC_SEEDLING', 'edit');
+  const canDelete = can('PROC_SEEDLING', 'delete');
+  const canExport = can('PROC_SEEDLING', 'export');
+  const canPrint = can('PROC_SEEDLING', 'print');
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -461,6 +471,11 @@ export default function SeedlingPage() {
         printMode={printMode}
         onPrintModeChange={setPrintMode}
         onConfirmPrint={handlePrintConfirm}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canExport={canExport}
+        canPrint={canPrint}
       />
 
       {/* 弹窗 */}

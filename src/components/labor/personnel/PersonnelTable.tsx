@@ -11,6 +11,11 @@ interface PersonnelTableProps {
   selectedRows?: number[];
   onSelectAll?: () => void;
   onSelectRow?: (index: number) => void;
+  // 权限控制props
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function PersonnelTable({
@@ -22,6 +27,10 @@ export function PersonnelTable({
   selectedRows = [],
   onSelectAll,
   onSelectRow,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: PersonnelTableProps) {
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -127,20 +136,24 @@ export function PersonnelTable({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => onEditWorker(worker)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="编辑"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteWorker(worker)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="删除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => onEditWorker(worker)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="编辑"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => onDeleteWorker(worker)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

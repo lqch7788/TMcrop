@@ -13,6 +13,10 @@ import { MaterialExportModal } from './MaterialExportModal';
 import PageHeader from './PageHeader';
 import TabSwitch from './TabSwitch';
 import ActionToolbar from './ActionToolbar';
+import { useAuthPermission } from '../../hooks/usePermission';
+
+// 仓库物料模块权限代码
+const PROC_WAREHOUSE = 'PROC_WAREHOUSE';
 
 const categoryConfig: Record<string, { name: string; categories: Record<string, { name: string; subCategories: Record<string, { name: string; prefix: string }> }> }> = {
   'SP': { name: '生产投入类', categories: {
@@ -353,6 +357,14 @@ const initialFilters: MaterialFiltersState = {
 
 export default function WarehouseMaterialsPage() {
   const navigate = useNavigate();
+
+  // 权限检查 - 仓库物料模块权限
+  const { can } = useAuthPermission();
+  const canCreate = can(PROC_WAREHOUSE, 'create');
+  const canEdit = can(PROC_WAREHOUSE, 'edit');
+  const canDelete = can(PROC_WAREHOUSE, 'delete');
+  const canExport = can(PROC_WAREHOUSE, 'export');
+
   const [activeTab, setActiveTab] = useState<'overview' | 'inbound'>('inbound');
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   const [codeGen, setCodeGen] = useState({ bigCategory: '', midCategory: '', subCategory: '', generatedCode: '' });
@@ -665,6 +677,9 @@ export default function WarehouseMaterialsPage() {
             onCancelDelete={handleCancelDelete}
             onConfirmExport={handleConfirmExportClick}
             onCancelExport={handleCancelExport}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            canExport={canExport}
           />
 
           <MaterialsTable
@@ -684,6 +699,10 @@ export default function WarehouseMaterialsPage() {
             onDelete={handleDelete}
             onCancelSelection={handleCancelSelection}
             onConfirmExport={handleConfirmExport}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            canExport={canExport}
           />
         </>
       )}
@@ -797,6 +816,10 @@ export default function WarehouseMaterialsPage() {
           onBatchDeleteRecords={handleBatchDeleteRecords}
           onBatchSaveRecord={handleBatchSaveRecord}
           onAddRecord={handleAddRecord}
+          canCreate={canCreate}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          canExport={canExport}
         />
       )}
 

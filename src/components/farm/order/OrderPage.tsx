@@ -17,8 +17,15 @@ import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import * as cropOrderService from '@/services/cropOrderService';
 import * as cropInstanceService from '@/services/cropInstanceService';
 import * as cropVarietyService from '@/services/cropVarietyService';
+import { useAuthPermission } from '@/hooks/usePermission';
 
 export default function OrderPage() {
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 订单模块权限
+  const canCreate = can('PROC_ORDER', 'create');
+  const canDelete = can('PROC_ORDER', 'delete');
+  const canExport = can('PROC_ORDER', 'export');
   const [filters, setFilters] = useState<CropOrderFilters>({
     orderCode: '',
     orderName: '',
@@ -291,6 +298,9 @@ export default function OrderPage() {
         onExportSelectAll={handleExportSelectAll}
         onExportCancel={handleExportCancel}
         onConfirmExport={handleExportClickConfirm}
+        canCreate={canCreate}
+        canDelete={canDelete}
+        canExport={canExport}
       />
 
       {/* 弹窗 */}
