@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
-import { greenhouses, cropBatches, users } from '../../../data/mockData';
+import { cropBatches } from '../../../data/mockData';
+import { useUsers, useGreenhouses } from '../../common/settings';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
 import { TasksTable } from './TasksTable';
@@ -114,6 +115,9 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 }
 
 export function TasksPage() {
+  const { users } = useUsers();
+  const { greenhouses } = useGreenhouses();
+
   // 使用统一任务管理 Hook
   const { tasks, addTask, updateTask, deleteTask, updateTaskStatus } = useTasks();
   const [currentPage, setCurrentPage] = useState(1);

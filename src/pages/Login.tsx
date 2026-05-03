@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Cloud } from 'lucide-react';
-import { users } from '../data/mockData';
+import { useUsers } from '../components/common/settings';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { users } = useUsers();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberPassword, setRememberPassword] = useState(false);

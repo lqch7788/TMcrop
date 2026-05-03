@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
-import { greenhouses, currentUser } from '../../../data/mockData';
+import { currentUser } from '../../../data/mockData';
+import { useGreenhouses } from '../../common/settings';
 import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
@@ -56,6 +57,8 @@ export function TempTaskFormModal({
   dispatchMode: externalDispatchMode,
   onDispatchModeChange,
 }: TempTaskFormModalProps) {
+  const { greenhouses } = useGreenhouses();
+
   // 派发模式状态（默认手动选择）
   const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>(externalDispatchMode || 'manual');
   // AI推荐结果

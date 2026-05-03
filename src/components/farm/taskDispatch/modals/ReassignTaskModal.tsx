@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
-import { users } from '../../../../data/mockData';
+import { useUsers } from '../../../common/settings';
 
 interface ReassignTaskModalProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ export function ReassignTaskModal({
   onClose,
 }: ReassignTaskModalProps) {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+  const { users } = useUsers();
 
   if (!task) return null;
 

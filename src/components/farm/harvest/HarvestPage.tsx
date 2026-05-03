@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
-import { cropBatches, greenhouses, users } from '../../../data/mockData';
+import { cropBatches } from '../../../data/mockData';
+import { useUsers, useGreenhouses } from '../../common/settings';
 import { warehouseOptions } from '../../../data/farmMockData';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal, AddModal } from './modals';
 import {
@@ -43,6 +44,9 @@ const generateProductCode = (cropName: string, variety: string, index: number): 
 };
 
 export default function HarvestPage() {
+  const { users } = useUsers();
+  const { greenhouses } = useGreenhouses();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);

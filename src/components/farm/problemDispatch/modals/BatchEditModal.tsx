@@ -1,6 +1,7 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
-import { greenhouses, cropTypes } from '../../../../data/mockData';
+import { cropTypes } from '../../../../data/mockData';
+import { useGreenhouses } from '../../../common/settings';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export function BatchEditModal({
   onClose,
   onConfirm,
 }: BatchEditModalProps) {
+  const { greenhouses } = useGreenhouses();
+
   const selectedProblems = selectedRows.map(id => problems.find(p => p.id === id)).filter(Boolean) as ProblemEntry[];
   const currentProblem = selectedProblemId ? problems.find(p => p.id === selectedProblemId) : null;
   const editedData = selectedProblemId ? editedProblems[selectedProblemId] || {} : {};

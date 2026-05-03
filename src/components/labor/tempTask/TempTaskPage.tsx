@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Plus, AlertTriangle, Edit, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
 import { TempTask, TEMP_TASK_TYPES } from '../../../types';
-import { tempTasks as initialTempTasks, users } from '../../../data/mockData';
+import { tempTasks as initialTempTasks } from '../../../data/mockData';
+import { useUsers } from '../../common/settings';
 import { TempTaskFilters } from './TempTaskFilters';
 import { TempTaskTable } from './TempTaskTable';
 import { TempTaskFormModal } from './TempTaskFormModal';
@@ -701,6 +702,8 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
 }
 
 export function TempTaskPage() {
+  const { users } = useUsers();
+
   // 使用统一临时任务管理 Hook（数据闭环核心）
   const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
