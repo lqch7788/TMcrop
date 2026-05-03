@@ -5,7 +5,9 @@
 
 import React, { useState } from 'react';
 import { useTasks, Task } from '../../../hooks/useTasks';
-import { users as workers, cropBatches, greenhouses } from '../../../data/mockData';
+import { cropBatches } from '../../../data/mockData';
+import { useUsers } from '../../common/settings';
+import { useGreenhouses } from '../../common/settings';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
@@ -32,6 +34,8 @@ type Worker = User & {
  */
 export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskModalProps) {
   const { createTask } = useTasks();
+  const { users: workers } = useUsers();
+  const { greenhouses } = useGreenhouses();
 
   const [title, setTitle] = useState(prefillData?.title || '');
   const [description, setDescription] = useState(prefillData?.description || '');

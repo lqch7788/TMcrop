@@ -10,6 +10,7 @@ import { WorkerAttendanceTable } from './WorkerAttendanceTable';
 import { WorkerAttendanceExport } from './WorkerAttendanceExport';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { AttendanceRecord } from './types';
+import { useDepartments } from '../../common/settings';
 
 // 编辑记录的类型
 type EditedRecordsMap = Record<string, Partial<AttendanceRecord>>;
@@ -61,7 +62,10 @@ export function WorkerAttendancePage() {
   // Data state for local editing
   const [attendanceData, setAttendanceData] = useState(filteredData);
 
-  const departments = ['全部', '生产部', '技术部', '仓储部', '质检部'];
+  // 从SettingsDataProvider获取部门列表
+  const { departments } = useDepartments();
+  // 转换为页面需要的格式（包含"全部"选项）
+  const departmentOptions = ['全部', ...departments.map(d => d.name)];
 
   // Batch Edit handlers
   const handleBatchEditClick = () => {
@@ -265,7 +269,7 @@ export function WorkerAttendancePage() {
         onClose={() => setShowBatchEditModal(false)}
         onConfirm={handleConfirmBatchEdit}
         onConfirmNext={handleConfirmNext}
-        departments={departments}
+        departments={departmentOptions}
       />
 
       {/* 删除确认弹窗 */}

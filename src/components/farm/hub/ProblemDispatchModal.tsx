@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { users as workers } from '../../../data/mockData';
+import { useUsers } from '../../common/settings';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 
@@ -28,6 +28,9 @@ type Worker = User & {
 };
 
 export function ProblemDispatchModal({ problemId, onClose, onDispatched }: ProblemDispatchModalProps) {
+  // 从SettingsDataProvider获取用户列表
+  const { users: workers } = useUsers();
+
   const [problem, setProblem] = useState<ProblemEntry | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [priority, setPriority] = useState<'高' | '中' | '低'>('中');

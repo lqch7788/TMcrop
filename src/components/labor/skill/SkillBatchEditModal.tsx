@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { StaffSkill, SkillLevel } from './types';
+import { useDepartments, useDictionaries } from '../../common/settings';
 
 interface SkillBatchEditModalProps {
   isOpen: boolean;
@@ -17,9 +18,8 @@ interface SkillBatchEditModalProps {
   onConfirmNext: () => void;
 }
 
+// 技能等级列表 - 从字典获取
 const skillLevels: SkillLevel[] = ['初级', '中级', '高级', '技师'];
-const departments = ['生产部', '技术部', '质检部', '仓储部', '设备部'];
-const statusOptions = ['正常', '即将过期', '已过期'];
 
 export function SkillBatchEditModal({
   isOpen,
@@ -35,6 +35,13 @@ export function SkillBatchEditModal({
   onConfirm,
   onConfirmNext,
 }: SkillBatchEditModalProps) {
+  // 从SettingsDataProvider获取部门列表和字典数据
+  const { departments } = useDepartments();
+  const { getDictItems } = useDictionaries();
+
+  // 获取技能状态字典
+  const statusOptions = getDictItems('skill_status').map(item => item.name);
+
   // 当弹窗打开且没有选择记录时，自动选择第一条
   React.useEffect(() => {
     if (isOpen && !selectedRecordId && selectedRows.length > 0) {
@@ -139,7 +146,7 @@ export function SkillBatchEditModal({
                   className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                 >
                   {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                    <option key={dept.oid || dept.name} value={dept.name}>{dept.name}</option>
                   ))}
                 </select>
               </div>

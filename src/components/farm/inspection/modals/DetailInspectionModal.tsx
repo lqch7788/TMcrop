@@ -1,7 +1,7 @@
 import { Modal } from '../../../ui/Modal';
 import { usePersistentProblems } from '../../../../hooks/usePersistentProblems';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
-import { users } from '../../../../data/mockData';
+import { useUsers } from '../../../common/settings';
 
 // 动作类型中文映射
 const ACTION_LABELS: Record<string, string> = {
@@ -81,6 +81,8 @@ function getStatusBadge(status: string) {
 export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspectionModalProps) {
   // 通过 problemId 获取关联的问题数据和流转记录 - Hook需在条件返回之前调用
   const { problems } = usePersistentProblems();
+  // 从SettingsDataProvider获取用户列表
+  const { users } = useUsers();
 
   if (!record) return null;
 

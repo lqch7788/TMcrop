@@ -5,6 +5,7 @@
 // Provider
 export { SettingsDataProvider, useSettingsData, triggerSettingsRefresh } from './SettingsDataProvider';
 export type {
+  User,
   Department,
   Position,
   Team,
@@ -21,7 +22,7 @@ export type {
 } from './SettingsDataProvider';
 
 // Hooks
-export { useDepartments, usePositions, useTeams, useWarehouses, useGreenhouses, useDictionaries, useDevices, useNotificationChannels, useNotificationRules, useCodeRules, useZones, useBlocks, useDictionaryCategories } from './SettingsDataProvider';
+export { useUsers, useDepartments, usePositions, useTeams, useWarehouses, useGreenhouses, useDictionaries, useDevices, useNotificationChannels, useNotificationRules, useCodeRules, useZones, useBlocks, useDictionaryCategories } from './SettingsDataProvider';
 
 // Select Components
 export { DepartmentSelect } from './DepartmentSelect';
