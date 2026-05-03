@@ -382,3 +382,29 @@ hongzhiyun/
 1. 重启后端服务器以加载更新的 seed 数据
 2. 测试 DictionaryManagement 页面的完整 CRUD 功能
 3. 完成 NotificationSettings 的 API 迁移
+
+### Phase 3: 硬编码消除进度 (2026-05-03)
+
+#### 已完成改造
+| 文件 | 改造内容 | 状态 |
+|------|---------|------|
+| DepartmentSettings.tsx | 使用useDepartments()获取部门数据 | ✅ 已完成 |
+| SkillBatchEditModal.tsx | 使用useDepartments()和useDictionaries()获取数据 | ✅ 已完成 |
+| WorkerAttendancePage.tsx | 使用useDepartments()获取部门列表 | ✅ 已完成 |
+| InspectionTable.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+| DetailInspectionModal.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+| ProblemTab.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+| ProblemDispatchModal.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+| CreateTaskModal.tsx | 使用useUsers()和useGreenhouses()获取数据 | ✅ 已完成 |
+| ReassignTaskModal.tsx | 使用useUsers()获取用户列表 | ✅ 已完成 |
+
+#### 待改造文件（主要）
+- HarvestPage.tsx - 使用greenhouses和users
+- TempTaskPage.tsx - 使用greenhouses和users
+- InspectionTab.tsx - 使用greenhouses、users、cropTypes
+- TasksPage.tsx - 使用greenhouses和users
+- 其他业务组件...
+
+#### 改造原则
+- **硬编码业务配置**（部门、人员、温室、仓库等）→ 从SettingsDataProvider获取
+- **模拟业务数据**（cropBatches、tasks、inspectionRecords等）→ 保留用于开发测试

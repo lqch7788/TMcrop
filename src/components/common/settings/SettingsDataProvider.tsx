@@ -6,6 +6,23 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 // 基础数据类型
+export interface User {
+  id: string;
+  oid: string;
+  username: string;
+  realName: string;
+  name?: string;
+  orgOid: string;
+  orgName?: string;
+  departmentOid?: string;
+  departmentName?: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  status: string;
+  roleIds?: string[];
+}
+
 export interface Department {
   oid: string;
   name: string;
@@ -150,6 +167,7 @@ export interface DictionaryCategory {
 // Context类型
 interface SettingsDataContextType {
   // 数据状态
+  users: User[];
   departments: Department[];
   positions: Position[];
   teams: Team[];
@@ -170,6 +188,7 @@ interface SettingsDataContextType {
 
   // 刷新函数
   refreshAll: () => void;
+  refreshUsers: () => void;
   refreshDepartments: () => void;
   refreshPositions: () => void;
   refreshTeams: () => void;
@@ -210,6 +229,7 @@ interface SettingsDataProviderProps {
 
 export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
   // 数据状态
+  const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -229,6 +249,36 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   // 刷新函数
+  const refreshUsers = useCallback(async () => {
+    try {
+      // 从权限系统获取用户列表
+      const response = await fetch('/api/authority/users');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        // 标准化用户数据，兼容realName和name字段
+        const normalizedUsers: User[] = data.map((u: any) => ({
+          id: u.id,
+          oid: u.oid,
+          username: u.username,
+          realName: u.real_name || u.realName || u.name || u.username,
+          name: u.real_name || u.realName || u.name || u.username,
+          orgOid: u.org_oid || u.orgOid || '',
+          orgName: u.org_name || u.orgName || '',
+          departmentOid: u.department_oid || u.departmentOid || '',
+          departmentName: u.department_name || u.departmentName || '',
+          position: u.position || '',
+          email: u.email || '',
+          phone: u.phone || '',
+          status: u.status || 'active',
+          roleIds: u.role_ids || u.roleIds || [],
+        }));
+        setUsers(normalizedUsers);
+      }
+    } catch (e) {
+      console.error('Failed to fetch users:', e);
+    }
+  }, []);
+
   const refreshDepartments = useCallback(async () => {
     try {
       const data = await fetchData<Department>(`${API_BASE}/departments`);
@@ -680,6 +730,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     setError(null);
     try {
       await Promise.all([
+        refreshUsers(),
         refreshDepartments(),
         refreshPositions(),
         refreshTeams(),
@@ -701,6 +752,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
       setIsLoading(false);
     }
   }, [
+    refreshUsers,
     refreshDepartments,
     refreshPositions,
     refreshTeams,
@@ -743,6 +795,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
   }, [refreshAll]);
 
   const value: SettingsDataContextType = {
+    users,
     departments,
     positions,
     teams,
@@ -759,6 +812,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     isLoading,
     error,
     refreshAll,
+    refreshUsers,
     refreshDepartments,
     refreshPositions,
     refreshTeams,
@@ -789,6 +843,11 @@ export function useSettingsData() {
     throw new Error('useSettingsData must be used within a SettingsDataProvider');
   }
   return context;
+}
+
+export function useUsers() {
+  const { users, refreshUsers } = useSettingsData();
+  return { users, refreshUsers };
 }
 
 export function useDepartments() {

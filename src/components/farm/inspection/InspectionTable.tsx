@@ -1,5 +1,5 @@
 import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
-import { users } from '../../../data/mockData';
+import { useUsers } from '../../common/settings';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {
@@ -109,6 +109,9 @@ export function InspectionTable({
   tasks = [],
   onAcceptance,
 }: InspectionTableProps) {
+  // 从SettingsDataProvider获取用户列表
+  const { users } = useUsers();
+
   const totalPages = Math.ceil(records.length / pageSize) || 1;
   const showSelection = exportMode || batchEditMode || batchDeleteMode;
 

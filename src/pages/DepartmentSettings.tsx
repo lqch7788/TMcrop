@@ -1,20 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Target, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDepartments } from '../components/common/settings';
 
-const departments = [
-  { id: 1, code: 'D001', name: '管理层', parent: '-', manager: '张总', staffCount: 2, description: '公司战略规划与决策', establishDate: '2020-01-01', status: '正常', statusClass: 'normal' },
-  { id: 2, code: 'D002', name: '技术部', parent: '管理层', manager: '李建国', staffCount: 5, description: '农业生产技术研发与指导', establishDate: '2020-01-01', status: '正常', statusClass: 'normal' },
-  { id: 3, code: 'D003', name: '生产部', parent: '管理层', manager: '王主管', staffCount: 18, description: '日常农业生产管理', establishDate: '2020-01-01', status: '正常', statusClass: 'normal' },
-  { id: 4, code: 'D004', name: '后勤部', parent: '管理层', manager: '赵后勤', staffCount: 4, description: '物资采购与仓库管理', establishDate: '2021-06-01', status: '正常', statusClass: 'normal' },
-  { id: 5, code: 'D005', name: '财务部', parent: '管理层', manager: '钱会计', staffCount: 2, description: '财务核算与资金管理', establishDate: '2020-01-01', status: '正常', statusClass: 'normal' },
-];
+// 部门列表数据结构
+interface DepartmentData {
+  id: number;
+  code: string;
+  name: string;
+  parent: string;
+  manager: string;
+  staffCount: number;
+  description: string;
+  establishDate: string;
+  status: string;
+  statusClass: string;
+}
 
 export default function DepartmentSettings() {
+  const { departments } = useDepartments();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
-  const totalPages = Math.ceil(departments.length / pageSize);
-  const paginatedDepartments = departments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 将API数据转换为页面需要的格式
+  const departmentList: DepartmentData[] = departments.map((dept, index) => ({
+    id: index + 1,
+    code: dept.oid || `D${String(index + 1).padStart(3, '0')}`,
+    name: dept.name,
+    parent: '-',
+    manager: dept.managerName || '-',
+    staffCount: 0,
+    description: '-',
+    establishDate: '-',
+    status: dept.status === 'active' ? '正常' : '停用',
+    statusClass: dept.status === 'active' ? 'normal' : 'inactive',
+  }));
+
+  const totalPages = Math.ceil(departmentList.length / pageSize);
+  const paginatedDepartments = departmentList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 分页状态重置
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [departments.length]);
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm">

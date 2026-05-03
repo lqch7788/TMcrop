@@ -8,7 +8,7 @@ import { usePersistentProblems, ProblemEntry } from '../../../hooks/usePersisten
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
 import { useTasks } from '../../../hooks/useTasks';
-import { users } from '../../../data/mockData';
+import { useUsers } from '../../common/settings';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals';
@@ -68,13 +68,15 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
   const { tasks } = useTasks();
+  // 从SettingsDataProvider获取用户列表
+  const { users } = useUsers();
 
   // 获取默认巡查人员（避免硬编码）
   const defaultInspector = useMemo(() => {
     // 优先使用 admin 用户，否则使用第一个用户
     const adminUser = users.find(u => u.id === 'U001' || u.name.includes('管理员'));
     return adminUser || users[0] || null;
-  }, []);
+  }, [users]);
 
   // ========== 标签页状态 ==========
   const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
