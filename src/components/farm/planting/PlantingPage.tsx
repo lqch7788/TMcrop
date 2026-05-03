@@ -17,7 +17,7 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaries } from '../../common/settings';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
-import * as plantingService from '../../../services/plantingService';
+import * as plantingService from '../../../services/apiPlantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/cropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
@@ -51,10 +51,8 @@ export default function PlantingPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从localStorage加载数据
-  const [plantings, setPlantings] = useState<Planting[]>(() =>
-    plantingService.initPlantings()
-  );
+  // 从API加载数据，初始为空数组
+  const [plantings, setPlantings] = useState<Planting[]>([]);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -84,16 +82,20 @@ export default function PlantingPage() {
     return getDictItems('planting_status').map(d => ({ value: d.code, label: d.name }));
   }, [getDictItems]);
 
-  // 刷新数据
-  const refreshData = useCallback(() => {
-    setPlantings(plantingService.getPlantings());
-    setRefreshKey(k => k + 1);
+  // 刷新数据（异步调用API）
+  const refreshData = useCallback(async () => {
+    try {
+      const data = await plantingService.getPlantings();
+      setPlantings(data);
+    } catch (error) {
+      console.error('获取种植数据失败:', error);
+    }
   }, []);
 
   // 初始化数据
   useEffect(() => {
     refreshData();
-  }, [refreshKey]);
+  }, []);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);

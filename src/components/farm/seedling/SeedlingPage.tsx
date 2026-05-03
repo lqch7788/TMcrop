@@ -17,7 +17,7 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaries } from '../../common/settings';
 import { Seedling, SeedlingFilters, SeedlingStatus } from '../../../types/crop';
-import * as seedlingService from '../../../services/seedlingService';
+import * as seedlingService from '../../../services/apiSeedlingService';
 import * as seedSourceService from '../../../services/seedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/cropBatchService';
@@ -52,10 +52,8 @@ export default function SeedlingPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从localStorage加载数据
-  const [seedlings, setSeedlings] = useState<Seedling[]>(() =>
-    seedlingService.initSeedlings()
-  );
+  // 从API加载数据，初始为空数组
+  const [seedlings, setSeedlings] = useState<Seedling[]>([]);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -86,16 +84,20 @@ export default function SeedlingPage() {
     return getDictItems('seedling_status').map(d => ({ value: d.code, label: d.name }));
   }, [getDictItems]);
 
-  // 刷新数据
-  const refreshData = useCallback(() => {
-    setSeedlings(seedlingService.getSeedlings());
-    setRefreshKey(k => k + 1);
+  // 刷新数据（异步调用API）
+  const refreshData = useCallback(async () => {
+    try {
+      const data = await seedlingService.getSeedlings();
+      setSeedlings(data);
+    } catch (error) {
+      console.error('获取育苗数据失败:', error);
+    }
   }, []);
 
   // 初始化数据
   useEffect(() => {
     refreshData();
-  }, [refreshKey]);
+  }, []);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
