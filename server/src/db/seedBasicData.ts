@@ -415,15 +415,22 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
 // 字典项数据（V5.0新增）
 // ============================================
 const defaultDictionaries: DictionarySeed[] = [
-  // 供应商类型
-  { id: 'D001', categoryCode: 'supplier_type', dictCode: 'SP', dictLabel: '原材料供应', dictValue: 'SP', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D002', categoryCode: 'supplier_type', dictCode: 'FE', dictLabel: '设施设备', dictValue: 'FE', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D003', categoryCode: 'supplier_type', dictCode: 'PP', dictLabel: '包装材料', dictValue: 'PP', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'D004', categoryCode: 'supplier_type', dictCode: 'EQ', dictLabel: '设备配件', dictValue: 'EQ', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 供应商类型 - 与供应商编码规则保持一致（SU_前缀 + 大类2位 + 中类2位 + 流水号3位）
+  { id: 'D001', categoryCode: 'supplier_type', dictCode: 'SP', dictLabel: '种子与种苗类', dictValue: 'SP', color: 'blue', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'D002', categoryCode: 'supplier_type', dictCode: 'FE', dictLabel: '肥料与土壤改良类', dictValue: 'FE', color: 'green', sortOrder: 2, isDefault: 1, status: 'active' },
+  { id: 'D003', categoryCode: 'supplier_type', dictCode: 'PP', dictLabel: '农药与植保产品类', dictValue: 'PP', color: 'red', sortOrder: 3, isDefault: 1, status: 'active' },
+  { id: 'D004', categoryCode: 'supplier_type', dictCode: 'EQ', dictLabel: '农业机械与设备类', dictValue: 'EQ', color: 'orange', sortOrder: 4, isDefault: 1, status: 'active' },
+  { id: 'D005', categoryCode: 'supplier_type', dictCode: 'FA', dictLabel: '设施农业资材类', dictValue: 'FA', color: 'purple', sortOrder: 5, isDefault: 1, status: 'active' },
+  { id: 'D006', categoryCode: 'supplier_type', dictCode: 'IR', dictLabel: '灌溉与水肥一体化类', dictValue: 'IR', color: 'cyan', sortOrder: 6, isDefault: 1, status: 'active' },
+  { id: 'D007', categoryCode: 'supplier_type', dictCode: 'OP', dictLabel: '日常劳保与劳动工具类', dictValue: 'OP', color: 'pink', sortOrder: 7, isDefault: 1, status: 'active' },
+  { id: 'D008', categoryCode: 'supplier_type', dictCode: 'PH', dictLabel: '仓储与物流资材类', dictValue: 'PH', color: 'indigo', sortOrder: 8, isDefault: 1, status: 'active' },
+  { id: 'D009', categoryCode: 'supplier_type', dictCode: 'TS', dictLabel: '检测与技术服务类', dictValue: 'TS', color: 'teal', sortOrder: 9, isDefault: 1, status: 'active' },
+  { id: 'D010', categoryCode: 'supplier_type', dictCode: 'UT', dictLabel: '能源与辅助耗材类', dictValue: 'UT', color: 'yellow', sortOrder: 10, isDefault: 1, status: 'active' },
+  { id: 'D011', categoryCode: 'supplier_type', dictCode: 'OT', dictLabel: '其他综合类', dictValue: 'OT', color: 'gray', sortOrder: 11, isDefault: 1, status: 'active' },
   // 供应商状态
-  { id: 'D010', categoryCode: 'supplier_status', dictCode: 'active', dictLabel: '合作中', dictValue: 'active', color: 'green', sortOrder: 1, isDefault: 1, status: 'active' },
-  { id: 'D011', categoryCode: 'supplier_status', dictCode: 'paused', dictLabel: '暂停', dictValue: 'paused', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D012', categoryCode: 'supplier_status', dictCode: 'terminated', dictLabel: '终止', dictValue: 'terminated', color: 'red', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D012', categoryCode: 'supplier_status', dictCode: 'active', dictLabel: '合作中', dictValue: 'active', color: 'green', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'D013', categoryCode: 'supplier_status', dictCode: 'paused', dictLabel: '暂停', dictValue: 'paused', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D014', categoryCode: 'supplier_status', dictCode: 'terminated', dictLabel: '终止', dictValue: 'terminated', color: 'red', sortOrder: 3, isDefault: 0, status: 'active' },
   // 审批状态
   { id: 'D020', categoryCode: 'approval_status', dictCode: 'pending', dictLabel: '待审批', dictValue: 'pending', color: 'orange', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D021', categoryCode: 'approval_status', dictCode: 'approved', dictLabel: '已通过', dictValue: 'approved', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -471,6 +478,22 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D120', categoryCode: 'purchase_type', dictCode: 'production', dictLabel: '生产性采购', dictValue: 'production', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D121', categoryCode: 'purchase_type', dictCode: 'emergency', dictLabel: '紧急采购', dictValue: 'emergency', color: 'red', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'D122', categoryCode: 'purchase_type', dictCode: 'daily', dictLabel: '日常采购', dictValue: 'daily', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 种源类型
+  { id: 'D130', categoryCode: 'source_type', dictCode: 'seed', dictLabel: '种子', dictValue: 'seed', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'D131', categoryCode: 'source_type', dictCode: 'seedling', dictLabel: '种苗', dictValue: 'seedling', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D132', categoryCode: 'source_type', dictCode: 'cutting', dictLabel: '扦插苗', dictValue: 'cutting', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D133', categoryCode: 'source_type', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D134', categoryCode: 'source_type', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'D135', categoryCode: 'source_type', dictCode: 'split', dictLabel: '分株苗', dictValue: 'split', color: 'yellow', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'D136', categoryCode: 'source_type', dictCode: 'bulb', dictLabel: '种球', dictValue: 'bulb', color: 'pink', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'D137', categoryCode: 'source_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 8, isDefault: 0, status: 'active' },
+  // 来源途径
+  { id: 'D140', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'D141', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '内部自繁', dictValue: 'self_produced', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D142', categoryCode: 'source_origin', dictCode: 'commissioned', dictLabel: '委托培育', dictValue: 'commissioned', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D143', categoryCode: 'source_origin', dictCode: 'gift', dictLabel: '政府/机构赠送', dictValue: 'gift', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D144', categoryCode: 'source_origin', dictCode: 'self_retained', dictLabel: '自留种', dictValue: 'self_retained', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'D145', categoryCode: 'source_origin', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
 ];
 
 // ============================================

@@ -1,7 +1,6 @@
 /**
  * 数据字典管理页面
- * V5.0 系统设置重构
- * 数据字典CRUD管理
+ * V5.0 折叠面板形式展示分类和字典项
  */
 
 import { useState, useEffect } from 'react';
@@ -12,11 +11,13 @@ import {
   Edit,
   Trash2,
   ChevronLeft,
+  ChevronDown,
+  ChevronRight,
   Search,
   RefreshCw,
   X,
   Save,
-  FolderTree,
+  ChevronUp,
 } from 'lucide-react';
 import {
   Dictionary,
@@ -32,11 +33,14 @@ export default function DictionaryManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [showModal, setShowModal] = useState(false);
-  const [editingDictionary, setEditingDictionary] = useState<Partial<Dictionary> | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+
+  // 展开的分类集合
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // 编辑状态
+  const [editingItem, setEditingItem] = useState<Dictionary | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewItem, setIsNewItem] = useState(false);
 
   // 新增分类弹窗状态
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -49,7 +53,7 @@ export default function DictionaryManagement() {
       setLoading(true);
       setError(null);
       const [dictData, catData] = await Promise.all([
-        getDictionaries(selectedCategory || undefined),
+        getDictionaries(),
         getDictionaryCategories(),
       ]);
       setDictionaries(dictData);
@@ -63,89 +67,104 @@ export default function DictionaryManagement() {
 
   useEffect(() => {
     loadData();
-  }, [selectedCategory]);
+  }, []);
 
-  // 过滤字典
-  const filteredDictionaries = dictionaries.filter(
-    (dict) =>
-      dict.name?.includes(searchTerm) ||
-      dict.code?.includes(searchTerm) ||
-      dict.category?.includes(searchTerm)
-  );
+  // 切换分类展开/折叠
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
+  };
 
-  // 分页
-  const totalPages = Math.ceil(filteredDictionaries.length / pageSize);
-  const paginatedDictionaries = filteredDictionaries.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // 展开所有分类
+  const expandAll = () => {
+    setExpandedCategories(new Set(categories));
+  };
 
-  // 按分类分组统计
-  const categoryStats = categories.reduce((acc, cat) => {
-    acc[cat] = dictionaries.filter((d) => d.category === cat).length;
-    return acc;
-  }, {} as Record<string, number>);
+  // 折叠所有分类
+  const collapseAll = () => {
+    setExpandedCategories(new Set());
+  };
 
-  // 打开新增弹窗
-  const handleAdd = () => {
-    setEditingDictionary({
-      category: selectedCategory || '',
+  // 按分类过滤字典项
+  const getDictionariesByCategory = (category: string) => {
+    return dictionaries
+      .filter(d => d.category === category)
+      .filter(d =>
+        !searchTerm ||
+        d.name?.includes(searchTerm) ||
+        d.code?.includes(searchTerm)
+      )
+      .sort((a, b) => (a.sortNumber || 0) - (b.sortNumber || 0));
+  };
+
+  // 打开新增字典项弹窗
+  const handleAddItem = (category: string) => {
+    setEditingItem({
+      category,
       code: '',
       name: '',
       sortNumber: 0,
     });
-    setShowModal(true);
+    setIsNewItem(true);
+    setIsModalOpen(true);
   };
 
-  // 打开编辑弹窗
-  const handleEdit = (dictionary: Dictionary) => {
-    setEditingDictionary({ ...dictionary });
-    setShowModal(true);
+  // 打开编辑字典项弹窗
+  const handleEditItem = (item: Dictionary) => {
+    setEditingItem({ ...item });
+    setIsNewItem(false);
+    setIsModalOpen(true);
   };
 
-  // 保存
+  // 保存字典项
   const handleSave = async () => {
-    if (!editingDictionary) return;
+    if (!editingItem) return;
+    if (!editingItem.name?.trim()) {
+      alert('请输入字典名称');
+      return;
+    }
+    if (!editingItem.code?.trim()) {
+      alert('请输入字典编码');
+      return;
+    }
     try {
       setLoading(true);
       await saveDictionaries({
-        inserted: editingDictionary.id ? [] : [editingDictionary as Dictionary],
-        updated: editingDictionary.id ? [editingDictionary as Dictionary] : [],
+        inserted: isNewItem && !editingItem.id ? [editingItem] : [],
+        updated: editingItem.id ? [editingItem] : [],
         deleted: [],
       });
-      setShowModal(false);
-      setEditingDictionary(null);
+      setIsModalOpen(false);
+      setEditingItem(null);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存失败');
+      alert(err instanceof Error ? err.message : '保存失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 删除
-  const handleDelete = async (dictionary: Dictionary) => {
-    if (!confirm(`确定要删除字典项"${dictionary.name}"吗？`)) return;
+  // 删除字典项
+  const handleDelete = async (item: Dictionary) => {
+    if (!confirm(`确定要删除字典项"${item.name}"吗？`)) return;
     try {
       setLoading(true);
       await saveDictionaries({
         inserted: [],
         updated: [],
-        deleted: [dictionary.id!],
+        deleted: [item.id!],
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '删除失败');
+      alert(err instanceof Error ? err.message : '删除失败');
     } finally {
       setLoading(false);
     }
-  };
-
-  // 打开新增分类弹窗
-  const handleAddCategory = () => {
-    setNewCategoryCode('');
-    setNewCategoryName('');
-    setShowAddCategoryModal(true);
   };
 
   // 保存新分类
@@ -154,208 +173,79 @@ export default function DictionaryManagement() {
       alert('请填写完整的分类信息');
       return;
     }
-    setEditingDictionary({
+    setEditingItem({
       category: newCategoryCode.trim(),
       code: 'NEW',
       name: newCategoryName.trim(),
       sortNumber: 0,
     });
     setShowAddCategoryModal(false);
-    setShowModal(true);
+    setIsNewItem(true);
+    setIsModalOpen(true);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 页面头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <Book className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">数据字典</h1>
-            <p className="text-gray-500">管理系统数据字典配置</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <FolderTree className="w-5 h-5 text-indigo-600" />
+            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </Link>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Book className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{categories.length}</p>
-              <p className="text-xs text-gray-500">字典分类</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <Book className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{dictionaries.length}</p>
-              <p className="text-xs text-gray-500">字典项总数</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 操作栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            {/* 分类筛选 */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">全部分类</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {getCategoryChineseName(cat)} ({categoryStats[cat] || 0})
-                </option>
-              ))}
-            </select>
-
-            {/* 搜索 */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="搜索字典名称或编码..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <h1 className="text-2xl font-bold text-gray-900">数据字典</h1>
+              <p className="text-gray-500">管理系统数据字典配置</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={expandAll}
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+            >
+              <ChevronDown className="w-4 h-4" />
+              全部展开
+            </button>
+            <button
+              onClick={collapseAll}
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+            >
+              <ChevronUp className="w-4 h-4" />
+              全部折叠
+            </button>
+            <button
               onClick={() => loadData()}
-              className="h-10 px-4 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+              className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
             >
               <RefreshCw className="w-4 h-4" />
               刷新
             </button>
             <button
-              onClick={handleAddCategory}
-              className="h-10 px-4 border border-gray-200 rounded-lg text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
+              onClick={() => setShowAddCategoryModal(true)}
+              className="h-10 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 hover:shadow-lg transition-shadow"
             >
               <Plus className="w-4 h-4" />
               新增分类
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={!selectedCategory}
-              className="h-10 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              新增字典项
             </button>
           </div>
         </div>
       </div>
 
-      {/* 表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">分类</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">字典编码</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">字典名称</th>
-                <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">排序</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedDictionaries.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                    暂无字典数据
-                  </td>
-                </tr>
-              ) : (
-                paginatedDictionaries.map((dictionary) => (
-                  <tr key={dictionary.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {dictionary.category}
-                      <span className="text-gray-400 ml-1">({getCategoryChineseName(dictionary.category)})</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-mono">
-                      {dictionary.code}
-                      <span className="text-gray-400 ml-1">({dictionary.name})</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{dictionary.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-center">{dictionary.sortNumber || 0}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(dictionary)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(dictionary)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* 搜索栏 */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索字典名称或编码..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
         </div>
-
-        {/* 分页 */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              显示 {(currentPage - 1) * pageSize + 1} 到 {Math.min(currentPage * pageSize, filteredDictionaries.length)} 条，共 {filteredDictionaries.length} 条
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-200 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                上一页
-              </button>
-              <span className="text-sm text-gray-600">
-                第 {currentPage} / {totalPages} 页
-              </span>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-200 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 错误提示 */}
@@ -365,21 +255,228 @@ export default function DictionaryManagement() {
         </div>
       )}
 
-      {/* 新增分类弹窗 */}
-      {showAddCategoryModal && (
+      {/* 分类折叠面板列表 */}
+      <div className="space-y-2">
+        {categories.map((category) => {
+          const isExpanded = expandedCategories.has(category);
+          const items = getDictionariesByCategory(category);
+          const chineseName = getCategoryChineseName(category);
+
+          return (
+            <div key={category} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {/* 分类头部 */}
+              <div
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleCategory(category)}
+              >
+                <div className="flex items-center gap-3">
+                  {isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  )}
+                  <span className="text-lg font-medium text-gray-900">{chineseName}</span>
+                  <span className="text-sm text-gray-400">({category})</span>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-full">
+                    {items.length} 项
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddItem(category);
+                    }}
+                    className="px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增
+                  </button>
+                </div>
+              </div>
+
+              {/* 字典项列表 */}
+              {isExpanded && (
+                <div className="border-t border-gray-100">
+                  {items.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                      暂无字典项
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                          <th className="px-4 py-2 w-32">编码</th>
+                          <th className="px-4 py-2">名称</th>
+                          <th className="px-4 py-2 w-20 text-center">排序</th>
+                          <th className="px-4 py-2 w-24 text-center">状态</th>
+                          <th className="px-4 py-2 w-28 text-right">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {items.map((item) => (
+                          <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-2.5">
+                              <span className="font-mono text-sm text-gray-700">{item.code}</span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="text-sm text-gray-900">{item.name}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className="text-sm text-gray-500">{item.sortNumber || 0}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                item.status === 'active'
+                                  ? 'bg-green-50 text-green-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {item.status === 'active' ? '启用' : '停用'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleEditItem(item)}
+                                  className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                  title="编辑"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(item)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 统计信息 */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>共 {categories.length} 个分类，{dictionaries.length} 个字典项</span>
+        </div>
+      </div>
+
+      {/* 新增/编辑字典项弹窗 */}
+      {isModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">新增字典分类</h3>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isNewItem && !editingItem.id ? '新增字典项' : '编辑字典项'}
+              </h3>
               <button
-                onClick={() => setShowAddCategoryModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 space-y-4">
+              {/* 分类（只读） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                <input
+                  type="text"
+                  value={`${getCategoryChineseName(editingItem.category)} (${editingItem.category})`}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+                  disabled
+                />
+              </div>
+
+              {/* 编码 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  编码 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.code || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, code: e.target.value })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：active"
+                  disabled={!isNewItem || !!editingItem.id}
+                />
+              </div>
+
+              {/* 名称 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  名称 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.name || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：启用"
+                  autoFocus
+                />
+              </div>
+
+              {/* 排序 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
+                <input
+                  type="number"
+                  value={editingItem.sortNumber || 0}
+                  onChange={(e) => setEditingItem({ ...editingItem, sortNumber: parseInt(e.target.value) || 0 })}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading || !editingItem.code || !editingItem.name}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新增分类弹窗 */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">新增字典分类</h3>
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   分类编码 <span className="text-red-500">*</span>
@@ -389,8 +486,9 @@ export default function DictionaryManagement() {
                   value={newCategoryCode}
                   onChange={(e) => setNewCategoryCode(e.target.value)}
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：supplier_type"
+                  placeholder="例如：custom_category"
                 />
+                <p className="mt-1 text-xs text-gray-400">建议使用英文下划线格式，如 custom_category</p>
               </div>
 
               <div>
@@ -402,12 +500,13 @@ export default function DictionaryManagement() {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：供应商类型"
+                  placeholder="例如：自定义分类"
+                  autoFocus
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100">
               <button
                 onClick={() => setShowAddCategoryModal(false)}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
@@ -416,96 +515,7 @@ export default function DictionaryManagement() {
               </button>
               <button
                 onClick={handleSaveNewCategory}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 弹窗 */}
-      {showModal && editingDictionary && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {editingDictionary.id ? '编辑字典项' : '新增字典项'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  字典分类 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingDictionary.category || ''}
-                  onChange={(e) => setEditingDictionary({ ...editingDictionary, category: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：作物类型"
-                  disabled={!!editingDictionary.id}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  字典编码 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingDictionary.code || ''}
-                  onChange={(e) => setEditingDictionary({ ...editingDictionary, code: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：VEGETABLE"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  字典名称 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingDictionary.name || ''}
-                  onChange={(e) => setEditingDictionary({ ...editingDictionary, name: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：蔬菜"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
-                <input
-                  type="number"
-                  value={editingDictionary.sortNumber || 0}
-                  onChange={(e) => setEditingDictionary({ ...editingDictionary, sortNumber: parseInt(e.target.value) || 0 })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={loading || !editingDictionary.category || !editingDictionary.code || !editingDictionary.name}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-1"
               >
                 <Save className="w-4 h-4" />
                 保存
