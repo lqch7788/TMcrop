@@ -409,8 +409,21 @@ hongzhiyun/
 | BatchEditModal.tsx | 使用useGreenhouses() | ✅ 已完成 |
 | ProductionPage.tsx | 使用useGreenhouses() | ✅ 已完成 |
 | Login.tsx | 使用useUsers() | ✅ 已完成 |
+| AttendanceRepairPage.tsx | 使用useUsers() | ✅ 已完成 |
+| ContractRenewalPage.tsx | 使用useUsers() | ✅ 已完成 |
+| LeavePage.tsx | 使用useUsers() | ✅ 已完成 |
+| OnboardingPage.tsx | 使用useUsers() | ✅ 已完成 |
+| OvertimePage.tsx | 使用useUsers() | ✅ 已完成 |
+| ResignationPage.tsx | 使用useUsers() | ✅ 已完成 |
+| SalaryAdjustmentPage.tsx | 使用useUsers() | ✅ 已完成 |
+| RecruitmentPage.tsx | 使用useDepartments()+usePositions()+useUsers() | ✅ 已完成 |
+| SalaryBudgetPage.tsx | 使用useDepartments() | ✅ 已完成 |
+| StaffManagementPage.tsx | 使用useUsers() | ✅ 已完成 |
+| ProduceInventoryPage.tsx | 使用useWarehouses() | ✅ 已完成 |
+| ProduceInventoryAddModal.tsx | 使用useWarehouses() | ✅ 已完成 |
 
-#### 待改造文件（主要）
+#### 待改造文件（其他）
+- Dashboard.tsx - 多个模块
 - 其他业务组件...
 
 #### 改造原则
