@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -6,6 +6,7 @@ import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
 import { useGreenhouses } from '../common/settings';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { apiClient, USE_API } from '../../services/apiClient';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';
@@ -22,20 +23,59 @@ import {
 export default function ProductionPage() {
   const { greenhouses } = useGreenhouses();
 
-  // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_PRODUCTION', 'create');
-  const canEdit = can('PROC_PRODUCTION', 'edit');
-  const canDelete = can('PROC_PRODUCTION', 'delete');
-  const canExport = can('PROC_PRODUCTION', 'export');
+  // 权限控制 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [planTypeFilter, setPlanTypeFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [batches, setBatches] = useState<CropBatch[]>(cropBatches);
+  const [batches, setBatches] = useState<CropBatch[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 从 API 加载生产计划数据
+  useEffect(() => {
+    const loadProductionData = async () => {
+      setIsLoading(true);
+      try {
+        if (USE_API) {
+          // 尝试从 API 获取生产计划数据
+          const apiData = await apiClient.get<CropBatch[]>('/production/plans');
+          if (apiData && apiData.length > 0) {
+            setBatches(apiData);
+          } else {
+            setBatches(cropBatches);
+          }
+        } else {
+          // 非 API 模式，检查是否后端已实现
+          try {
+            const apiData = await apiClient.get<CropBatch[]>('/production/plans');
+            if (apiData && apiData.length > 0) {
+              setBatches(apiData);
+            } else {
+              setBatches(cropBatches);
+            }
+          } catch {
+            // API 不可用，使用 mock 数据
+            setBatches(cropBatches);
+          }
+        }
+      } catch (error) {
+        console.error('加载生产计划数据失败，使用 mock 数据:', error);
+        setBatches(cropBatches);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProductionData();
+  }, []);
 
   // Search filters
   const [batchCodeSearch, setBatchCodeSearch] = useState('');

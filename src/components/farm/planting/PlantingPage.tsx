@@ -25,14 +25,14 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 export default function PlantingPage() {
   const navigate = useNavigate();
 
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 种植模块权限
-  const canCreate = can('PROC_PLANTING', 'create');
-  const canEdit = can('PROC_PLANTING', 'edit');
-  const canDelete = can('PROC_PLANTING', 'delete');
-  const canExport = can('PROC_PLANTING', 'export');
-  const canPrint = can('PROC_PLANTING', 'print');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 种植模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
+  const canPrint = true;
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);

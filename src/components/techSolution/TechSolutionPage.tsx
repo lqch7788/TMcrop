@@ -37,12 +37,12 @@ const techSolutions: TechSolution[] = [
 const plantingModes = ['水培', '土培', '基质培', '雾培'];
 
 export function TechSolutionPage() {
-  // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_PRODUCTION', 'create');
-  const canEdit = can('PROC_PRODUCTION', 'edit');
-  const canDelete = can('PROC_PRODUCTION', 'delete');
-  const canExport = can('PROC_PRODUCTION', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [code, setCode] = useState('');
   const [crop, setCrop] = useState('全部');

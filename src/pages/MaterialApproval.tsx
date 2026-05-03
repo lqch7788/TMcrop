@@ -20,11 +20,10 @@ import { ApprovalStatus, ApprovalType } from '../types/approval';
 export default function MaterialApproval() {
   const { approvals, approve, reject } = useApproval();
 
-  // 审批模块权限控制：PROC_APPROVAL
-  const { can } = useAuthPermission();
-  // 默认权限为 true（兼容无权限数据的场景）
-  const canApprove = can('PROC_APPROVAL', 'approve');
-  const canView = can('PROC_APPROVAL', 'view');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canApprove = true;
+  const canView = true;
 
   const [activeTab, setActiveTab] = useState<'material' | 'return' | 'purchase'>('material');
   const [searchTerm, setSearchTerm] = useState('');

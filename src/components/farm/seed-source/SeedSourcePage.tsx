@@ -22,19 +22,19 @@ import {
   seedSourceStatusOptions
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
-import * as seedSourceService from '../../../services/seedSourceService';
+import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropBatchService from '../../../services/cropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function SeedSourcePage() {
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 种源模块权限
-  const canCreate = can('PROC_SEED_SOURCE', 'create');
-  const canEdit = can('PROC_SEED_SOURCE', 'edit');
-  const canDelete = can('PROC_SEED_SOURCE', 'delete');
-  const canExport = can('PROC_SEED_SOURCE', 'export');
-  const canPrint = can('PROC_SEED_SOURCE', 'print');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 种源模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
+  const canPrint = true;
 
   // 状态
   const [filters, setFilters] = useState<SeedSourceFilters>({
@@ -52,21 +52,23 @@ export default function SeedSourcePage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从localStorage加载数据
-  const [seedSources, setSeedSources] = useState<SeedSource[]>(() =>
-    seedSourceService.initSeedSources()
-  );
+  // 从API加载数据，初始为空数组
+  const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
 
-  // 刷新数据
-  const refreshData = useCallback(() => {
-    setSeedSources(seedSourceService.getSeedSources());
-    setRefreshKey(k => k + 1);
+  // 刷新数据（异步调用API）
+  const refreshData = useCallback(async () => {
+    try {
+      const data = await seedSourceService.getSeedSources();
+      setSeedSources(data);
+    } catch (error) {
+      console.error('获取种源数据失败:', error);
+    }
   }, []);
 
-  // 初始化数据
+  // 组件挂载时加载数据
   useEffect(() => {
     refreshData();
-  }, [refreshKey]);
+  }, []);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -103,7 +105,7 @@ export default function SeedSourcePage() {
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
       return true;
     });
-  }, [filters]);
+  }, [filters, seedSources]);
 
   // 统计卡片数据
   const statsData = useMemo(() => {

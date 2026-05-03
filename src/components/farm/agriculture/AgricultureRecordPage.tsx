@@ -68,13 +68,13 @@ export default function AgricultureRecordPage() {
   // 临时任务验收 Hook
   const { acceptCompletion, rejectCompletion } = useTempTasks();
 
-  // 权限检查 Hook - 农事管理模块权限控制
-  const { can } = useAuthPermission();
-  // PROC_FARM: 农事管理工序权限
-  const canCreate = can('PROC_FARM', 'create');
-  const canEdit = can('PROC_FARM', 'edit');
-  const canDelete = can('PROC_FARM', 'delete');
-  const canExport = can('PROC_FARM', 'export');
+  // 权限检查 Hook - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // PROC_FARM: 农事管理工序权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);

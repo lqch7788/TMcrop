@@ -35,12 +35,12 @@ export function PersonnelManagementPage() {
   const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(positions.length / pageSize);
 
-  // 权限检查 - 人工管理模块权限
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_LABOR', 'create');
-  const canEdit = can('PROC_LABOR', 'edit');
-  const canDelete = can('PROC_LABOR', 'delete');
-  const canExport = can('PROC_LABOR', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   // 批量操作状态
   const [batchEditMode, setBatchEditMode] = useState(false);

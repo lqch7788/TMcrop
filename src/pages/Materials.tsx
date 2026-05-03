@@ -245,12 +245,14 @@ export default function Materials() {
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 权限检查 - 物料库存管理模块
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_MATERIALS', 'create');
-  const canEdit = can('PROC_MATERIALS', 'edit');
-  const canDelete = can('PROC_MATERIALS', 'delete');
-  const canExport = can('PROC_MATERIALS', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 取消按钮级别权限控制 - 所有按钮始终显示
+  const can = () => true;
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [newInbound, setNewInbound] = useState({
     orderCode: '',
@@ -885,7 +887,7 @@ export default function Materials() {
                       {!exportMode && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            {can.can('PROC_MATERIALS', 'view') && (
+                            {can('PROC_MATERIALS', 'view') && (
                               <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
                             )}
                             {canEdit && (
@@ -1097,7 +1099,7 @@ export default function Materials() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          {can.can('PROC_MATERIALS', 'view') && (
+                          {can('PROC_MATERIALS', 'view') && (
                             <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
                           )}
                           {canEdit && (

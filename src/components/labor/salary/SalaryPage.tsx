@@ -15,12 +15,12 @@ import type { SalaryRecord, SalaryCalculateData } from './types';
  * 工资管理页面容器
  */
 export function SalaryPage() {
-  // 权限检查 - 人工管理模块权限
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_LABOR', 'create');
-  const canEdit = can('PROC_LABOR', 'edit');
-  const canDelete = can('PROC_LABOR', 'delete');
-  const canExport = can('PROC_LABOR', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const {
     data,
