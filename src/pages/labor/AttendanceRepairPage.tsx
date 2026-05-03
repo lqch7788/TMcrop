@@ -7,7 +7,7 @@ import { ClipboardCheck, Plus, Search, Download, Check, X, Eye, RefreshCw } from
 import { UnifiedModal } from '../../components/ui/UnifiedModal';
 import ProTable from '../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge';
-import { workers } from '../../data/mockData';
+import { useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
 
@@ -65,6 +65,8 @@ interface AttendanceRepairFilters {
 // ============================================================
 
 export default function AttendanceRepairPage() {
+  const { workers } = useUsers();
+
   // ============================================================
   // 状态定义
   // ============================================================

@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { produceInventory, warehouses } from '../../data/mockData';
+import { produceInventory } from '../../data/mockData';
+import { useWarehouses } from '../common/settings';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Select, Modal } from '../ui/Modal';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
@@ -489,6 +490,8 @@ function DeleteConfirmModal({ isOpen, selectedCount, onClose, onConfirm }: {
  * 产品库存管理主页面组件
  */
 export default function ProduceInventoryPage() {
+  const { warehouses } = useWarehouses();
+
   // 状态
   const [inventoryData, setInventoryData] = useState<ProduceInventory[]>(produceInventory);
   const [searchText, setSearchText] = useState('');

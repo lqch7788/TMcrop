@@ -4,13 +4,15 @@
 import { useState } from 'react';
 import { Users, Plus, Download, Pencil, Trash2 } from 'lucide-react';
 import { Worker } from '../../../types';
-import { workers } from '../../../data/mockData';
+import { useWorkers } from '../../common/settings';
 import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
 export function StaffManagementPage() {
+  const { workers } = useWorkers();
+
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);

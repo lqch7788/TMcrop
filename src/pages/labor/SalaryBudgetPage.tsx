@@ -7,7 +7,7 @@ import { Wallet, Plus, Search, Download, RefreshCw, Eye, Check, X } from 'lucide
 import { UnifiedModal } from '../../components/ui/UnifiedModal';
 import ProTable from '../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge';
-import { departments } from '../../data/mockData';
+import { useDepartments } from '../../components/common/settings';
 import { ApprovalType, ApprovalStatus, getApprovalTypeName, getApprovalStatusName } from '../../types/approval';
 import { ApprovalStatusLabels } from '../../types/labor/approval';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
@@ -134,6 +134,8 @@ function getMonthOptions(): { value: string; label: string }[] {
 // ============================================================
 
 export default function SalaryBudgetPage() {
+  const { departments } = useDepartments();
+
   // ============================================================
   // 状态定义
   // ============================================================
