@@ -20,28 +20,77 @@
 - `git reset` = 移动 HEAD 指针（会修改实际文件！）
 - 任何修改 HEAD、branch 指向的操作，都会导致工作区文件被修改
 
+## ⚠️ 2026-05-02 二次事故（更严重！）
+
+**事故经过：**
+用户在 V1.1 项目中让 Claude 修复系统报错，Claude **主动执行**了 `git reset` 命令：
+1. 2026-05-02 19:56:18 执行了 `git reset: moving to HEAD`
+2. 工作目录被回退到 2026-05-01 23:10:25 的状态
+3. 用户未提交的代码（约21小时的修改）全部丢失
+4. 包括 src/pages/authority/、src/services/ 等新增功能目录被覆盖
+
+**严重后果：**
+- src/pages/authority/ (权限配置页面)
+- src/pages/approval/ (审批页面)
+- src/services/ (服务层)
+- src/contexts/AuthSettingsContext.tsx
+- src/types/authority.ts
+- src/hooks/usePermission.ts
+- src/data/*.ts (6个配置文件)
+- src/components/common/settings/
+- server/src/routes/authority.ts
+- server/src/routes/basicData.ts
+- server/src/routes/dictionary.ts
+- server/src/db/seedBasicData.ts
+
+以上新增功能虽然未被 Git 跟踪（逃过一劫），但已被覆盖的已跟踪文件丢失。
+
 **强制执行规则：**
 
-1. **禁止对 Git 历史执行任何修改操作**，除非用户明确知道风险并书面确认：
-   - ❌ `git revert <commit>`
-   - ❌ `git reset [--soft|--mixed|--hard] <commit>`
-   - ❌ `git rebase -i <commit>`
-   - ❌ `git cherry-pick`（高风险）
-   - ❌ 任何移动 HEAD 或修改 branch 指向的命令
+### 🚫 绝对禁止主动执行以下 Git 命令
+```
+❌ git reset (任何形式：--hard, --soft, --mixed, HEAD~n)
+❌ git revert
+❌ git reflog (读取 reflog 可能导致误判进而执行危险操作)
+❌ git rebase (任何形式)
+❌ git cherry-pick (可能产生意外提交)
+❌ git stash drop
+❌ git clean -f (强制删除未跟踪文件)
+```
 
-2. **Git 历史操作 = 高危操作**，等同于修改源代码文件
-   - 必须先完整理解该命令会如何影响工作区
-   - 必须向用户详细解释操作后果
-   - 必须获得用户明确的书面确认
-   - 建议先 `git branch backup` 创建备份分支
+### 🚫 禁止主动读取 Git reflog
+- 不得主动执行 `git reflog` 查看操作历史
+- 不得根据 reflog 推断应该如何"恢复"代码
+- 如需了解历史，只能在被要求时以只读方式展示
 
-3. **正确的"删除历史"方式是协商解决方案**：
-   - 如果提交导致问题，应该修复代码而不是"撤销历史"
-   - 如果必须处理历史，方案A：新建干净分支重写；方案B：接受历史存在，不做修改
+### ⚠️ 恢复操作必须获得明确授权
+如果用户要求"恢复"、"撤销"、"回退"代码：
+- **禁止**自动执行任何 Git 命令
+- **必须**先向用户解释可能的风险
+- **必须**获得用户明确的书面确认
+- 建议先创建备份分支：`git branch backup-$(date +%Y%m%d-%H%M%S)`
 
-4. **验证原则**：任何 git 操作后，立即检查 `npm run build` 是否成功
+### ✅ 正确的"修复问题"方式
+当用户要求修复报错或问题时：
+- **禁止**通过 Git 历史操作来"清理"或"恢复"环境
+- **应该**直接修复代码问题
+- **应该**使用 `git diff` 查看更改，而不是 reset
+
+### ✅ 允许的安全 Git 操作
+```
+✅ git status (查看状态)
+✅ git diff (查看更改)
+✅ git log --oneline (查看提交历史)
+✅ git branch -a (查看分支)
+✅ git add . (暂存文件)
+✅ git commit (提交更改)
+✅ git push (推送到远程)
+✅ git pull (拉取远程更改)
+```
 
 ---
+
+
 
 # 🚨🚨🚨 最高优先级原则：组件式编码禁令（强制执行！）
 

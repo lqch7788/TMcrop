@@ -20,6 +20,90 @@ interface DictType {
   items: DictItem[];
 }
 
+// 获取字典类型的中文名称
+function getDictTypeName(code: string): string {
+  const names: Record<string, string> = {
+    approval_status: '审批状态',
+    approval_action: '审批操作',
+    approval_type: '审批类型',
+    task_type: '任务类型',
+    task_status: '任务状态',
+    task_priority: '任务优先级',
+    harvest_status: '采收状态',
+    harvest_grade: '采收等级',
+    seedling_status: '育苗状态',
+    planting_status: '种植状态',
+    supplier_type: '供应商类型',
+    supplier_level: '供应商等级',
+    warehouse_type: '仓库类型',
+    greenhouse_type: '温室类型',
+    greenhouse_status: '温室状态',
+    department_status: '部门状态',
+    position_type: '岗位类型',
+    staff_status: '员工状态',
+    leave_type: '请假类型',
+    overtime_type: '加班类型',
+    attendance_status: '考勤状态',
+    gender: '性别',
+    education: '学历',
+    purchase_status: '采购状态',
+    notification_type: '通知类型',
+    notification_channel: '通知渠道',
+    video_record_type: '录像类型',
+    work_order_status: '工单状态',
+    work_order_type: '工单类型',
+    common_status: '通用状态',
+    boolean_yes_no: '是/否',
+    pagination_size: '分页大小',
+    process_type: '工序类型',
+    crop_category: '作物类别',
+    planting_mode: '种植模式',
+  };
+  return names[code] || code;
+}
+
+// 获取字典类型的描述
+function getDictTypeDescription(code: string): string {
+  const descriptions: Record<string, string> = {
+    approval_status: '所有审批流程的通用状态',
+    approval_action: '审批人可执行的操作类型',
+    approval_type: '系统中所有审批业务类型',
+    task_type: '所有农事任务的类型定义',
+    task_status: '任务的生命周期状态',
+    task_priority: '任务优先级定义',
+    harvest_status: '采收记录的状态',
+    harvest_grade: '采收产品的等级分类',
+    seedling_status: '育苗记录的状态',
+    planting_status: '种植记录的状态',
+    supplier_type: '供应商分类',
+    supplier_level: '供应商评级',
+    warehouse_type: '仓库类型分类',
+    greenhouse_type: '温室大棚类型',
+    greenhouse_status: '温室当前状态',
+    department_status: '部门状态',
+    position_type: '岗位类型分类',
+    staff_status: '员工在职状态',
+    leave_type: '请假类型分类',
+    overtime_type: '加班类型分类',
+    attendance_status: '考勤记录状态',
+    gender: '性别',
+    education: '员工学历',
+    purchase_status: '采购计划状态',
+    notification_type: '消息通知分类',
+    notification_channel: '消息发送渠道',
+    video_record_type: '视频监控录像类型',
+    work_order_status: '工单状态',
+    work_order_type: '工单类型',
+    common_status: '通用状态',
+    boolean_yes_no: '是否布尔值',
+    pagination_size: '分页大小选项',
+    process_type: '农事工序类型',
+    crop_category: '作物类别',
+    planting_mode: '种植模式',
+  };
+  return descriptions[code] || code;
+}
+
 const DEFAULT_DICTS: DictType[] = [
   // ===== 审批流程字典 =====
   {
@@ -620,21 +704,121 @@ export default function DictionaryManagement() {
   const [newDict, setNewDict] = useState<Partial<DictType>>({});
   const [newItem, setNewItem] = useState<Partial<DictItem>>({});
 
-  useEffect(() => {
-    const stored = localStorage.getItem('yuanxingtu_dictionaries');
-    if (stored) {
-      try {
-        setDicts(JSON.parse(stored));
-      } catch {
-        setDicts(DEFAULT_DICTS);
+  // API基础路径
+  const API_BASE = '/api/dictionary';
+
+  // 从API加载字典数据
+  const loadFromApi = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/dictionaries`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // 将API数据转换为页面使用的格式
+          const dictMap = new Map<string, DictType>();
+          for (const item of data) {
+            const categoryCode = item.category || item.category_code;
+            const dictCode = item.code || item.dict_code;
+            const dictLabel = item.name || item.dict_label;
+            const dictValue = item.name || item.dict_value || item.dict_label;
+            const sortOrder = item.sort_number || item.sort_order || 0;
+
+            if (!dictMap.has(categoryCode)) {
+              dictMap.set(categoryCode, {
+                dictCode: categoryCode,
+                dictName: getDictTypeName(categoryCode),
+                description: getDictTypeDescription(categoryCode),
+                status: 'active',
+                items: [],
+              });
+            }
+            dictMap.get(categoryCode)!.items.push({
+              id: item.id,
+              dictCode: dictCode,
+              dictLabel: dictLabel,
+              dictValue: dictValue,
+              dictSort: sortOrder,
+              status: item.status === 'active' ? 'active' : 'inactive',
+            });
+          }
+          // 对每个字典类型的items按sort排序
+          for (const dict of dictMap.values()) {
+            dict.items.sort((a, b) => a.dictSort - b.dictSort);
+          }
+          return Array.from(dictMap.values());
+        }
       }
-    } else {
-      setDicts(DEFAULT_DICTS);
+    } catch (error) {
+      console.error('从API加载字典失败:', error);
     }
+    return null;
+  };
+
+  // 保存字典到API
+  const saveToApi = async (dictsToSave: DictType[]) => {
+    try {
+      const inserted: any[] = [];
+      const updated: any[] = [];
+      const deleted: string[] = [];
+
+      for (const dict of dictsToSave) {
+        for (const item of dict.items) {
+          const itemData = {
+            category_code: dict.dictCode,
+            dict_code: item.dictCode,
+            dict_label: item.dictLabel,
+            dict_value: item.dictValue || item.dictLabel,
+            sort_order: item.dictSort,
+          };
+
+          if (item.id.startsWith('temp_')) {
+            inserted.push(itemData);
+          } else {
+            updated.push({ id: item.id, ...itemData });
+          }
+        }
+      }
+
+      const response = await fetch(`${API_BASE}/dictionaries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inserted, updated, deleted }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('保存字典到API失败:', error);
+      return false;
+    }
+  };
+
+  // 初始化加载数据
+  useEffect(() => {
+    const loadData = async () => {
+      // 优先尝试从API加载
+      const apiData = await loadFromApi();
+      if (apiData && apiData.length > 0) {
+        setDicts(apiData);
+      } else {
+        // API失败时使用localStorage
+        const stored = localStorage.getItem('yuanxingtu_dictionaries');
+        if (stored) {
+          try {
+            setDicts(JSON.parse(stored));
+          } catch {
+            setDicts(DEFAULT_DICTS);
+          }
+        } else {
+          setDicts(DEFAULT_DICTS);
+        }
+      }
+    };
+    loadData();
   }, []);
 
+  // 数据变化时同步保存
   useEffect(() => {
     if (dicts.length > 0) {
+      // 保存到localStorage作为后备
       localStorage.setItem('yuanxingtu_dictionaries', JSON.stringify(dicts));
     }
   }, [dicts]);

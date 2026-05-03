@@ -1,21 +1,29 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ScrollText, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const processData = [
-  { id: 1, code: 'P001', name: '整地', unit: '亩', price: 150, bonus: 10, status: '启用', statusClass: 'normal' },
-  { id: 2, code: 'P002', name: '播种', unit: '亩', price: 200, bonus: 15, status: '启用', statusClass: 'normal' },
-  { id: 3, code: 'P003', name: '浇水', unit: '亩', price: 80, bonus: 5, status: '启用', statusClass: 'normal' },
-  { id: 4, code: 'P004', name: '施肥', unit: '亩', price: 120, bonus: 8, status: '启用', statusClass: 'normal' },
-  { id: 5, code: 'P005', name: '病虫害防治', unit: '亩', price: 180, bonus: 12, status: '启用', statusClass: 'normal' },
-  { id: 6, code: 'P006', name: '搭架', unit: '亩', price: 250, bonus: 15, status: '停用', statusClass: 'disabled' },
-  { id: 7, code: 'P007', name: '修剪', unit: '亩', price: 160, bonus: 10, status: '启用', statusClass: 'normal' },
-  { id: 8, code: 'P008', name: '采收', unit: '亩', price: 300, bonus: 20, status: '启用', statusClass: 'normal' },
-];
+import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
 
 export default function ProcessManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  // 从 SettingsDataProvider 获取工序类型字典数据
+  const { getDictItems } = useDictionaries();
+  const processData = useMemo(() => {
+    const processes = getDictItems('process_type');
+    // 转换为页面所需的格式
+    return processes.map((proc, index) => ({
+      id: index + 1,
+      code: proc.code,
+      name: proc.name,
+      unit: '亩',
+      price: 0,
+      bonus: 0,
+      status: proc.status === 'active' ? '启用' : '停用',
+      statusClass: proc.status === 'active' ? 'normal' : 'disabled',
+    }));
+  }, [getDictItems]);
+
   const totalPages = Math.ceil(processData.length / pageSize);
   const paginatedData = processData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (

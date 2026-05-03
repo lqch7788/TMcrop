@@ -2,34 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-
-// 园区/地块数据 - 与ParkArchive共享数据
-const initialCompanyGroups = [
-  {
-    id: 1,
-    name: '宁波帮帮忙公司',
-    bases: [
-      { id: 2, name: '上海松江基地', area: 300, unit: '亩', crop: '水稻', growthDay: 30, status: 'planting', statusText: '种植中', manager: '李明轩', phone: '13800138002', soilType: '沙壤土', ph: 6.8, coords: '121.2234,31.0342', city: '上海', province: '上海', lng: 121.2234, lat: 31.0342, intro: '总种植面积300亩，包含玻璃温室2个，连栋薄膜温室5个，日光拱棚10个，大田200亩。', greenhouseCount: 17, fieldArea: 200 },
-      { id: 3, name: '上海崇明基地', area: 800, unit: '亩', crop: '小麦', growthDay: 0, status: 'fallow', statusText: '休耕中', manager: '王建国', phone: '13800138003', soilType: '黏土', ph: 6.2, coords: '121.5654,31.6243', city: '上海', province: '上海', lng: 121.5654, lat: 31.6243, intro: '总种植面积800亩，包含玻璃温室3个，连栋薄膜温室8个，日光拱棚15个，大田650亩。', greenhouseCount: 26, fieldArea: 650 },
-      { id: 7, name: '上海嘉定基地', area: 350, unit: '亩', crop: '蔬菜', growthDay: 25, status: 'planting', statusText: '种植中', manager: '周志强', phone: '13800138007', soilType: '沙土', ph: 7.0, coords: '121.2654,31.3754', city: '上海', province: '上海', lng: 121.2654, lat: 31.3754, intro: '总种植面积350亩，包含玻璃温室4个，连栋薄膜温室6个，日光拱棚8个，大田200亩。', greenhouseCount: 18, fieldArea: 200 },
-      { id: 12, name: '上海奉贤基地', area: 550, unit: '亩', crop: '玉米', growthDay: 50, status: 'planting', statusText: '种植中', manager: '杨文博', phone: '13800138012', soilType: '黏土', ph: 6.8, coords: '121.4745,30.9123', city: '上海', province: '上海', lng: 121.4745, lat: 30.9123, intro: '总种植面积550亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚12个，大田450亩。', greenhouseCount: 18, fieldArea: 450 },
-    ]
-  },
-  {
-    id: 2,
-    name: '成都帮帮您公司',
-    bases: [
-      { id: 1, name: '西安雁塔基地', area: 500, unit: '亩', crop: '番茄', growthDay: 45, status: 'planting', statusText: '种植中', manager: '张伟民', phone: '13800138001', soilType: '壤土', ph: 6.5, coords: '108.9470,34.2194', city: '西安', province: '陕西', lng: 108.9470, lat: 34.2194, intro: '总种植面积500亩，包含玻璃温室3个，连栋薄膜温室7个，日光拱棚12个，大田380亩。', greenhouseCount: 22, fieldArea: 380 },
-      { id: 6, name: '西安高新基地', area: 200, unit: '亩', crop: '草莓', growthDay: 55, status: 'planting', statusText: '种植中', manager: '孙晓峰', phone: '13800138006', soilType: '营养土', ph: 6.4, coords: '108.8789,34.2181', city: '西安', province: '陕西', lng: 108.8789, lat: 34.2181, intro: '总种植面积200亩，包含玻璃温室5个，连栋薄膜温室3个，日光拱棚5个，大田100亩。', greenhouseCount: 13, fieldArea: 100 },
-      { id: 4, name: '宁波北仑基地', area: 600, unit: '亩', crop: '茶叶', growthDay: 60, status: 'planting', statusText: '种植中', manager: '赵俊杰', phone: '13800138004', soilType: '壤土', ph: 6.6, coords: '121.9701,29.8947', city: '宁波', province: '浙江', lng: 121.9701, lat: 29.8947, intro: '总种植面积600亩，包含玻璃温室1个，连栋薄膜温室4个，日光拱棚8个，大田550亩。', greenhouseCount: 13, fieldArea: 550 },
-      { id: 8, name: '宁波镇海基地', area: 280, unit: '亩', crop: '水稻', growthDay: 40, status: 'planting', statusText: '种植中', manager: '吴海龙', phone: '13800138008', soilType: '壤土', ph: 6.7, coords: '121.7532,29.9543', city: '宁波', province: '浙江', lng: 121.7532, lat: 29.9543, intro: '总种植面积280亩，包含玻璃温室2个，连栋薄膜温室3个，日光拱棚6个，大田220亩。', greenhouseCount: 11, fieldArea: 220 },
-      { id: 10, name: '宁波慈溪基地', area: 420, unit: '亩', crop: '葡萄', growthDay: 75, status: 'planting', statusText: '种植中', manager: '陈思远', phone: '13800138010', soilType: '壤土', ph: 6.5, coords: '121.2678,30.1543', city: '宁波', province: '浙江', lng: 121.2678, lat: 30.1543, intro: '总种植面积420亩，包含玻璃温室3个，连栋薄膜温室5个，日光拱棚10个，大田320亩。', greenhouseCount: 18, fieldArea: 320 },
-      { id: 5, name: '广东顺德基地', area: 450, unit: '亩', crop: '花卉', growthDay: 90, status: 'fallow', statusText: '休耕中', manager: '钱文涛', phone: '13800138005', soilType: '营养土', ph: 6.3, coords: '113.2586,22.9312', city: '佛山', province: '广东', lng: 113.2586, lat: 22.9312, intro: '总种植面积450亩，包含玻璃温室6个，连栋薄膜温室8个，日光拱棚10个，大田250亩。', greenhouseCount: 24, fieldArea: 250 },
-      { id: 9, name: '广东广州基地', area: 380, unit: '亩', crop: '荔枝', growthDay: 120, status: 'planting', statusText: '种植中', manager: '郑志鹏', phone: '13800138009', soilType: '红壤', ph: 5.8, coords: '113.3245,23.1065', city: '广州', province: '广东', lng: 113.3245, lat: 23.1065, intro: '总种植面积380亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚8个，大田300亩。', greenhouseCount: 14, fieldArea: 300 },
-      { id: 11, name: '广东深圳基地', area: 150, unit: '亩', crop: '火龙果', growthDay: 100, status: 'planting', statusText: '种植中', manager: '刘志勇', phone: '13800138011', soilType: '沙壤土', ph: 6.2, coords: '114.0579,22.5431', city: '深圳', province: '广东', lng: 114.0579, lat: 22.5431, intro: '总种植面积150亩，包含玻璃温室4个，连栋薄膜温室5个，日光拱棚6个，大田80亩。', greenhouseCount: 15, fieldArea: 80 },
-    ]
-  },
-];
+import { useGreenhouses, useWarehouses, useSettingsData } from '../components/common/settings/SettingsDataProvider';
 
 type BaseData = {
   id: number;
@@ -62,8 +35,62 @@ type CompanyGroup = {
 
 export default function BaseSettings() {
   const { toast } = useToast();
-  const [companyGroups, setCompanyGroups] = useState(initialCompanyGroups);
+  // 从 SettingsDataProvider 获取数据
+  const { greenhouses, warehouses, refreshGreenhouses, refreshWarehouses } = useSettingsData();
+  const [companyGroups, setCompanyGroups] = useState<CompanyGroup[]>([]);
   const navigate = useNavigate();
+
+  // 当 greenhouses 数据加载后，构建 companyGroups 结构
+  useMemo(() => {
+    if (greenhouses && greenhouses.length > 0) {
+      // 按公司/区域分组 greenhouses 数据
+      const grouped = greenhouses.reduce((acc, greenhouse) => {
+        const companyName = greenhouse.location || '默认公司';
+        if (!acc[companyName]) {
+          acc[companyName] = {
+            id: companyName.charCodeAt(0),
+            name: companyName,
+            bases: []
+          };
+        }
+        // 将 greenhouse 转换为 base 格式
+        const base: BaseData = {
+          id: parseInt(greenhouse.id) || 0,
+          name: greenhouse.name,
+          area: greenhouse.area || 0,
+          unit: '亩',
+          crop: '',
+          growthDay: 0,
+          status: greenhouse.status === 'using' ? 'planting' : greenhouse.status,
+          statusText: greenhouse.status === 'using' ? '使用中' : greenhouse.status,
+          manager: '',
+          phone: '',
+          soilType: '',
+          ph: 0,
+          coords: '',
+          city: greenhouse.location || '',
+          province: '',
+          lng: 0,
+          lat: 0,
+          intro: `${greenhouse.name}，类型：${greenhouse.greenhouseType || '温室'}，面积：${greenhouse.area || 0}亩`,
+          greenhouseCount: 0,
+          fieldArea: 0
+        };
+        acc[companyName].bases.push(base);
+        return acc;
+      }, {} as Record<string, CompanyGroup>);
+
+      setCompanyGroups(Object.values(grouped));
+    }
+  }, [greenhouses]);
+
+  // 当 companyGroups 更新时，同步更新 expandedCompanies
+  React.useEffect(() => {
+    if (companyGroups.length > 0) {
+      setExpandedCompanies(companyGroups.map(g => g.id));
+    }
+  }, [companyGroups]);
+
   const [searchName, setSearchName] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cropFilter, setCropFilter] = useState('all');
@@ -81,7 +108,7 @@ export default function BaseSettings() {
     type: 'danger' | 'warning' | 'info';
     onConfirm: () => void;
   } | null>(null);
-  const [expandedCompanies, setExpandedCompanies] = useState<number[]>(companyGroups.map(g => g.id));
+  const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 

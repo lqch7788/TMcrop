@@ -15,11 +15,7 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import {
-  areas,
-  sourceTypeOptions,
-  plantingStatusOptions
-} from '../../../data/cropData';
+import { useDictionaries } from '../../common/settings';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/plantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
@@ -59,6 +55,24 @@ export default function PlantingPage() {
   // 将品种库选项转换为旧格式以兼容现有组件（仅用于页面筛选）
   const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
+
+  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
+  const { getDictItems } = useDictionaries();
+
+  // 种植区域选项
+  const areas = useMemo(() => {
+    return getDictItems('planting_area').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
+  // 来源类型选项
+  const sourceTypeOptions = useMemo(() => {
+    return getDictItems('source_type').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
+  // 种植状态选项
+  const plantingStatusOptions = useMemo(() => {
+    return getDictItems('planting_status').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
 
   // 刷新数据
   const refreshData = useCallback(() => {

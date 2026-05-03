@@ -1,14 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Leaf, Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const plantModes = [
-  { id: 1, code: 'PM001', name: '春季番茄高产模式', type: '季节性模式', crops: '番茄', tempRange: '20-28', humidityRange: '60-75', lightRequirement: '中等', greenhouses: '1号棚,2号棚', status: '启用中', statusClass: 'normal' },
-  { id: 2, code: 'PM002', name: '夏季黄瓜耐热模式', type: '季节性模式', crops: '黄瓜', tempRange: '25-32', humidityRange: '70-85', lightRequirement: '高', greenhouses: '3号棚', status: '启用中', statusClass: 'normal' },
-  { id: 3, code: 'PM003', name: '冬季草莓促成模式', type: '季节性模式', crops: '草莓', tempRange: '15-22', humidityRange: '65-80', lightRequirement: '低', greenhouses: '4号棚,5号棚', status: '停用', statusClass: 'disabled' },
-  { id: 4, code: 'PM004', name: '辣椒越夏栽培模式', type: '越夏模式', crops: '辣椒', tempRange: '22-30', humidityRange: '55-70', lightRequirement: '高', greenhouses: '-', status: '草稿', statusClass: 'draft' },
-  { id: 5, code: 'PM005', name: '叶菜类快菜模式', type: '速生模式', crops: '生菜,小白菜', tempRange: '18-25', humidityRange: '70-85', lightRequirement: '中', greenhouses: '6号棚', status: '启用中', statusClass: 'normal' },
-];
+import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
 
 export default function PlantingModeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,11 +9,33 @@ export default function PlantingModeManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  const filteredModes = plantModes.filter(mode => {
-    const matchSearch = mode.name.toLowerCase().includes(searchTerm.toLowerCase()) || mode.code.includes(searchTerm);
-    const matchStatus = statusFilter === '全部' || mode.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // 从 SettingsDataProvider 获取种植模式字典数据
+  const { getDictItems } = useDictionaries();
+  const plantModes = useMemo(() => {
+    const modes = getDictItems('planting_mode');
+    // 转换为页面所需的格式
+    return modes.map((mode, index) => ({
+      id: index + 1,
+      code: mode.code,
+      name: mode.name,
+      type: mode.category || '种植模式',
+      crops: '-',
+      tempRange: '-',
+      humidityRange: '-',
+      lightRequirement: '-',
+      greenhouses: '-',
+      status: mode.status === 'active' ? '启用中' : '停用',
+      statusClass: mode.status === 'active' ? 'normal' : 'disabled',
+    }));
+  }, [getDictItems]);
+
+  const filteredModes = useMemo(() => {
+    return plantModes.filter(mode => {
+      const matchSearch = mode.name.toLowerCase().includes(searchTerm.toLowerCase()) || mode.code.includes(searchTerm);
+      const matchStatus = statusFilter === '全部' || mode.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [plantModes, searchTerm, statusFilter]);
 
   const totalPages = Math.ceil(filteredModes.length / pageSize);
   const paginatedModes = filteredModes.slice((currentPage - 1) * pageSize, currentPage * pageSize);

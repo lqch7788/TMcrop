@@ -1,12 +1,240 @@
 /**
  * 数据库表结构定义
  * 对应现有 LocalStorage 的数据存储
+ * V5.0重构：新增系统设置相关表
  */
 
 import { getDatabase } from './index';
 
 export function initializeDatabase() {
   const db = getDatabase();
+
+  // ========== 系统设置表（V5.0新增）==========
+
+  // 部门表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS departments (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      code TEXT,
+      manager_id TEXT,
+      manager_name TEXT,
+      parent_oid TEXT,
+      sort_number INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 职位表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS positions (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      department_oid TEXT,
+      department_name TEXT,
+      level INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 班组表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS teams (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      team_code TEXT NOT NULL,
+      team_name TEXT NOT NULL,
+      department_oid TEXT,
+      department_name TEXT,
+      leader_id TEXT,
+      leader_name TEXT,
+      shift_type TEXT,
+      member_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 仓库表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS warehouses (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      warehouse_type TEXT,
+      location TEXT,
+      capacity REAL DEFAULT 0,
+      current_stock REAL DEFAULT 0,
+      manager_id TEXT,
+      manager_name TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 温室表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS greenhouses (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      greenhouse_type TEXT,
+      area REAL DEFAULT 0,
+      location TEXT,
+      base_oid TEXT,
+      base_name TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 区域表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS zones (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      zone_code TEXT NOT NULL,
+      zone_name TEXT NOT NULL,
+      greenhouse_oid TEXT,
+      greenhouse_name TEXT,
+      zone_type TEXT,
+      area REAL DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 地块表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blocks (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      block_code TEXT NOT NULL,
+      block_name TEXT NOT NULL,
+      zone_oid TEXT,
+      zone_name TEXT,
+      block_type TEXT,
+      area REAL DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 编码规则表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS code_rules (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      prefix TEXT NOT NULL,
+      seq_length INTEGER DEFAULT 3,
+      current_seq INTEGER DEFAULT 0,
+      date_pattern TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 通知渠道表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notification_channels (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      channel_code TEXT NOT NULL,
+      channel_name TEXT NOT NULL,
+      channel_type TEXT,
+      is_active INTEGER DEFAULT 1,
+      config TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 通知规则表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notification_rules (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      rule_code TEXT NOT NULL,
+      rule_name TEXT NOT NULL,
+      event_type TEXT,
+      recipient_type TEXT,
+      recipient_ids TEXT,
+      channel_ids TEXT,
+      frequency TEXT DEFAULT 'immediate',
+      template TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 审批规则表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approval_rules (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      rule_code TEXT NOT NULL,
+      rule_name TEXT NOT NULL,
+      business_type TEXT,
+      flow_id TEXT,
+      conditions TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // ========== 数据字典表（V5.0新增）==========
+
+  // 字典分类表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dictionary_categories (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      module TEXT,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 字典项表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dictionaries (
+      id TEXT PRIMARY KEY,
+      category_code TEXT NOT NULL,
+      dict_code TEXT NOT NULL,
+      dict_label TEXT NOT NULL,
+      dict_value TEXT NOT NULL,
+      color TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_default INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
 
   // 创建作物品种表
   db.run(`

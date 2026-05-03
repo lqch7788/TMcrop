@@ -317,3 +317,68 @@ hongzhiyun/
 - **API端口**: 5188
 - **默认用户**: 陆启闯(LQC)，职位：经理，部门：生产部
 - **启动命令**: `npm run dev` 或 `启动服务.bat`
+
+## V5.0 系统设置重构
+
+### 完成时间
+2026-05-02
+
+### 核心目标
+将系统设置模块从 localStorage 模式迁移到 API 模式，实现数据的持久化存储。
+
+### 主要变更
+
+#### 1. 后端 API 路由
+- `server/src/routes/index.ts` - 挂载 basicData 和 dictionary 路由
+- `server/src/routes/basicData.ts` - 部门、职位、班组、仓库、温室、区域、地块等 CRUD API
+- `server/src/routes/dictionary.ts` - 数据字典 CRUD API
+
+#### 2. 数据库表结构
+- `server/src/db/schema.ts` - 创建 13+ 张系统设置表
+  - departments, positions, teams, warehouses, greenhouses, zones, blocks
+  - code_rules, notification_channels, notification_rules, approval_rules
+  - dictionary_categories, dictionaries
+
+#### 3. 种子数据
+- `server/src/db/seedData.ts` - 业务数据种子（作物品种、供应商、种源、育苗、种植等）
+- `server/src/db/seedBasicData.ts` - 基础数据种子（部门、职位、班组、仓库、温室等）
+
+#### 4. 前端组件迁移
+
+| 页面 | 迁移前 | 迁移后 | 状态 |
+|------|--------|--------|------|
+| DictionaryManagement.tsx | localStorage | API模式 | ✅ 已完成 |
+| DepartmentSettings.tsx | 硬编码数据 | API模式 | ✅ 已完成 |
+| BaseSettings.tsx | SettingsDataProvider | SettingsDataProvider | ✅ 已完成 |
+| NotificationSettings.tsx | localStorage | API模式 | ⏳ 待完成 |
+
+#### 5. SettingsDataProvider
+- `src/components/common/settings/SettingsDataProvider.tsx`
+- 提供全局设置数据的状态管理
+- 支持 useDepartments, usePositions, useWarehouses, useGreenhouses, useDictionaries 等 Hooks
+- 触发全局刷新机制：`triggerSettingsRefresh()`
+
+### API 端点
+
+| 端点 | 说明 |
+|------|------|
+| GET /api/basic-data/departments | 获取部门列表 |
+| GET /api/basic-data/positions | 获取职位列表 |
+| GET /api/basic-data/teams | 获取班组列表 |
+| GET /api/basic-data/warehouses | 获取仓库列表 |
+| GET /api/basic-data/greenhouses | 获取温室列表 |
+| GET /api/basic-data/zones | 获取区域列表 |
+| GET /api/basic-data/blocks | 获取地块列表 |
+| GET /api/dictionary/dictionaries | 获取字典列表 |
+| GET /api/dictionary/dictionaries/categories | 获取字典分类 |
+
+### 数据字段映射
+
+#### DictionaryManagement
+- API返回: `category_code`, `dict_code`, `dict_label`, `dict_value`, `sort_order`
+- 前端使用: `dictCode`, `dictLabel`, `dictValue`, `dictSort`
+
+### 后续任务
+1. 重启后端服务器以加载更新的 seed 数据
+2. 测试 DictionaryManagement 页面的完整 CRUD 功能
+3. 完成 NotificationSettings 的 API 迁移
