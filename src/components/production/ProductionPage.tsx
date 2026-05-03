@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import { cropBatches, greenhouses, cropTypes, plantingModes } from '../../data/mockData';
+import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
+import { useGreenhouses } from '../common/settings';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
@@ -18,6 +19,8 @@ import {
 } from './modals';
 
 export default function ProductionPage() {
+  const { greenhouses } = useGreenhouses();
+
   const [statusFilter, setStatusFilter] = useState('all');
   const [planTypeFilter, setPlanTypeFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);

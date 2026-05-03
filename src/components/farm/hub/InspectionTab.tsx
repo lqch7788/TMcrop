@@ -15,7 +15,8 @@ import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { BatchEditModal } from './modals/BatchEditModal';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
-import { greenhouses, users, cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
+import { cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
+import { useUsers, useGreenhouses } from '../../common/settings';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '../../ui/Modal';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
@@ -122,6 +123,10 @@ export function InspectionTab({
   onBatchDelete,
   onBatchEdit,
 }: InspectionTabProps) {
+  // 使用 SettingsDataProvider 获取用户和温室数据
+  const { users } = useUsers();
+  const { greenhouses } = useGreenhouses();
+
   // 使用 hub 传来的 inspections 作为数据源，通过 useMemo 派生本地状态
   // 避免状态同步反模式：不再用 useEffect 复制 prop 到 state
   const inspectionRecords = useMemo(() => inspections, [inspections]);

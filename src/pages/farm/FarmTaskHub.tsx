@@ -25,7 +25,8 @@ import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTy
 import { taskDispatchFields, taskDispatchStaff } from '../../data/farmMockData';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../types/farm/common';
 import { TaskConfigValues } from '../../types/farm/taskTypeConfig';
-import { users, cropBatches } from '../../data/mockData';
+import { cropBatches } from '../../data/mockData';
+import { useUsers } from '../../components/common/settings';
 import { format, parse, addDays, addHours } from 'date-fns';
 
 // 导入弹窗适配器
@@ -130,6 +131,7 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
 export function FarmTaskHub() {
   const hub = useFarmHub();
   const tasksHook = useTasks();
+  const { users } = useUsers();
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
   // 弹窗状态

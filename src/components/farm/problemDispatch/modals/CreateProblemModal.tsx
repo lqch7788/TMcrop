@@ -1,5 +1,6 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { greenhouses, cropTypes } from '../../../../data/mockData';
+import { cropTypes } from '../../../../data/mockData';
+import { useGreenhouses } from '../../../common/settings';
 
 interface CreateProblemModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export function CreateProblemModal({
   errors,
   onFormChange,
 }: CreateProblemModalProps) {
+  const { greenhouses } = useGreenhouses();
+
   const handleGreenhouseChange = (greenhouseId: string) => {
     const greenhouse = greenhouses.find(g => g.id === greenhouseId);
     onFormChange('greenhouseId', greenhouseId);
