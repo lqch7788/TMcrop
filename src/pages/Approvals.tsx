@@ -22,12 +22,11 @@ export default function Approvals() {
     getApprovalById,
   } = useApproval();
 
-  // 审批模块权限控制：PROC_APPROVAL
-  const { can } = useAuthPermission();
-  // 默认权限为 true（兼容无权限数据的场景）
-  const canApprove = can('PROC_APPROVAL', 'approve');
-  const canReject = can('PROC_APPROVAL', 'approve'); // 拒绝也使用 approve 权限
-  const canExport = can('PROC_APPROVAL', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canApprove = true;
+  const canReject = true;
+  const canExport = true;
 
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [searchTerm, setSearchTerm] = useState('');

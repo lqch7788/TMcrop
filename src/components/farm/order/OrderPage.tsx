@@ -14,18 +14,18 @@ import {
   cropCategories,
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
-import * as cropOrderService from '@/services/cropOrderService';
+import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropInstanceService from '@/services/cropInstanceService';
 import * as cropVarietyService from '@/services/cropVarietyService';
 import { useAuthPermission } from '@/hooks/usePermission';
 
 export default function OrderPage() {
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 订单模块权限
-  const canCreate = can('PROC_ORDER', 'create');
-  const canDelete = can('PROC_ORDER', 'delete');
-  const canExport = can('PROC_ORDER', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 订单模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canDelete = true;
+  const canExport = true;
   const [filters, setFilters] = useState<CropOrderFilters>({
     orderCode: '',
     orderName: '',
@@ -39,10 +39,8 @@ export default function OrderPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从localStorage加载数据
-  const [orders, setOrders] = useState<CropOrder[]>(() =>
-    cropOrderService.initOrders()
-  );
+  // 从API加载数据，初始为空数组
+  const [orders, setOrders] = useState<CropOrder[]>([]);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -54,16 +52,20 @@ export default function OrderPage() {
   const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
-  // 刷新数据
-  const refreshData = useCallback(() => {
-    setOrders(cropOrderService.getOrders());
-    setRefreshKey(k => k + 1);
+  // 刷新数据（异步调用API）
+  const refreshData = useCallback(async () => {
+    try {
+      const data = await cropOrderService.getOrders();
+      setOrders(data);
+    } catch (error) {
+      console.error('获取订单数据失败:', error);
+    }
   }, []);
 
-  // 初始化数据
+  // 组件挂载时加载数据
   useEffect(() => {
     refreshData();
-  }, [refreshKey]);
+  }, []);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);

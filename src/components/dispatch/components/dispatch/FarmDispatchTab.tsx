@@ -19,12 +19,12 @@ import { useAuthPermission } from '../../../../hooks/usePermission';
 export const FarmDispatchTab: React.FC = () => {
   const { unifiedTasks, publishTask, updateTask, deleteTask, getTaskRecordsByTaskId } = useTasks();
 
-  // 权限检查
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_DISPATCH', 'create');
-  const canEdit = can('PROC_DISPATCH', 'edit');
-  const canDelete = can('PROC_DISPATCH', 'delete');
-  const canPublish = can('PROC_DISPATCH', 'publish');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canPublish = true;
 
   // 搜索和筛选状态
   const [searchText, setSearchText] = useState('');

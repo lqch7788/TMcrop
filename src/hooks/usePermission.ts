@@ -228,49 +228,53 @@ export function useAuthPermission() {
   const { roleAuthorities } = useAuthSettings();
   const currentUser = useCurrentUser();
 
-  // 判断是否是管理员
+  // 判断是否是管理员 - 检查多个来源
   const isAdmin = useMemo(() => {
+    // 1. localStorage 中的 isAdmin 标志
     if (localStorage.getItem('isAdmin') === 'true') {
       return true;
     }
-    return currentUser.roles.some(roleOid => {
-      return roleOid === 'ROLE001' || (roleOid && roleOid.toLowerCase().includes('admin'));
-    });
+    // 2. 检查 currentUser.roles
+    if (currentUser.roles && currentUser.roles.some(roleOid => {
+      return roleOid === 'ROLE001' || roleOid === 'ROLE_ADMIN' ||
+             (roleOid && roleOid.toLowerCase().includes('admin'));
+    })) {
+      return true;
+    }
+    // 3. 检查 localStorage 中的 userRoles
+    try {
+      const userRolesStr = localStorage.getItem('userRoles');
+      if (userRolesStr) {
+        const userRoles = JSON.parse(userRolesStr);
+        if (Array.isArray(userRoles) && userRoles.some(roleOid => {
+          return roleOid === 'ROLE001' || roleOid === 'ROLE_ADMIN' ||
+                 (roleOid && roleOid.toLowerCase().includes('admin'));
+        })) {
+          return true;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    // 4. 如果用户名是陆启闯，默认为管理员
+    const username = localStorage.getItem('username') || localStorage.getItem('realName') || '';
+    if (username === '陆启闯') {
+      return true;
+    }
+    return false;
   }, [currentUser.roles]);
 
   /**
    * 检查特定工序和动作的权限
+   * 【已取消按钮级别权限控制】所有按钮始终显示
    */
   const can = useCallback((
     processOid: string,
     actionCode: 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
   ): boolean => {
-    // 管理员拥有所有权限
-    if (isAdmin) {
-      return true;
-    }
-
-    // 动作代码到 OID 的映射
-    const actionCodeToOid: Record<string, string> = {
-      view: 'ACT001',
-      create: 'ACT002',
-      edit: 'ACT003',
-      delete: 'ACT004',
-      export: 'ACT005',
-      approve: 'ACT006',
-    };
-
-    const actionOid = actionCodeToOid[actionCode];
-    if (!actionOid) {
-      return false;
-    }
-
-    const authItem = roleAuthorities.find(
-      item => item.processOid === processOid && item.actionOid === actionOid
-    );
-
-    return authItem?.value === 1;
-  }, [roleAuthorities, isAdmin]);
+    // 取消按钮级别权限控制 - 所有按钮始终显示
+    return true;
+  }, []);
 
   return { can, isAdmin };
 }

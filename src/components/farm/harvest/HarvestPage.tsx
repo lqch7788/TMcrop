@@ -10,7 +10,7 @@ import {
   produceCategories,
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
-import * as harvestService from '../../../services/harvestService';
+import * as harvestService from '../../../services/apiHarvestService';
 import * as cropInstanceService from '../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import { inbound as inventoryInbound } from '../../../services/inventoryService';
@@ -47,13 +47,13 @@ const generateProductCode = (cropName: string, variety: string, index: number): 
 export default function HarvestPage() {
   const { users } = useUsers();
   const { greenhouses } = useGreenhouses();
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 采收模块权限：PROC_HARVEST 是采收相关工序，需要在权限配置中添加
-  const canCreate = can('PROC_HARVEST', 'create');
-  const canEdit = can('PROC_HARVEST', 'edit');
-  const canDelete = can('PROC_HARVEST', 'delete');
-  const canExport = can('PROC_HARVEST', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 采收模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -72,8 +72,21 @@ export default function HarvestPage() {
     status: '',
   });
 
-  // Harvest Records State
-  const [harvestRecords, setHarvestRecords] = useState(() => harvestService.getHarvestRecords());
+  // Harvest Records State - 从API加载数据，初始为空数组
+  const [harvestRecords, setHarvestRecords] = useState<any[]>([]);
+
+  // 初始化数据（从API加载）
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await harvestService.getHarvestRecords();
+        setHarvestRecords(data);
+      } catch (error) {
+        console.error('获取采收数据失败:', error);
+      }
+    };
+    loadData();
+  }, []);
 
   // Export state
   const [exportMode, setExportMode] = useState(false);
@@ -474,7 +487,17 @@ export default function HarvestPage() {
     }));
   };
 
-  const handleCreateRecord = () => {
+  // 刷新采收数据
+  const refreshHarvestData = async () => {
+    try {
+      const data = await harvestService.getHarvestRecords();
+      setHarvestRecords(data);
+    } catch (error) {
+      console.error('获取采收数据失败:', error);
+    }
+  };
+
+  const handleCreateRecord = async () => {
     if (!validateForm()) return;
 
     const selectedBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
@@ -550,7 +573,7 @@ export default function HarvestPage() {
       if (selectedBatch?.instanceId) {
         cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);
       }
-      setHarvestRecords(harvestService.getHarvestRecords());
+      refreshHarvestData();
     });
 
     setIsCreateModalOpen(false);

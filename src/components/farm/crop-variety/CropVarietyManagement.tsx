@@ -34,12 +34,12 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 export default function CropVarietyManagement() {
   const navigate = useNavigate();
 
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 品种管理模块权限
-  const canCreate = can('PROC_CROP_VARIETY', 'create');
-  const canEdit = can('PROC_CROP_VARIETY', 'edit');
-  const canDelete = can('PROC_CROP_VARIETY', 'delete');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 品种管理模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
   const [selectedVariety, setSelectedVariety] = useState<CropVariety | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [prefillAddData, setPrefillAddData] = useState<{

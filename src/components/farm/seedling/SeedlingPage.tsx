@@ -26,14 +26,14 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 export default function SeedlingPage() {
   const navigate = useNavigate();
 
-  // 权限检查
-  const { can } = useAuthPermission();
-  // 育苗模块权限
-  const canCreate = can('PROC_SEEDLING', 'create');
-  const canEdit = can('PROC_SEEDLING', 'edit');
-  const canDelete = can('PROC_SEEDLING', 'delete');
-  const canExport = can('PROC_SEEDLING', 'export');
-  const canPrint = can('PROC_SEEDLING', 'print');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  // 育苗模块权限 - 已取消，直接设置为 true
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
+  const canPrint = true;
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);

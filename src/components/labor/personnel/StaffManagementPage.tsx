@@ -21,12 +21,12 @@ const initialWorkers: Worker[] = [
 ];
 
 export function StaffManagementPage() {
-  // 权限检查 - 人工管理模块权限
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_LABOR', 'create');
-  const canEdit = can('PROC_LABOR', 'edit');
-  const canDelete = can('PROC_LABOR', 'delete');
-  const canExport = can('PROC_LABOR', 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);

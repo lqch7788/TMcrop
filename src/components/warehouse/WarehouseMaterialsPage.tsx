@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from './MaterialFilters';
 import { MaterialsTable } from './MaterialsTable';
@@ -14,6 +14,7 @@ import PageHeader from './PageHeader';
 import TabSwitch from './TabSwitch';
 import ActionToolbar from './ActionToolbar';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { apiClient, USE_API } from '../../services/apiClient';
 
 // 仓库物料模块权限代码
 const PROC_WAREHOUSE = 'PROC_WAREHOUSE';
@@ -358,12 +359,12 @@ const initialFilters: MaterialFiltersState = {
 export default function WarehouseMaterialsPage() {
   const navigate = useNavigate();
 
-  // 权限检查 - 仓库物料模块权限
-  const { can } = useAuthPermission();
-  const canCreate = can(PROC_WAREHOUSE, 'create');
-  const canEdit = can(PROC_WAREHOUSE, 'edit');
-  const canDelete = can(PROC_WAREHOUSE, 'delete');
-  const canExport = can(PROC_WAREHOUSE, 'export');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'inbound'>('inbound');
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -399,8 +400,64 @@ export default function WarehouseMaterialsPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [selectedInboundRecord, setSelectedInboundRecord] = useState<InboundRecord | null>(null);
   const [selectedInboundRecords, setSelectedInboundRecords] = useState<InboundRecord[]>([]);
-  const [inboundRecords, setInboundRecords] = useState<InboundRecord[]>(initialInboundRecords);
-  const [warehouseData, setWarehouseData] = useState<Material[]>(warehouseMaterials);
+  const [inboundRecords, setInboundRecords] = useState<InboundRecord[]>([]);
+  const [warehouseData, setWarehouseData] = useState<Material[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 从 API 加载物料数据
+  useEffect(() => {
+    const loadMaterialData = async () => {
+      setIsLoading(true);
+      try {
+        if (USE_API) {
+          // 尝试从 API 获取物料数据
+          const materialsData = await apiClient.get<Material[]>('/materials');
+          if (materialsData && materialsData.length > 0) {
+            setWarehouseData(materialsData);
+          } else {
+            setWarehouseData(warehouseMaterials);
+          }
+        } else {
+          // 非 API 模式，检查是否后端已实现
+          try {
+            const materialsData = await apiClient.get<Material[]>('/materials');
+            if (materialsData && materialsData.length > 0) {
+              setWarehouseData(materialsData);
+            } else {
+              setWarehouseData(warehouseMaterials);
+            }
+          } catch {
+            // API 不可用，使用 mock 数据
+            setWarehouseData(warehouseMaterials);
+          }
+        }
+
+        // 同样加载入库记录
+        try {
+          if (USE_API) {
+            const inboundData = await apiClient.get<InboundRecord[]>('/materials/inbound');
+            if (inboundData && inboundData.length > 0) {
+              setInboundRecords(inboundData);
+            } else {
+              setInboundRecords(initialInboundRecords);
+            }
+          } else {
+            setInboundRecords(initialInboundRecords);
+          }
+        } catch {
+          setInboundRecords(initialInboundRecords);
+        }
+      } catch (error) {
+        console.error('加载物料数据失败，使用 mock 数据:', error);
+        setWarehouseData(warehouseMaterials);
+        setInboundRecords(initialInboundRecords);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMaterialData();
+  }, []);
 
   const lowStockCount = warehouseData.filter(m => m.quantity < m.minStock).length;
   const filteredMaterials = filterMaterials(warehouseData, filters);

@@ -14,10 +14,9 @@ export default function PendingApproval() {
   const { approve, reject } = useApproval();
   const { pendingApprovals } = usePendingApprovals();
 
-  // 审批模块权限控制：PROC_APPROVAL
-  const { can } = useAuthPermission();
-  // 默认权限为 true（兼容无权限数据的场景）
-  const canApprove = can('PROC_APPROVAL', 'approve');
+  // 权限检查 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canApprove = true;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');

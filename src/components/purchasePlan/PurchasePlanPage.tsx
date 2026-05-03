@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Plus, Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Download, X, ChevronDown, ChevronRightIcon, RefreshCw, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
-import { getPurchasePlansWithStatus, subscribeToStatusChanges } from '../../hooks/usePurchasePlanStore';
+import { getPurchasePlansWithStatus, getPurchasePlansWithStatusAsync, subscribeToStatusChanges } from '../../hooks/usePurchasePlanStore';
 import * as XLSX from 'xlsx';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
@@ -10,15 +10,33 @@ import { useAuthPermission } from '../../hooks/usePermission';
 import { UserSelect } from '../common/settings/UserSelect';
 
 export function PurchasePlanPage() {
-  // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
-  const { can } = useAuthPermission();
-  const canCreate = can('PROC_PRODUCTION', 'create');
-  const canEdit = can('PROC_PRODUCTION', 'edit');
-  const canDelete = can('PROC_PRODUCTION', 'delete');
-  const canExport = can('PROC_PRODUCTION', 'export');
+  // 权限控制 - 已取消，所有人可使用所有功能
+  // const { can } = useAuthPermission();
+  const canCreate = true;
+  const canEdit = true;
+  const canDelete = true;
+  const canExport = true;
 
   // 采购计划数据状态（支持审批联动更新）
-  const [purchasePlansData, setPurchasePlansData] = useState<PurchasePlan[]>(() => getPurchasePlansWithStatus());
+  const [purchasePlansData, setPurchasePlansData] = useState<PurchasePlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 加载采购计划数据
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getPurchasePlansWithStatusAsync();
+        setPurchasePlansData(data);
+      } catch (error) {
+        console.error('加载采购计划数据失败，使用同步版本:', error);
+        setPurchasePlansData(getPurchasePlansWithStatus());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // 订阅采购计划状态变化事件
   useEffect(() => {
