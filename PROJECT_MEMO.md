@@ -381,7 +381,35 @@ hongzhiyun/
 ### 后续任务
 1. 重启后端服务器以加载更新的 seed 数据
 2. 测试 DictionaryManagement 页面的完整 CRUD 功能
-3. 完成 NotificationSettings 的 API 迁移
+3. ✅ 完成 NotificationSettings 的 API 迁移（2026-05-03）
+
+### Phase 4: 权限与流程集成 (待开始)
+- 权限系统设计与实现
+- 审批流程与权限联动
+
+### NotificationSettings API 迁移 (2026-05-03 完成)
+**后端 API**:
+- `GET /api/notifications/channels` - 获取通知渠道列表
+- `POST /api/notifications/channels` - 创建通知渠道
+- `PUT /api/notifications/channels/:id` - 更新通知渠道
+- `DELETE /api/notifications/channels/:id` - 删除通知渠道
+- `PATCH /api/notifications/channels/:id/toggle` - 切换渠道状态
+- `GET /api/notifications/rules` - 获取通知规则列表
+- `POST /api/notifications/rules` - 创建通知规则
+- `PUT /api/notifications/rules/:id` - 更新通知规则
+- `DELETE /api/notifications/rules/:id` - 删除通知规则
+- `PATCH /api/notifications/rules/:id/toggle` - 切换规则状态
+
+**数据库表**:
+- `notification_channels` - 通知渠道表
+- `notification_rules` - 通知规则表
+
+**种子数据**:
+- 4个默认通知渠道（站内消息、邮件、短信、企业微信）
+- 6条默认通知规则（审批待办、审批结果、预警、任务分配、每日汇总、系统公告）
+
+**前端组件**:
+- `src/pages/NotificationSettings.tsx` - 已从 localStorage 迁移到 API 模式
 
 ### Phase 3: 硬编码消除进度 (2026-05-03)
 

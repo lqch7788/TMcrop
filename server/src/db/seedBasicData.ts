@@ -96,6 +96,36 @@ export interface DictionarySeed {
   status: string;
 }
 
+/**
+ * 通知渠道数据结构
+ */
+export interface NotificationChannelSeed {
+  id: string;
+  oid: string;
+  channelCode: string;
+  channelName: string;
+  channelType: string;
+  isActive: number;
+  config: string;
+}
+
+/**
+ * 通知规则数据结构
+ */
+export interface NotificationRuleSeed {
+  id: string;
+  oid: string;
+  ruleCode: string;
+  ruleName: string;
+  eventType: string;
+  recipientType: string;
+  recipientIds: string;
+  channelIds: string;
+  frequency: string;
+  template: string;
+  isActive: number;
+}
+
 // ============================================
 // 默认部门数据
 // ============================================
@@ -443,6 +473,132 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D122', categoryCode: 'purchase_type', dictCode: 'daily', dictLabel: '日常采购', dictValue: 'daily', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
 ];
 
+// ============================================
+// 默认通知渠道数据
+// ============================================
+const defaultNotificationChannels: NotificationChannelSeed[] = [
+  {
+    id: 'NC001',
+    oid: 'NC001',
+    channelCode: 'in-app',
+    channelName: '系统内消息',
+    channelType: 'in-app',
+    isActive: 1,
+    config: '{}'
+  },
+  {
+    id: 'NC002',
+    oid: 'NC002',
+    channelCode: 'email',
+    channelName: '邮件通知',
+    channelType: 'email',
+    isActive: 1,
+    config: JSON.stringify({ smtpHost: 'smtp.example.com', smtpPort: '587', fromEmail: 'noreply@example.com' })
+  },
+  {
+    id: 'NC003',
+    oid: 'NC003',
+    channelCode: 'sms',
+    channelName: '短信通知',
+    channelType: 'sms',
+    isActive: 0,
+    config: JSON.stringify({ apiKey: '', provider: 'aliyun' })
+  },
+  {
+    id: 'NC004',
+    oid: 'NC004',
+    channelCode: 'wechat',
+    channelName: '企业微信',
+    channelType: 'wechat',
+    isActive: 0,
+    config: JSON.stringify({ webhook: '', corpId: '' })
+  }
+];
+
+// ============================================
+// 默认通知规则数据
+// ============================================
+const defaultNotificationRules: NotificationRuleSeed[] = [
+  {
+    id: 'NR001',
+    oid: 'NR001',
+    ruleCode: 'approval_pending',
+    ruleName: '审批待办通知',
+    eventType: 'approval_pending',
+    recipientType: 'approver',
+    recipientIds: JSON.stringify(['approver']),
+    channelIds: JSON.stringify(['NC001', 'NC002']),
+    frequency: 'immediate',
+    template: '',
+    isActive: 1
+  },
+  {
+    id: 'NR002',
+    oid: 'NR002',
+    ruleCode: 'approval_result',
+    ruleName: '审批结果通知',
+    eventType: 'approval_result',
+    recipientType: 'applicant',
+    recipientIds: JSON.stringify(['applicant']),
+    channelIds: JSON.stringify(['NC001']),
+    frequency: 'immediate',
+    template: '',
+    isActive: 1
+  },
+  {
+    id: 'NR003',
+    oid: 'NR003',
+    ruleCode: 'alert',
+    ruleName: '预警通知',
+    eventType: 'alert',
+    recipientType: 'admin',
+    recipientIds: JSON.stringify(['admin', 'manager']),
+    channelIds: JSON.stringify(['NC001', 'NC002', 'NC003']),
+    frequency: 'immediate',
+    template: '',
+    isActive: 1
+  },
+  {
+    id: 'NR004',
+    oid: 'NR004',
+    ruleCode: 'task_assigned',
+    ruleName: '任务分配通知',
+    eventType: 'task_assigned',
+    recipientType: 'assignee',
+    recipientIds: JSON.stringify(['assignee']),
+    channelIds: JSON.stringify(['NC001']),
+    frequency: 'immediate',
+    template: '',
+    isActive: 1
+  },
+  {
+    id: 'NR005',
+    oid: 'NR005',
+    ruleCode: 'daily_summary',
+    ruleName: '每日汇总',
+    eventType: 'daily_summary',
+    recipientType: 'all',
+    recipientIds: JSON.stringify(['all']),
+    channelIds: JSON.stringify(['NC001', 'NC002']),
+    frequency: 'daily',
+    template: '',
+    isActive: 0
+  },
+  {
+    id: 'NR006',
+    oid: 'NR006',
+    ruleCode: 'announcement',
+    ruleName: '系统公告',
+    eventType: 'announcement',
+    recipientType: 'all',
+    recipientIds: JSON.stringify(['all']),
+    channelIds: JSON.stringify(['NC001', 'NC002', 'NC003']),
+    frequency: 'immediate',
+    template: '',
+    isActive: 1
+  }
+];
+
 /**
  * 导入部门数据
  */
@@ -613,6 +769,64 @@ export function seedDictionaries() {
 }
 
 /**
+ * 导入通知渠道数据
+ */
+export function seedNotificationChannels() {
+  const db = getDatabase();
+
+  for (const channel of defaultNotificationChannels) {
+    db.run(`
+      INSERT OR REPLACE INTO notification_channels
+      (id, oid, channel_code, channel_name, channel_type, is_active, config, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      channel.id,
+      channel.oid,
+      channel.channelCode,
+      channel.channelName,
+      channel.channelType,
+      channel.isActive,
+      channel.config,
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+  }
+
+  console.log(`已导入 ${defaultNotificationChannels.length} 条通知渠道数据`);
+}
+
+/**
+ * 导入通知规则数据
+ */
+export function seedNotificationRules() {
+  const db = getDatabase();
+
+  for (const rule of defaultNotificationRules) {
+    db.run(`
+      INSERT OR REPLACE INTO notification_rules
+      (id, oid, rule_code, rule_name, event_type, recipient_type, recipient_ids, channel_ids, frequency, template, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      rule.id,
+      rule.oid,
+      rule.ruleCode,
+      rule.ruleName,
+      rule.eventType,
+      rule.recipientType,
+      rule.recipientIds,
+      rule.channelIds,
+      rule.frequency,
+      rule.template,
+      rule.isActive,
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+  }
+
+  console.log(`已导入 ${defaultNotificationRules.length} 条通知规则数据`);
+}
+
+/**
  * 导出所有基础数据
  */
 export function exportBasicData() {
@@ -622,6 +836,8 @@ export function exportBasicData() {
   seedPositions();
   seedDictionaryCategories();
   seedDictionaries();
+  seedNotificationChannels();
+  seedNotificationRules();
   saveDatabase();
   console.log('基础数据导入完成');
 }
