@@ -8,7 +8,7 @@ import { LogOut, Plus, Search, Download, Check, X, Eye, RefreshCw, UserX } from 
 import { UnifiedModal } from '../../components/ui/UnifiedModal';
 import ProTable from '../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge';
-import { workers } from '../../data/mockData';
+import { useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
 
@@ -95,6 +95,8 @@ const STATUS_OPTIONS = [
 // ============================================================
 
 export default function ResignationPage() {
+  const { workers } = useUsers();
+
   // ============================================================
   // 状态定义
   // ============================================================

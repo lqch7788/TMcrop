@@ -6,7 +6,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
-import { warehouses, produceInventory } from '../../data/mockData';
+import { produceInventory } from '../../data/mockData';
+import { useWarehouses } from '../common/settings';
 
 interface ProduceInventoryAddModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
   onClose,
   onAdd,
 }) => {
+  const { warehouses } = useWarehouses();
+
   // 获取下一个ID
   const getNextId = () => {
     const maxId = produceInventory.reduce((max, item) => {

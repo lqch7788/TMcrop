@@ -7,7 +7,7 @@ import { CalendarDays, Plus, Search, Download, Check, X, Eye, RefreshCw, Undo2 }
 import { UnifiedModal } from '../../components/ui/UnifiedModal';
 import ProTable from '../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge';
-import { workers } from '../../data/mockData';
+import { useUsers } from '../../components/common/settings';
 import { LeaveType, LeaveStatus, LeaveRecord, LeaveQuota } from '../../components/labor/leave/types';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
@@ -83,6 +83,8 @@ function getAvailableDays(quota: LeaveQuota, leaveType: LeaveType): number {
 // ============================================================
 
 export default function LeavePage() {
+  const { workers } = useUsers();
+
   // ============================================================
   // 状态定义
   // ============================================================

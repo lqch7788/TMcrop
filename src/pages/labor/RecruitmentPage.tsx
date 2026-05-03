@@ -7,7 +7,7 @@ import { Users, Plus, Search, Download, Check, X, Eye, RefreshCw } from 'lucide-
 import { UnifiedModal } from '../../components/ui/UnifiedModal';
 import ProTable from '../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge';
-import { departments, positions, workers } from '../../data/mockData';
+import { useDepartments, usePositions, useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
 
@@ -82,6 +82,10 @@ interface RecruitmentFilters {
 // ============================================================
 
 export default function RecruitmentPage() {
+  const { departments } = useDepartments();
+  const { positions } = usePositions();
+  const { workers } = useUsers();
+
   // ============================================================
   // 状态定义
   // ============================================================
