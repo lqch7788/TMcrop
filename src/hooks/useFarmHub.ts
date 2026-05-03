@@ -35,6 +35,9 @@ const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
 // 导入初始任务数据（用于空状态时显示）
 import { taskDispatchTasks } from '../data/farmMockData';
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, inspectionRecords as mockInspectionRecords } from '../data/mockData';
+// 导入巡查和问题API服务
+import { getAllInspections } from '../services/apiInspectionService';
+import { getAllProblems } from '../services/apiProblemService';
 
 // ============================================
 // 类型定义
@@ -316,34 +319,68 @@ export function useFarmHub(): UseFarmHubReturn {
   // 加载其他数据（问题、巡查、操作记录）
   const loadData = useCallback(() => {
     setIsLoading(true);
-    try {
-      // 读取问题数据
-      const storedProblems = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
-      if (storedProblems) {
-        const parsed = JSON.parse(storedProblems);
-        setProblems(Array.isArray(parsed) ? parsed : []);
-      }
 
-      // 读取巡查数据
-      const storedInspections = localStorage.getItem(STORAGE_KEYS.INSPECTION_RECORDS);
-      if (storedInspections) {
-        const parsed = JSON.parse(storedInspections);
-        setInspections(Array.isArray(parsed) ? parsed : []);
-      }
+    // 尝试从API加载数据，失败时回退到localStorage
+    const loadFromAPIs = async () => {
+      try {
+        // 并行请求API数据
+        const [apiProblems, apiInspections] = await Promise.allSettled([
+          getAllProblems(),
+          getAllInspections()
+        ]);
 
-      // 读取操作记录
-      const storedRecords = localStorage.getItem(STORAGE_KEYS.OPERATION_RECORDS);
-      if (storedRecords) {
-        const parsed = JSON.parse(storedRecords);
-        setOperationRecords(Array.isArray(parsed) ? parsed : []);
+        // 处理问题数据
+        if (apiProblems.status === 'fulfilled' && apiProblems.value && Array.isArray(apiProblems.value) && apiProblems.value.length > 0) {
+          console.log('[useFarmHub] 从API获取到问题数据:', apiProblems.value.length, '条');
+          setProblems(apiProblems.value as ProblemEntry[]);
+        }
+
+        // 处理巡查数据
+        if (apiInspections.status === 'fulfilled' && apiInspections.value && Array.isArray(apiInspections.value) && apiInspections.value.length > 0) {
+          console.log('[useFarmHub] 从API获取到巡查数据:', apiInspections.value.length, '条');
+          setInspections(apiInspections.value as InspectionRecord[]);
+        }
+      } catch (error) {
+        console.warn('[useFarmHub] API调用失败，使用本地数据:', error);
       }
-    } catch (error) {
-      // 加载数据失败
-    } finally {
-      setIsLoading(false);
-    }
-    // 刷新任务计数，触发任务列表重新渲染
-    setRefreshKey(k => k + 1);
+    };
+
+    // 加载本地数据作为备份
+    const loadFromLocal = () => {
+      try {
+        // 读取问题数据
+        const storedProblems = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
+        if (storedProblems) {
+          const parsed = JSON.parse(storedProblems);
+          setProblems(Array.isArray(parsed) ? parsed : []);
+        }
+
+        // 读取巡查数据
+        const storedInspections = localStorage.getItem(STORAGE_KEYS.INSPECTION_RECORDS);
+        if (storedInspections) {
+          const parsed = JSON.parse(storedInspections);
+          setInspections(Array.isArray(parsed) ? parsed : []);
+        }
+
+        // 读取操作记录
+        const storedRecords = localStorage.getItem(STORAGE_KEYS.OPERATION_RECORDS);
+        if (storedRecords) {
+          const parsed = JSON.parse(storedRecords);
+          setOperationRecords(Array.isArray(parsed) ? parsed : []);
+        }
+      } catch (error) {
+        // 加载数据失败
+      } finally {
+        setIsLoading(false);
+      }
+      // 刷新任务计数，触发任务列表重新渲染
+      setRefreshKey(k => k + 1);
+    };
+
+    // 先尝试API加载，然后回退到本地
+    loadFromAPIs().finally(() => {
+      loadFromLocal();
+    });
   }, []);
 
   // 强制刷新任务列表

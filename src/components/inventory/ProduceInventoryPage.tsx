@@ -3,7 +3,7 @@
  * 样式参照库存总览页面（WarehouseOverviewPage）
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { produceInventory } from '../../data/mockData';
 import { useWarehouses } from '../common/settings';
@@ -16,6 +16,8 @@ import { ProduceInventoryBatchEditModal } from './ProduceInventoryBatchEditModal
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ProduceInventoryAddModal } from './ProduceInventoryAddModal';
 import { getAllVarieties } from '../../services/cropVarietyService';
+import * as inventoryService from '../../services/inventoryService';
+import { StockType } from '../../types/inventory';
 
 /**
  * 根据作物名称和品种生成11位作物编码
@@ -493,7 +495,7 @@ export default function ProduceInventoryPage() {
   const { warehouses } = useWarehouses();
 
   // 状态
-  const [inventoryData, setInventoryData] = useState<ProduceInventory[]>(produceInventory);
+  const [inventoryData, setInventoryData] = useState<ProduceInventory[]>([]);
   const [searchText, setSearchText] = useState('');
   const [filters, setFilters] = useState({
     warehouseId: '',
@@ -521,6 +523,68 @@ export default function ProduceInventoryPage() {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  // 数据加载状态
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 从 API 加载库存数据
+  useEffect(() => {
+    const loadInventoryData = async () => {
+      setIsLoading(true);
+      try {
+        // 调用 API 获取库存数据（只获取成品库存）
+        const stocks = await inventoryService.getInventoryList({
+          stockType: StockType.PRODUCT,
+        });
+
+        // 将库存数据转换为 ProduceInventory 格式
+        const mappedData: ProduceInventory[] = stocks.map((stock, index) => ({
+          id: stock.instanceId || `PI${String(index + 1).padStart(3, '0')}`,
+          productCode: stock.businessId || stock.instanceId || '',
+          cropName: stock.cropName || '',
+          variety: stock.varietyName || '',
+          grade: 'A' as const, // 默认A级
+          quantity: stock.currentQuantity,
+          unit: stock.unit || 'kg',
+          warehouseId: stock.baseId || '',
+          warehouseName: stock.baseName || '',
+          storageLocation: stock.instanceId || '',
+          storageDate: stock.inboundDate ? new Date(stock.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          expirationDate: stock.expiryDate || '',
+          batchCode: stock.productionPlanCode || '',
+          greenhouseName: '',
+          plantingMode: '',
+          alertSettings: {
+            enableStorageTimeAlert: false,
+            storageTimeThreshold: 0,
+            enableQuantityAlert: false,
+            minQuantityThreshold: 0,
+            maxQuantityThreshold: 0,
+            minStock: 0,
+            maxStock: 0,
+            expirationDays: 0,
+          },
+          inboundRecords: [],
+          outboundRecords: [],
+          status: stock.status === 'IN_STOCK' ? 'in_stock' : stock.status === 'LOW_STOCK' ? 'low_stock' : 'in_stock',
+        }));
+
+        if (mappedData.length > 0) {
+          setInventoryData(mappedData);
+        } else {
+          // API 返回空数据，使用 mock 数据
+          setInventoryData(produceInventory);
+        }
+      } catch (error) {
+        console.error('加载库存数据失败，使用 mock 数据:', error);
+        // API 调用失败，回退到 mock 数据
+        setInventoryData(produceInventory);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInventoryData();
+  }, []);
 
   // 计算预警信息
   const alerts = useMemo((): AlertInfo[] => {

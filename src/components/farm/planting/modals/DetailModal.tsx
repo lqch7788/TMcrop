@@ -29,7 +29,14 @@ export function DetailModal({
 
   const status = statusMap[record.status] || statusMap[PlantingStatus.GROWING];
 
-  const images = record.pictures || [];
+  // 确保 images 是数组，如果是字符串则解析
+  const images = (() => {
+    if (Array.isArray(record.pictures)) return record.pictures;
+    if (typeof record.pictures === 'string') {
+      try { return JSON.parse(record.pictures); } catch { return []; }
+    }
+    return [];
+  })();
 
   const openImageViewer = (index: number) => {
     setSelectedImageIndex(index);

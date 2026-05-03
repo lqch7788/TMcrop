@@ -608,6 +608,7 @@ export function initializeDatabase() {
       request_time TEXT,
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'pending',
+      due_date TEXT,
       completion_date TEXT,
       completion_note TEXT,
       remarks TEXT,
@@ -680,6 +681,41 @@ export function initializeDatabase() {
 
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN production_plan_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种源表添加来源途径字段（如果不存在则添加）
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN source_origin TEXT DEFAULT 'external_purchase'`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种源表添加作物类别字段
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN crop_category TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种源表添加类型名称字段
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN type_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种源表添加品种名称字段
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN variety_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种源表添加作物编码字段
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN crop_code TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }
@@ -920,6 +956,53 @@ export function initializeDatabase() {
       permission_oid TEXT NOT NULL,
       created_at TEXT,
       UNIQUE(role_oid, permission_oid)
+    )
+  `);
+
+  // 工序表（用于权限系统）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS processes (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      process_code TEXT NOT NULL,
+      process_name TEXT NOT NULL,
+      category TEXT,
+      app_type INTEGER DEFAULT 0,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 动作表（用于权限系统）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS actions (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      action_code TEXT NOT NULL,
+      action_name TEXT NOT NULL,
+      category TEXT,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 角色权限关联表（authority 系统用）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS roles_authority (
+      id TEXT PRIMARY KEY,
+      role_oid TEXT NOT NULL,
+      process_oid TEXT NOT NULL,
+      action_oid TEXT NOT NULL,
+      value INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(role_oid, process_oid, action_oid)
     )
   `);
 

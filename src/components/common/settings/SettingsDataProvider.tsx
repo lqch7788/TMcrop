@@ -326,12 +326,22 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
 
   const refreshDictionaries = useCallback(async () => {
     try {
-      // 字典 API 路径是 /api/dictionary/dictionaries，且返回的是数组而非包装对象
+      // 字典 API 路径是 /api/dictionary/dictionaries
       const response = await fetch('/api/dictionary/dictionaries');
       const data = await response.json();
-      // API 返回数组格式：[{id, category, code, name, ...}, ...]
+      // API 返回数组格式：[{id, category_code, dict_code, dict_label, ...}, ...]
       if (Array.isArray(data) && data.length > 0) {
-        setDictionaries(data);
+        // 转换 API 字段名为前端期望的字段名
+        const normalizedData: DictionaryItem[] = data.map((item: any) => ({
+          id: item.id,
+          category: item.category_code,      // category_code -> category
+          code: item.dict_code,              // dict_code -> code
+          name: item.dict_label,              // dict_label -> name
+          color: item.color,
+          sortNumber: item.sort_order || 0,   // sort_order -> sortNumber
+          status: item.status || 'active',
+        }));
+        setDictionaries(normalizedData);
       } else {
         // API 返回空或无效时使用默认数据
         setDictionaries(DEFAULT_DICTIONARIES);

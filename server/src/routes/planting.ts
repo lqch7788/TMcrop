@@ -13,34 +13,73 @@ router.get('/', (req: Request, res: Response) => {
     const { crop_name, status, page = 1, limit = 50 } = req.query;
     const db = getDatabase();
 
-    // 构建基础SQL和参数
-    let sql = 'SELECT * FROM plantings WHERE 1=1';
+    // 使用 SQL 别名将数据库字段映射到前端期望的字段名
+    let baseSql = `SELECT
+      id,
+      planting_code AS plantCode,
+      source_type AS sourceType,
+      source_id AS sourceId,
+      source_name AS sourceCode,
+      '' AS cropCode,
+      crop_name AS cropName,
+      crop_variety AS cropVariety,
+      '' AS areaId,
+      area_name AS areaName,
+      '' AS rootName,
+      planting_quantity AS plantingCount,
+      planting_date AS plantingDate,
+      0 AS soilPH,
+      0 AS soilEC,
+      0 AS transplantCount,
+      '' AS transplantDate,
+      FALSE AS isHarvest,
+      '' AS harvestDate,
+      0 AS attritionRate,
+      0 AS printCount,
+      '' AS traceabilityCode,
+      '[]' AS pictures,
+      greenhouse_name AS greenhouseName,
+      planted_quantity AS plantedQuantity,
+      survival_quantity AS survivalQuantity,
+      survival_rate AS survivalRate,
+      growth_status AS growthStatus,
+      expected_harvest_date AS expectedHarvestDate,
+      actual_harvest_date AS actualHarvestDate,
+      harvest_quantity AS harvestQuantity,
+      status,
+      remarks,
+      '' AS productionPlanId,
+      '' AS productionPlanCode,
+      create_by AS createBy,
+      create_time AS createTime,
+      update_time AS updateTime
+    FROM plantings WHERE 1=1`;
     const params: any[] = [];
 
     if (crop_name) {
-      sql += ' AND crop_name LIKE ?';
+      baseSql += ' AND crop_name LIKE ?';
       params.push(`%${crop_name}%`);
     }
 
     if (status) {
-      sql += ' AND status = ?';
+      baseSql += ' AND status = ?';
       params.push(status);
     }
 
     // 保存原始SQL用于count查询
-    const countSql = sql;
+    const countSql = baseSql;
 
-    sql += ' ORDER BY create_time DESC';
+    baseSql += ' ORDER BY create_time DESC';
 
     // 获取总数
     const total = execCount(db, countSql, params);
 
     // 添加分页
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    baseSql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
 
     // 获取数据列表
-    const items = queryToObjects(db, sql, params);
+    const items = queryToObjects(db, baseSql, params);
 
     res.json({ success: true, data: items, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {

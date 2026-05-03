@@ -44,7 +44,13 @@ export function EditModal({
     quantity: record.quantity,
     unit: record.unit,
     unitPrice: record.unitPrice,
-    pictures: record.pictures || [],
+    pictures: (() => {
+      if (Array.isArray(record.pictures)) return record.pictures;
+      if (typeof record.pictures === 'string') {
+        try { return JSON.parse(record.pictures); } catch { return []; }
+      }
+      return [];
+    })(),
     remarks: record.remarks || ''
   });
 
@@ -62,7 +68,13 @@ export function EditModal({
       quantity: record.quantity,
       unit: record.unit,
       unitPrice: record.unitPrice,
-      pictures: record.pictures || [],
+      pictures: (() => {
+      if (Array.isArray(record.pictures)) return record.pictures;
+      if (typeof record.pictures === 'string') {
+        try { return JSON.parse(record.pictures); } catch { return []; }
+      }
+      return [];
+    })(),
       remarks: record.remarks || ''
     });
   }, [record]);

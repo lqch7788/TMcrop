@@ -171,7 +171,7 @@ router.post('/organizations', (req, res) => {
  */
 router.get('/roles', (req, res) => {
   const db = getDatabase();
-  const { orgOid, sort = 'sort_number', order = 'asc' } = req.query;
+  const { orgOid, sort = 'created_at', order = 'desc' } = req.query;
 
   let sql = 'SELECT * FROM roles WHERE status = ?';
   const bindings: string[] = ['active'];
@@ -181,7 +181,10 @@ router.get('/roles', (req, res) => {
     bindings.push(orgOid as string);
   }
 
-  sql += ` ORDER BY ${sort} ${order}`;
+  // 安全检查：只允许特定的排序列
+  const allowedSorts = ['created_at', 'role_name', 'oid'];
+  const safeSort = allowedSorts.includes(sort as string) ? sort : 'created_at';
+  sql += ` ORDER BY ${safeSort} ${order}`;
 
   try {
     const stmt = db.prepare(sql);
