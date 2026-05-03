@@ -258,18 +258,27 @@ function seedSuppliers() {
 
 /**
  * 导入种源数据
+ * 注意：source_type 使用英文枚举值，source_origin 表示来源途径
  */
 function seedSeedSources() {
   const db = getDatabase();
 
+  // 种源数据 - 与前端 SeedSource 类型对齐
+  // source_type: seed/seedling/cutting/grafting/tissue_culture/split/bulb/other
+  // source_origin: external_purchase/internal_seed/tissue_culture/grafting/seedling_split/cutting/direct_seedling/direct_planting/external_harvest
   const seedSources = [
     {
       id: 'SS001',
       source_code: 'ZZ20260115-001',
       source_name: '红果番茄种子',
-      source_type: '种子',
+      source_type: 'seed',
+      source_origin: 'external_purchase',
+      crop_category: '蔬菜类',
+      type_name: '茄果类',
+      variety_name: '番茄',
       crop_name: '红果番茄',
       crop_variety: '番茄',
+      crop_code: 'PD030102001',
       supplier_id: 'SUP001',
       supplier_name: '金色稻种有限公司',
       quantity: 50,
@@ -277,10 +286,10 @@ function seedSeedSources() {
       purchase_date: '2026-01-15',
       purchase_price: 150,
       total_amount: 7500,
-      used_quantity: 20000,
-      remaining_quantity: 35000,
-      status: 'active',
-      production_plan_code: 'SC20260115-001',
+      used_quantity: 15,
+      remaining_quantity: 35,
+      status: 'sufficient',
+      production_plan_code: 'JZB2026-001',
       create_by: '李明辉',
       create_time: '2026-01-15T10:00:00.000Z',
       update_time: '2026-04-20T14:30:00.000Z'
@@ -289,20 +298,25 @@ function seedSeedSources() {
       id: 'SS002',
       source_code: 'ZZ20260201-001',
       source_name: '大叶生菜种子',
-      source_type: '种苗',
+      source_type: 'seed',
+      source_origin: 'external_purchase',
+      crop_category: '蔬菜类',
+      type_name: '叶菜类',
+      variety_name: '生菜',
       crop_name: '大叶生菜',
       crop_variety: '生菜',
+      crop_code: 'PD030201001',
       supplier_id: 'SUP002',
       supplier_name: '丰收种业公司',
       quantity: 30,
-      unit: '株',
+      unit: '袋',
       purchase_date: '2026-02-01',
       purchase_price: 5,
       total_amount: 150,
-      used_quantity: 1500,
-      remaining_quantity: 1500,
-      status: 'active',
-      production_plan_code: 'SC20260201-001',
+      used_quantity: 15,
+      remaining_quantity: 15,
+      status: 'low',
+      production_plan_code: 'JZB2026-002',
       create_by: '王建国',
       create_time: '2026-02-01T09:00:00.000Z',
       update_time: '2026-04-18T11:20:00.000Z'
@@ -311,9 +325,14 @@ function seedSeedSources() {
       id: 'SS003',
       source_code: 'ZZ20260215-001',
       source_name: '水果黄瓜种子',
-      source_type: '种子',
+      source_type: 'seed',
+      source_origin: 'external_purchase',
+      crop_category: '蔬菜类',
+      type_name: '瓜菜类',
+      variety_name: '黄瓜',
       crop_name: '水果黄瓜',
       crop_variety: '黄瓜',
+      crop_code: 'PD030301001',
       supplier_id: 'SUP001',
       supplier_name: '金色稻种有限公司',
       quantity: 40,
@@ -321,10 +340,10 @@ function seedSeedSources() {
       purchase_date: '2026-02-15',
       purchase_price: 120,
       total_amount: 4800,
-      used_quantity: 0,
-      remaining_quantity: 40000,
-      status: 'active',
-      production_plan_code: 'SC20260215-001',
+      used_quantity: 10,
+      remaining_quantity: 30,
+      status: 'sufficient',
+      production_plan_code: 'JZB2026-003',
       create_by: '李明辉',
       create_time: '2026-02-15T14:00:00.000Z',
       update_time: '2026-04-20T09:00:00.000Z'
@@ -333,9 +352,14 @@ function seedSeedSources() {
       id: 'SS004',
       source_code: 'ZZ20260301-001',
       source_name: '紫长茄子种子',
-      source_type: '种子',
+      source_type: 'seed',
+      source_origin: 'external_purchase',
+      crop_category: '蔬菜类',
+      type_name: '茄果类',
+      variety_name: '茄子',
       crop_name: '紫长茄子',
       crop_variety: '茄子',
+      crop_code: 'PD030103001',
       supplier_id: 'SUP003',
       supplier_name: '绿野种苗公司',
       quantity: 20,
@@ -343,10 +367,10 @@ function seedSeedSources() {
       purchase_date: '2026-03-01',
       purchase_price: 200,
       total_amount: 4000,
-      used_quantity: 20000,
+      used_quantity: 20,
       remaining_quantity: 0,
       status: 'depleted',
-      production_plan_code: 'SC20260301-001',
+      production_plan_code: 'JZB2026-004',
       create_by: '张伟',
       create_time: '2026-03-01T08:30:00.000Z',
       update_time: '2026-04-15T16:00:00.000Z'
@@ -354,10 +378,15 @@ function seedSeedSources() {
     {
       id: 'SS005',
       source_code: 'ZZ20260310-001',
-      source_name: '大叶空心菜种苗',
-      source_type: '扦插苗',
+      source_name: '大叶空心菜扦插苗',
+      source_type: 'cutting',
+      source_origin: 'self_produced',
+      crop_category: '蔬菜类',
+      type_name: '叶菜类',
+      variety_name: '空心菜',
       crop_name: '大叶空心菜',
       crop_variety: '空心菜',
+      crop_code: 'PD030202001',
       supplier_id: '',
       supplier_name: '基地自繁',
       quantity: 100,
@@ -365,10 +394,10 @@ function seedSeedSources() {
       purchase_date: '2026-03-10',
       purchase_price: 0,
       total_amount: 0,
-      used_quantity: 2000,
-      remaining_quantity: 8000,
-      status: 'active',
-      production_plan_code: 'SC20260310-001',
+      used_quantity: 20,
+      remaining_quantity: 80,
+      status: 'sufficient',
+      production_plan_code: 'YMB2026-001',
       create_by: '王建国',
       create_time: '2026-03-10T09:00:00.000Z',
       update_time: '2026-04-20T10:00:00.000Z'
@@ -377,9 +406,14 @@ function seedSeedSources() {
       id: 'SS006',
       source_code: 'ZZ20260315-001',
       source_name: '黑美人西瓜嫁接苗',
-      source_type: '嫁接苗',
+      source_type: 'grafting',
+      source_origin: 'commissioned',
+      crop_category: '蔬菜类',
+      type_name: '瓜菜类',
+      variety_name: '西瓜',
       crop_name: '黑美人西瓜',
       crop_variety: '西瓜',
+      crop_code: 'PD030302001',
       supplier_id: '',
       supplier_name: '委托培育',
       quantity: 50,
@@ -387,10 +421,10 @@ function seedSeedSources() {
       purchase_date: '2026-03-15',
       purchase_price: 80,
       total_amount: 4000,
-      used_quantity: 0,
-      remaining_quantity: 5000,
-      status: 'active',
-      production_plan_code: 'SC20260315-001',
+      used_quantity: 10,
+      remaining_quantity: 40,
+      status: 'sufficient',
+      production_plan_code: 'YMB2026-002',
       create_by: '李明辉',
       create_time: '2026-03-15T14:00:00.000Z',
       update_time: '2026-04-18T16:00:00.000Z'
@@ -399,9 +433,14 @@ function seedSeedSources() {
       id: 'SS007',
       source_code: 'ZZ20260320-001',
       source_name: '奶油生菜组培苗',
-      source_type: '组培苗',
+      source_type: 'tissue_culture',
+      source_origin: 'gift',
+      crop_category: '蔬菜类',
+      type_name: '叶菜类',
+      variety_name: '生菜',
       crop_name: '奶油生菜',
       crop_variety: '生菜',
+      crop_code: 'PD030202002',
       supplier_id: '',
       supplier_name: '省农业厅赠送',
       quantity: 200,
@@ -409,10 +448,10 @@ function seedSeedSources() {
       purchase_date: '2026-03-20',
       purchase_price: 0,
       total_amount: 0,
-      used_quantity: 5000,
-      remaining_quantity: 15000,
-      status: 'active',
-      production_plan_code: 'SC20260320-001',
+      used_quantity: 50,
+      remaining_quantity: 150,
+      status: 'sufficient',
+      production_plan_code: 'YMB2026-003',
       create_by: '张伟',
       create_time: '2026-03-20T10:00:00.000Z',
       update_time: '2026-04-19T09:00:00.000Z'
@@ -422,18 +461,197 @@ function seedSeedSources() {
   for (const ss of seedSources) {
     db.run(`
       INSERT OR REPLACE INTO seed_sources
-      (id, source_code, source_name, source_type, crop_name, crop_variety,
+      (id, source_code, source_name, source_type, source_origin,
+       crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
        supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
        total_amount, used_quantity, remaining_quantity, status, production_plan_code, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      ss.id, ss.source_code, ss.source_name, ss.source_type, ss.crop_name, ss.crop_variety,
+      ss.id, ss.source_code, ss.source_name, ss.source_type, ss.source_origin,
+      ss.crop_category, ss.type_name, ss.variety_name, ss.crop_name, ss.crop_variety, ss.crop_code,
       ss.supplier_id, ss.supplier_name, ss.quantity, ss.unit, ss.purchase_date, ss.purchase_price,
       ss.total_amount, ss.used_quantity, ss.remaining_quantity, ss.status, ss.production_plan_code, ss.create_by, ss.create_time, ss.update_time
     ]);
   }
 
   console.log(`已导入 ${seedSources.length} 条种源数据`);
+}
+
+/**
+ * 导入生产计划数据
+ */
+function seedProductionPlans() {
+  const db = getDatabase();
+
+  // 生产计划数据 - 与计划管理-生产计划表对齐
+  // JZB=育种计划, YMB=育苗计划, ZZB=种植计划
+  const productionPlans = [
+    {
+      id: 'PP001',
+      plan_code: 'JZB2026-001',
+      plan_name: '红果番茄种源采购计划',
+      plan_type: 'seed_breeding',
+      crop_name: '红果番茄',
+      crop_variety: '番茄',
+      greenhouse_name: '',
+      area_name: '',
+      planned_quantity: 50,
+      actual_quantity: 50,
+      planting_date: '2026-01-15',
+      expected_harvest_date: '',
+      actual_harvest_date: '',
+      status: 'completed',
+      priority: 'medium',
+      remarks: '用于种源库补充',
+      create_by: '李明辉',
+      create_time: '2026-01-15T10:00:00.000Z',
+      update_time: '2026-04-20T14:30:00.000Z'
+    },
+    {
+      id: 'PP002',
+      plan_code: 'JZB2026-002',
+      plan_name: '大叶生菜种源采购计划',
+      plan_type: 'seed_breeding',
+      crop_name: '大叶生菜',
+      crop_variety: '生菜',
+      greenhouse_name: '',
+      area_name: '',
+      planned_quantity: 30,
+      actual_quantity: 30,
+      planting_date: '2026-02-01',
+      expected_harvest_date: '',
+      actual_harvest_date: '',
+      status: 'completed',
+      priority: 'low',
+      remarks: '',
+      create_by: '王建国',
+      create_time: '2026-02-01T09:00:00.000Z',
+      update_time: '2026-04-18T11:20:00.000Z'
+    },
+    {
+      id: 'PP003',
+      plan_code: 'JZB2026-003',
+      plan_name: '水果黄瓜种源采购计划',
+      plan_type: 'seed_breeding',
+      crop_name: '水果黄瓜',
+      crop_variety: '黄瓜',
+      greenhouse_name: '',
+      area_name: '',
+      planned_quantity: 40,
+      actual_quantity: 40,
+      planting_date: '2026-02-15',
+      expected_harvest_date: '',
+      actual_harvest_date: '',
+      status: 'completed',
+      priority: 'medium',
+      remarks: '',
+      create_by: '李明辉',
+      create_time: '2026-02-15T14:00:00.000Z',
+      update_time: '2026-04-20T09:00:00.000Z'
+    },
+    {
+      id: 'PP004',
+      plan_code: 'JZB2026-004',
+      plan_name: '紫长茄子种源采购计划',
+      plan_type: 'seed_breeding',
+      crop_name: '紫长茄子',
+      crop_variety: '茄子',
+      greenhouse_name: '',
+      area_name: '',
+      planned_quantity: 20,
+      actual_quantity: 20,
+      planting_date: '2026-03-01',
+      expected_harvest_date: '',
+      actual_harvest_date: '',
+      status: 'completed',
+      priority: 'high',
+      remarks: '紧急采购',
+      create_by: '张伟',
+      create_time: '2026-03-01T08:30:00.000Z',
+      update_time: '2026-04-15T16:00:00.000Z'
+    },
+    {
+      id: 'PP005',
+      plan_code: 'YMB2026-001',
+      plan_name: '大叶空心菜扦插苗培育计划',
+      plan_type: 'seedling',
+      crop_name: '大叶空心菜',
+      crop_variety: '空心菜',
+      greenhouse_name: '育苗基地A区',
+      area_name: '',
+      planned_quantity: 100,
+      actual_quantity: 100,
+      planting_date: '2026-03-10',
+      expected_harvest_date: '2026-03-25',
+      actual_harvest_date: '',
+      status: 'in_progress',
+      priority: 'medium',
+      remarks: '自繁扦插苗',
+      create_by: '王建国',
+      create_time: '2026-03-10T09:00:00.000Z',
+      update_time: '2026-04-20T10:00:00.000Z'
+    },
+    {
+      id: 'PP006',
+      plan_code: 'YMB2026-002',
+      plan_name: '黑美人西瓜嫁接苗培育计划',
+      plan_type: 'seedling',
+      crop_name: '黑美人西瓜',
+      crop_variety: '西瓜',
+      greenhouse_name: '育苗基地B区',
+      area_name: '',
+      planned_quantity: 50,
+      actual_quantity: 50,
+      planting_date: '2026-03-15',
+      expected_harvest_date: '2026-04-10',
+      actual_harvest_date: '',
+      status: 'in_progress',
+      priority: 'high',
+      remarks: '委托培育嫁接苗',
+      create_by: '李明辉',
+      create_time: '2026-03-15T14:00:00.000Z',
+      update_time: '2026-04-18T16:00:00.000Z'
+    },
+    {
+      id: 'PP007',
+      plan_code: 'YMB2026-003',
+      plan_name: '奶油生菜组培苗培育计划',
+      plan_type: 'seedling',
+      crop_name: '奶油生菜',
+      crop_variety: '生菜',
+      greenhouse_name: '组培中心',
+      area_name: '',
+      planned_quantity: 200,
+      actual_quantity: 200,
+      planting_date: '2026-03-20',
+      expected_harvest_date: '2026-04-15',
+      actual_harvest_date: '',
+      status: 'in_progress',
+      priority: 'medium',
+      remarks: '省农业厅赠送组培苗',
+      create_by: '张伟',
+      create_time: '2026-03-20T10:00:00.000Z',
+      update_time: '2026-04-19T09:00:00.000Z'
+    }
+  ];
+
+  for (const plan of productionPlans) {
+    db.run(`
+      INSERT OR REPLACE INTO production_plans
+      (id, plan_code, plan_name, plan_type, crop_name, crop_variety,
+       greenhouse_name, area_name, planned_quantity, actual_quantity,
+       planting_date, expected_harvest_date, actual_harvest_date,
+       status, priority, remarks, create_by, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      plan.id, plan.plan_code, plan.plan_name, plan.plan_type, plan.crop_name, plan.crop_variety,
+      plan.greenhouse_name || '', plan.area_name || '', plan.planned_quantity || 0, plan.actual_quantity || 0,
+      plan.planting_date || '', plan.expected_harvest_date || '', plan.actual_harvest_date || '',
+      plan.status || 'planning', plan.priority || 'medium', plan.remarks || '', plan.create_by || '', plan.create_time || '', plan.update_time || ''
+    ]);
+  }
+
+  console.log(`已导入 ${productionPlans.length} 条生产计划数据`);
 }
 
 /**
@@ -2274,16 +2492,17 @@ function seedBusinessApprovals() {
  * 导入所有业务数据
  */
 export function seedAllBusinessData() {
-  seedBusinessCropBatches();
+  // 以下种子数据函数引用了 schema 中不存在的表或列，临时注释掉
+  // seedBusinessCropBatches(); // crop_batches 表不存在
+  // seedBusinessWorkers(); // workers 表不存在
+  // seedBusinessPurchasePlans(); // purchase_plans 表列不匹配
+  // seedBusinessMaterialRequests(); // material_requests 表列不匹配
+  // seedBusinessProduceInventory(); // produce_inventory 表不存在
+  // seedBusinessHarvestRecords(); // harvest_records 表列不匹配
+  // seedBusinessApprovals(); // approvals 表列不匹配
   seedBusinessTasks();
   seedBusinessInspectionRecords();
   seedBusinessTempTasks();
-  seedBusinessWorkers();
-  seedBusinessPurchasePlans();
-  seedBusinessMaterialRequests();
-  seedBusinessProduceInventory();
-  seedBusinessHarvestRecords();
-  seedBusinessApprovals();
 
   saveDatabase();
   console.log('业务数据种子数据导入完成');
@@ -2296,6 +2515,7 @@ export function exportDatabase() {
   seedCropVarieties();
   seedSuppliers();
   seedSeedSources();
+  seedProductionPlans();
   seedSeedlings();
   seedPlantings();
   seedHarvestRecords();

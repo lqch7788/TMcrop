@@ -39,6 +39,8 @@ import { SeedlingStatus } from '../types/crop';
 // 导入临时任务数据和巡查反馈处理任务数据
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, InspectionFeedbackTaskData } from '../data/mockData';
 import { TempTask } from '../hooks/useTempTasks';
+// 导入农事任务API服务
+import { getAllTasks } from '../services/apiFarmTaskService';
 
 // ============================================
 // 状态标签配置
@@ -532,6 +534,8 @@ export interface UseTasksReturn {
 export function useTasks(): UseTasksReturn {
   // 从 localStorage 读取任务数据（包含农事任务和临时任务）
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS_WITH_TEMP);
+  // 标记是否已从API加载过数据
+  const [apiLoaded, setApiLoaded] = useState(false);
 
   // 版本检测：如果存储的版本低于当前版本，合并数据而不是覆盖
   useEffect(() => {
@@ -567,6 +571,42 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_VERSION_KEY, String(DATA_VERSION));
     }
   }, [setTasks]);
+
+  // 尝试从API加载任务数据
+  useEffect(() => {
+    if (apiLoaded) return; // 只加载一次
+
+    const loadFromAPI = async () => {
+      try {
+        const apiTasks = await getAllTasks();
+        if (apiTasks && Array.isArray(apiTasks) && apiTasks.length > 0) {
+          console.log('[useTasks] 从API获取到任务数据:', apiTasks.length, '条');
+          // API数据有效，合并到现有数据中
+          const existingData = localStorage.getItem(STORAGE_KEYS.TASKS);
+          let existingTasks: Task[] = [];
+          if (existingData) {
+            const parsed = JSON.parse(existingData);
+            existingTasks = parsed.data || parsed;
+          }
+          // 合并API数据和本地数据（去重）
+          const apiTaskIds = new Set(apiTasks.map(t => t.id || t.taskCode));
+          const localOnlyTasks = existingTasks.filter(t => !apiTaskIds.has(t.id || t.taskCode));
+          const mergedTasks = [...apiTasks, ...localOnlyTasks];
+          setTasks(mergedTasks);
+          setApiLoaded(true);
+          console.log('[useTasks] API数据合并完成，总任务数:', mergedTasks.length);
+        } else {
+          console.log('[useTasks] API返回空数据，使用本地数据');
+          setApiLoaded(true);
+        }
+      } catch (error) {
+        console.warn('[useTasks] API调用失败，使用本地mock数据:', error);
+        setApiLoaded(true);
+      }
+    };
+
+    loadFromAPI();
+  }, [apiLoaded, setTasks]);
 
   // 操作记录
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);

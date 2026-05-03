@@ -2,13 +2,14 @@
  * 工人考勤数据 Hook
  * 统一管理考勤相关的数据和操作逻辑
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   AttendanceRecord,
   AttendanceFilters,
   ExportFormat,
   EXPORT_FORMAT_OPTIONS,
 } from '../types';
+import { apiClient, USE_API } from '../../../../services/apiClient';
 
 // File System Access API 类型声明
 declare global {
@@ -95,14 +96,56 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 筛选数据（实际项目中这里应该调用API）
+  // 考勤数据状态（从 API 加载）
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 从 API 加载考勤数据
+  useEffect(() => {
+    const loadAttendanceData = async () => {
+      setIsLoading(true);
+      try {
+        if (USE_API) {
+          // 尝试从 API 获取考勤数据
+          const apiData = await apiClient.get<AttendanceRecord[]>('/labor/attendance');
+          if (apiData && apiData.length > 0) {
+            setAttendanceRecords(apiData);
+          } else {
+            setAttendanceRecords(attendanceData);
+          }
+        } else {
+          // 非 API 模式，检查是否后端已实现
+          try {
+            const apiData = await apiClient.get<AttendanceRecord[]>('/labor/attendance');
+            if (apiData && apiData.length > 0) {
+              setAttendanceRecords(apiData);
+            } else {
+              setAttendanceRecords(attendanceData);
+            }
+          } catch {
+            // API 不可用，使用 mock 数据
+            setAttendanceRecords(attendanceData);
+          }
+        }
+      } catch (error) {
+        console.error('加载考勤数据失败，使用 mock 数据:', error);
+        setAttendanceRecords(attendanceData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAttendanceData();
+  }, []);
+
+  // 筛选数据
   const filteredData = useMemo(() => {
-    return attendanceData.filter((item) => {
+    return attendanceRecords.filter((item) => {
       if (filters.dept !== '全部' && item.dept !== filters.dept) return false;
       if (filters.keyword && !item.name.includes(filters.keyword) && !item.workerId.includes(filters.keyword)) return false;
       return true;
     });
-  }, [filters]);
+  }, [filters, attendanceRecords]);
 
   // 分页数据
   const paginatedData = useMemo(() => {
