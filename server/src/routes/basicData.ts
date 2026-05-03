@@ -172,10 +172,10 @@ router.get('/zones', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT z.id, z.zone_code, z.zone_name, z.greenhouse_id, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
-             g.name as greenhouse_name
-      FROM sys_zones z
-      LEFT JOIN greenhouses g ON z.greenhouse_id = g.oid
+      SELECT z.id, z.oid, z.zone_code, z.zone_name, z.greenhouse_oid, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
+             g.name as greenhouseName
+      FROM zones z
+      LEFT JOIN greenhouses g ON z.greenhouse_oid = g.oid
       WHERE z.status = 'active'
       ORDER BY z.zone_code
     `);
@@ -209,10 +209,10 @@ router.get('/blocks', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT b.id, b.block_code, b.block_name, b.zone_id, b.block_type, b.area, b.sort_order, b.status, b.created_at,
+      SELECT b.id, b.oid, b.block_code, b.block_name, b.zone_oid, b.block_type, b.area, b.sort_order, b.status, b.created_at,
              z.zone_name, z.zone_code
-      FROM sys_blocks b
-      LEFT JOIN sys_zones z ON b.zone_id = z.id
+      FROM blocks b
+      LEFT JOIN zones z ON b.zone_oid = z.oid
       WHERE b.status = 'active'
       ORDER BY b.block_code
     `);

@@ -17,6 +17,7 @@ import problemRouter from './problem';
 import laborRouter from './labor';
 import basicDataRouter from './basicData';
 import dictionaryRouter from './dictionary';
+import authorityRouter from './authority';
 
 const router = Router();
 
@@ -61,6 +62,9 @@ router.use('/basic-data', basicDataRouter);
 
 // 数据字典路由
 router.use('/dictionary', dictionaryRouter);
+
+// 组织与权限路由
+router.use('/authority', authorityRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {
