@@ -1075,6 +1075,340 @@ function seedCropInstances() {
 }
 
 /**
+ * 导入数据字典
+ * 注意：此数据需与前端 DEFAULT_DICTIONARIES 保持同步
+ */
+function seedDictionaries() {
+  const db = getDatabase();
+
+  const dictionaries = [
+    // ========== 原有数据 ==========
+    // 作物类别
+    { id: 'DICT001', category: 'crop_category', code: 'vegetable', name: '蔬菜类', sort_number: 1 },
+    { id: 'DICT002', category: 'crop_category', code: 'fruit', name: '水果类', sort_number: 2 },
+    { id: 'DICT003', category: 'crop_category', code: 'grain', name: '粮食类', sort_number: 3 },
+    { id: 'DICT004', category: 'crop_category', code: 'other', name: '其他', sort_number: 4 },
+
+    // 种植模式
+    { id: 'DICT010', category: 'planting_mode', code: 'greenhouse', name: '温室种植', sort_number: 1 },
+    { id: 'DICT011', category: 'planting_mode', code: 'open', name: '露天种植', sort_number: 2 },
+    { id: 'DICT012', category: 'planting_mode', code: 'hydroponic', name: '水培', sort_number: 3 },
+    { id: 'DICT013', category: 'planting_mode', code: 'substrate', name: '基质栽培', sort_number: 4 },
+
+    // 温室类型
+    { id: 'DICT020', category: 'greenhouse_type', code: 'glass', name: '玻璃温室', sort_number: 1 },
+    { id: 'DICT021', category: 'greenhouse_type', code: 'solar', name: '日光温室', sort_number: 2 },
+    { id: 'DICT022', category: 'greenhouse_type', code: 'plastic', name: '塑料大棚', sort_number: 3 },
+    { id: 'DICT023', category: 'greenhouse_type', code: 'seedling', name: '育苗温室', sort_number: 4 },
+
+    // ========== 前端同步数据 (dt-xxx 格式) ==========
+    // 供应商类型
+    { id: 'dt-001', category: 'supplier_type', code: 'SP', name: '原材料供应', sort_number: 1 },
+    { id: 'dt-002', category: 'supplier_type', code: 'FE', name: '设施设备', sort_number: 2 },
+    { id: 'dt-003', category: 'supplier_type', code: 'PP', name: '包装材料', sort_number: 3 },
+    { id: 'dt-004', category: 'supplier_type', code: 'EQ', name: '设备配件', sort_number: 4 },
+    { id: 'dt-005', category: 'supplier_type', code: 'FA', name: '工厂用品', sort_number: 5 },
+    { id: 'dt-006', category: 'supplier_type', code: 'IR', name: '办公用品', sort_number: 6 },
+    { id: 'dt-007', category: 'supplier_type', code: 'OP', name: '运营用品', sort_number: 7 },
+    { id: 'dt-008', category: 'supplier_type', code: 'PH', name: '农药', sort_number: 8 },
+    { id: 'dt-009', category: 'supplier_type', code: 'TS', name: '运输服务', sort_number: 9 },
+    { id: 'dt-010', category: 'supplier_type', code: 'UT', name: '公用事业', sort_number: 10 },
+    { id: 'dt-011', category: 'supplier_type', code: 'OT', name: '其他', sort_number: 11 },
+
+    // 供应商状态
+    { id: 'dt-020', category: 'supplier_status', code: 'active', name: '合作中', sort_number: 1 },
+    { id: 'dt-021', category: 'supplier_status', code: 'paused', name: '暂停', sort_number: 2 },
+    { id: 'dt-022', category: 'supplier_status', code: 'terminated', name: '终止', sort_number: 3 },
+
+    // 供应商属性
+    { id: 'dt-030', category: 'supplier_attribute', code: 'enterprise', name: '企业', sort_number: 1 },
+    { id: 'dt-031', category: 'supplier_attribute', code: 'individual', name: '个体户', sort_number: 2 },
+    { id: 'dt-032', category: 'supplier_attribute', code: 'institution', name: '事业单位', sort_number: 3 },
+
+    // 审批状态
+    { id: 'dt-040', category: 'approval_status', code: 'pending', name: '待审批', sort_number: 1 },
+    { id: 'dt-041', category: 'approval_status', code: 'processing', name: '审批中', sort_number: 2 },
+    { id: 'dt-042', category: 'approval_status', code: 'approved', name: '已通过', sort_number: 3 },
+    { id: 'dt-043', category: 'approval_status', code: 'rejected', name: '已拒绝', sort_number: 4 },
+    { id: 'dt-044', category: 'approval_status', code: 'withdrawn', name: '已撤回', sort_number: 5 },
+
+    // 合同类型
+    { id: 'dt-050', category: 'contract_type', code: 'labor', name: '劳动合同', sort_number: 1 },
+    { id: 'dt-051', category: 'contract_type', code: 'internship', name: '实习协议', sort_number: 2 },
+    { id: 'dt-052', category: 'contract_type', code: 'service', name: '劳务合同', sort_number: 3 },
+
+    // 合同状态
+    { id: 'dt-060', category: 'contract_status', code: 'effective', name: '生效中', sort_number: 1 },
+    { id: 'dt-061', category: 'contract_status', code: 'pending', name: '待生效', sort_number: 2 },
+    { id: 'dt-062', category: 'contract_status', code: 'expired', name: '已到期', sort_number: 3 },
+    { id: 'dt-063', category: 'contract_status', code: 'terminated', name: '已终止', sort_number: 4 },
+
+    // 入职状态
+    { id: 'dt-070', category: 'onboarding_status', code: 'pending', name: '待入职', sort_number: 1 },
+    { id: 'dt-071', category: 'onboarding_status', code: 'processing', name: '办理中', sort_number: 2 },
+    { id: 'dt-072', category: 'onboarding_status', code: 'onboarded', name: '已入职', sort_number: 3 },
+
+    // 招聘来源
+    { id: 'dt-080', category: 'recruitment_source', code: 'campus', name: '校园招聘', sort_number: 1 },
+    { id: 'dt-081', category: 'recruitment_source', code: 'social', name: '社会招聘', sort_number: 2 },
+    { id: 'dt-082', category: 'recruitment_source', code: 'referral', name: '内部推荐', sort_number: 3 },
+    { id: 'dt-083', category: 'recruitment_source', code: 'other', name: '其他', sort_number: 4 },
+
+    // 成本分类
+    { id: 'dt-090', category: 'cost_category', code: 'seed', name: '种质资源', sort_number: 1 },
+    { id: 'dt-091', category: 'cost_category', code: 'fertilizer', name: '肥料与土壤改良剂', sort_number: 2 },
+    { id: 'dt-092', category: 'cost_category', code: 'pesticide', name: '农药与植保产品', sort_number: 3 },
+    { id: 'dt-093', category: 'cost_category', code: 'machinery', name: '农业机械', sort_number: 4 },
+    { id: 'dt-094', category: 'cost_category', code: 'safety', name: '劳保与防护用品', sort_number: 5 },
+    { id: 'dt-095', category: 'cost_category', code: 'harvest', name: '采收容器', sort_number: 6 },
+    { id: 'dt-096', category: 'cost_category', code: 'monitoring', name: '监测设备', sort_number: 7 },
+    { id: 'dt-097', category: 'cost_category', code: 'other', name: '其他', sort_number: 8 },
+
+    // 仓库位置
+    { id: 'dt-100', category: 'warehouse_location', code: 'A区', name: '仓库A区', sort_number: 1 },
+    { id: 'dt-101', category: 'warehouse_location', code: 'B区', name: '仓库B区', sort_number: 2 },
+    { id: 'dt-102', category: 'warehouse_location', code: 'C区', name: '仓库C区', sort_number: 3 },
+    { id: 'dt-103', category: 'warehouse_location', code: 'D区', name: '仓库D区', sort_number: 4 },
+    { id: 'dt-104', category: 'warehouse_location', code: 'E区', name: '仓库E区', sort_number: 5 },
+
+    // 温室状态
+    { id: 'dt-110', category: 'greenhouse_status', code: 'using', name: '使用中', sort_number: 1 },
+    { id: 'dt-111', category: 'greenhouse_status', code: 'maintenance', name: '维护中', sort_number: 2 },
+    { id: 'dt-112', category: 'greenhouse_status', code: 'idle', name: '空闲', sort_number: 3 },
+
+    // 工人状态
+    { id: 'dt-120', category: 'worker_status', code: 'working', name: '在职', sort_number: 1 },
+    { id: 'dt-121', category: 'worker_status', code: 'resigned', name: '离职', sort_number: 2 },
+    { id: 'dt-122', category: 'worker_status', code: 'retired', name: '退休', sort_number: 3 },
+
+    // 薪资状态
+    { id: 'dt-130', category: 'salary_status', code: 'pending', name: '待确认', sort_number: 1 },
+    { id: 'dt-131', category: 'salary_status', code: 'confirmed', name: '已确认', sort_number: 2 },
+    { id: 'dt-132', category: 'salary_status', code: 'paid', name: '已发放', sort_number: 3 },
+
+    // 采购类型
+    { id: 'dt-140', category: 'purchase_type', code: 'production', name: '生产性采购', sort_number: 1 },
+    { id: 'dt-141', category: 'purchase_type', code: 'emergency', name: '紧急采购', sort_number: 2 },
+    { id: 'dt-142', category: 'purchase_type', code: 'daily', name: '日常采购', sort_number: 3 },
+    { id: 'dt-143', category: 'purchase_type', code: 'capital', name: '资本性采购', sort_number: 4 },
+
+    // 物资状态
+    { id: 'dt-150', category: 'material_status', code: 'in_stock', name: '库存', sort_number: 1 },
+    { id: 'dt-151', category: 'material_status', code: 'out_of_stock', name: '缺货', sort_number: 2 },
+    { id: 'dt-152', category: 'material_status', code: 'low_stock', name: '库存不足', sort_number: 3 },
+
+    // 任务状态
+    { id: 'dt-160', category: 'task_status', code: 'pending', name: '待处理', sort_number: 1 },
+    { id: 'dt-161', category: 'task_status', code: 'in_progress', name: '进行中', sort_number: 2 },
+    { id: 'dt-162', category: 'task_status', code: 'completed', name: '已完成', sort_number: 3 },
+    { id: 'dt-163', category: 'task_status', code: 'cancelled', name: '已取消', sort_number: 4 },
+
+    // 采收状态
+    { id: 'dt-170', category: 'harvest_status', code: 'pending', name: '待采收', sort_number: 1 },
+    { id: 'dt-171', category: 'harvest_status', code: 'harvested', name: '已采收', sort_number: 2 },
+    { id: 'dt-172', category: 'harvest_status', code: 'graded', name: '已分级', sort_number: 3 },
+    { id: 'dt-173', category: 'harvest_status', code: 'packaged', name: '已包装', sort_number: 4 },
+    { id: 'dt-174', category: 'harvest_status', code: 'shipped', name: '已发货', sort_number: 5 },
+
+    // 考核状态
+    { id: 'dt-180', category: 'performance_status', code: 'pending', name: '待评估', sort_number: 1 },
+    { id: 'dt-181', category: 'performance_status', code: 'evaluated', name: '已评估', sort_number: 2 },
+
+    // 考勤状态
+    { id: 'dt-190', category: 'attendance_status', code: 'normal', name: '正常', sort_number: 1 },
+    { id: 'dt-191', category: 'attendance_status', code: 'late', name: '迟到', sort_number: 2 },
+    { id: 'dt-192', category: 'attendance_status', code: 'early', name: '早退', sort_number: 3 },
+    { id: 'dt-193', category: 'attendance_status', code: 'absent', name: '缺勤', sort_number: 4 },
+    { id: 'dt-194', category: 'attendance_status', code: 'overtime', name: '加班', sort_number: 5 },
+
+    // 技能状态
+    { id: 'dt-200', category: 'skill_status', code: 'normal', name: '正常', sort_number: 1 },
+    { id: 'dt-201', category: 'skill_status', code: 'expiring', name: '即将过期', sort_number: 2 },
+    { id: 'dt-202', category: 'skill_status', code: 'expired', name: '已过期', sort_number: 3 },
+
+    // 离职原因
+    { id: 'dt-210', category: 'resignation_reason', code: 'personal', name: '个人原因', sort_number: 1 },
+    { id: 'dt-211', category: 'resignation_reason', code: 'career', name: '职业发展', sort_number: 2 },
+    { id: 'dt-212', category: 'resignation_reason', code: 'compensation', name: '薪酬原因', sort_number: 3 },
+    { id: 'dt-213', category: 'resignation_reason', code: 'family', name: '家庭原因', sort_number: 4 },
+    { id: 'dt-214', category: 'resignation_reason', code: 'other', name: '其他', sort_number: 5 },
+
+    // 离职类型
+    { id: 'dt-220', category: 'resignation_type', code: 'voluntary', name: '主动离职', sort_number: 1 },
+    { id: 'dt-221', category: 'resignation_type', code: 'passive', name: '被动离职', sort_number: 2 },
+    { id: 'dt-222', category: 'resignation_type', code: 'retirement', name: '退休', sort_number: 3 },
+
+    // 物品归还状态
+    { id: 'dt-230', category: 'return_status', code: 'pending', name: '待归还', sort_number: 1 },
+    { id: 'dt-231', category: 'return_status', code: 'returned', name: '已归还', sort_number: 2 },
+    { id: 'dt-232', category: 'return_status', code: 'damaged', name: '损坏', sort_number: 3 },
+    { id: 'dt-233', category: 'return_status', code: 'lost', name: '丢失', sort_number: 4 },
+
+    // 岗位类型
+    { id: 'dt-240', category: 'position_type', code: 'full_time', name: '全职', sort_number: 1 },
+    { id: 'dt-241', category: 'position_type', code: 'part_time', name: '兼职', sort_number: 2 },
+    { id: 'dt-242', category: 'position_type', code: 'contract', name: '合同工', sort_number: 3 },
+    { id: 'dt-243', category: 'position_type', code: 'intern', name: '实习生', sort_number: 4 },
+
+    // 岗位职级
+    { id: 'dt-250', category: 'position_level', code: 'senior', name: '高级', sort_number: 1 },
+    { id: 'dt-251', category: 'position_level', code: 'mid', name: '中级', sort_number: 2 },
+    { id: 'dt-252', category: 'position_level', code: 'junior', name: '初级', sort_number: 3 },
+    { id: 'dt-253', category: 'position_level', code: 'entry', name: '入门级', sort_number: 4 },
+
+    // 工人类型
+    { id: 'dt-260', category: 'worker_type', code: 'formal', name: '正式工', sort_number: 1 },
+    { id: 'dt-261', category: 'worker_type', code: 'temporary', name: '临时工', sort_number: 2 },
+    { id: 'dt-262', category: 'worker_type', code: 'seasonal', name: '季节工', sort_number: 3 },
+    { id: 'dt-263', category: 'worker_type', code: 'none', name: '无合同', sort_number: 4 },
+
+    // 保险类型
+    { id: 'dt-270', category: 'insurance_type', code: 'work_injury', name: '工伤险', sort_number: 1 },
+    { id: 'dt-271', category: 'insurance_type', code: 'comprehensive', name: '综合险', sort_number: 2 },
+    { id: 'dt-272', category: 'insurance_type', code: 'none', name: '无保险', sort_number: 3 },
+
+    // 临时工来源
+    { id: 'dt-280', category: 'temp_worker_source', code: 'agency', name: '劳务公司', sort_number: 1 },
+    { id: 'dt-281', category: 'temp_worker_source', code: 'individual', name: '个人零工', sort_number: 2 },
+    { id: 'dt-282', category: 'temp_worker_source', code: 'student', name: '学生实习', sort_number: 3 },
+
+    // 作业区域
+    { id: 'dt-290', category: 'work_zone', code: 'A区', name: 'A区', sort_number: 1 },
+    { id: 'dt-291', category: 'work_zone', code: 'B区', name: 'B区', sort_number: 2 },
+    { id: 'dt-292', category: 'work_zone', code: 'C区', name: 'C区', sort_number: 3 },
+    { id: 'dt-293', category: 'work_zone', code: 'D区', name: 'D区', sort_number: 4 },
+
+    // 临时工状态
+    { id: 'dt-300', category: 'temp_worker_status', code: 'working', name: '在职', sort_number: 1 },
+    { id: 'dt-301', category: 'temp_worker_status', code: 'resigned', name: '离职', sort_number: 2 },
+    { id: 'dt-302', category: 'temp_worker_status', code: 'leave', name: '停薪留职', sort_number: 3 },
+    { id: 'dt-303', category: 'temp_worker_status', code: 'probation', name: '试用期', sort_number: 4 },
+
+    // 加班类型
+    { id: 'dt-310', category: 'overtime_type', code: 'normal', name: '普通加班', sort_number: 1 },
+    { id: 'dt-311', category: 'overtime_type', code: 'weekend', name: '周末加班', sort_number: 2 },
+    { id: 'dt-312', category: 'overtime_type', code: 'holiday', name: '节假日加班', sort_number: 3 },
+
+    // 请假类型
+    { id: 'dt-320', category: 'leave_type', code: 'personal', name: '事假', sort_number: 1 },
+    { id: 'dt-321', category: 'leave_type', code: 'sick', name: '病假', sort_number: 2 },
+    { id: 'dt-322', category: 'leave_type', code: 'annual', name: '年假', sort_number: 3 },
+    { id: 'dt-323', category: 'leave_type', code: 'marriage', name: '婚假', sort_number: 4 },
+    { id: 'dt-324', category: 'leave_type', code: 'maternity', name: '产假', sort_number: 5 },
+    { id: 'dt-325', category: 'leave_type', code: 'paternity', name: '陪产假', sort_number: 6 },
+    { id: 'dt-326', category: 'leave_type', code: 'bereavement', name: '丧假', sort_number: 7 },
+    { id: 'dt-327', category: 'leave_type', code: 'work_injury', name: '工伤假', sort_number: 8 },
+
+    // ========== 业务模块字典 ==========
+    // 育苗方式
+    { id: 'biz-001', category: 'seedling_type', code: 'plug', name: '穴盘育苗', sort_number: 1 },
+    { id: 'biz-002', category: 'seedling_type', code: 'direct', name: '直播育苗', sort_number: 2 },
+    { id: 'biz-003', category: 'seedling_type', code: 'grafting', name: '嫁接育苗', sort_number: 3 },
+    { id: 'biz-004', category: 'seedling_type', code: 'tissue', name: '组培育苗', sort_number: 4 },
+    { id: 'biz-005', category: 'seedling_type', code: 'ground', name: '地栽育苗', sort_number: 5 },
+    { id: 'biz-006', category: 'seedling_type', code: 'floating', name: '漂浮育苗', sort_number: 6 },
+    { id: 'biz-007', category: 'seedling_type', code: 'ebb_flow', name: '潮汐育苗', sort_number: 7 },
+    { id: 'biz-008', category: 'seedling_type', code: 'paper_pot', name: '纸袋育苗', sort_number: 8 },
+    { id: 'biz-009', category: 'seedling_type', code: 'nutrition_cup', name: '营养杯育苗', sort_number: 9 },
+    { id: 'biz-010', category: 'seedling_type', code: 'cutting', name: '扦插育苗', sort_number: 10 },
+    { id: 'biz-011', category: 'seedling_type', code: 'division', name: '分株育苗', sort_number: 11 },
+    { id: 'biz-012', category: 'seedling_type', code: 'other', name: '其他', sort_number: 12 },
+
+    // 种源类型
+    { id: 'biz-020', category: 'source_type', code: 'seed', name: '种子', sort_number: 1 },
+    { id: 'biz-021', category: 'source_type', code: 'seedling', name: '种苗', sort_number: 2 },
+    { id: 'biz-022', category: 'source_type', code: 'cutting', name: '扦插苗', sort_number: 3 },
+    { id: 'biz-023', category: 'source_type', code: 'grafting', name: '嫁接苗', sort_number: 4 },
+    { id: 'biz-024', category: 'source_type', code: 'tissue_culture', name: '组培苗', sort_number: 5 },
+    { id: 'biz-025', category: 'source_type', code: 'split', name: '分株苗', sort_number: 6 },
+    { id: 'biz-026', category: 'source_type', code: 'bulb', name: '种球', sort_number: 7 },
+    { id: 'biz-027', category: 'source_type', code: 'other', name: '其他', sort_number: 8 },
+
+    // 育苗场地/区域
+    { id: 'biz-030', category: 'seedling_site', code: 'SITE001', name: '育苗温室A区', sort_number: 1 },
+    { id: 'biz-031', category: 'seedling_site', code: 'SITE002', name: '育苗温室B区', sort_number: 2 },
+    { id: 'biz-032', category: 'seedling_site', code: 'SITE003', name: '育苗温室C区', sort_number: 3 },
+    { id: 'biz-033', category: 'seedling_site', code: 'SITE004', name: '育苗温室D区', sort_number: 4 },
+
+    // 种植区域
+    { id: 'biz-040', category: 'planting_area', code: 'G001', name: '一棚 > 01区', sort_number: 1 },
+    { id: 'biz-041', category: 'planting_area', code: 'G002', name: '一棚 > 02区', sort_number: 2 },
+    { id: 'biz-042', category: 'planting_area', code: 'G003', name: '二棚 > 01区', sort_number: 3 },
+    { id: 'biz-043', category: 'planting_area', code: 'G004', name: '二棚 > 02区', sort_number: 4 },
+    { id: 'biz-044', category: 'planting_area', code: 'G005', name: '三棚 > 01区', sort_number: 5 },
+
+    // 目标成活率预设
+    { id: 'biz-050', category: 'survival_rate_target', code: '85', name: '85%（保守）', sort_number: 1 },
+    { id: 'biz-051', category: 'survival_rate_target', code: '90', name: '90%（标准）', sort_number: 2 },
+    { id: 'biz-052', category: 'survival_rate_target', code: '95', name: '95%（乐观）', sort_number: 3 },
+
+    // 育苗计划类型
+    { id: 'biz-060', category: 'seedling_plan_type', code: 'routine', name: '常规', sort_number: 1 },
+    { id: 'biz-061', category: 'seedling_plan_type', code: 'urgent', name: '加急', sort_number: 2 },
+    { id: 'biz-062', category: 'seedling_plan_type', code: 'experiment', name: '实验', sort_number: 3 },
+
+    // 扩繁倍数预设
+    { id: 'biz-070', category: 'propagation_multiple', code: '5', name: '3-5倍（多肉植物等）', sort_number: 1 },
+    { id: 'biz-071', category: 'propagation_multiple', code: '10', name: '5-10倍（吊兰、吊竹梅等）', sort_number: 2 },
+    { id: 'biz-072', category: 'propagation_multiple', code: '20', name: '10-20倍（菊花分株等）', sort_number: 3 },
+    { id: 'biz-073', category: 'propagation_multiple', code: '50', name: '30-50倍（普通草莓扩繁）', sort_number: 4 },
+    { id: 'biz-074', category: 'propagation_multiple', code: '80', name: '50-80倍（草莓优良品种）', sort_number: 5 },
+    { id: 'biz-075', category: 'propagation_multiple', code: '500', name: '100-500倍（普通组培）', sort_number: 6 },
+    { id: 'biz-076', category: 'propagation_multiple', code: '1000', name: '500-1000倍（高品质组培）', sort_number: 7 },
+    { id: 'biz-077', category: 'propagation_multiple', code: '0', name: '其他（自定义倍数）', sort_number: 8 },
+
+    // 种植状态
+    { id: 'biz-085', category: 'planting_status', code: 'planted', name: '已定植', sort_number: 1 },
+    { id: 'biz-086', category: 'planting_status', code: 'growing', name: '生长期', sort_number: 2 },
+    { id: 'biz-087', category: 'planting_status', code: 'harvested', name: '已采收', sort_number: 3 },
+    { id: 'biz-088', category: 'planting_status', code: 'cancelled', name: '已取消', sort_number: 4 },
+
+    // 操作人员
+    { id: 'biz-080', category: 'operator', code: '李明辉', name: '李明辉', sort_number: 1 },
+    { id: 'biz-081', category: 'operator', code: '王建国', name: '王建国', sort_number: 2 },
+    { id: 'biz-082', category: 'operator', code: '张伟', name: '张伟', sort_number: 3 },
+    { id: 'biz-083', category: 'operator', code: '刘洋', name: '刘洋', sort_number: 4 },
+    { id: 'biz-084', category: 'operator', code: '陈静', name: '陈静', sort_number: 5 },
+
+    // 物料类型
+    { id: 'dt-mat-001', category: 'material_type', code: 'seed', name: '种子', sort_number: 1 },
+    { id: 'dt-mat-002', category: 'material_type', code: 'seedling', name: '种苗', sort_number: 2 },
+    { id: 'dt-mat-003', category: 'material_type', code: 'fertilizer', name: '肥料', sort_number: 3 },
+    { id: 'dt-mat-004', category: 'material_type', code: 'pesticide', name: '农药', sort_number: 4 },
+    { id: 'dt-mat-005', category: 'material_type', code: 'equipment', name: '设备', sort_number: 5 },
+    { id: 'dt-mat-006', category: 'material_type', code: 'packaging', name: '包装材料', sort_number: 6 },
+    { id: 'dt-mat-007', category: 'material_type', code: 'other', name: '其他', sort_number: 7 },
+
+    // 员工状态
+    { id: 'dt-emp-001', category: 'employee_status', code: 'active', name: '在职', sort_number: 1 },
+    { id: 'dt-emp-002', category: 'employee_status', code: 'probation', name: '试用期', sort_number: 2 },
+    { id: 'dt-emp-003', category: 'employee_status', code: 'intern', name: '实习', sort_number: 3 },
+    { id: 'dt-emp-004', category: 'employee_status', code: 'resigned', name: '离职', sort_number: 4 },
+
+    // 性别
+    { id: 'dt-gender-001', category: 'gender', code: 'male', name: '男', sort_number: 1 },
+    { id: 'dt-gender-002', category: 'gender', code: 'female', name: '女', sort_number: 2 },
+  ];
+
+  for (const dict of dictionaries) {
+    db.run(`
+      INSERT OR REPLACE INTO dictionaries
+      (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))
+    `, [
+      dict.id,
+      dict.category,
+      dict.code,
+      dict.name,
+      dict.name,
+      dict.sort_number
+    ]);
+  }
+
+  console.log(`已导入 ${dictionaries.length} 条字典数据`);
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
@@ -1090,6 +1424,7 @@ export function exportDatabase() {
   seedProblems();
   seedCropInstances();
   seedInventory();
+  seedDictionaries();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');

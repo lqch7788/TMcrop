@@ -36,6 +36,11 @@ async function start() {
     const { exportDatabase } = await import('./db/seedData');
     exportDatabase();
 
+    // 导入基础数据（V5.0新增：部门/仓库/温室/职位/字典等）
+    console.log('正在导入基础数据...');
+    const { exportBasicData } = await import('./db/seedBasicData');
+    exportBasicData();
+
     // 中间件
     app.use(cors);
     app.use(express.json());

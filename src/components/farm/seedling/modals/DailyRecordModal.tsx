@@ -2,11 +2,11 @@
  * 每日记录弹窗
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { addDailyRecord } from '../../../../services/seedlingService';
-import { OPERATORS } from '../../../../data/cropData';
+import { useDictionaries } from '../../../common/settings';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -16,6 +16,14 @@ interface DailyRecordModalProps {
 }
 
 export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
+  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
+  const { getDictItems } = useDictionaries();
+
+  // 操作人员选项
+  const OPERATORS = useMemo(() => {
+    return getDictItems('operator').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
   const [formData, setFormData] = useState({
     recordDate: new Date().toISOString().split('T')[0],
     temperature: undefined as number | undefined,

@@ -1,17 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const materialData = [
-  { id: 1, code: 'M001', name: '有机肥', category: '肥料', unit: '袋', price: 45, stock: 200, status: '充足', statusClass: 'normal' },
-  { id: 2, code: 'M002', name: '复合肥', category: '肥料', unit: '袋', price: 80, stock: 45, status: '不足', statusClass: 'warning' },
-  { id: 3, code: 'M003', name: '多菌灵', category: '农药', unit: '箱', price: 150, stock: 30, status: '充足', statusClass: 'normal' },
-  { id: 4, code: 'M004', name: '吡虫啉', category: '农药', unit: '箱', price: 120, stock: 15, status: '不足', statusClass: 'warning' },
-  { id: 5, code: 'M005', name: 'PO膜', category: '农膜', unit: '㎡', price: 2, stock: 1000, status: '充足', statusClass: 'normal' },
-  { id: 6, code: 'M006', name: '滴灌带', category: '农膜', unit: '米', price: 0.5, stock: 2000, status: '充足', statusClass: 'normal' },
-  { id: 7, code: 'M007', name: '铁锹', category: '工具', unit: '把', price: 25, stock: 50, status: '充足', statusClass: 'normal' },
-  { id: 8, code: 'M008', name: '喷雾器', category: '工具', unit: '台', price: 120, stock: 8, status: '不足', statusClass: 'warning' },
-];
+import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
 
 export default function MaterialManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,11 +9,43 @@ export default function MaterialManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  const filteredMaterials = materialData.filter(item => {
-    const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.code.includes(searchTerm);
-    const matchCategory = categoryFilter === '全部' || item.category === categoryFilter;
-    return matchSearch && matchCategory;
-  });
+  // 从 SettingsDataProvider 获取物料类型字典数据
+  const { getDictItems } = useDictionaries();
+  const materialData = useMemo(() => {
+    const materials = getDictItems('material_type');
+    // 转换为页面所需的格式
+    return materials.map((item, index) => ({
+      id: index + 1,
+      code: item.code,
+      name: item.name,
+      category: getDictItemCategoryName(item.category),
+      unit: '-',
+      price: 0,
+      stock: 0,
+      status: '充足',
+      statusClass: 'normal',
+    }));
+  }, [getDictItems]);
+
+  // 获取物料类别名称的辅助函数
+  const getDictItemCategoryName = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'fertilizer': '肥料',
+      'pesticide': '农药',
+      'film': '农膜',
+      'tool': '工具',
+      'other': '其他',
+    };
+    return categoryMap[category] || category;
+  };
+
+  const filteredMaterials = useMemo(() => {
+    return materialData.filter(item => {
+      const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.code.includes(searchTerm);
+      const matchCategory = categoryFilter === '全部' || item.category === categoryFilter;
+      return matchSearch && matchCategory;
+    });
+  }, [materialData, searchTerm, categoryFilter]);
 
   const totalPages = Math.ceil(filteredMaterials.length / pageSize);
   const paginatedMaterials = filteredMaterials.slice((currentPage - 1) * pageSize, currentPage * pageSize);

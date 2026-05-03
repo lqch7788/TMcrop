@@ -1,8 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Sprout, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
 
-const cropData = [
+// 作物数据接口
+interface CropItem {
+  id: number;
+  code: string;
+  type: string;
+  name: string;
+  desc: string;
+  cycle: number;
+  status: string;
+  statusClass: string;
+}
+
+// 模拟作物数据 - 实际应从API获取
+const cropData: CropItem[] = [
   { id: 1, code: 'C001', type: '番茄', name: '红果番茄', desc: '常规红果品种，口感好', cycle: 120, status: '启用', statusClass: 'normal' },
   { id: 2, code: 'C002', type: '番茄', name: '樱桃番茄', desc: '小型果，甜度高', cycle: 90, status: '启用', statusClass: 'normal' },
   { id: 3, code: 'C003', type: '黄瓜', name: '水果黄瓜', desc: '无刺黄瓜，口感脆甜', cycle: 60, status: '启用', statusClass: 'normal' },
@@ -14,10 +28,23 @@ const cropData = [
 ];
 
 export default function CropManagement() {
+  // 使用字典hook获取作物类型和状态选项
+  const { getDictItems, getDictItemName } = useDictionaries();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  // 从字典获取作物类型选项
+  const cropTypes = useMemo(() => {
+    return getDictItems('crop_category').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
+  // 从字典获取状态选项
+  const statusOptions = useMemo(() => {
+    return getDictItems('status').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
 
   const filteredCrops = cropData.filter(crop => {
     const matchSearch = crop.name.toLowerCase().includes(searchTerm.toLowerCase()) || crop.code.includes(searchTerm);
@@ -111,11 +138,10 @@ export default function CropManagement() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
-              <option>全部</option>
-              <option>番茄</option>
-              <option>黄瓜</option>
-              <option>草莓</option>
-              <option>辣椒</option>
+              <option value="全部">全部</option>
+              {cropTypes.map(crop => (
+                <option key={crop.value} value={crop.label}>{crop.label}</option>
+              ))}
             </select>
           </div>
           <div className="flex gap-2">

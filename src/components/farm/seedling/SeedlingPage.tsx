@@ -15,12 +15,7 @@ import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import {
-  seedlingTypes,
-  sites,
-  seedlingStatusOptions,
-  areas
-} from '../../../data/cropData';
+import { useDictionaries } from '../../common/settings';
 import { Seedling, SeedlingFilters, SeedlingStatus } from '../../../types/crop';
 import * as seedlingService from '../../../services/seedlingService';
 import * as seedSourceService from '../../../services/seedSourceService';
@@ -62,6 +57,24 @@ export default function SeedlingPage() {
   const cropNames = useMemo(() => {
     return cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   }, [cropVarietyOptions]);
+
+  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
+  const { getDictItems } = useDictionaries();
+
+  // 育苗方式选项
+  const seedlingTypes = useMemo(() => {
+    return getDictItems('seedling_type').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
+  // 场地选项
+  const sites = useMemo(() => {
+    return getDictItems('seedling_site').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
+
+  // 育苗状态选项
+  const seedlingStatusOptions = useMemo(() => {
+    return getDictItems('seedling_status').map(d => ({ value: d.code, label: d.name }));
+  }, [getDictItems]);
 
   // 刷新数据
   const refreshData = useCallback(() => {

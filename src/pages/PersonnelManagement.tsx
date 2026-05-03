@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Plus, Edit, Eye, ChevronRight, ClipboardCheck, Calendar, Clock, FileText, ChevronLeft } from 'lucide-react';
-
-const positions = [
-  { id: 1, code: 'J001', name: '总经理', dept: '管理层', level: '高层', salary: 15000, staffCount: 1, description: '公司全面管理', status: '启用', statusClass: 'normal' },
-  { id: 2, code: 'J002', name: '技术总监', dept: '技术部', level: '高层', salary: 12000, staffCount: 1, description: '技术研发管理', status: '启用', statusClass: 'normal' },
-  { id: 3, code: 'J003', name: '技术员', dept: '技术部', level: '中层', salary: 8000, staffCount: 3, description: '农业生产技术指导', status: '启用', statusClass: 'normal' },
-  { id: 4, code: 'J004', name: '生产主管', dept: '生产部', level: '中层', salary: 7000, staffCount: 2, description: '生产作业管理', status: '启用', statusClass: 'normal' },
-  { id: 5, code: 'J005', name: '普工', dept: '生产部', level: '基层', salary: 4000, staffCount: 15, description: '日常农事操作', status: '启用', statusClass: 'normal' },
-  { id: 6, code: 'J006', name: '仓库管理员', dept: '后勤部', level: '基层', salary: 4500, staffCount: 2, description: '物资出入库管理', status: '启用', statusClass: 'normal' },
-];
+import { usePositions } from '../components/common/settings/SettingsDataProvider';
 
 const hrSubItems = [
   { icon: Users, label: '人员管理', path: '/settings/personnel/staff', desc: '园区员工信息管理' },
@@ -20,10 +12,29 @@ const hrSubItems = [
 ];
 
 export default function PersonnelManagement() {
+  // 从 SettingsDataProvider 获取职位数据
+  const { positions } = usePositions();
+
+  // 将 API 返回的 positions 数据转换为页面期望的格式
+  // API level: 1=高层, 2=中层, 3=基层; UI level: '高层'/'中层'/'基层'
+  const levelMap: Record<number, string> = { 1: '高层', 2: '中层', 3: '基层' };
+  const transformedPositions = positions.map(pos => ({
+    id: pos.id,
+    code: pos.code,
+    name: pos.name,
+    dept: pos.departmentName || '',
+    level: levelMap[pos.level] || '未知',
+    salary: 0,  // API 数据中无此字段
+    staffCount: 0,  // API 数据中无此字段
+    description: '',  // API 数据中无此字段
+    status: pos.status === 'active' ? '启用' : '停用',
+    statusClass: pos.status === 'active' ? 'normal' : 'disabled'
+  }));
+
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
-  const totalPages = Math.ceil(positions.length / pageSize);
-  const paginatedPositions = positions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(transformedPositions.length / pageSize);
+  const paginatedPositions = transformedPositions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -70,7 +81,7 @@ export default function PersonnelManagement() {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{transformedPositions.length}</p>
               <p className="text-xs text-gray-500">职务总数</p>
             </div>
           </div>
@@ -81,7 +92,7 @@ export default function PersonnelManagement() {
               <span className="text-green-600 text-lg">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.filter(p => p.status === '启用').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{transformedPositions.filter(p => p.status === '启用').length}</p>
               <p className="text-xs text-gray-500">启用中</p>
             </div>
           </div>
@@ -92,7 +103,7 @@ export default function PersonnelManagement() {
               <span className="text-amber-600 text-lg">!</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
+              <p className="text-2xl font-bold text-gray-900">{transformedPositions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
               <p className="text-xs text-gray-500">在职人数</p>
             </div>
           </div>
@@ -162,7 +173,7 @@ export default function PersonnelManagement() {
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
-            共 {positions.length} 条记录，第 {currentPage}/{totalPages} 页
+            共 {transformedPositions.length} 条记录，第 {currentPage}/{totalPages} 页
           </div>
           <div className="flex items-center gap-2">
             <button

@@ -166,7 +166,7 @@ export default function OrderPage() {
       '订单名称': record.orderName,
       '订单类型': record.orderType === 'production' ? '生产订单' : record.orderType === 'seed' ? '种子订单' : '研发订单',
       '作物类别': record.cropCategory,
-      '作物品种': record.cropName,
+      '作物名称': record.cropName,
       '作物品种': record.cropVariety,
       '计划数量': record.plannedQuantity,
       '实际数量': record.actualQuantity,

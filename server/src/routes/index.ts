@@ -15,6 +15,8 @@ import farmTaskRouter from './farmTask';
 import inspectionRouter from './inspection';
 import problemRouter from './problem';
 import laborRouter from './labor';
+import basicDataRouter from './basicData';
+import dictionaryRouter from './dictionary';
 
 const router = Router();
 
@@ -53,6 +55,12 @@ router.use('/problems', problemRouter);
 
 // 人工记录路由
 router.use('/labor', laborRouter);
+
+// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）
+router.use('/basic-data', basicDataRouter);
+
+// 数据字典路由
+router.use('/dictionary', dictionaryRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {

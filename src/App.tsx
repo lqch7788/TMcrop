@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -26,6 +27,7 @@ import SystemConfig from './pages/SystemConfig';
 import DictionaryManagement from './pages/DictionaryManagement';
 import UserPermission from './pages/UserPermission';
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
+import ApprovalFlowPage from './pages/approval/ApprovalFlowPage';
 import NotificationSettings from './pages/NotificationSettings';
 import DeviceManagement from './pages/DeviceManagement';
 import WarehouseManagement from './pages/WarehouseManagement';
@@ -305,6 +307,7 @@ function AppContent() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/approvals" element={<Approvals />} />
         <Route path="/approval-demo" element={<ApprovalDemo />} />
+        <Route path="/approval/approval-flow" element={<ApprovalFlowPage />} />
         <Route path="/material-approval" element={<MaterialApproval />} />
         <Route path="/production-approval" element={<ProductionApproval />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
@@ -327,11 +330,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <ToastProvider>
-        <ApprovalProvider>
-          <AppContent />
-        </ApprovalProvider>
-      </ToastProvider>
+      <SettingsDataProvider>
+        <ToastProvider>
+          <ApprovalProvider>
+            <AppContent />
+          </ApprovalProvider>
+        </ToastProvider>
+      </SettingsDataProvider>
     </BrowserRouter>
   );
 }
