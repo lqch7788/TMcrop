@@ -40,6 +40,12 @@ interface SeedSourceTableProps {
   printMode: boolean;
   onPrintModeChange: (mode: boolean) => void;
   onConfirmPrint: (records: SeedSource[]) => void;
+  // 权限控制
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
+  canPrint?: boolean;
 }
 
 export function SeedSourceTable({
@@ -64,7 +70,12 @@ export function SeedSourceTable({
   onConfirmExport,
   printMode,
   onPrintModeChange,
-  onConfirmPrint
+  onConfirmPrint,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
+  canPrint = true,
 }: SeedSourceTableProps) {
   // 计算分页
   const totalPages = Math.ceil(data.length / pagination.pageSize);
@@ -239,7 +250,7 @@ export function SeedSourceTable({
           ) : (
             /* 正常模式 - 显示所有操作按钮 */
             <>
-              {onAdd && (
+              {canCreate && onAdd && (
                 <button
                   onClick={onAdd}
                   className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
@@ -248,34 +259,42 @@ export function SeedSourceTable({
                   新增
                 </button>
               )}
-              <button
-                onClick={() => onOperationModeChange('edit')}
-                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                编辑
-              </button>
-              <button
-                onClick={() => onOperationModeChange('delete')}
-                className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
-              </button>
-              <button
-                onClick={() => { onOperationModeChange('export'); }}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-              <button
-                onClick={() => { onPrintModeChange(true); }}
-                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
-              >
-                <Printer className="w-4 h-4" />
-                标签打印
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => onOperationModeChange('edit')}
+                  className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => onOperationModeChange('delete')}
+                  className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {canExport && (
+                <button
+                  onClick={() => { onOperationModeChange('export'); }}
+                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
+              {canPrint && (
+                <button
+                  onClick={() => { onPrintModeChange(true); }}
+                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  标签打印
+                </button>
+              )}
             </>
           )}
         </div>

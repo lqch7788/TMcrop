@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { AuthSettingsProvider } from './contexts/AuthSettingsContext';
 import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
 import HomePage from './pages/HomePage';
@@ -330,13 +331,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      <SettingsDataProvider>
-        <ToastProvider>
-          <ApprovalProvider>
-            <AppContent />
-          </ApprovalProvider>
-        </ToastProvider>
-      </SettingsDataProvider>
+      <AuthSettingsProvider>
+        <SettingsDataProvider>
+          <ToastProvider>
+            <ApprovalProvider>
+              <AppContent />
+            </ApprovalProvider>
+          </ToastProvider>
+        </SettingsDataProvider>
+      </AuthSettingsProvider>
     </BrowserRouter>
   );
 }

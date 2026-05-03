@@ -16,6 +16,7 @@ import * as cropVarietyService from '../../../services/cropVarietyService';
 import { inbound as inventoryInbound } from '../../../services/inventoryService';
 import { StockType, BusinessType, SourceType } from '../../../types/inventory';
 import { getCurrentUsername } from '../../../hooks/farm';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -46,6 +47,13 @@ const generateProductCode = (cropName: string, variety: string, index: number): 
 export default function HarvestPage() {
   const { users } = useUsers();
   const { greenhouses } = useGreenhouses();
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 采收模块权限：PROC_HARVEST 是采收相关工序，需要在权限配置中添加
+  const canCreate = can('PROC_HARVEST', 'create');
+  const canEdit = can('PROC_HARVEST', 'edit');
+  const canDelete = can('PROC_HARVEST', 'delete');
+  const canExport = can('PROC_HARVEST', 'export');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -627,6 +635,10 @@ export default function HarvestPage() {
           onCancelBatchEdit={handleCancelBatchEdit}
           onConfirmBatchDelete={() => setShowDeleteWarning(true)}
           onCancelBatchDelete={handleCancelBatchDelete}
+          canCreate={canCreate}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          canExport={canExport}
         />
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <HarvestTable

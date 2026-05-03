@@ -20,6 +20,11 @@ export interface FarmTaskTableProps {
   onView: (task: Task) => void; // 查看详情
   onPublish: (taskId: string) => void;
   onDelete: (taskId: string) => void;
+  // 权限控制
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canPublish?: boolean;
 }
 
 /**
@@ -42,16 +47,6 @@ const PRIORITY_LABELS: Record<string, string> = {
   low: '低',
 };
 
-export interface FarmTaskTableProps {
-  tasks: Task[];
-  selectedRows: number[];
-  onRowSelect: (index: number) => void;
-  onSelectAll: () => void;
-  onEdit: (task: Task) => void;
-  onPublish: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
-}
-
 /**
  * 农事任务表格组件
  */
@@ -64,6 +59,10 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
   onView,
   onPublish,
   onDelete,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canPublish = true,
 }) => {
   // 可编辑状态列表
   const EDITABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
@@ -201,34 +200,40 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => onEdit(task)}
-                      disabled={!EDITABLE_STATUSES.includes(task.status)}
-                      className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="编辑"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onPublish(task.id)}
-                      disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
-                      className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="派发"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('确定要删除吗？')) {
-                          onDelete(task.id);
-                        }
-                      }}
-                      disabled={!DELETABLE_STATUSES.includes(task.status)}
-                      className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="删除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => onEdit(task)}
+                        disabled={!EDITABLE_STATUSES.includes(task.status)}
+                        className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="编辑"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canPublish && (
+                      <button
+                        onClick={() => onPublish(task.id)}
+                        disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
+                        className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="派发"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('确定要删除吗？')) {
+                            onDelete(task.id);
+                          }
+                        }}
+                        disabled={!DELETABLE_STATUSES.includes(task.status)}
+                        className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

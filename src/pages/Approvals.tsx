@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react';
 import { Search, CheckCircle, XCircle, Clock, ChevronRight, Filter, AlertTriangle, X } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
+import { useAuthPermission } from '../hooks/usePermission';
 import { ApprovalStatus, ApprovalType, Approval, MaterialItem } from '../types/approval';
 
 export default function Approvals() {
@@ -20,6 +21,13 @@ export default function Approvals() {
     partiallyApprove,
     getApprovalById,
   } = useApproval();
+
+  // 审批模块权限控制：PROC_APPROVAL
+  const { can } = useAuthPermission();
+  // 默认权限为 true（兼容无权限数据的场景）
+  const canApprove = can('PROC_APPROVAL', 'approve');
+  const canReject = can('PROC_APPROVAL', 'approve'); // 拒绝也使用 approve 权限
+  const canExport = can('PROC_APPROVAL', 'export');
 
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [searchTerm, setSearchTerm] = useState('');
@@ -200,24 +208,30 @@ export default function Approvals() {
             </div>
             {approval.status === ApprovalStatus.PENDING && (
               <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-                <button
-                  onClick={() => handleApprove(approval.id)}
-                  className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
-                >
-                  通过
-                </button>
-                <button
-                  onClick={() => handlePartialApprove(approval)}
-                  className="h-10 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
-                >
-                  部分通过
-                </button>
-                <button
-                  onClick={() => handleReject(approval.id)}
-                  className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
-                >
-                  拒绝
-                </button>
+                {canApprove && (
+                  <>
+                    <button
+                      onClick={() => handleApprove(approval.id)}
+                      className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+                    >
+                      通过
+                    </button>
+                    <button
+                      onClick={() => handlePartialApprove(approval)}
+                      className="h-10 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
+                    >
+                      部分通过
+                    </button>
+                  </>
+                )}
+                {canReject && (
+                  <button
+                    onClick={() => handleReject(approval.id)}
+                    className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
+                  >
+                    拒绝
+                  </button>
+                )}
               </div>
             )}
           </div>

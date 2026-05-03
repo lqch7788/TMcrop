@@ -202,6 +202,57 @@ export function initializeDatabase() {
     )
   `);
 
+  // 审批工作流表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approval_workflows (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT NOT NULL,
+      description TEXT,
+      module TEXT,
+      trigger_condition TEXT,
+      nodes TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 审批单表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approvals (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      type TEXT NOT NULL,
+      type_name TEXT,
+      category TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      applicant_id TEXT,
+      applicant_name TEXT,
+      applicant_department TEXT,
+      apply_date TEXT,
+      apply_time TEXT,
+      current_step INTEGER DEFAULT 1,
+      total_steps INTEGER DEFAULT 1,
+      approvers TEXT,
+      records TEXT,
+      status TEXT DEFAULT 'pending',
+      business_link TEXT,
+      attachments TEXT,
+      priority TEXT DEFAULT 'normal',
+      due_date TEXT,
+      reminder_count INTEGER DEFAULT 0,
+      related_batch_code TEXT,
+      related_task_ids TEXT,
+      notification_sent INTEGER DEFAULT 0,
+      amount TEXT,
+      materials TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
   // ========== 数据字典表（V5.0新增）==========
 
   // 字典分类表
@@ -543,6 +594,104 @@ export function initializeDatabase() {
 
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN production_plan_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // ========== V5.0 Phase 2: 关联字段迁移 ==========
+  // 为种源表添加创建者ID关联
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为育苗表添加创建者ID关联
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为种植表添加创建者ID关联
+  try {
+    db.run(`ALTER TABLE plantings ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为采收记录表添加关联字段
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN warehouse_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN harvester_ids TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN auditor_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为供应商表添加创建者ID关联
+  try {
+    db.run(`ALTER TABLE suppliers ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为农事任务表添加创建者ID关联（如果还没有的话）
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为巡查记录表添加关联字段
+  try {
+    db.run(`ALTER TABLE inspections ADD COLUMN greenhouse_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为问题记录表添加关联字段
+  try {
+    db.run(`ALTER TABLE problems ADD COLUMN greenhouse_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为人工记录表添加工人ID关联
+  try {
+    db.run(`ALTER TABLE labor_records ADD COLUMN worker_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE labor_records ADD COLUMN department_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为库存表添加入库记录ID关联
+  try {
+    db.run(`ALTER TABLE inventory ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为作物实例表添加创建者ID关联
+  try {
+    db.run(`ALTER TABLE crop_instances ADD COLUMN create_by_id TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }

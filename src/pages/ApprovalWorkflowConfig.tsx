@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Settings, Search, ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react';
+import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Settings, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+
+// API基础路径
+const API_BASE = '/api/approval-workflows';
 
 interface ApprovalNode {
   id: string;
@@ -22,69 +25,8 @@ interface ApprovalWorkflow {
   nodes: ApprovalNode[];
   status: 'active' | 'inactive';
   createdAt: string;
+  updatedAt?: string;
 }
-
-const STORAGE_KEY = 'approval_workflow_data';
-
-const DEFAULT_WORKFLOWS: ApprovalWorkflow[] = [
-  {
-    id: '1',
-    name: '生产计划审批',
-    code: 'production_plan',
-    description: '生产计划创建后的审批流程',
-    module: 'production',
-    triggerCondition: '创建生产计划时',
-    status: 'active',
-    createdAt: '2024-01-15',
-    nodes: [
-      { id: 'n1', name: '部门主管审批', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
-      { id: 'n2', name: '总经理审批', approverRole: 'admin', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: false },
-    ],
-  },
-  {
-    id: '2',
-    name: '物料采购审批',
-    code: 'material_purchase',
-    description: '物料采购申请的审批流程',
-    module: 'materials',
-    triggerCondition: '采购金额 > 5000元',
-    status: 'active',
-    createdAt: '2024-01-20',
-    nodes: [
-      { id: 'n1', name: '仓库主管审批', approverRole: 'warehouse_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
-      { id: 'n2', name: '财务审批', approverRole: 'finance', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
-      { id: 'n3', name: '总经理审批', approverRole: 'admin', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: false },
-    ],
-  },
-  {
-    id: '3',
-    name: '人员入职审批',
-    code: 'hr_onboard',
-    description: '新员工入职审批流程',
-    module: 'hr',
-    triggerCondition: '新员工入职时',
-    status: 'active',
-    createdAt: '2024-02-01',
-    nodes: [
-      { id: 'n1', name: 'HR主管审批', approverRole: 'hr_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
-      { id: 'n2', name: '部门主管确认', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: false },
-    ],
-  },
-  {
-    id: '4',
-    name: '技术方案审批',
-    code: 'tech_solution',
-    description: '农业技术方案审批',
-    module: 'tech',
-    triggerCondition: '技术方案发布前',
-    status: 'active',
-    createdAt: '2024-02-10',
-    nodes: [
-      { id: 'n1', name: '技术主管审批', approverRole: 'tech_manager', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: true },
-      { id: 'n2', name: '生产主管确认', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: false },
-    ],
-  },
-];
 
 const MODULE_OPTIONS = [
   { value: 'production', label: '生产管理' },
@@ -105,21 +47,32 @@ export default function ApprovalWorkflowConfig() {
     status: 'active',
     nodes: [],
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 加载审批工作流数据
+  const loadWorkflows = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success) {
+        setWorkflows(result.data || []);
+      } else {
+        setError(result.error || '加载失败');
+      }
+    } catch (err) {
+      console.error('加载审批工作流失败:', err);
+      setError('加载审批工作流失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setWorkflows(JSON.parse(saved));
-    } else {
-      setWorkflows(DEFAULT_WORKFLOWS);
-    }
+    loadWorkflows();
   }, []);
-
-  useEffect(() => {
-    if (workflows.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workflows));
-    }
-  }, [workflows]);
 
   const filteredWorkflows = workflows.filter(w =>
     w.name.includes(searchTerm) || w.code.includes(searchTerm) || w.module.includes(searchTerm)
@@ -131,27 +84,65 @@ export default function ApprovalWorkflowConfig() {
     );
   };
 
-  const handleSaveWorkflow = () => {
-    if (editingWorkflow) {
-      setWorkflows(workflows.map(w =>
-        w.id === editingWorkflow.id ? { ...w, ...newWorkflow } as ApprovalWorkflow : w
-      ));
-    } else {
-      setWorkflows([...workflows, {
-        ...newWorkflow,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString().split('T')[0],
+  const handleSaveWorkflow = async () => {
+    try {
+      const payload = {
+        name: newWorkflow.name,
+        code: newWorkflow.code,
+        description: newWorkflow.description || '',
+        module: newWorkflow.module || '',
+        triggerCondition: newWorkflow.triggerCondition || '',
         nodes: newWorkflow.nodes || [],
-      } as ApprovalWorkflow]);
+        status: newWorkflow.status || 'active',
+      };
+
+      if (editingWorkflow) {
+        const response = await fetch(`${API_BASE}/${editingWorkflow.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          alert(result.error || '更新失败');
+          return;
+        }
+      } else {
+        const response = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          alert(result.error || '创建失败');
+          return;
+        }
+      }
+
+      await loadWorkflows();
+      setShowModal(false);
+      setEditingWorkflow(null);
+      setNewWorkflow({ status: 'active', nodes: [] });
+    } catch (err) {
+      console.error('保存审批工作流失败:', err);
+      alert('保存审批工作流失败');
     }
-    setShowModal(false);
-    setEditingWorkflow(null);
-    setNewWorkflow({ status: 'active', nodes: [] });
   };
 
-  const deleteWorkflow = (id: string) => {
-    if (confirm('确定删除该审批流程吗？')) {
-      setWorkflows(workflows.filter(w => w.id !== id));
+  const deleteWorkflow = async (id: string) => {
+    if (!confirm('确定删除该审批流程吗？')) return;
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        await loadWorkflows();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('删除审批工作流失败:', err);
+      alert('删除失败');
     }
   };
 
@@ -192,11 +183,38 @@ export default function ApprovalWorkflowConfig() {
     });
   };
 
-  const toggleWorkflowStatus = (id: string) => {
-    setWorkflows(workflows.map(w =>
-      w.id === id ? { ...w, status: w.status === 'active' ? 'inactive' : 'active' } : w
-    ));
+  const toggleWorkflowStatus = async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/${id}/toggle`, { method: 'PATCH' });
+      const result = await response.json();
+      if (result.success) {
+        await loadWorkflows();
+      } else {
+        alert(result.error || '切换状态失败');
+      }
+    } catch (err) {
+      console.error('切换审批工作流状态失败:', err);
+      alert('切换状态失败');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -278,14 +296,14 @@ export default function ApprovalWorkflowConfig() {
                 ) : (
                   <ChevronDown className="w-4 h-4" />
                 )}
-                {expandedWorkflows.includes(workflow.id) ? '收起节点' : '查看审批节点'} ({workflow.nodes.length})
+                {expandedWorkflows.includes(workflow.id) ? '收起节点' : '查看审批节点'} ({workflow.nodes?.length || 0})
               </button>
 
               {/* 审批节点 */}
               {expandedWorkflows.includes(workflow.id) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2 overflow-x-auto">
-                    {workflow.nodes.map((node, index) => (
+                    {(workflow.nodes || []).map((node, index) => (
                       <div key={node.id} className="flex items-center">
                         <div className="px-4 py-3 bg-gray-50 rounded-lg min-w-[160px]">
                           <div className="flex items-center gap-2">
@@ -303,7 +321,7 @@ export default function ApprovalWorkflowConfig() {
                             <p>{node.requireComment ? '必须填写意见' : '可选意见'}</p>
                           </div>
                         </div>
-                        {index < workflow.nodes.length - 1 && (
+                        {index < (workflow.nodes?.length || 0) - 1 && (
                           <ArrowRight className="w-5 h-5 text-gray-400 mx-2 flex-shrink-0" />
                         )}
                       </div>

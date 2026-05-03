@@ -21,6 +21,11 @@ interface InspectionToolbarProps {
   onCancelBatchEdit: () => void;
   onConfirmBatchDelete: () => void;
   onCancelBatchDelete: () => void;
+  // 权限控制
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function InspectionToolbar({
@@ -37,6 +42,10 @@ export function InspectionToolbar({
   onCancelBatchEdit,
   onConfirmBatchDelete,
   onCancelBatchDelete,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: InspectionToolbarProps) {
   return (
     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -97,34 +106,42 @@ export function InspectionToolbar({
         </div>
       ) : (
         <div className="flex gap-2">
-          <button
-            onClick={onCreate}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            新增
-          </button>
-          <button
-            onClick={onBatchEdit}
-            className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-          >
-            <Pencil className="w-4 h-4" />
-            编辑
-          </button>
-          <button
-            onClick={onBatchDelete}
-            className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-          >
-            <Trash2 className="w-4 h-4" />
-            删除
-          </button>
-          <button
-            onClick={onExport}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
-            <Download className="w-4 h-4" />
-            导出
-          </button>
+          {canCreate && (
+            <button
+              onClick={onCreate}
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              新增
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={onBatchEdit}
+              className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+            >
+              <Pencil className="w-4 h-4" />
+              编辑
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={onBatchDelete}
+              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+            >
+              <Trash2 className="w-4 h-4" />
+              删除
+            </button>
+          )}
+          {canExport && (
+            <button
+              onClick={onExport}
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+          )}
         </div>
       )}
     </div>

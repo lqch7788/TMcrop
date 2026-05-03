@@ -18,6 +18,10 @@ interface ActionToolbarProps {
   onCancelDelete: () => void;
   onConfirmExport: () => void;
   onCancelExport: () => void;
+  // 权限控制 props
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export default function ActionToolbar({
@@ -38,6 +42,10 @@ export default function ActionToolbar({
   onCancelDelete,
   onConfirmExport,
   onCancelExport,
+  // 权限控制 props - 默认为 true 以兼容无权限配置的情况
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: ActionToolbarProps) {
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
@@ -59,25 +67,31 @@ export default function ActionToolbar({
               )}
               库存不足
             </button>
-            <button
-              onClick={onBatchEdit}
-              className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              编辑
-            </button>
-            <button
-              onClick={onDelete}
-              className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
-              删除
-            </button>
-            <button
-              onClick={onExport}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            {canEdit && (
+              <button
+                onClick={onBatchEdit}
+                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+              >
+                编辑
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={onDelete}
+                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+              >
+                删除
+              </button>
+            )}
+            {canExport && (
+              <button
+                onClick={onExport}
+                className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
           </>
         )}
         {/* 编辑模式 */}

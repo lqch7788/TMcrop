@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { useAuthPermission } from '../../hooks/usePermission';
 
 // 技术方案类型定义
 export interface TechSolution {
@@ -36,6 +37,13 @@ const techSolutions: TechSolution[] = [
 const plantingModes = ['水培', '土培', '基质培', '雾培'];
 
 export function TechSolutionPage() {
+  // 权限控制 - 使用 PROC_PRODUCTION 工序代码，默认权限为 true
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_PRODUCTION', 'create');
+  const canEdit = can('PROC_PRODUCTION', 'edit');
+  const canDelete = can('PROC_PRODUCTION', 'delete');
+  const canExport = can('PROC_PRODUCTION', 'export');
+
   const [code, setCode] = useState('');
   const [crop, setCrop] = useState('全部');
   const [author, setAuthor] = useState('');
@@ -492,34 +500,42 @@ export function TechSolutionPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              <button
-                onClick={() => {
-                  setBatchEditMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-              >
-                <Edit className="w-4 h-4" />
-                编辑
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDeleteMode(true);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
-              </button>
-              <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                导出
-              </button>
+              {canCreate && (
+                <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={() => {
+                    setBatchEditMode(true);
+                    setSelectedRows([]);
+                  }}
+                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Edit className="w-4 h-4" />
+                  编辑
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => {
+                    setBatchDeleteMode(true);
+                    setSelectedRows([]);
+                  }}
+                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </button>
+              )}
+              {canExport && (
+                <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
             </div>
           )}
         </div>

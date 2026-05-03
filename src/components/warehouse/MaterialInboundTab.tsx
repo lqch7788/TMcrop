@@ -89,6 +89,11 @@ interface MaterialInboundTabProps {
   onBatchDeleteRecords: (records: InboundRecord[]) => void;
   onBatchSaveRecord: (records: InboundRecord[]) => void;
   onAddRecord: () => void;
+  // 权限控制 props
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function MaterialInboundTab({
@@ -104,6 +109,11 @@ export function MaterialInboundTab({
   onBatchSaveRecord,
   onDeleteRecord,
   onAddRecord,
+  // 权限控制 props - 默认为 true 以兼容无权限配置的情况
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: MaterialInboundTabProps) {
   const navigate = useNavigate();
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -436,35 +446,43 @@ export function MaterialInboundTab({
           <div className="flex items-center gap-2">
             {!editMode && !deleteMode && !exportMode ? (
               <>
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  编辑
-                </button>
-                <button
-                  onClick={() => setDeleteMode(true)}
-                  className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </button>
-                <button
-                  onClick={() => setExportMode(true)}
-                  className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
-                <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                <button
-                  onClick={onAddRecord}
-                  className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  新增入库
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    编辑
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => setDeleteMode(true)}
+                    className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    删除
+                  </button>
+                )}
+                {canExport && (
+                  <button
+                    onClick={() => setExportMode(true)}
+                    className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    导出
+                  </button>
+                )}
+                {(canEdit || canDelete || canExport) && <div className="w-px h-6 bg-gray-300 mx-1"></div>}
+                {canCreate && (
+                  <button
+                    onClick={onAddRecord}
+                    className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增入库
+                  </button>
+                )}
               </>
             ) : (
               <>

@@ -11,6 +11,8 @@ interface WorkerAttendanceExportProps {
   onFormatChange: (format: ExportFormat) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  // 权限控制props
+  canExport?: boolean;
 }
 
 export function WorkerAttendanceExport({
@@ -20,6 +22,7 @@ export function WorkerAttendanceExport({
   onFormatChange,
   onConfirm,
   onCancel,
+  canExport = true,
 }: WorkerAttendanceExportProps) {
   if (!show) return null;
 
@@ -77,12 +80,14 @@ export function WorkerAttendanceExport({
             >
               取消
             </button>
-            <button
-              onClick={onConfirm}
-              className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
-              导出
-            </button>
+            {canExport && (
+              <button
+                onClick={onConfirm}
+                className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+              >
+                导出
+              </button>
+            )}
           </div>
         </div>
       </div>

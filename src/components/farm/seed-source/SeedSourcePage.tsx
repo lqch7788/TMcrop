@@ -24,8 +24,18 @@ import {
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
 import * as seedSourceService from '../../../services/seedSourceService';
 import * as cropBatchService from '../../../services/cropBatchService';
+import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function SeedSourcePage() {
+  // 权限检查
+  const { can } = useAuthPermission();
+  // 种源模块权限
+  const canCreate = can('PROC_SEED_SOURCE', 'create');
+  const canEdit = can('PROC_SEED_SOURCE', 'edit');
+  const canDelete = can('PROC_SEED_SOURCE', 'delete');
+  const canExport = can('PROC_SEED_SOURCE', 'export');
+  const canPrint = can('PROC_SEED_SOURCE', 'print');
+
   // 状态
   const [filters, setFilters] = useState<SeedSourceFilters>({
     cropCategory: '',
@@ -412,6 +422,11 @@ export default function SeedSourcePage() {
         printMode={printMode}
         onPrintModeChange={setPrintMode}
         onConfirmPrint={handlePrintConfirm}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canExport={canExport}
+        canPrint={canPrint}
       />
 
       {/* 弹窗 */}

@@ -20,6 +20,11 @@ interface ScheduleTableProps {
   onBatchExportClick?: () => void;
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
+  // 权限控制props
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 // 获取班次颜色
@@ -46,6 +51,10 @@ export function ScheduleTable({
   onBatchExportClick,
   onCancelBatchEdit,
   onCancelBatchDelete,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: ScheduleTableProps) {
   // 筛选状态
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,7 +175,7 @@ export function ScheduleTable({
             </>
           ) : (
             <>
-              {onAddClick && (
+              {canCreate && onAddClick && (
                 <button
                   onClick={onAddClick}
                   className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
@@ -175,7 +184,7 @@ export function ScheduleTable({
                   新增
                 </button>
               )}
-              {onBatchEditClick && (
+              {canEdit && onBatchEditClick && (
                 <button
                   onClick={onBatchEditClick}
                   className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
@@ -184,7 +193,7 @@ export function ScheduleTable({
                   编辑
                 </button>
               )}
-              {onBatchDeleteClick && (
+              {canDelete && onBatchDeleteClick && (
                 <button
                   onClick={onBatchDeleteClick}
                   className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
@@ -193,7 +202,7 @@ export function ScheduleTable({
                   删除
                 </button>
               )}
-              {onExport && (
+              {canExport && onExport && (
                 <button
                   onClick={onExport}
                   className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"

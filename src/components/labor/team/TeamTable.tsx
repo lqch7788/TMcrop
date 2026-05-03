@@ -7,9 +7,20 @@ import type { Team } from './types';
 
 interface TeamTableProps {
   onBack?: () => void;
+  // 权限控制props
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
-export function TeamTable({ onBack }: TeamTableProps) {
+export function TeamTable({
+  onBack,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
+}: TeamTableProps) {
   const navigate = useNavigate();
   const {
     teams,
@@ -110,13 +121,15 @@ export function TeamTable({ onBack }: TeamTableProps) {
               <p className="text-xs text-gray-500">管理临时工班组分配</p>
             </div>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            新建班组
-          </button>
+          {canCreate && (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              新建班组
+            </button>
+          )}
         </div>
       </div>
 
@@ -174,20 +187,24 @@ export function TeamTable({ onBack }: TeamTableProps) {
                   >
                     <UserPlus className="w-5 h-5" />
                   </button>
-                  <button
-                    onClick={() => openEditModal(team)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                    title="编辑"
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(team)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
-                    title="删除"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => openEditModal(team)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      title="编辑"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDelete(team)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      title="删除"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </div>
               {team.description && (

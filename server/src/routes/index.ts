@@ -19,6 +19,8 @@ import basicDataRouter from './basicData';
 import dictionaryRouter from './dictionary';
 import authorityRouter from './authority';
 import notificationRouter from './notification';
+import approvalWorkflowRouter from './approvalWorkflow';
+import approvalRouter from './approval';
 
 const router = Router();
 
@@ -69,6 +71,12 @@ router.use('/authority', authorityRouter);
 
 // 通知设置路由
 router.use('/notifications', notificationRouter);
+
+// 审批工作流路由
+router.use('/approval-workflows', approvalWorkflowRouter);
+
+// 审批单路由
+router.use('/approvals', approvalRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {

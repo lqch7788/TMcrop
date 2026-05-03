@@ -19,6 +19,10 @@ interface OrderTableProps {
   onExportSelectAll: () => void;
   onExportCancel: () => void;
   onConfirmExport: () => void;
+  // 权限控制
+  canCreate?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function OrderTable({
@@ -34,6 +38,9 @@ export function OrderTable({
   onExportSelectAll,
   onExportCancel,
   onConfirmExport,
+  canCreate = true,
+  canDelete = true,
+  canExport = true,
 }: OrderTableProps) {
   const getStatusBadge = (status: CropOrderStatus) => {
     switch (status) {
@@ -106,28 +113,34 @@ export function OrderTable({
             </>
           ) : (
             <>
-              <button
-                onClick={onAdd}
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </button>
-              <button
-                onClick={onDelete.bind(null, selectedRows)}
-                disabled={selectedRows.length === 0}
-                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                批量删除
-              </button>
-              <button
-                onClick={() => onSelectionChange([])}
-                className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
+              {canCreate && (
+                <button
+                  onClick={onAdd}
+                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={onDelete.bind(null, selectedRows)}
+                  disabled={selectedRows.length === 0}
+                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  批量删除
+                </button>
+              )}
+              {canExport && (
+                <button
+                  onClick={() => onSelectionChange([])}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  导出
+                </button>
+              )}
             </>
           )}
         </div>

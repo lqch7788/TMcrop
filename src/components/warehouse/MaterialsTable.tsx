@@ -18,6 +18,11 @@ interface MaterialsTableProps {
   onDelete: (material: Material) => void;
   onCancelSelection: () => void;
   onConfirmExport: () => void;
+  // 权限控制 props
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function MaterialsTable({
@@ -37,6 +42,11 @@ export function MaterialsTable({
   onDelete,
   onCancelSelection,
   onConfirmExport,
+  // 权限控制 props - 默认为 true 以兼容无权限配置的情况
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
 }: MaterialsTableProps) {
   const totalPages = Math.ceil(materials.length / pageSize) || 1;
   const startIdx = (currentPage - 1) * pageSize;

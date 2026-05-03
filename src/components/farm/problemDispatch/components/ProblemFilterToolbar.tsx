@@ -34,6 +34,11 @@ interface ProblemFilterToolbarProps {
   onCancelBatchDelete: () => void;
   onCancelBatchDispatch: () => void;
   onCreate?: () => void;
+  // 权限控制
+  canCreate?: boolean;
+  canDispatch?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export function ProblemFilterToolbar({
@@ -60,6 +65,10 @@ export function ProblemFilterToolbar({
   onCancelExport,
   onCancelBatchDelete,
   onCancelBatchDispatch,
+  canCreate = true,
+  canDispatch = true,
+  canDelete = true,
+  canExport = true,
 }: ProblemFilterToolbarProps) {
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -196,7 +205,7 @@ export function ProblemFilterToolbar({
           </div>
         ) : (
           <div className="flex gap-2 ml-auto">
-            {onCreate && (
+            {canCreate && onCreate && (
               <button
                 onClick={onCreate}
                 className="h-8 px-3 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-1"
@@ -205,20 +214,24 @@ export function ProblemFilterToolbar({
                 新建
               </button>
             )}
-            <button
-              onClick={onBatchDispatch}
-              className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
-            >
-              <Send className="w-4 h-4" />
-              批量分派
-            </button>
-            <button
-              onClick={onExport}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
+            {canDispatch && (
+              <button
+                onClick={onBatchDispatch}
+                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
+              >
+                <Send className="w-4 h-4" />
+                批量分派
+              </button>
+            )}
+            {canExport && (
+              <button
+                onClick={onExport}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
           </div>
         )}
       </div>

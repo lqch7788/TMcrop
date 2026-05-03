@@ -474,6 +474,87 @@ const defaultDictionaries: DictionarySeed[] = [
 ];
 
 // ============================================
+// 审批工作流数据结构
+// ============================================
+export interface ApprovalWorkflowSeed {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  module: string;
+  triggerCondition: string;
+  nodes: Array<{
+    id: string;
+    name: string;
+    approverRole: string;
+    approverName?: string;
+    timeoutHours: number;
+    autoApproveOnTimeout: boolean;
+    requireComment: boolean;
+  }>;
+  status: string;
+}
+
+// ============================================
+// 默认审批工作流数据
+// ============================================
+const defaultApprovalWorkflows: ApprovalWorkflowSeed[] = [
+  {
+    id: 'AWF001',
+    name: '生产计划审批',
+    code: 'production_plan',
+    description: '生产计划创建后的审批流程',
+    module: 'production',
+    triggerCondition: '创建生产计划时',
+    status: 'active',
+    nodes: [
+      { id: 'n1', name: '部门主管审批', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
+      { id: 'n2', name: '总经理审批', approverRole: 'admin', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: false },
+    ],
+  },
+  {
+    id: 'AWF002',
+    name: '物料采购审批',
+    code: 'material_purchase',
+    description: '物料采购申请的审批流程',
+    module: 'materials',
+    triggerCondition: '采购金额 > 5000元',
+    status: 'active',
+    nodes: [
+      { id: 'n1', name: '仓库主管审批', approverRole: 'warehouse_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
+      { id: 'n2', name: '财务审批', approverRole: 'finance', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
+      { id: 'n3', name: '总经理审批', approverRole: 'admin', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: false },
+    ],
+  },
+  {
+    id: 'AWF003',
+    name: '人员入职审批',
+    code: 'hr_onboard',
+    description: '新员工入职审批流程',
+    module: 'hr',
+    triggerCondition: '新员工入职时',
+    status: 'active',
+    nodes: [
+      { id: 'n1', name: 'HR主管审批', approverRole: 'hr_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: true },
+      { id: 'n2', name: '部门主管确认', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: false },
+    ],
+  },
+  {
+    id: 'AWF004',
+    name: '技术方案审批',
+    code: 'tech_solution',
+    description: '农业技术方案审批',
+    module: 'tech',
+    triggerCondition: '技术方案发布前',
+    status: 'active',
+    nodes: [
+      { id: 'n1', name: '技术主管审批', approverRole: 'tech_manager', timeoutHours: 48, autoApproveOnTimeout: false, requireComment: true },
+      { id: 'n2', name: '生产主管确认', approverRole: 'production_manager', timeoutHours: 24, autoApproveOnTimeout: false, requireComment: false },
+    ],
+  },
+];
+
+// ============================================
 // 默认通知渠道数据
 // ============================================
 const defaultNotificationChannels: NotificationChannelSeed[] = [
@@ -827,6 +908,34 @@ export function seedNotificationRules() {
 }
 
 /**
+ * 导入审批工作流数据
+ */
+export function seedApprovalWorkflows() {
+  const db = getDatabase();
+
+  for (const workflow of defaultApprovalWorkflows) {
+    db.run(`
+      INSERT OR REPLACE INTO approval_workflows
+      (id, name, code, description, module, trigger_condition, nodes, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      workflow.id,
+      workflow.name,
+      workflow.code,
+      workflow.description,
+      workflow.module,
+      workflow.triggerCondition,
+      JSON.stringify(workflow.nodes),
+      workflow.status,
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+  }
+
+  console.log(`已导入 ${defaultApprovalWorkflows.length} 条审批工作流数据`);
+}
+
+/**
  * 导出所有基础数据
  */
 export function exportBasicData() {
@@ -838,6 +947,7 @@ export function exportBasicData() {
   seedDictionaries();
   seedNotificationChannels();
   seedNotificationRules();
+  seedApprovalWorkflows();
   saveDatabase();
   console.log('基础数据导入完成');
 }
