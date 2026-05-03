@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react';
 import { SearchForm, STATUS_OPTIONS } from './types';
-import { DEPARTMENTS } from './config';
+import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
 
 interface MaterialReturnSearchProps {
   searchForm: SearchForm;
@@ -13,6 +13,8 @@ export function MaterialReturnSearch({
   onUpdateField,
   onReset,
 }: MaterialReturnSearchProps) {
+  // 从 API 获取部门选项（包含"全部"选项）
+  const { options: departmentOptions } = useDepartmentOptions({ includeAll: true, allText: '全部部门' });
   return (
     <div className="bg-[#F2F6FA] rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
       <div className="flex flex-wrap items-end gap-4">
@@ -98,7 +100,7 @@ export function MaterialReturnSearch({
             onChange={(e) => onUpdateField('department', e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent min-w-[140px]"
           >
-            {DEPARTMENTS.map((dept) => (
+            {departmentOptions.map((dept) => (
               <option key={dept} value={dept === '全部部门' ? 'all' : dept}>{dept}</option>
             ))}
           </select>

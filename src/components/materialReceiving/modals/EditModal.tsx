@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { MaterialReceivingRecord, MaterialItem } from '../../../types/materialReceiving';
+import { UserSelect } from '../../common/settings/UserSelect';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -51,11 +52,10 @@ export const EditModal: React.FC<EditModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-blue-700 mb-1">申请人</label>
-          <input
-            type="text"
+          <UserSelect
             value={editForm.applicant}
-            onChange={(e) => onChange('applicant', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onChange={(value) => onChange('applicant', value)}
+            placeholder="选择申请人"
           />
         </div>
         <div>
@@ -99,17 +99,11 @@ export const EditModal: React.FC<EditModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-blue-700 mb-1">审核人</label>
-          <select
+          <UserSelect
             value={editForm.reviewer}
-            onChange={(e) => onChange('reviewer', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="王经理">王经理</option>
-            <option value="李经理">李经理</option>
-            <option value="张经理">张经理</option>
-            <option value="陈经理">陈经理</option>
-            <option value="赵经理">赵经理</option>
-          </select>
+            onChange={(value) => onChange('reviewer', value)}
+            placeholder="选择审核人"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-blue-700 mb-1">生产计划批次号</label>

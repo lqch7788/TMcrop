@@ -12,6 +12,14 @@ export default defineConfig({
     strictPort: false,
     // 自动打开浏览器
     open: true,
+    // 代理配置
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     // HMR配置优化
     hmr: {
       // HMR连接超时时间

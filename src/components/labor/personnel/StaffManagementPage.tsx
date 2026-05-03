@@ -4,19 +4,34 @@
 import { useState } from 'react';
 import { Users, Plus, Download, Pencil, Trash2 } from 'lucide-react';
 import { Worker } from '../../../types';
-import { useWorkers } from '../../common/settings';
+import { useAuthPermission } from '../../../hooks/usePermission';
 import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 
+// 模拟员工数据（后续迁移到SQLite数据库）
+const initialWorkers: Worker[] = [
+  { id: '1', workerId: 'A001', name: '张伟民', gender: '男', age: 35, department: '生产部', position: '普工', phone: '138****1234', status: '在职' },
+  { id: '2', workerId: 'A002', name: '李明轩', gender: '女', age: 28, department: '技术部', position: '技术员', phone: '139****5678', status: '在职' },
+  { id: '3', workerId: 'A003', name: '王建国', gender: '男', age: 42, department: '生产部', position: '生产主管', phone: '136****9012', status: '在职' },
+  { id: '4', workerId: 'A004', name: '赵俊杰', gender: '女', age: 30, department: '技术部', position: '技术员', phone: '137****3456', status: '在职' },
+  { id: '5', workerId: 'A005', name: '钱文涛', gender: '男', age: 25, department: '生产部', position: '普工', phone: '135****7890', status: '在职' },
+  { id: '6', workerId: 'A006', name: '孙晓峰', gender: '女', age: 33, department: '后勤部', position: '仓库管理员', phone: '134****2345', status: '在职' },
+];
+
 export function StaffManagementPage() {
-  const { workers } = useWorkers();
+  // 权限检查 - 人工管理模块权限
+  const { can } = useAuthPermission();
+  const canCreate = can('PROC_LABOR', 'create');
+  const canEdit = can('PROC_LABOR', 'edit');
+  const canDelete = can('PROC_LABOR', 'delete');
+  const canExport = can('PROC_LABOR', 'export');
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
-  const [workerList, setWorkerList] = useState<Worker[]>(workers);
+  const [workerList, setWorkerList] = useState<Worker[]>(initialWorkers);
 
   // Batch Edit state
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -359,34 +374,42 @@ export function StaffManagementPage() {
           </div>
         ) : (
           <div className="flex gap-2">
-            <button
-              onClick={handleBatchEditClick}
-              className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Pencil className="w-4 h-4" />
-              编辑
-            </button>
-            <button
-              onClick={handleBatchDeleteClick}
-              className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              删除
-            </button>
-            <button
-              onClick={handleExportClick}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </button>
-            <button
-              onClick={handleAddWorker}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              新增员工
-            </button>
+            {canEdit && (
+              <button
+                onClick={handleBatchEditClick}
+                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Pencil className="w-4 h-4" />
+                编辑
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={handleBatchDeleteClick}
+                className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+            )}
+            {canExport && (
+              <button
+                onClick={handleExportClick}
+                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
+            {canCreate && (
+              <button
+                onClick={handleAddWorker}
+                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                新增员工
+              </button>
+            )}
           </div>
         )}
       </div>

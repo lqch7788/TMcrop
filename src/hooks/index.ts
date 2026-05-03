@@ -2,6 +2,9 @@
  * Hooks 统一导出
  */
 
+// 部门选项相关
+export { useDepartmentOptions, useDepartmentOptionsWithValue } from './useDepartmentOptions';
+
 // 生产汇总相关
 export { useBatchSummary, useBatchFilterOptions } from './useBatchSummary';
 

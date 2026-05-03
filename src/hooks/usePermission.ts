@@ -5,6 +5,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useAuthSettings } from '../contexts/AuthSettingsContext';
+import { useCurrentUser } from '../hooks/farm/useCurrentUser';
 import type { AuthValue } from '../types/authority';
 
 // 工序与菜单路径的映射关系
@@ -69,6 +70,24 @@ export function usePermission(options: UsePermissionOptions = {}) {
     loading,
   } = useAuthSettings();
 
+  // 获取当前用户信息
+  const currentUser = useCurrentUser();
+
+  // 判断是否是管理员
+  const isAdmin = useMemo(() => {
+    // 优先从 localStorage 判断
+    if (localStorage.getItem('isAdmin') === 'true') {
+      return true;
+    }
+    // 检查用户角色列表中是否包含管理员角色
+    return currentUser.roles.some(roleOid => {
+      const roleOidLower = roleOid?.toLowerCase() || '';
+      return roleOid === 'ROLE001' ||
+             roleOid === 'ROLE_ADMIN' ||
+             roleOidLower.includes('admin');
+    });
+  }, [currentUser.roles]);
+
   /**
    * 检查用户是否拥有特定操作权限
    */
@@ -77,6 +96,11 @@ export function usePermission(options: UsePermissionOptions = {}) {
     targetActionOid: string,
     targetRequiredValue: AuthValue = 1
   ): boolean => {
+    // 管理员拥有所有权限
+    if (isAdmin) {
+      return true;
+    }
+
     // 查找匹配的权限记录
     const authItem = roleAuthorities.find(
       item => item.processOid === targetProcessOid && item.actionOid === targetActionOid
@@ -88,7 +112,7 @@ export function usePermission(options: UsePermissionOptions = {}) {
     }
 
     return authItem.value === targetRequiredValue;
-  }, [roleAuthorities]);
+  }, [roleAuthorities, isAdmin]);
 
   /**
    * 根据工序和动作检查权限
@@ -126,11 +150,6 @@ export function usePermission(options: UsePermissionOptions = {}) {
    */
   const checkMenuAccess = useCallback((menuPath: string): boolean => {
     // 管理员角色拥有所有权限
-    const isAdmin = roles.some(role => {
-      // 这里应该根据当前登录用户来判断，暂时使用简化逻辑
-      return role.name === '系统管理员';
-    });
-
     if (isAdmin) {
       return true;
     }
@@ -145,7 +164,7 @@ export function usePermission(options: UsePermissionOptions = {}) {
 
     // 默认允许访问（后续可以根据权限数据精细控制）
     return true;
-  }, [roles]);
+  }, [isAdmin]);
 
   /**
    * 获取用户在特定工序下的所有权限
@@ -165,6 +184,9 @@ export function usePermission(options: UsePermissionOptions = {}) {
     roles,
     users,
     loading,
+    // 当前用户信息
+    currentUser,
+    isAdmin,
     // 权限检查方法
     hasPermission,
     checkPermission,
@@ -204,6 +226,17 @@ export interface WithPermissionProps {
  */
 export function useAuthPermission() {
   const { roleAuthorities } = useAuthSettings();
+  const currentUser = useCurrentUser();
+
+  // 判断是否是管理员
+  const isAdmin = useMemo(() => {
+    if (localStorage.getItem('isAdmin') === 'true') {
+      return true;
+    }
+    return currentUser.roles.some(roleOid => {
+      return roleOid === 'ROLE001' || (roleOid && roleOid.toLowerCase().includes('admin'));
+    });
+  }, [currentUser.roles]);
 
   /**
    * 检查特定工序和动作的权限
@@ -212,6 +245,11 @@ export function useAuthPermission() {
     processOid: string,
     actionCode: 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
   ): boolean => {
+    // 管理员拥有所有权限
+    if (isAdmin) {
+      return true;
+    }
+
     // 动作代码到 OID 的映射
     const actionCodeToOid: Record<string, string> = {
       view: 'ACT001',
@@ -232,7 +270,7 @@ export function useAuthPermission() {
     );
 
     return authItem?.value === 1;
-  }, [roleAuthorities]);
+  }, [roleAuthorities, isAdmin]);
 
-  return { can };
+  return { can, isAdmin };
 }

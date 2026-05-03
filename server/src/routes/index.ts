@@ -21,6 +21,7 @@ import authorityRouter from './authority';
 import notificationRouter from './notification';
 import approvalWorkflowRouter from './approvalWorkflow';
 import approvalRouter from './approval';
+import operationLogRouter from './operationLog';
 
 const router = Router();
 
@@ -77,6 +78,9 @@ router.use('/approval-workflows', approvalWorkflowRouter);
 
 // 审批单路由
 router.use('/approvals', approvalRouter);
+
+// 操作日志路由
+router.use('/operation-logs', operationLogRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {

@@ -696,5 +696,120 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ========== V6.0 Phase 1: 新增系统配置和操作日志表 ==========
+
+  // 系统配置表 - 存储系统参数配置
+  db.run(`
+    CREATE TABLE IF NOT EXISTS system_configs (
+      id TEXT PRIMARY KEY,
+      config_key TEXT NOT NULL UNIQUE,
+      config_value TEXT,
+      config_type TEXT DEFAULT 'string',
+      category TEXT,
+      description TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 操作日志表 - 存储用户操作审计日志
+  db.run(`
+    CREATE TABLE IF NOT EXISTS operation_logs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      username TEXT,
+      action TEXT NOT NULL,
+      module TEXT,
+      resource_type TEXT,
+      resource_id TEXT,
+      description TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      status TEXT DEFAULT 'success',
+      error_message TEXT,
+      created_at TEXT
+    )
+  `);
+
+  // ========== V6.0 Phase 4: 用户与权限表 ==========
+
+  // 角色表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS roles (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      role_code TEXT NOT NULL,
+      role_name TEXT NOT NULL,
+      description TEXT,
+      is_system INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 权限表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS permissions (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      permission_code TEXT NOT NULL,
+      permission_name TEXT NOT NULL,
+      category TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 用户表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      username TEXT NOT NULL,
+      password_hash TEXT,
+      real_name TEXT,
+      org_oid TEXT,
+      org_name TEXT,
+      department_oid TEXT,
+      department_name TEXT,
+      position TEXT,
+      email TEXT,
+      phone TEXT,
+      avatar TEXT,
+      status TEXT DEFAULT 'active',
+      last_login TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 用户角色关联表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_roles (
+      id TEXT PRIMARY KEY,
+      user_oid TEXT NOT NULL,
+      role_oid TEXT NOT NULL,
+      created_at TEXT,
+      UNIQUE(user_oid, role_oid)
+    )
+  `);
+
+  // 角色权限关联表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id TEXT PRIMARY KEY,
+      role_oid TEXT NOT NULL,
+      permission_oid TEXT NOT NULL,
+      created_at TEXT,
+      UNIQUE(role_oid, permission_oid)
+    )
+  `);
+
   console.log('数据库表初始化完成');
 }

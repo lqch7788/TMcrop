@@ -1,8 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { ReturnRecord, EditFormData, MaterialItem, RETURN_REASONS } from '../types';
-import { DEPARTMENTS, RETURN_TYPES } from '../config';
+import { RETURN_TYPES } from '../config';
 import { mockSourceApplications } from '../mockData';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface EditModalProps {
   open: boolean;
@@ -29,6 +30,9 @@ export function EditModal({
   onAddMaterial,
   onRemoveMaterial,
 }: EditModalProps) {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
+
   if (!record) return null;
 
   return (
@@ -85,7 +89,7 @@ export function EditModal({
             onChange={(e) => onFormChange('department', e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            {DEPARTMENTS.filter(d => d !== '全部部门').map((dept) => (
+            {departmentOptions.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>

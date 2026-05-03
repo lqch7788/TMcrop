@@ -1,9 +1,10 @@
 import { Trash2, RefreshCw } from 'lucide-react';
 import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
-import { DEPARTMENTS, APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
+import { APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
 import { mockSourceApplications, currentUser } from '../mockData';
 import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface AddModalProps {
   open: boolean;
@@ -28,6 +29,8 @@ export function AddModal({
   onSelectMaterialsFromSource,
   onGenerateCode,
 }: AddModalProps) {
+  // 从 API 获取部门选项
+  const { options: departmentOptions } = useDepartmentOptions();
   return (
     <UnifiedModal
       isOpen={open}
@@ -85,7 +88,7 @@ export function AddModal({
             <span className="text-gray-500 w-20 shrink-0">退料部门：</span>
             <SearchableSelect
               value={form.department}
-              options={DEPARTMENTS.filter(d => d !== '全部部门').map(v => ({ value: v, label: v }))}
+              options={departmentOptions.map(v => ({ value: v, label: v }))}
               onChange={(val) => onFormChange('department', val)}
               placeholder="请选择"
               className="flex-1"

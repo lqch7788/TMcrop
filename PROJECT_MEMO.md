@@ -350,7 +350,7 @@ hongzhiyun/
 | DictionaryManagement.tsx | localStorage | API模式 | ✅ 已完成 |
 | DepartmentSettings.tsx | 硬编码数据 | API模式 | ✅ 已完成 |
 | BaseSettings.tsx | SettingsDataProvider | SettingsDataProvider | ✅ 已完成 |
-| NotificationSettings.tsx | localStorage | API模式 | ⏳ 待完成 |
+| NotificationSettings.tsx | localStorage | API模式 | ✅ 已完成 |
 
 #### 5. SettingsDataProvider
 - `src/components/common/settings/SettingsDataProvider.tsx`
@@ -383,9 +383,10 @@ hongzhiyun/
 2. 测试 DictionaryManagement 页面的完整 CRUD 功能
 3. ✅ 完成 NotificationSettings 的 API 迁移（2026-05-03）
 
-### Phase 4: 权限与流程集成 (待开始)
-- 权限系统设计与实现
-- 审批流程与权限联动
+### Phase 4: 权限与流程集成 (✅ 已完成)
+- 权限系统设计与实现 ✅
+- 审批流程与权限联动 ✅
+- 业务模块权限控制集成 ✅ (2026-05-03)
 
 ### NotificationSettings API 迁移 (2026-05-03 完成)
 **后端 API**:
@@ -410,6 +411,39 @@ hongzhiyun/
 
 **前端组件**:
 - `src/pages/NotificationSettings.tsx` - 已从 localStorage 迁移到 API 模式
+
+### Phase 4: 业务模块权限集成进度 (2026-05-03)
+
+#### 已添加权限控制的组件
+| 组件 | 权限参数 | 状态 |
+|------|---------|------|
+| HarvestTableToolbar.tsx | canCreate, canEdit, canDelete, canExport | ✅ 已完成 |
+| InspectionToolbar.tsx | canCreate, canEdit, canDelete, canExport | ✅ 已完成 |
+| AgricultureRecordTableToolbar.tsx | canDelete, canExport | ✅ 已完成 |
+| ProblemFilterToolbar.tsx | canCreate, canDispatch, canDelete, canExport | ✅ 已完成 |
+| FilterToolbar.tsx (hub) | canImport, canSmartRecommend | ✅ 已完成 |
+
+#### 权限使用方式
+```tsx
+import { useAuthPermission } from '../../../hooks/usePermission';
+
+const { can } = useAuthPermission();
+
+// 权限检查示例
+can('PROC_HARVEST', 'create')   // 采收模块 - 新增
+can('PROC_HARVEST', 'edit')     // 采收模块 - 编辑
+can('PROC_HARVEST', 'delete')   // 采收模块 - 删除
+can('PROC_HARVEST', 'export')   // 采收模块 - 导出
+can('PROC_CROP', 'view')        // 作物模块 - 查看
+```
+
+#### 待集成权限的业务模块
+- [ ] SeedSource (种源管理)
+- [ ] Seedling (育苗管理)
+- [ ] Planting (种植管理)
+- [ ] Order (订单管理)
+- [ ] TaskDispatch (任务派发)
+- [ ] CropVariety (品种管理)
 
 ### Phase 3: 硬编码消除进度 (2026-05-03)
 
