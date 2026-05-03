@@ -1,417 +1,790 @@
 /**
- * V5.0 Phase 2: 数据清洗脚本
+ * V6.0 数据清洗脚本
  * 将业务表中的字符串字段清洗为ID关联
+ *
+ * 清洗规则：
+ * 1. create_by (字符串) → create_by_id (用户ID)
+ * 2. supplier_name (字符串) → supplier_id (供应商ID)
+ * 3. warehouse_name (字符串) → warehouse_id (仓库ID)
+ * 4. greenhouse_name (字符串) → greenhouse_id (温室ID)
+ * 5. worker_name (字符串) → worker_id (工人ID)
+ * 6. inspector_name (字符串) → inspector_id (巡查员ID)
+ * 7. reporter_name (字符串) → reporter_id (报告人ID)
+ * 8. assignee_name (字符串) → assignee_id (指派人ID)
  */
 
 import { getDatabase } from './index';
 
-/**
- * 获取所有员工列表（用于名称匹配）
- */
-function getStaffList() {
-  const db = getDatabase();
-  const result = db.exec(`
-    SELECT id, oid, code, name, department_oid, department_name
-    FROM departments
-    WHERE status = 'active'
-  `);
-
-  // 也需要从其他可能的员工表中获取，这里假设员工数据在departments表中
-  // 实际可能需要从其他表如 staff, employees 等获取
+// 辅助函数：将查询结果转换为对象数组
+function queryToArray<T>(result: any[]): T[] {
   if (result.length === 0) return [];
-
   const columns = result[0].columns;
-  return result[0].values.map(row => {
+  return result[0].values.map((row: any[]) => {
     const obj: any = {};
-    columns.forEach((col, i) => {
+    columns.forEach((col: string, i: number) => {
       obj[col] = row[i];
     });
-    return obj;
+    return obj as T;
   });
+}
+
+// 清洗结果类型
+interface MigrationResult {
+  tableName: string;
+  fieldName: string;
+  success: number;
+  failed: number;
+  notFound: string[];
+}
+
+/**
+ * 获取所有用户列表（用于名称匹配）
+ */
+interface UserInfo {
+  id: string;
+  oid: string;
+  username: string;
+  real_name: string;
+}
+
+function getUserList(): UserInfo[] {
+  const db = getDatabase();
+  const result = db.exec(`
+    SELECT id, oid, username, real_name
+    FROM users
+    WHERE status = 'active'
+  `);
+  return queryToArray<UserInfo>(result);
 }
 
 /**
  * 获取所有仓库列表
  */
-function getWarehouseList() {
+interface WarehouseInfo {
+  id: string;
+  oid: string;
+  code: string;
+  name: string;
+}
+
+function getWarehouseList(): WarehouseInfo[] {
   const db = getDatabase();
   const result = db.exec(`
     SELECT id, oid, code, name
     FROM warehouses
     WHERE status = 'active'
   `);
-
-  if (result.length === 0) return [];
-
-  const columns = result[0].columns;
-  return result[0].values.map(row => {
-    const obj: any = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj;
-  });
+  return queryToArray<WarehouseInfo>(result);
 }
 
 /**
  * 获取所有供应商列表
  */
-function getSupplierList() {
+interface SupplierInfo {
+  id: string;
+  supplier_code: string;
+  supplier_name: string;
+}
+
+function getSupplierList(): SupplierInfo[] {
   const db = getDatabase();
   const result = db.exec(`
     SELECT id, supplier_code, supplier_name
     FROM suppliers
     WHERE status = 'active'
   `);
-
-  if (result.length === 0) return [];
-
-  const columns = result[0].columns;
-  return result[0].values.map(row => {
-    const obj: any = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj;
-  });
+  return queryToArray<SupplierInfo>(result);
 }
 
 /**
  * 获取所有温室列表
  */
-function getGreenhouseList() {
+interface GreenhouseInfo {
+  id: string;
+  oid: string;
+  code: string;
+  name: string;
+}
+
+function getGreenhouseList(): GreenhouseInfo[] {
   const db = getDatabase();
   const result = db.exec(`
     SELECT id, oid, code, name
     FROM greenhouses
     WHERE status = 'active'
   `);
-
-  if (result.length === 0) return [];
-
-  const columns = result[0].columns;
-  return result[0].values.map(row => {
-    const obj: any = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj;
-  });
+  return queryToArray<GreenhouseInfo>(result);
 }
 
 /**
  * 清洗种源表的createBy（字符串→ID）
  */
-export async function migrateSeedSourceCreateBy() {
+export function migrateSeedSourceCreateBy(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'seed_sources';
+  const fieldName = 'create_by';
 
-  // 获取种源数据
-  const seedSources = db.exec('SELECT id, create_by FROM seed_sources');
-  if (seedSources.length === 0) {
-    console.log('种源表为空，跳过清洗');
-    return { success: true, message: '种源表为空' };
+  const seedSources = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (seedSources.length === 0 || seedSources[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
-  // 获取员工数据（假设员工名称存储在departments表的manager_name或name中）
-  // 实际需要根据实际员工表结构调整
-  const staffList = getStaffList();
-
+  const users = getUserList();
   const columns = seedSources[0].columns;
-  const createByIndex = columns.indexOf('create_by');
+  const createByIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
 
   for (const row of seedSources[0].values) {
     const id = row[idIndex];
-    const createBy = row[createByIndex];
+    const createBy = row[createByIndex] as string;
 
     if (!createBy) continue;
 
-    // 尝试匹配员工（通过名称模糊匹配）
-    // 实际实现可能需要更复杂的匹配逻辑
-    let matchedId: string | null = null;
+    // 优先匹配 real_name，其次匹配 username
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
 
-    for (const staff of staffList) {
-      if (staff.name === createBy || staff.manager_name === createBy) {
-        matchedId = staff.id;
-        break;
-      }
-    }
-
-    if (matchedId) {
-      db.run('UPDATE seed_sources SET create_by_id = ? WHERE id = ?', [matchedId, id]);
-      migrated++;
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到员工: ${createBy}`);
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
     }
   }
 
-  console.log(`种源表createBy清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
  * 清洗种源表的supplierName（字符串→ID）
  */
-export async function migrateSeedSourceSupplier() {
+export function migrateSeedSourceSupplier(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'seed_sources';
+  const fieldName = 'supplier_name';
 
-  const seedSources = db.exec('SELECT id, supplier_name FROM seed_sources');
-  if (seedSources.length === 0) {
-    console.log('种源表为空，跳过清洗');
-    return { success: true, message: '种源表为空' };
+  const seedSources = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (seedSources.length === 0 || seedSources[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
   const suppliers = getSupplierList();
-
   const columns = seedSources[0].columns;
-  const supplierNameIndex = columns.indexOf('supplier_name');
+  const supplierNameIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
 
   for (const row of seedSources[0].values) {
     const id = row[idIndex];
-    const supplierName = row[supplierNameIndex];
+    const supplierName = row[supplierNameIndex] as string;
 
     if (!supplierName) continue;
 
     const matched = suppliers.find(s => s.supplier_name === supplierName);
 
     if (matched) {
-      db.run('UPDATE seed_sources SET supplier_id = ? WHERE id = ?', [matched.id, id]);
-      migrated++;
+      db.run(`UPDATE ${tableName} SET supplier_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到供应商: ${supplierName}`);
+      notFound.push(supplierName);
+      console.warn(`[${tableName}] 未匹配到供应商: ${supplierName}`);
     }
   }
 
-  console.log(`种源表supplierName清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
- * 清洗采收记录的仓库名称（字符串→ID）
+ * 清洗育苗表的createBy（字符串→ID）
  */
-export async function migrateHarvestWarehouse() {
+export function migrateSeedlingCreateBy(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'seedlings';
+  const fieldName = 'create_by';
 
-  const harvests = db.exec('SELECT id, warehouse_name FROM harvest_records WHERE warehouse_name IS NOT NULL');
-  if (harvests.length === 0) {
-    console.log('采收记录表为空或无仓库信息，跳过清洗');
-    return { success: true, message: '采收记录表为空' };
+  const seedlings = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (seedlings.length === 0 || seedlings[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
-  const warehouses = getWarehouseList();
-
-  const columns = harvests[0].columns;
-  const warehouseNameIndex = columns.indexOf('warehouse_name');
+  const users = getUserList();
+  const columns = seedlings[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of seedlings[0].values) {
+    const id = row[idIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗种植表的createBy（字符串→ID）
+ */
+export function migratePlantingCreateBy(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'plantings';
+  const fieldName = 'create_by';
+
+  const plantings = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (plantings.length === 0 || plantings[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = plantings[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of plantings[0].values) {
+    const id = row[idIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗采收记录表的createBy（字符串→ID）
+ */
+export function migrateHarvestCreateBy(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'harvest_records';
+  const fieldName = 'create_by';
+
+  const harvests = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (harvests.length === 0 || harvests[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = harvests[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
 
   for (const row of harvests[0].values) {
     const id = row[idIndex];
-    const warehouseName = row[warehouseNameIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗采收记录表的仓库名称（字符串→ID）
+ */
+export function migrateHarvestWarehouse(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'harvest_records';
+  const fieldName = 'warehouse_name';
+
+  const harvests = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (harvests.length === 0 || harvests[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const warehouses = getWarehouseList();
+  const columns = harvests[0].columns;
+  const warehouseNameIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of harvests[0].values) {
+    const id = row[idIndex];
+    const warehouseName = row[warehouseNameIndex] as string;
 
     if (!warehouseName) continue;
 
     const matched = warehouses.find(w => w.name === warehouseName);
 
     if (matched) {
-      db.run('UPDATE harvest_records SET warehouse_id = ? WHERE id = ?', [matched.id, id]);
-      migrated++;
+      db.run(`UPDATE ${tableName} SET warehouse_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到仓库: ${warehouseName}`);
+      notFound.push(warehouseName);
+      console.warn(`[${tableName}] 未匹配到仓库: ${warehouseName}`);
     }
   }
 
-  console.log(`采收记录表warehouseName清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
- * 清洗采收记录的采收人名称（字符串→ID数组）
+ * 清洗供应商表的createBy（字符串→ID）
  */
-export async function migrateHarvestHarvesters() {
+export function migrateSupplierCreateBy(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'suppliers';
+  const fieldName = 'create_by';
 
-  const harvests = db.exec('SELECT id, harvester_names FROM harvest_records WHERE harvester_names IS NOT NULL');
-  if (harvests.length === 0) {
-    console.log('采收记录表为空或无采收人信息，跳过清洗');
-    return { success: true, message: '采收记录表为空' };
+  const suppliers = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (suppliers.length === 0 || suppliers[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
-  const staffList = getStaffList();
-
-  const columns = harvests[0].columns;
-  const harvesterNamesIndex = columns.indexOf('harvester_names');
+  const users = getUserList();
+  const columns = suppliers[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
 
-  for (const row of harvests[0].values) {
+  for (const row of suppliers[0].values) {
     const id = row[idIndex];
-    let harvesterNames: string | string[] | null = row[harvesterNamesIndex] as string | null;
+    const createBy = row[createByIndex] as string;
 
-    if (!harvesterNames) continue;
+    if (!createBy) continue;
 
-    // 解析JSON数组
-    try {
-      if (typeof harvesterNames === 'string') {
-        harvesterNames = JSON.parse(harvesterNames);
-      }
-    } catch (e) {
-      // 如果不是JSON，尝试作为单个名称处理
-      harvesterNames = [harvesterNames as string];
-    }
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
 
-    if (!Array.isArray(harvesterNames)) {
-      harvesterNames = [harvesterNames as string];
-    }
-
-    const matchedIds: string[] = [];
-
-    for (const name of harvesterNames) {
-      const matched = staffList.find(s => s.name === name || s.manager_name === name);
-      if (matched) {
-        matchedIds.push(matched.id);
-      }
-    }
-
-    if (matchedIds.length > 0) {
-      db.run('UPDATE harvest_records SET harvester_ids = ? WHERE id = ?', [JSON.stringify(matchedIds), id]);
-      migrated++;
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到采收人: ${harvesterNames.join(', ')}`);
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
     }
   }
 
-  console.log(`采收记录表harvesterNames清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
- * 清洗巡查记录的温室名称（字符串→ID）
+ * 清洗农事任务表的createBy（字符串→ID）
  */
-export async function migrateInspectionGreenhouse() {
+export function migrateFarmTaskCreateBy(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'farm_tasks';
+  const fieldName = 'create_by';
 
-  const inspections = db.exec('SELECT id, greenhouse_name FROM inspections WHERE greenhouse_name IS NOT NULL');
-  if (inspections.length === 0) {
-    console.log('巡查记录表为空或无温室信息，跳过清洗');
-    return { success: true, message: '巡查记录表为空' };
+  const tasks = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (tasks.length === 0 || tasks[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = tasks[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of tasks[0].values) {
+    const id = row[idIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗巡查记录表的温室名称（字符串→ID）
+ */
+export function migrateInspectionGreenhouse(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'inspections';
+  const fieldName = 'greenhouse_name';
+
+  const inspections = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (inspections.length === 0 || inspections[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
   const greenhouses = getGreenhouseList();
-
   const columns = inspections[0].columns;
-  const greenhouseNameIndex = columns.indexOf('greenhouse_name');
+  const greenhouseNameIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
 
   for (const row of inspections[0].values) {
     const id = row[idIndex];
-    const greenhouseName = row[greenhouseNameIndex];
+    const greenhouseName = row[greenhouseNameIndex] as string;
 
     if (!greenhouseName) continue;
 
     const matched = greenhouses.find(g => g.name === greenhouseName);
 
     if (matched) {
-      db.run('UPDATE inspections SET greenhouse_id = ? WHERE id = ?', [matched.id, id]);
-      migrated++;
+      db.run(`UPDATE ${tableName} SET greenhouse_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到温室: ${greenhouseName}`);
+      notFound.push(greenhouseName);
+      console.warn(`[${tableName}] 未匹配到温室: ${greenhouseName}`);
     }
   }
 
-  console.log(`巡查记录表greenhouseName清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
- * 清洗问题记录的温室名称（字符串→ID）
+ * 清洗问题记录表的温室名称（字符串→ID）
  */
-export async function migrateProblemGreenhouse() {
+export function migrateProblemGreenhouse(): MigrationResult {
   const db = getDatabase();
+  const tableName = 'problems';
+  const fieldName = 'greenhouse_name';
 
-  const problems = db.exec('SELECT id, greenhouse_name FROM problems WHERE greenhouse_name IS NOT NULL');
-  if (problems.length === 0) {
-    console.log('问题记录表为空或无温室信息，跳过清洗');
-    return { success: true, message: '问题记录表为空' };
+  const problems = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (problems.length === 0 || problems[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
   }
 
   const greenhouses = getGreenhouseList();
-
   const columns = problems[0].columns;
-  const greenhouseNameIndex = columns.indexOf('greenhouse_name');
+  const greenhouseNameIndex = columns.indexOf(fieldName);
   const idIndex = columns.indexOf('id');
 
-  let migrated = 0;
+  let success = 0;
   let failed = 0;
+  const notFound: string[] = [];
 
   for (const row of problems[0].values) {
     const id = row[idIndex];
-    const greenhouseName = row[greenhouseNameIndex];
+    const greenhouseName = row[greenhouseNameIndex] as string;
 
     if (!greenhouseName) continue;
 
     const matched = greenhouses.find(g => g.name === greenhouseName);
 
     if (matched) {
-      db.run('UPDATE problems SET greenhouse_id = ? WHERE id = ?', [matched.id, id]);
-      migrated++;
+      db.run(`UPDATE ${tableName} SET greenhouse_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
     } else {
       failed++;
-      console.warn(`未匹配到温室: ${greenhouseName}`);
+      notFound.push(greenhouseName);
+      console.warn(`[${tableName}] 未匹配到温室: ${greenhouseName}`);
     }
   }
 
-  console.log(`问题记录表greenhouseName清洗完成: 成功${migrated}, 失败${failed}`);
-  return { success: true, migrated, failed };
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗人工记录表的工人名称（字符串→ID）
+ */
+export function migrateLaborWorker(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'labor_records';
+  const fieldName = 'worker_name';
+
+  const records = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (records.length === 0 || records[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = records[0].columns;
+  const workerNameIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of records[0].values) {
+    const id = row[idIndex];
+    const workerName = row[workerNameIndex] as string;
+
+    if (!workerName) continue;
+
+    const matched = users.find(u => u.real_name === workerName || u.username === workerName);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET worker_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(workerName);
+      console.warn(`[${tableName}] 未匹配到工人: ${workerName}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗作物实例表的createBy（字符串→ID）
+ */
+export function migrateCropInstanceCreateBy(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'crop_instances';
+  const fieldName = 'create_by';
+
+  const instances = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (instances.length === 0 || instances[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = instances[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of instances[0].values) {
+    const id = row[idIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
+}
+
+/**
+ * 清洗库存表的createBy（字符串→ID）
+ */
+export function migrateInventoryCreateBy(): MigrationResult {
+  const db = getDatabase();
+  const tableName = 'inventory';
+  const fieldName = 'create_by';
+
+  const inventories = db.exec(`SELECT id, ${fieldName} FROM ${tableName} WHERE ${fieldName} IS NOT NULL AND ${fieldName} != ''`);
+  if (inventories.length === 0 || inventories[0].values.length === 0) {
+    console.log(`[${tableName}] ${fieldName}为空或无数据，跳过清洗`);
+    return { tableName, fieldName, success: 0, failed: 0, notFound: [] };
+  }
+
+  const users = getUserList();
+  const columns = inventories[0].columns;
+  const createByIndex = columns.indexOf(fieldName);
+  const idIndex = columns.indexOf('id');
+
+  let success = 0;
+  let failed = 0;
+  const notFound: string[] = [];
+
+  for (const row of inventories[0].values) {
+    const id = row[idIndex];
+    const createBy = row[createByIndex] as string;
+
+    if (!createBy) continue;
+
+    const matched = users.find(u => u.real_name === createBy || u.username === createBy);
+
+    if (matched) {
+      db.run(`UPDATE ${tableName} SET create_by_id = ? WHERE id = ?`, [matched.id, id]);
+      success++;
+    } else {
+      failed++;
+      notFound.push(createBy);
+      console.warn(`[${tableName}] 未匹配到用户: ${createBy}`);
+    }
+  }
+
+  console.log(`[${tableName}] ${fieldName}清洗完成: 成功${success}, 失败${failed}`);
+  return { tableName, fieldName, success, failed, notFound };
 }
 
 /**
  * 执行所有数据清洗
  */
-export async function runAllMigrations() {
+export function runAllMigrations(): { success: boolean; results: MigrationResult[] } {
   console.log('========== 开始数据清洗 ==========');
+  console.log('清洗规则：将业务表中的字符串字段清洗为ID关联\n');
+
+  const results: MigrationResult[] = [];
 
   try {
-    await migrateSeedSourceCreateBy();
-    await migrateSeedSourceSupplier();
-    await migrateHarvestWarehouse();
-    await migrateHarvestHarvesters();
-    await migrateInspectionGreenhouse();
-    await migrateProblemGreenhouse();
+    // 1. 种源表清洗
+    results.push(migrateSeedSourceCreateBy());
+    results.push(migrateSeedSourceSupplier());
 
-    console.log('========== 数据清洗完成 ==========');
-    return { success: true };
+    // 2. 育苗表清洗
+    results.push(migrateSeedlingCreateBy());
+
+    // 3. 种植表清洗
+    results.push(migratePlantingCreateBy());
+
+    // 4. 采收记录表清洗
+    results.push(migrateHarvestCreateBy());
+    results.push(migrateHarvestWarehouse());
+
+    // 5. 供应商表清洗
+    results.push(migrateSupplierCreateBy());
+
+    // 6. 农事任务表清洗
+    results.push(migrateFarmTaskCreateBy());
+
+    // 7. 巡查记录表清洗
+    results.push(migrateInspectionGreenhouse());
+
+    // 8. 问题记录表清洗
+    results.push(migrateProblemGreenhouse());
+
+    // 9. 人工记录表清洗
+    results.push(migrateLaborWorker());
+
+    // 10. 作物实例表清洗
+    results.push(migrateCropInstanceCreateBy());
+
+    // 11. 库存表清洗
+    results.push(migrateInventoryCreateBy());
+
+    // 汇总统计
+    const totalSuccess = results.reduce((sum, r) => sum + r.success, 0);
+    const totalFailed = results.reduce((sum, r) => sum + r.failed, 0);
+
+    console.log('\n========== 数据清洗完成 ==========');
+    console.log(`总计：成功 ${totalSuccess} 条，失败 ${totalFailed} 条`);
+
+    // 输出失败详情
+    const failures = results.filter(r => r.failed > 0);
+    if (failures.length > 0) {
+      console.log('\n失败详情：');
+      failures.forEach(f => {
+        console.log(`  - [${f.tableName}] ${f.fieldName}: 未匹配到 ${f.notFound.join(', ')}`);
+      });
+    }
+
+    return { success: true, results };
   } catch (error) {
     console.error('数据清洗失败:', error);
-    return { success: false, error };
+    return { success: false, results };
   }
 }
 
 export default {
+  // 单个清洗函数
   migrateSeedSourceCreateBy,
   migrateSeedSourceSupplier,
+  migrateSeedlingCreateBy,
+  migratePlantingCreateBy,
+  migrateHarvestCreateBy,
   migrateHarvestWarehouse,
-  migrateHarvestHarvesters,
+  migrateSupplierCreateBy,
+  migrateFarmTaskCreateBy,
   migrateInspectionGreenhouse,
   migrateProblemGreenhouse,
+  migrateLaborWorker,
+  migrateCropInstanceCreateBy,
+  migrateInventoryCreateBy,
+  // 批量清洗
   runAllMigrations,
 };

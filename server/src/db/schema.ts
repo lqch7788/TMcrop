@@ -210,9 +210,11 @@ export function initializeDatabase() {
       code TEXT NOT NULL,
       description TEXT,
       module TEXT,
+      business_type TEXT,
       trigger_condition TEXT,
       nodes TEXT,
       status TEXT DEFAULT 'active',
+      version INTEGER DEFAULT 1,
       created_at TEXT,
       updated_at TEXT
     )
@@ -248,6 +250,8 @@ export function initializeDatabase() {
       notification_sent INTEGER DEFAULT 0,
       amount TEXT,
       materials TEXT,
+      workflow_id TEXT,
+      workflow_name TEXT,
       created_at TEXT,
       updated_at TEXT
     )
@@ -692,6 +696,32 @@ export function initializeDatabase() {
   // 为作物实例表添加创建者ID关联
   try {
     db.run(`ALTER TABLE crop_instances ADD COLUMN create_by_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // ========== V6.0 Phase 2: 审批流程增强字段 ==========
+
+  // 为审批工作流表添加业务类型和版本字段
+  try {
+    db.run(`ALTER TABLE approval_workflows ADD COLUMN business_type TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE approval_workflows ADD COLUMN version INTEGER DEFAULT 1`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为审批单表添加工 workflow_id 和 workflow_name 字段
+  try {
+    db.run(`ALTER TABLE approvals ADD COLUMN workflow_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE approvals ADD COLUMN workflow_name TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }

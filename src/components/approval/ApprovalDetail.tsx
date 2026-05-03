@@ -14,6 +14,9 @@ interface ApprovalDetailProps {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onClose?: () => void;
+  // 权限控制 props，默认都为 true
+  canApprove?: boolean;
+  canReject?: boolean;
 }
 
 export function ApprovalDetail({
@@ -22,6 +25,8 @@ export function ApprovalDetail({
   onApprove,
   onReject,
   onClose,
+  canApprove = true,
+  canReject = true,
 }: ApprovalDetailProps) {
   const getStatusIcon = (status: ApprovalStatus) => {
     switch (status) {
@@ -242,7 +247,7 @@ export function ApprovalDetail({
       {/* 操作按钮 */}
       {showActions && approval.status === ApprovalStatus.PENDING && (
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          {onReject && (
+          {onReject && canReject && (
             <button
               onClick={() => onReject(approval.id)}
               className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
@@ -250,7 +255,7 @@ export function ApprovalDetail({
               拒绝
             </button>
           )}
-          {onApprove && (
+          {onApprove && canApprove && (
             <button
               onClick={() => onApprove(approval.id)}
               className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"

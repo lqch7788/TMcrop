@@ -15,6 +15,7 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import { UserSelect } from '../../../common/settings/UserSelect';
 import { GreenhouseSelect } from '../../../common/settings/GreenhouseSelect';
 import { WarehouseSelect } from '../../../common/settings/WarehouseSelect';
+import { useDictionaries } from '../../../common/settings/SettingsDataProvider';
 
 interface ProductDetail {
   productCode: string;
@@ -66,13 +67,6 @@ interface AddModalProps {
   errors: Record<string, string>;
 }
 
-// 品质等级选项
-const GRADE_OPTIONS = [
-  { value: 'A', label: 'A级' },
-  { value: 'B', label: 'B级' },
-  { value: 'C', label: 'C级' },
-];
-
 export const AddModal: React.FC<AddModalProps> = ({
   isOpen,
   onClose,
@@ -91,6 +85,11 @@ export const AddModal: React.FC<AddModalProps> = ({
 }) => {
   // 获取当前登录用户
   const currentOperator = getCurrentUsername() || '未知用户';
+
+  // 获取数据字典（品质等级、采收类型等）
+  const { getDictItems } = useDictionaries();
+  const qualityGradeOptions = getDictItems('quality_grade');
+  const harvestTypeOptions = getDictItems('harvest_type');
 
   // 获取选中的批次信息
   const selectedBatch = cropBatches.find(b => b.batchCode === addForm.batchCode);
@@ -276,9 +275,9 @@ export const AddModal: React.FC<AddModalProps> = ({
             }}
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="product">成品采收</option>
-            <option value="seed">种子采收</option>
-            <option value="seedling">种苗采收</option>
+            {harvestTypeOptions.map(t => (
+              <option key={t.code} value={t.code}>{t.name}</option>
+            ))}
           </select>
           <p className="mt-1 text-xs text-gray-400">种子/种苗采收将入库到相应库存</p>
         </div>
@@ -465,8 +464,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                           <option value="">等级</option>
-                          {GRADE_OPTIONS.map(g => (
-                            <option key={g.value} value={g.value}>{g.label}</option>
+                          {qualityGradeOptions.map(g => (
+                            <option key={g.code} value={g.code}>{g.name}</option>
                           ))}
                         </select>
                       </td>
