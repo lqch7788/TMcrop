@@ -110,8 +110,13 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     try {
       const response = await fetch(API_BASE);
       const result = await response.json();
-      if (result.success) {
-        dispatch({ type: 'SET_APPROVALS', payload: result.data || [] });
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        // API 返回有效数据
+        dispatch({ type: 'SET_APPROVALS', payload: result.data });
+      } else if (result.success && Array.isArray(result.data) && result.data.length === 0) {
+        // API 返回空数据，使用 mock 数据（数据库可能为空）
+        console.warn('API returned empty approvals, using mock data');
+        dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
       } else {
         console.warn('Failed to load approvals from API:', result.error);
         // 如果 API 加载失败，使用 mock 数据
