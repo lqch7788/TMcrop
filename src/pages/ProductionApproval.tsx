@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye
+  Calendar, Warehouse, Eye, Package, RefreshCw
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType } from '../types/approval';
@@ -18,17 +18,22 @@ import { ApprovalStatus, ApprovalType } from '../types/approval';
 export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
 
-  const [activeTab, setActiveTab] = useState<'tech' | 'plan' | 'harvest'>('tech');
+  const [activeTab, setActiveTab] = useState<
+    'tech' | 'plan' | 'batch' | 'batch_change' | 'batch_void' | 'harvest'
+  >('tech');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // Tab配置
+  // Tab配置 - 生产类审批
   const tabs = [
-    { key: 'tech', label: '技术方案审批', icon: FileText, path: '/tech-solution', types: [] as ApprovalType[] },
-    { key: 'plan', label: '生产计划审批', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
-    { key: 'harvest', label: '采收申请审批', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
+    { key: 'tech', label: '技术方案', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
+    { key: 'plan', label: '生产计划', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
+    { key: 'batch', label: '生产批次', icon: Package, path: '/production', types: [ApprovalType.PRODUCTION_BATCH] },
+    { key: 'batch_change', label: '批次变更', icon: RefreshCw, path: '/production', types: [ApprovalType.BATCH_CHANGE] },
+    { key: 'batch_void', label: '批次作废', icon: XCircle, path: '/production', types: [ApprovalType.BATCH_VOID] },
+    { key: 'harvest', label: '采收申请', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
   ] as const;
 
   // 根据Tab类型筛选数据

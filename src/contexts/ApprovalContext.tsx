@@ -19,13 +19,7 @@ import { approvals as mockApprovals } from '../data/mockData';
 import {
   executeApprovalIntegration,
   registerApprovalIntegration,
-  materialApprovalHandler,
-  purchaseApprovalHandler,
-  productionApprovalHandler,
-  leaveApprovalHandler,
-  harvestApprovalHandler,
-  seedSourceSupplementaryHandler,
-  seedlingSupplementaryHandler,
+  registerAllHandlers,
 } from '../types/approvalIntegration';
 
 // ============================================================
@@ -131,13 +125,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
 
   // 注册业务联动处理器（仅注册一次）
   useEffect(() => {
-    registerApprovalIntegration(materialApprovalHandler);
-    registerApprovalIntegration(purchaseApprovalHandler);
-    registerApprovalIntegration(productionApprovalHandler);
-    registerApprovalIntegration(leaveApprovalHandler);
-    registerApprovalIntegration(harvestApprovalHandler);
-    registerApprovalIntegration(seedSourceSupplementaryHandler);
-    registerApprovalIntegration(seedlingSupplementaryHandler);
+    registerAllHandlers();
   }, []);
 
   // 组件挂载时从 API 加载数据

@@ -1,117 +1,105 @@
 // ============================================================
-// 审批中心主页 - 重构版本
+// 审批中心 - 仪表盘概览页面
 // 文件路径：src/pages/Approvals.tsx
-// 使用统一数据层：ApprovalContext
+// 功能：统计概览 + 快捷入口链接到各审批子页面
 // ============================================================
 
-import { useState, useMemo } from 'react';
-import { Search, CheckCircle, XCircle, Clock, ChevronRight, Filter, AlertTriangle, X } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
-import { useAuthPermission } from '../hooks/usePermission';
-import { ApprovalStatus, ApprovalType, Approval, MaterialItem } from '../types/approval';
+import { Link } from 'react-router-dom';
+import {
+  ClipboardList,
+  ShoppingCart,
+  RotateCcw,
+  Factory,
+  Users,
+  Sprout,
+  FileText,
+  Calendar,
+  Warehouse,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  ChevronRight,
+  LayoutGrid,
+  ArrowRightLeft,
+  UserPlus,
+  Coins,
+  ScrollText,
+  Construction,
+  AlertCircle,
+  CheckSquare,
+  Bell,
+  Target,
+} from 'lucide-react';
 
 export default function Approvals() {
-  const {
-    approvals,
-    stats,
-    filters,
-    setFilters,
-    approve,
-    reject,
-    partiallyApprove,
-    getApprovalById,
-  } = useApproval();
+  const { stats } = useApproval();
 
-  // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
-  const canApprove = true;
-  const canReject = true;
-  const canExport = true;
+  // 快捷入口配置
+  const quickEntries = [
+    {
+      group: '业务审批',
+      icon: ClipboardList,
+      color: 'blue',
+      entries: [
+        { label: '领料审批', path: '/material-approval', desc: '物资/领料申请审批' },
+        { label: '退料审批', path: '/material-approval?tab=return', desc: '退料单审批' },
+        { label: '采购审批', path: '/material-approval?tab=purchase', desc: '采购申请审批' },
+        { label: '物料入库', path: '/business-approval?type=material_inbound', desc: '物料入库审批' },
+        { label: '库存调拨', path: '/business-approval?type=material_transfer', desc: '库存调拨审批' },
+        { label: '订单创建', path: '/business-approval?type=order_create', desc: '订单创建审批' },
+        { label: '订单变更', path: '/business-approval?type=order_change', desc: '订单变更审批' },
+      ],
+    },
+    {
+      group: '生产审批',
+      icon: Factory,
+      color: 'emerald',
+      entries: [
+        { label: '技术方案', path: '/production-approval?tab=tech', desc: '技术方案审批' },
+        { label: '生产计划', path: '/production-approval?tab=plan', desc: '生产计划审批' },
+        { label: '采收申请', path: '/production-approval?tab=harvest', desc: '采收申请审批' },
+      ],
+    },
+    {
+      group: '农事审批',
+      icon: Sprout,
+      color: 'green',
+      entries: [
+        { label: '任务派发', path: '/farm-approval?tab=task_dispatch', desc: '农事任务派发审批' },
+        { label: '任务变更', path: '/farm-approval?tab=task_change', desc: '任务变更审批' },
+        { label: '巡查问题', path: '/farm-approval?tab=inspection', desc: '巡查问题审批' },
+        { label: '问题整改', path: '/farm-approval?tab=resolve', desc: '问题整改审批' },
+      ],
+    },
+    {
+      group: '指标/预算审批',
+      icon: BarChart3,
+      color: 'purple',
+      entries: [
+        { label: '指标发布', path: '/indicator-budget-approval?tab=indicator', desc: '指标发布审批' },
+        { label: '指标调整', path: '/indicator-budget-approval?tab=indicator_adjust', desc: '指标调整审批' },
+        { label: '预算编制', path: '/indicator-budget-approval?tab=budget_create', desc: '预算编制审批' },
+        { label: '预算调整', path: '/indicator-budget-approval?tab=budget_adjust', desc: '预算调整审批' },
+      ],
+    },
+    {
+      group: 'HR审批',
+      icon: Users,
+      color: 'orange',
+      entries: [
+        { label: 'HR审批中心', path: '/hr-approval', desc: '请假/加班/离职等HR审批' },
+      ],
+    },
+  ];
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showPartialModal, setShowPartialModal] = useState(false);
-  const [partialApproval, setPartialApproval] = useState<Approval | null>(null);
-  const [partialQuantities, setPartialQuantities] = useState<Record<string, number>>({});
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-      case ApprovalStatus.APPROVED:
-        return <CheckCircle className="w-5 h-5 text-emerald-500" />;
-      case 'rejected':
-      case ApprovalStatus.REJECTED:
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return <Clock className="w-5 h-5 text-yellow-500" />;
-    }
-  };
-
-  // 根据Tab和搜索筛选审批列表
-  const filteredApprovals = useMemo(() => {
-    let result = approvals;
-
-    // Tab筛选
-    if (activeTab !== 'all') {
-      if (activeTab === 'pending') {
-        result = result.filter(a => a.status === ApprovalStatus.PENDING);
-      } else if (activeTab === 'approved') {
-        result = result.filter(a =>
-          a.status === ApprovalStatus.APPROVED || a.status === ApprovalStatus.PARTIALLY_APPROVED
-        );
-      } else if (activeTab === 'rejected') {
-        result = result.filter(a => a.status === ApprovalStatus.REJECTED);
-      }
-    }
-
-    // 搜索筛选
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(a =>
-        a.title.toLowerCase().includes(term) ||
-        a.applicantName.toLowerCase().includes(term) ||
-        a.code.toLowerCase().includes(term)
-      );
-    }
-
-    return result;
-  }, [approvals, activeTab, searchTerm]);
-
-  // 统计待审批数量
-  const pendingCount = useMemo(() => {
-    return approvals.filter(a => a.status === ApprovalStatus.PENDING).length;
-  }, [approvals]);
-
-  const handleApprove = (id: string) => {
-    approve(id);
-  };
-
-  const handleReject = (id: string) => {
-    reject(id, '审批拒绝');
-  };
-
-  const handlePartialApprove = (approval: Approval) => {
-    // 初始化部分数量为申请数量
-    const initialQuantities: Record<string, number> = {};
-    if (approval.materials) {
-      approval.materials.forEach((mat: MaterialItem) => {
-        initialQuantities[mat.materialId || mat.materialCode] = mat.requestedQuantity;
-      });
-    }
-    setPartialApproval(approval);
-    setPartialQuantities(initialQuantities);
-    setShowPartialModal(true);
-  };
-
-  const confirmPartialApprove = () => {
-    if (!partialApproval) return;
-
-    // 使用 materialId 作为 key（兼容不同数据结构）
-    partiallyApprove(partialApproval.id, partialQuantities);
-
-    setShowPartialModal(false);
-    setPartialApproval(null);
-    setPartialQuantities({});
+  const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
+    blue: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'text-blue-600', hover: 'hover:bg-blue-100' },
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'text-emerald-600', hover: 'hover:bg-emerald-100' },
+    green: { bg: 'bg-green-50', border: 'border-green-200', icon: 'text-green-600', hover: 'hover:bg-green-100' },
+    purple: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-600', hover: 'hover:bg-purple-100' },
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', icon: 'text-orange-600', hover: 'hover:bg-orange-100' },
   };
 
   return (
@@ -121,232 +109,97 @@ export default function Approvals() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">审批中心</h1>
-            <p className="text-gray-500">管理各类审批单据</p>
+            <p className="text-gray-500 mt-1">审批管理统一入口</p>
           </div>
-          <div className="flex gap-3">
-            <div className="px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-              <span className="text-yellow-700">待审批 </span>
-              <span className="font-semibold text-yellow-800">{stats.pending}</span>
+          <Link
+            to="/my-applications"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+          >
+            <FileText className="w-4 h-4" />
+            我的申请
+          </Link>
+        </div>
+      </div>
+
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-yellow-600" />
             </div>
-            <div className="px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
-              <span className="text-emerald-700">已通过 </span>
-              <span className="font-semibold text-emerald-800">{stats.approved}</span>
+            <div>
+              <p className="text-sm text-gray-500">待审批</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
             </div>
-            <div className="px-3 py-1 bg-red-50 border border-red-200 rounded-lg text-sm">
-              <span className="text-red-700">已拒绝 </span>
-              <span className="font-semibold text-red-800">{stats.rejected}</span>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">已通过</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">已拒绝</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <LayoutGrid className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">全部</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
-        {(['pending', 'approved', 'rejected', 'all'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${
-              activeTab === tab
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {tab === 'pending' ? '待审批' : tab === 'approved' ? '已通过' : tab === 'rejected' ? '已拒绝' : '全部'}
-            {tab === 'pending' && (
-              <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                {pendingCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="搜索审批单标题、申请人..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-      </div>
-
-      {/* Approval List */}
-      <div className="space-y-3">
-        {filteredApprovals.map(approval => (
-          <div
-            key={approval.id}
-            className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                {getStatusIcon(approval.status)}
-                <div>
-                  <h3 className="font-semibold text-gray-900">{approval.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {approval.applicantName} · {approval.applicantDepartment} · {approval.applyDate}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
-                      {approval.typeName}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      审批进度：{approval.currentStep}/{approval.totalSteps}
-                    </span>
-                  </div>
+      {/* 快捷入口 */}
+      <div className="space-y-4">
+        {quickEntries.map(group => {
+          const colors = colorMap[group.color] || colorMap.blue;
+          return (
+            <div key={group.group} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center`}>
+                  <group.icon className={`w-4 h-4 ${colors.icon}`} />
                 </div>
+                <h2 className="font-semibold text-gray-900">{group.group}</h2>
               </div>
-              <button className="text-emerald-600 hover:text-emerald-700 text-sm font-medium flex items-center gap-1">
-                查看详情 <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-            {approval.status === ApprovalStatus.PENDING && (
-              <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-                {canApprove && (
-                  <>
-                    <button
-                      onClick={() => handleApprove(approval.id)}
-                      className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
-                    >
-                      通过
-                    </button>
-                    <button
-                      onClick={() => handlePartialApprove(approval)}
-                      className="h-10 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
-                    >
-                      部分通过
-                    </button>
-                  </>
-                )}
-                {canReject && (
-                  <button
-                    onClick={() => handleReject(approval.id)}
-                    className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                {group.entries.map(entry => (
+                  <Link
+                    key={entry.path + entry.label}
+                    to={entry.path}
+                    className={`flex flex-col gap-1 p-3 rounded-lg border ${colors.border} ${colors.bg} ${colors.hover} transition-colors group`}
                   >
-                    拒绝
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        {filteredApprovals.length === 0 && (
-          <div className="bg-white rounded-xl p-12 text-center">
-            <p className="text-gray-500">暂无审批单据</p>
-          </div>
-        )}
-      </div>
-
-      {/* 部分通过弹窗 */}
-      {showPartialModal && partialApproval && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
-              <h3 className="text-lg font-semibold text-white">部分通过审批</h3>
-              <button
-                onClick={() => setShowPartialModal(false)}
-                className="text-white hover:bg-blue-700 p-1 rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <div className="text-sm text-gray-500 mb-1">领料单号</div>
-                <div className="font-medium text-gray-900">{partialApproval.code}</div>
-              </div>
-              <div className="mb-4">
-                <div className="text-sm text-gray-500 mb-1">标题</div>
-                <div className="font-medium text-gray-900">{partialApproval.title}</div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium text-gray-700 mb-2">物料明细 - 请填写实际发放数量</div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料编码</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">申请数量</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">实际发放</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {(partialApproval.materials || []).map((mat: MaterialItem) => {
-                        const key = mat.materialId || mat.materialCode;
-                        const insufficient = (partialQuantities[key] || 0) < mat.requestedQuantity;
-                        return (
-                          <tr key={key}>
-                            <td className="px-3 py-2 text-gray-900">{mat.materialCode}</td>
-                            <td className="px-3 py-2 text-gray-900">{mat.materialName}</td>
-                            <td className="px-3 py-2 text-right text-gray-900">{mat.requestedQuantity}</td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max={mat.requestedQuantity}
-                                value={partialQuantities[key] || 0}
-                                onChange={(e) =>
-                                  setPartialQuantities({
-                                    ...partialQuantities,
-                                    [key]: Number(e.target.value),
-                                  })
-                                }
-                                className={`w-20 h-8 px-2 border rounded text-right text-sm focus:outline-none focus:border-blue-500 ${
-                                  insufficient ? 'border-amber-400 bg-amber-50' : 'border-gray-200'
-                                }`}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 提示信息 */}
-              {Object.keys(partialQuantities).some((key) => {
-                const mat = partialApproval.materials?.find(
-                  (m: MaterialItem) => (m.materialId || m.materialCode) === key
-                );
-                return mat && (partialQuantities[key] || 0) < mat.requestedQuantity;
-              }) && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium">部分物料数量不足</p>
-                      <p className="mt-1">系统将自动生成新的待审批领料单，包含不足数量的物料。</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900 text-sm">{entry.label}</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowPartialModal(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={confirmPartialApprove}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                >
-                  确认部分通过
-                </button>
+                    <p className="text-xs text-gray-500">{entry.desc}</p>
+                  </Link>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
