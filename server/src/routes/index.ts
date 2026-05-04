@@ -27,6 +27,8 @@ import approvalRouter from './approval';
 import operationLogRouter from './operationLog';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
+import monitoringRouter from './monitoring';
+import syncRouter from './sync';
 
 const router = Router();
 
@@ -101,6 +103,12 @@ router.use('/crop-orders', cropOrderRouter);
 
 // 生产计划路由
 router.use('/production-plans', productionPlanRouter);
+
+// 性能监控路由
+router.use('/monitoring', monitoringRouter);
+
+// 数据同步路由
+router.use('/sync', syncRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {
