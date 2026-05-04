@@ -18,7 +18,7 @@ const router = Router();
  */
 router.get('/organizations', (req, res) => {
   const db = getDatabase();
-  const { rows = -1, id, sort = 'sort_number', order = 'asc' } = req.query;
+  const { rows = -1, id, sort = 'sort_order', order = 'asc' } = req.query;
 
   let sql = 'SELECT * FROM organizations WHERE status = ?';
   const bindings: (string | number)[] = ['active'];
@@ -220,15 +220,14 @@ router.post('/roles', (req, res) => {
       for (const role of inserted) {
         const oid = role.oid || `ROLE_${Date.now()}`;
         db.run(
-          `INSERT INTO roles (oid, org_oid, aid, name, description, sort_number, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO roles (oid, org_oid, aid, name, description, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             oid,
             role.orgOid,
             role.aid,
             role.name,
             role.description || null,
-            role.sortNumber || 0,
             'active',
             now,
             now
@@ -242,14 +241,13 @@ router.post('/roles', (req, res) => {
       for (const role of updated) {
         db.run(
           `UPDATE roles SET org_oid = ?, aid = ?, name = ?, description = ?,
-            sort_number = ?, updated_at = ?
+            updated_at = ?
            WHERE oid = ?`,
           [
             role.orgOid,
             role.aid,
             role.name,
             role.description || null,
-            role.sortNumber || 0,
             now,
             role.oid
           ]
@@ -451,7 +449,7 @@ router.get('/users/:userOid/roles', (req, res) => {
  */
 router.get('/processes', (req, res) => {
   const db = getDatabase();
-  const { rows = -1, id, appType, sort = 'sort_number', order = 'asc' } = req.query;
+  const { rows = -1, id, appType, sort = 'sort_order', order = 'asc' } = req.query;
 
   let sql = 'SELECT * FROM processes WHERE status = ?';
   const bindings: (string | number)[] = ['active'];
