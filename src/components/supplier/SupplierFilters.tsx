@@ -1,7 +1,9 @@
 // 供应商筛选组件
+import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { supplierCategories, getSupplierTypeName } from './data';
+import { useSettingsData } from '../common/settings/SettingsDataProvider';
 
 interface SupplierFiltersProps {
   filters: SupplierFiltersState;
@@ -10,9 +12,15 @@ interface SupplierFiltersProps {
 }
 
 export default function SupplierFilters({ filters, onFilterChange, onReset }: SupplierFiltersProps) {
+  // 从全局设置数据获取供应商属性字典
+  const { dictionaries } = useSettingsData();
+  const attributeOptions = useMemo(() => {
+    const attrs = dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active');
+    return ['全部', ...attrs.map(a => a.name)];
+  }, [dictionaries]);
+
   const typeOptions = ['全部', 'SP', 'FE', 'PP', 'EQ', 'FA', 'IR', 'OP', 'PH', 'TS', 'UT', 'OT'];
   const statusOptions = ['全部', '合作中', '暂停', '终止'];
-  const attributeOptions = ['全部', '企业', '个体户', '事业单位'];
   const organizationOptions = ['全部', '宁波帮帮忙公司', '成都帮帮您公司'];
 
   return (

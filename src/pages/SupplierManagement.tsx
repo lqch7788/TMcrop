@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Plus, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronDown, X, Hash, AlertTriangle, Package, Trash2 } from 'lucide-react';
 import SupplierExportModal from '../components/supplier/SupplierExportModal';
@@ -7,9 +7,15 @@ import SupplierDetailModal from '../components/supplier/SupplierDetailModal';
 import SupplierBatchEditModal from '../components/supplier/SupplierBatchEditModal';
 import { Supplier } from '../components/supplier/types';
 import { supplierCategories, getSupplierTypeName, suppliers } from '../components/supplier/data';
+import { useSettingsData } from '../components/common/settings/SettingsDataProvider';
 
 export default function SupplierManagement() {
   const navigate = useNavigate();
+  const { dictionaries } = useSettingsData();
+  const supplierAttributeOptions = useMemo(() =>
+    dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active'),
+    [dictionaries]
+  );
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -933,12 +939,9 @@ export default function SupplierManagement() {
                     className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
                   >
                     <option value="">请选择</option>
-                    <option value="个人">个人</option>
-                    <option value="个体户">个体户</option>
-                    <option value="企业">企业</option>
-                    <option value="团体">团体</option>
-                    <option value="事业单位">事业单位</option>
-                    <option value="网络平台">网络平台</option>
+                    {supplierAttributeOptions.map((option) => (
+                      <option key={option.code} value={option.name}>{option.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -1356,12 +1359,9 @@ export default function SupplierManagement() {
                       className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
                     >
                       <option value="">请选择</option>
-                      <option value="个人">个人</option>
-                      <option value="个体户">个体户</option>
-                      <option value="企业">企业</option>
-                      <option value="团体">团体</option>
-                      <option value="事业单位">事业单位</option>
-                      <option value="网络平台">网络平台</option>
+                      {supplierAttributeOptions.map((option) => (
+                        <option key={option.code} value={option.name}>{option.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

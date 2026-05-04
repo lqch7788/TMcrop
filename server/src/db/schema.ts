@@ -82,7 +82,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 温室表
+  // 温室/基地表 - 扩展字段支持园区导览
   db.run(`
     CREATE TABLE IF NOT EXISTS greenhouses (
       id TEXT PRIMARY KEY,
@@ -94,6 +94,19 @@ export function initializeDatabase() {
       location TEXT,
       base_oid TEXT,
       base_name TEXT,
+      company_id TEXT,
+      company_name TEXT,
+      lng REAL DEFAULT 0,
+      lat REAL DEFAULT 0,
+      crop TEXT,
+      growth_day INTEGER DEFAULT 0,
+      manager TEXT,
+      phone TEXT,
+      soil_type TEXT,
+      ph REAL DEFAULT 0,
+      intro TEXT,
+      greenhouse_count INTEGER DEFAULT 0,
+      field_area REAL DEFAULT 0,
       status TEXT DEFAULT 'active',
       created_at TEXT,
       updated_at TEXT

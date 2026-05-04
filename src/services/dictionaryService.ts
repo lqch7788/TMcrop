@@ -23,6 +23,105 @@ export interface Dictionary {
 }
 
 // ============================================
+// 模块定义
+// ============================================
+
+export interface DictionaryModule {
+  code: string;
+  name: string;
+  icon: string;
+  categories: string[];
+}
+
+// 数据字典模块配置
+export const DICTIONARY_MODULES: DictionaryModule[] = [
+  {
+    code: 'labor',
+    name: '人工管理',
+    icon: 'Users',
+    categories: [
+      'approval_status', 'attendance_status', 'contract_type', 'contract_status',
+      'employee_status', 'gender', 'insurance_type', 'leave_type',
+      'onboarding_status', 'overtime_type', 'position_level', 'position_type',
+      'recruitment_source', 'resignation_reason', 'resignation_type', 'return_status',
+      'salary_status', 'skill_status', 'temp_worker_source', 'temp_worker_status',
+      'worker_status', 'worker_type'
+    ]
+  },
+  {
+    code: 'supply',
+    name: '供应链管理',
+    icon: 'Truck',
+    categories: [
+      'material_status', 'material_type', 'purchase_type',
+      'supplier_attribute', 'supplier_status', 'supplier_type'
+    ]
+  },
+  {
+    code: 'production',
+    name: '生产种植',
+    icon: 'Sprout',
+    categories: [
+      'crop_category', 'operator', 'planting_area', 'planting_mode',
+      'planting_status', 'process_type', 'propagation_multiple',
+      'seedling_plan_type', 'seedling_site', 'seedling_type', 'survival_rate_target'
+    ]
+  },
+  {
+    code: 'seed',
+    name: '种源管理',
+    icon: 'Flower2',
+    categories: ['source_origin', 'source_type']
+  },
+  {
+    code: 'inventory',
+    name: '库存管理',
+    icon: 'Warehouse',
+    categories: [
+      'harvest_status', 'harvest_type', 'inbound_type',
+      'target_inventory', 'warehouse_location'
+    ]
+  },
+  {
+    code: 'facility',
+    name: '设备设施',
+    icon: 'Building',
+    categories: ['greenhouse_status', 'work_zone']
+  },
+  {
+    code: 'quality',
+    name: '质量管理',
+    icon: 'CheckCircle',
+    categories: ['quality_grade']
+  },
+  {
+    code: 'task',
+    name: '任务通用',
+    icon: 'ClipboardList',
+    categories: ['cost_category', 'performance_status', 'task_priority', 'task_status']
+  }
+];
+
+// 获取分类所属的模块
+export function getCategoryModule(category: string): string | null {
+  for (const mod of DICTIONARY_MODULES) {
+    if (mod.categories.includes(category)) {
+      return mod.code;
+    }
+  }
+  return null;
+}
+
+// 按模块分组获取分类
+export function getCategoriesByModule(): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const mod of DICTIONARY_MODULES) {
+    result[mod.code] = mod.categories;
+  }
+  return result;
+}
+
+// ============================================
 // 分类中文翻译映射
 // ============================================
 
@@ -364,6 +463,7 @@ export async function saveDictionaries(data: {
 }): Promise<SaveResult<Dictionary>> {
   // 转换字段格式：前端 -> 后端
   const convertToBackend = (dict: Dictionary) => ({
+    id: dict.id,
     category_code: dict.category,
     dict_code: dict.code,
     dict_label: dict.name,

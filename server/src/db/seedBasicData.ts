@@ -69,6 +69,24 @@ export interface PositionSeed {
 }
 
 /**
+ * 班组数据结构
+ */
+export interface TeamSeed {
+  id: string;
+  oid: string;
+  teamCode: string;
+  teamName: string;
+  departmentOid: string;
+  departmentName: string;
+  leaderId: string;
+  leaderName: string;
+  shiftType: string;
+  memberCount: number;
+  status: string;
+  createTime: string;
+}
+
+/**
  * 字典分类数据结构
  */
 export interface DictionaryCategorySeed {
@@ -386,6 +404,18 @@ const defaultPositions: PositionSeed[] = [
 ];
 
 // ============================================
+// 默认班组数据
+// ============================================
+const defaultTeams: TeamSeed[] = [
+  { id: 'T001', oid: 'TEAM001', teamCode: 'PRD-A', teamName: '生产A组', departmentOid: 'DEPT001', departmentName: '生产部', leaderId: 'U002', leaderName: '李明辉', shiftType: 'day', memberCount: 8, status: 'active', createTime: new Date().toISOString() },
+  { id: 'T002', oid: 'TEAM002', teamCode: 'PRD-B', teamName: '生产B组', departmentOid: 'DEPT001', departmentName: '生产部', leaderId: 'U003', leaderName: '张晓燕', shiftType: 'day', memberCount: 7, status: 'active', createTime: new Date().toISOString() },
+  { id: 'T003', oid: 'TEAM003', teamCode: 'PRD-C', teamName: '生产C组', departmentOid: 'DEPT001', departmentName: '生产部', leaderId: 'U005', leaderName: '陈建国', shiftType: 'night', memberCount: 6, status: 'active', createTime: new Date().toISOString() },
+  { id: 'T004', oid: 'TEAM004', teamCode: 'TEC-001', teamName: '技术组', departmentOid: 'DEPT002', departmentName: '技术部', leaderId: 'U004', leaderName: '赵文静', shiftType: 'day', memberCount: 5, status: 'active', createTime: new Date().toISOString() },
+  { id: 'T005', oid: 'TEAM005', teamCode: 'WH-001', teamName: '仓储A组', departmentOid: 'DEPT003', departmentName: '仓储部', leaderId: 'U010', leaderName: '孙丽娜', shiftType: 'day', memberCount: 4, status: 'active', createTime: new Date().toISOString() },
+  { id: 'T006', oid: 'TEAM006', teamCode: 'WH-002', teamName: '仓储B组', departmentOid: 'DEPT003', departmentName: '仓储部', leaderId: 'U011', leaderName: '周建设', shiftType: 'day', memberCount: 4, status: 'active', createTime: new Date().toISOString() },
+];
+
+// ============================================
 // 字典分类数据（V5.0新增）
 // ============================================
 const defaultDictionaryCategories: DictionaryCategorySeed[] = [
@@ -478,15 +508,6 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D120', categoryCode: 'purchase_type', dictCode: 'production', dictLabel: '生产性采购', dictValue: 'production', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D121', categoryCode: 'purchase_type', dictCode: 'emergency', dictLabel: '紧急采购', dictValue: 'emergency', color: 'red', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'D122', categoryCode: 'purchase_type', dictCode: 'daily', dictLabel: '日常采购', dictValue: 'daily', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
-  // 种源类型
-  { id: 'D130', categoryCode: 'source_type', dictCode: 'seed', dictLabel: '种子', dictValue: 'seed', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D131', categoryCode: 'source_type', dictCode: 'seedling', dictLabel: '种苗', dictValue: 'seedling', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D132', categoryCode: 'source_type', dictCode: 'cutting', dictLabel: '扦插苗', dictValue: 'cutting', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'D133', categoryCode: 'source_type', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'D134', categoryCode: 'source_type', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
-  { id: 'D135', categoryCode: 'source_type', dictCode: 'split', dictLabel: '分株苗', dictValue: 'split', color: 'yellow', sortOrder: 6, isDefault: 0, status: 'active' },
-  { id: 'D136', categoryCode: 'source_type', dictCode: 'bulb', dictLabel: '种球', dictValue: 'bulb', color: 'pink', sortOrder: 7, isDefault: 0, status: 'active' },
-  { id: 'D137', categoryCode: 'source_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 8, isDefault: 0, status: 'active' },
   // 来源途径
   { id: 'D140', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D141', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '内部自繁', dictValue: 'self_produced', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -817,6 +838,37 @@ export function seedPositions() {
 }
 
 /**
+ * 导入班组数据
+ */
+export function seedTeams() {
+  const db = getDatabase();
+
+  for (const team of defaultTeams) {
+    db.run(`
+      INSERT OR REPLACE INTO teams
+      (id, oid, team_code, team_name, department_oid, department_name, leader_id, leader_name, shift_type, member_count, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      team.id,
+      team.oid,
+      team.teamCode,
+      team.teamName,
+      team.departmentOid,
+      team.departmentName,
+      team.leaderId,
+      team.leaderName,
+      team.shiftType,
+      team.memberCount,
+      team.status,
+      team.createTime || new Date().toISOString(),
+      team.createTime || new Date().toISOString()
+    ]);
+  }
+
+  console.log(`已导入 ${defaultTeams.length} 条班组数据`);
+}
+
+/**
  * 导入字典分类数据
  */
 export function seedDictionaryCategories() {
@@ -966,6 +1018,7 @@ export function exportBasicData() {
   seedWarehouses();
   seedGreenhouses();
   seedPositions();
+  seedTeams();
   seedDictionaryCategories();
   seedDictionaries();
   seedNotificationChannels();
