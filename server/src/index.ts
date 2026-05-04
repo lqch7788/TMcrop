@@ -8,6 +8,7 @@ import cors from './middleware/cors';
 import routes from './routes';
 import { initDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
+import { fixMissingSchema } from './db/fixMissingSchema';
 import path from 'path';
 import fs from 'fs';
 
@@ -30,6 +31,10 @@ async function start() {
     // 初始化表结构
     console.log('正在创建数据库表...');
     initializeDatabase();
+
+    // 修复数据库结构（添加缺失的列和表）
+    console.log('正在修复数据库结构...');
+    await fixMissingSchema();
 
     // 导入种子数据（延迟导入避免循环依赖）
     console.log('正在导入种子数据...');
