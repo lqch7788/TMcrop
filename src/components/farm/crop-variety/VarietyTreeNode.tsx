@@ -7,6 +7,7 @@ import React from 'react';
 import { ChevronDown, ChevronRight, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { VarietyTreeNode as VarietyTreeNodeType } from './types';
 import { CropVariety } from '../../../types/cropVariety';
+import * as extensionService from '../../../services/cropVarietyExtensionService';
 
 interface VarietyTreeNodeProps {
   node: VarietyTreeNodeType;
@@ -17,6 +18,18 @@ interface VarietyTreeNodeProps {
   onEdit: (variety: CropVariety) => void;
   onDelete: (variety: CropVariety) => void;
   level?: number;
+  selectedId?: string;
+  inlineAddState?: {
+    active: boolean;
+    level: 'type' | 'variety' | 'subVariety1';
+    parentKey: string;
+  };
+  inlineAddCode?: string;
+  inlineAddName?: string;
+  onInlineAddCodeChange?: (code: string) => void;
+  onInlineAddNameChange?: (name: string) => void;
+  onInlineAddSave?: () => void;
+  onInlineAddCancel?: () => void;
 }
 
 /**
@@ -72,10 +85,19 @@ export function VarietyTreeNode({
   onAdd,
   onEdit,
   onDelete,
-  level = 0
+  level = 0,
+  selectedId,
+  inlineAddState,
+  inlineAddCode = '',
+  inlineAddName = '',
+  onInlineAddCodeChange,
+  onInlineAddNameChange,
+  onInlineAddSave,
+  onInlineAddCancel
 }: VarietyTreeNodeProps) {
   const isExpanded = expandedKeys.includes(node.key);
   const hasChildren = node.hasChildren;
+  const isInlineAdding = inlineAddState?.active && inlineAddState?.parentKey === node.key;
 
   // 构建完整11位作物编码显示
   const getFullCropCode = (): string => {
@@ -171,6 +193,14 @@ export function VarietyTreeNode({
         updateTime: ''
       };
       onEdit(mockVariety);
+    } else if ((node as any).isExtension) {
+      // 扩展节点：类型/品种/子品种 - 触发内联编辑（暂用alert提示）
+      const levelNames: Record<string, string> = {
+        'type': '类型',
+        'variety': '品种',
+        'subVariety1': '子品种'
+      };
+      alert(`${levelNames[node.level] || '扩展'}编辑功能开发中，当前ID: ${(node as any).extensionId}`);
     }
   };
 
@@ -179,6 +209,31 @@ export function VarietyTreeNode({
     e.stopPropagation();
     if (node.recordedVariety) {
       onDelete(node.recordedVariety);
+    } else if ((node as any).isExtension) {
+      // 扩展节点删除确认
+      const levelNames: Record<string, string> = {
+        'type': '类型',
+        'variety': '品种',
+        'subVariety1': '子品种'
+      };
+      const levelKey = node.level as 'type' | 'variety' | 'subVariety1';
+      if (confirm(`确定要删除这个${levelNames[levelKey]} "${node.name}" 吗？`)) {
+        // 调用删除API
+        const extensionId = (node as any).extensionId;
+        if (node.level === 'type' && extensionId) {
+          extensionService.removeTypeExtension(extensionId).then(() => {
+            window.location.reload();
+          }).catch(err => alert('删除失败: ' + err.message));
+        } else if (node.level === 'variety' && extensionId) {
+          extensionService.removeVarietyExtension(extensionId).then(() => {
+            window.location.reload();
+          }).catch(err => alert('删除失败: ' + err.message));
+        } else if (node.level === 'subVariety1' && extensionId) {
+          extensionService.removeSubVariety1Extension(extensionId).then(() => {
+            window.location.reload();
+          }).catch(err => alert('删除失败: ' + err.message));
+        }
+      }
     }
   };
 
@@ -334,7 +389,8 @@ export function VarietyTreeNode({
                 <Plus className="w-3.5 h-3.5" />
               </button>
             )}
-            {node.isRecorded && node.level !== 'category' && node.level !== 'type' && (
+            {/* 编辑按钮：对于已录入品种或扩展节点（除了category和type） */}
+            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && node.level !== 'type' && (
               <button
                 onClick={handleEdit}
                 className={getActionButtonClass('edit')}
@@ -343,7 +399,8 @@ export function VarietyTreeNode({
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             )}
-            {node.isRecorded && node.level !== 'category' && node.level !== 'type' && (
+            {/* 删除按钮：对于已录入品种或扩展节点（除了category和type） */}
+            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && node.level !== 'type' && (
               <button
                 onClick={handleDelete}
                 className={getActionButtonClass('delete')}
@@ -355,6 +412,47 @@ export function VarietyTreeNode({
           </div>
         </td>
       </tr>
+
+      {/* 内联新增表单 */}
+      {isInlineAdding && (
+        <tr className="bg-yellow-50 border-l-4 border-yellow-400">
+          <td className="px-4 py-3" colSpan={8}>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                {inlineAddState.level === 'type' && '新增类型：'}
+                {inlineAddState.level === 'variety' && '新增品种：'}
+                {inlineAddState.level === 'subVariety1' && '新增子品种：'}
+              </span>
+              <input
+                type="text"
+                value={inlineAddCode}
+                onChange={(e) => onInlineAddCodeChange?.(e.target.value)}
+                placeholder="编号"
+                className="w-24 px-2 py-1.5 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                value={inlineAddName}
+                onChange={(e) => onInlineAddNameChange?.(e.target.value)}
+                placeholder="名称"
+                className="w-40 px-2 py-1.5 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={onInlineAddSave}
+                className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
+              >
+                保存
+              </button>
+              <button
+                onClick={onInlineAddCancel}
+                className="px-3 py-1.5 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+              >
+                取消
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
 
       {/* 递归渲染子节点 */}
       {isExpanded && hasChildren && node.children.map(child => (
@@ -368,6 +466,14 @@ export function VarietyTreeNode({
           onEdit={onEdit}
           onDelete={onDelete}
           level={level + 1}
+          selectedId={selectedId}
+          inlineAddState={inlineAddState}
+          inlineAddCode={inlineAddCode}
+          inlineAddName={inlineAddName}
+          onInlineAddCodeChange={onInlineAddCodeChange}
+          onInlineAddNameChange={onInlineAddNameChange}
+          onInlineAddSave={onInlineAddSave}
+          onInlineAddCancel={onInlineAddCancel}
         />
       ))}
     </>

@@ -3,15 +3,17 @@
  * 直接显示所有已录入的作物品种，不再使用折叠形式
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import {
-  getAllVarieties,
+  getAllVarieties as getAllVarietiesFromService,
   getCategoryOptions,
-  deleteVariety,
-  generateCropCode
+  deleteVariety as deleteVarietyFromService,
+  generateCropCode,
+  initVarieties
 } from '../../../services/cropVarietyService';
+import { deleteVariety } from '../../../services/apiCropVarietyService';
 
 type ViewMode = 'table' | 'tree';
 
@@ -23,6 +25,8 @@ interface CropVarietyTableProps {
   onEdit: (variety: CropVariety) => void;
   onDelete: (variety: CropVariety) => void;
   selectedId?: string;
+  // 刷新键：当数据变化时递增此值触发刷新
+  refreshKey?: number;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -37,6 +41,7 @@ export function CropVarietyTable({
   onEdit,
   onDelete,
   selectedId,
+  refreshKey = 0,
   canCreate = true,
   canEdit = true,
   canDelete = true,
@@ -46,9 +51,15 @@ export function CropVarietyTable({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [allVarieties, setAllVarieties] = useState<CropVariety[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 获取所有已录入的品种
-  const allVarieties = useMemo(() => getAllVarieties(), []);
+  // 加载数据（与树状图一致，使用本地服务）
+  useEffect(() => {
+    const data = getAllVarietiesFromService();
+    setAllVarieties(data);
+    setLoading(false);
+  }, [refreshKey]);
 
   // 获取类目选项
   const categoryOptions = useMemo(() => getCategoryOptions(), []);
@@ -247,17 +258,9 @@ export function CropVarietyTable({
                         <span className="text-gray-700">{variety.subVariety1Name}</span>
                       </>
                     )}
-                    {variety.detailVarietyCode && variety.detailVarietyCode !== '00' && (
-                      <>
-                        <span className="text-gray-400 mx-0.5">-</span>
-                        <span className="text-gray-900 font-medium">{variety.varietyName}</span>
-                      </>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
-                    {variety.detailVarietyCode && variety.detailVarietyCode !== '00'
-                      ? variety.varietyName
-                      : (variety.subVariety1Name || '-')}
+                    {variety.subVariety1Name || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${

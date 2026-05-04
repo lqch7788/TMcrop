@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { produceCategories, getProduceTypesByCategory, ProduceCategoryCode } from '../../../../data/produceCodeRule';
 import { getVarietyOptions, getAllVarieties } from '../../../../services/cropVarietyService';
+import { getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } from '../../../../services/cropVarietyExtensionService';
 
 /**
  * 将已录入品种转换为以编码前缀分组的Map
@@ -65,7 +66,7 @@ const buildTreeNode = (
   let isRecorded = false;
 
   if (level === 'category') {
-    // 类别节点 - 构建类型子节点
+    // 类别节点 - 构建类型子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === code as ProduceCategoryCode);
     if (category) {
       const types = getProduceTypesByCategory(category.code);
@@ -83,10 +84,29 @@ const buildTreeNode = (
         }
         childCount++;
       }
+      // 添加用户扩展的类型（数据库返回的是 snake_case 字段名）
+      const extensionTypes = getTypeExtensions(category.code);
+      for (const extType of extensionTypes) {
+        // 跳过已存在的预定义类型
+        if (types.some(t => t.code === extType.type_code)) continue;
+        const typeNode = buildTreeNode(
+          'type',
+          extType.type_name,
+          extType.type_code,
+          { ...path, typeCode: extType.type_code, typeName: extType.type_name },
+          recordedMap
+        );
+        // 标记为扩展节点
+        (typeNode as any).isExtension = true;
+        (typeNode as any).extensionId = extType.id;
+        children.push(typeNode);
+        hasChildren = true;
+        childCount++;
+      }
     }
     isRecorded = hasRecordedVariety(code, '', '', undefined, recordedMap);
   } else if (level === 'type') {
-    // 类型节点 - 构建品种子节点（始终添加所有品种）
+    // 类型节点 - 构建品种子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === path.categoryCode);
     if (category) {
       const types = getProduceTypesByCategory(category.code);
@@ -107,19 +127,42 @@ const buildTreeNode = (
           }
           childCount++;
         }
+        // 添加用户扩展的品种（数据库返回 snake_case 字段名）
+        const extensionVarieties = getVarietyExtensions(path.categoryCode, code);
+        for (const extVar of extensionVarieties) {
+          // 跳过已存在的预定义品种
+          if (type.subCategories.some(v => v.code === extVar.variety_code)) continue;
+          const varietyNode = buildTreeNode(
+            'variety',
+            extVar.variety_name,
+            extVar.variety_code,
+            { ...path, varietyCode: extVar.variety_code, varietyName: extVar.variety_name },
+            recordedMap
+          );
+          // 标记为扩展节点
+          (varietyNode as any).isExtension = true;
+          (varietyNode as any).extensionId = extVar.id;
+          children.push(varietyNode);
+          hasChildren = true;
+          childCount++;
+        }
       }
     }
     isRecorded = hasRecordedVariety(path.categoryCode, code, '', undefined, recordedMap);
   } else if (level === 'variety') {
-    // 品种节点 - 构建子品种1子节点
+    // 品种节点 - 构建子品种1子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === path.categoryCode);
     if (category) {
       const types = getProduceTypesByCategory(category.code);
       const type = types.find(t => t.code === path.typeCode);
       if (type) {
         const variety = type.subCategories.find(v => v.code === code);
+        // 收集所有子品种1的code，用于去重
+        const existingSubCodes = new Set<string>();
+
         if (variety?.subVarieties && variety.subVarieties.length > 0) {
           for (const sub of variety.subVarieties) {
+            existingSubCodes.add(sub.code);
             const subNode = buildTreeNode(
               'subVariety1',
               sub.name,
@@ -132,12 +175,33 @@ const buildTreeNode = (
             childCount++;
           }
           isRecorded = hasRecordedVariety(path.categoryCode, path.typeCode, code, undefined, recordedMap);
-        } else {
-          // 无预定义子品种，检查是否有已录入的详细品种
+        }
+
+        // 添加用户扩展的子品种1（数据库返回 snake_case 字段名）
+        const extensionSubVarieties = getSubVariety1Extensions(path.categoryCode, path.typeCode, code);
+        for (const extSub of extensionSubVarieties) {
+          // 跳过已存在的预定义子品种
+          if (existingSubCodes.has(extSub.sub_variety1_code)) continue;
+          const subNode = buildTreeNode(
+            'subVariety1',
+            extSub.sub_variety1_name,
+            extSub.sub_variety1_code,
+            { ...path, subVariety1Code: extSub.sub_variety1_code, subVariety1Name: extSub.sub_variety1_name },
+            recordedMap
+          );
+          // 标记为扩展节点
+          (subNode as any).isExtension = true;
+          (subNode as any).extensionId = extSub.id;
+          children.push(subNode);
+          hasChildren = true;
+          childCount++;
+        }
+
+        // 如果既没有预定义子品种也没有扩展子品种，检查是否有已录入的详细品种（直接挂在品种下）
+        if (children.length === 0) {
           const key = `${path.categoryCode}${path.typeCode}${code}000`;
           const recordedVarieties = recordedMap.get(key) || [];
           if (recordedVarieties.length > 0) {
-            // 有已录入品种，添加到子节点
             for (const rv of recordedVarieties) {
               const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
                 ? rv.subVariety1Name
@@ -162,7 +226,6 @@ const buildTreeNode = (
             }
             isRecorded = true;
           }
-          // 如果既没有预定义子品种也没有已录入品种，仍然添加品种节点（hasChildren=false, isRecorded=false）
         }
       }
     }

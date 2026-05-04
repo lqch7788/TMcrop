@@ -816,3 +816,14 @@ export function getStandardCropCodeAutoCreate(varietyName: string): string {
   const variety = findOrCreateVarietyByName(varietyName);
   return variety?.cropCode || '';
 }
+
+// API服务回退所需的别名函数
+export function createVariety(data: Partial<CropVariety>): string {
+  const variety = addVariety(data as CreateCropVarietyInput);
+  return variety.id;
+}
+
+export function findByCropName(cropName: string): CropVariety[] {
+  const variety = findVarietyByCropName(cropName);
+  return variety ? [variety] : [];
+}

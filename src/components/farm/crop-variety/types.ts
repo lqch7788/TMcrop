@@ -27,8 +27,12 @@ export interface VarietyTreeNode {
   children: VarietyTreeNode[];
   /** 是否为叶子节点 */
   isLeaf: boolean;
-  /** 是否已录入（用户已添加的品种） */
+  /** 是否已录入（用户已添加的作物品种） */
   isRecorded: boolean;
+  /** 是否为用户扩展的节点（类型/品种/子品种） */
+  isExtension?: boolean;
+  /** 扩展数据的ID（用于编辑和删除） */
+  extensionId?: string;
   /** 完整作物编码（11位，仅叶子节点） */
   fullCropCode?: string;
   /** 用户录入的品种详情（仅已录入的节点有值） */
@@ -87,6 +91,26 @@ export interface VarietyTreeProps {
   onDelete: (variety: CropVariety) => void;
   /** 展开状态变化回调 */
   onExpandChange?: (expandedKeys: string[]) => void;
+  /** 选中的节点ID */
+  selectedId?: string;
+  /** 内联新增状态 */
+  inlineAddState?: {
+    active: boolean;
+    level: 'type' | 'variety' | 'subVariety1';
+    parentKey: string;
+  };
+  /** 内联新增编码 */
+  inlineAddCode?: string;
+  /** 内联新增名称 */
+  inlineAddName?: string;
+  /** 内联新增编码变化回调 */
+  onInlineAddCodeChange?: (code: string) => void;
+  /** 内联新增名称变化回调 */
+  onInlineAddNameChange?: (name: string) => void;
+  /** 内联新增保存回调 */
+  onInlineAddSave?: () => void;
+  /** 内联新增取消回调 */
+  onInlineAddCancel?: () => void;
 }
 
 /**
