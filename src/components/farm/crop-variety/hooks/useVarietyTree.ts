@@ -205,7 +205,7 @@ const buildTreeNode = (
             for (const rv of recordedVarieties) {
               const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
                 ? rv.subVariety1Name
-                : rv.varietyName;
+                : (rv.detailVarietyName || rv.subVariety1Name);
               const detailNode: VarietyTreeNode = {
                 key: `${key}${rv.detailVarietyCode || '00'}`,
                 name: detailName,
@@ -243,10 +243,10 @@ const buildTreeNode = (
 
     for (const rv of sortedVarieties) {
       // 当 detailVarietyCode 为 '00' 或空时，使用 subVariety1Name 作为名称
-      // 否则使用用户录入的 varietyName
+      // 否则使用用户录入的 detailVarietyName
       const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
         ? rv.subVariety1Name
-        : rv.varietyName;
+        : (rv.detailVarietyName || rv.subVariety1Name);
 
       const detailNode: VarietyTreeNode = {
         key: `${key}${rv.detailVarietyCode}`,
@@ -412,13 +412,16 @@ export function useVarietyTree(
   searchKeyword: string = '',
   categoryFilter: string = '',
   displayMode: DisplayMode = 'recorded',
-  defaultExpandLevel: TreeLevel = 'subVariety1'
+  defaultExpandLevel: TreeLevel = 'subVariety1',
+  refreshKey?: number
 ): UseVarietyTreeReturn {
   // 展开状态
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  // 是否已初始化（避免刷新时重置展开状态）
+  const [isExpandedInitialized, setIsExpandedInitialized] = useState(false);
 
   // 构建已录入品种Map
-  const recordedVarietyMap = useMemo(() => buildRecordedVarietyMap(), []);
+  const recordedVarietyMap = useMemo(() => buildRecordedVarietyMap(), [refreshKey]);
 
   // 构建完整树形数据
   const fullTreeData = useMemo((): VarietyTreeNode[] => {
@@ -519,11 +522,14 @@ export function useVarietyTree(
   }, [treeData]);
 
   // 初始化时展开到默认级别（仅展开第一级，让用户自己选择展开哪一级的子节点）
+  // 注意：只在首次初始化时执行，刷新时保留用户展开的状态
   useEffect(() => {
-    // 只展开第一级（类别级别），不展开更深层级
-    const initialKeys = treeData.map(node => node.key);
-    setExpandedKeys(new Set(initialKeys));
-  }, [treeData]);
+    if (!isExpandedInitialized) {
+      const initialKeys = treeData.map(node => node.key);
+      setExpandedKeys(new Set(initialKeys));
+      setIsExpandedInitialized(true);
+    }
+  }, [treeData, isExpandedInitialized]);
 
   return {
     treeData,

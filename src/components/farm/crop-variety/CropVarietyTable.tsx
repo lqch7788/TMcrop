@@ -260,7 +260,7 @@ export function CropVarietyTable({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
-                    {variety.subVariety1Name || '-'}
+                    {variety.subVariety1Name || variety.varietyName || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${

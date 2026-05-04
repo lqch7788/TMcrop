@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save } from 'lucide-react';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
@@ -31,7 +31,11 @@ export function VarietyTree({
   onInlineAddCodeChange,
   onInlineAddNameChange,
   onInlineAddSave,
-  onInlineAddCancel
+  onInlineAddCancel,
+  isTreeEditing = false,
+  onTreeEditingChange,
+  onRefresh,
+  refreshKey
 }: VarietyTreeProps) {
   // 内部状态
   const [internalSearchNameKeyword, setInternalSearchNameKeyword] = useState('');
@@ -56,7 +60,7 @@ export function VarietyTree({
     collapseAll,
     expandToLevel,
     totalNodeCount
-  } = useVarietyTree(combinedSearchKeyword, categoryFilter, 'all', 'subVariety1');
+  } = useVarietyTree(combinedSearchKeyword, categoryFilter, 'all', 'subVariety1', refreshKey);
 
   // 通知展开状态变化
   React.useEffect(() => {
@@ -159,6 +163,22 @@ export function VarietyTree({
             <Plus className="w-4 h-4" />
             新增作物
           </button>
+          {!isTreeEditing ? (
+            <button
+              onClick={() => onTreeEditingChange?.(true)}
+              className="h-10 px-4 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 flex items-center gap-2 flex-shrink-0"
+            >
+              <Edit2 className="w-4 h-4" />
+              修改规则
+            </button>
+          ) : (
+            <button
+              onClick={() => onTreeEditingChange?.(false)}
+              className="h-10 px-4 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 flex items-center gap-2 flex-shrink-0"
+            >
+              退出编辑
+            </button>
+          )}
         </div>
 
         {/* 展开控制栏 */}
@@ -190,6 +210,18 @@ export function VarietyTree({
           </div>
         </div>
       </div>
+
+      {/* 编辑模式提示 */}
+      {isTreeEditing && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+          <div className="flex items-center gap-2 text-sm text-blue-700">
+            <span className="font-medium">编辑模式：</span>
+            <span>• 点击展开图标查看下级分类</span>
+            <span>• 悬停到类型/品种/子品种名称上可显示编辑和删除按钮</span>
+            <span>• 点击新增按钮可添加子节点</span>
+          </div>
+        </div>
+      )}
 
       {/* 树形列表 */}
       <div className="flex-1 overflow-auto">
@@ -235,6 +267,8 @@ export function VarietyTree({
                   onInlineAddNameChange={onInlineAddNameChange}
                   onInlineAddSave={onInlineAddSave}
                   onInlineAddCancel={onInlineAddCancel}
+                  isTreeEditing={isTreeEditing}
+                  onRefresh={onRefresh}
                 />
               ))}
             </tbody>

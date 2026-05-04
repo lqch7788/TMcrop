@@ -35,14 +35,12 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">
-                {variety.varietyName}
-                {variety.subVariety1Name && (
-                  <span className="text-emerald-600 ml-1">- {variety.subVariety1Name}</span>
-                )}
+                {variety.detailVarietyName || variety.subVariety1Name || variety.varietyName}
               </h3>
               <p className="text-sm text-gray-500">
                 {variety.categoryName} &gt; {variety.typeName} &gt; {variety.varietyName}
                 {variety.subVariety1Name && ` > ${variety.subVariety1Name}`}
+                {variety.detailVarietyName && ` > ${variety.detailVarietyName}`}
               </p>
             </div>
           </div>
@@ -123,9 +121,7 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                 <label className="block text-xs font-medium text-blue-600 mb-1">作物品种</label>
                 <p className="text-blue-900 font-bold text-lg">
-                  {variety.detailVarietyCode && variety.detailVarietyCode !== '00'
-                    ? variety.varietyName
-                    : (variety.subVariety1Name || variety.varietyName)}
+                  {variety.detailVarietyName || variety.subVariety1Name || variety.varietyName}
                 </p>
               </div>
             </div>

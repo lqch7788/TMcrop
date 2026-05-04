@@ -11,11 +11,11 @@ import {
   getCategoryOptions,
   getTypeOptionsByCategory,
   getVarietyOptionsByType,
-  getSubVariety1Options,
   generateCropCode,
   getAllVarieties,
   getMaxDetailVarietyCode
 } from '../../../../services/cropVarietyService';
+import { getSubVariety1Options as getSubVariety1OptionsFromExtension } from '../../../../services/cropVarietyExtensionService';
 import { Search, Check, X, RefreshCw } from 'lucide-react';
 
 interface AddCropVarietyModalProps {
@@ -142,7 +142,7 @@ export function AddCropVarietyModal({
   }, [formData.categoryCode, formData.typeCode]);
   const subVariety1Options = useMemo(() => {
     if (!formData.categoryCode || !formData.typeCode || !formData.varietyCode) return [];
-    return getSubVariety1Options(formData.categoryCode, formData.typeCode, formData.varietyCode);
+    return getSubVariety1OptionsFromExtension(formData.categoryCode, formData.typeCode, formData.varietyCode);
   }, [formData.categoryCode, formData.typeCode, formData.varietyCode]);
 
   // 处理类别变化
@@ -326,7 +326,8 @@ export function AddCropVarietyModal({
       }
 
       // 如果没有输入作物品种，使用子品种名称作为最终品种名称，详细品种序号默认为00
-      const finalVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || formData.varietyName;
+      // 注意：varietyName 保持为"草莓"等基础品种名，detailVarietyName 存储用户输入的最细分品种名
+      const finalDetailVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || '';
       const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
 
       // 添加品种
@@ -336,10 +337,11 @@ export function AddCropVarietyModal({
         typeCode: formData.typeCode,
         typeName: formData.typeName,
         varietyCode: formData.varietyCode,
-        varietyName: finalVarietyName,
+        varietyName: formData.varietyName,
         subVariety1Code: formData.subVariety1Code || undefined,
         subVariety1Name: formData.subVariety1Name || undefined,
         detailVarietyCode: finalDetailCode || undefined,
+        detailVarietyName: finalDetailVarietyName || undefined,
         alias: parseAlias(formData.alias),
         image: formData.image || undefined,
         description: formData.description || undefined,

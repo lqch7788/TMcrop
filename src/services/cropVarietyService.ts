@@ -285,7 +285,7 @@ export function getVarietyOptions(): CropVarietyOption[] {
     .filter(v => v.status === 'active')
     .map(v => ({
       value: v.cropCode,
-      label: v.varietyName,
+      label: v.detailVarietyName || v.subVariety1Name || v.varietyName,
       category: v.categoryName,
       categoryCode: v.categoryCode,
       typeName: v.typeName,
@@ -294,8 +294,9 @@ export function getVarietyOptions(): CropVarietyOption[] {
       subVariety1Name: v.subVariety1Name,
       subVariety1Code: v.subVariety1Code,
       detailVarietyCode: v.detailVarietyCode,
+      detailVarietyName: v.detailVarietyName,
       alias: v.alias,
-      fullPath: `${v.categoryName} > ${v.typeName} > ${v.varietyName}${v.subVariety1Name ? ` > ${v.subVariety1Name}` : ''}${v.detailVarietyCode ? ` > ${v.varietyName}` : ''}`
+      fullPath: `${v.categoryName} > ${v.typeName} > ${v.varietyName}${v.subVariety1Name ? ` > ${v.subVariety1Name}` : ''}${v.detailVarietyName ? ` > ${v.detailVarietyName}` : ''}`
     }));
 }
 

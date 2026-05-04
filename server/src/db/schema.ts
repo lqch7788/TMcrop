@@ -318,6 +318,7 @@ export function initializeDatabase() {
       sub_variety1_code TEXT,
       sub_variety1_name TEXT,
       detail_variety_code TEXT,
+      detail_variety_name TEXT,
       status TEXT DEFAULT 'active',
       create_time TEXT,
       update_time TEXT
@@ -853,6 +854,13 @@ export function initializeDatabase() {
   }
   try {
     db.run(`ALTER TABLE approvals ADD COLUMN workflow_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // ========== V6.1: 为作物品种表添加详细品种名称字段 ==========
+  try {
+    db.run(`ALTER TABLE crop_varieties ADD COLUMN detail_variety_name TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }

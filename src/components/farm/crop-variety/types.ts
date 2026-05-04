@@ -111,6 +111,14 @@ export interface VarietyTreeProps {
   onInlineAddSave?: () => void;
   /** 内联新增取消回调 */
   onInlineAddCancel?: () => void;
+  /** 树形编辑模式 */
+  isTreeEditing?: boolean;
+  /** 树形编辑模式切换回调 */
+  onTreeEditingChange?: (editing: boolean) => void;
+  /** 刷新数据回调 */
+  onRefresh?: () => void;
+  /** 刷新标识（用于触发树形数据刷新） */
+  refreshKey?: number;
 }
 
 /**
