@@ -24,9 +24,9 @@ router.get('/organizations', (req, res) => {
   const bindings: (string | number)[] = ['active'];
 
   if (!id) {
-    sql += ' AND oid_parent IS NULL';
+    sql += ' AND parent_oid IS NULL';
   } else {
-    sql += ' AND oid_parent = ?';
+    sql += ' AND parent_oid = ?';
     bindings.push(id as string);
   }
 
@@ -49,7 +49,7 @@ router.get('/organizations', (req, res) => {
     // 递归加载子节点
     const loadChildren = (nodes: Record<string, unknown>[]): Record<string, unknown>[] => {
       return nodes.map(node => {
-        const childrenSql = 'SELECT * FROM organizations WHERE status = ? AND oid_parent = ?';
+        const childrenSql = 'SELECT * FROM organizations WHERE status = ? AND parent_oid = ?';
         const childStmt = db.prepare(childrenSql);
         childStmt.bind(['active', node.oid as string]);
         const children: Record<string, unknown>[] = [];
@@ -91,9 +91,9 @@ router.post('/organizations', (req, res) => {
       for (const org of inserted) {
         const oid = org.oid || `ORG_${Date.now()}`;
         db.run(
-          `INSERT INTO organizations (oid, oid_parent, aid, name, description, address,
+          `INSERT INTO organizations (oid, parent_oid, aid, name, description, address,
             contactor, contactor_phone, contactor_mobile, contactor_email,
-            org_type, sort_number, status, created_at, updated_at)
+            org_type, sort_order, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             oid,
@@ -122,9 +122,9 @@ router.post('/organizations', (req, res) => {
       for (const org of updated) {
         db.run(
           `UPDATE organizations SET
-            oid_parent = ?, aid = ?, name = ?, description = ?, address = ?,
+            parent_oid = ?, aid = ?, name = ?, description = ?, address = ?,
             contactor = ?, contactor_phone = ?, contactor_mobile = ?, contactor_email = ?,
-            org_type = ?, sort_number = ?, updated_at = ?
+            org_type = ?, sort_order = ?, updated_at = ?
            WHERE oid = ?`,
           [
             org.oidParent || null,
@@ -462,9 +462,9 @@ router.get('/processes', (req, res) => {
   }
 
   if (!id) {
-    sql += ' AND oid_parent IS NULL';
+    sql += ' AND parent_oid IS NULL';
   } else {
-    sql += ' AND oid_parent = ?';
+    sql += ' AND parent_oid = ?';
     bindings.push(id as string);
   }
 
@@ -487,7 +487,7 @@ router.get('/processes', (req, res) => {
     // 递归加载子节点
     const loadChildren = (nodes: Record<string, unknown>[]): Record<string, unknown>[] => {
       return nodes.map(node => {
-        const childrenSql = 'SELECT * FROM processes WHERE status = ? AND oid_parent = ?';
+        const childrenSql = 'SELECT * FROM processes WHERE status = ? AND parent_oid = ?';
         const childStmt = db.prepare(childrenSql);
         childStmt.bind(['active', node.oid as string]);
         const children: Record<string, unknown>[] = [];
@@ -528,8 +528,8 @@ router.post('/processes', (req, res) => {
       for (const proc of inserted) {
         const oid = proc.oid || `PROC_${Date.now()}`;
         db.run(
-          `INSERT INTO processes (oid, oid_parent, aid, name, app_type, exec_name, exec_mode,
-            description, image_aid, hidden, sort_number, status, created_at, updated_at)
+          `INSERT INTO processes (oid, parent_oid, aid, name, app_type, exec_name, exec_mode,
+            description, image_aid, hidden, sort_order, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             oid,
@@ -555,9 +555,9 @@ router.post('/processes', (req, res) => {
     if (updated && updated.length > 0) {
       for (const proc of updated) {
         db.run(
-          `UPDATE processes SET oid_parent = ?, aid = ?, name = ?, app_type = ?,
+          `UPDATE processes SET parent_oid = ?, aid = ?, name = ?, app_type = ?,
             exec_name = ?, exec_mode = ?, description = ?, image_aid = ?,
-            hidden = ?, sort_number = ?, updated_at = ?
+            hidden = ?, sort_order = ?, updated_at = ?
            WHERE oid = ?`,
           [
             proc.oidParent || null,
@@ -617,7 +617,7 @@ router.get('/actions', (req, res) => {
     bindings.push(category as string);
   }
 
-  sql += ' ORDER BY sort_number ASC';
+  sql += ' ORDER BY sort_order ASC';
 
   try {
     const stmt = db.prepare(sql);
