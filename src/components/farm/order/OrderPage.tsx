@@ -15,8 +15,8 @@ import {
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import * as cropOrderService from '@/services/apiCropOrderService';
-import * as cropInstanceService from '@/services/cropInstanceService';
-import * as cropVarietyService from '@/services/cropVarietyService';
+import * as cropInstanceService from '@/services/apiCropInstanceService';
+import * as cropVarietyService from '@/services/apiCropVarietyService';
 import { useAuthPermission } from '@/hooks/usePermission';
 
 export default function OrderPage() {

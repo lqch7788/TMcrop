@@ -2,9 +2,11 @@
  * 种植数据表格组件
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle } from 'lucide-react';
 import { Planting, PlantingStatus } from '../../../../types/crop';
+import { CropVariety } from '../../../../types/crop';
+import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 
 // 操作模式类型
 type PlantingOperationMode = 'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export';
@@ -76,6 +78,128 @@ export function PlantingTable({
   canExport = true,
   canPrint = true,
 }: PlantingTableProps) {
+  // 品种数据缓存
+  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+
+  // 加载品种数据
+  useEffect(() => {
+    const loadVarieties = async () => {
+      const varieties = await cropVarietyService.getAllVarieties();
+      const cache = new Map<string, CropVariety>();
+      varieties.forEach(v => {
+        // 缓存最细分品种（sub_variety1_name 优先）
+        const key1 = v.sub_variety1_name || '';
+        if (key1 && !cache.has(key1)) {
+          cache.set(key1, v);
+        }
+        // 也按 variety_name 缓存
+        const key2 = v.variety_name || '';
+        if (key2 && !cache.has(key2)) {
+          cache.set(key2, v);
+        }
+        // 也按 crop_code 缓存
+        const key3 = v.crop_code || '';
+        if (key3 && !cache.has(key3)) {
+          cache.set(key3, v);
+        }
+      });
+      setVarietyCache(cache);
+    };
+    loadVarieties();
+  }, []);
+
+  // 根据 cropCode 或 cropName 获取品种信息
+  // 所有作物必须有编码！找不到时使用同品种下的"其他"类
+  const getVarietyByAny = (record: Planting): CropVariety | null => {
+    // 优先用 cropCode 查找（11位新编码）
+    if (record.cropCode) {
+      const v = varietyCache.get(record.cropCode);
+      if (v) return v;
+    }
+    // 用 sourceCode 查找（迁移数据中 sourceCode 存储正确品种名）
+    if (record.sourceCode) {
+      const v = varietyCache.get(record.sourceCode);
+      if (v) return v;
+      // 模糊匹配
+      for (const [key, variety] of varietyCache.entries()) {
+        const varietyFullName = (variety.sub_variety1_name || variety.variety_name || '');
+        if (varietyFullName.includes(record.sourceCode) || record.sourceCode.includes(varietyFullName)) {
+          return variety;
+        }
+      }
+    }
+    // 用 cropName 查找
+    if (record.cropName) {
+      const v = varietyCache.get(record.cropName);
+      if (v) return v;
+      // 模糊匹配
+      for (const [key, variety] of varietyCache.entries()) {
+        const varietyFullName = (variety.sub_variety1_name || variety.variety_name || '');
+        if (varietyFullName.includes(record.cropName) || record.cropName.includes(varietyFullName)) {
+          return variety;
+        }
+      }
+    }
+
+    // 找不到时，在同品种下找"其他"子品种
+    // 遍历品种库，查找 variety_name 相同但 sub_variety1_name 为"其他"的品种
+    for (const [key, variety] of varietyCache.entries()) {
+      const searchName = record.sourceCode || record.cropName || '';
+      if (!searchName) continue;
+
+      // 检查该品种的 variety_name 是否匹配
+      if (variety.variety_name && searchName.includes(variety.variety_name)) {
+        // 在同品种下查找"其他"子品种
+        for (const [k2, v2] of varietyCache.entries()) {
+          if (v2.variety_name === variety.variety_name &&
+              v2.type_name === variety.type_name &&
+              v2.category_name === variety.category_name &&
+              v2.sub_variety1_name?.includes('其他')) {
+            return v2;
+          }
+        }
+      }
+    }
+
+    // 仍然找不到，返回 null（不应该发生，所有作物必须有编码）
+    return null;
+  };
+
+  // 获取作物品种路径
+  const getVarietyPath = (record: Planting): string => {
+    const variety = getVarietyByAny(record);
+    if (!variety) {
+      // 找不到品种（不应该发生），返回原始名称
+      return record.sourceCode || record.cropName || '-';
+    }
+    const parts: string[] = [];
+    if (variety.category_name) parts.push(variety.category_name);
+    if (variety.type_name) parts.push(variety.type_name);
+    if (variety.variety_name) parts.push(variety.variety_name);
+    if (variety.sub_variety1_name) parts.push(variety.sub_variety1_name);
+    return parts.join('-') || record.sourceCode || record.cropName || '-';
+  };
+
+  // 获取标准作物编码
+  const getStandardCropCode = (record: Planting): string => {
+    const variety = getVarietyByAny(record);
+    if (!variety) {
+      // 找不到品种（不应该发生），返回空编码提示
+      return '-';
+    }
+    return variety.crop_code || '-';
+  };
+
+  // 获取作物品种（最细分）
+  const getCropVarietyName = (record: Planting): string => {
+    const variety = getVarietyByAny(record);
+    if (!variety) {
+      // 找不到品种（不应该发生），返回原始名称
+      return record.sourceCode || record.cropName || '-';
+    }
+    return variety.sub_variety1_name || variety.variety_name || record.sourceCode || record.cropName || '-';
+  };
+
   const totalPages = Math.ceil(data.length / pagination.pageSize);
   const startIndex = (pagination.current - 1) * pagination.pageSize;
   const endIndex = Math.min(startIndex + pagination.pageSize, data.length);
@@ -154,19 +278,21 @@ export function PlantingTable({
         title: '作物编码',
         dataIndex: 'cropCode',
         width: 120,
-        render: (code: string) => (
-          <span className="font-mono text-orange-600">{code || '-'}</span>
+        render: (code: string, record: Planting) => (
+          <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
         )
       },
       {
         title: '作物品种',
         dataIndex: 'cropName',
-        width: 100
+        width: 100,
+        render: (name: string, record: Planting) => getCropVarietyName(record)
       },
       {
-        title: '品种',
+        title: '品种路径',
         dataIndex: 'cropVariety',
-        width: 120
+        width: 180,
+        render: (value: string, record: Planting) => getVarietyPath(record)
       },
       {
         title: '种植区域',
@@ -388,7 +514,7 @@ export function PlantingTable({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       {/* 标题和操作按钮栏 */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">种植作物列表</h3>
@@ -446,15 +572,15 @@ export function PlantingTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600">
+      <div className="overflow-auto max-h-[calc(100vh-380px)]">
+        <table className="w-full min-w-[1400px]">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <tr>
               {columns.map((col, index) => (
                 <th
                   key={index}
-                  className="px-4 py-3 text-left text-sm font-semibold text-white"
-                  style={{ width: col.width }}
+                  className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap"
+                  style={{ minWidth: col.width }}
                 >
                   {col.title}
                 </th>
@@ -472,7 +598,7 @@ export function PlantingTable({
               currentData.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
                   {columns.map((col, index) => (
-                    <td key={index} className="px-4 py-3 text-sm text-gray-700">
+                    <td key={index} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap" style={{ minWidth: col.width }}>
                       {col.render
                         ? col.render(record[col.dataIndex as keyof Planting] as never, record)
                         : (record[col.dataIndex as keyof Planting] as never)}

@@ -58,7 +58,17 @@
       "mcp__MiniMax__web_search",
       "Bash(npx eslint *)",
       "Bash(taskkill /F /IM node.exe)",
-      "Bash(npm start *)"
+      "Bash(npm start *)",
+      "Bash(findstr \":3001\")",
+      "Bash(npx tsx *)",
+      "Bash(taskkill //F //PID 49812)",
+      "Bash(taskkill //F //PID 24568)",
+      "Bash(taskkill //F //PID 29952)",
+      "Bash(npm run *)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('总条数:', d['meta']['total']\\); [print\\(f\\\\\"{i['seedCode']} | {i['sourceName']} | {i['productionPlanCode']}\\\\\"\\) for i in d['data'][:5]]\")",
+      "Bash(cmd *)",
+      "mcp__MiniMax__understand_image"
     ]
   }
 }

@@ -4,10 +4,11 @@
  * 行内按钮逻辑：查看详情/每日记录/定植操作/打印/图片 → 直接执行
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
-import * as cropVarietyService from '../../../../services/cropVarietyService';
+import { CropVariety } from '../../../../types/crop';
+import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -82,11 +83,88 @@ export function SeedlingTable({
   canExport = true,
   canPrint = true,
 }: SeedlingTableProps) {
-  // 确保品种库数据正确初始化
+  // 品种数据缓存
+  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+
+  // 加载品种数据
   useEffect(() => {
-    // 强制重置品种库数据，确保数据完整正确
-    cropVarietyService.resetVarieties();
+    const loadVarieties = async () => {
+      const varieties = await cropVarietyService.getAllVarieties();
+      const cache = new Map<string, CropVariety>();
+      varieties.forEach(v => {
+        // 缓存最细分品种（sub_variety1_name 优先）
+        const key1 = v.sub_variety1_name || '';
+        if (key1 && !cache.has(key1)) {
+          cache.set(key1, v);
+        }
+        // 也按 variety_name 缓存
+        const key2 = v.variety_name || '';
+        if (key2 && !cache.has(key2)) {
+          cache.set(key2, v);
+        }
+        // 也按 crop_code 缓存
+        const key3 = v.crop_code || '';
+        if (key3 && !cache.has(key3)) {
+          cache.set(key3, v);
+        }
+      });
+      setVarietyCache(cache);
+    };
+    loadVarieties();
   }, []);
+
+  // 根据 cropCode 获取品种信息
+  const getVarietyByCode = (cropCode: string): CropVariety | undefined => {
+    if (!cropCode) return undefined;
+    // 尝试直接用编码查找
+    let variety = varietyCache.get(cropCode);
+    if (variety) return variety;
+
+    // 尝试用前9位匹配
+    if (cropCode.length >= 9) {
+      const prefix9 = cropCode.substring(0, 9);
+      for (const [key, v] of varietyCache.entries()) {
+        if (key.startsWith(prefix9) || prefix9.startsWith(key.substring(0, Math.min(9, key.length)))) {
+          return v;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  // 获取作物品种路径显示
+  const getCropVarietyPath = (record: Seedling) => {
+    const variety = getVarietyByCode(record.cropCode);
+    if (variety && variety.category_name) {
+      return {
+        categoryName: variety.category_name,
+        typeName: variety.type_name,
+        varietyName: variety.variety_name,
+        subVarietyName: variety.sub_variety1_name || ''
+      };
+    }
+    return {
+      categoryName: '',
+      typeName: '',
+      varietyName: record.cropVariety || '',
+      subVarietyName: ''
+    };
+  };
+
+  // 获取标准作物编码
+  const getStandardCropCode = (cropCode: string): string => {
+    const variety = getVarietyByCode(cropCode);
+    return variety?.crop_code || cropCode;
+  };
+
+  // 获取作物品种（最细分）
+  const getCropVarietyName = (record: Seedling): string => {
+    const variety = getVarietyByCode(record.cropCode);
+    if (variety) {
+      return variety.sub_variety1_name || variety.variety_name || record.cropVariety || '';
+    }
+    return record.cropVariety || record.cropName || '';
+  };
 
   // 计算分页
   const totalPages = Math.ceil(data.length / pagination.pageSize);
@@ -153,50 +231,6 @@ export function SeedlingTable({
     onConfirmPrint(selectedRecords);
     onPrintModeChange(false);
     onSelectionChange([]);
-  };
-
-  // 获取作物品种路径显示（参照种源管理页面格式）
-  // 格式：类别 - 类型 - 品种 - 作物品种
-  const getCropVarietyPath = (record: Seedling) => {
-    if (!record.cropCode || record.cropCode.length < 6) {
-      return { categoryName: '', typeName: '', varietyName: '', subVarietyName: '' };
-    }
-    // 初始化品种库
-    cropVarietyService.initVarieties();
-    // 尝试精确匹配11位编码
-    let variety = cropVarietyService.getVarietyByCode(record.cropCode);
-    // 如果精确匹配失败，尝试用前9位匹配（去掉最后2位详细编码）
-    if (!variety && record.cropCode.length >= 9) {
-      const prefix9 = record.cropCode.substring(0, 9) + '00'; // 假设详细编码为00
-      variety = cropVarietyService.getVarietyByCode(prefix9);
-    }
-    // 如果仍然失败，遍历品种库查找匹配的记录
-    if (!variety) {
-      const allVarieties = cropVarietyService.getAllVarieties();
-      // 查找前9位匹配的记录
-      variety = allVarieties.find(v =>
-        v.cropCode && record.cropCode &&
-        (record.cropCode.startsWith(v.cropCode.substring(0, Math.min(9, v.cropCode.length))) ||
-         v.cropCode.startsWith(record.cropCode.substring(0, Math.min(9, record.cropCode.length))))
-      );
-    }
-
-    if (variety && variety.categoryName) {
-      return {
-        categoryName: variety.categoryName,
-        typeName: variety.typeName,
-        varietyName: variety.varietyName,
-        subVarietyName: variety.subVariety1Name || ''
-      };
-    }
-
-    // 如果品种库查询失败，使用数据本身的字段
-    return {
-      categoryName: '',
-      typeName: '',
-      varietyName: record.cropVariety || '',
-      subVarietyName: ''
-    };
   };
 
   return (
@@ -418,26 +452,18 @@ export function SeedlingTable({
                     ) : '-'}
                   </td>
                   <td className="px-3 py-2 text-sm">
-                    <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
+                    <span className="font-mono text-orange-600">{getStandardCropCode(record.cropCode) || record.cropCode || '-'}</span>
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.sourceCode}</td>
                   <td className="px-3 py-2 text-sm text-gray-900 truncate" title={record.cropVariety || record.cropName}>
-                    {/* 作物品种列：从品种库获取最细化名称，参照种源管理页面格式显示 */}
-                    {(() => {
-                      cropVarietyService.initVarieties();
-                      const variety = cropVarietyService.getVarietyByCode(record.cropCode);
-                      if (variety) {
-                        // 显示品种库中的完整品种名称（最后一级）
-                        return variety.subVariety1Name || variety.varietyName;
-                      }
-                      // 找不到时显示cropVariety
-                      return record.cropVariety || record.cropName;
-                    })()}
+                    {/* 作物品种列：从品种库获取最细化名称 */}
+                    {getCropVarietyName(record)}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis">
                     {/* 品种路径列，参照种源管理页面格式：类别-类型-品种-作物名称 */}
                     {(() => {
                       const pathInfo = getCropVarietyPath(record);
+                      if (!pathInfo.categoryName) return record.cropVariety || '-';
                       return (
                         <>
                           <span className="text-gray-400">{pathInfo.categoryName}</span>

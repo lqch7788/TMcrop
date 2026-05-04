@@ -9,14 +9,25 @@ import fs from 'fs';
 
 /**
  * 导入作物品种数据
+ * 注意：只在数据库为空时才导入，避免覆盖已有数据
  */
 function seedCropVarieties() {
   const db = getDatabase();
 
+  // 检查是否已有数据
+  const existing = db.exec('SELECT COUNT(*) FROM crop_varieties');
+  const count = existing[0]?.values[0]?.[0] || 0;
+
+  if (count > 0) {
+    console.log(`作物品种数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  // 如果数据库为空，使用正确的11位编码格式
   const cropVarieties = [
     {
       id: 'CV001',
-      crop_code: '030101001',
+      crop_code: 'PD03010100100',  // 蔬菜类-叶菜类-生菜-红生菜
       category_code: '03',
       category_name: '蔬菜类',
       type_code: '01',
@@ -25,62 +36,62 @@ function seedCropVarieties() {
       variety_name: '生菜',
       sub_variety1_code: '001',
       sub_variety1_name: '红生菜',
-      detail_variety_code: '01',
+      detail_variety_code: '00',
       status: 'active',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
     {
       id: 'CV002',
-      crop_code: '030101002',
+      crop_code: 'PD03010100200',  // 蔬菜类-叶菜类-生菜-大叶菠菜
       category_code: '03',
       category_name: '蔬菜类',
       type_code: '01',
       type_name: '叶菜类',
-      variety_code: '02',
-      variety_name: '菠菜',
-      sub_variety1_code: '001',
+      variety_code: '01',
+      variety_name: '生菜',
+      sub_variety1_code: '002',
       sub_variety1_name: '大叶菠菜',
-      detail_variety_code: '01',
+      detail_variety_code: '00',
       status: 'active',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
     {
       id: 'CV003',
-      crop_code: '030102001',
+      crop_code: 'PD03030200100',  // 蔬菜类-茄果类-番茄-大番茄
       category_code: '03',
       category_name: '蔬菜类',
-      type_code: '02',
+      type_code: '03',
       type_name: '茄果类',
-      variety_code: '01',
+      variety_code: '02',
       variety_name: '番茄',
       sub_variety1_code: '001',
       sub_variety1_name: '大番茄',
-      detail_variety_code: '01',
+      detail_variety_code: '00',
       status: 'active',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
     {
       id: 'CV004',
-      crop_code: '030102002',
+      crop_code: 'PD03030400200',  // 蔬菜类-茄果类-辣椒-青椒
       category_code: '03',
       category_name: '蔬菜类',
-      type_code: '02',
+      type_code: '03',
       type_name: '茄果类',
-      variety_code: '02',
+      variety_code: '04',
       variety_name: '辣椒',
-      sub_variety1_code: '001',
+      sub_variety1_code: '002',
       sub_variety1_name: '青椒',
-      detail_variety_code: '01',
+      detail_variety_code: '00',
       status: 'active',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
     {
       id: 'CV005',
-      crop_code: '010101001',
+      crop_code: 'FR01010100100',  // 水果类-浆果类-草莓-红颜
       category_code: '01',
       category_name: '水果类',
       type_code: '01',
@@ -89,7 +100,7 @@ function seedCropVarieties() {
       variety_name: '草莓',
       sub_variety1_code: '001',
       sub_variety1_name: '红颜',
-      detail_variety_code: '01',
+      detail_variety_code: '00',
       status: 'active',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
@@ -262,6 +273,15 @@ function seedSuppliers() {
  */
 function seedSeedSources() {
   const db = getDatabase();
+
+  // 检查是否已有数据
+  const existing = db.exec('SELECT COUNT(*) FROM seed_sources');
+  const count = existing[0]?.values[0]?.[0] || 0;
+
+  if (count > 0) {
+    console.log(`种源数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
 
   // 种源数据 - 与前端 SeedSource 类型对齐
   // source_type: seed/seedling/cutting/grafting/tissue_culture/split/bulb/other
