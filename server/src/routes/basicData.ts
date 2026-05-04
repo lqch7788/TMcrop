@@ -169,10 +169,12 @@ router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT id, oid, code, name, greenhouse_type, area, location, status, created_at
+      SELECT id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
+             company_id, company_name, lng, lat, crop, growth_day, manager, phone,
+             soil_type, ph, intro, greenhouse_count, field_area, status, created_at
       FROM greenhouses
       WHERE status = 'active'
-      ORDER BY code
+      ORDER BY company_name, code
     `);
 
     if (result.length === 0) {
@@ -202,6 +204,35 @@ router.get('/greenhouses', (req, res) => {
  */
 router.post('/init', (req, res) => {
   try {
+    const db = getDatabase();
+
+    // 安全地添加 greenhouses 新列（如果列已存在则忽略错误）
+    const newColumns = [
+      'company_id TEXT DEFAULT ""',
+      'company_name TEXT DEFAULT ""',
+      'lng REAL DEFAULT 0',
+      'lat REAL DEFAULT 0',
+      'crop TEXT DEFAULT ""',
+      'growth_day INTEGER DEFAULT 0',
+      'manager TEXT DEFAULT ""',
+      'phone TEXT DEFAULT ""',
+      'soil_type TEXT DEFAULT ""',
+      'ph REAL DEFAULT 0',
+      'intro TEXT DEFAULT ""',
+      'greenhouse_count INTEGER DEFAULT 0',
+      'field_area REAL DEFAULT 0'
+    ];
+
+    for (const colDef of newColumns) {
+      try {
+        const colName = colDef.split(' ')[0];
+        db.run(`ALTER TABLE greenhouses ADD COLUMN ${colDef}`);
+      } catch (e) {
+        // 列可能已存在，忽略错误
+      }
+    }
+
+    // 导出基础数据
     exportBasicData();
     res.json({ success: true, message: '基础数据初始化成功' });
   } catch (error) {
@@ -272,6 +303,9 @@ router.get('/zones', (req, res) => {
         const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
         obj[camelCol] = row[i];
       });
+      // 将 greenhouseOid 映射到 baseOid，供前端统一使用
+      obj.baseOid = obj.greenhouseOid;
+      obj.baseName = obj.greenhouseName;
       return obj;
     });
 
@@ -279,6 +313,86 @@ router.get('/zones', (req, res) => {
   } catch (error) {
     console.error('获取区域数据失败:', error);
     res.status(500).json({ success: false, error: '获取区域数据失败' });
+  }
+});
+
+/**
+ * 创建区域
+ * POST /api/basic-data/zones
+ */
+router.post('/zones', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { zoneName, zoneCode, baseOid, zoneType, area, sortOrder, description } = req.body;
+
+    if (!zoneName || !zoneCode) {
+      return res.status(400).json({ success: false, error: '区域名称和编码不能为空' });
+    }
+
+    const id = `ZN${Date.now()}`;
+    const oid = `ZN${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO zones (id, oid, zone_code, zone_name, greenhouse_oid, zone_type, area, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, zoneCode, zoneName, baseOid || '', zoneType || '', area || 0, sortOrder || 0, now, now]);
+
+    res.json({ success: true, message: '区域创建成功', data: { id, oid, zoneCode, zoneName } });
+  } catch (error) {
+    console.error('创建区域失败:', error);
+    res.status(500).json({ success: false, error: '创建区域失败' });
+  }
+});
+
+/**
+ * 更新区域
+ * PUT /api/basic-data/zones/:id
+ */
+router.put('/zones/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { zoneName, zoneCode, baseOid, zoneType, area, sortOrder, status, description } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE zones
+      SET zone_name = COALESCE(?, zone_name),
+          zone_code = COALESCE(?, zone_code),
+          greenhouse_oid = COALESCE(?, greenhouse_oid),
+          zone_type = COALESCE(?, zone_type),
+          area = COALESCE(?, area),
+          sort_order = COALESCE(?, sort_order),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [zoneName, zoneCode, baseOid, zoneType, area, sortOrder, status, now, id]);
+
+    res.json({ success: true, message: '区域更新成功' });
+  } catch (error) {
+    console.error('更新区域失败:', error);
+    res.status(500).json({ success: false, error: '更新区域失败' });
+  }
+});
+
+/**
+ * 删除区域（软删除）
+ * DELETE /api/basic-data/zones/:id
+ */
+router.delete('/zones/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE zones SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '区域删除成功' });
+  } catch (error) {
+    console.error('删除区域失败:', error);
+    res.status(500).json({ success: false, error: '删除区域失败' });
   }
 });
 
@@ -521,7 +635,7 @@ router.get('/teams', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT t.id, t.oid, t.team_code, t.team_name, t.department_oid, t.leader_name, t.shift_type, t.member_count, t.description, t.status, t.created_at,
+      SELECT t.id, t.oid, t.team_code, t.team_name, t.department_oid, t.leader_id, t.leader_name, t.shift_type, t.member_count, t.status, t.created_at,
              d.name as department_name
       FROM teams t
       LEFT JOIN departments d ON t.department_oid = d.oid
@@ -761,10 +875,12 @@ router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT id, oid, code, name, greenhouse_type, area, location, status, created_at
+      SELECT id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
+             company_id, company_name, lng, lat, crop, growth_day, manager, phone,
+             soil_type, ph, intro, greenhouse_count, field_area, status, created_at
       FROM greenhouses
       WHERE status = 'active'
-      ORDER BY code
+      ORDER BY company_name, code
     `);
 
     if (result.length === 0) {
@@ -795,7 +911,12 @@ router.get('/greenhouses', (req, res) => {
 router.post('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
-    const { name, code, greenhouseType, area, location } = req.body;
+    const {
+      name, code, greenhouseType, area, location,
+      baseOid, baseName, companyId, companyName,
+      lng, lat, crop, growthDay, manager, phone,
+      soilType, ph, intro, greenhouseCount, fieldArea
+    } = req.body;
 
     if (!name || !code) {
       return res.status(400).json({ success: false, error: '温室名称和编码不能为空' });
@@ -806,9 +927,19 @@ router.post('/greenhouses', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`
-      INSERT INTO greenhouses (id, oid, code, name, greenhouse_type, area, location, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
-    `, [id, oid, code, name, greenhouseType || '', area || 0, location || '', now, now]);
+      INSERT INTO greenhouses (id, oid, code, name, greenhouse_type, area, location,
+             base_oid, base_name, company_id, company_name, lng, lat, crop, growth_day,
+             manager, phone, soil_type, ph, intro, greenhouse_count, field_area,
+             status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [
+      id, oid, code, name, greenhouseType || '', area || 0, location || '',
+      baseOid || '', baseName || '', companyId || '', companyName || '',
+      lng || 0, lat || 0, crop || '', growthDay || 0,
+      manager || '', phone || '', soilType || '', ph || 0, intro || '',
+      greenhouseCount || 0, fieldArea || 0,
+      now, now
+    ]);
 
     res.json({ success: true, message: '温室创建成功', data: { id, oid, code, name } });
   } catch (error) {
@@ -825,7 +956,12 @@ router.put('/greenhouses/:id', (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
-    const { name, code, greenhouseType, area, location, status } = req.body;
+    const {
+      name, code, greenhouseType, area, location,
+      baseOid, baseName, companyId, companyName,
+      lng, lat, crop, growthDay, manager, phone,
+      soilType, ph, intro, greenhouseCount, fieldArea, status
+    } = req.body;
 
     const now = new Date().toISOString();
 
@@ -836,10 +972,31 @@ router.put('/greenhouses/:id', (req, res) => {
           greenhouse_type = COALESCE(?, greenhouse_type),
           area = COALESCE(?, area),
           location = COALESCE(?, location),
+          base_oid = COALESCE(?, base_oid),
+          base_name = COALESCE(?, base_name),
+          company_id = COALESCE(?, company_id),
+          company_name = COALESCE(?, company_name),
+          lng = COALESCE(?, lng),
+          lat = COALESCE(?, lat),
+          crop = COALESCE(?, crop),
+          growth_day = COALESCE(?, growth_day),
+          manager = COALESCE(?, manager),
+          phone = COALESCE(?, phone),
+          soil_type = COALESCE(?, soil_type),
+          ph = COALESCE(?, ph),
+          intro = COALESCE(?, intro),
+          greenhouse_count = COALESCE(?, greenhouse_count),
+          field_area = COALESCE(?, field_area),
           status = COALESCE(?, status),
           updated_at = ?
       WHERE id = ?
-    `, [name, code, greenhouseType, area, location, status, now, id]);
+    `, [
+      name, code, greenhouseType, area, location,
+      baseOid, baseName, companyId, companyName,
+      lng, lat, crop, growthDay, manager, phone,
+      soilType, ph, intro, greenhouseCount, fieldArea, status,
+      now, id
+    ]);
 
     res.json({ success: true, message: '温室更新成功' });
   } catch (error) {

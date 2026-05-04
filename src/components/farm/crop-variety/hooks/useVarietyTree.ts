@@ -3,7 +3,7 @@
  * 管理树形的展开状态、数据转换、搜索过滤等功能
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   VarietyTreeNode,
   TreeLevel,

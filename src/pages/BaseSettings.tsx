@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
@@ -41,11 +41,12 @@ export default function BaseSettings() {
   const navigate = useNavigate();
 
   // 当 greenhouses 数据加载后，构建 companyGroups 结构
-  useMemo(() => {
+  useEffect(() => {
     if (greenhouses && greenhouses.length > 0) {
       // 按公司/区域分组 greenhouses 数据
       const grouped = greenhouses.reduce((acc, greenhouse) => {
-        const companyName = greenhouse.location || '默认公司';
+        // 使用 company_name 字段，如果没有则用 location
+        const companyName = greenhouse.companyName || greenhouse.company_name || greenhouse.location || '默认公司';
         if (!acc[companyName]) {
           acc[companyName] = {
             id: companyName.charCodeAt(0),
@@ -53,28 +54,28 @@ export default function BaseSettings() {
             bases: []
           };
         }
-        // 将 greenhouse 转换为 base 格式
+        // 将 greenhouse 转换为 base 格式，使用 API 返回的完整字段
         const base: BaseData = {
           id: parseInt(greenhouse.id) || 0,
           name: greenhouse.name,
           area: greenhouse.area || 0,
           unit: '亩',
-          crop: '',
-          growthDay: 0,
+          crop: greenhouse.crop || '',
+          growthDay: greenhouse.growthDay || greenhouse.growth_day || 0,
           status: greenhouse.status === 'using' ? 'planting' : greenhouse.status,
-          statusText: greenhouse.status === 'using' ? '使用中' : greenhouse.status,
-          manager: '',
-          phone: '',
-          soilType: '',
-          ph: 0,
-          coords: '',
+          statusText: greenhouse.status === 'using' ? '使用中' : (greenhouse.status === 'active' ? '种植中' : greenhouse.status || '种植中'),
+          manager: greenhouse.manager || '',
+          phone: greenhouse.phone || '',
+          soilType: greenhouse.soilType || greenhouse.soil_type || '',
+          ph: greenhouse.ph || 0,
+          coords: greenhouse.lng && greenhouse.lat ? `${greenhouse.lng},${greenhouse.lat}` : '',
           city: greenhouse.location || '',
           province: '',
-          lng: 0,
-          lat: 0,
-          intro: `${greenhouse.name}，类型：${greenhouse.greenhouseType || '温室'}，面积：${greenhouse.area || 0}亩`,
-          greenhouseCount: 0,
-          fieldArea: 0
+          lng: greenhouse.lng || 0,
+          lat: greenhouse.lat || 0,
+          intro: greenhouse.intro || `${greenhouse.name}，类型：${greenhouse.greenhouseType || '温室'}，面积：${greenhouse.area || 0}亩`,
+          greenhouseCount: greenhouse.greenhouseCount || greenhouse.greenhouse_count || 0,
+          fieldArea: greenhouse.fieldArea || greenhouse.field_area || 0
         };
         acc[companyName].bases.push(base);
         return acc;
@@ -85,7 +86,7 @@ export default function BaseSettings() {
   }, [greenhouses]);
 
   // 当 companyGroups 更新时，同步更新 expandedCompanies
-  React.useEffect(() => {
+  useEffect(() => {
     if (companyGroups.length > 0) {
       setExpandedCompanies(companyGroups.map(g => g.id));
     }

@@ -110,20 +110,26 @@ router.post('/dictionaries', (req, res) => {
     // 处理更新
     if (updated && updated.length > 0) {
       for (const dict of updated) {
-        db.run(
-          `UPDATE dictionaries SET category_code = ?, dict_code = ?, dict_label = ?, dict_value = ?, sort_order = ?, updated_at = ?
-           WHERE id = ?`,
-          [
-            dict.category_code,
-            dict.dict_code,
-            dict.dict_label,
-            dict.dict_value || dict.dict_label,
-            dict.sort_order || 0,
-            now,
-            dict.id
-          ]
-        );
-        results.updated.push(dict);
+        console.log('[Dictionary] Updating dict:', JSON.stringify(dict));
+        try {
+          db.run(
+            `UPDATE dictionaries SET category_code = ?, dict_code = ?, dict_label = ?, dict_value = ?, sort_order = ?, updated_at = ?
+             WHERE id = ?`,
+            [
+              dict.category_code,
+              dict.dict_code,
+              dict.dict_label,
+              dict.dict_value || dict.dict_label,
+              dict.sort_order || 0,
+              now,
+              dict.id
+            ]
+          );
+          results.updated.push(dict);
+        } catch (updateError) {
+          console.error('[Dictionary] Update error:', updateError);
+          throw updateError;
+        }
       }
     }
 

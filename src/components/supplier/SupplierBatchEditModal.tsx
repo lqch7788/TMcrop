@@ -1,7 +1,8 @@
 // 供应商批量编辑弹窗组件
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Supplier } from './types';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { useSettingsData } from '../common/settings/SettingsDataProvider';
 
 interface SupplierBatchEditModalProps {
   isOpen: boolean;
@@ -12,6 +13,13 @@ interface SupplierBatchEditModalProps {
 }
 
 export default function SupplierBatchEditModal({ isOpen, suppliers, selectedIds, onClose, onSave }: SupplierBatchEditModalProps) {
+  // 从全局设置数据获取供应商属性字典
+  const { dictionaries } = useSettingsData();
+  const supplierAttributeOptions = useMemo(() =>
+    dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active'),
+    [dictionaries]
+  );
+
   const [batchData, setBatchData] = useState<Record<string, string>>({
     status: '',
     supplierAttribute: '',
@@ -76,9 +84,9 @@ export default function SupplierBatchEditModal({ isOpen, suppliers, selectedIds,
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">不修改</option>
-            <option value="企业">企业</option>
-            <option value="个体户">个体户</option>
-            <option value="事业单位">事业单位</option>
+            {supplierAttributeOptions.map(opt => (
+              <option key={opt.code} value={opt.name}>{opt.name}</option>
+            ))}
           </select>
         </div>
 

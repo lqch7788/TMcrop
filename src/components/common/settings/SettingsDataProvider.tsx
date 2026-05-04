@@ -73,6 +73,21 @@ export interface Greenhouse {
   greenhouseType: string;
   area: number;
   location: string;
+  baseOid: string;
+  baseName: string;
+  companyId: string;
+  companyName: string;
+  lng: number;
+  lat: number;
+  crop: string;
+  growthDay: number;
+  manager: string;
+  phone: string;
+  soilType: string;
+  ph: number;
+  intro: string;
+  greenhouseCount: number;
+  fieldArea: number;
   status: string;
 }
 
@@ -132,14 +147,18 @@ export interface CodeRule {
 
 export interface Zone {
   id: string;
+  oid: string;
   zoneCode: string;
   zoneName: string;
-  greenhouseId: string;
+  baseOid: string;        // 所属基地OID (对应数据库 greenhouse_oid)
+  baseName?: string;      // 基地名称（用于显示）
   greenhouseName?: string;
   zoneType: string;
   area: number;
   sortOrder: number;
   status: string;
+  description?: string;
+  createdAt?: string;
 }
 
 export interface Block {
@@ -355,18 +374,18 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
 
   // 默认字典数据 - 当 API 不可用时提供基础选项
   const DEFAULT_DICTIONARIES: DictionaryItem[] = [
-    // 供应商类型
-    { id: 'dt-001', category: 'supplier_type', code: 'SP', name: '原材料供应', sortNumber: 1, status: 'active' },
-    { id: 'dt-002', category: 'supplier_type', code: 'FE', name: '设施设备', sortNumber: 2, status: 'active' },
-    { id: 'dt-003', category: 'supplier_type', code: 'PP', name: '包装材料', sortNumber: 3, status: 'active' },
-    { id: 'dt-004', category: 'supplier_type', code: 'EQ', name: '设备配件', sortNumber: 4, status: 'active' },
-    { id: 'dt-005', category: 'supplier_type', code: 'FA', name: '工厂用品', sortNumber: 5, status: 'active' },
-    { id: 'dt-006', category: 'supplier_type', code: 'IR', name: '办公用品', sortNumber: 6, status: 'active' },
-    { id: 'dt-007', category: 'supplier_type', code: 'OP', name: '运营用品', sortNumber: 7, status: 'active' },
-    { id: 'dt-008', category: 'supplier_type', code: 'PH', name: '农药', sortNumber: 8, status: 'active' },
-    { id: 'dt-009', category: 'supplier_type', code: 'TS', name: '运输服务', sortNumber: 9, status: 'active' },
-    { id: 'dt-010', category: 'supplier_type', code: 'UT', name: '公用事业', sortNumber: 10, status: 'active' },
-    { id: 'dt-011', category: 'supplier_type', code: 'OT', name: '其他', sortNumber: 11, status: 'active' },
+    // 供应商类型 - 与供应商编码规则保持一致
+    { id: 'dt-001', category: 'supplier_type', code: 'SP', name: '种子与种苗类', sortNumber: 1, status: 'active' },
+    { id: 'dt-002', category: 'supplier_type', code: 'FE', name: '肥料与土壤改良类', sortNumber: 2, status: 'active' },
+    { id: 'dt-003', category: 'supplier_type', code: 'PP', name: '农药与植保产品类', sortNumber: 3, status: 'active' },
+    { id: 'dt-004', category: 'supplier_type', code: 'EQ', name: '农业机械与设备类', sortNumber: 4, status: 'active' },
+    { id: 'dt-005', category: 'supplier_type', code: 'FA', name: '设施农业资材类', sortNumber: 5, status: 'active' },
+    { id: 'dt-006', category: 'supplier_type', code: 'IR', name: '灌溉与水肥一体化类', sortNumber: 6, status: 'active' },
+    { id: 'dt-007', category: 'supplier_type', code: 'OP', name: '日常劳保与劳动工具类', sortNumber: 7, status: 'active' },
+    { id: 'dt-008', category: 'supplier_type', code: 'PH', name: '仓储与物流资材类', sortNumber: 8, status: 'active' },
+    { id: 'dt-009', category: 'supplier_type', code: 'TS', name: '检测与技术服务类', sortNumber: 9, status: 'active' },
+    { id: 'dt-010', category: 'supplier_type', code: 'UT', name: '能源与辅助耗材类', sortNumber: 10, status: 'active' },
+    { id: 'dt-011', category: 'supplier_type', code: 'OT', name: '其他综合类', sortNumber: 11, status: 'active' },
 
     // 供应商状态
     { id: 'dt-020', category: 'supplier_status', code: 'active', name: '合作中', sortNumber: 1, status: 'active' },
@@ -610,10 +629,6 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     { id: 'biz-076', category: 'propagation_multiple', code: '1000', name: '500-1000倍（高品质组培）', sortNumber: 7, status: 'active' },
     { id: 'biz-077', category: 'propagation_multiple', code: '0', name: '其他（自定义倍数）', sortNumber: 8, status: 'active' },
 
-    // 来源类型
-    { id: 'biz-078', category: 'source_type', code: 'seed', name: '种子', sortNumber: 1, status: 'active' },
-    { id: 'biz-079', category: 'source_type', code: 'seedling', name: '种苗', sortNumber: 2, status: 'active' },
-
     // 种植状态
     { id: 'biz-085', category: 'planting_status', code: 'planted', name: '已定植', sortNumber: 1, status: 'active' },
     { id: 'biz-086', category: 'planting_status', code: 'growing', name: '生长期', sortNumber: 2, status: 'active' },
@@ -827,16 +842,16 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     refreshAll();
   }, [refreshAll]);
 
-  // 监听全局刷新事件
+  // 监听全局刷新事件 - 仅刷新字典数据
   useEffect(() => {
     const handleRefresh = () => {
-      refreshAll();
+      refreshDictionaries();
     };
     window.addEventListener('settings:refresh', handleRefresh);
     return () => {
       window.removeEventListener('settings:refresh', handleRefresh);
     };
-  }, [refreshAll]);
+  }, [refreshDictionaries]);
 
   const value: SettingsDataContextType = {
     users,

@@ -69,7 +69,7 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // 保存原始SQL用于count查询
-    const countSql = `SELECT COUNT(*) as total FROM seed_sources ss LEFT JOIN crop_varieties cv ON ss.crop_variety = cv.variety_name OR ss.crop_name = cv.variety_name WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM seed_sources ss LEFT JOIN crop_varieties cv ON ss.crop_variety = cv.variety_name OR ss.crop_name = cv.variety_name WHERE 1=1`;
     let countParams: any[] = [];
 
     if (crop_name) {
