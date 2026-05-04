@@ -30,6 +30,25 @@ import {
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { ProduceCategoryCode } from '../../../data/produceCodeRule';
+import * as extensionService from '../../../services/cropVarietyExtensionService';
+
+// 内联新增状态类型
+type InlineAddLevel = 'type' | 'variety' | 'subVariety1';
+
+interface InlineAddState {
+  active: boolean;
+  level: InlineAddLevel;
+  parentKey: string;
+  parentPath: {
+    categoryCode: ProduceCategoryCode;
+    categoryName: string;
+    typeCode?: string;
+    typeName?: string;
+    varietyCode?: string;
+    varietyName?: string;
+  };
+}
 
 export default function CropVarietyManagement() {
   const navigate = useNavigate();
@@ -79,10 +98,73 @@ export default function CropVarietyManagement() {
   const [varietyOptions, setVarietyOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [subVariety1Options, setSubVariety1Options] = useState<Array<{ value: string; label: string }>>([]);
 
+  // 内联新增状态
+  const [inlineAddState, setInlineAddState] = useState<InlineAddState>({
+    active: false,
+    level: 'type',
+    parentKey: '',
+    parentPath: {
+      categoryCode: 'PD',
+      categoryName: ''
+    }
+  });
+  // 内联新增输入值
+  const [inlineAddCode, setInlineAddCode] = useState('');
+  const [inlineAddName, setInlineAddName] = useState('');
 
-  // 初始化品种库
+  // 处理内联新增保存
+  const handleInlineAddSave = useCallback(async () => {
+    if (!inlineAddCode.trim() || !inlineAddName.trim()) {
+      alert('请输入编号和名称');
+      return;
+    }
+
+    try {
+      if (inlineAddState.level === 'type') {
+        await extensionService.addTypeExtension(
+          inlineAddState.parentPath.categoryCode,
+          inlineAddCode.trim(),
+          inlineAddName.trim()
+        );
+      } else if (inlineAddState.level === 'variety') {
+        await extensionService.addVarietyExtension(
+          inlineAddState.parentPath.categoryCode,
+          inlineAddState.parentPath.typeCode!,
+          inlineAddCode.trim(),
+          inlineAddName.trim()
+        );
+      } else if (inlineAddState.level === 'subVariety1') {
+        await extensionService.addSubVariety1Extension(
+          inlineAddState.parentPath.categoryCode,
+          inlineAddState.parentPath.typeCode!,
+          inlineAddState.parentPath.varietyCode!,
+          inlineAddCode.trim(),
+          inlineAddName.trim()
+        );
+      }
+      // 刷新树形数据
+      handleRefresh();
+      // 清空内联新增状态
+      setInlineAddState({ active: false, level: 'type', parentKey: '', parentPath: { categoryCode: 'PD', categoryName: '' } });
+      setInlineAddCode('');
+      setInlineAddName('');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '保存失败');
+    }
+  }, [inlineAddState, inlineAddCode, inlineAddName]);
+
+  // 处理内联新增取消
+  const handleInlineAddCancel = useCallback(() => {
+    setInlineAddState({ active: false, level: 'type', parentKey: '', parentPath: { categoryCode: 'PD', categoryName: '' } });
+    setInlineAddCode('');
+    setInlineAddName('');
+  }, []);
+
+
+  // 初始化品种库和扩展缓存
   useEffect(() => {
     initVarieties();
+    extensionService.initExtensionCache();
   }, []);
 
   // 加载统计数据
@@ -476,6 +558,7 @@ export default function CropVarietyManagement() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               selectedId={selectedVariety?.id}
+              refreshKey={refreshKey}
               canCreate={canCreate}
               canEdit={canEdit}
               canDelete={canDelete}
@@ -486,23 +569,78 @@ export default function CropVarietyManagement() {
               onViewModeChange={setViewMode}
               onSelect={handleSelect}
               onAdd={(node: VarietyTreeNodeType) => {
-                // 从节点获取预填充数据
-                if (node && node.path) {
-                  setPrefillAddData({
-                    categoryCode: node.path.categoryCode,
-                    categoryName: node.path.categoryName,
-                    typeCode: node.path.typeCode,
-                    typeName: node.path.typeName,
-                    varietyCode: node.path.varietyCode,
-                    varietyName: node.path.varietyName,
-                    subVariety1Code: node.path.subVariety1Code,
-                    subVariety1Name: node.path.subVariety1Name
-                  });
+                // 只有子品种1级别才弹出作物品种新增弹窗
+                // 其他级别（类型、品种）使用内联新增
+                if (node.level === 'subVariety1') {
+                  // 从节点获取预填充数据
+                  if (node && node.path) {
+                    setPrefillAddData({
+                      categoryCode: node.path.categoryCode,
+                      categoryName: node.path.categoryName,
+                      typeCode: node.path.typeCode,
+                      typeName: node.path.typeName,
+                      varietyCode: node.path.varietyCode,
+                      varietyName: node.path.varietyName,
+                      subVariety1Code: node.path.subVariety1Code,
+                      subVariety1Name: node.path.subVariety1Name
+                    });
+                  }
+                  setIsAddModalOpen(true);
+                } else {
+                  // 内联新增：根据节点级别设置父级信息
+                  if (node.level === 'category') {
+                    // 在类别级别点击新增 → 新增类型
+                    setInlineAddState({
+                      active: true,
+                      level: 'type',
+                      parentKey: node.key,
+                      parentPath: {
+                        categoryCode: node.path.categoryCode,
+                        categoryName: node.path.categoryName
+                      }
+                    });
+                  } else if (node.level === 'type') {
+                    // 在类型级别点击新增 → 新增品种
+                    setInlineAddState({
+                      active: true,
+                      level: 'variety',
+                      parentKey: node.key,
+                      parentPath: {
+                        categoryCode: node.path.categoryCode,
+                        categoryName: node.path.categoryName,
+                        typeCode: node.path.typeCode,
+                        typeName: node.path.typeName
+                      }
+                    });
+                  } else if (node.level === 'variety') {
+                    // 在品种级别点击新增 → 新增子品种1
+                    setInlineAddState({
+                      active: true,
+                      level: 'subVariety1',
+                      parentKey: node.key,
+                      parentPath: {
+                        categoryCode: node.path.categoryCode,
+                        categoryName: node.path.categoryName,
+                        typeCode: node.path.typeCode,
+                        typeName: node.path.typeName,
+                        varietyCode: node.path.varietyCode,
+                        varietyName: node.path.varietyName
+                      }
+                    });
+                  }
+                  setInlineAddCode('');
+                  setInlineAddName('');
                 }
-                setIsAddModalOpen(true);
               }}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              inlineAddState={inlineAddState}
+              inlineAddCode={inlineAddCode}
+              inlineAddName={inlineAddName}
+              onInlineAddCodeChange={setInlineAddCode}
+              onInlineAddNameChange={setInlineAddName}
+              onInlineAddSave={handleInlineAddSave}
+              onInlineAddCancel={handleInlineAddCancel}
             />
           )}
         </div>

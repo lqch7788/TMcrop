@@ -25,11 +25,28 @@ export function getVarietyOptions(): CropVarietyOption[] {
 }
 
 /**
+ * 将 snake_case 转换为 camelCase
+ */
+function snakeToCamel(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(snakeToCamel);
+  if (typeof obj !== 'object') return obj;
+
+  const result: any = {};
+  for (const key in obj) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    result[camelKey] = snakeToCamel(obj[key]);
+  }
+  return result;
+}
+
+/**
  * 获取所有作物品种
  */
 export async function getAllVarieties(): Promise<CropVariety[]> {
   if (USE_API) {
-    return apiClient.get<CropVariety[]>('/crop-varieties');
+    const data = await apiClient.get<any[]>('/crop-varieties');
+    return data.map(snakeToCamel);
   }
   // 回退到本地服务
   return localService.getAllVarieties();
@@ -40,7 +57,8 @@ export async function getAllVarieties(): Promise<CropVariety[]> {
  */
 export async function getVarietyById(id: string): Promise<CropVariety | undefined> {
   if (USE_API) {
-    return apiClient.get<CropVariety>(`/crop-varieties/${id}`);
+    const data = await apiClient.get<any>(`/crop-varieties/${id}`);
+    return snakeToCamel(data);
   }
   return localService.getVarietyById(id);
 }
@@ -84,7 +102,7 @@ export async function deleteVariety(id: string): Promise<boolean> {
 export async function findByCropName(cropName: string): Promise<CropVariety[]> {
   if (USE_API) {
     const all = await getAllVarieties();
-    return all.filter(v => v.variety_name?.includes(cropName) || v.type_name?.includes(cropName));
+    return all.filter(v => v.varietyName?.includes(cropName) || v.typeName?.includes(cropName));
   }
   return localService.findByCropName(cropName);
 }
@@ -96,7 +114,7 @@ export async function findByCropName(cropName: string): Promise<CropVariety[]> {
 export async function getVarietyByCode(cropCode: string): Promise<CropVariety | undefined> {
   if (USE_API) {
     const all = await getAllVarieties();
-    return all.find(v => v.crop_code === cropCode);
+    return all.find(v => v.cropCode === cropCode);
   }
   return localService.getVarietyByCode(cropCode);
 }
@@ -121,16 +139,16 @@ export async function getVarietyPathString(cropCode: string): Promise<string> {
  */
 export async function getVarietyPathByName(varietyName: string): Promise<string> {
   const all = await getAllVarieties();
-  // 优先精确匹配 sub_variety1_name，然后匹配 variety_name
-  let variety = all.find(v => v.sub_variety1_name === varietyName);
+  // 优先精确匹配 subVariety1Name，然后匹配 varietyName
+  let variety = all.find(v => v.subVariety1Name === varietyName);
   if (!variety) {
-    variety = all.find(v => v.variety_name === varietyName);
+    variety = all.find(v => v.varietyName === varietyName);
   }
   if (!variety) {
     // 尝试模糊匹配
     variety = all.find(v =>
-      v.variety_name.includes(varietyName) ||
-      (v.sub_variety1_name && v.sub_variety1_name.includes(varietyName))
+      v.varietyName.includes(varietyName) ||
+      (v.subVariety1Name && v.subVariety1Name.includes(varietyName))
     );
   }
   if (!variety) {
@@ -146,17 +164,17 @@ export async function getVarietyPathByName(varietyName: string): Promise<string>
  */
 export async function getStandardCropCode(varietyName: string): Promise<string> {
   const all = await getAllVarieties();
-  let variety = all.find(v => v.sub_variety1_name === varietyName);
+  let variety = all.find(v => v.subVariety1Name === varietyName);
   if (!variety) {
-    variety = all.find(v => v.variety_name === varietyName);
+    variety = all.find(v => v.varietyName === varietyName);
   }
   if (!variety) {
     variety = all.find(v =>
-      v.variety_name.includes(varietyName) ||
-      (v.sub_variety1_name && v.sub_variety1_name.includes(varietyName))
+      v.varietyName.includes(varietyName) ||
+      (v.subVariety1Name && v.subVariety1Name.includes(varietyName))
     );
   }
-  return variety?.crop_code || '';
+  return variety?.cropCode || '';
 }
 
 /**
@@ -165,14 +183,14 @@ export async function getStandardCropCode(varietyName: string): Promise<string> 
  */
 export async function getCropVarietyName(varietyName: string): Promise<string> {
   const all = await getAllVarieties();
-  let variety = all.find(v => v.sub_variety1_name === varietyName);
+  let variety = all.find(v => v.subVariety1Name === varietyName);
   if (!variety) {
-    variety = all.find(v => v.variety_name === varietyName);
+    variety = all.find(v => v.varietyName === varietyName);
   }
   if (!variety) {
     variety = all.find(v =>
-      v.variety_name.includes(varietyName) ||
-      (v.sub_variety1_name && v.sub_variety1_name.includes(varietyName))
+      v.varietyName.includes(varietyName) ||
+      (v.subVariety1Name && v.subVariety1Name.includes(varietyName))
     );
   }
   if (!variety) {
@@ -180,7 +198,7 @@ export async function getCropVarietyName(varietyName: string): Promise<string> {
     return varietyName || '';
   }
   // 返回最细分的品种名称
-  return variety.sub_variety1_name || variety.variety_name || '';
+  return variety.subVariety1Name || variety.varietyName || '';
 }
 
 /**
@@ -188,9 +206,9 @@ export async function getCropVarietyName(varietyName: string): Promise<string> {
  */
 function buildVarietyPathString(variety: CropVariety): string {
   const parts: string[] = [];
-  if (variety.category_name) parts.push(variety.category_name);
-  if (variety.type_name) parts.push(variety.type_name);
-  if (variety.variety_name) parts.push(variety.variety_name);
-  if (variety.sub_variety1_name) parts.push(variety.sub_variety1_name);
+  if (variety.categoryName) parts.push(variety.categoryName);
+  if (variety.typeName) parts.push(variety.typeName);
+  if (variety.varietyName) parts.push(variety.varietyName);
+  if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
   return parts.join('-');
 }

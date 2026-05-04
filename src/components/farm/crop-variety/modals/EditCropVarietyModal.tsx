@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
-import { updateVariety } from '../../../../services/cropVarietyService';
+import { updateVariety } from '../../../../services/apiCropVarietyService';
 
 interface EditCropVarietyModalProps {
   isOpen: boolean;
@@ -88,31 +88,34 @@ export function EditCropVarietyModal({
   };
 
   // 提交
-  const handleSubmit = () => {
-    updateVariety(variety.id, {
-      varietyName: formData.varietyName,
-      alias: parseAlias(formData.alias),
-      image: formData.image || undefined,
-      description: formData.description || undefined,
-      germinationPeriod: formData.germinationPeriod,
-      seedlingPeriod: formData.seedlingPeriod,
-      floweringPeriod: formData.floweringPeriod,
-      fruitingPeriod: formData.fruitingPeriod,
-      harvestPeriod: formData.harvestPeriod,
-      airTemperature: formData.airTemperature,
-      airHumidity: formData.airHumidity,
-      co2Content: formData.co2Content,
-      lightIntensity: formData.lightIntensity,
-      soilTemperature: formData.soilTemperature,
-      soilHumidity: formData.soilHumidity,
-      soilPh: formData.soilPh,
-      soilEc: formData.soilEc,
-      status: formData.status as CropVarietyStatus,
-      remarks: formData.remarks
-    });
-
-    onSuccess();
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      await updateVariety(variety.id, {
+        varietyName: formData.varietyName,
+        alias: parseAlias(formData.alias),
+        image: formData.image || undefined,
+        description: formData.description || undefined,
+        germinationPeriod: formData.germinationPeriod,
+        seedlingPeriod: formData.seedlingPeriod,
+        floweringPeriod: formData.floweringPeriod,
+        fruitingPeriod: formData.fruitingPeriod,
+        harvestPeriod: formData.harvestPeriod,
+        airTemperature: formData.airTemperature,
+        airHumidity: formData.airHumidity,
+        co2Content: formData.co2Content,
+        lightIntensity: formData.lightIntensity,
+        soilTemperature: formData.soilTemperature,
+        soilHumidity: formData.soilHumidity,
+        soilPh: formData.soilPh,
+        soilEc: formData.soilEc,
+        status: formData.status as CropVarietyStatus,
+        remarks: formData.remarks
+      });
+      onSuccess();
+      onClose();
+    } catch (error) {
+      alert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    }
   };
 
   return (

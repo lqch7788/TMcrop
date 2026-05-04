@@ -309,84 +309,89 @@ export function AddCropVarietyModal({
   };
 
   // 提交
-  const handleSubmit = () => {
-    // 验证
-    if (!formData.categoryCode || !formData.typeCode || !formData.varietyName) {
-      alert('请选择完整的类别、类型和品种');
-      return;
+  const handleSubmit = async () => {
+    try {
+      // 验证
+      if (!formData.categoryCode || !formData.typeCode || !formData.varietyName) {
+        alert('请选择完整的类别、类型和品种');
+        return;
+      }
+      if (!cropCode) {
+        alert('请先生成作物编码');
+        return;
+      }
+      if (duplicateCheckResult?.hasDuplicate) {
+        alert('存在重复的品种，请修改后重试');
+        return;
+      }
+
+      // 如果没有输入作物品种，使用子品种名称作为最终品种名称，详细品种序号默认为00
+      const finalVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || formData.varietyName;
+      const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
+
+      // 添加品种
+      addVariety({
+        categoryCode: formData.categoryCode as any,
+        categoryName: formData.categoryName,
+        typeCode: formData.typeCode,
+        typeName: formData.typeName,
+        varietyCode: formData.varietyCode,
+        varietyName: finalVarietyName,
+        subVariety1Code: formData.subVariety1Code || undefined,
+        subVariety1Name: formData.subVariety1Name || undefined,
+        detailVarietyCode: finalDetailCode || undefined,
+        alias: parseAlias(formData.alias),
+        image: formData.image || undefined,
+        description: formData.description || undefined,
+        germinationPeriod: formData.germinationPeriod,
+        seedlingPeriod: formData.seedlingPeriod,
+        floweringPeriod: formData.floweringPeriod,
+        fruitingPeriod: formData.fruitingPeriod,
+        harvestPeriod: formData.harvestPeriod,
+        airTemperature: formData.airTemperature,
+        airHumidity: formData.airHumidity,
+        co2Content: formData.co2Content,
+        lightIntensity: formData.lightIntensity,
+        soilTemperature: formData.soilTemperature,
+        soilHumidity: formData.soilHumidity,
+        soilPh: formData.soilPh,
+        soilEc: formData.soilEc,
+        status: 'active' as CropVarietyStatus,
+        remarks: formData.remarks
+      });
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('保存品种失败:', error);
+      alert('保存失败，请重试');
+    } finally {
+      // 重置表单
+      setFormData({
+        categoryCode: '',
+        categoryName: '',
+        typeCode: '',
+        typeName: '',
+        varietyCode: '',
+        varietyName: '',
+        subVariety1Code: '',
+        subVariety1Name: '',
+        detailVarietyName: '',
+        alias: '',
+        image: '',
+        description: '',
+        germinationPeriod: undefined,
+        seedlingPeriod: undefined,
+        floweringPeriod: undefined,
+        fruitingPeriod: undefined,
+        harvestPeriod: undefined,
+        remarks: ''
+      });
+      setCropCode('');
+      setDetailVarietyCode('');
+      setCodeGenerated(false);
+      setDuplicateCheckResult(null);
     }
-    if (!cropCode) {
-      alert('请先生成作物编码');
-      return;
-    }
-    if (duplicateCheckResult?.hasDuplicate) {
-      alert('存在重复的品种，请修改后重试');
-      return;
-    }
-
-    // 如果没有输入作物品种，使用子品种名称作为最终品种名称，详细品种序号默认为00
-    const finalVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || formData.varietyName;
-    const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
-
-    // 添加品种
-    addVariety({
-      categoryCode: formData.categoryCode as any,
-      categoryName: formData.categoryName,
-      typeCode: formData.typeCode,
-      typeName: formData.typeName,
-      varietyCode: formData.varietyCode,
-      varietyName: finalVarietyName,
-      subVariety1Code: formData.subVariety1Code || undefined,
-      subVariety1Name: formData.subVariety1Name || undefined,
-      detailVarietyCode: finalDetailCode || undefined,
-      alias: parseAlias(formData.alias),
-      image: formData.image || undefined,
-      description: formData.description || undefined,
-      germinationPeriod: formData.germinationPeriod,
-      seedlingPeriod: formData.seedlingPeriod,
-      floweringPeriod: formData.floweringPeriod,
-      fruitingPeriod: formData.fruitingPeriod,
-      harvestPeriod: formData.harvestPeriod,
-      airTemperature: formData.airTemperature,
-      airHumidity: formData.airHumidity,
-      co2Content: formData.co2Content,
-      lightIntensity: formData.lightIntensity,
-      soilTemperature: formData.soilTemperature,
-      soilHumidity: formData.soilHumidity,
-      soilPh: formData.soilPh,
-      soilEc: formData.soilEc,
-      status: 'active' as CropVarietyStatus,
-      remarks: formData.remarks
-    });
-
-    onSuccess();
-    onClose();
-
-    // 重置表单
-    setFormData({
-      categoryCode: '',
-      categoryName: '',
-      typeCode: '',
-      typeName: '',
-      varietyCode: '',
-      varietyName: '',
-      subVariety1Code: '',
-      subVariety1Name: '',
-      detailVarietyName: '',
-      alias: '',
-      image: '',
-      description: '',
-      germinationPeriod: undefined,
-      seedlingPeriod: undefined,
-      floweringPeriod: undefined,
-      fruitingPeriod: undefined,
-      harvestPeriod: undefined,
-      remarks: ''
-    });
-    setCropCode('');
-    setDetailVarietyCode('');
-    setCodeGenerated(false);
-    setDuplicateCheckResult(null);
   };
 
   // 关闭时重置表单

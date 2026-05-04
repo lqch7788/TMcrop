@@ -1072,5 +1072,52 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== 作物品种库扩展表（用户新增的类型/品种/子品种）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_variety_type_extensions (
+      id TEXT PRIMARY KEY,
+      category_code TEXT NOT NULL,
+      category_name TEXT,
+      type_code TEXT NOT NULL,
+      type_name TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(category_code, type_code)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_variety_variety_extensions (
+      id TEXT PRIMARY KEY,
+      category_code TEXT NOT NULL,
+      type_code TEXT NOT NULL,
+      variety_code TEXT NOT NULL,
+      variety_name TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(category_code, type_code, variety_code)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_variety_sub1_extensions (
+      id TEXT PRIMARY KEY,
+      category_code TEXT NOT NULL,
+      type_code TEXT NOT NULL,
+      variety_code TEXT NOT NULL,
+      sub_variety1_code TEXT NOT NULL,
+      sub_variety1_name TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(category_code, type_code, variety_code, sub_variety1_code)
+    )
+  `);
+
   console.log('数据库表初始化完成');
 }

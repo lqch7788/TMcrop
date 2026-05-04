@@ -23,7 +23,15 @@ export function VarietyTree({
   onAdd,
   onEdit,
   onDelete,
-  onExpandChange
+  onExpandChange,
+  selectedId,
+  inlineAddState,
+  inlineAddCode,
+  inlineAddName,
+  onInlineAddCodeChange,
+  onInlineAddNameChange,
+  onInlineAddSave,
+  onInlineAddCancel
 }: VarietyTreeProps) {
   // 内部状态
   const [internalSearchNameKeyword, setInternalSearchNameKeyword] = useState('');
@@ -219,6 +227,14 @@ export function VarietyTree({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   level={0}
+                  selectedId={selectedId}
+                  inlineAddState={inlineAddState}
+                  inlineAddCode={inlineAddCode}
+                  inlineAddName={inlineAddName}
+                  onInlineAddCodeChange={onInlineAddCodeChange}
+                  onInlineAddNameChange={onInlineAddNameChange}
+                  onInlineAddSave={onInlineAddSave}
+                  onInlineAddCancel={onInlineAddCancel}
                 />
               ))}
             </tbody>
