@@ -2,18 +2,27 @@
  * 作物实例追溯主页面
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle, Barcode } from 'lucide-react';
-import * as cropInstanceService from '@/services/cropInstanceService';
-import { CropInstance, CropInstanceStatus, SourceOrigin } from '@/types/crop';
+import * as cropInstanceService from '@/services/apiCropInstanceService';
+import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '@/types/crop';
 
 export default function InstancePage() {
   const [searchCode, setSearchCode] = useState('');
   const [selectedInstance, setSelectedInstance] = useState<CropInstance | null>(null);
-  const [traceChain, setTraceChain] = useState<ReturnType<typeof cropInstanceService.getTraceChain> | null>(null);
+  const [traceChain, setTraceChain] = useState<CropTraceChain | null>(null);
 
-  // 获取所有实例
-  const instances = cropInstanceService.getInstances();
+  // 作物实例数据（从API加载）
+  const [instances, setInstances] = useState<CropInstance[]>([]);
+
+  // 加载实例数据
+  useEffect(() => {
+    const loadInstances = async () => {
+      const data = await cropInstanceService.getInstances();
+      setInstances(data);
+    };
+    loadInstances();
+  }, []);
 
   // 筛选数据
   const filteredInstances = useMemo(() => {
@@ -26,9 +35,9 @@ export default function InstancePage() {
   }, [instances, searchCode]);
 
   // 查询溯源链
-  const handleQuery = useCallback((instance: CropInstance) => {
+  const handleQuery = useCallback(async (instance: CropInstance) => {
     setSelectedInstance(instance);
-    const chain = cropInstanceService.getTraceChain(instance.id);
+    const chain = await cropInstanceService.getTraceChain(instance.id);
     setTraceChain(chain);
   }, []);
 

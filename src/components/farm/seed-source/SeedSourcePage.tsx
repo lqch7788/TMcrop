@@ -174,11 +174,16 @@ export default function SeedSourcePage() {
   };
 
   // 处理删除
-  const handleDelete = (ids: string[]) => {
+  const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      seedSourceService.deleteSeedSources(ids);
-      refreshData();
-      setSelectedRows([]);
+      try {
+        await seedSourceService.deleteSeedSources(ids);
+        await refreshData();
+        setSelectedRows([]);
+      } catch (error) {
+        console.error('删除失败:', error);
+        alert('删除失败，请重试');
+      }
     }
   };
 

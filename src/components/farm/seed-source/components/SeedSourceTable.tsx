@@ -4,9 +4,11 @@
  * 行内按钮逻辑：查看详情/打印/图片 → 直接执行
  */
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
+import * as cropVarietyService from '../../../../services/apiCropVarietyService';
+import { CropVariety } from '../../../../types/crop';
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -77,6 +79,55 @@ export function SeedSourceTable({
   canExport = true,
   canPrint = true,
 }: SeedSourceTableProps) {
+  // 品种数据缓存（用于显示正确的品种路径）
+  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+
+  // 加载品种数据
+  useEffect(() => {
+    const loadVarieties = async () => {
+      const varieties = await cropVarietyService.getAllVarieties();
+      const cache = new Map<string, CropVariety>();
+      varieties.forEach(v => {
+        // 缓存最细分品种（sub_variety1_name 优先）
+        const key = v.sub_variety1_name || v.variety_name;
+        if (key && !cache.has(key)) {
+          cache.set(key, v);
+        }
+        // 也按 variety_name 缓存
+        if (v.variety_name && !cache.has(v.variety_name)) {
+          cache.set(v.variety_name, v);
+        }
+      });
+      setVarietyCache(cache);
+    };
+    loadVarieties();
+  }, []);
+
+  // 根据品种名称获取品种路径
+  const getVarietyPath = (varietyName: string): string => {
+    const variety = varietyCache.get(varietyName);
+    if (!variety) return varietyName || '';
+    const parts: string[] = [];
+    if (variety.category_name) parts.push(variety.category_name);
+    if (variety.type_name) parts.push(variety.type_name);
+    if (variety.variety_name) parts.push(variety.variety_name);
+    if (variety.sub_variety1_name) parts.push(variety.sub_variety1_name);
+    return parts.join('-');
+  };
+
+  // 根据品种名称获取标准作物编码
+  const getStandardCropCode = (varietyName: string): string => {
+    const variety = varietyCache.get(varietyName);
+    return variety?.crop_code || '';
+  };
+
+  // 根据品种名称获取作物品种（最细分）
+  const getCropVarietyName = (varietyName: string): string => {
+    const variety = varietyCache.get(varietyName);
+    if (!variety) return varietyName || '';
+    return variety.sub_variety1_name || variety.variety_name || '';
+  };
+
   // 计算分页
   const totalPages = Math.ceil(data.length / pagination.pageSize);
   const startIndex = (pagination.current - 1) * pagination.pageSize;
@@ -382,17 +433,11 @@ export function SeedSourceTable({
                     ) : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="font-mono text-orange-600">{record.cropCode || '-'}</span>
+                    <span className="font-mono text-orange-600">{getStandardCropCode(record.varietyName) || record.cropCode || '-'}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.cropName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record.varietyName)}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    <span className="text-gray-400">{record.cropCategory}</span>
-                    <span className="text-gray-400 mx-0.5">-</span>
-                    <span className="text-gray-700">{record.typeName}</span>
-                    <span className="text-gray-400 mx-0.5">-</span>
-                    <span className="text-gray-700">{record.varietyName}</span>
-                    <span className="text-gray-400 mx-0.5">-</span>
-                    <span className="text-gray-900 font-medium">{record.cropName}</span>
+                    {getVarietyPath(record.varietyName)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {sourceTypeMap[record.sourceType] || record.sourceType}

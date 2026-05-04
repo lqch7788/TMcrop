@@ -16,6 +16,7 @@ router.get('/', (req: Request, res: Response) => {
     // 使用 SQL 别名将数据库字段映射到前端期望的字段名
     // 通过 LEFT JOIN 获取 crop_varieties 表的详细信息
     // 注意：需要正确处理作物品种的多级结构：类别 > 类型 > 品种 > 子品种 > 详细品种
+    // 修复：直接使用 crop_varieties.crop_code 字段，而不是重新拼接（因为 crop_code 已经是正确的11位格式）
     let baseSql = `SELECT
       ss.id,
       ss.source_code AS seedCode,
@@ -27,11 +28,9 @@ router.get('/', (req: Request, res: Response) => {
       COALESCE(cv.variety_name, ss.variety_name, '') AS varietyName,
       ss.crop_name AS cropName,
       COALESCE(ss.crop_variety, '') AS cropVariety,
-      COALESCE(
-        cv.category_code || cv.type_code || cv.variety_code || cv.sub_variety1_code || cv.detail_variety_code,
-        ss.crop_code,
-        ''
-      ) AS cropCode,
+      -- 直接使用 crop_varieties.crop_code（已包含正确的11位字母数字混合编码）
+      -- 如果 crop_varieties.crop_code 为空（兼容旧数据），则使用 ss.crop_code
+      COALESCE(cv.crop_code, ss.crop_code, '') AS cropCode,
       ss.supplier_id AS supplierId,
       ss.supplier_name AS supplierName,
       ss.purchase_date AS purchaseDate,
@@ -52,9 +51,9 @@ router.get('/', (req: Request, res: Response) => {
       ss.create_time AS createTime,
       ss.update_time AS updateTime
     FROM seed_sources ss
-    LEFT JOIN crop_varieties cv ON ss.crop_name = cv.variety_name
-      OR ss.crop_name = cv.sub_variety1_name
-      OR ss.crop_name = cv.detail_variety_code
+    -- 使用 crop_code 精确匹配获取品种信息，避免重复记录
+    LEFT JOIN crop_varieties cv
+      ON ss.crop_code = cv.crop_code
     WHERE 1=1`;
     const params: any[] = [];
 
@@ -183,6 +182,25 @@ router.delete('/:id', (req: Request, res: Response) => {
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: '删除种源记录失败' });
+  }
+});
+
+// 批量删除路由（放在 /:id 之后）
+router.delete('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
+    }
+    const idArray = (ids as string).split(',');
+    const db = getDatabase();
+    const placeholders = idArray.map(() => '?').join(',');
+    db.run(`DELETE FROM seed_sources WHERE id IN (${placeholders})`, idArray);
+    saveDatabase();
+    res.json({ success: true, data: { deletedCount: idArray.length } });
+  } catch (error) {
+    console.error('批量删除种源记录失败:', error);
+    res.status(500).json({ success: false, error: '批量删除种源记录失败' });
   }
 });
 

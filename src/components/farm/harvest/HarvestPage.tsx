@@ -11,7 +11,7 @@ import {
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
 import * as harvestService from '../../../services/apiHarvestService';
-import * as cropInstanceService from '../../../services/cropInstanceService';
+import * as cropInstanceService from '../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import { inbound as inventoryInbound } from '../../../services/inventoryService';
 import { StockType, BusinessType, SourceType } from '../../../types/inventory';

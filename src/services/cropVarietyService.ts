@@ -667,3 +667,152 @@ export function getMaxSubVariety2Code(
 
   return String(maxCode).padStart(2, '0');
 }
+
+/**
+ * 根据品种名称查找或创建品种
+ * 当找不到精确匹配的品种时，会自动找到最接近的品种并在其下创建新子品种
+ *
+ * @param varietyName 品种名称（如"黑茄子"）
+ * @returns 找到或创建的品种，如果无法创建则返回 null
+ */
+export function findOrCreateVarietyByName(varietyName: string): CropVariety | null {
+  if (!varietyName || !varietyName.trim()) {
+    return null;
+  }
+
+  const trimmedName = varietyName.trim();
+  const varieties = getAllVarieties();
+
+  // 第一步：精确匹配 varietyName 或 subVariety1Name
+  let exactMatch = varieties.find(v =>
+    v.varietyName === trimmedName ||
+    v.subVariety1Name === trimmedName ||
+    v.varietyName.includes(trimmedName) ||
+    (v.subVariety1Name && v.subVariety1Name.includes(trimmedName))
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  // 第二步：模糊匹配，找到最接近的品种
+  // 策略：匹配品种名称或类型名称中包含输入名称的情况
+  // 例如：输入"黑茄子" 匹配 "茄子" 品种
+
+  let matchedVariety: CropVariety | null = null;
+  let bestMatchScore = 0;
+
+  for (const v of varieties) {
+    let score = 0;
+
+    // 完全匹配品种名（最高分）
+    if (v.varietyName === trimmedName) {
+      score = 100;
+    }
+    // 完全匹配子品种名
+    else if (v.subVariety1Name === trimmedName) {
+      score = 90;
+    }
+    // 品种名包含输入
+    else if (v.varietyName.includes(trimmedName)) {
+      score = 70;
+    }
+    // 子品种名包含输入
+    else if (v.subVariety1Name && v.subVariety1Name.includes(trimmedName)) {
+      score = 60;
+    }
+    // 输入包含品种名（如：茄子 包含于 黑茄子）
+    else if (trimmedName.includes(v.varietyName) && v.varietyName.length >= 2) {
+      score = 40 + v.varietyName.length;
+    }
+    // 类型名包含输入（如：茄子 包含于 黑茄子）
+    else if (v.typeName && trimmedName.includes(v.typeName) && v.typeName.length >= 2) {
+      score = 30 + v.typeName.length;
+    }
+    // 模糊匹配：两个词都有交集
+    else {
+      const nameChars = new Set(trimmedName);
+      const varietyChars = new Set(v.varietyName);
+      let commonChars = 0;
+      nameChars.forEach(c => {
+        if (varietyChars.has(c)) commonChars++;
+      });
+      if (commonChars >= 2 && commonChars >= Math.min(trimmedName.length, v.varietyName.length) * 0.5) {
+        score = 10 + commonChars;
+      }
+    }
+
+    if (score > bestMatchScore) {
+      bestMatchScore = score;
+      matchedVariety = v;
+    }
+  }
+
+  // 如果找到了匹配品种且评分足够高（>=30），在其下创建新子品种
+  if (matchedVariety && bestMatchScore >= 30) {
+    // 找到该品种下的最大子品种代码
+    const existingSubVarieties = varieties.filter(v =>
+      v.categoryCode === matchedVariety!.categoryCode &&
+      v.typeCode === matchedVariety!.typeCode &&
+      v.varietyCode === matchedVariety!.varietyCode &&
+      v.subVariety1Code &&
+      v.subVariety1Code !== '999' // 排除"其他"类
+    );
+
+    // 计算新的子品种代码
+    let maxSubCode = 0;
+    for (const sv of existingSubVarieties) {
+      const code = parseInt(sv.subVariety1Code!.replace(/^0+/, '') || '0', 10);
+      if (code > maxSubCode) {
+        maxSubCode = code;
+      }
+    }
+    const newSubCode = String(maxSubCode + 1).padStart(3, '0');
+
+    // 生成新的作物编码
+    // 编码结构：类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细品种(2) = 11位
+    const newCropCode = `${matchedVariety.categoryCode}${matchedVariety.typeCode}${matchedVariety.varietyCode}${newSubCode}00`;
+
+    const now = new Date().toLocaleString('zh-CN');
+    const newVariety: CropVariety = {
+      id: `CV${Date.now()}`,
+      cropCode: newCropCode,
+      categoryCode: matchedVariety.categoryCode,
+      categoryName: matchedVariety.categoryName,
+      typeCode: matchedVariety.typeCode,
+      typeName: matchedVariety.typeName,
+      varietyCode: matchedVariety.varietyCode,
+      varietyName: trimmedName, // 新品种名
+      subVariety1Code: newSubCode,
+      subVariety1Name: trimmedName,
+      detailVarietyCode: '00',
+      status: 'active',
+      createTime: now,
+      updateTime: now
+    };
+
+    // 保存到存储
+    varieties.push(newVariety);
+    saveVarieties(varieties);
+
+    console.log(`[findOrCreateVarietyByName] 自动创建新品种: ${trimmedName}，编码: ${newCropCode}，父品种: ${matchedVariety.varietyName}`);
+
+    return newVariety;
+  }
+
+  // 无法找到匹配的品种，返回 null
+  console.log(`[findOrCreateVarietyByName] 无法找到匹配品种: ${trimmedName}`);
+  return null;
+}
+
+/**
+ * 根据品种名称获取标准作物编码
+ * 如果品种不存在，会自动创建并返回新编码
+ *
+ * @param varietyName 品种名称
+ * @returns 作物编码，如果无法创建则返回空字符串
+ */
+export function getStandardCropCodeAutoCreate(varietyName: string): string {
+  const variety = findOrCreateVarietyByName(varietyName);
+  return variety?.cropCode || '';
+}

@@ -5,14 +5,15 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, ChevronDown, ChevronRight, Leaf } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Leaf, Plus } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   initVarieties,
   getVarietyOptions,
   searchVarieties,
   getCategoryOptions,
-  getVarietyByCode
+  getVarietyByCode,
+  findOrCreateVarietyByName
 } from '../../../services/cropVarietyService';
 import { CropVarietyOption } from '../../../types/cropVariety';
 
@@ -190,8 +191,25 @@ export function CropCodeSelector({
           {/* 选项列表 */}
           <div className="max-h-64 overflow-y-auto">
             {filteredOptions.length === 0 && searchResults.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                未找到匹配的品种
+              <div className="px-4 py-6 text-center">
+                <div className="text-gray-500 text-sm mb-3">未找到匹配的品种</div>
+                {searchKeyword.trim() && (
+                  <button
+                    onClick={() => {
+                      // 自动创建新品种
+                      const newVariety = findOrCreateVarietyByName(searchKeyword.trim());
+                      if (newVariety) {
+                        onChange(newVariety.cropCode, newVariety);
+                        setIsOpen(false);
+                        setSearchKeyword('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2 mx-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    自动创建「{searchKeyword.trim()}」
+                  </button>
+                )}
               </div>
             ) : (
               <>
