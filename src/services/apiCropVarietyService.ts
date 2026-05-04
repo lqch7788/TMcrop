@@ -210,5 +210,6 @@ function buildVarietyPathString(variety: CropVariety): string {
   if (variety.typeName) parts.push(variety.typeName);
   if (variety.varietyName) parts.push(variety.varietyName);
   if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
-  return parts.join('-');
+  if (variety.detailVarietyName) parts.push(variety.detailVarietyName);
+  return parts.join(' > ');
 }

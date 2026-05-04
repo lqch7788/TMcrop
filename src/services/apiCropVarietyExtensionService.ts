@@ -89,6 +89,26 @@ export async function deleteTypeExtension(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error || '删除类型扩展失败');
 }
 
+// 更新类型扩展
+export async function updateTypeExtension(
+  id: string,
+  typeName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/types/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type_name: typeName,
+      sort_order: sortOrder,
+      status
+    })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || '更新类型扩展失败');
+}
+
 // 获取所有品种扩展
 export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
   const res = await fetch(`${API_BASE}/varieties`);
@@ -131,6 +151,26 @@ export async function deleteVarietyExtension(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/varieties/${id}`, { method: 'DELETE' });
   const data = await res.json();
   if (!data.success) throw new Error(data.error || '删除品种扩展失败');
+}
+
+// 更新品种扩展
+export async function updateVarietyExtension(
+  id: string,
+  varietyName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/varieties/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      variety_name: varietyName,
+      sort_order: sortOrder,
+      status
+    })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || '更新品种扩展失败');
 }
 
 // 获取所有子品种1扩展
@@ -181,4 +221,24 @@ export async function deleteSubVariety1Extension(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/subvariety1/${id}`, { method: 'DELETE' });
   const data = await res.json();
   if (!data.success) throw new Error(data.error || '删除子品种1扩展失败');
+}
+
+// 更新子品种1扩展
+export async function updateSubVariety1Extension(
+  id: string,
+  subVariety1Name: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/subvariety1/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sub_variety1_name: subVariety1Name,
+      sort_order: sortOrder,
+      status
+    })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || '更新子品种1扩展失败');
 }

@@ -27,6 +27,8 @@ export interface CropVariety {
   subVariety1Name?: string;     // 子品种1名称 (如 '红颜')
   // 详细品种序号（第9-10位，如01大叶红颜，02小叶红颜），自动生成
   detailVarietyCode?: string;    // 详细品种代码 (2位，如 '01')
+  // 作物品种名称（用户手工输入的最细分品种名称，如"青旗红颜"）
+  detailVarietyName?: string;     // 作物品种名称（最细分品种）
   alias?: string[];             // 别名/俗名
   image?: string;              // 作物图片URL
   description?: string;         // 特性描述
@@ -75,6 +77,7 @@ export interface CropVarietyOption {
   subVariety1Name?: string; // 子品种1名称
   subVariety1Code?: string; // 子品种1代码
   detailVarietyCode?: string; // 详细品种代码
+  detailVarietyName?: string; // 作物品种名称（最细分）
   alias?: string[];   // 别名
   fullPath: string;   // 完整路径：如 "蔬菜类 > 茄果类 > 番茄 > 红颜 > 大叶红颜"
 }

@@ -107,12 +107,12 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO crop_varieties
       (id, crop_code, category_code, category_name, type_code, type_name,
        variety_code, variety_name, sub_variety1_code, sub_variety1_name,
-       detail_variety_code, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       detail_variety_code, detail_variety_name, status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId, crop_code, category_code, category_name, type_code, type_name,
       variety_code, variety_name, sub_variety1_code, sub_variety1_name,
-      detail_variety_code, status, now, now
+      detail_variety_code, detail_variety_name, status, now, now
     ]);
 
     saveDatabase();
@@ -141,25 +141,37 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    // 构建更新语句
-    const fields = Object.keys(updates)
-      .filter(key => key !== 'id')
-      .map(key => `${key} = ?`)
-      .join(', ');
+    // 只允许更新 crop_varieties 表中存在的字段
+    const allowedFields = [
+      'crop_code', 'category_code', 'category_name',
+      'type_code', 'type_name',
+      'variety_code', 'variety_name',
+      'sub_variety1_code', 'sub_variety1_name',
+      'detail_variety_code', 'detail_variety_name',
+      'status'
+    ];
 
-    if (fields.length === 0) {
+    // 构建更新语句，只包含允许的字段
+    const validUpdates: string[] = [];
+    const values: any[] = [];
+
+    for (const key of Object.keys(updates)) {
+      if (key !== 'id' && allowedFields.includes(key)) {
+        validUpdates.push(`${key} = ?`);
+        values.push(updates[key]);
+      }
+    }
+
+    if (validUpdates.length === 0) {
       return res.status(400).json({
         success: false,
-        error: '没有需要更新的字段'
+        error: '没有需要更新的字段或字段不被允许'
       });
     }
 
-    const values = Object.keys(updates)
-      .filter(key => key !== 'id')
-      .map(key => updates[key]);
     values.push(now, id);
 
-    db.run(`UPDATE crop_varieties SET ${fields}, update_time = ? WHERE id = ?`, values);
+    db.run(`UPDATE crop_varieties SET ${validUpdates.join(', ')}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
 
     res.json({
@@ -302,6 +314,27 @@ router.delete('/extensions/types/:id', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 更新类型扩展
+ */
+router.put('/extensions/types/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { type_name, sort_order, status } = req.body;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      `UPDATE crop_variety_type_extensions SET type_name = ?, sort_order = ?, status = ?, updated_at = ? WHERE id = ?`,
+      [type_name, sort_order || 0, status || 'active', now, id]
+    );
+    saveDatabase();
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('更新类型扩展失败:', error);
+    res.status(500).json({ success: false, error: '更新类型扩展失败' });
+  }
+});
+
 // ==================== 品种扩展 API ====================
 
 /**
@@ -409,6 +442,27 @@ router.delete('/extensions/varieties/:id', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 更新品种扩展
+ */
+router.put('/extensions/varieties/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { variety_name, sort_order, status } = req.body;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      `UPDATE crop_variety_variety_extensions SET variety_name = ?, sort_order = ?, status = ?, updated_at = ? WHERE id = ?`,
+      [variety_name, sort_order || 0, status || 'active', now, id]
+    );
+    saveDatabase();
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('更新品种扩展失败:', error);
+    res.status(500).json({ success: false, error: '更新品种扩展失败' });
+  }
+});
+
 // ==================== 子品种1扩展 API ====================
 
 /**
@@ -513,6 +567,27 @@ router.delete('/extensions/subvariety1/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('删除子品种1扩展失败:', error);
     res.status(500).json({ success: false, error: '删除子品种1扩展失败' });
+  }
+});
+
+/**
+ * 更新子品种1扩展
+ */
+router.put('/extensions/subvariety1/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { sub_variety1_name, sort_order, status } = req.body;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      `UPDATE crop_variety_sub1_extensions SET sub_variety1_name = ?, sort_order = ?, status = ?, updated_at = ? WHERE id = ?`,
+      [sub_variety1_name, sort_order || 0, status || 'active', now, id]
+    );
+    saveDatabase();
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('更新子品种1扩展失败:', error);
+    res.status(500).json({ success: false, error: '更新子品种1扩展失败' });
   }
 });
 

@@ -14,15 +14,19 @@ import {
   getTypeExtensionsByCategory,
   addTypeExtension as apiAddTypeExtension,
   deleteTypeExtension,
+  updateTypeExtension as apiUpdateTypeExtension,
   getAllVarietyExtensions,
   getVarietyExtensionsByType,
   addVarietyExtension as apiAddVarietyExtension,
   deleteVarietyExtension,
+  updateVarietyExtension as apiUpdateVarietyExtension,
   getAllSubVariety1Extensions,
   getSubVariety1ExtensionsByVariety,
   addSubVariety1Extension as apiAddSubVariety1Extension,
-  deleteSubVariety1Extension
+  deleteSubVariety1Extension,
+  updateSubVariety1Extension as apiUpdateSubVariety1Extension
 } from './apiCropVarietyExtensionService';
+import { getSubVariety1Options as getConfigSubVariety1Options } from './cropVarietyService';
 
 export { TypeExtension, VarietyExtension, SubVariety1Extension };
 
@@ -96,6 +100,17 @@ export async function removeTypeExtension(id: string): Promise<void> {
   await refreshCache();
 }
 
+// 更新类型扩展
+export async function updateTypeExtension(
+  id: string,
+  typeName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  await apiUpdateTypeExtension(id, typeName, sortOrder, status);
+  await refreshCache();
+}
+
 // 获取指定类型的所有扩展品种
 export function getVarietyExtensions(categoryCode: string, typeCode: string): VarietyExtension[] {
   return varietyExtensionsCache.filter(
@@ -128,6 +143,17 @@ export async function removeVarietyExtension(id: string): Promise<void> {
   await refreshCache();
 }
 
+// 更新品种扩展
+export async function updateVarietyExtension(
+  id: string,
+  varietyName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  await apiUpdateVarietyExtension(id, varietyName, sortOrder, status);
+  await refreshCache();
+}
+
 // 获取指定品种的所有扩展子品种1
 export function getSubVariety1Extensions(
   categoryCode: string,
@@ -137,6 +163,36 @@ export function getSubVariety1Extensions(
   return subVariety1ExtensionsCache.filter(
     s => s.category_code === categoryCode && s.type_code === typeCode && s.variety_code === varietyCode
   );
+}
+
+// 获取指定品种的子品种选项（合并预配置和扩展数据）
+export function getSubVariety1Options(
+  categoryCode: string,
+  typeCode: string,
+  varietyCode: string
+): Array<{ value: string; label: string }> {
+  // 从预配置数据获取子品种选项
+  const configOptions = getConfigSubVariety1Options(categoryCode, typeCode, varietyCode);
+
+  // 从扩展缓存获取用户新增的子品种
+  const extensions = subVariety1ExtensionsCache.filter(
+    s => s.category_code === categoryCode && s.type_code === typeCode && s.variety_code === varietyCode
+  );
+
+  const extensionOptions = extensions.map(e => ({
+    value: e.sub_variety1_code,
+    label: e.sub_variety1_name
+  }));
+
+  // 合并选项（扩展选项在前，预配置选项在后去重）
+  const allOptions = [...extensionOptions];
+  configOptions.forEach(opt => {
+    if (!allOptions.some(o => o.value === opt.value)) {
+      allOptions.push(opt);
+    }
+  });
+
+  return allOptions;
 }
 
 // 添加子品种1扩展
@@ -165,6 +221,17 @@ export async function addSubVariety1Extension(
 // 删除子品种1扩展
 export async function removeSubVariety1Extension(id: string): Promise<void> {
   await deleteSubVariety1Extension(id);
+  await refreshCache();
+}
+
+// 更新子品种1扩展
+export async function updateSubVariety1Extension(
+  id: string,
+  subVariety1Name: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  await apiUpdateSubVariety1Extension(id, subVariety1Name, sortOrder, status);
   await refreshCache();
 }
 

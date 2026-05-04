@@ -1,10 +1,11 @@
 /**
  * 作物品种库树形节点组件
  * 递归渲染树形结构的单个节点及其子节点
+ * 参照 supplier-code-rule 页面的编辑模式
  */
 
-import React from 'react';
-import { ChevronDown, ChevronRight, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, Plus, Eye, Edit2, Trash2, Save, X } from 'lucide-react';
 import { VarietyTreeNode as VarietyTreeNodeType } from './types';
 import { CropVariety } from '../../../types/cropVariety';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
@@ -30,6 +31,10 @@ interface VarietyTreeNodeProps {
   onInlineAddNameChange?: (name: string) => void;
   onInlineAddSave?: () => void;
   onInlineAddCancel?: () => void;
+  /** 树形编辑模式 */
+  isTreeEditing?: boolean;
+  /** 刷新数据回调 */
+  onRefresh?: () => void;
 }
 
 /**
@@ -93,11 +98,52 @@ export function VarietyTreeNode({
   onInlineAddCodeChange,
   onInlineAddNameChange,
   onInlineAddSave,
-  onInlineAddCancel
+  onInlineAddCancel,
+  isTreeEditing = false,
+  onRefresh
 }: VarietyTreeNodeProps) {
   const isExpanded = expandedKeys.includes(node.key);
   const hasChildren = node.hasChildren;
   const isInlineAdding = inlineAddState?.active && inlineAddState?.parentKey === node.key;
+
+  // 内联编辑状态
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  // 开始内联编辑
+  const startInlineEdit = () => {
+    setEditValue(node.name);
+    setIsInlineEditing(true);
+  };
+
+  // 保存内联编辑
+  const saveInlineEdit = async () => {
+    if (!editValue.trim() || editValue.trim() === node.name) {
+      setIsInlineEditing(false);
+      return;
+    }
+
+    const extensionId = (node as any).extensionId;
+    try {
+      if (node.level === 'type' && extensionId) {
+        await extensionService.updateTypeExtension(extensionId, editValue.trim());
+      } else if (node.level === 'variety' && extensionId) {
+        await extensionService.updateVarietyExtension(extensionId, editValue.trim());
+      } else if (node.level === 'subVariety1' && extensionId) {
+        await extensionService.updateSubVariety1Extension(extensionId, editValue.trim());
+      }
+      onRefresh?.();
+    } catch (err: any) {
+      alert('更新失败: ' + err.message);
+    }
+    setIsInlineEditing(false);
+  };
+
+  // 取消内联编辑
+  const cancelInlineEdit = () => {
+    setIsInlineEditing(false);
+    setEditValue('');
+  };
 
   // 构建完整11位作物编码显示
   const getFullCropCode = (): string => {
@@ -114,12 +160,8 @@ export function VarietyTreeNode({
   // 处理点击选择
   const handleSelect = () => {
     if (node.level === 'detail' && node.recordedVariety) {
-      // detail 节点：使用 node.name（显示名称）覆盖 recordedVariety.varietyName
-      const updatedVariety: CropVariety = {
-        ...node.recordedVariety,
-        varietyName: node.name  // 使用树形中显示的名称
-      };
-      onSelect(updatedVariety);
+      // detail 节点：直接使用 recordedVariety，不过覆盖 varietyName
+      onSelect(node.recordedVariety);
     } else if (node.level === 'subVariety1' && node.isRecorded) {
       const { categoryCode, typeCode, varietyCode, subVariety1Code, subVariety1Name } = node.path;
       const mockVariety: CropVariety = {
@@ -132,7 +174,7 @@ export function VarietyTreeNode({
         varietyCode,
         subVariety1Code: subVariety1Code || node.code,
         subVariety1Name: subVariety1Name || node.name,
-        varietyName: subVariety1Name || node.name,
+        varietyName: node.path.varietyName,
         alias: [],
         status: 'active',
         createTime: '',
@@ -194,13 +236,30 @@ export function VarietyTreeNode({
       };
       onEdit(mockVariety);
     } else if ((node as any).isExtension) {
-      // 扩展节点：类型/品种/子品种 - 触发内联编辑（暂用alert提示）
+      // 扩展节点：类型/品种/子品种 - 弹出输入框编辑
       const levelNames: Record<string, string> = {
         'type': '类型',
         'variety': '品种',
         'subVariety1': '子品种'
       };
-      alert(`${levelNames[node.level] || '扩展'}编辑功能开发中，当前ID: ${(node as any).extensionId}`);
+      const newName = prompt(`请输入新的${levelNames[node.level]}名称：`, node.name);
+      if (newName && newName.trim() && newName.trim() !== node.name) {
+        const extensionId = (node as any).extensionId;
+        // 根据节点级别调用不同的更新 API
+        if (node.level === 'type') {
+          extensionService.updateTypeExtension(extensionId, newName.trim()).then(() => {
+            onRefresh?.();
+          }).catch((err: Error) => alert('更新失败: ' + err.message));
+        } else if (node.level === 'variety') {
+          extensionService.updateVarietyExtension(extensionId, newName.trim()).then(() => {
+            onRefresh?.();
+          }).catch((err: Error) => alert('更新失败: ' + err.message));
+        } else if (node.level === 'subVariety1') {
+          extensionService.updateSubVariety1Extension(extensionId, newName.trim()).then(() => {
+            onRefresh?.();
+          }).catch((err: Error) => alert('更新失败: ' + err.message));
+        }
+      }
     }
   };
 
@@ -222,15 +281,15 @@ export function VarietyTreeNode({
         const extensionId = (node as any).extensionId;
         if (node.level === 'type' && extensionId) {
           extensionService.removeTypeExtension(extensionId).then(() => {
-            window.location.reload();
+            onRefresh?.();
           }).catch(err => alert('删除失败: ' + err.message));
         } else if (node.level === 'variety' && extensionId) {
           extensionService.removeVarietyExtension(extensionId).then(() => {
-            window.location.reload();
+            onRefresh?.();
           }).catch(err => alert('删除失败: ' + err.message));
         } else if (node.level === 'subVariety1' && extensionId) {
           extensionService.removeSubVariety1Extension(extensionId).then(() => {
-            window.location.reload();
+            onRefresh?.();
           }).catch(err => alert('删除失败: ' + err.message));
         }
       }
@@ -290,7 +349,48 @@ export function VarietyTreeNode({
             <div className="flex items-center gap-2">
               {renderToggleButton()}
               <span className="font-mono text-blue-600 font-medium text-sm">{node.code}</span>
-              <span className="text-gray-700 text-sm">{node.name}</span>
+              {isInlineEditing ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveInlineEdit();
+                      if (e.key === 'Escape') cancelInlineEdit();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
+                    autoFocus
+                  />
+                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <span className="text-gray-700 text-sm">{node.name}</span>
+                  {isTreeEditing && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
+                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <span className="text-gray-300">-</span>
@@ -303,9 +403,50 @@ export function VarietyTreeNode({
             <div className="flex items-center gap-2">
               {renderToggleButton()}
               <span className="font-mono text-blue-600 text-sm">{node.code}</span>
-              <span className="text-gray-700 text-sm">{node.name}</span>
-              {hasChildren && (
-                <span className="text-xs text-gray-400 ml-1">({node.childCount})</span>
+              {isInlineEditing ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveInlineEdit();
+                      if (e.key === 'Escape') cancelInlineEdit();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
+                    autoFocus
+                  />
+                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <span className="text-gray-700 text-sm">{node.name}</span>
+                  {hasChildren && (
+                    <span className="text-xs text-gray-400 ml-1">({node.childCount})</span>
+                  )}
+                  {isTreeEditing && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
+                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -319,9 +460,50 @@ export function VarietyTreeNode({
             <div className="flex items-center gap-2">
               {renderToggleButton()}
               <span className="font-mono text-green-600 text-sm">{node.code}</span>
-              <span className="text-gray-700 text-sm">{node.name}</span>
-              {node.isRecorded && (
-                <span className="text-xs text-green-600 ml-1">✓</span>
+              {isInlineEditing ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveInlineEdit();
+                      if (e.key === 'Escape') cancelInlineEdit();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
+                    autoFocus
+                  />
+                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <span className="text-gray-700 text-sm">{node.name}</span>
+                  {node.isRecorded && (
+                    <span className="text-xs text-green-600 ml-1">✓</span>
+                  )}
+                  {isTreeEditing && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
+                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -389,22 +571,22 @@ export function VarietyTreeNode({
                 <Plus className="w-3.5 h-3.5" />
               </button>
             )}
-            {/* 编辑按钮：对于已录入品种或扩展节点（除了category和type） */}
-            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && node.level !== 'type' && (
+            {/* 编辑按钮：对于已录入品种或扩展节点（category 级别不显示） */}
+            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && (
               <button
                 onClick={handleEdit}
                 className={getActionButtonClass('edit')}
-                title="编辑品种"
+                title={(node as any).isExtension ? '编辑' : '编辑品种'}
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             )}
-            {/* 删除按钮：对于已录入品种或扩展节点（除了category和type） */}
-            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && node.level !== 'type' && (
+            {/* 删除按钮：对于已录入品种或扩展节点（category 级别不显示） */}
+            {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && (
               <button
                 onClick={handleDelete}
                 className={getActionButtonClass('delete')}
-                title="删除品种"
+                title={(node as any).isExtension ? '删除' : '删除品种'}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -474,6 +656,7 @@ export function VarietyTreeNode({
           onInlineAddNameChange={onInlineAddNameChange}
           onInlineAddSave={onInlineAddSave}
           onInlineAddCancel={onInlineAddCancel}
+          isTreeEditing={isTreeEditing}
         />
       ))}
     </>

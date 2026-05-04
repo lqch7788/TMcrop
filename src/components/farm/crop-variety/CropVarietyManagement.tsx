@@ -50,6 +50,25 @@ interface InlineAddState {
   };
 }
 
+// 内联编辑状态类型
+interface InlineEditState {
+  active: boolean;
+  level: 'type' | 'variety' | 'subVariety1' | 'recorded';
+  nodeKey: string;
+  nodeName: string;
+  extensionId?: string;
+  parentPath: {
+    categoryCode?: ProduceCategoryCode;
+    categoryName?: string;
+    typeCode?: string;
+    typeName?: string;
+    varietyCode?: string;
+    varietyName?: string;
+    subVariety1Code?: string;
+    subVariety1Name?: string;
+  };
+}
+
 export default function CropVarietyManagement() {
   const navigate = useNavigate();
 
@@ -80,6 +99,8 @@ export default function CropVarietyManagement() {
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
   // 显示模式状态：仅已录入 or 显示全部
   const [displayMode, setDisplayMode] = useState<DisplayMode>('recorded');
+  // 树形编辑模式状态
+  const [isTreeEditing, setIsTreeEditing] = useState(false);
 
   // 编码生成器状态
   const [codeGenCategory, setCodeGenCategory] = useState('');
@@ -111,6 +132,49 @@ export default function CropVarietyManagement() {
   // 内联新增输入值
   const [inlineAddCode, setInlineAddCode] = useState('');
   const [inlineAddName, setInlineAddName] = useState('');
+
+  // 内联编辑状态
+  const [inlineEditState, setInlineEditState] = useState<InlineEditState>({
+    active: false,
+    level: 'type',
+    nodeKey: '',
+    nodeName: '',
+    extensionId: undefined,
+    parentPath: {}
+  });
+  // 内联编辑输入值
+  const [inlineEditName, setInlineEditName] = useState('');
+
+  // 处理内联编辑保存
+  const handleInlineEditSave = useCallback(async () => {
+    if (!inlineEditName.trim()) {
+      alert('请输入名称');
+      return;
+    }
+
+    try {
+      if (inlineEditState.level === 'type' && inlineEditState.extensionId) {
+        await extensionService.updateTypeExtension(inlineEditState.extensionId, inlineEditName.trim());
+      } else if (inlineEditState.level === 'variety' && inlineEditState.extensionId) {
+        await extensionService.updateVarietyExtension(inlineEditState.extensionId, inlineEditName.trim());
+      } else if (inlineEditState.level === 'subVariety1' && inlineEditState.extensionId) {
+        await extensionService.updateSubVariety1Extension(inlineEditState.extensionId, inlineEditName.trim());
+      }
+      // 刷新树形数据
+      handleRefresh();
+      // 清空内联编辑状态
+      setInlineEditState({ active: false, level: 'type', nodeKey: '', nodeName: '', extensionId: undefined, parentPath: {} });
+      setInlineEditName('');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '保存失败');
+    }
+  }, [inlineEditState, inlineEditName]);
+
+  // 处理内联编辑取消
+  const handleInlineEditCancel = useCallback(() => {
+    setInlineEditState({ active: false, level: 'type', nodeKey: '', nodeName: '', extensionId: undefined, parentPath: {} });
+    setInlineEditName('');
+  }, []);
 
   // 处理内联新增保存
   const handleInlineAddSave = useCallback(async () => {
@@ -641,6 +705,10 @@ export default function CropVarietyManagement() {
               onInlineAddNameChange={setInlineAddName}
               onInlineAddSave={handleInlineAddSave}
               onInlineAddCancel={handleInlineAddCancel}
+              isTreeEditing={isTreeEditing}
+              onTreeEditingChange={setIsTreeEditing}
+              onRefresh={handleRefresh}
+              refreshKey={refreshKey}
             />
           )}
         </div>
