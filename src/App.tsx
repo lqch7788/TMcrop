@@ -21,14 +21,15 @@ import Reports from './pages/Reports';
 import Approvals from './pages/Approvals';
 import MaterialApproval from './pages/MaterialApproval';
 import ProductionApproval from './pages/ProductionApproval';
-import ApprovalDemo from './pages/ApprovalDemo';
+import FarmApproval from './pages/FarmApproval';
+import IndicatorBudgetApproval from './pages/IndicatorBudgetApproval';
+import MyApplications from './pages/MyApplications';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import SystemConfig from './pages/SystemConfig';
 import DictionaryManagement from './pages/DictionaryManagement';
 import UserPermission from './pages/UserPermission';
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
-import ApprovalFlowPage from './pages/approval/ApprovalFlowPage';
 import NotificationSettings from './pages/NotificationSettings';
 import DeviceManagement from './pages/DeviceManagement';
 import WarehouseManagement from './pages/WarehouseManagement';
@@ -306,10 +307,11 @@ function AppContent() {
         <Route path="/announcement" element={<Announcement />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/approvals" element={<Approvals />} />
-        <Route path="/approval-demo" element={<ApprovalDemo />} />
-        <Route path="/approval/approval-flow" element={<ApprovalFlowPage />} />
         <Route path="/material-approval" element={<MaterialApproval />} />
         <Route path="/production-approval" element={<ProductionApproval />} />
+        <Route path="/farm-approval" element={<FarmApproval />} />
+        <Route path="/indicator-budget-approval" element={<IndicatorBudgetApproval />} />
+        <Route path="/my-applications" element={<MyApplications />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/approved" element={<Approved />} />
         <Route path="/my-approval" element={<MyApproval />} />

@@ -11,7 +11,7 @@ import {
   Package, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, ClipboardList,
   Truck, ShoppingCart, RotateCcw, Eye,
-  ChevronDown, X, RefreshCw
+  ChevronDown, X, RefreshCw, Sprout, FileText
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { useAuthPermission } from '../hooks/usePermission';
@@ -25,7 +25,12 @@ export default function MaterialApproval() {
   const canApprove = true;
   const canView = true;
 
-  const [activeTab, setActiveTab] = useState<'material' | 'return' | 'purchase'>('material');
+  const [activeTab, setActiveTab] = useState<
+    'material' | 'return' | 'purchase' |
+    'material_inbound' | 'material_transfer' |
+    'seed_inbound' | 'seedling' | 'planting' |
+    'order' | 'supplementary'
+  >('material');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,11 +73,18 @@ export default function MaterialApproval() {
     return categoryMap[prefix] || '其他';
   };
 
-  // Tab配置
+  // Tab配置 - 业务类审批
   const tabs = [
     { key: 'material', label: '领料审批', icon: ClipboardList, path: '/material-receiving', types: [ApprovalType.MATERIAL_REQUEST] },
     { key: 'return', label: '退料审批', icon: RotateCcw, path: '/material-return', types: [ApprovalType.RETURN_MATERIAL] },
     { key: 'purchase', label: '采购审批', icon: ShoppingCart, path: '/purchase-plan', types: [ApprovalType.PURCHASE_REQUEST] },
+    { key: 'material_inbound', label: '物料入库', icon: Truck, path: '/warehouse-inbound', types: [ApprovalType.MATERIAL_INBOUND] },
+    { key: 'material_transfer', label: '库存调拨', icon: RotateCcw, path: '/warehouse-overview', types: [ApprovalType.MATERIAL_TRANSFER] },
+    { key: 'seed_inbound', label: '种源入库', icon: Package, path: '/crop/seed-source', types: [ApprovalType.SEED_SOURCE_INBOUND] },
+    { key: 'seedling', label: '育苗计划', icon: Sprout, path: '/crop/seedling', types: [ApprovalType.SEEDLING_PLAN] },
+    { key: 'planting', label: '种植计划', icon: Sprout, path: '/crop/planting', types: [ApprovalType.PLANTING_PLAN] },
+    { key: 'order', label: '订单管理', icon: ShoppingCart, path: '/crop/order', types: [ApprovalType.ORDER_CREATE, ApprovalType.ORDER_CHANGE] },
+    { key: 'supplementary', label: '补录审批', icon: FileText, path: '/crop/seed-source', types: [ApprovalType.SEED_SOURCE_SUPPLEMENTARY, ApprovalType.SEEDLING_SUPPLEMENTARY, ApprovalType.CROP_STORAGE_SUPPLEMENTARY] },
   ] as const;
 
   // 根据Tab类型筛选数据
