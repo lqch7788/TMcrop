@@ -5,6 +5,7 @@
  */
 
 import { getDatabase } from './index';
+import { createIndexes } from './createIndexes';
 
 export function initializeDatabase() {
   const db = getDatabase();
@@ -989,6 +990,7 @@ export function initializeDatabase() {
       process_name TEXT NOT NULL,
       category TEXT,
       app_type INTEGER DEFAULT 0,
+      parent_oid TEXT,
       description TEXT,
       sort_order INTEGER DEFAULT 0,
       status TEXT DEFAULT 'active',
@@ -996,6 +998,13 @@ export function initializeDatabase() {
       updated_at TEXT
     )
   `);
+
+  // 为 processes 表添加 parent_oid 列（如果不存在）
+  try {
+    db.run(`ALTER TABLE processes ADD COLUMN parent_oid TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // 动作表（用于权限系统）
   db.run(`
@@ -1128,4 +1137,11 @@ export function initializeDatabase() {
   `);
 
   console.log('数据库表初始化完成');
+
+  // 创建索引
+  try {
+    createIndexes();
+  } catch (e) {
+    console.error('索引创建失败:', e);
+  }
 }
