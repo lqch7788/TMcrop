@@ -10,7 +10,7 @@ import { X, Upload, RefreshCw, Search, Plus, Check, Leaf } from 'lucide-react';
 import { SourceType, StockStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
-import { addSeedSource, updateSeedSource, generateSeedCode } from '../../../../services/seedSourceService';
+import { addSeedSource, updateSeedSource, generateSeedCode } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import * as supplierService from '../../../../services/supplierService';
