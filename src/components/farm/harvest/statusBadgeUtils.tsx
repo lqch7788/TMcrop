@@ -17,6 +17,7 @@ const statusColors: Record<string, string> = {
   'pending': '#FAAD14',       // 待采收 - 黄色
   'harvesting': '#1677FF',   // 采收中 - 蓝色
   'harvested': '#52C41A',    // 已采收 - 绿色
+  'completed': '#52C41A',    // 已完成 - 绿色
   'graded': '#722ED1',       // 已分级 - 紫色
   'stored': '#13C2C2',      // 已入库 - 青色
 };
@@ -26,6 +27,7 @@ const statusNames: Record<string, string> = {
   'pending': '待采收',
   'harvesting': '采收中',
   'harvested': '已采收',
+  'completed': '已完成',
   'graded': '已分级',
   'stored': '已入库',
 };

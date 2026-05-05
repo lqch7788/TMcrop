@@ -536,6 +536,8 @@ export function initializeDatabase() {
       status TEXT DEFAULT 'pending',
       completion_date TEXT,
       completion_note TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
       create_by TEXT,
       create_time TEXT,
       update_time TEXT
@@ -596,7 +598,10 @@ export function initializeDatabase() {
       total_amount REAL DEFAULT 0,
       greenhouse_id TEXT,
       greenhouse_name TEXT,
+      area_name TEXT,
       task_description TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
       status TEXT DEFAULT 'pending',
       remarks TEXT,
       create_time TEXT,
@@ -792,6 +797,16 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN batch_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN batch_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // 为巡查记录表添加关联字段
   try {
@@ -815,6 +830,21 @@ export function initializeDatabase() {
   }
   try {
     db.run(`ALTER TABLE labor_records ADD COLUMN department_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE labor_records ADD COLUMN area_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE labor_records ADD COLUMN batch_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE labor_records ADD COLUMN batch_code TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }
@@ -1135,6 +1165,78 @@ export function initializeDatabase() {
       UNIQUE(category_code, type_code, variety_code, sub_variety1_code)
     )
   `);
+
+  // ========== V8.0: 物料成本表 ==========
+  // 物料成本表 - 用于统计生产过程中的物料消耗成本
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_costs (
+      id TEXT PRIMARY KEY,
+      cost_code TEXT NOT NULL,
+      cost_type TEXT NOT NULL,
+      cost_name TEXT NOT NULL,
+      category TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT,
+      crop_name TEXT,
+      material_name TEXT,
+      material_type TEXT,
+      unit TEXT,
+      quantity REAL DEFAULT 0,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      cost_date TEXT,
+      supplier_id TEXT,
+      supplier_name TEXT,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 能源成本表 ==========
+  // 能源成本表 - 用于统计生产过程中的能源消耗（电、水、燃气等）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS energy_costs (
+      id TEXT PRIMARY KEY,
+      cost_code TEXT NOT NULL,
+      cost_type TEXT NOT NULL,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
+      quantity REAL DEFAULT 0,
+      unit TEXT,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      cost_date TEXT,
+      meter_start REAL DEFAULT 0,
+      meter_end REAL DEFAULT 0,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 为能源成本表添加ALTER TABLE（向后兼容）
+  try {
+    db.run(`ALTER TABLE energy_costs ADD COLUMN crop_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE energy_costs ADD COLUMN supplier_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE energy_costs ADD COLUMN supplier_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   console.log('数据库表初始化完成');
 

@@ -64,7 +64,10 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
     categories: [
       'crop_category', 'operator', 'planting_area', 'planting_mode',
       'planting_status', 'process_type', 'propagation_multiple',
-      'seedling_plan_type', 'seedling_site', 'seedling_type', 'survival_rate_target'
+      'seedling_plan_type', 'seedling_site', 'seedling_type', 'survival_rate_target',
+      // 生产汇总表配置（V8.0新增）
+      'problem_config', 'yield_config', 'cost_config', 'labor_config',
+      'batch_summary_config', 'alert_threshold', 'report_display_config'
     ]
   },
   {
@@ -239,6 +242,14 @@ export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   batch_config: '批次配置',
   recruitment_config: '招聘配置',
   notification_config: '系统通知配置',
+  // 生产汇总表配置（V8.0新增）
+  problem_config: '问题统计配置',
+  yield_config: '产量统计配置',
+  cost_config: '成本统计配置',
+  labor_config: '人工统计配置',
+  batch_summary_config: '批次汇总配置',
+  alert_threshold: '预警阈值配置',
+  report_display_config: '报表显示配置',
 };
 
 // 获取分类的中文名称

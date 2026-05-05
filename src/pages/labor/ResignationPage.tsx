@@ -752,7 +752,7 @@ export default function ResignationPage() {
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="">请选择员工</option>
-              {workers.map(w => (
+              {(workers || []).map(w => (
                 <option key={w.workerId} value={w.workerId}>{w.name} - {w.department}</option>
               ))}
             </select>
@@ -819,7 +819,7 @@ export default function ResignationPage() {
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="">请选择交接人</option>
-              {workers.filter(w => w.workerId !== formData.workerId).map(w => (
+              {(workers || []).filter(w => w.workerId !== formData.workerId).map(w => (
                 <option key={w.workerId} value={w.workerId}>{w.name} - {w.department}</option>
               ))}
             </select>

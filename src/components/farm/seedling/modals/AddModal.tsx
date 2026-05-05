@@ -35,7 +35,7 @@ export function AddModal({
   isOpen,
   onClose,
   onSuccess,
-  seedSources,
+  seedSources = [],
   cropVarietyOptions,
   seedlingTypes,
   sites
@@ -523,7 +523,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">请选择</option>
-                {seedSources.map(s => (
+                {Array.isArray(seedSources) && seedSources.map(s => (
                   <option key={s.id} value={s.id}>
                     {s.seedCode} - {s.cropName} ({s.cropVariety})
                   </option>

@@ -915,27 +915,229 @@ function seedHarvestRecords() {
   const db = getDatabase();
 
   const harvests = [
+    // 2026年1月
     {
       id: 'HV001',
-      harvest_code: 'CS202604001',
+      harvest_code: 'CS202601001',
       source_id: 'PL001',
-      source_name: 'ZZ202604001',
-      crop_name: '红生菜',
-      crop_variety: '红生菜',
+      source_name: 'ZZ202601001',
+      crop_name: '番茄',
+      crop_variety: '樱桃番茄',
       greenhouse_name: '1号大棚',
-      harvest_date: '2026-04-28',
-      harvest_quantity: 50,
+      harvest_date: '2026-01-15',
+      harvest_quantity: 120,
       unit: 'kg',
-      unit_price: 8,
-      total_amount: 400,
+      unit_price: 6,
+      total_amount: 720,
       quality_grade: 'A',
       buyer_id: 'PUR001',
       buyer_name: '张三',
       sales_channel: '批发',
       status: 'completed',
       create_by: '系统',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
+      create_time: '2026-01-15T10:00:00.000Z',
+      update_time: '2026-01-15T10:00:00.000Z'
+    },
+    {
+      id: 'HV002',
+      harvest_code: 'CS202601002',
+      source_id: 'PL002',
+      source_name: 'ZZ202601002',
+      crop_name: '黄瓜',
+      crop_variety: '水果黄瓜',
+      greenhouse_name: '2号大棚',
+      harvest_date: '2026-01-20',
+      harvest_quantity: 85,
+      unit: 'kg',
+      unit_price: 5,
+      total_amount: 425,
+      quality_grade: 'A',
+      buyer_id: 'PUR002',
+      buyer_name: '李四',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-01-20T10:00:00.000Z',
+      update_time: '2026-01-20T10:00:00.000Z'
+    },
+    // 2026年2月
+    {
+      id: 'HV003',
+      harvest_code: 'CS202602001',
+      source_id: 'PL001',
+      source_name: 'ZZ202601001',
+      crop_name: '番茄',
+      crop_variety: '樱桃番茄',
+      greenhouse_name: '1号大棚',
+      harvest_date: '2026-02-10',
+      harvest_quantity: 150,
+      unit: 'kg',
+      unit_price: 6.5,
+      total_amount: 975,
+      quality_grade: 'A',
+      buyer_id: 'PUR001',
+      buyer_name: '张三',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-02-10T10:00:00.000Z',
+      update_time: '2026-02-10T10:00:00.000Z'
+    },
+    {
+      id: 'HV004',
+      harvest_code: 'CS202602002',
+      source_id: 'PL003',
+      source_name: 'ZZ202602001',
+      crop_name: '草莓',
+      crop_variety: '红颜草莓',
+      greenhouse_name: '3号大棚',
+      harvest_date: '2026-02-18',
+      harvest_quantity: 60,
+      unit: 'kg',
+      unit_price: 25,
+      total_amount: 1500,
+      quality_grade: 'A',
+      buyer_id: 'PUR003',
+      buyer_name: '王五',
+      sales_channel: '采摘',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-02-18T10:00:00.000Z',
+      update_time: '2026-02-18T10:00:00.000Z'
+    },
+    // 2026年3月
+    {
+      id: 'HV005',
+      harvest_code: 'CS202603001',
+      source_id: 'PL002',
+      source_name: 'ZZ202601002',
+      crop_name: '黄瓜',
+      crop_variety: '水果黄瓜',
+      greenhouse_name: '2号大棚',
+      harvest_date: '2026-03-05',
+      harvest_quantity: 95,
+      unit: 'kg',
+      unit_price: 5.5,
+      total_amount: 522.5,
+      quality_grade: 'A',
+      buyer_id: 'PUR002',
+      buyer_name: '李四',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-03-05T10:00:00.000Z',
+      update_time: '2026-03-05T10:00:00.000Z'
+    },
+    {
+      id: 'HV006',
+      harvest_code: 'CS202603002',
+      source_id: 'PL004',
+      source_name: 'ZZ202603001',
+      crop_name: '生菜',
+      crop_variety: '奶油生菜',
+      greenhouse_name: '1号大棚',
+      harvest_date: '2026-03-12',
+      harvest_quantity: 200,
+      unit: 'kg',
+      unit_price: 4,
+      total_amount: 800,
+      quality_grade: 'A',
+      buyer_id: 'PUR001',
+      buyer_name: '张三',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-03-12T10:00:00.000Z',
+      update_time: '2026-03-12T10:00:00.000Z'
+    },
+    {
+      id: 'HV007',
+      harvest_code: 'CS202603003',
+      source_id: 'PL001',
+      source_name: 'ZZ202601001',
+      crop_name: '番茄',
+      crop_variety: '樱桃番茄',
+      greenhouse_name: '1号大棚',
+      harvest_date: '2026-03-25',
+      harvest_quantity: 180,
+      unit: 'kg',
+      unit_price: 6,
+      total_amount: 1080,
+      quality_grade: 'A',
+      buyer_id: 'PUR001',
+      buyer_name: '张三',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-03-25T10:00:00.000Z',
+      update_time: '2026-03-25T10:00:00.000Z'
+    },
+    // 2026年4月
+    {
+      id: 'HV008',
+      harvest_code: 'CS202604001',
+      source_id: 'PL005',
+      source_name: 'ZZ202604001',
+      crop_name: '红生菜',
+      crop_variety: '红生菜',
+      greenhouse_name: '1号大棚',
+      harvest_date: '2026-04-08',
+      harvest_quantity: 75,
+      unit: 'kg',
+      unit_price: 7,
+      total_amount: 525,
+      quality_grade: 'A',
+      buyer_id: 'PUR001',
+      buyer_name: '张三',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-04-08T10:00:00.000Z',
+      update_time: '2026-04-08T10:00:00.000Z'
+    },
+    {
+      id: 'HV009',
+      harvest_code: 'CS202604002',
+      source_id: 'PL002',
+      source_name: 'ZZ202601002',
+      crop_name: '黄瓜',
+      crop_variety: '水果黄瓜',
+      greenhouse_name: '2号大棚',
+      harvest_date: '2026-04-15',
+      harvest_quantity: 110,
+      unit: 'kg',
+      unit_price: 5,
+      total_amount: 550,
+      quality_grade: 'A',
+      buyer_id: 'PUR002',
+      buyer_name: '李四',
+      sales_channel: '批发',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-04-15T10:00:00.000Z',
+      update_time: '2026-04-15T10:00:00.000Z'
+    },
+    {
+      id: 'HV010',
+      harvest_code: 'CS202604003',
+      source_id: 'PL003',
+      source_name: 'ZZ202602001',
+      crop_name: '草莓',
+      crop_variety: '红颜草莓',
+      greenhouse_name: '3号大棚',
+      harvest_date: '2026-04-22',
+      harvest_quantity: 45,
+      unit: 'kg',
+      unit_price: 28,
+      total_amount: 1260,
+      quality_grade: 'A',
+      buyer_id: 'PUR003',
+      buyer_name: '王五',
+      sales_channel: '采摘',
+      status: 'completed',
+      create_by: '系统',
+      create_time: '2026-04-22T10:00:00.000Z',
+      update_time: '2026-04-22T10:00:00.000Z'
     }
   ];
 
@@ -2754,9 +2956,335 @@ export function seedAllBusinessData() {
   seedBusinessTasks();
   seedBusinessInspectionRecords();
   seedBusinessTempTasks();
+  seedMaterialCosts();
+  seedEnergyCosts();
 
   saveDatabase();
   console.log('业务数据种子数据导入完成');
+}
+
+/**
+ * 导入物料成本记录
+ */
+function seedMaterialCosts() {
+  const db = getDatabase();
+
+  const records = [
+    {
+      id: 'MC001',
+      cost_code: 'MC202603001',
+      cost_type: 'fertilizer',
+      cost_name: '番茄基肥',
+      category: '番茄',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      crop_name: '番茄',
+      material_name: '商品有机肥',
+      material_type: 'fertilizer',
+      unit: 'kg',
+      quantity: 500,
+      unit_price: 2.5,
+      total_amount: 1250,
+      cost_date: '2026-03-15',
+      supplier_id: 'SUP001',
+      supplier_name: '绿野农资公司',
+      remarks: '用于番茄定植前基肥',
+      create_by: 'U001',
+      create_time: '2026-03-15T08:00:00.000Z',
+      update_time: '2026-03-15T08:00:00.000Z'
+    },
+    {
+      id: 'MC002',
+      cost_code: 'MC202603002',
+      cost_type: 'pesticide',
+      cost_name: '番茄病虫害防治',
+      category: '番茄',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      crop_name: '番茄',
+      material_name: '多菌灵',
+      material_type: 'pesticide',
+      unit: 'kg',
+      quantity: 20,
+      unit_price: 45,
+      total_amount: 900,
+      cost_date: '2026-03-20',
+      supplier_id: 'SUP002',
+      supplier_name: '中化农药化肥店',
+      remarks: '番茄灰霉病防治',
+      create_by: 'U001',
+      create_time: '2026-03-20T09:00:00.000Z',
+      update_time: '2026-03-20T09:00:00.000Z'
+    },
+    {
+      id: 'MC003',
+      cost_code: 'MC202603003',
+      cost_type: 'seed',
+      cost_name: '黄瓜种子',
+      category: '黄瓜',
+      batch_id: 'BP002',
+      batch_code: 'SC202603002',
+      greenhouse_id: 'GH002',
+      greenhouse_name: '2号大棚',
+      crop_name: '黄瓜',
+      material_name: '黄瓜优选品种',
+      material_type: 'seed',
+      unit: '袋',
+      quantity: 50,
+      unit_price: 80,
+      total_amount: 4000,
+      cost_date: '2026-03-05',
+      supplier_id: 'SUP003',
+      supplier_name: '寿光蔬菜种苗公司',
+      remarks: '黄瓜春季种植用种',
+      create_by: 'U001',
+      create_time: '2026-03-05T10:00:00.000Z',
+      update_time: '2026-03-05T10:00:00.000Z'
+    },
+    {
+      id: 'MC004',
+      cost_code: 'MC202604001',
+      cost_type: 'film',
+      cost_name: '番茄地膜',
+      category: '番茄',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      crop_name: '番茄',
+      material_name: '黑色地膜',
+      material_type: 'film',
+      unit: 'kg',
+      quantity: 100,
+      unit_price: 15,
+      total_amount: 1500,
+      cost_date: '2026-04-01',
+      supplier_id: 'SUP001',
+      supplier_name: '绿野农资公司',
+      remarks: '保温保湿用黑色地膜',
+      create_by: 'U002',
+      create_time: '2026-04-01T08:00:00.000Z',
+      update_time: '2026-04-01T08:00:00.000Z'
+    },
+    {
+      id: 'MC005',
+      cost_code: 'MC202604002',
+      cost_type: 'fertilizer',
+      cost_name: '黄瓜追肥',
+      category: '黄瓜',
+      batch_id: 'BP002',
+      batch_code: 'SC202603002',
+      greenhouse_id: 'GH002',
+      greenhouse_name: '2号大棚',
+      crop_name: '黄瓜',
+      material_name: '复合肥(NPK)',
+      material_type: 'fertilizer',
+      unit: 'kg',
+      quantity: 300,
+      unit_price: 4.2,
+      total_amount: 1260,
+      cost_date: '2026-04-10',
+      supplier_id: 'SUP001',
+      supplier_name: '绿野农资公司',
+      remarks: '黄瓜结果期追肥',
+      create_by: 'U002',
+      create_time: '2026-04-10T07:30:00.000Z',
+      update_time: '2026-04-10T07:30:00.000Z'
+    },
+    {
+      id: 'MC006',
+      cost_code: 'MC202604003',
+      cost_type: 'pesticide',
+      cost_name: '黄瓜霜霉病防治',
+      category: '黄瓜',
+      batch_id: 'BP002',
+      batch_code: 'SC202603002',
+      greenhouse_id: 'GH002',
+      greenhouse_name: '2号大棚',
+      crop_name: '黄瓜',
+      material_name: '杜邦克露',
+      material_type: 'pesticide',
+      unit: 'kg',
+      quantity: 15,
+      unit_price: 120,
+      total_amount: 1800,
+      cost_date: '2026-04-15',
+      supplier_id: 'SUP002',
+      supplier_name: '中化农药化肥店',
+      remarks: '黄瓜霜霉病预防性喷施',
+      create_by: 'U002',
+      create_time: '2026-04-15T09:00:00.000Z',
+      update_time: '2026-04-15T09:00:00.000Z'
+    }
+  ];
+
+  for (const record of records) {
+    db.run(`
+      INSERT OR REPLACE INTO material_costs
+      (id, cost_code, cost_type, cost_name, category, batch_id, batch_code,
+       greenhouse_id, greenhouse_name, crop_name, material_name, material_type,
+       unit, quantity, unit_price, total_amount, cost_date,
+       supplier_id, supplier_name, remarks, create_by, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      record.id, record.cost_code, record.cost_type, record.cost_name, record.category,
+      record.batch_id, record.batch_code, record.greenhouse_id, record.greenhouse_name,
+      record.crop_name, record.material_name, record.material_type, record.unit,
+      record.quantity, record.unit_price, record.total_amount, record.cost_date,
+      record.supplier_id, record.supplier_name, record.remarks, record.create_by,
+      record.create_time, record.update_time
+    ]);
+  }
+
+  console.log(`已导入 ${records.length} 条物料成本记录`);
+}
+
+/**
+ * 导入能源成本记录
+ */
+function seedEnergyCosts() {
+  const db = getDatabase();
+
+  const records = [
+    {
+      id: 'EC001',
+      cost_code: 'EC202603001',
+      cost_type: 'electricity',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      crop_name: '番茄',
+      quantity: 2500,
+      unit: '度',
+      unit_price: 0.6,
+      total_amount: 1500,
+      cost_date: '2026-03-31',
+      meter_start: 10500,
+      meter_end: 13000,
+      remarks: '3月份电费（滴灌+通风设备）',
+      create_by: 'U001',
+      create_time: '2026-03-31T18:00:00.000Z',
+      update_time: '2026-03-31T18:00:00.000Z',
+      supplier_id: null,
+      supplier_name: '国家电网'
+    },
+    {
+      id: 'EC002',
+      cost_code: 'EC202603002',
+      cost_type: 'electricity',
+      greenhouse_id: 'GH002',
+      greenhouse_name: '2号大棚',
+      batch_id: 'BP002',
+      batch_code: 'SC202603002',
+      crop_name: '黄瓜',
+      quantity: 2800,
+      unit: '度',
+      unit_price: 0.6,
+      total_amount: 1680,
+      cost_date: '2026-03-31',
+      meter_start: 8200,
+      meter_end: 11000,
+      remarks: '3月份电费（加湿+保温）',
+      create_by: 'U001',
+      create_time: '2026-03-31T18:00:00.000Z',
+      update_time: '2026-03-31T18:00:00.000Z',
+      supplier_id: null,
+      supplier_name: '国家电网'
+    },
+    {
+      id: 'EC003',
+      cost_code: 'EC202604001',
+      cost_type: 'electricity',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      crop_name: '番茄',
+      quantity: 3200,
+      unit: '度',
+      unit_price: 0.6,
+      total_amount: 1920,
+      cost_date: '2026-04-30',
+      meter_start: 13000,
+      meter_end: 16200,
+      remarks: '4月份电费',
+      create_by: 'U001',
+      create_time: '2026-04-30T18:00:00.000Z',
+      update_time: '2026-04-30T18:00:00.000Z',
+      supplier_id: null,
+      supplier_name: '国家电网'
+    },
+    {
+      id: 'EC004',
+      cost_code: 'EC202604002',
+      cost_type: 'water',
+      greenhouse_id: 'GH001',
+      greenhouse_name: '1号大棚',
+      batch_id: 'BP001',
+      batch_code: 'SC202603001',
+      crop_name: '番茄',
+      quantity: 800,
+      unit: '吨',
+      unit_price: 3.5,
+      total_amount: 2800,
+      cost_date: '2026-04-30',
+      meter_start: 4500,
+      meter_end: 5300,
+      remarks: '4月份水费（滴灌用水）',
+      create_by: 'U001',
+      create_time: '2026-04-30T18:00:00.000Z',
+      update_time: '2026-04-30T18:00:00.000Z',
+      supplier_id: null,
+      supplier_name: '自来水公司'
+    },
+    {
+      id: 'EC005',
+      cost_code: 'EC202604003',
+      cost_type: 'electricity',
+      greenhouse_id: 'GH002',
+      greenhouse_name: '2号大棚',
+      batch_id: 'BP002',
+      batch_code: 'SC202603002',
+      crop_name: '黄瓜',
+      quantity: 3500,
+      unit: '度',
+      unit_price: 0.6,
+      total_amount: 2100,
+      cost_date: '2026-04-30',
+      meter_start: 11000,
+      meter_end: 14500,
+      remarks: '4月份电费',
+      create_by: 'U001',
+      create_time: '2026-04-30T18:00:00.000Z',
+      update_time: '2026-04-30T18:00:00.000Z',
+      supplier_id: null,
+      supplier_name: '国家电网'
+    }
+  ];
+
+  for (const record of records) {
+    db.run(`
+      INSERT OR REPLACE INTO energy_costs
+      (id, cost_code, cost_type, greenhouse_id, greenhouse_name, batch_id, batch_code,
+       crop_name, quantity, unit, unit_price, total_amount, cost_date,
+       meter_start, meter_end, remarks, create_by, create_time, update_time,
+       supplier_id, supplier_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      record.id, record.cost_code, record.cost_type, record.greenhouse_id, record.greenhouse_name,
+      record.batch_id, record.batch_code, record.crop_name, record.quantity, record.unit,
+      record.unit_price, record.total_amount, record.cost_date, record.meter_start,
+      record.meter_end, record.remarks, record.create_by, record.create_time, record.update_time,
+      record.supplier_id, record.supplier_name
+    ]);
+  }
+
+  console.log(`已导入 ${records.length} 条能源成本记录`);
 }
 
 /**
@@ -2782,6 +3310,8 @@ export function exportDatabase() {
   seedSystemConfigs();
   seedUsersAndRoles();
   seedAllBusinessData();
+  seedMaterialCosts();
+  seedEnergyCosts();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');
