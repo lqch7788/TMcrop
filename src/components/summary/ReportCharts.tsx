@@ -67,13 +67,14 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
                   cy="50%"
                   outerRadius={100}
                   dataKey="value"
-                  label
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={{ stroke: '#9ca3af', strokeWidth: 1, strokeDasharray: '4 4' }}
                 >
                   {CHART_COLORS.map((color, index) => (
                     <Cell key={index} fill={color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => `${value.toLocaleString()} kg`} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -98,12 +99,14 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
                   outerRadius={120}
                   paddingAngle={2}
                   dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={{ stroke: '#9ca3af', strokeWidth: 1, strokeDasharray: '4 4' }}
                 >
                   {costAnalysis.map((_, index) => (
                     <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => `¥${value.toLocaleString()}`} />
               </PieChart>
             </ResponsiveContainer>
           </div>

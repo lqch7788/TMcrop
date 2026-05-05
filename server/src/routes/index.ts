@@ -28,6 +28,8 @@ import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
+import summaryRouter from './summary';
+import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 
@@ -107,6 +109,12 @@ router.use('/crop-orders', cropOrderRouter);
 
 // 生产计划路由
 router.use('/production-plans', productionPlanRouter);
+
+// 生产汇总统计路由
+router.use('/summary', summaryRouter);
+
+// 成本管理路由（物料成本 + 能源成本）
+router.use('/material-costs', materialCostRouter);
 
 // 性能监控路由
 router.use('/monitoring', monitoringRouter);

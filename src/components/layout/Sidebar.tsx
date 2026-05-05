@@ -9,7 +9,7 @@ import {
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot, UserMinus, FileSpreadsheet,
-  Leaf, Flower2, Trees
+  Leaf, Flower2, Trees, CheckCircle
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,6 +40,7 @@ const cropSubItems = [
   { icon: Sprout, label: '种源管理', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
+  { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },

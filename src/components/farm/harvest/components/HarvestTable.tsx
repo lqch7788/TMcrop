@@ -37,18 +37,18 @@ function ProductRow({ record, recordIdx, generateProductCode }: ProductRowProps)
       <tbody>
         <tr className="border-t">
           <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
-            {generateProductCode(record.cropName, record.variety, recordIdx)}
+            {generateProductCode(record.cropName, record.variety || record.cropVariety || '', recordIdx)}
           </td>
           <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety || record.cropVariety || '-'}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode || '-'}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode || '-'}</td>
           <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield || 0}</td>
           <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
-            {Math.round(record.harvestQuantity / record.targetYield * 100)}%
+            {record.targetYield ? Math.round(record.harvestQuantity / record.targetYield * 100) : 0}%
           </td>
-          <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade)}</td>
+          <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade || record.qualityGrade || 'A')}</td>
           <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
         </tr>
       </tbody>
@@ -144,13 +144,13 @@ export function HarvestTableRow({
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
         <td className="px-4 py-3 whitespace-nowrap">
           <div className="flex flex-col items-center gap-1">
-            {record.harvesterNames.map((name, i) => (
-              <span key={i} className="text-sm text-gray-900">{name}</span>
+            {(record.harvesterNames || record.createBy ? [record.createBy] : []).map((name, i) => (
+              <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
             ))}
           </div>
         </td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</td>
-        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor}</td>
+        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor || '-'}</td>
         <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</td>
       </tr>
       {/* 展开行：产品明细 */}

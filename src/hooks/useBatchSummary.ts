@@ -1,76 +1,123 @@
 /**
  * 批次汇总数据 Hook
  * 用于生产汇总表(PlanSummary)页面的数据聚合
+ * 支持后端 API 和 mockData 回退
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { BatchSummaryRow, SummaryStatCard, BatchFilters } from '../types/views';
 import { cropBatches, tasks } from '../data/mockData';
+import { getBatchStats, type BatchStatsItem } from '../services/summaryService';
 
 /**
  * 批次汇总数据 Hook
  */
 export function useBatchSummary(filters?: BatchFilters) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [batchStats, setBatchStats] = useState<BatchStatsItem[]>([]);
 
-  // 模拟异步加载
-  useEffect(() => {
+  // 从后端加载批次汇总数据
+  const loadData = useCallback(async () => {
     setLoading(true);
-    const timer = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(timer);
+    setError(null);
+
+    try {
+      const data = await getBatchStats({
+        crop_name: filters?.cropName && filters.cropName !== '全部' ? filters.cropName : undefined,
+        status: filters?.status && filters.status !== '全部' ? filters.status : undefined,
+        greenhouse_name: filters?.greenhouse && filters.greenhouse !== '全部' ? filters.greenhouse : undefined,
+      });
+      setBatchStats(data);
+    } catch (err) {
+      console.error('加载批次汇总数据失败:', err);
+      setError('加载数据失败');
+      // 回退到 mockData
+      fallbackToMockData();
+    } finally {
+      setLoading(false);
+    }
   }, [filters?.cropName, filters?.status, filters?.greenhouse]);
 
-  // 聚合批次汇总数据
-  const summaries = useMemo((): BatchSummaryRow[] => {
-    return cropBatches.map(batch => {
-      // 聚合任务
+  // 回退到 mockData
+  const fallbackToMockData = useCallback(() => {
+    const mockData: BatchStatsItem[] = cropBatches.map(batch => {
       const batchTasks = tasks.filter(t => t.batchId === batch.id);
       const completedTasks = batchTasks.filter(t => t.status === 'completed');
-
-      // 计算完成率
       const completionRate = batchTasks.length > 0
-        ? ((completedTasks.length / batchTasks.length) * 100).toFixed(1) + '%'
-        : '0%';
+        ? Math.round((completedTasks.length / batchTasks.length) * 100)
+        : 0;
 
+      return {
+        id: batch.id,
+        batchCode: batch.batchCode,
+        batchName: batch.batchName || batch.batchCode,
+        cropName: batch.cropName,
+        variety: batch.variety,
+        greenhouse: typeof batch.greenhouse === 'string' ? batch.greenhouse : batch.greenhouseName || '',
+        plantingArea: batch.plantingArea,
+        targetYield: batch.targetYield,
+        actualQuantity: batch.actualYield,
+        harvestQuantity: batch.actualYield,
+        completionRate,
+        status: batch.status,
+        plantingDate: batch.startDate,
+        expectedHarvestDate: batch.endDate,
+        actualHarvestDate: '',
+        taskCount: batchTasks.length,
+        completedTaskCount: completedTasks.length,
+        pendingTaskCount: batchTasks.filter(t => t.status === 'pending').length,
+        inProgressTaskCount: batchTasks.filter(t => t.status === 'in_progress').length,
+        totalWorkHours: batchTasks.reduce((sum, t) => sum + t.workDuration, 0),
+        laborCost: 0,
+        remainingYield: batch.targetYield - batch.actualYield,
+      };
+    });
+    setBatchStats(mockData);
+  }, []);
+
+  // 初次加载和数据变化时获取数据
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 转换为页面需要的行数据格式
+  const summaryRows = useMemo((): BatchSummaryRow[] => {
+    return batchStats.map(batch => {
       // 计算状态样式
-      const statusClass = getStatusClass(completionRate, batch.status);
-
-      // 获取温室名称
-      const greenhouseName = typeof batch.greenhouse === 'string'
-        ? batch.greenhouse
-        : batch.greenhouseName || '';
+      const statusClass = getStatusClass(batch.completionRate, batch.status);
 
       return {
         id: batch.id,
         batchCode: batch.batchCode,
         cropName: batch.cropName,
         variety: batch.variety,
-        greenhouse: greenhouseName,
+        greenhouse: batch.greenhouse,
         plantingArea: batch.plantingArea,
         targetYield: batch.targetYield,
-        actualYield: batch.actualYield,
-        completionRate,
+        actualYield: batch.harvestQuantity || batch.actualQuantity,
+        completionRate: batch.completionRate.toString() + '%',
         status: batch.status,
         statusClass,
-        taskCount: batchTasks.length,
-        completedTaskCount: completedTasks.length,
-        totalWorkHours: batchTasks.reduce((sum, t) => sum + t.workDuration, 0),
-        laborCost: 0, // TODO: 从 WorkLog/Attendance 聚合
-        materialCost: 0, // TODO: 从 MaterialReceiving 聚合
+        taskCount: batch.taskCount,
+        completedTaskCount: batch.completedTaskCount,
+        totalWorkHours: batch.totalWorkHours,
+        laborCost: batch.laborCost,
+        materialCost: 0,
       };
     });
-  }, [cropBatches, tasks]);
+  }, [batchStats]);
 
   // 应用筛选
   const filteredSummaries = useMemo(() => {
-    if (!filters) return summaries;
-    return summaries.filter(s => {
-      if (filters.cropName && s.cropName !== filters.cropName) return false;
-      if (filters.status && s.status !== filters.status) return false;
-      if (filters.greenhouse && s.greenhouse !== filters.greenhouse) return false;
+    if (!filters) return summaryRows;
+    return summaryRows.filter(s => {
+      if (filters.cropName && filters.cropName !== '全部' && s.cropName !== filters.cropName) return false;
+      if (filters.status && filters.status !== '全部' && s.status !== filters.status) return false;
+      if (filters.greenhouse && filters.greenhouse !== '全部' && !s.greenhouse.includes(filters.greenhouse)) return false;
       return true;
     });
-  }, [summaries, filters?.cropName, filters?.status, filters?.greenhouse]);
+  }, [summaryRows, filters?.cropName, filters?.status, filters?.greenhouse]);
 
   // 计算统计卡片数据
   const statCards = useMemo((): SummaryStatCard[] => {
@@ -94,25 +141,27 @@ export function useBatchSummary(filters?: BatchFilters) {
     summaries: filteredSummaries,
     statCards,
     loading,
-    totalCount: summaries.length,
+    error,
+    totalCount: summaryRows.length,
+    refresh: loadData,
   };
 }
 
 /**
  * 获取状态样式
  */
-function getStatusClass(completionRate: string, status: string): 'normal' | 'warning' | 'danger' {
+function getStatusClass(completionRate: number | string, status: string): 'normal' | 'warning' | 'danger' {
   if (status === 'completed') return 'normal';
   if (status === 'cancelled' || status === 'suspended') return 'danger';
 
-  const rate = parseFloat(completionRate);
+  const rate = typeof completionRate === 'string' ? parseFloat(completionRate) : completionRate;
   if (rate >= 80) return 'normal';
   if (rate >= 50) return 'warning';
   return 'danger';
 }
 
 /**
- * 获取批次下拉选项
+ * 获取批次下拉选项（从 mockData 获取，保持兼容性）
  */
 export function useBatchFilterOptions() {
   const cropNames = useMemo(() => {

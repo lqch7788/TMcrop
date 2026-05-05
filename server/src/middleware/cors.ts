@@ -9,9 +9,13 @@ export const corsOptions: cors.CorsOptions = {
     'http://localhost:5173',  // Vite 开发服务器
     'http://localhost:5188',  // 备用端口
     'http://localhost:5189',  // 当前前端端口
+    'http://localhost:4174',  // Vite preview 端口
+    'http://localhost:4173',  // Vite preview 备用端口
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5188',
-    'http://127.0.0.1:5189'
+    'http://127.0.0.1:5189',
+    'http://127.0.0.1:4174',
+    'http://127.0.0.1:4173'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

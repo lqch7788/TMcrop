@@ -453,6 +453,18 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC018', code: 'material_type', name: '物料类型', module: 'material', description: '物料类型分类', sortOrder: 18, status: 'active' },
   { id: 'DC019', code: 'material_status', name: '物料状态', module: 'material', description: '物料库存状态', sortOrder: 19, status: 'active' },
   { id: 'DC020', code: 'purchase_type', name: '采购类型', module: 'purchase', description: '采购申请类型', sortOrder: 20, status: 'active' },
+  { id: 'DC021', code: 'energy_type', name: '能源类型', module: 'production', description: '能源消耗类型（电/水/燃气等）', sortOrder: 21, status: 'active' },
+  { id: 'DC022', code: 'material_cost_type', name: '物料成本类型', module: 'production', description: '物料成本类型（肥料/农药/种子等）', sortOrder: 22, status: 'active' },
+  // ============================================
+  // 生产汇总表配置分类（V8.0新增）
+  // ============================================
+  { id: 'DC101', code: 'problem_config', name: '问题统计配置', module: 'production', description: '问题统计相关配置项', sortOrder: 101, status: 'active' },
+  { id: 'DC102', code: 'yield_config', name: '产量统计配置', module: 'production', description: '产量统计相关配置项', sortOrder: 102, status: 'active' },
+  { id: 'DC103', code: 'cost_config', name: '成本统计配置', module: 'production', description: '成本统计相关配置项', sortOrder: 103, status: 'active' },
+  { id: 'DC104', code: 'labor_config', name: '人工统计配置', module: 'production', description: '人工统计相关配置项', sortOrder: 104, status: 'active' },
+  { id: 'DC105', code: 'batch_summary_config', name: '批次汇总配置', module: 'production', description: '批次完成情况汇总配置', sortOrder: 105, status: 'active' },
+  { id: 'DC106', code: 'alert_threshold', name: '预警阈值配置', module: 'production', description: '各类预警阈值设置', sortOrder: 106, status: 'active' },
+  { id: 'DC107', code: 'report_display_config', name: '报表显示配置', module: 'production', description: '生产报表显示相关配置', sortOrder: 107, status: 'active' },
 ];
 
 // ============================================
@@ -584,6 +596,18 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D120', categoryCode: 'purchase_type', dictCode: 'production', dictLabel: '生产性采购', dictValue: 'production', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D121', categoryCode: 'purchase_type', dictCode: 'emergency', dictLabel: '紧急采购', dictValue: 'emergency', color: 'red', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'D122', categoryCode: 'purchase_type', dictCode: 'daily', dictLabel: '日常采购', dictValue: 'daily', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 能源类型
+  { id: 'D130', categoryCode: 'energy_type', dictCode: 'electricity', dictLabel: '电费', dictValue: 'electricity', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'D131', categoryCode: 'energy_type', dictCode: 'water', dictLabel: '水费', dictValue: 'water', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D132', categoryCode: 'energy_type', dictCode: 'gas', dictLabel: '燃气费', dictValue: 'gas', color: 'orange', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D133', categoryCode: 'energy_type', dictCode: 'heating', dictLabel: '暖气费', dictValue: 'heating', color: 'red', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D134', categoryCode: 'energy_type', dictCode: 'other', dictLabel: '其他能源', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 物料成本类型
+  { id: 'D135', categoryCode: 'material_cost_type', dictCode: 'fertilizer', dictLabel: '肥料', dictValue: 'fertilizer', color: 'brown', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'D136', categoryCode: 'material_cost_type', dictCode: 'pesticide', dictLabel: '农药', dictValue: 'pesticide', color: 'red', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D137', categoryCode: 'material_cost_type', dictCode: 'seed', dictLabel: '种子种苗', dictValue: 'seed', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D138', categoryCode: 'material_cost_type', dictCode: 'film', dictLabel: '基质农膜', dictValue: 'film', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D139', categoryCode: 'material_cost_type', dictCode: 'other', dictLabel: '其他物料', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
   // 来源途径
   { id: 'D140', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D141', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '内部自繁', dictValue: 'self_produced', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -591,6 +615,63 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D143', categoryCode: 'source_origin', dictCode: 'gift', dictLabel: '政府/机构赠送', dictValue: 'gift', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'D144', categoryCode: 'source_origin', dictCode: 'self_retained', dictLabel: '自留种', dictValue: 'self_retained', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'D145', categoryCode: 'source_origin', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
+  // ============================================
+  // 生产汇总表字典项（V8.0新增）
+  // ============================================
+  // 问题统计配置
+  { id: 'PD001', categoryCode: 'problem_config', dictCode: 'problem_severity_high', dictLabel: '严重问题阈值(次)', dictValue: '3', color: 'red', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD002', categoryCode: 'problem_config', dictCode: 'problem_severity_medium', dictLabel: '中等问题阈值(次)', dictValue: '5', color: 'orange', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD003', categoryCode: 'problem_config', dictCode: 'problem_pending_warning', dictLabel: '待处理问题预警数', dictValue: '10', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD004', categoryCode: 'problem_config', dictCode: 'problem_response_timeout', dictLabel: '问题响应超时(小时)', dictValue: '24', color: 'red', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD005', categoryCode: 'problem_config', dictCode: 'problem_resolve_timeout', dictLabel: '问题解决超时(天)', dictValue: '7', color: 'orange', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD006', categoryCode: 'problem_config', dictCode: 'problem_auto_escalation', dictLabel: '问题自动升级', dictValue: 'true', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 产量统计配置
+  { id: 'PD010', categoryCode: 'yield_config', dictCode: 'yield_target_rate', dictLabel: '目标产量达标率(%)', dictValue: '95', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD011', categoryCode: 'yield_config', dictCode: 'yield_excellent_rate', dictLabel: '优秀产量达标率(%)', dictValue: '105', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD012', categoryCode: 'yield_config', dictCode: 'yield_warning_rate', dictLabel: '产量预警阈值(%)', dictValue: '80', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD013', categoryCode: 'yield_config', dictCode: 'yield_danger_rate', dictLabel: '产量危险阈值(%)', dictValue: '60', color: 'red', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD014', categoryCode: 'yield_config', dictCode: 'yield_loss_rate', dictLabel: '采收损耗率上限(%)', dictValue: '10', color: 'orange', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD015', categoryCode: 'yield_config', dictCode: 'yield_stat_by_crop', dictLabel: '按作物统计', dictValue: 'true', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'PD016', categoryCode: 'yield_config', dictCode: 'yield_stat_by_greenhouse', dictLabel: '按温室统计', dictValue: 'true', color: 'blue', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'PD017', categoryCode: 'yield_config', dictCode: 'yield_stat_by_month', dictLabel: '按月份统计', dictValue: 'true', color: 'blue', sortOrder: 8, isDefault: 0, status: 'active' },
+  // 成本统计配置
+  { id: 'PD020', categoryCode: 'cost_config', dictCode: 'cost_warning_ratio', dictLabel: '成本预警比例(%)', dictValue: '90', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD021', categoryCode: 'cost_config', dictCode: 'cost_danger_ratio', dictLabel: '成本超支比例(%)', dictValue: '110', color: 'red', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD022', categoryCode: 'cost_config', dictCode: 'cost_unit_labor', dictLabel: '人工成本单位(元/小时)', dictValue: '50', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD023', categoryCode: 'cost_config', dictCode: 'cost_stat_by_type', dictLabel: '按类型统计成本', dictValue: 'true', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD024', categoryCode: 'cost_config', dictCode: 'cost_stat_by_batch', dictLabel: '按批次统计成本', dictValue: 'true', color: 'blue', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD025', categoryCode: 'cost_config', dictCode: 'cost_stat_by_month', dictLabel: '按月份统计成本', dictValue: 'true', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 人工统计配置
+  { id: 'PD030', categoryCode: 'labor_config', dictCode: 'labor_efficiency_target', dictLabel: '人工效率目标(平方米/人天)', dictValue: '100', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD031', categoryCode: 'labor_config', dictCode: 'labor_overtime_threshold', dictLabel: '加班阈值(小时/天)', dictValue: '2', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD032', categoryCode: 'labor_config', dictCode: 'labor_absent_rate', dictLabel: '旷工率预警(%)', dictValue: '5', color: 'red', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD033', categoryCode: 'labor_config', dictCode: 'labor_stat_by_team', dictLabel: '按班组统计', dictValue: 'true', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD034', categoryCode: 'labor_config', dictCode: 'labor_stat_by_task', dictLabel: '按任务统计', dictValue: 'true', color: 'blue', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD035', categoryCode: 'labor_config', dictCode: 'labor_stat_by_month', dictLabel: '按月份统计', dictValue: 'true', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 批次汇总配置
+  { id: 'PD040', categoryCode: 'batch_summary_config', dictCode: 'batch_excellent_rate', dictLabel: '批次优秀完成率(%)', dictValue: '95', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD041', categoryCode: 'batch_summary_config', dictCode: 'batch_good_rate', dictLabel: '批次良好完成率(%)', dictValue: '85', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD042', categoryCode: 'batch_summary_config', dictCode: 'batch_pass_rate', dictLabel: '批次合格完成率(%)', dictValue: '70', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD043', categoryCode: 'batch_summary_config', dictCode: 'batch_delay_warning', dictLabel: '批次延期预警(天)', dictValue: '3', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD044', categoryCode: 'batch_summary_config', dictCode: 'batch_show_tasks', dictLabel: '显示任务统计', dictValue: 'true', color: 'blue', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD045', categoryCode: 'batch_summary_config', dictCode: 'batch_show_problems', dictLabel: '显示问题统计', dictValue: 'true', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'PD046', categoryCode: 'batch_summary_config', dictCode: 'batch_show_yield', dictLabel: '显示产量统计', dictValue: 'true', color: 'blue', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'PD047', categoryCode: 'batch_summary_config', dictCode: 'batch_show_labor', dictLabel: '显示人工统计', dictValue: 'true', color: 'blue', sortOrder: 8, isDefault: 0, status: 'active' },
+  // 预警阈值配置
+  { id: 'PD050', categoryCode: 'alert_threshold', dictCode: 'alert_low_stock', dictLabel: '库存不足预警(%)', dictValue: '20', color: 'red', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD051', categoryCode: 'alert_threshold', dictCode: 'alert_high_stock', dictLabel: '库存积压预警(%)', dictValue: '100', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD052', categoryCode: 'alert_threshold', dictCode: 'alert_quality_rate', dictLabel: '质量合格率下限(%)', dictValue: '90', color: 'red', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD053', categoryCode: 'alert_threshold', dictCode: 'alert_equipment_downtime', dictLabel: '设备停机预警(小时)', dictValue: '24', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD054', categoryCode: 'alert_threshold', dictCode: 'alert_task_overdue', dictLabel: '任务逾期预警(天)', dictValue: '2', color: 'red', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD055', categoryCode: 'alert_threshold', dictCode: 'alert_pest_risk', dictLabel: '病虫害风险预警', dictValue: 'true', color: 'red', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'PD056', categoryCode: 'alert_threshold', dictCode: 'alert_weather_risk', dictLabel: '极端天气预警', dictValue: 'true', color: 'orange', sortOrder: 7, isDefault: 0, status: 'active' },
+  // 报表显示配置
+  { id: 'PD060', categoryCode: 'report_display_config', dictCode: 'report_default_period', dictLabel: '报表默认周期', dictValue: 'month', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PD061', categoryCode: 'report_display_config', dictCode: 'report_show_charts', dictLabel: '显示图表', dictValue: 'true', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PD062', categoryCode: 'report_display_config', dictCode: 'report_export_excel', dictLabel: '允许导出Excel', dictValue: 'true', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PD063', categoryCode: 'report_display_config', dictCode: 'report_auto_refresh', dictLabel: '自动刷新间隔(分钟)', dictValue: '30', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PD064', categoryCode: 'report_display_config', dictCode: 'report_page_size', dictLabel: '默认分页大小', dictValue: '20', color: 'blue', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PD065', categoryCode: 'report_display_config', dictCode: 'report_decimal_places', dictLabel: '小数位数', dictValue: '2', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
 ];
 
 // ============================================

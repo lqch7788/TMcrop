@@ -8,6 +8,38 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+// 人工记录状态值标准化映射（中文 -> 英文）
+const LABOR_STATUS_MAP: Record<string, string> = {
+  '待处理': 'pending',
+  '处理中': 'in_progress',
+  '已处理': 'completed',
+  'pending': 'pending',
+  'in_progress': 'in_progress',
+  'completed': 'completed',
+};
+
+// 英文状态值到中文的映射
+const LABOR_STATUS_LABEL_MAP: Record<string, string> = {
+  'pending': '待处理',
+  'in_progress': '处理中',
+  'completed': '已处理',
+};
+
+/**
+ * 标准化人工记录状态值（将中文转换为英文）
+ */
+function normalizeLaborStatus(status?: string): string {
+  if (!status) return 'pending';
+  return LABOR_STATUS_MAP[status] || status;
+}
+
+/**
+ * 获取状态显示标签
+ */
+function getLaborStatusLabel(status: string): string {
+  return LABOR_STATUS_LABEL_MAP[status] || status;
+}
+
 router.get('/', (req: Request, res: Response) => {
   try {
     const { worker_name, work_type, status, greenhouse_name, page = 1, limit = 50 } = req.query;
@@ -52,7 +84,13 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
-    res.json({ success: true, data: items, meta: { total, page: Number(page), limit: Number(limit) } });
+    // 为每个item添加状态标签
+    const itemsWithLabels = items.map((item: any) => ({
+      ...item,
+      statusLabel: getLaborStatusLabel(item.status || 'pending'),
+    }));
+
+    res.json({ success: true, data: itemsWithLabels, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取人工记录失败' });
   }
@@ -64,7 +102,7 @@ router.get('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM labor_records WHERE id = ?');
     stmt.bind([id]);
-    let item = null;
+    let item: any = null;
     if (stmt.step()) {
       item = stmt.getAsObject();
     }
@@ -73,6 +111,9 @@ router.get('/:id', (req: Request, res: Response) => {
     if (!item || Object.keys(item).length === 0) {
       return res.status(404).json({ success: false, error: '人工记录不存在' });
     }
+
+    // 添加状态标签
+    item.statusLabel = getLaborStatusLabel(item.status || 'pending');
 
     res.json({ success: true, data: item });
   } catch (error) {
@@ -94,7 +135,7 @@ router.post('/', (req: Request, res: Response) => {
         total_amount, greenhouse_id, greenhouse_name, task_description, status, remarks, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, worker_id, worker_name, work_type, work_date, work_hours, hourly_rate,
-        total_amount, greenhouse_id, greenhouse_name, task_description, status || 'pending', remarks, now, now]);
+        total_amount, greenhouse_id, greenhouse_name, task_description, normalizeLaborStatus(status), remarks, now, now]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });
@@ -109,6 +150,12 @@ router.put('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
     const now = new Date().toISOString();
+
+    // 对 status 字段进行标准化转换
+    if (updates.status) {
+      updates.status = normalizeLaborStatus(updates.status);
+    }
+
     const db = getDatabase();
 
     const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
