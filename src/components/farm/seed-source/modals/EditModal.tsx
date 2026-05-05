@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
-import { updateSeedSource } from '../../../../services/seedSourceService';
+import { updateSeedSource } from '../../../../services/apiSeedSourceService';
 import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface EditModalProps {
@@ -79,7 +79,7 @@ export function EditModal({
     });
   }, [record]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 验证：选择"其他"时备注必填
     if (formData.sourceType === SourceType.OTHER && !formData.remarks.trim()) {
       alert('选择"其他"种源类型时，备注为必填项，请输入详细说明');
@@ -108,23 +108,29 @@ export function EditModal({
       status = StockStatus.SUFFICIENT;
     }
 
-    updateSeedSource(record.id, {
-      sourceType: formData.sourceType,
-      sourceOrigin: formData.sourceOrigin,
-      cropCategory: formData.cropCategory,
-      cropName: formData.cropName,
-      cropVariety: formData.cropVariety,
-      supplierId: formData.supplierId,
-      supplierName,
-      purchaseDate: formData.purchaseDate,
-      quantity: formData.quantity,
-      unit: formData.unit,
-      unitPrice: formData.unitPrice,
-      totalAmount,
-      pictures: formData.pictures,
-      remarks: formData.remarks,
-      status
-    });
+    try {
+      await updateSeedSource(record.id, {
+        sourceType: formData.sourceType,
+        sourceOrigin: formData.sourceOrigin,
+        cropCategory: formData.cropCategory,
+        cropName: formData.cropName,
+        cropVariety: formData.cropVariety,
+        supplierId: formData.supplierId,
+        supplierName,
+        purchaseDate: formData.purchaseDate,
+        quantity: formData.quantity,
+        unit: formData.unit,
+        unitPrice: formData.unitPrice,
+        totalAmount,
+        pictures: formData.pictures,
+        remarks: formData.remarks,
+        status
+      });
+    } catch (error) {
+      console.error('更新种源失败:', error);
+      alert('更新失败，请重试');
+      return;
+    }
 
     onClose();
     onSuccess?.();

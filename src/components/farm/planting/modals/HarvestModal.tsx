@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
-import { harvestPlanting } from '../../../../services/plantingService';
+import { harvestPlanting } from '../../../../services/apiPlantingService';
 
 interface HarvestModalProps {
   isOpen: boolean;
@@ -21,15 +21,21 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
     remarks: ''
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 计算损耗率
     const harvestCount = formData.harvestYield;
     const attritionRate = record.plantingCount > 0
       ? Math.round((1 - harvestCount / record.plantingCount) * 100)
       : 0;
 
-    // 调用采收服务
-    harvestPlanting(record.id, formData.harvestDate, harvestCount);
+    try {
+      // 调用采收服务
+      await harvestPlanting(record.id, formData.harvestDate, harvestCount);
+    } catch (error) {
+      console.error('采收登记失败:', error);
+      alert('采收登记失败，请重试');
+      return;
+    }
 
     onClose();
     onSuccess?.();

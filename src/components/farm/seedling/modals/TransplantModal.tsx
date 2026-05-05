@@ -5,8 +5,8 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
-import { increasePlantedCount } from '../../../../services/seedlingService';
-import { addPlanting } from '../../../../services/plantingService';
+import { increasePlantedCount } from '../../../../services/apiSeedlingService';
+import { addPlanting } from '../../../../services/apiPlantingService';
 
 interface TransplantModalProps {
   isOpen: boolean;
@@ -30,7 +30,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
   // 计算可定植数量
   const availableCount = record.survivalCount - record.plantedCount;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.transplantCount || formData.transplantCount <= 0) {
       alert('请输入有效的定植数量');
       return;
@@ -55,35 +55,41 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
     const areaName = area?.label || '';
     const rootName = area?.parent || '';
 
-    // 创建种植记录
-    addPlanting({
-      plantCode,
-      sourceType: SourceType.SEEDLING,
-      sourceId: record.id,
-      sourceCode: record.seedlingCode,
-      cropName: record.cropName,
-      cropVariety: record.cropVariety,
-      areaId: formData.areaId,
-      areaName,
-      rootName,
-      plantingCount: formData.transplantCount,
-      plantingDate: formData.transplantDate,
-      soilPH: formData.soilPH,
-      soilEC: formData.soilEC,
-      transplantCount: formData.transplantCount,
-      transplantDate: formData.transplantDate,
-      isHarvest: false,
-      attritionRate: 0,
-      printCount: 0,
-      traceabilityCode,
-      pictures: [],
-      remarks: formData.remarks,
-      status: PlantingStatus.PLANTED,
-      createBy: '当前用户'
-    });
+    try {
+      // 创建种植记录
+      await addPlanting({
+        plantCode,
+        sourceType: SourceType.SEEDLING,
+        sourceId: record.id,
+        sourceCode: record.seedlingCode,
+        cropName: record.cropName,
+        cropVariety: record.cropVariety,
+        areaId: formData.areaId,
+        areaName,
+        rootName,
+        plantingCount: formData.transplantCount,
+        plantingDate: formData.transplantDate,
+        soilPH: formData.soilPH,
+        soilEC: formData.soilEC,
+        transplantCount: formData.transplantCount,
+        transplantDate: formData.transplantDate,
+        isHarvest: false,
+        attritionRate: 0,
+        printCount: 0,
+        traceabilityCode,
+        pictures: [],
+        remarks: formData.remarks,
+        status: PlantingStatus.PLANTED,
+        createBy: '当前用户'
+      });
 
-    // 更新育苗的已定植数量
-    increasePlantedCount(record.id, formData.transplantCount);
+      // 更新育苗的已定植数量
+      await increasePlantedCount(record.id, formData.transplantCount);
+    } catch (error) {
+      console.error('定植操作失败:', error);
+      alert('定植操作失败，请重试');
+      return;
+    }
 
     onClose();
     onSuccess?.();

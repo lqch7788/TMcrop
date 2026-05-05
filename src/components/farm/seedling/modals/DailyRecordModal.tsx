@@ -5,7 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
-import { addDailyRecord } from '../../../../services/seedlingService';
+import { addDailyRecord } from '../../../../services/apiSeedlingService';
 import { useDictionaries } from '../../../common/settings';
 
 interface DailyRecordModalProps {
@@ -42,30 +42,36 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     operator: ''
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.recordDate) {
       alert('请选择记录日期');
       return;
     }
 
     // 调用服务添加每日记录
-    addDailyRecord(record.id, {
-      recordDate: formData.recordDate,
-      temperature: formData.temperature,
-      humidity: formData.humidity,
-      watering: formData.watering,
-      abnormality: formData.abnormality || undefined,
-      // 数量变化字段
-      survivalCountChange: formData.survivalCountChange,
-      plantedCountChange: formData.plantedCountChange,
-      lossCountChange: formData.lossCountChange,
-      remarks: formData.remarks || undefined,
-      // 水质参数（新增）
-      phValue: formData.phValue,
-      ecValue: formData.ecValue,
-      // 操作人员（新增）
-      operator: formData.operator || undefined
-    });
+    try {
+      await addDailyRecord(record.id, {
+        recordDate: formData.recordDate,
+        temperature: formData.temperature,
+        humidity: formData.humidity,
+        watering: formData.watering,
+        abnormality: formData.abnormality || undefined,
+        // 数量变化字段
+        survivalCountChange: formData.survivalCountChange,
+        plantedCountChange: formData.plantedCountChange,
+        lossCountChange: formData.lossCountChange,
+        remarks: formData.remarks || undefined,
+        // 水质参数（新增）
+        phValue: formData.phValue,
+        ecValue: formData.ecValue,
+        // 操作人员（新增）
+        operator: formData.operator || undefined
+      });
+    } catch (error) {
+      console.error('添加每日记录失败:', error);
+      alert('添加记录失败，请重试');
+      return;
+    }
 
     onClose();
     onSuccess?.();

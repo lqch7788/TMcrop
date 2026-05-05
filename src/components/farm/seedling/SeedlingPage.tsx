@@ -18,7 +18,7 @@ import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaries } from '../../common/settings';
 import { Seedling, SeedlingFilters, SeedlingStatus } from '../../../types/crop';
 import * as seedlingService from '../../../services/apiSeedlingService';
-import * as seedSourceService from '../../../services/seedSourceService';
+import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/cropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';

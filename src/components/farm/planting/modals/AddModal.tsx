@@ -6,10 +6,10 @@ import React, { useState, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus } from '../../../../types/crop';
-import { addPlanting } from '../../../../services/plantingService';
-import { getSeedSources } from '../../../../services/seedSourceService';
-import { getSeedlings } from '../../../../services/seedlingService';
-import * as cropInstanceService from '../../../../services/cropInstanceService';
+import { addPlanting } from '../../../../services/apiPlantingService';
+import { getSeedSources } from '../../../../services/apiSeedSourceService';
+import { getSeedlings } from '../../../../services/apiSeedlingService';
+import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { cropBatches } from '../../../../data/mockData';
 import { PlanType } from '../../../../types';
@@ -69,7 +69,7 @@ export function AddModal({
     s.status === 'transplant_ready' || s.status === 'in_progress'
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
       alert('请填写完整信息');
       return;
@@ -94,52 +94,58 @@ export function AddModal({
     const areaName = area?.label || '';
     const rootName = area?.parent || '';
 
-    addPlanting({
-      plantCode,
-      sourceType: formData.sourceType as SourceType,
-      sourceId: formData.sourceId,
-      sourceCode: formData.sourceCode,
-      cropName: formData.cropName,
-      cropVariety: formData.cropVariety,
-      cropCode,
-      areaId: formData.areaId,
-      areaName,
-      rootName,
-      plantingCount: formData.plantingCount,
-      plantingDate: formData.plantingDate,
-      soilPH: formData.soilPH,
-      soilEC: formData.soilEC,
-      transplantCount: 0,
-      transplantDate: '',
-      isHarvest: false,
-      attritionRate: 0,
-      printCount: 0,
-      traceabilityCode,
-      pictures: pictures,
-      remarks: formData.remarks,
-      status: PlantingStatus.PLANTED,
-      createBy: '当前用户',
-      productionPlanId: formData.productionPlanId || undefined,
-      productionPlanCode: formData.productionPlanCode || undefined
-    });
+    try {
+      await addPlanting({
+        plantCode,
+        sourceType: formData.sourceType as SourceType,
+        sourceId: formData.sourceId,
+        sourceCode: formData.sourceCode,
+        cropName: formData.cropName,
+        cropVariety: formData.cropVariety,
+        cropCode,
+        areaId: formData.areaId,
+        areaName,
+        rootName,
+        plantingCount: formData.plantingCount,
+        plantingDate: formData.plantingDate,
+        soilPH: formData.soilPH,
+        soilEC: formData.soilEC,
+        transplantCount: 0,
+        transplantDate: '',
+        isHarvest: false,
+        attritionRate: 0,
+        printCount: 0,
+        traceabilityCode,
+        pictures: pictures,
+        remarks: formData.remarks,
+        status: PlantingStatus.PLANTED,
+        createBy: '当前用户',
+        productionPlanId: formData.productionPlanId || undefined,
+        productionPlanCode: formData.productionPlanCode || undefined
+      });
 
-    // 更新作物实例的定植数量
-    // 尝试从种源或育苗获取关联的实例ID
-    let instanceId: string | undefined;
-    if (formData.sourceType === SourceType.SEED) {
-      // 来自种源
-      const source = seedSources.find(s => s.id === formData.sourceId);
-      instanceId = source?.instanceId;
-    } else {
-      // 来自育苗（育苗关联的种源有instanceId）
-      const seedling = seedlings.find(s => s.id === formData.sourceId);
-      if (seedling) {
-        const source = seedSources.find(s => s.id === seedling.sourceId);
+      // 更新作物实例的定植数量
+      // 尝试从种源或育苗获取关联的实例ID
+      let instanceId: string | undefined;
+      if (formData.sourceType === SourceType.SEED) {
+        // 来自种源
+        const source = seedSources.find(s => s.id === formData.sourceId);
         instanceId = source?.instanceId;
+      } else {
+        // 来自育苗（育苗关联的种源有instanceId）
+        const seedling = seedlings.find(s => s.id === formData.sourceId);
+        if (seedling) {
+          const source = seedSources.find(s => s.id === seedling.sourceId);
+          instanceId = source?.instanceId;
+        }
       }
-    }
-    if (instanceId) {
-      cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
+      if (instanceId) {
+        await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
+      }
+    } catch (error) {
+      console.error('添加种植记录失败:', error);
+      alert('添加失败，请重试');
+      return;
     }
 
     onClose();
