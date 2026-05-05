@@ -3,7 +3,7 @@
  * 提供部门的本地存储和API获取功能
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 import { departments as defaultDepartments } from '../data/mockData';
 
 // 部门数据结构
@@ -59,28 +59,21 @@ export function initDepartments(): Department[] {
  * 获取所有部门（API模式优先）
  */
 export async function getDepartments(): Promise<Department[]> {
-  if (USE_API) {
-    try {
-      const data = await apiClient.get<Department[]>('/basic-data/departments');
-      saveDepartmentsToStorage(data);
-      return data;
-    } catch (error) {
-      console.error('API获取部门数据失败，使用本地数据:', error);
-      return getStoredDepartments();
-    }
+  try {
+    const data = await apiClient.get<Department[]>('/basic-data/departments');
+    saveDepartmentsToStorage(data);
+    return data;
+  } catch (error) {
+    console.error('API获取部门数据失败，使用本地数据:', error);
+    return getStoredDepartments();
   }
-  return getStoredDepartments();
 }
 
 /**
  * 根据ID获取部门
  */
 export async function getDepartmentById(id: string): Promise<Department | undefined> {
-  if (USE_API) {
-    const departments = await getDepartments();
-    return departments.find(d => d.id === id);
-  }
-  const departments = getStoredDepartments();
+  const departments = await getDepartments();
   return departments.find(d => d.id === id);
 }
 
@@ -96,10 +89,8 @@ export async function getDepartmentName(id: string): Promise<string> {
  * 保存部门数据
  */
 export async function saveDepartments(departments: Department[]): Promise<void> {
-  if (USE_API) {
-    // API模式下通过后端保存
-    await apiClient.post('/basic-data/departments', departments);
-  }
+  // API模式下通过后端保存
+  await apiClient.post('/basic-data/departments', departments);
   saveDepartmentsToStorage(departments);
 }
 

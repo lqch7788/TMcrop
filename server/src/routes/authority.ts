@@ -6,8 +6,100 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+import bcrypt from 'bcryptjs';
+import { generateToken, authenticate } from '../middleware/auth';
 
 const router = Router();
+
+// ============================================
+// 登录接口
+// ============================================
+
+/**
+ * 用户登录
+ * POST /api/authority/login
+ * 请求体: { username: string, password: string }
+ * 返回: { success: true, token: string, user: { oid, username, name, ... } }
+ */
+router.post('/login', (req, res) => {
+  const db = getDatabase();
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    res.status(400).json({ success: false, error: '请提供账号和密码' });
+    return;
+  }
+
+  try {
+    // 查询用户（使用 username 作为登录账号）
+    const stmt = db.prepare('SELECT * FROM users WHERE username = ? AND status = ?');
+    stmt.bind([username, 'active']);
+
+    if (stmt.step()) {
+      const user = stmt.getAsObject() as Record<string, unknown>;
+      stmt.free();
+
+      // 使用 bcrypt 验证密码
+      const storedPasswordHash = user.password_hash as string;
+      const isPasswordValid = bcrypt.compareSync(password, storedPasswordHash);
+
+      if (!isPasswordValid) {
+        res.status(401).json({ success: false, error: '账号或密码错误' });
+        return;
+      }
+
+      // 生成 JWT token
+      const token = generateToken({
+        userId: user.oid as string,
+        aid: user.username as string,
+        name: (user.real_name || user.username) as string,
+      });
+
+      // 去除密码哈希后返回用户信息
+      const { password_hash, ...userWithoutPassword } = user;
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          oid: userWithoutPassword.oid,
+          aid: userWithoutPassword.username,
+          name: userWithoutPassword.real_name || userWithoutPassword.username,
+          email: userWithoutPassword.email,
+          phone: userWithoutPassword.phone,
+          org_oid: userWithoutPassword.org_oid,
+          status: userWithoutPassword.status,
+        },
+      });
+    } else {
+      stmt.free();
+      res.status(401).json({ success: false, error: '账号或密码错误' });
+    }
+  } catch (error) {
+    console.error('登录失败:', error);
+    res.status(500).json({ success: false, error: '登录失败' });
+  }
+});
+
+/**
+ * 验证 token 有效性
+ * GET /api/authority/verify
+ * 需要认证
+ */
+router.get('/verify', authenticate, (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: '未认证' });
+    return;
+  }
+  res.json({
+    success: true,
+    user: {
+      userId: req.user.userId,
+      aid: req.user.aid,
+      name: req.user.name,
+    }
+  });
+});
 
 // ============================================
 // 组织管理
@@ -30,7 +122,12 @@ router.get('/organizations', (req, res) => {
     bindings.push(id as string);
   }
 
-  sql += ` ORDER BY ${sort} ${order}`;
+  // ORDER BY 白名单验证，防止 SQL 注入
+  const allowedSorts = ['sort_order', 'name', 'oid', 'created_at', 'status'];
+  const allowedOrders = ['asc', 'desc'];
+  const safeSort = allowedSorts.includes(sort as string) ? sort : 'sort_order';
+  const safeOrder = allowedOrders.includes((order as string).toLowerCase()) ? (order as string).toLowerCase() : 'asc';
+  sql += ` ORDER BY ${safeSort} ${safeOrder}`;
 
   if (Number(rows) > 0) {
     sql += ' LIMIT ?';
@@ -72,9 +169,9 @@ router.get('/organizations', (req, res) => {
 });
 
 /**
- * 保存组织（新增或更新）
+ * 保存组织（新增或更新）- 需要认证
  */
-router.post('/organizations', (req, res) => {
+router.post('/organizations', authenticate, (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -90,12 +187,14 @@ router.post('/organizations', (req, res) => {
     if (inserted && inserted.length > 0) {
       for (const org of inserted) {
         const oid = org.oid || `ORG_${Date.now()}`;
+        const id = `ORG_ID_${Date.now()}`;
         db.run(
-          `INSERT INTO organizations (oid, parent_oid, aid, name, description, address,
+          `INSERT INTO organizations (id, oid, parent_oid, aid, name, description, address,
             contactor, contactor_phone, contactor_mobile, contactor_email,
             org_type, sort_order, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            id,
             oid,
             org.oidParent || null,
             org.aid,
@@ -113,7 +212,7 @@ router.post('/organizations', (req, res) => {
             now
           ]
         );
-        results.inserted.push({ OID: oid, ...org });
+        results.inserted.push({ oid, ...org });
       }
     }
 
@@ -171,27 +270,30 @@ router.post('/organizations', (req, res) => {
  */
 router.get('/roles', (req, res) => {
   const db = getDatabase();
-  const { orgOid, sort = 'created_at', order = 'desc' } = req.query;
+  const { sort = 'created_at', order = 'desc' } = req.query;
 
   let sql = 'SELECT * FROM roles WHERE status = ?';
   const bindings: string[] = ['active'];
 
-  if (orgOid) {
-    sql += ' AND org_oid = ?';
-    bindings.push(orgOid as string);
-  }
-
-  // 安全检查：只允许特定的排序列
+  // 安全检查：只允许特定的排序列和排序方向
   const allowedSorts = ['created_at', 'role_name', 'oid'];
+  const allowedOrders = ['asc', 'desc'];
   const safeSort = allowedSorts.includes(sort as string) ? sort : 'created_at';
-  sql += ` ORDER BY ${safeSort} ${order}`;
+  const safeOrder = allowedOrders.includes((order as string).toLowerCase()) ? (order as string).toLowerCase() : 'asc';
+  sql += ` ORDER BY ${safeSort} ${safeOrder}`;
 
   try {
     const stmt = db.prepare(sql);
     stmt.bind(bindings);
     const results: Record<string, unknown>[] = [];
     while (stmt.step()) {
-      results.push(stmt.getAsObject());
+      const role = stmt.getAsObject();
+      // 字段映射：数据库字段 -> 前端期望字段
+      // 数据库: role_code -> 前端: aid
+      // 数据库: role_name -> 前端: name
+      (role as Record<string, unknown>).aid = role.role_code;
+      (role as Record<string, unknown>).name = role.role_name;
+      results.push(role);
     }
     stmt.free();
     res.json(results);
@@ -202,9 +304,9 @@ router.get('/roles', (req, res) => {
 });
 
 /**
- * 保存角色
+ * 保存角色 - 需要认证
  */
-router.post('/roles', (req, res) => {
+router.post('/roles', authenticate, (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -219,33 +321,33 @@ router.post('/roles', (req, res) => {
     if (inserted && inserted.length > 0) {
       for (const role of inserted) {
         const oid = role.oid || `ROLE_${Date.now()}`;
+        const id = `ROLE_ID_${Date.now()}`;
+        // roles 表字段: id, oid, role_code, role_name, description, is_system, status, created_at, updated_at
         db.run(
-          `INSERT INTO roles (oid, org_oid, aid, name, description, status, created_at, updated_at)
+          `INSERT INTO roles (id, oid, role_code, role_name, description, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            id,
             oid,
-            role.orgOid,
-            role.aid,
-            role.name,
+            role.aid || oid,  // role_code 使用 aid 或 oid
+            role.name,       // role_name
             role.description || null,
             'active',
             now,
             now
           ]
         );
-        results.inserted.push({ OID: oid, ...role });
+        results.inserted.push({ oid, ...role });
       }
     }
 
     if (updated && updated.length > 0) {
       for (const role of updated) {
         db.run(
-          `UPDATE roles SET org_oid = ?, aid = ?, name = ?, description = ?,
-            updated_at = ?
+          `UPDATE roles SET role_code = ?, role_name = ?, description = ?, updated_at = ?
            WHERE oid = ?`,
           [
-            role.orgOid,
-            role.aid,
+            role.aid || role.oid,
             role.name,
             role.description || null,
             now,
@@ -268,6 +370,89 @@ router.post('/roles', (req, res) => {
   } catch (error) {
     console.error('保存角色失败:', error);
     res.status(500).json({ error: '保存角色失败' });
+  }
+});
+
+
+// ============================================
+// 认证管理
+// ============================================
+
+/**
+ * 用户登录验证
+ * POST /api/authority/auth/login
+ * Body: { username: string, password: string }
+ */
+router.post('/auth/login', async (req, res) => {
+  const db = getDatabase();
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    res.status(400).json({ error: '用户名和密码不能为空' });
+    return;
+  }
+
+  try {
+    // 查找用户（支持用户名或真实姓名）
+    const stmt = db.prepare(`
+      SELECT oid, username, password_hash, real_name, org_oid, org_name, 
+             department_oid, department_name, position, email, phone, status
+      FROM users 
+      WHERE username = ? OR real_name = ?
+    `);
+    stmt.bind([username, username]);
+    
+    let user: Record<string, unknown> | null = null;
+    if (stmt.step()) {
+      user = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!user) {
+      res.status(401).json({ error: '用户不存在' });
+      return;
+    }
+
+    // 检查用户状态
+    if ((user.status as string) !== 'active') {
+      res.status(401).json({ error: '用户已被禁用' });
+      return;
+    }
+
+    // 验证密码
+    const passwordHash = user.password_hash as string;
+    if (!passwordHash) {
+      console.error('用户密码哈希为空:', user.oid);
+      res.status(500).json({ error: '密码验证失败，请联系管理员' });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(password, passwordHash);
+    if (!isValid) {
+      res.status(401).json({ error: '密码错误' });
+      return;
+    }
+
+    // 获取用户角色
+    const roleStmt = db.prepare('SELECT role_oid FROM user_roles WHERE user_oid = ?');
+    roleStmt.bind([user.oid as string]);
+    const roles: string[] = [];
+    while (roleStmt.step()) {
+      const row = roleStmt.getAsObject() as { role_oid: string };
+      roles.push(row.role_oid);
+    }
+    roleStmt.free();
+
+    // 返回用户信息（不包含密码）
+    const { password_hash, ...userWithoutPassword } = user;
+    res.json({
+      success: true,
+      user: userWithoutPassword,
+      roles
+    });
+  } catch (error) {
+    console.error('登录验证失败:', error);
+    res.status(500).json({ error: '登录验证失败' });
   }
 });
 
@@ -303,6 +488,11 @@ router.get('/users', (req, res) => {
       const user = stmt.getAsObject();
       // 去除密码哈希
       delete (user as Record<string, unknown>).password_hash;
+      // 字段映射：数据库字段 -> 前端期望字段
+      // 数据库: username -> 前端: aid
+      // 数据库: real_name -> 前端: name
+      (user as Record<string, unknown>).aid = user.username;
+      (user as Record<string, unknown>).name = user.real_name;
       results.push(user);
     }
     stmt.free();
@@ -314,9 +504,9 @@ router.get('/users', (req, res) => {
 });
 
 /**
- * 保存用户
+ * 保存用户 - 需要认证
  */
-router.post('/users', (req, res) => {
+router.post('/users', authenticate, (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -331,15 +521,18 @@ router.post('/users', (req, res) => {
     if (inserted && inserted.length > 0) {
       for (const user of inserted) {
         const oid = user.oid || `USER_${Date.now()}`;
+        const id = `USER_ID_${Date.now()}`;
+        // users 表字段: id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, avatar, status, last_login, created_at, updated_at
         db.run(
-          `INSERT INTO users (oid, org_oid, aid, name, password_hash, email, phone, avatar, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO users (id, oid, username, real_name, password_hash, org_oid, email, phone, avatar, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            id,
             oid,
-            user.orgOid,
-            user.aid,
-            user.name,
+            user.aid || user.username,  // username 使用 aid 或 username
+            user.name,                 // real_name
             user.passwordHash || null,
+            user.orgOid || null,
             user.email || null,
             user.phone || null,
             user.avatar || null,
@@ -348,7 +541,7 @@ router.post('/users', (req, res) => {
             now
           ]
         );
-        results.inserted.push({ OID: oid, ...user });
+        results.inserted.push({ oid, ...user });
       }
     }
 
@@ -358,8 +551,8 @@ router.post('/users', (req, res) => {
         const bindings: (string | number)[] = [];
 
         if (user.orgOid) { updates.push('org_oid = ?'); bindings.push(user.orgOid); }
-        if (user.aid) { updates.push('aid = ?'); bindings.push(user.aid); }
-        if (user.name) { updates.push('name = ?'); bindings.push(user.name); }
+        if (user.aid) { updates.push('username = ?'); bindings.push(user.aid); }
+        if (user.name) { updates.push('real_name = ?'); bindings.push(user.name); }
         if (user.passwordHash) { updates.push('password_hash = ?'); bindings.push(user.passwordHash); }
         if (user.email !== undefined) { updates.push('email = ?'); bindings.push(user.email); }
         if (user.phone !== undefined) { updates.push('phone = ?'); bindings.push(user.phone); }
@@ -390,9 +583,9 @@ router.post('/users', (req, res) => {
 });
 
 /**
- * 保存用户角色关联
+ * 保存用户角色关联 - 需要认证
  */
-router.post('/users/:userOid/roles', (req, res) => {
+router.post('/users/:userOid/roles', authenticate, (req, res) => {
   const db = getDatabase();
   const { userOid } = req.params;
   const { roleOids } = req.body;
@@ -466,7 +659,12 @@ router.get('/processes', (req, res) => {
     bindings.push(id as string);
   }
 
-  sql += ` ORDER BY ${sort} ${order}`;
+  // ORDER BY 白名单验证，防止 SQL 注入
+  const allowedSorts = ['sort_order', 'name', 'oid', 'created_at', 'status', 'app_type'];
+  const allowedOrders = ['asc', 'desc'];
+  const safeSort = allowedSorts.includes(sort as string) ? sort : 'sort_order';
+  const safeOrder = allowedOrders.includes((order as string).toLowerCase()) ? (order as string).toLowerCase() : 'asc';
+  sql += ` ORDER BY ${safeSort} ${safeOrder}`;
 
   if (Number(rows) > 0) {
     sql += ' LIMIT ?';
@@ -508,9 +706,9 @@ router.get('/processes', (req, res) => {
 });
 
 /**
- * 保存工序
+ * 保存工序 - 需要认证
  */
-router.post('/processes', (req, res) => {
+router.post('/processes', authenticate, (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -666,9 +864,9 @@ router.get('/roles/:roleOid/authority', (req, res) => {
 });
 
 /**
- * 保存角色权限
+ * 保存角色权限 - 需要认证
  */
-router.post('/roles/:roleOid/authority', (req, res) => {
+router.post('/roles/:roleOid/authority', authenticate, (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { authorities } = req.body;
@@ -745,9 +943,9 @@ router.get('/roles/:roleOid/data-authority', (req, res) => {
 });
 
 /**
- * 保存角色数据权限
+ * 保存角色数据权限 - 需要认证
  */
-router.post('/roles/:roleOid/data-authority', (req, res) => {
+router.post('/roles/:roleOid/data-authority', authenticate, (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { orgOids, isAuthorize } = req.body;

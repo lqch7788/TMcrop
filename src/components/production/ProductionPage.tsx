@@ -163,59 +163,99 @@ export default function ProductionPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  // 提交处理 - 调用后端 API 创建生产计划
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
     const crop = cropTypes.find(c => c.name === formData.cropName);
     const today = new Date().toISOString().slice(0, 10);
 
-    const newBatch: CropBatch = {
+    // 构造符合后端期望的字段格式
+    const apiData = {
       id: `B${String(batches.length + 1).padStart(3, '0')}`,
-      batchCode: formData.batchCode,
-      cropName: formData.cropName,
-      cropType: crop?.category || '',
-      variety: formData.variety,
-      greenhouseId: formData.greenhouseId,
-      greenhouseName: greenhouse?.name || '',
-      plantingArea: parseInt(formData.plantingArea),
+      plan_code: formData.batchCode,
+      plan_name: formData.batchCode, // 后端 plan_name 使用 batchCode
+      plan_type: formData.planType,
+      crop_name: formData.cropName,
+      crop_variety: formData.variety,
+      greenhouse_id: formData.greenhouseId,
+      greenhouse_name: greenhouse?.name || '',
+      area_name: greenhouse?.name || '',
+      planting_area: parseInt(formData.plantingArea) || 0,
+      planting_mode: formData.plantingMode,
+      responsible_person: formData.responsiblePerson,
+      planting_date: formData.startDate,
+      expected_harvest_date: formData.expectedHarvestDate,
+      target_yield: parseInt(formData.targetYield) || 0,
+      actual_yield: 0,
+      status: formData.batchStatus === 'published' ? 'published' : 'draft',
       stage: 'seedling',
-      stageName: '苗期',
-      startDate: formData.startDate,
-      expectedHarvestDate: formData.expectedHarvestDate,
-      targetYield: parseInt(formData.targetYield),
-      actualYield: 0,
-      status: 'planned',
-      plantingMode: formData.plantingMode,
-      responsiblePerson: formData.responsiblePerson,
-      publisher: formData.publisher,
-      publishDate: formData.batchStatus === 'published' ? today : undefined,
-      lastModifyDate: today,
-      batchStatus: formData.batchStatus,
-      planType: formData.planType,
-      planTypeName: formData.planTypeName,
+      stage_name: '苗期',
+      priority: 'normal',
+      remarks: formData.description || '',
+      create_by: formData.publisher || localStorage.getItem('username') || '陆启闯',
+      plan_detail: formData.planDetail || '',
     };
 
-    setBatches([newBatch, ...batches]);
-    setShowCreateModal(false);
-    setFormData({
-      batchCode: '',
-      planType: PlanType.PLANTING as PlanType,
-      planTypeName: '种植计划',
-      cropName: '',
-      variety: '',
-      greenhouseId: '',
-      plantingArea: '',
-      startDate: '',
-      expectedHarvestDate: '',
-      targetYield: '',
-      plantingMode: '',
-      responsiblePerson: '',
-      publisher: localStorage.getItem('username') || '陆启闯',
-      batchStatus: 'draft',
-      description: ''
-    });
-    setErrors({});
+    try {
+      // 调用后端 API 创建生产计划
+      if (USE_API) {
+        await apiClient.post('/production/plans', apiData);
+      }
+
+      // 构造前端本地状态使用的 CropBatch 对象
+      const newBatch: CropBatch = {
+        id: apiData.id,
+        batchCode: formData.batchCode,
+        cropName: formData.cropName,
+        cropType: crop?.category || '',
+        variety: formData.variety,
+        greenhouseId: formData.greenhouseId,
+        greenhouseName: greenhouse?.name || '',
+        plantingArea: parseInt(formData.plantingArea),
+        stage: 'seedling',
+        stageName: '苗期',
+        startDate: formData.startDate,
+        expectedHarvestDate: formData.expectedHarvestDate,
+        targetYield: parseInt(formData.targetYield),
+        actualYield: 0,
+        status: 'planned',
+        plantingMode: formData.plantingMode,
+        responsiblePerson: formData.responsiblePerson,
+        publisher: formData.publisher,
+        publishDate: formData.batchStatus === 'published' ? today : undefined,
+        lastModifyDate: today,
+        batchStatus: formData.batchStatus,
+        planType: formData.planType,
+        planTypeName: formData.planTypeName,
+      };
+
+      // 更新本地状态
+      setBatches([newBatch, ...batches]);
+      setShowCreateModal(false);
+      setFormData({
+        batchCode: '',
+        planType: PlanType.PLANTING as PlanType,
+        planTypeName: '种植计划',
+        cropName: '',
+        variety: '',
+        greenhouseId: '',
+        plantingArea: '',
+        startDate: '',
+        expectedHarvestDate: '',
+        targetYield: '',
+        plantingMode: '',
+        responsiblePerson: '',
+        publisher: localStorage.getItem('username') || '陆启闯',
+        batchStatus: 'draft',
+        description: ''
+      });
+      setErrors({});
+    } catch (error) {
+      console.error('创建生产计划失败:', error);
+      alert('创建生产计划失败，请重试');
+    }
   };
 
   const handleClose = () => {

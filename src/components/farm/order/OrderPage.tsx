@@ -14,10 +14,10 @@ import {
   cropCategories,
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
+import { getOrderStats } from '@/services/apiCropOrderService';
 import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import * as cropVarietyService from '@/services/apiCropVarietyService';
-import { useAuthPermission } from '@/hooks/usePermission';
 
 export default function OrderPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -41,6 +41,11 @@ export default function OrderPage() {
 
   // 从API加载数据，初始为空数组
   const [orders, setOrders] = useState<CropOrder[]>([]);
+  // Loading状态
+  const [loading, setLoading] = useState(false);
+
+  // API统计数据（感知后端stats路由）
+  const [apiStats, setApiStats] = useState<{ total: number; inProgress: number; completed: number; thisMonth: number } | null>(null);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -54,11 +59,14 @@ export default function OrderPage() {
 
   // 刷新数据（异步调用API）
   const refreshData = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await cropOrderService.getOrders();
       setOrders(data);
     } catch (error) {
       console.error('获取订单数据失败:', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -66,6 +74,21 @@ export default function OrderPage() {
   useEffect(() => {
     refreshData();
   }, []);
+
+  // 获取API统计数据（感知后端stats路由）
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const stats = await getOrderStats();
+        if (stats) {
+          setApiStats(stats);
+        }
+      } catch (error) {
+        console.warn('获取API统计失败，使用本地计算:', error);
+      }
+    };
+    fetchStats();
+  }, [refreshKey]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -91,8 +114,13 @@ export default function OrderPage() {
     });
   }, [orders, filters]);
 
-  // 统计卡片数据
+  // 统计卡片数据（优先使用后端API统计数据，否则回退到本地计算）
   const statsData = useMemo(() => {
+    // 如果有API统计数据，优先使用
+    if (apiStats) {
+      return apiStats;
+    }
+    // 回退到本地计算
     const total = orders.length;
     const inProgress = orders.filter(o => o.status === CropOrderStatus.IN_PROGRESS).length;
     const completed = orders.filter(o => o.status === CropOrderStatus.COMPLETED).length;
@@ -102,7 +130,7 @@ export default function OrderPage() {
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length;
     return { total, inProgress, completed, thisMonth };
-  }, [orders]);
+  }, [orders, apiStats]);
 
   // 处理操作
   const handleDetail = (record: CropOrder) => {
@@ -110,11 +138,16 @@ export default function OrderPage() {
     setDetailModalOpen(true);
   };
 
-  const handleDelete = (ids: string[]) => {
+  const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      cropOrderService.deleteOrders(ids);
-      refreshData();
-      setSelectedRows([]);
+      try {
+        await cropOrderService.deleteOrders(ids);
+        refreshData();
+        setSelectedRows([]);
+      } catch (error) {
+        console.error('删除订单失败:', error);
+        alert('删除失败，请稍后重试');
+      }
     }
   };
 
@@ -167,7 +200,7 @@ export default function OrderPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['订单编号', '订单名称', '订单类型', '作物类别', '作物品种', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['订单编号', '订单名称', '订单类型', '作物类别', '作物名称', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -244,12 +277,12 @@ export default function OrderPage() {
     setShowExportModal(false);
   };
 
-  // 订单选项
+  // 订单状态选项（使用枚举值保证一致性）
   const orderStatusOptions = [
-    { value: 'planned', label: '已计划' },
-    { value: 'in_progress', label: '进行中' },
-    { value: 'completed', label: '已完成' },
-    { value: 'cancelled', label: '已取消' },
+    { value: CropOrderStatus.PLANNED, label: '已计划' },
+    { value: CropOrderStatus.IN_PROGRESS, label: '进行中' },
+    { value: CropOrderStatus.COMPLETED, label: '已完成' },
+    { value: CropOrderStatus.CANCELLED, label: '已取消' },
   ];
 
   const orderTypeOptions = [
@@ -287,6 +320,14 @@ export default function OrderPage() {
       />
 
       {/* 数据表格 */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-500">加载中...</span>
+          </div>
+        </div>
+      )}
       <OrderTable
         data={filteredData}
         pagination={pagination}

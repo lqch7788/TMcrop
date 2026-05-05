@@ -258,89 +258,117 @@ export default function OvertimePage() {
   };
 
   /** 提交加班申请 */
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.staffId || !formData.startTime || !formData.endTime || !formData.reason) {
       alert('请填写完整信息');
       return;
     }
 
-    const newRecord: OvertimeRecord = {
-      id: `OT${Date.now()}`,
-      staffId: formData.staffId,
-      staffName: formData.staffName,
-      overtimeType: formData.overtimeType,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      hours: formData.hours,
-      reason: formData.reason,
-      status: '待审批',
-      remarks: formData.remarks,
-    };
-
-    // 创建审批记录 - 使用分级审批动态生成审批人配置（加班2小时内免审批）
-    const approvalLevelResult = generateApprovers(ApprovalType.OVERTIME, 0, { overtimeHours: formData.hours });
-
-    const approval: Approval = {
-      id: `APR-${Date.now()}`,
-      code: `OT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.OVERTIME,
-      typeName: '加班申请',
-      category: 'hr',
-      title: `${formData.staffName}申请${formData.overtimeType}${formData.hours}小时`,
-      description: formData.reason,
-      applicantId: formData.staffId,
-      applicantName: formData.staffName,
-      applicantDepartment: workers.find(w => w.workerId === formData.staffId)?.department || '生产部',
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'overtime',
-        requestId: newRecord.id,
+    try {
+      const newRecord: OvertimeRecord = {
+        id: `OT${Date.now()}`,
+        staffId: formData.staffId,
+        staffName: formData.staffName,
         overtimeType: formData.overtimeType,
         startTime: formData.startTime,
         endTime: formData.endTime,
         hours: formData.hours,
         reason: formData.reason,
-      },
-    };
+        status: '待审批',
+        remarks: formData.remarks,
+      };
 
-    addApproval(approval);
-    setOvertimeRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-    setIsFormModalOpen(false);
-    alert('提交成功！');
+      // 创建审批记录 - 使用分级审批动态生成审批人配置（加班2小时内免审批）
+      const approvalLevelResult = generateApprovers(ApprovalType.OVERTIME, 0, { overtimeHours: formData.hours });
+
+      const approval: Approval = {
+        id: `APR-${Date.now()}`,
+        code: `OT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
+        type: ApprovalType.OVERTIME,
+        typeName: '加班申请',
+        category: 'hr',
+        title: `${formData.staffName}申请${formData.overtimeType}${formData.hours}小时`,
+        description: formData.reason,
+        applicantId: formData.staffId,
+        applicantName: formData.staffName,
+        applicantDepartment: workers.find(w => w.workerId === formData.staffId)?.department || '生产部',
+        applyDate: new Date().toISOString().slice(0, 10),
+        applyTime: new Date().toISOString().slice(11, 19),
+        priority: 'normal',
+        status: ApprovalStatus.PENDING,
+        currentStep: 1,
+        totalSteps: approvalLevelResult.totalSteps,
+        approvers: approvalLevelResult.approvers,
+        records: [],
+        remark: formData.remarks,
+        reminderCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notificationSent: true,
+        businessLink: {
+          type: 'overtime',
+          requestId: newRecord.id,
+          overtimeType: formData.overtimeType,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          hours: formData.hours,
+          reason: formData.reason,
+        },
+      };
+
+      // 持久化加班记录到加班费计算服务
+      const overtimeTypeEnum = OVERTIME_TYPE_MAP[formData.overtimeType] || OvertimeType.WORKDAY;
+      await overtimeCalculationService.addOvertimeRecord({
+        employeeId: formData.staffId,
+        date: formData.startTime.split('T')[0],
+        startTime: formData.startTime.split('T')[1] || formData.startTime,
+        endTime: formData.endTime.split('T')[1] || formData.endTime,
+        hours: formData.hours,
+        type: overtimeTypeEnum,
+        baseSalary: DEFAULT_BASE_SALARY,
+        status: 'pending',
+      });
+
+      await addApproval(approval);
+      setOvertimeRecords(prev => [newRecord, ...prev]);
+      setPagination(prev => ({ ...prev, total: prev.total + 1 }));
+      setIsFormModalOpen(false);
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交加班申请失败:', error);
+      alert('提交失败，请重试');
+    }
   };
 
   /** 审批通过 */
-  const handleApprove = (record: OvertimeRecord) => {
+  const handleApprove = async (record: OvertimeRecord) => {
     const approval = approvals.find(a => a.id === record.id);
     if (approval) {
-      approve(approval.id, '同意');
-      setOvertimeRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
-      );
+      try {
+        await approve(approval.id, '同意');
+        setOvertimeRecords(prev =>
+          prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
+        );
+      } catch (error) {
+        console.error('审批通过失败:', error);
+        alert('操作失败，请重试');
+      }
     }
   };
 
   /** 审批驳回 */
-  const handleReject = (record: OvertimeRecord) => {
+  const handleReject = async (record: OvertimeRecord) => {
     const approval = approvals.find(a => a.id === record.id);
     if (approval) {
-      reject(approval.id, '不符合条件');
-      setOvertimeRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
-      );
+      try {
+        await reject(approval.id, '不符合条件');
+        setOvertimeRecords(prev =>
+          prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
+        );
+      } catch (error) {
+        console.error('审批驳回失败:', error);
+        alert('操作失败，请重试');
+      }
     }
   };
 

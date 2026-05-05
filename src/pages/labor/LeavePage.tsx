@@ -278,7 +278,7 @@ export default function LeavePage() {
   };
 
   /** 提交请假申请 */
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.staffId || !formData.startDate || !formData.endDate || !formData.reason) {
       alert('请填写完整信息');
       return;
@@ -347,7 +347,13 @@ export default function LeavePage() {
     };
 
     // 添加到Context
-    addApproval(approval);
+    try {
+      await addApproval(approval);
+    } catch (error) {
+      console.error('添加审批记录失败:', error);
+      alert('提交失败，请重试');
+      return;
+    }
 
     // 冻结请假余额（审批通过后正式扣减，审批拒绝后释放）
     leaveQuotaService.freezeQuota(formData.staffId, formData.leaveType as LeaveType, formData.days);
@@ -361,28 +367,38 @@ export default function LeavePage() {
   };
 
   /** 审批通过 */
-  const handleApprove = (record: LeaveRecord) => {
+  const handleApprove = async (record: LeaveRecord) => {
     const approval = approvals.find(a => a.id === record.id);
     if (approval) {
-      approve(approval.id, '同意');
-      // 审批通过后正式扣减余额
-      leaveQuotaService.deductQuota(record.staffId, record.leaveType as LeaveType, record.days);
-      setLeaveRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已通过' as LeaveStatus } : r)
-      );
+      try {
+        await approve(approval.id, '同意');
+        // 审批通过后正式扣减余额
+        leaveQuotaService.deductQuota(record.staffId, record.leaveType as LeaveType, record.days);
+        setLeaveRecords(prev =>
+          prev.map(r => r.id === record.id ? { ...r, status: '已通过' as LeaveStatus } : r)
+        );
+      } catch (error) {
+        console.error('审批通过失败:', error);
+        alert('审批失败，请重试');
+      }
     }
   };
 
   /** 审批驳回 */
-  const handleReject = (record: LeaveRecord) => {
+  const handleReject = async (record: LeaveRecord) => {
     const approval = approvals.find(a => a.id === record.id);
     if (approval) {
-      reject(approval.id, '不符合条件');
-      // 审批拒绝后释放冻结的余额
-      leaveQuotaService.releaseQuota(record.staffId, record.leaveType as LeaveType, record.days);
-      setLeaveRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as LeaveStatus } : r)
-      );
+      try {
+        await reject(approval.id, '不符合条件');
+        // 审批拒绝后释放冻结的余额
+        leaveQuotaService.releaseQuota(record.staffId, record.leaveType as LeaveType, record.days);
+        setLeaveRecords(prev =>
+          prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as LeaveStatus } : r)
+        );
+      } catch (error) {
+        console.error('审批驳回失败:', error);
+        alert('操作失败，请重试');
+      }
     }
   };
 
@@ -393,19 +409,27 @@ export default function LeavePage() {
   };
 
   /** 撤回请假申请 - 申请人主动撤回 */
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (!withdrawRecord) return;
 
     const approval = approvals.find(a => a.id === withdrawRecord.id);
     if (approval) {
-      // 调用 cancel 释放冻结的额度
-      reject(approval.id, '用户撤回申请');
-      // 释放冻结的请假额度
-      leaveQuotaService.releaseQuota(withdrawRecord.staffId, withdrawRecord.leaveType as LeaveType, withdrawRecord.days);
-      // 更新本地状态为已撤回
-      setLeaveRecords(prev =>
-        prev.map(r => r.id === withdrawRecord.id ? { ...r, status: '已撤回' as LeaveStatus } : r)
-      );
+      try {
+        // 调用 cancel 释放冻结的额度
+        await reject(approval.id, '用户撤回申请');
+        // 释放冻结的请假额度
+        leaveQuotaService.releaseQuota(withdrawRecord.staffId, withdrawRecord.leaveType as LeaveType, withdrawRecord.days);
+        // 更新本地状态为已撤回
+        setLeaveRecords(prev =>
+          prev.map(r => r.id === withdrawRecord.id ? { ...r, status: '已撤回' as LeaveStatus } : r)
+        );
+      } catch (error) {
+        console.error('撤回申请失败:', error);
+        alert('撤回失败，请重试');
+        setIsWithdrawModalOpen(false);
+        setWithdrawRecord(null);
+        return;
+      }
     }
 
     setIsWithdrawModalOpen(false);

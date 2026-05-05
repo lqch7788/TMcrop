@@ -18,7 +18,7 @@ interface StatsCardsProps {
   stats: StatsData;
 }
 
-export function StatsCards({ stats }: StatsCardsProps) {
+export const StatsCards = React.memo<StatsCardsProps>(({ stats }: StatsCardsProps) => {
   const cards = [
     {
       key: 'total',
@@ -78,4 +78,4 @@ export function StatsCards({ stats }: StatsCardsProps) {
       ))}
     </div>
   );
-}
+});

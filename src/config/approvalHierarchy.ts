@@ -5,6 +5,7 @@
 // ============================================================
 
 import { ApprovalType } from '../types/approval';
+import { Dictionary } from '../services/dictionaryService';
 
 // ============================================================
 // 审批级别枚举
@@ -376,7 +377,7 @@ export function getHighValueOrderThreshold(): number {
     }
 
     const dictionaries = JSON.parse(stored);
-    const highValueItem = dictionaries.find((d: any) =>
+    const highValueItem = dictionaries.find((d: Dictionary) =>
       d.category === 'approval_rule' && d.code === 'high_value_threshold'
     );
 

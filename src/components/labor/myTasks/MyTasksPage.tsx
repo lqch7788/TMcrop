@@ -22,6 +22,85 @@ import { useOperationRecords } from '../../../hooks/useOperationRecords';
 // 导入任务配置（用于详情弹窗的流转记录显示）
 import { TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../config/taskConfig';
 
+/**
+ * 任务扩展类型
+ * 统一任务管理中的任务可能包含 TaskDispatchTask 中没有的额外字段
+ * 使用索引签名允许访问任何额外属性
+ */
+interface TaskWithExtras {
+  id: string;
+  taskCode?: string;
+  title?: string;
+  types?: string[];
+  typeName?: string;
+  typeLabel?: string;
+  field?: string;
+  greenhouseName?: string;
+  crop?: string;
+  cropName?: string;
+  cropRemarks?: string;
+  assignee?: string;
+  assigneeName?: string;
+  assigneeId?: string;
+  planStart?: string;
+  planEnd?: string;
+  progress?: number;
+  status?: string;
+  priority?: string;
+  estimatedDays?: number;
+  estimatedHours?: number;
+  dueDate?: string;
+  startDate?: string;
+  requiredFeedback?: string[];
+  feedbackRequirements?: string[];
+  remarks?: string;
+  typeConfig?: Record<string, unknown>;
+  sopContent?: string;
+  materials?: Array<{ name: string; qty: number; unit: string }>;
+  tools?: Array<{ name: string; qty: number; unit: string }>;
+  // 临时任务特有字段
+  sourceType?: string;
+  sourceProblemId?: string;
+  workLocation?: string;
+  urgency?: string;
+  tempTaskType?: string;
+  workerCount?: number;
+  totalEstimatedHours?: number;
+  // 巡查反馈特有字段
+  sourceId?: string;
+  recordCode?: string;
+  inspectionType?: string;
+  submitterId?: string;
+  submitterName?: string;
+  assignerName?: string;
+  location?: string;
+  checkDate?: string;
+  checkTime?: string;
+  checkResult?: string;
+  issueCategories?: string[];
+  issueSeverity?: string;
+  issueText?: string;
+  photos?: string[];
+  feedbackStatus?: string;
+  feedbackUsers?: Array<{ id: string; name: string }>;
+  processProgress?: number;
+  inspectorId?: string;
+  inspectorName?: string;
+  createdAt?: string;
+  [key: string]: unknown;  // 允许访问任何额外属性
+}
+
+/**
+ * 任务物资类型
+ */
+interface TaskMaterial {
+  name: string;
+  qty: number;
+  unit: string;
+  code?: string;
+  [key: string]: unknown;
+}
+
 // 任务类型定义
 const taskTypes = [
   { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
@@ -157,8 +236,6 @@ export function MyTasksPage() {
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 兼容处理：如果是 Task[] 类型直接使用，否则从 unifiedTasks 获取
-  // 调试：检查 unifiedTasks 中的 requiredFeedback
-  console.log('[MyTasksPage] unifiedTasks 示例:', unifiedTasks.slice(0, 3).map(t => ({ id: t.id, requiredFeedback: t.requiredFeedback, sourceProblemId: (t as any).sourceProblemId })));
   const myTasks: (TaskDispatchTask | Task)[] = unifiedTasks.length > 0
     ? unifiedTasks.map(t => ({
         id: t.id,
@@ -184,41 +261,41 @@ export function MyTasksPage() {
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
         // 任务配置
-        typeConfig: (t as any).typeConfig || {},
-        sopContent: (t as any).sopContent || '',
+        typeConfig: (t as TaskWithExtras).typeConfig || {},
+        sopContent: (t as TaskWithExtras).sopContent || '',
         materials: t.materials || [],
         tools: t.tools || [],
         // 关联字段
-        sourceProblemId: (t as any).sourceProblemId,
+        sourceProblemId: (t as TaskWithExtras).sourceProblemId,
         // 来源类型（用于区分临时任务和生产任务）
-        sourceType: (t as any).sourceType,
+        sourceType: (t as TaskWithExtras).sourceType,
         // 临时任务特有字段
-        workLocation: (t as any).workLocation || '',
-        urgency: (t as any).urgency || 'normal',
-        tempTaskType: (t as any).tempTaskType || '',
-        workerCount: (t as any).workerCount || 1,
-        totalEstimatedHours: (t as any).totalEstimatedHours || 0,
+        workLocation: (t as TaskWithExtras).workLocation || '',
+        urgency: (t as TaskWithExtras).urgency || 'normal',
+        tempTaskType: (t as TaskWithExtras).tempTaskType || '',
+        workerCount: (t as TaskWithExtras).workerCount || 1,
+        totalEstimatedHours: (t as TaskWithExtras).totalEstimatedHours || 0,
         // 巡查反馈处理表格字段（用于 taskFilter === 'problem' 时显示）
-        sourceId: (t as any).sourceId,
-        recordCode: (t as any).recordCode,
-        inspectionType: (t as any).inspectionType || 'farm',
-        submitterId: (t as any).submitterId,
-        submitterName: (t as any).submitterName || (t as any).assignerName || '',
-        location: (t as any).location || t.greenhouseName || t.field || '',
-        checkDate: (t as any).checkDate || t.planStart?.split(' ')[0] || '',
-        checkTime: (t as any).checkTime || '',
-        checkResult: (t as any).checkResult || '',
-        issueCategories: (t as any).issueCategories || [],
-        issueSeverity: (t as any).issueSeverity || '',
-        issueText: (t as any).issueText || '',
-        photos: (t as any).photos || [],
-        feedbackStatus: (t as any).feedbackStatus || t.status,
-        feedbackUsers: (t as any).feedbackUsers || [],
-        processProgress: (t as any).processProgress || t.progress || 0,
-        inspectorId: (t as any).inspectorId,
-        inspectorName: (t as any).inspectorName || (t as any).assignerName || '',
+        sourceId: (t as TaskWithExtras).sourceId,
+        recordCode: (t as TaskWithExtras).recordCode,
+        inspectionType: (t as TaskWithExtras).inspectionType || 'farm',
+        submitterId: (t as TaskWithExtras).submitterId,
+        submitterName: (t as TaskWithExtras).submitterName || (t as TaskWithExtras).assignerName || '',
+        location: (t as TaskWithExtras).location || t.greenhouseName || t.field || '',
+        checkDate: (t as TaskWithExtras).checkDate || t.planStart?.split(' ')[0] || '',
+        checkTime: (t as TaskWithExtras).checkTime || '',
+        checkResult: (t as TaskWithExtras).checkResult || '',
+        issueCategories: (t as TaskWithExtras).issueCategories || [],
+        issueSeverity: (t as TaskWithExtras).issueSeverity || '',
+        issueText: (t as TaskWithExtras).issueText || '',
+        photos: (t as TaskWithExtras).photos || [],
+        feedbackStatus: (t as TaskWithExtras).feedbackStatus || t.status,
+        feedbackUsers: (t as TaskWithExtras).feedbackUsers || [],
+        processProgress: (t as TaskWithExtras).processProgress || t.progress || 0,
+        inspectorId: (t as TaskWithExtras).inspectorId,
+        inspectorName: (t as TaskWithExtras).inspectorName || (t as TaskWithExtras).assignerName || '',
         // 用于排序的创建时间字段
-        createdAt: (t as any).createdAt || '',
+        createdAt: (t as TaskWithExtras).createdAt || '',
       }))
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
@@ -235,7 +312,7 @@ export function MyTasksPage() {
     // 使用时间戳比较，确保无效日期也能正确排序
     const sortByCreatedAt = (a: TaskDispatchTask | Task, b: TaskDispatchTask | Task) => {
       const getCreatedAtTime = (task: TaskDispatchTask | Task): number => {
-        const timeStr = (task as any).createdAt || (task as any).planStart || (task as any).startDate || '';
+        const timeStr = (task as TaskWithExtras).createdAt || (task as TaskWithExtras).planStart || (task as TaskWithExtras).startDate || '';
         if (!timeStr) return 0;
         const date = new Date(timeStr);
         return isNaN(date.getTime()) ? 0 : date.getTime();
@@ -256,14 +333,14 @@ export function MyTasksPage() {
       case 'production':
         // 生产任务：没有 sourceProblemId 且不是临时任务的任务，按创建时间倒序
         return myTasks
-          .filter(task => !task.sourceProblemId && (task as any).sourceType !== 'tempTask')
+          .filter(task => !task.sourceProblemId && (task as TaskWithExtras).sourceType !== 'tempTask')
           .sort(sortByCreatedAt);
       case 'temp':
         // 临时任务 Tab：筛选 sourceType === 'tempTask' 且非草稿状态，按开始时间倒序
         return myTasks
-          .filter(task => (task as any).sourceType === 'tempTask' && task.status !== 'draft')
+          .filter(task => (task as TaskWithExtras).sourceType === 'tempTask' && task.status !== 'draft')
           .sort((a, b) => {
-            const getTime = (t: any): number => {
+            const getTime = (t: TaskWithExtras): number => {
               const timeStr = t.startDate || t.planStart || '';
               if (!timeStr) return 0;
               const date = new Date(timeStr);
@@ -287,8 +364,8 @@ export function MyTasksPage() {
   const taskCounts = useMemo(() => ({
     all: myTasks.length,
     problem: myTasks.filter(t => t.sourceProblemId !== undefined).length,
-    production: myTasks.filter(t => !t.sourceProblemId && (t as any).sourceType !== 'tempTask').length,
-    temp: myTasks.filter(t => (t as any).sourceType === 'tempTask').length,
+    production: myTasks.filter(t => !t.sourceProblemId && (t as TaskWithExtras).sourceType !== 'tempTask').length,
+    temp: myTasks.filter(t => (t as TaskWithExtras).sourceType === 'tempTask').length,
   }), [myTasks]);
 
   // 详情弹窗状态
@@ -475,11 +552,9 @@ export function MyTasksPage() {
         return;
       }
       const task = feedbackModal.task;
-      console.log('[提交反馈] 开始提交', { taskId: task.id, progress: task.progress, sourceProblemId: task.sourceProblemId });
 
       // 新增：处理"无法继续"逻辑
       if (feedbackForm.cannotContinue && feedbackForm.cannotContinueReason.trim()) {
-        console.log('[提交反馈] 执行无法继续逻辑');
         // 查找 unifiedTasks 中对应的任务
         const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
         if (unifiedTask) {
@@ -538,7 +613,6 @@ export function MyTasksPage() {
       };
 
       if (task.sourceProblemId) {
-        console.log('[提交反馈] 更新问题流转记录', { problemId: task.sourceProblemId });
         // 先记录进度流转（包含反馈数据）
         addProgressRecord(
           task.sourceProblemId,
@@ -550,7 +624,6 @@ export function MyTasksPage() {
         );
         // 进度100%时提交验收，否则只是进度反馈
         if (task.progress === 100) {
-          console.log('[提交反馈] 进度100%，提交验收');
           submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
             resultText: feedbackForm.resultText,
             actualWorkload: feedbackForm.workloadConfirm
@@ -562,14 +635,13 @@ export function MyTasksPage() {
           });
         }
       } else {
-        console.log('[提交反馈] 警告：task.sourceProblemId 为空，跳过问题流转更新');
+        // task.sourceProblemId 为空，跳过问题流转更新
       }
 
       // ========== 数据闭环：同步到 useTasks ==========
       // 查找 unifiedTasks 中对应的任务
       const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
       if (unifiedTask) {
-        console.log('[提交反馈] 找到统一任务', { unifiedTaskId: unifiedTask.id, taskCode: unifiedTask.taskCode });
         const isFinal = task.progress === 100;
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
         submitProgress(unifiedTask.id, task.progress || 0, {
@@ -612,10 +684,8 @@ export function MyTasksPage() {
           voiceNote: feedbackForm.voiceNote || undefined,
           materialCode: feedbackForm.materialCode || undefined,
         });
-        console.log('[提交反馈] 提交成功');
       } else {
         console.error('[提交反馈] 错误：在 unifiedTasks 中找不到对应任务', { taskId: task.id, taskCode: task.taskCode });
-        console.log('[提交反馈] unifiedTasks 当前 IDs:', unifiedTasks.map(t => ({ id: t.id, taskCode: t.taskCode })));
       }
 
       setFeedbackModal({ isOpen: false, task: null });
@@ -897,10 +967,10 @@ export function MyTasksPage() {
               ) : (
                 paginatedTasks.map((task) => {
                   const types = task.types || [];
-                  const isTempTask = (task as any).sourceType === 'tempTask';
-                  const totalHours = ((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) * ((task as any).workerCount || 1);
+                  const isTempTask = (task as TaskWithExtras).sourceType === 'tempTask';
+                  const totalHours = ((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) * ((task as TaskWithExtras).workerCount || 1);
                   return (
-                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && (task as any).urgency === 'critical' ? 'bg-red-50' : ''}`}>
+                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && (task as TaskWithExtras).urgency === 'critical' ? 'bg-red-50' : ''}`}>
                       {taskFilter === 'temp' ? (
                         <>
                           <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
@@ -914,11 +984,11 @@ export function MyTasksPage() {
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              {isTempTask && (task as any).urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                              {isTempTask && (task as TaskWithExtras).urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
                               <span className="font-medium text-gray-900 text-sm">{task.title}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as any).typeName || '-'}</td>
+                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as TaskWithExtras).typeName || '-'}</td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-sm text-gray-600">
                               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -934,16 +1004,16 @@ export function MyTasksPage() {
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-sm text-gray-600">
                               <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              {(task as any).startDate ? formatDateShort((task as any).startDate) : '-'}
+                              {(task as TaskWithExtras).startDate ? formatDateShort((task as TaskWithExtras).startDate) : '-'}
                             </div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-sm text-emerald-600">
                               <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                              {formatExpectedEndDate((task as any).startDate, (task as any).estimatedDays, (task as any).estimatedHours)}
+                              {formatExpectedEndDate((task as TaskWithExtras).startDate, (task as TaskWithExtras).estimatedDays, (task as TaskWithExtras).estimatedHours)}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as any).workerCount || 1}人</td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as TaskWithExtras).workerCount || 1}人</td>
                           <td className="px-3 py-3 text-center text-sm font-medium text-emerald-600">{totalHours}h</td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
@@ -951,8 +1021,8 @@ export function MyTasksPage() {
                             </span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[(task as any).urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
-                              {TEMP_TASK_URGENCY_CONFIG[(task as any).urgency]?.label || (task as any).urgency || '-'}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[(task as TaskWithExtras).urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
+                              {TEMP_TASK_URGENCY_CONFIG[(task as TaskWithExtras).urgency]?.label || (task as TaskWithExtras).urgency || '-'}
                             </span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
@@ -1030,13 +1100,13 @@ export function MyTasksPage() {
                               onClick={() => openDetailModal(task)}
                               className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                             >
-                              {(task as any).sourceId || (task as any).recordCode || task.taskCode || '-'}
+                              {(task as TaskWithExtras).sourceId || (task as TaskWithExtras).recordCode || task.taskCode || '-'}
                             </button>
                           </td>
                           {/* 巡查类型 */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
-                              const type = (task as any).inspectionType || 'farm';
+                              const type = (task as TaskWithExtras).inspectionType || 'farm';
                               const typeMap: Record<string, { label: string; className: string }> = {
                                 '农场巡查': { label: '种植', className: 'bg-emerald-100 text-emerald-700' },
                                 '设备巡查': { label: '设备', className: 'bg-blue-100 text-blue-700' },
@@ -1053,27 +1123,27 @@ export function MyTasksPage() {
                           </td>
                           {/* 提交人 */}
                           <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                            <span className="font-medium text-gray-900 truncate block" title={(task as any).submitterName || task.assignerName || '-'}>
-                              {(task as any).submitterName || task.assignerName || '-'}
+                            <span className="font-medium text-gray-900 truncate block" title={(task as TaskWithExtras).submitterName || task.assignerName || '-'}>
+                              {(task as TaskWithExtras).submitterName || task.assignerName || '-'}
                             </span>
                           </td>
                           {/* 位置/对象 */}
                           <td className="px-3 py-3 text-sm text-gray-600 min-w-[10em] max-w-[15em]">
                             <div className="flex items-center gap-1 overflow-hidden">
                               <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                              <span className="text-gray-900 truncate block" title={(task as any).location || task.greenhouseName || task.field || '-'}>
-                                {(task as any).location || task.greenhouseName || task.field || '-'}
+                              <span className="text-gray-900 truncate block" title={(task as TaskWithExtras).location || task.greenhouseName || task.field || '-'}>
+                                {(task as TaskWithExtras).location || task.greenhouseName || task.field || '-'}
                               </span>
                             </div>
                           </td>
                           {/* 巡查日期 */}
                           <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                            {(task as any).checkDate || task.planStart?.split(' ')[0] || '-'}
+                            {(task as TaskWithExtras).checkDate || task.planStart?.split(' ')[0] || '-'}
                           </td>
                           {/* 巡查结果 */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
-                              const result = (task as any).checkResult || (task as any).issueSeverity || '';
+                              const result = (task as TaskWithExtras).checkResult || (task as TaskWithExtras).issueSeverity || '';
                               const isNormal = result === '正常' || result === '轻微' || result === 'low';
                               return isNormal ? (
                                 <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
@@ -1085,7 +1155,7 @@ export function MyTasksPage() {
                           {/* 问题分类 */}
                           <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
                             {(() => {
-                              const cats = (task as any).issueCategories || [];
+                              const cats = (task as TaskWithExtras).issueCategories || [];
                               if (Array.isArray(cats) && cats.length > 0) {
                                 return (
                                   <div className="flex gap-1 justify-center flex-wrap">
@@ -1106,7 +1176,7 @@ export function MyTasksPage() {
                           {/* 严重程度 */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
-                              const severity = (task as any).issueSeverity || (task as any).priority || '';
+                              const severity = (task as TaskWithExtras).issueSeverity || (task as TaskWithExtras).priority || '';
                               if (severity === '严重' || severity === 'high') {
                                 return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">严重</span>;
                               }
@@ -1119,7 +1189,7 @@ export function MyTasksPage() {
                           {/* 问题照片 */}
                           <td className="px-3 py-3 text-center whitespace-nowrap">
                             {(() => {
-                              const photos = (task as any).photos || [];
+                              const photos = (task as TaskWithExtras).photos || [];
                               if (photos.length > 0) {
                                 return (
                                   <div className="flex justify-center gap-1">
@@ -1140,7 +1210,7 @@ export function MyTasksPage() {
                           {/* 反馈状态 */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
-                              const fbStatus = (task as any).feedbackStatus || task.status;
+                              const fbStatus = (task as TaskWithExtras).feedbackStatus || task.status;
                               const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
                                 pending: { label: '待接受', bg: 'bg-gray-100', color: 'text-gray-600' },
                                 accepted: { label: '已接受', bg: 'bg-blue-100', color: 'text-blue-600' },
@@ -1162,14 +1232,14 @@ export function MyTasksPage() {
                           {/* 反馈人员 */}
                           <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
                             {(() => {
-                              const users = (task as any).feedbackUsers || [];
+                              const users = (task as TaskWithExtras).feedbackUsers || [];
                               return Array.isArray(users) && users.length > 0 ? users[0] : '-';
                             })()}
                           </td>
                           {/* 处理进度 */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
-                              const progress = parseInt(String((task as any).processProgress || task.progress || 0));
+                              const progress = parseInt(String((task as TaskWithExtras).processProgress || task.progress || 0));
                               return (
                                 <div className="flex items-center justify-center gap-1">
                                   <div className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -1255,8 +1325,8 @@ export function MyTasksPage() {
                           </td>
                           {/* 备注 */}
                           <td className="px-3 py-3 text-sm text-gray-600 max-w-[10em]">
-                            <span className="truncate block" title={(task as any).issueText || (task as any).remarks || ''}>
-                              {((task as any).issueText || (task as any).remarks || '').slice(0, 10) || '-'}
+                            <span className="truncate block" title={(task as TaskWithExtras).issueText || (task as TaskWithExtras).remarks || ''}>
+                              {((task as TaskWithExtras).issueText || (task as TaskWithExtras).remarks || '').slice(0, 10) || '-'}
                             </span>
                           </td>
                         </>
@@ -1543,7 +1613,7 @@ export function MyTasksPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedTask.materials.map((m: any, i: number) => (
+                      {selectedTask.materials.map((m: TaskMaterial, i: number) => (
                         <tr key={i} className="border-b border-gray-100 last:border-0">
                           <td className="py-2 text-gray-900">{m.name}</td>
                           <td className="py-2 text-gray-900 text-right">{m.qty}</td>

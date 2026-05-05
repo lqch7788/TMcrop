@@ -17,10 +17,52 @@ import {
   farmTasks,
   produceInventories,
 } from '../../data/mockData';
+import { SeedSource } from '../../types/crop';
+import { Seedling } from '../../types/crop';
+import { Planting } from '../../types/crop';
+import { HarvestRecord } from '../../types/index';
+import { CropInstance } from '../../types/crop';
+import { CropOrder } from '../../types/crop';
+import { ProduceInventory } from '../../types/inventory';
 
 // Helper functions - 生成ID和时间戳
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 const now = () => new Date().toISOString();
+
+// 通用更新类型 - 用于部分更新场景
+type UpdateRecord<T> = Partial<T> & { id?: string };
+
+// 每日记录类型（用于育苗每日记录）
+interface DailyRecord {
+  id: string;
+  seedlingId: string;
+  recordDate: string;
+  plantHeight?: number;
+  leafCount?: number;
+  temperature?: number;
+  humidity?: number;
+  remarks?: string;
+  [key: string]: unknown;
+}
+
+// 供应商类型
+interface Supplier {
+  id: string;
+  name: string;
+  contact?: string;
+  phone?: string;
+  address?: string;
+  [key: string]: unknown;
+}
+
+// 农事任务类型
+interface FarmTask {
+  id: string;
+  taskCode: string;
+  title: string;
+  status: string;
+  [key: string]: unknown;
+}
 
 // ===== 种源服务 =====
 export const mockSeedSourceService = {
@@ -40,18 +82,18 @@ export const mockSeedSourceService = {
     return (seedSources || []).filter((s) => ids.includes(s.id));
   },
 
-  async addSeedSource(source: any) {
+  async addSeedSource(source: Partial<SeedSource>) {
     const newItem = {
       ...source,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as SeedSource;
     seedSources?.push(newItem);
     return newItem;
   },
 
-  async updateSeedSource(id: string, updates: any) {
+  async updateSeedSource(id: string, updates: Partial<SeedSource>) {
     const idx = (seedSources || []).findIndex((s) => s.id === id);
     if (idx >= 0) {
       seedSources[idx] = { ...seedSources[idx], ...updates, updateTime: now() };
@@ -131,18 +173,18 @@ export const mockSeedlingService = {
     return (seedlings || []).filter((s) => s.sourceId === sourceId);
   },
 
-  async addSeedling(seedling: any) {
+  async addSeedling(seedling: Partial<Seedling>) {
     const newItem = {
       ...seedling,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as Seedling;
     seedlings?.push(newItem);
     return newItem;
   },
 
-  async updateSeedling(id: string, updates: any) {
+  async updateSeedling(id: string, updates: Partial<Seedling>) {
     const idx = (seedlings || []).findIndex((s) => s.id === id);
     if (idx >= 0) {
       seedlings[idx] = { ...seedings[idx], ...updates, updateTime: now() };
@@ -172,7 +214,7 @@ export const mockSeedlingService = {
     return count > 0;
   },
 
-  async addDailyRecord(seedlingId: string, record: any) {
+  async addDailyRecord(seedlingId: string, record: Partial<DailyRecord>) {
     const seedling = (seedlings || []).find((s) => s.id === seedlingId);
     if (seedling) {
       if (!seedling.dailyRecords) seedling.dailyRecords = [];
@@ -186,7 +228,7 @@ export const mockSeedlingService = {
   async deleteDailyRecord(seedlingId: string, recordId: string) {
     const seedling = (seedlings || []).find((s) => s.id === seedlingId);
     if (seedling && seedling.dailyRecords) {
-      const idx = seedling.dailyRecords.findIndex((r: any) => r.id === recordId);
+      const idx = seedling.dailyRecords.findIndex((r: DailyRecord) => r.id === recordId);
       if (idx >= 0) {
         seedling.dailyRecords.splice(idx, 1);
         return true;
@@ -241,18 +283,18 @@ export const mockPlantingService = {
     return (plantings || []).filter((p) => p.sourceId === sourceId);
   },
 
-  async addPlanting(planting: any) {
+  async addPlanting(planting: Partial<Planting>) {
     const newItem = {
       ...planting,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as Planting;
     plantings?.push(newItem);
     return newItem;
   },
 
-  async updatePlanting(id: string, updates: any) {
+  async updatePlanting(id: string, updates: Partial<Planting>) {
     const idx = (plantings || []).findIndex((p) => p.id === id);
     if (idx >= 0) {
       plantings[idx] = { ...plantings[idx], ...updates, updateTime: now() };
@@ -334,29 +376,29 @@ export const mockHarvestService = {
     return (harvests || []).filter((h) => h.batchCode === batchCode);
   },
 
-  async addHarvestRecord(record: any) {
+  async addHarvestRecord(record: Partial<HarvestRecord>) {
     const newItem = {
       ...record,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as HarvestRecord;
     harvests?.push(newItem);
     return newItem;
   },
 
-  async addHarvestRecords(newRecords: any[]) {
+  async addHarvestRecords(newRecords: Partial<HarvestRecord>[]) {
     const items = newRecords.map((r) => ({
       ...r,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    }));
+    })) as HarvestRecord[];
     harvests?.push(...items);
     return items;
   },
 
-  async updateHarvestRecord(id: string, updates: any) {
+  async updateHarvestRecord(id: string, updates: Partial<HarvestRecord>) {
     const idx = (harvests || []).findIndex((h) => h.id === id);
     if (idx >= 0) {
       harvests[idx] = { ...harvests[idx], ...updates, updateTime: now() };
@@ -419,7 +461,7 @@ export const mockCropInstanceService = {
     return (cropInstances || []).filter((i) => i.orderId === orderId);
   },
 
-  async createInstance(cropInfo: any, sourceOrigin: string, initialQuantity: number, options?: any) {
+  async createInstance(cropInfo: Partial<CropInstance>, sourceOrigin: string, initialQuantity: number, options?: Partial<CropInstance>) {
     const newItem = {
       id: generateId(),
       ...cropInfo,
@@ -430,12 +472,12 @@ export const mockCropInstanceService = {
       ...options,
       createTime: now(),
       updateTime: now(),
-    };
+    } as CropInstance;
     cropInstances?.push(newItem);
     return newItem;
   },
 
-  async updateInstance(id: string, updates: any) {
+  async updateInstance(id: string, updates: Partial<CropInstance>) {
     const idx = (cropInstances || []).findIndex((i) => i.id === id);
     if (idx >= 0) {
       cropInstances[idx] = { ...cropInstances[idx], ...updates, updateTime: now() };
@@ -513,7 +555,7 @@ export const mockCropOrderService = {
     return (cropOrders || []).filter((o) => ids.includes(o.id));
   },
 
-  async createOrder(orderData: any) {
+  async createOrder(orderData: Partial<CropOrder>) {
     const newItem = {
       ...orderData,
       id: generateId(),
@@ -521,12 +563,12 @@ export const mockCropOrderService = {
       status: 'pending',
       createTime: now(),
       updateTime: now(),
-    };
+    } as CropOrder;
     cropOrders?.push(newItem);
     return newItem;
   },
 
-  async updateOrder(id: string, updates: any) {
+  async updateOrder(id: string, updates: Partial<CropOrder>) {
     const idx = (cropOrders || []).findIndex((o) => o.id === id);
     if (idx >= 0) {
       cropOrders[idx] = { ...cropOrders[idx], ...updates, updateTime: now() };
@@ -613,18 +655,18 @@ export const mockSupplierService = {
     return (suppliers || []).find((s) => s.id === id);
   },
 
-  async addSupplier(supplier: any) {
+  async addSupplier(supplier: Partial<Supplier>) {
     const newItem = {
       ...supplier,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as Supplier;
     suppliers?.push(newItem);
     return newItem;
   },
 
-  async updateSupplier(id: string, updates: any) {
+  async updateSupplier(id: string, updates: Partial<Supplier>) {
     const idx = (suppliers || []).findIndex((s) => s.id === id);
     if (idx >= 0) {
       suppliers[idx] = { ...suppliers[idx], ...updates, updateTime: now() };
@@ -665,18 +707,18 @@ export const mockInventoryService = {
     return (produceInventories || []).filter((i) => i.batchCode === batchCode);
   },
 
-  async addInventory(inventory: any) {
+  async addInventory(inventory: Partial<ProduceInventory>) {
     const newItem = {
       ...inventory,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as ProduceInventory;
     produceInventories?.push(newItem);
     return newItem;
   },
 
-  async updateInventory(id: string, updates: any) {
+  async updateInventory(id: string, updates: Partial<ProduceInventory>) {
     const idx = (produceInventories || []).findIndex((i) => i.id === id);
     if (idx >= 0) {
       produceInventories[idx] = { ...produceInventories[idx], ...updates, updateTime: now() };
@@ -723,18 +765,18 @@ export const mockFarmTaskService = {
     return (farmTasks || []).find((t) => t.id === id);
   },
 
-  async addFarmTask(task: any) {
+  async addFarmTask(task: Partial<FarmTask>) {
     const newItem = {
       ...task,
       id: generateId(),
       createTime: now(),
       updateTime: now(),
-    };
+    } as FarmTask;
     farmTasks?.push(newItem);
     return newItem;
   },
 
-  async updateFarmTask(id: string, updates: any) {
+  async updateFarmTask(id: string, updates: Partial<FarmTask>) {
     const idx = (farmTasks || []).findIndex((t) => t.id === id);
     if (idx >= 0) {
       farmTasks[idx] = { ...farmTasks[idx], ...updates, updateTime: now() };

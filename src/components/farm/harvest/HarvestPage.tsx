@@ -74,15 +74,20 @@ export default function HarvestPage() {
 
   // Harvest Records State - 从API加载数据，初始为空数组
   const [harvestRecords, setHarvestRecords] = useState<any[]>([]);
+  // Loading状态
+  const [loading, setLoading] = useState(false);
 
   // 初始化数据（从API加载）
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
       try {
         const data = await harvestService.getHarvestRecords();
         setHarvestRecords(data);
       } catch (error) {
         console.error('获取采收数据失败:', error);
+      } finally {
+        setLoading(false);
       }
     };
     loadData();
@@ -125,12 +130,13 @@ export default function HarvestPage() {
 
   // Filter records based on search
   const filteredRecords = harvestRecords.filter(record => {
-    if (searchFilters.harvestCode && !record.harvestCode.includes(searchFilters.harvestCode)) return false;
-    if (searchFilters.batchCode && !record.batchCode.includes(searchFilters.batchCode)) return false;
+    // 使用 startsWith 替代 includes，避免误匹配
+    if (searchFilters.harvestCode && !record.harvestCode.startsWith(searchFilters.harvestCode)) return false;
+    if (searchFilters.batchCode && !record.batchCode.startsWith(searchFilters.batchCode)) return false;
     if (searchFilters.greenhouseId && record.greenhouseId !== searchFilters.greenhouseId) return false;
-    if (searchFilters.cropName && !record.cropName.includes(searchFilters.cropName)) return false;
+    if (searchFilters.cropName && !record.cropName.startsWith(searchFilters.cropName)) return false;
     if (searchFilters.grade && record.grade !== searchFilters.grade) return false;
-    if (searchFilters.harvesterName && !record.harvesterNames.some(name => name.includes(searchFilters.harvesterName))) return false;
+    if (searchFilters.harvesterName && !record.harvesterNames.some(name => name.startsWith(searchFilters.harvesterName))) return false;
     if (searchFilters.warehouseId && record.warehouseId !== searchFilters.warehouseId) return false;
     if (searchFilters.status && record.status !== searchFilters.status) return false;
     return true;
@@ -309,42 +315,60 @@ export default function HarvestPage() {
     setSelectedRecordId('');
   };
 
-  const handleConfirmBatchEdit = () => {
+  const handleConfirmBatchEdit = async () => {
     // Apply all edits
     const updatedRecords = [...harvestRecords];
-    editedRecordIds.forEach(id => {
+    const failedIds: string[] = [];
+
+    for (const id of editedRecordIds) {
       const index = updatedRecords.findIndex(r => r.id.toString() === id);
       if (index !== -1 && editedRecords[id]) {
         const record = updatedRecords[index];
+        let updatedRecord = { ...record };
+
         // Find greenhouse name if greenhouseId changed
         if (editedRecords[id].greenhouseId && editedRecords[id].greenhouseId !== record.greenhouseId) {
           const gh = greenhouses.find(g => g.id === editedRecords[id].greenhouseId);
-          updatedRecords[index] = {
-            ...record,
+          updatedRecord = {
+            ...updatedRecord,
             ...editedRecords[id],
             greenhouseName: gh?.name || record.greenhouseName,
           };
         } else {
-          updatedRecords[index] = { ...record, ...editedRecords[id] };
+          updatedRecord = { ...updatedRecord, ...editedRecords[id] };
         }
         // Find warehouse name if warehouseId changed
         if (editedRecords[id].warehouseId && editedRecords[id].warehouseId !== record.warehouseId) {
           const wh = warehouseOptions.find(w => w.value === editedRecords[id].warehouseId);
-          updatedRecords[index] = {
-            ...updatedRecords[index],
+          updatedRecord = {
+            ...updatedRecord,
             warehouseName: wh?.label || record.warehouseName,
           };
         }
         // Find batch cropName if batchCode changed
         if (editedRecords[id].batchCode && editedRecords[id].batchCode !== record.batchCode) {
           const batch = cropBatches.find(b => b.batchCode === editedRecords[id].batchCode);
-          updatedRecords[index] = {
-            ...updatedRecords[index],
+          updatedRecord = {
+            ...updatedRecord,
             cropName: batch?.cropName || record.cropName,
           };
         }
+
+        // 同步到后端API
+        try {
+          await harvestService.updateHarvestRecord(id, updatedRecord);
+          updatedRecords[index] = updatedRecord;
+        } catch (error) {
+          console.error(`更新记录 ${id} 失败:`, error);
+          failedIds.push(id);
+        }
       }
-    });
+    }
+
+    if (failedIds.length > 0) {
+      alert(`部分记录更新失败: ${failedIds.join(', ')}`);
+    }
+
     setHarvestRecords(updatedRecords);
     setShowBatchEditModal(false);
     setBatchEditMode(false);
@@ -364,15 +388,32 @@ export default function HarvestPage() {
     setSelectedRows([]);
   };
 
-  const handleConfirmBatchDelete = () => {
-    // Delete selected records (using index from filtered records)
-    const indicesToDelete = new Set(selectedRows);
-    const remainingRecords = harvestRecords.filter((_, index) => {
-      // Map filtered index back to original records index
-      const filteredIndex = filteredRecords.findIndex(r => r.id === harvestRecords[index].id);
-      return !indicesToDelete.has(filteredIndex);
-    });
-    setHarvestRecords(remainingRecords);
+  const handleConfirmBatchDelete = async () => {
+    // 获取要删除的记录ID
+    const idsToDelete = selectedRows.map(index => filteredRecords[index]?.id).filter(Boolean);
+
+    if (idsToDelete.length === 0) {
+      setShowDeleteWarning(false);
+      setBatchDeleteMode(false);
+      setSelectedRows([]);
+      return;
+    }
+
+    // 调用后端API删除
+    try {
+      await harvestService.deleteHarvestRecords(idsToDelete);
+      // 删除成功后更新本地状态
+      const indicesToDeleteSet = new Set(selectedRows);
+      const remainingRecords = harvestRecords.filter((_, index) => {
+        const filteredIndex = filteredRecords.findIndex(r => r.id === harvestRecords[index].id);
+        return !indicesToDeleteSet.has(filteredIndex);
+      });
+      setHarvestRecords(remainingRecords);
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      alert('删除失败，请重试');
+    }
+
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
     setSelectedRows([]);
@@ -522,9 +563,12 @@ export default function HarvestPage() {
       remarks: newRecord.remarks,
     }];
 
-    productRecords.forEach((product) => {
+    for (const product of productRecords) {
+      // 生成采收单号
+      const harvestCode = newRecord.harvestCode || await harvestService.generateHarvestCode();
+
       const record = {
-        harvestCode: newRecord.harvestCode || harvestService.generateHarvestCode(),
+        harvestCode,
         batchCode: newRecord.batchCode,
         cropName: selectedBatch?.cropName || product.cropName,
         greenhouseId: newRecord.greenhouseId,
@@ -546,13 +590,13 @@ export default function HarvestPage() {
         quality: 'good' as const,
       };
 
-      // 使用 harvestService 添加记录
-      const newRecord = harvestService.addHarvestRecord(record);
+      // 使用 apiHarvestService 添加记录
+      const createdRecord = await harvestService.addHarvestRecord(record);
 
       // 同步到库存中心（V3.0统一库存）
       inventoryInbound({
         stockType: StockType.PRODUCT,
-        businessId: newRecord.id,
+        businessId: createdRecord.id,
         businessType: BusinessType.HARVEST,
         cropId: selectedBatch?.cropId || '',
         cropName: record.cropName,
@@ -571,10 +615,10 @@ export default function HarvestPage() {
 
       // 更新作物实例的采收数量
       if (selectedBatch?.instanceId) {
-        cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);
+        await cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);
       }
-      refreshHarvestData();
-    });
+    }
+    refreshHarvestData();
 
     setIsCreateModalOpen(false);
     setNewRecord({
@@ -636,6 +680,14 @@ export default function HarvestPage() {
       />
 
       {/* Harvest Records */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-500">加载中...</span>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <HarvestTableToolbar
           exportMode={exportMode}

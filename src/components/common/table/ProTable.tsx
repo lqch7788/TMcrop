@@ -18,7 +18,7 @@ export interface Column {
   sortable?: boolean;
   filterable?: boolean;
   filters?: { text: string; value: string }[];
-  render?: (value: any, record: any, index: number) => React.ReactNode;
+  render?: (value: unknown, record: any, index: number) => React.ReactNode;
 }
 
 // 分页配置类型
@@ -42,7 +42,7 @@ export interface RowSelection {
 
 interface ProTableProps {
   columns: Column[];
-  dataSource: any[];
+  dataSource: unknown[];
   loading?: boolean;
   pagination?: PaginationConfig | false;
   onSort?: (column: string, order: 'asc' | 'desc') => void;

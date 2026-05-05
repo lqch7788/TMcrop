@@ -53,6 +53,8 @@ export default function PlantingPage() {
 
   // 从API加载数据，初始为空数组
   const [plantings, setPlantings] = useState<Planting[]>([]);
+  // Loading状态
+  const [loading, setLoading] = useState(false);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -84,11 +86,14 @@ export default function PlantingPage() {
 
   // 刷新数据（异步调用API）
   const refreshData = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await plantingService.getPlantings();
       setPlantings(data);
     } catch (error) {
       console.error('获取种植数据失败:', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -174,11 +179,16 @@ export default function PlantingPage() {
     setLightboxOpen(true);
   };
 
-  const handleDelete = (ids: string[]) => {
+  const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      plantingService.deletePlantings(ids);
-      refreshData();
-      setSelectedRows([]);
+      try {
+        await plantingService.deletePlantings(ids);
+        refreshData();
+        setSelectedRows([]);
+      } catch (error) {
+        console.error('删除种植记录失败:', error);
+        alert('删除失败，请重试');
+      }
     }
   };
 
@@ -406,6 +416,14 @@ export default function PlantingPage() {
       />
 
       {/* 数据表格 */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-500">加载中...</span>
+          </div>
+        </div>
+      )}
       <PlantingTable
         data={filteredData}
         pagination={pagination}
@@ -453,6 +471,7 @@ export default function PlantingPage() {
         <EditModal
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
+          onSuccess={refreshData}
           record={currentRecord}
           cropVarietyOptions={cropVarietyOptions}
           areas={areas}

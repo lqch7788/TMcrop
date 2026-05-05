@@ -117,6 +117,12 @@ export default function HrApproval() {
   // 当前操作的审批记录
   const [currentRecord, setCurrentRecord] = useState<Approval | null>(null);
 
+  // 审批意见（通过）
+  const [approveComment, setApproveComment] = useState<string>('');
+
+  // 批量审批意见
+  const [batchApproveComment, setBatchApproveComment] = useState<string>('');
+
   // 筛选后的数据
   const filteredData = useMemo(() => {
     return hrApprovals.filter(a => {
@@ -176,12 +182,13 @@ export default function HrApproval() {
   // 确认通过
   const handleConfirmApprove = useCallback(() => {
     if (currentRecord) {
-      approve(currentRecord.id);
+      approve(currentRecord.id, approveComment || '审批通过');
       message.success('审批已通过');
       setApproveModalOpen(false);
       setCurrentRecord(null);
+      setApproveComment('');
     }
-  }, [currentRecord, approve]);
+  }, [currentRecord, approve, approveComment]);
 
   // 确认拒绝
   const handleConfirmReject = useCallback(() => {
@@ -207,13 +214,15 @@ export default function HrApproval() {
 
   // 确认批量通过
   const handleConfirmBatchApprove = useCallback(() => {
+    const comment = batchApproveComment || '批量审批通过';
     selectedRowKeys.forEach(key => {
-      approve(key as string);
+      approve(key as string, comment);
     });
     message.success(`已通过 ${selectedRowKeys.length} 项审批`);
     setSelectedRowKeys([]);
     setBatchApproveModalOpen(false);
-  }, [selectedRowKeys, approve]);
+    setBatchApproveComment('');
+  }, [selectedRowKeys, approve, batchApproveComment]);
 
   // 确认批量拒绝
   const handleConfirmBatchReject = useCallback(() => {
@@ -663,6 +672,16 @@ export default function HrApproval() {
             <p><strong>类型：</strong>{currentRecord.typeName}</p>
           </div>
         )}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">审批意见（可选）</label>
+          <textarea
+            value={approveComment}
+            onChange={(e) => setApproveComment(e.target.value)}
+            placeholder="请输入审批意见..."
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+          />
+        </div>
       </ProModal>
 
       {/* 拒绝确认弹窗 */}
@@ -697,6 +716,16 @@ export default function HrApproval() {
         <p className="text-gray-700">
           确定要通过选中的 <strong className="text-green-600">{selectedRowKeys.length}</strong> 项审批吗？
         </p>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">审批意见（可选）</label>
+          <textarea
+            value={batchApproveComment}
+            onChange={(e) => setBatchApproveComment(e.target.value)}
+            placeholder="请输入审批意见..."
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+          />
+        </div>
       </ProModal>
 
       {/* 批量驳回确认弹窗 */}

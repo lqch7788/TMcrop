@@ -35,17 +35,20 @@ router.get('/', (req: Request, res: Response) => {
 
     sql += ' ORDER BY create_time DESC';
 
-    // 获取总数
-    const countResult = db.exec(sql.replace('SELECT *', 'SELECT COUNT(*) as total'));
-    const total = countResult.length > 0 && countResult[0].values.length > 0
-      ? countResult[0].values[0][0] as number
-      : 0;
+    // 获取总数 - 使用参数化查询
+    const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as total');
+    const countStmt = db.prepare(countSql);
+    const countResult = countStmt.get(...params) as { total: number } | undefined;
+    const total = countResult?.total || 0;
 
-    // 分页
+    // 分页 - 使用参数化查询防止SQL注入
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    const limitValue = Number(limit);
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(limitValue, offset);
 
-    const results = db.exec(sql);
+    const stmt = db.prepare(sql);
+    const results = stmt.all(...params);
     let items: any[] = [];
 
     if (results.length > 0) {
@@ -141,6 +144,105 @@ router.get('/aggregate/by-crop', (req: Request, res: Response) => {
   }
 });
 
+// 批量操作路由必须在 /:id 之前定义，否则 /batch 会被当作 :id 参数
+
+/**
+ * 批量获取库存记录
+ * GET /api/inventory/batch?ids=id1,id2,id3
+ */
+router.get('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.query;
+    if (!ids || typeof ids !== 'string') {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
+    }
+
+    const idArray = ids.split(',').filter(id => id.trim() !== '');
+    if (idArray.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const db = getDatabase();
+    const placeholders = idArray.map(() => '?').join(',');
+    const sql = `SELECT * FROM inventory WHERE id IN (${placeholders})`;
+
+    const results = db.exec(sql);
+    let items: any[] = [];
+
+    if (results.length > 0) {
+      const { columns, values } = results[0];
+      items = values.map((row: any[]) => {
+        const obj: any = {};
+        columns.forEach((col: string, i: number) => {
+          obj[col] = row[i];
+        });
+        return obj;
+      });
+    }
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '批量获取库存记录失败' });
+  }
+});
+
+/**
+ * 批量更新库存记录
+ * PUT /api/inventory/batch
+ */
+router.put('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids, updates } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是有效数组' });
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ success: false, error: '缺少 updates 参数或 updates 不是有效对象' });
+    }
+
+    const now = new Date().toISOString();
+    const db = getDatabase();
+
+    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+    }
+
+    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    values.push(now);
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE inventory SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
+
+    saveDatabase();
+    res.json({ success: true, data: { ids, updated: ids.length } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '批量更新库存记录失败' });
+  }
+});
+
+/**
+ * 批量删除库存记录
+ * DELETE /api/inventory/batch
+ */
+router.delete('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是数组' });
+    }
+    const db = getDatabase();
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`DELETE FROM inventory WHERE id IN (${placeholders})`, ids);
+    saveDatabase();
+    res.json({ success: true, data: { deletedCount: ids.length } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '批量删除库存记录失败' });
+  }
+});
+
 /**
  * 根据ID获取库存详情
  */
@@ -182,15 +284,19 @@ router.post('/', (req: Request, res: Response) => {
       product_code,
       crop_name,
       variety,
+      stock_type = 'product',
       quantity = 0,
       unit,
       grade,
+      warehouse_id,
       warehouse_name,
       storage_location,
       harvest_date,
       batch_code,
       greenhouse_name,
       planting_mode,
+      production_plan_code,
+      expiration_date,
       status = 'active'
     } = req.body;
 
@@ -200,14 +306,16 @@ router.post('/', (req: Request, res: Response) => {
     const db = getDatabase();
     db.run(`
       INSERT INTO inventory
-      (id, product_code, crop_name, variety, quantity, unit, grade,
-       warehouse_name, storage_location, harvest_date, storage_date,
-       batch_code, greenhouse_name, planting_mode, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, product_code, crop_name, variety, stock_type, quantity, unit, grade,
+       warehouse_id, warehouse_name, storage_location, harvest_date, storage_date,
+       batch_code, greenhouse_name, planting_mode, production_plan_code, expiration_date,
+       status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId, product_code, crop_name, variety, quantity, unit, grade,
-      warehouse_name, storage_location, harvest_date, now,
-      batch_code, greenhouse_name, planting_mode, status, now, now
+      newId, product_code, crop_name, variety, stock_type, quantity, unit, grade,
+      warehouse_id, warehouse_name, storage_location, harvest_date, now,
+      batch_code, greenhouse_name, planting_mode, production_plan_code, expiration_date,
+      status, now, now
     ]);
 
     saveDatabase();
@@ -234,12 +342,23 @@ router.put('/:id', (req: Request, res: Response) => {
     const updates = req.body;
     const now = new Date().toISOString();
 
-    const db = getDatabase();
+    // 允许更新的字段白名单
+    const allowedFields = [
+      'product_code', 'crop_name', 'variety', 'stock_type', 'quantity', 'unit', 'grade',
+      'warehouse_id', 'warehouse_name', 'storage_location', 'harvest_date', 'storage_date',
+      'batch_code', 'greenhouse_name', 'planting_mode', 'production_plan_code',
+      'expiration_date', 'status', 'alert_settings', 'inbound_records', 'outbound_records'
+    ];
 
-    const fields = Object.keys(updates)
-      .filter(key => key !== 'id')
-      .map(key => `${key} = ?`)
-      .join(', ');
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    for (const key of Object.keys(updates)) {
+      if (key !== 'id' && allowedFields.includes(key)) {
+        fields.push(`${key} = ?`);
+        values.push(updates[key]);
+      }
+    }
 
     if (fields.length === 0) {
       return res.status(400).json({
@@ -248,12 +367,12 @@ router.put('/:id', (req: Request, res: Response) => {
       });
     }
 
-    const values = Object.keys(updates)
-      .filter(key => key !== 'id')
-      .map(key => updates[key]);
-    values.push(now, id);
+    fields.push('update_time = ?');
+    values.push(now);
+    values.push(id);
 
-    db.run(`UPDATE inventory SET ${fields}, update_time = ? WHERE id = ?`, values);
+    const db = getDatabase();
+    db.run(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
     res.json({

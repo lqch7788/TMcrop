@@ -21,7 +21,7 @@ import {
 
 export interface UseApprovalLevelReturn {
   /** 根据类型和金额解析审批级别 */
-  resolveLevel: (type: ApprovalType, amount: number, additionalData?: any) => ApprovalLevelResult;
+  resolveLevel: (type: ApprovalType, amount: number, additionalData?: unknown) => ApprovalLevelResult;
   /** 根据类型和金额生成初始审批人配置 */
   generateApprovers: (
     type: ApprovalType,
@@ -52,7 +52,7 @@ export interface UseApprovalLevelReturn {
 export function useApprovalLevel(): UseApprovalLevelReturn {
   // 根据类型和金额解析审批级别
   const resolveLevel = useCallback(
-    (type: ApprovalType, amount: number, additionalData?: any): ApprovalLevelResult => {
+    (type: ApprovalType, amount: number, additionalData?: unknown): ApprovalLevelResult => {
       return resolveApprovalLevel(type, amount, additionalData);
     },
     []

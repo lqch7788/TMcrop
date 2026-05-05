@@ -7,8 +7,73 @@ import { FileText, Bell } from 'lucide-react';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
 import { OvertimeBadge } from './OvertimeBadge';
 
+/**
+ * 任务表格行任务类型
+ * 用于统一任务管理中的任务数据结构
+ */
+interface TaskTableRowTask {
+  id: string;
+  taskCode?: string;
+  status: string;
+  type?: string;
+  typeName?: string;
+  types?: string[];
+  field?: string;
+  greenhouseName?: string;
+  crop?: string;
+  cropName?: string;
+  cropRemarks?: string;
+  batchCode?: string;
+  assignee?: string;
+  assigneeName?: string;
+  assigneeId?: string;
+  progress?: number;
+  priority?: string;
+  timeout?: {
+    severity?: string;
+    [key: string]: unknown;
+  };
+  remarks?: string;
+  sopContent?: string;
+  planStart?: string;
+  planEnd?: string;
+  dueDate?: string;
+  estimatedDays?: number;
+  estimatedHours?: number;
+  // 临时任务特有字段
+  sourceType?: string;
+  sourceProblemId?: string;
+  workLocation?: string;
+  urgency?: string;
+  tempTaskType?: string;
+  workerCount?: number;
+  totalEstimatedHours?: number;
+  // 巡查反馈特有字段
+  sourceId?: string;
+  recordCode?: string;
+  inspectionType?: string;
+  submitterId?: string;
+  submitterName?: string;
+  assignerName?: string;
+  location?: string;
+  checkDate?: string;
+  checkTime?: string;
+  checkResult?: string;
+  issueCategories?: string[];
+  issueSeverity?: string;
+  issueText?: string;
+  photos?: string[];
+  feedbackStatus?: string;
+  feedbackUsers?: Array<{ id: string; name: string }>;
+  processProgress?: number;
+  inspectorId?: string;
+  inspectorName?: string;
+  createdAt?: string;
+  [key: string]: unknown;  // 允许额外属性
+}
+
 interface TaskTableRowProps {
-  task: any;
+  task: TaskTableRowTask;
   index: number;
   showCheckbox: boolean;
   isSelected: boolean;
@@ -44,7 +109,7 @@ interface TaskTableRowProps {
   ) => void;
 }
 
-export function TaskTableRow({
+export const TaskTableRow = React.memo<TaskTableRowProps>(({
   task,
   index,
   showCheckbox,
@@ -67,7 +132,7 @@ export function TaskTableRow({
   remindProps,
   canRemind,
   sendReminder,
-}: TaskTableRowProps) {
+}: TaskTableRowProps) => {
   const statusInfo = STATUS_MAP[task.status] || { label: task.status, bg: 'bg-gray-100', color: 'text-gray-600' };
 
   return (
@@ -125,19 +190,19 @@ export function TaskTableRow({
 
       {/* 任务区域 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {(task as any).greenhouseName || task.field || '-'}
+        {task.greenhouseName || task.field || '-'}
       </td>
 
       {/* 作物 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        {(task as any).cropName ? (
-          (task as any).cropName === '其他' ? (
-            <div className="text-orange-500 text-xs">其他（{(task as any).cropRemarks || ''}）</div>
+        {task.cropName ? (
+          task.cropName === '其他' ? (
+            <div className="text-orange-500 text-xs">其他（{task.cropRemarks || ''}）</div>
           ) : (
-            <span className="text-sm text-gray-600">{(task as any).cropName}</span>
+            <span className="text-sm text-gray-600">{task.cropName}</span>
           )
         ) : task.crop === '其他' ? (
-          <div className="text-orange-500 text-xs">其他（{(task as any).cropRemarks || ''}）</div>
+          <div className="text-orange-500 text-xs">其他（{task.cropRemarks || ''}）</div>
         ) : (
           <span className="text-sm text-gray-600">{task.crop || '-'}</span>
         )}
@@ -145,12 +210,12 @@ export function TaskTableRow({
 
       {/* 批次 */}
       <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
-        {(task as any).batchCode || '-'}
+        {task.batchCode || '-'}
       </td>
 
       {/* 执行人 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        <span className="text-sm text-gray-600">{(task as any).assigneeName || task.assignee || '-'}</span>
+        <span className="text-sm text-gray-600">{task.assigneeName || task.assignee || '-'}</span>
       </td>
 
       {/* 进度 */}
@@ -180,8 +245,8 @@ export function TaskTableRow({
             {statusInfo.label}
           </span>
           {/* 超时警示徽章 */}
-          {(task as any).timeout && (
-            <OvertimeBadge timeout={(task as any).timeout} size="sm" showLabel={true} />
+          {task.timeout && (
+            <OvertimeBadge timeout={task.timeout} size="sm" showLabel={true} />
           )}
         </div>
       </td>
@@ -277,7 +342,7 @@ export function TaskTableRow({
           )}
 
           {/* 超时严重 - 超时处理按钮 */}
-          {(task as any).timeout?.severity === 'critical' && onOvertime && (
+          {task.timeout?.severity === 'critical' && onOvertime && (
             <button
               onClick={onOvertime}
               className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
@@ -340,20 +405,20 @@ export function TaskTableRow({
       </td>
 
       {/* 备注 */}
-      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
-        {(task as any).remarks || '-'}
+      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={task.remarks || '-'}>
+        {task.remarks || '-'}
       </td>
 
       {/* 作业标准 */}
       <td className="px-3 py-3 whitespace-nowrap max-w-[150px]">
-        {(task as any).sopContent ? (
+        {task.sopContent ? (
           <div
             className="text-blue-600 text-xs cursor-pointer hover:text-blue-800 truncate block"
             onClick={onViewSop}
             title="点击查看完整内容"
           >
-            {((task as any).sopContent || '').substring(0, 20)}
-            {((task as any).sopContent || '').length > 20 ? '...' : ''}
+            {(task.sopContent || '').substring(0, 20)}
+            {(task.sopContent || '').length > 20 ? '...' : ''}
           </div>
         ) : (
           <span className="text-gray-400 text-xs">-</span>
@@ -362,18 +427,18 @@ export function TaskTableRow({
 
       {/* 计划开始 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {task.planStart || (task as any).dueDate || '-'}
+        {task.planStart || task.dueDate || '-'}
       </td>
 
       {/* 计划结束 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {task.planEnd || (task as any).dueDate || '-'}
+        {task.planEnd || task.dueDate || '-'}
       </td>
 
       {/* 任务工时 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
+        {formatWorkHours(task.estimatedDays || 0, task.estimatedHours || 0)}
       </td>
     </tr>
   );
-}
+});

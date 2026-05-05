@@ -289,7 +289,6 @@ export interface Seedling {
   planType?: SeedlingPlanType; // 计划类型（常规/加急/实验）
   targetSurvivalRate?: number; // 目标成苗率
   targetSurvivalCount?: number; // 目标成苗数
-  qualityGrade?: string;      // 品质等级预判
   chargePerson?: string;      // 负责人
   // 关联字段
   productionPlanId?: string;   // 关联生产计划ID
@@ -304,6 +303,12 @@ export interface Seedling {
   // 栽种记录（新增）
   transplantRecords?: TransplantRecord[];  // 栽种记录列表
   transplantHistory?: TransplantHistory[]; // 定植履历列表
+  // 品种路径字段（来自作物品种库的标准化信息）
+  categoryName?: string;    // 类别名称（如：蔬菜类）
+  typeName?: string;       // 类型名称（如：茄果类）
+  varietyName?: string;     // 品种名称（如：辣椒）
+  subVarietyName?: string; // 子品种名称（如：尖椒）
+  varietyPath?: string;     // 完整品种路径（categoryName > typeName > varietyName > subVarietyName）
 }
 
 // ========== 种植类型 ==========

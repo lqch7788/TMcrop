@@ -4,6 +4,7 @@
  */
 
 import { getDatabase, saveDatabase } from './index';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 
@@ -2277,7 +2278,7 @@ function seedUsersAndRoles() {
     id: 'user-admin',
     oid: 'USER_ADMIN_001',
     username: '陆启闯',
-    password_hash: '123456',  // 实际应用中应该哈希存储
+    password_hash: bcrypt.hashSync('123456', 10),  // 密码已哈希存储
     real_name: '陆启闯',
     org_oid: 'ORG_DEFAULT',
     org_name: '默认组织',

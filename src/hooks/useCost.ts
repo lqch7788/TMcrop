@@ -44,7 +44,7 @@ export function useCostCategories() {
       const energyTypes = await loadDictionaryItems('DC021');
 
       // 转换为成本类别格式
-      const materialCategories: CostCategory[] = (materialTypes || []).map((item: any, index: number) => ({
+      const materialCategories: CostCategory[] = (materialTypes || []).map((item: Record<string, unknown>, index: number) => ({
         id: `mat-${index + 1}`,
         name: item.label || item.value,
         code: item.value,
@@ -54,7 +54,7 @@ export function useCostCategories() {
         status: 'active' as const,
       }));
 
-      const energyCategories: CostCategory[] = (energyTypes || []).map((item: any, index: number) => ({
+      const energyCategories: CostCategory[] = (energyTypes || []).map((item: Record<string, unknown>, index: number) => ({
         id: `energy-${index + 1}`,
         name: item.label || item.value,
         code: item.value,
@@ -285,7 +285,7 @@ export function useEnergyCosts(params?: {
 /**
  * 辅助函数：从数据字典加载字典项
  */
-async function loadDictionaryItems(categoryCode: string): Promise<any[]> {
+async function loadDictionaryItems(categoryCode: string): Promise<unknown[]> {
   try {
     // 动态导入 apiClient
     const { apiClient, USE_API } = await import('../services/apiClient');

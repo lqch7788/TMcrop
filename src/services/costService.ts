@@ -3,7 +3,7 @@
  * 对接后端 /api/material-costs 和 /api/summary/cost-stats
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 
 // ========== 类型定义 ==========
 
@@ -113,58 +113,43 @@ export async function getMaterialCosts(params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: MaterialCost[]; meta: { total: number; page: number; limit: number } }> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams[key] = String(value);
-        }
-      });
-    }
-    return apiClient.get('/material-costs', queryParams);
+  const queryParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams[key] = String(value);
+      }
+    });
   }
-  throw new Error('本地服务暂未实现');
+  return apiClient.get('/material-costs', queryParams);
 }
 
 /**
  * 获取物料成本详情
  */
 export async function getMaterialCostById(id: string): Promise<MaterialCost> {
-  if (USE_API) {
-    return apiClient.get(`/material-costs/${id}`);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.get(`/material-costs/${id}`);
 }
 
 /**
  * 创建物料成本
  */
 export async function createMaterialCost(data: Partial<MaterialCost>): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.post('/material-costs', data);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.post('/material-costs', data);
 }
 
 /**
  * 更新物料成本
  */
 export async function updateMaterialCost(id: string, data: Partial<MaterialCost>): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.put(`/material-costs/${id}`, data);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.put(`/material-costs/${id}`, data);
 }
 
 /**
  * 删除物料成本
  */
 export async function deleteMaterialCost(id: string): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.delete(`/material-costs/${id}`);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.delete(`/material-costs/${id}`);
 }
 
 // ========== 能源成本 API ==========
@@ -181,40 +166,28 @@ export async function getEnergyCosts(params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: EnergyCost[]; meta: { total: number; page: number; limit: number } }> {
-  if (USE_API) {
-    return apiClient.get('/material-costs/energy', params);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.get('/material-costs/energy', params);
 }
 
 /**
  * 创建能源成本
  */
 export async function createEnergyCost(data: Partial<EnergyCost>): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.post('/material-costs/energy', data);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.post('/material-costs/energy', data);
 }
 
 /**
  * 更新能源成本
  */
 export async function updateEnergyCost(id: string, data: Partial<EnergyCost>): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.put(`/material-costs/energy/${id}`, data);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.put(`/material-costs/energy/${id}`, data);
 }
 
 /**
  * 删除能源成本
  */
 export async function deleteEnergyCost(id: string): Promise<{ id: string }> {
-  if (USE_API) {
-    return apiClient.delete(`/material-costs/energy/${id}`);
-  }
-  throw new Error('本地服务暂未实现');
+  return apiClient.delete(`/material-costs/energy/${id}`);
 }
 
 // ========== 成本统计 API ==========
@@ -230,31 +203,28 @@ export async function getCostStats(params?: {
   batch_code?: string;
   cost_type?: 'labor' | 'material' | 'energy' | 'all';
 }): Promise<{ data: CostStats; summary: CostStatsSummary }> {
-  if (USE_API) {
-    // 构造查询参数
-    const queryParams: Record<string, string> = {};
-    if (params) {
-      if (params.start_date) queryParams.start_date = params.start_date;
-      if (params.end_date) queryParams.end_date = params.end_date;
-      if (params.batch_code) queryParams.batch_code = params.batch_code;
-      if (params.cost_type) queryParams.cost_type = params.cost_type;
-    }
-
-    // 直接fetch获取完整响应
-    const url = new URL('http://localhost:3001/api/summary/cost-stats');
-    Object.entries(queryParams).forEach(([k, v]) => url.searchParams.append(k, v));
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || 'API request failed');
-    }
-
-    return { data: result.data, summary: result.summary };
+  // 构造查询参数
+  const queryParams: Record<string, string> = {};
+  if (params) {
+    if (params.start_date) queryParams.start_date = params.start_date;
+    if (params.end_date) queryParams.end_date = params.end_date;
+    if (params.batch_code) queryParams.batch_code = params.batch_code;
+    if (params.cost_type) queryParams.cost_type = params.cost_type;
   }
-  throw new Error('本地服务暂未实现');
+
+  // 直接fetch获取完整响应
+  const url = new URL('http://localhost:3001/api/summary/cost-stats');
+  Object.entries(queryParams).forEach(([k, v]) => url.searchParams.append(k, v));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(result.error || 'API request failed');
+  }
+
+  return { data: result.data, summary: result.summary };
 }

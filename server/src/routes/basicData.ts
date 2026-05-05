@@ -1197,44 +1197,43 @@ router.get('/approval-nodes', (req, res) => {
       SELECT id, oid, workflow_oid, node_code, node_name, node_type, approver_type, approver_id, approver_name,
              timeout_hours, timeout_action, is_required, conditions, sort_order, created_at
       FROM approval_nodes
-      ORDER BY workflow_oid, sort_order
     `;
+    const bindings: (string | number)[] = [];
 
     if (workflowOid) {
-      sql = `
-        SELECT id, oid, workflow_oid, node_code, node_name, node_type, approver_type, approver_id, approver_name,
-               timeout_hours, timeout_action, is_required, conditions, sort_order, created_at
-        FROM approval_nodes
-        WHERE workflow_oid = '${workflowOid}'
-        ORDER BY sort_order
-      `;
+      sql += ` WHERE workflow_oid = ? ORDER BY sort_order`;
+      bindings.push(workflowOid as string);
+    } else {
+      sql += ` ORDER BY workflow_oid, sort_order`;
     }
 
-    const result = db.exec(sql);
-
-    if (result.length === 0) {
-      return res.json({ success: true, data: [] });
+    const stmt = db.prepare(sql);
+    if (bindings.length > 0) {
+      stmt.bind(bindings);
     }
 
-    const columns = result[0].columns;
-    const nodes = result[0].values.map(row => {
-      const obj: any = {};
-      columns.forEach((col, i) => {
-        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-        obj[camelCol] = row[i];
-      });
+    const results: Record<string, unknown>[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      // 将下划线字段名转换为驼峰命名
+      const camelRow: Record<string, unknown> = {};
+      for (const key in row) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        camelRow[camelKey] = row[key];
+      }
       // 解析 conditions JSON
-      if (obj.conditions) {
+      if (camelRow.conditions) {
         try {
-          obj.conditions = JSON.parse(obj.conditions);
+          camelRow.conditions = JSON.parse(camelRow.conditions as string);
         } catch (e) {
-          obj.conditions = {};
+          camelRow.conditions = {};
         }
       }
-      return obj;
-    });
+      results.push(camelRow);
+    }
+    stmt.free();
 
-    res.json({ success: true, data: nodes });
+    res.json({ success: true, data: results });
   } catch (error) {
     console.error('获取审批节点失败:', error);
     res.status(500).json({ success: false, error: '获取审批节点失败' });

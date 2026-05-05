@@ -3,6 +3,7 @@
  * 功能：显示任务超时状态标记
  */
 
+import React from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { TaskTimeout } from '../../../../types/task';
 
@@ -12,7 +13,7 @@ interface OvertimeBadgeProps {
   showLabel?: boolean;
 }
 
-export function OvertimeBadge({ timeout, size = 'sm', showLabel = true }: OvertimeBadgeProps) {
+export const OvertimeBadge = React.memo<OvertimeBadgeProps>(({ timeout, size = 'sm', showLabel = true }: OvertimeBadgeProps) => {
   if (!timeout) return null;
 
   const isWarning = timeout.severity === 'warning';
@@ -69,7 +70,7 @@ export function OvertimeBadge({ timeout, size = 'sm', showLabel = true }: Overti
       {showLabel && <span>{getTypeLabel()}</span>}
     </span>
   );
-}
+});
 
 /**
  * 超时时长显示组件
@@ -79,7 +80,7 @@ interface OvertimeDurationProps {
   size?: 'sm' | 'md';
 }
 
-export function OvertimeDuration({ startedAt, size = 'sm' }: OvertimeDurationProps) {
+export const OvertimeDuration = React.memo<OvertimeDurationProps>(({ startedAt, size = 'sm' }: OvertimeDurationProps) => {
   const started = new Date(startedAt);
   const now = new Date();
   const diffMs = now.getTime() - started.getTime();
@@ -100,4 +101,4 @@ export function OvertimeDuration({ startedAt, size = 'sm' }: OvertimeDurationPro
       {getDurationText()}
     </span>
   );
-}
+});

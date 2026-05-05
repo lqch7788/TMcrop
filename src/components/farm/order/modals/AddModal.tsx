@@ -101,7 +101,7 @@ export function AddModal({
       status: CropOrderStatus.PLANNED,
       remarks: formData.remarks,
       instanceIds: [],
-      createBy: '系统',
+      createBy: localStorage.getItem('username') || '',
     };
 
     try {

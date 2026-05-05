@@ -15,52 +15,53 @@ export default function Login() {
   const handleLogin = async () => {
     setError('');
 
-    // 查找用户
-    const user = users.find(u => u.name === username);
-
-    if (!user) {
-      setError('用户不存在');
+    if (!username || !password) {
+      setError('请输入用户名和密码');
       return;
     }
 
-    // 验证密码（默认123456）
-    if (password !== '123456') {
-      setError('密码错误');
-      return;
-    }
-
-    // 登录成功，存储登录状态
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', user.name);
-    localStorage.setItem('userId', user.id || user.oid || '');
-    localStorage.setItem('realName', user.name);
-    localStorage.setItem('department', user.department || '');
-
-    // 获取并存储用户角色信息
     try {
-      const userOid = user.oid || user.id;
-      const response = await fetch(`/api/authority/users/${userOid}/roles`);
-      if (response.ok) {
-        const roles = await response.json();
-        localStorage.setItem('userRoles', JSON.stringify(roles));
-        // 检查是否是管理员（拥有系统管理员角色）
-        const isAdmin = roles.some((roleOid: string) => {
-          // 根据角色OID判断是否是管理员（支持多种命名方式）
-          const roleOidLower = roleOid?.toLowerCase() || '';
-          return roleOid === 'ROLE001' ||
-                 roleOid === 'ROLE_ADMIN' ||
-                 roleOidLower.includes('admin');
-        });
-        localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-      }
-    } catch (e) {
-      console.error('获取用户角色失败:', e);
-      // 默认设置为非管理员
-      localStorage.setItem('isAdmin', 'false');
-    }
+      // 调用后端API验证用户名和密码
+      const response = await fetch('/api/authority/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    // 跳转到基地总览页面
-    navigate('/dashboard');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || '登录失败');
+        return;
+      }
+
+      // 登录成功，存储用户信息
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('username', data.user.username);
+      localStorage.setItem('userId', data.user.oid);
+      localStorage.setItem('realName', data.user.real_name);
+      localStorage.setItem('department', data.user.department_name || '');
+
+      // 存储用户角色信息
+      localStorage.setItem('userRoles', JSON.stringify(data.roles));
+      
+      // 检查是否是管理员
+      const isAdmin = data.roles.some((roleOid: string) => {
+        const roleOidLower = roleOid?.toLowerCase() || '';
+        return roleOid === 'ROLE001' ||
+               roleOid === 'ROLE_ADMIN' ||
+               roleOidLower.includes('admin');
+      });
+      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+
+      // 跳转到基地总览页面
+      navigate('/dashboard');
+    } catch (e) {
+      console.error('登录请求失败:', e);
+      setError('网络错误，请稍后重试');
+    }
   };
 
   return (

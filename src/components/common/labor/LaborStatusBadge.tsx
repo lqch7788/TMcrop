@@ -87,13 +87,13 @@ export interface LaborStatusBadgeProps {
   className?: string
 }
 
-export function LaborStatusBadge({
+export const LaborStatusBadge = React.memo<LaborStatusBadgeProps>(({
   status,
   label,
   showDot = true,
   size = 'md',
   className,
-}: LaborStatusBadgeProps) {
+}: LaborStatusBadgeProps) => {
   // 获取配置
   const config = STATUS_CONFIG[status as LaborStatusType]
   const displayLabel = label || config?.label || status
@@ -148,8 +148,8 @@ export function LaborStatusBadge({
       )}
       {displayLabel}
     </span>
-  )
-}
+  );
+});
 
 // 带边框的状态徽章
 export interface LaborStatusOutlineBadgeProps {
@@ -159,12 +159,12 @@ export interface LaborStatusOutlineBadgeProps {
   className?: string
 }
 
-export function LaborStatusOutlineBadge({
+export const LaborStatusOutlineBadge = React.memo<LaborStatusOutlineBadgeProps>(({
   status,
   label,
   size = 'md',
   className,
-}: LaborStatusOutlineBadgeProps) {
+}: LaborStatusOutlineBadgeProps) => {
   const config = STATUS_CONFIG[status as LaborStatusType]
   const displayLabel = label || config?.label || status
 
@@ -197,5 +197,5 @@ export function LaborStatusOutlineBadge({
     >
       {displayLabel}
     </span>
-  )
-}
+  );
+});

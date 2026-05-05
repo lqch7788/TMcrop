@@ -16,9 +16,9 @@ export interface ExportConfig {
   /** 导出表头 */
   headers: string[];
   /** 导出数据生成函数 */
-  getExportData: (record: any) => Record<string, any>;
+  getExportData: (record: Record<string, unknown>) => Record<string, unknown>;
   /** 格式化回调（可选） */
-  formatRecord?: (record: any) => any;
+  formatRecord?: (record: Record<string, unknown>) => unknown;
 }
 
 // 使用导出功能的Hook
@@ -30,7 +30,7 @@ export function useExport() {
    * @param exportFormat - 导出格式
    */
   const handleExport = useCallback(async (
-    selectedData: any[],
+    selectedData: Record<string, unknown>[],
     config: ExportConfig,
     exportFormat: ExportFormat = 'xlsx'
   ) => {

@@ -6,7 +6,7 @@
 const API_BASE_URL = 'http://localhost:3001/api';
 
 // 是否使用 API 模式
-const USE_API = import.meta.env.VITE_USE_API === 'true';
+export const USE_API = import.meta.env.VITE_USE_API === 'true';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -19,17 +19,22 @@ interface ApiResponse<T> {
   };
 }
 
+// 默认请求超时时间（毫秒）
+const DEFAULT_TIMEOUT = 30000;
+
 class ApiClient {
   private baseUrl: string;
+  private timeout: number;
 
-  constructor(baseUrl: string = API_BASE_URL) {
+  constructor(baseUrl: string = API_BASE_URL, timeout: number = DEFAULT_TIMEOUT) {
     this.baseUrl = baseUrl;
+    this.timeout = timeout;
   }
 
   private async request<T>(
     method: string,
     path: string,
-    data?: any,
+    data?: unknown,
     params?: Record<string, string>
   ): Promise<T> {
     let url = `${this.baseUrl}${path}`;
@@ -51,30 +56,44 @@ class ApiClient {
       options.body = JSON.stringify(data);
     }
 
-    const response = await fetch(url, options);
+    // 创建 AbortController 用于超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    options.signal = controller.signal;
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result: ApiResponse<T> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'API request failed');
+      }
+
+      return result.data as T;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`请求超时（${this.timeout}ms）`);
+      }
+      throw error;
     }
-
-    const result: ApiResponse<T> = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'API request failed');
-    }
-
-    return result.data as T;
   }
 
   async get<T>(path: string, params?: Record<string, string>): Promise<T> {
     return this.request<T>('GET', path, undefined, params);
   }
 
-  async post<T>(path: string, data?: any): Promise<T> {
+  async post<T>(path: string, data?: unknown): Promise<T> {
     return this.request<T>('POST', path, data);
   }
 
-  async put<T>(path: string, data?: any): Promise<T> {
+  async put<T>(path: string, data?: unknown): Promise<T> {
     return this.request<T>('PUT', path, data);
   }
 
@@ -85,8 +104,5 @@ class ApiClient {
 
 // 导出 API 客户端实例
 export const apiClient = new ApiClient();
-
-// 导出是否使用 API 模式
-export { USE_API };
 
 export type { ApiResponse };

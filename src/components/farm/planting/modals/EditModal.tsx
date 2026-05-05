@@ -7,10 +7,12 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
+import { updatePlanting } from '../../../../services/apiPlantingService';
 
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   record: Planting;
   cropVarietyOptions: CropVarietyOption[];
   areas: Array<{ value: string; label: string; parent?: string }>;
@@ -19,6 +21,7 @@ interface EditModalProps {
 export function EditModal({
   isOpen,
   onClose,
+  onSuccess,
   record,
   cropVarietyOptions,
   areas
@@ -35,9 +38,25 @@ export function EditModal({
     remarks: record.remarks || ''
   });
 
-  const handleSubmit = () => {
-    console.log('Update:', formData, record.id);
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      await updatePlanting(record.id, {
+        cropCode: formData.selectedCropCode,
+        cropName: formData.cropName,
+        cropVariety: formData.cropVariety,
+        areaId: formData.areaId,
+        plantingCount: formData.plantingCount,
+        plantingDate: formData.plantingDate,
+        soilPH: formData.soilPH,
+        soilEC: formData.soilEC,
+        remarks: formData.remarks
+      });
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('更新失败:', error);
+      alert('更新失败，请重试');
+    }
   };
 
   // 处理作物品种选择

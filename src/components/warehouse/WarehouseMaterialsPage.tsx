@@ -182,6 +182,8 @@ const bigCategoriesList = [
   { code: 'OT', name: '其他类' },
 ];
 
+// TODO [P2-1]: 移除硬编码Mock数据 - 后端API /materials 完善后替换为API调用
+// 当前使用硬编码的13种物料数据，等待后端实现物料管理API
 const warehouseMaterials: Material[] = [
   { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, maxStock: 500, price: '30元', supplier: '金种子业公司', location: 'A区-01', specification: '25kg/袋', barcode: '6932456789012', batchNo: 'PC20260301', productionDate: '2026-01-15', expiryDate: '2027-01-15', lastUpdateTime: '2026-03-20 10:30:00', dataStatus: '启用' },
   { id: 2, code: 'SP0102001', name: '棉花种子', category: '种质资源-经济作物种子', unit: '袋', quantity: 80, minStock: 30, maxStock: 200, price: '25元', supplier: '丰收种业', location: 'A区-02', specification: '20kg/袋', barcode: '6932456789013', batchNo: 'PC20260220', productionDate: '2026-02-01', expiryDate: '2027-02-01', lastUpdateTime: '2026-03-19 14:20:00', dataStatus: '启用' },
@@ -198,6 +200,8 @@ const warehouseMaterials: Material[] = [
   { id: 13, code: 'IT0101001', name: '土壤温湿度传感器', category: '监测设备-传感器', unit: '个', quantity: 20, minStock: 10, maxStock: 50, price: '150元', supplier: '智慧农业设备商', location: 'H区-01', specification: 'RS485 Modbus', barcode: '6932456789024', batchNo: 'IT20260308', productionDate: '2026-03-08', expiryDate: '2031-03-08', lastUpdateTime: '2026-03-20 17:00:00', dataStatus: '启用' },
 ];
 
+// TODO [P2-1]: 移除硬编码Mock数据 - 后端API /materials/inbound 完善后替换为API调用
+// 当前使用硬编码的12条入库记录，等待后端实现入库记录管理API
 const initialInboundRecords: InboundRecord[] = [
   {
     id: 1,
@@ -405,6 +409,7 @@ export default function WarehouseMaterialsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // 从 API 加载物料数据
+  // TODO [P2-1]: 静默降级逻辑 - 后端API完善后应移除降级到Mock的逻辑，统一使用API
   useEffect(() => {
     const loadMaterialData = async () => {
       setIsLoading(true);
@@ -415,6 +420,7 @@ export default function WarehouseMaterialsPage() {
           if (materialsData && materialsData.length > 0) {
             setWarehouseData(materialsData);
           } else {
+            // TODO [P2-1]: 后端API /materials 已上线但返回空数据，需确认API是否正确实现
             setWarehouseData(warehouseMaterials);
           }
         } else {
@@ -424,10 +430,12 @@ export default function WarehouseMaterialsPage() {
             if (materialsData && materialsData.length > 0) {
               setWarehouseData(materialsData);
             } else {
+              // TODO [P2-1]: 后端API /materials 已上线但返回空数据，需确认API是否正确实现
               setWarehouseData(warehouseMaterials);
             }
           } catch {
             // API 不可用，使用 mock 数据
+            // TODO [P2-1]: 后端API /materials 未实现或不可访问，等待后端实现
             setWarehouseData(warehouseMaterials);
           }
         }
@@ -439,12 +447,15 @@ export default function WarehouseMaterialsPage() {
             if (inboundData && inboundData.length > 0) {
               setInboundRecords(inboundData);
             } else {
+              // TODO [P2-1]: 后端API /materials/inbound 已上线但返回空数据，需确认API是否正确实现
               setInboundRecords(initialInboundRecords);
             }
           } else {
+            // TODO [P2-1]: 非API模式下使用Mock数据，后端API完善后可切换到API模式
             setInboundRecords(initialInboundRecords);
           }
         } catch {
+          // TODO [P2-1]: 后端API /materials/inbound 未实现或不可访问，等待后端实现
           setInboundRecords(initialInboundRecords);
         }
       } catch (error) {
@@ -656,14 +667,20 @@ export default function WarehouseMaterialsPage() {
     return `${todayPrefix}${String(newSeq).padStart(4, '0')}`;
   };
 
-  const handleSaveNewInbound = (record: Omit<InboundRecord, 'id'>) => {
-    console.log('Save new inbound record:', record);
-    const newRecord: InboundRecord = {
-      ...record,
-      id: Date.now(),
-    };
-    setInboundRecords(prev => [newRecord, ...prev]);
-    setShowInboundAddModal(false);
+  const handleSaveNewInbound = async (record: Omit<InboundRecord, 'id'>) => {
+    try {
+      // 调用后端API持久化入库记录
+      const newId = await apiClient.post<number>('/materials/inbound', record);
+      const newRecord: InboundRecord = {
+        ...record,
+        id: newId,
+      };
+      setInboundRecords(prev => [newRecord, ...prev]);
+      setShowInboundAddModal(false);
+    } catch (error) {
+      console.error('保存入库记录失败:', error);
+      alert('保存入库记录失败，请重试');
+    }
   };
 
   // ActionToolbar callbacks

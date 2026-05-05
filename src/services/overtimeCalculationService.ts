@@ -46,20 +46,17 @@ function generateRecordId(): string {
 }
 
 /**
- * 从LocalStorage获取员工数据（用于获取员工姓名）
+ * 从API获取员工姓名（异步）
+ * @param employeeId 员工ID
+ * @returns 员工姓名
  */
-function getWorkerName(employeeId: string): string {
+async function getWorkerNameAsync(employeeId: string): Promise<string> {
   try {
-    const workerData = localStorage.getItem('WORKERS');
-    if (!workerData) return '未知员工';
-
-    const workers = JSON.parse(workerData);
-    const worker = Array.isArray(workers)
-      ? workers.find((w: { id?: string; employeeId?: string }) => w.id === employeeId || w.employeeId === employeeId)
-      : null;
-
-    return worker?.name || '未知员工';
-  } catch {
+    // 动态导入避免循环依赖
+    const { getWorkerNameById } = await import('./apiWorkerService');
+    return await getWorkerNameById(employeeId);
+  } catch (error) {
+    console.error('获取员工姓名失败:', error);
     return '未知员工';
   }
 }
@@ -115,11 +112,11 @@ export class OvertimeCalculationService {
   }
 
   /**
-   * 添加加班记录
+   * 添加加班记录（异步）
    * @param record 加班记录（不含id、hourlyRate、rate、totalPay、createdAt）
    * @returns 创建的完整加班记录
    */
-  addOvertimeRecord(record: Omit<OvertimeRecord, 'id' | 'hourlyRate' | 'rate' | 'totalPay' | 'createdAt'>): OvertimeRecord {
+  async addOvertimeRecord(record: Omit<OvertimeRecord, 'id' | 'hourlyRate' | 'rate' | 'totalPay' | 'createdAt'>): Promise<OvertimeRecord> {
     const records = getStoredRecords();
 
     // 计算时薪和加班费
@@ -127,8 +124,8 @@ export class OvertimeCalculationService {
     const rate = this.getOvertimeTypeRate(record.type);
     const totalPay = record.hours * hourlyRate * rate;
 
-    // 获取员工姓名
-    const employeeName = getWorkerName(record.employeeId);
+    // 获取员工姓名（异步）
+    const employeeName = await getWorkerNameAsync(record.employeeId);
 
     const newRecord: OvertimeRecord = {
       ...record,

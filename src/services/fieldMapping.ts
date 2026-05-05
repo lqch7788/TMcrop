@@ -12,29 +12,31 @@ function toCamelCase(str: string): string {
 
 /**
  * 将对象的所有下划线字段转换为驼峰命名
+ * @param obj - 待转换的对象
+ * @returns 转换后的对象
  */
-export function mapFieldsToCamelCase<T>(obj: any): T {
+export function mapFieldsToCamelCase<T>(obj: unknown): T {
   if (obj === null || obj === undefined) {
-    return obj;
+    return obj as T;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => mapFieldsToCamelCase(item)) as T;
+    return obj.map(item => mapFieldsToCamelCase<unknown>(item)) as T;
   }
 
   if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key of Object.keys(obj)) {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
       const camelKey = toCamelCase(key);
-      const value = obj[key];
+      const value = (obj as Record<string, unknown>)[key];
 
       // 递归处理嵌套对象和数组
       if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-        result[camelKey] = mapFieldsToCamelCase(value);
+        result[camelKey] = mapFieldsToCamelCase<unknown>(value);
       } else if (Array.isArray(value)) {
-        result[camelKey] = value.map(item =>
+        result[camelKey] = (value as unknown[]).map(item =>
           item && typeof item === 'object' && !(item instanceof Date)
-            ? mapFieldsToCamelCase(item)
+            ? mapFieldsToCamelCase<unknown>(item)
             : item
         );
       } else {
@@ -44,7 +46,7 @@ export function mapFieldsToCamelCase<T>(obj: any): T {
     return result as T;
   }
 
-  return obj;
+  return obj as T;
 }
 
 /**
@@ -56,28 +58,30 @@ function toSnakeCase(str: string): string {
 
 /**
  * 将对象的所有驼峰命名字段转换为下划线命名
+ * @param obj - 待转换的对象
+ * @returns 转换后的对象
  */
-export function mapFieldsToSnakeCase<T>(obj: any): T {
+export function mapFieldsToSnakeCase<T>(obj: unknown): T {
   if (obj === null || obj === undefined) {
-    return obj;
+    return obj as T;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => mapFieldsToSnakeCase(item)) as T;
+    return obj.map(item => mapFieldsToSnakeCase<unknown>(item)) as T;
   }
 
   if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key of Object.keys(obj)) {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
       const snakeKey = toSnakeCase(key);
-      const value = obj[key];
+      const value = (obj as Record<string, unknown>)[key];
 
       if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-        result[snakeKey] = mapFieldsToSnakeCase(value);
+        result[snakeKey] = mapFieldsToSnakeCase<unknown>(value);
       } else if (Array.isArray(value)) {
-        result[snakeKey] = value.map(item =>
+        result[snakeKey] = (value as unknown[]).map(item =>
           item && typeof item === 'object' && !(item instanceof Date)
-            ? mapFieldsToSnakeCase(item)
+            ? mapFieldsToSnakeCase<unknown>(item)
             : item
         );
       } else {
@@ -87,5 +91,5 @@ export function mapFieldsToSnakeCase<T>(obj: any): T {
     return result as T;
   }
 
-  return obj;
+  return obj as T;
 }

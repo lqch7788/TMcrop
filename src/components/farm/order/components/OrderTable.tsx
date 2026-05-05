@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
-import { CropOrder, CropOrderStatus } from '../../../../types/crop';
+import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface OrderTableProps {
   data: CropOrder[];
