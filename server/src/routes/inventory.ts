@@ -35,20 +35,19 @@ router.get('/', (req: Request, res: Response) => {
 
     sql += ' ORDER BY create_time DESC';
 
-    // 获取总数 - 使用参数化查询
+    // 获取总数 - 使用 db.exec() 获取结果
     const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as total');
-    const countStmt = db.prepare(countSql);
-    const countResult = countStmt.get(...params) as { total: number } | undefined;
-    const total = countResult?.total || 0;
+    const countResult = db.exec(countSql, params);
+    const total = countResult.length > 0 && countResult[0].values.length > 0
+      ? Number(countResult[0].values[0][0]) || 0
+      : 0;
 
     // 分页 - 使用参数化查询防止SQL注入
     const offset = (Number(page) - 1) * Number(limit);
     const limitValue = Number(limit);
-    sql += ` LIMIT ? OFFSET ?`;
-    params.push(limitValue, offset);
+    sql += ` LIMIT ${limitValue} OFFSET ${offset}`;
 
-    const stmt = db.prepare(sql);
-    const results = stmt.all(...params);
+    const results = db.exec(sql, params);
     let items: any[] = [];
 
     if (results.length > 0) {

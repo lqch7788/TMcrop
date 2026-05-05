@@ -8,10 +8,10 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { getDatabase } from './index.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// 使用 process.cwd() 代替 __dirname (tsx 支持 ES 模块语法)
+const WORK_DIR = process.cwd();
 
 /**
  * 迁移配置
@@ -45,7 +45,8 @@ interface MigrationResult {
  * localStorage 数据备份加载器
  */
 function loadLocalStorageBackup(): Record<string, any[]> {
-  const backupPath = path.join(__dirname, '../../../src/data/localStorageBackup.json');
+  // 相对于项目根目录
+  const backupPath = path.join(WORK_DIR, 'server/src/data/localStorageBackup.json');
 
   if (!fs.existsSync(backupPath)) {
     console.error('❌ 备份文件不存在:', backupPath);
