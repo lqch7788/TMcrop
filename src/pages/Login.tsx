@@ -44,6 +44,11 @@ export default function Login() {
       localStorage.setItem('realName', data.user.real_name);
       localStorage.setItem('department', data.user.department_name || '');
 
+      // 存储JWT token（如果后端返回了）
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
       // 存储用户角色信息
       localStorage.setItem('userRoles', JSON.stringify(data.roles));
       
