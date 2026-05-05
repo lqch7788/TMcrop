@@ -2,10 +2,10 @@
  * 种植新增弹窗
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
-import { SourceType, PlantingStatus } from '../../../../types/crop';
+import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
 import { addPlanting } from '../../../../services/apiPlantingService';
 import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
@@ -62,12 +62,26 @@ export function AddModal({
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
 
-  // 获取种源列表（用于选择）
-  const seedSources = getSeedSources().filter(s => s.availableCount > 0);
-  // 获取育苗列表（用于选择）
-  const seedlings = getSeedlings().filter(s =>
-    s.status === 'transplant_ready' || s.status === 'in_progress'
-  );
+  // 种源列表和育苗列表状态
+  const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
+  const [seedlings, setSeedlings] = useState<Seedling[]>([]);
+
+  // 加载种源列表和育苗列表
+  useEffect(() => {
+    if (isOpen) {
+      Promise.all([
+        getSeedSources(),
+        getSeedlings()
+      ]).then(([sources, seedlingsData]) => {
+        setSeedSources(sources.filter((s: SeedSource) => s.availableCount > 0));
+        setSeedlings(seedlingsData.filter((s: Seedling) =>
+          s.status === 'transplant_ready' || s.status === 'in_progress'
+        ));
+      }).catch(error => {
+        console.error('加载数据失败:', error);
+      });
+    }
+  }, [isOpen]);
 
   const handleSubmit = async () => {
     if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
