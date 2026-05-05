@@ -443,10 +443,18 @@ router.post('/auth/login', async (req, res) => {
     }
     roleStmt.free();
 
+    // 生成 JWT token
+    const token = generateToken({
+      userId: user.oid as string,
+      aid: user.username as string,
+      name: (user.real_name || user.username) as string,
+    });
+
     // 返回用户信息（不包含密码）
     const { password_hash, ...userWithoutPassword } = user;
     res.json({
       success: true,
+      token,
       user: userWithoutPassword,
       roles
     });

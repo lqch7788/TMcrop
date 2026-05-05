@@ -31,6 +31,14 @@ class ApiClient {
     this.timeout = timeout;
   }
 
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('token');
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    return {};
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -45,11 +53,14 @@ class ApiClient {
       url += `?${searchParams.toString()}`;
     }
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeaders(),
+    };
+
     const options: RequestInit = {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     };
 
     if (data && method !== 'GET') {
@@ -64,6 +75,12 @@ class ApiClient {
     try {
       const response = await fetch(url, options);
       clearTimeout(timeoutId);
+
+      // 如果是401未授权，清除token并抛出错误（触发降级）
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        throw new Error('未授权，请重新登录');
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
