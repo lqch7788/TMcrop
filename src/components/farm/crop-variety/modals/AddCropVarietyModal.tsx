@@ -7,7 +7,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
-  addVariety,
   getCategoryOptions,
   getTypeOptionsByCategory,
   getVarietyOptionsByType,
@@ -15,6 +14,7 @@ import {
   getAllVarieties,
   getMaxDetailVarietyCode
 } from '../../../../services/cropVarietyService';
+import { createVariety as addVarietyApi } from '../../../../services/apiCropVarietyService';
 import { getSubVariety1Options as getSubVariety1OptionsFromExtension } from '../../../../services/cropVarietyExtensionService';
 import { Search, Check, X, RefreshCw } from 'lucide-react';
 
@@ -331,7 +331,7 @@ export function AddCropVarietyModal({
       const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
 
       // 添加品种
-      addVariety({
+      await addVarietyApi({
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
         typeCode: formData.typeCode,
@@ -360,7 +360,7 @@ export function AddCropVarietyModal({
         soilEc: formData.soilEc,
         status: 'active' as CropVarietyStatus,
         remarks: formData.remarks
-      });
+      } as any);
 
       onSuccess();
       onClose();

@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedSource } from '../../../../types/crop';
-import { updateSeedling } from '../../../../services/seedlingService';
+import { updateSeedling } from '../../../../services/apiSeedlingService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 
@@ -69,7 +69,7 @@ export function EditModal({
     });
   }, [record]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 获取场地名称
     const site = sites.find(s => s.value === formData.siteId);
     const siteName = site?.label || formData.siteName;
@@ -85,26 +85,32 @@ export function EditModal({
     const lossCount = initialCount - survivalCount;
     const lossRate = initialCount > 0 ? Math.round((lossCount / initialCount) * 100) : 0;
 
-    updateSeedling(record.id, {
-      sourceId: formData.sourceId,
-      sourceCode,
-      cropName: formData.cropName,
-      cropVariety: formData.cropVariety,
-      cropCode: formData.selectedCropCode,
-      seedlingType: formData.seedlingType,
-      siteId: formData.siteId,
-      siteName,
-      startDate: formData.startDate,
-      expectedEndDate: formData.expectedEndDate,
-      endDate: formData.endDate,
-      initialCount: formData.initialCount,
-      survivalCount,
-      plantedCount: formData.plantedCount,
-      survivalRate,
-      lossCount,
-      lossRate,
-      remarks: formData.remarks
-    });
+    try {
+      await updateSeedling(record.id, {
+        sourceId: formData.sourceId,
+        sourceCode,
+        cropName: formData.cropName,
+        cropVariety: formData.cropVariety,
+        cropCode: formData.selectedCropCode,
+        seedlingType: formData.seedlingType,
+        siteId: formData.siteId,
+        siteName,
+        startDate: formData.startDate,
+        expectedEndDate: formData.expectedEndDate,
+        endDate: formData.endDate,
+        initialCount: formData.initialCount,
+        survivalCount,
+        plantedCount: formData.plantedCount,
+        survivalRate,
+        lossCount,
+        lossRate,
+        remarks: formData.remarks
+      });
+    } catch (error) {
+      console.error('更新育苗记录失败:', error);
+      alert('更新失败，请重试');
+      return;
+    }
 
     onClose();
     onSuccess?.();

@@ -8,9 +8,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
-import { addSeedling, generateSeedlingCodeByDate } from '../../../../services/seedlingService';
-import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/seedSourceService';
-import * as cropInstanceService from '../../../../services/cropInstanceService';
+import { addSeedling } from '../../../../services/apiSeedlingService';
+import { generateSeedlingCodeByDate } from '../../../../services/seedlingService';
+import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
+import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { useDictionaries } from '../../../common/settings';
@@ -179,7 +180,7 @@ export function AddModal({
     'other': '其他'
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 基本信息验证
     if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId) {
       alert('请填写完整信息：关联种源、作物品种、育苗区域为必填项');
@@ -270,7 +271,14 @@ export function AddModal({
     };
 
     // 保存育苗数据
-    const addedSeedling = addSeedling(seedlingData);
+    let addedSeedling;
+    try {
+      addedSeedling = await addSeedling(seedlingData);
+    } catch (error) {
+      console.error('保存育苗记录失败:', error);
+      alert('保存失败，请重试');
+      return;
+    }
 
     // 创建草稿任务（供任务中心分派执行人）
     if (addedSeedling?.id) {
@@ -304,11 +312,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
     const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
       ? formData.motherPlantCount
       : formData.initialCount;
-    decreaseAvailableCount(formData.sourceId, deductCount);
+    try {
+      await decreaseAvailableCount(formData.sourceId, deductCount);
+    } catch (error) {
+      console.error('扣减种源可用数量失败:', error);
+    }
 
     // 更新作物实例状态为育苗中
     if (source?.instanceId) {
-      cropInstanceService.updateQuantity(source.instanceId, 'seedling', 0);
+      try {
+        await cropInstanceService.updateQuantity(source.instanceId, 'seedling', 0);
+      } catch (error) {
+        console.error('更新作物实例状态失败:', error);
+      }
     }
 
     // V3.1 补录申请：如果勾选了补录，创建审批记录

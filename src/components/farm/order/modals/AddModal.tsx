@@ -5,7 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
-import * as cropOrderService from '@/services/cropOrderService';
+import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropVarietyService from '@/services/cropVarietyService';
 
 interface AddModalProps {
@@ -72,7 +72,7 @@ export function AddModal({
       .map(opt => ({ value: opt.varietyCode, label: opt.label }));
   }, [varietyOptions, formData.cropName]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 验证
     const newErrors: Record<string, string> = {};
     if (!formData.orderName) newErrors.orderName = '请输入订单名称';
@@ -104,7 +104,13 @@ export function AddModal({
       createBy: '系统',
     };
 
-    cropOrderService.createOrder(newOrder);
+    try {
+      await cropOrderService.createOrder(newOrder);
+    } catch (error) {
+      console.error('创建订单失败:', error);
+      alert('创建订单失败，请重试');
+      return;
+    }
     onSuccess();
     onClose();
 
