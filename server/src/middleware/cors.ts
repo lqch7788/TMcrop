@@ -27,6 +27,7 @@ const getAllowedOrigins = (): string[] => {
     'http://localhost:5189',  // 备用端口
     'http://localhost:5190',  // 当前前端端口
     'http://localhost:5191',  // 当前前端端口
+    'http://localhost:5192',  // 当前前端端口
     'http://localhost:4174',  // Vite preview 端口
     'http://localhost:4173',  // Vite preview 备用端口
     'http://127.0.0.1:5173',
@@ -34,6 +35,7 @@ const getAllowedOrigins = (): string[] => {
     'http://127.0.0.1:5189',
     'http://127.0.0.1:5190',
     'http://127.0.0.1:5191',
+    'http://127.0.0.1:5192',
     'http://127.0.0.1:4174',
     'http://127.0.0.1:4173',
   ];
