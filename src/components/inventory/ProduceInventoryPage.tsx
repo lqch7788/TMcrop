@@ -15,7 +15,7 @@ import { ProduceDetailModal } from './ProduceDetailModal';
 import { ProduceInventoryBatchEditModal } from './ProduceInventoryBatchEditModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ProduceInventoryAddModal } from './ProduceInventoryAddModal';
-import { getAllVarieties } from '../../services/apiCropVarietyService';
+import { getAllVarieties } from '../../services/cropVarietyService';
 import * as inventoryService from '../../services/apiInventoryService';
 import { StockType } from '../../types/inventory';
 
