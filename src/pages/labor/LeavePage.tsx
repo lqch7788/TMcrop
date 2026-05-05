@@ -11,6 +11,7 @@ import { useUsers } from '../../components/common/settings';
 import { LeaveType, LeaveStatus, LeaveRecord, LeaveQuota } from '../../components/labor/leave/types';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 import { leaveQuotaService } from '../../services/leaveQuotaService';
 
 // ============================================================
@@ -134,10 +135,11 @@ export default function LeavePage() {
   const [withdrawRecord, setWithdrawRecord] = useState<LeaveRecord | null>(null);
 
   // ============================================================
-  // Context
+  // Context & Hooks
   // ============================================================
 
   const { addApproval, approve, reject, getFilteredApprovals, approvals } = useApprovalContext();
+  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 数据处理
@@ -305,7 +307,9 @@ export default function LeavePage() {
       remarks: formData.remarks,
     };
 
-    // 创建审批记录
+    // 创建审批记录 - 使用分级审批动态生成审批人配置
+    const approvalLevelResult = generateApprovers(ApprovalType.LEAVE, 0, { leaveDays: formData.days });
+
     const approval: Approval = {
       id: `APR-${Date.now()}`,
       code: `SP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
@@ -322,10 +326,8 @@ export default function LeavePage() {
       priority: 'normal',
       status: ApprovalStatus.PENDING,
       currentStep: 1,
-      totalSteps: 2,
-      approvers: [
-        { userId: 'U003', userName: '王建国', role: '部门经理', order: 1, status: 'pending', comment: '' },
-      ],
+      totalSteps: approvalLevelResult.totalSteps,
+      approvers: approvalLevelResult.approvers,
       records: [],
       remark: formData.remarks,
       reminderCount: 0,

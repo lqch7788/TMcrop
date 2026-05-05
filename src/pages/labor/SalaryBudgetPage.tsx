@@ -11,6 +11,7 @@ import { useDepartments } from '../../components/common/settings';
 import { ApprovalType, ApprovalStatus, getApprovalTypeName, getApprovalStatusName } from '../../types/approval';
 import { ApprovalStatusLabels } from '../../types/labor/approval';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
+import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 import { salaryCalculationService } from '../../services/salaryCalculationService';
 
 // ============================================================
@@ -176,10 +177,11 @@ export default function SalaryBudgetPage() {
   const [budgetRecords, setBudgetRecords] = useState<SalaryBudgetRecord[]>([]);
 
   // ============================================================
-  // Context
+  // Context & Hooks
   // ============================================================
 
   const { addApproval, approvals, approve, reject } = useApprovalContext();
+  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 数据处理
@@ -377,7 +379,9 @@ export default function SalaryBudgetPage() {
     setBudgetRecords(prev => [newRecord, ...prev]);
     setPagination(prev => ({ ...prev, total: prev.total + 1 }));
 
-    // 创建审批记录
+    // 创建审批记录 - 使用分级审批动态生成审批人配置（工资预算强制严格审批）
+    const approvalLevelResult = generateApprovers(ApprovalType.SALARY_BUDGET, 0);
+
     const approval = {
       id: newRecord.id,
       code: newRecord.budgetCode,
@@ -392,10 +396,8 @@ export default function SalaryBudgetPage() {
       applyDate: newRecord.applyDate,
       applyTime: new Date().toISOString().slice(11, 19),
       currentStep: 1,
-      totalSteps: 2,
-      approvers: [
-        { userId: 'U002', userName: '李明辉', role: '部门经理', order: 1, status: 'pending' as const, comment: '' },
-      ],
+      totalSteps: approvalLevelResult.totalSteps,
+      approvers: approvalLevelResult.approvers,
       records: [],
       status: ApprovalStatus.PENDING,
       priority: 'normal' as const,

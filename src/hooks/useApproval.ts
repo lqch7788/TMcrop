@@ -43,6 +43,10 @@ export interface UseApprovalReturn {
   partiallyApprove: (id: string, items: Record<string, number>, comment?: string) => void;
   cancel: (id: string, reason?: string) => void;
 
+  // 批量审批操作
+  batchApprove: (ids: string[], comment?: string) => void;
+  batchReject: (ids: string[], comment: string) => void;
+
   // 查询方法
   getApprovalById: (id: string) => Approval | undefined;
   getApprovalsByType: (type: ApprovalType) => Approval[];
@@ -83,6 +87,8 @@ export function useApproval(): UseApprovalReturn {
     reject,
     partiallyApprove,
     cancel,
+    batchApprove,
+    batchReject,
     getApprovalById,
     getApprovalsByType,
     getApprovalsByStatus,
@@ -109,6 +115,8 @@ export function useApproval(): UseApprovalReturn {
     reject,
     partiallyApprove,
     cancel,
+    batchApprove,
+    batchReject,
     getApprovalById,
     getApprovalsByType,
     getApprovalsByStatus,

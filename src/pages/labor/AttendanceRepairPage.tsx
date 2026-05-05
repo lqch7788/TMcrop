@@ -10,6 +10,7 @@ import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge
 import { useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 
 // ============================================================
 // 常量定义
@@ -111,10 +112,11 @@ export default function AttendanceRepairPage() {
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // Context
+  // Context & Hooks
   // ============================================================
 
   const { addApproval, approve, reject, approvals } = useApprovalContext();
+  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 数据处理
@@ -269,7 +271,9 @@ export default function AttendanceRepairPage() {
       remarks: formData.remarks,
     };
 
-    // 创建审批记录
+    // 创建审批记录 - 使用分级审批动态生成审批人配置
+    const approvalLevelResult = generateApprovers(ApprovalType.ATTENDANCE_REPAIR, 0);
+
     const approval: Approval = {
       id: `APR-AR-${Date.now()}`,
       code: `SP-AR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
@@ -286,10 +290,8 @@ export default function AttendanceRepairPage() {
       priority: 'normal',
       status: ApprovalStatus.PENDING,
       currentStep: 1,
-      totalSteps: 1,
-      approvers: [
-        { userId: 'U003', userName: '王建国', role: '部门经理', order: 1, status: 'pending', comment: '' },
-      ],
+      totalSteps: approvalLevelResult.totalSteps,
+      approvers: approvalLevelResult.approvers,
       records: [],
       remark: formData.remarks,
       reminderCount: 0,
@@ -297,7 +299,7 @@ export default function AttendanceRepairPage() {
       updatedAt: new Date().toISOString(),
       notificationSent: true,
       businessLink: {
-        type: 'leave',
+        type: 'attendance_repair',
         requestId: newRecord.id,
         employeeId: newRecord.employeeId,
         employeeName: newRecord.employeeName,

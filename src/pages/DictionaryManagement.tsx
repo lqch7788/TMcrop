@@ -26,6 +26,7 @@ import {
   Building,
   CheckCircle,
   ClipboardList,
+  Shield,
 } from 'lucide-react';
 import {
   Dictionary,
@@ -47,6 +48,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   Building: <Building className="w-5 h-5" />,
   CheckCircle: <CheckCircle className="w-5 h-5" />,
   ClipboardList: <ClipboardList className="w-5 h-5" />,
+  Shield: <Shield className="w-5 h-5" />,
 };
 
 export default function DictionaryManagement() {

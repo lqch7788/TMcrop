@@ -10,10 +10,11 @@ import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye, Package, RefreshCw
+  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType } from '../types/approval';
+import BatchActionBar from '../components/approval/BatchActionBar';
 
 export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -25,6 +26,7 @@ export default function ProductionApproval() {
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Tab配置 - 生产类审批
   const tabs = [
@@ -84,6 +86,67 @@ export default function ProductionApproval() {
         return <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{status}</span>;
     }
   };
+
+  // 批量操作处理
+  const handleSelectAll = (selectAll: boolean) => {
+    if (selectAll) {
+      const pendingIds = paginatedData
+        .filter(d => d.status === ApprovalStatus.PENDING)
+        .map(d => d.id);
+      setSelectedIds(new Set(pendingIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBatchApprove = () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
+      selectedIds.forEach(id => approve(id));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBatchReject = () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
+      selectedIds.forEach(id => reject(id, '批量拒绝'));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleExport = () => {
+    if (selectedIds.size === 0) return;
+    const selectedData = paginatedData.filter(d => selectedIds.has(d.id));
+    const exportData = selectedData.map(d => ({
+      单号: d.code,
+      标题: d.title,
+      申请人: d.applicantName,
+      部门: d.applicantDepartment,
+      申请时间: d.applyDate,
+      状态: d.status
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `生产审批_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 获取待审批数据用于批量操作栏
+  const pendingApprovals = getCurrentData.filter(d => d.status === ApprovalStatus.PENDING);
 
   return (
     <div className="space-y-6">
@@ -216,10 +279,32 @@ export default function ProductionApproval() {
             查看全部 →
           </Link>
         </div>
+        {/* 批量操作栏 */}
+        <BatchActionBar
+          selectedIds={selectedIds}
+          allIds={paginatedData.map(d => d.id)}
+          pendingApprovals={pendingApprovals}
+          onSelectAll={handleSelectAll}
+          onBatchApprove={handleBatchApprove}
+          onBatchReject={handleBatchReject}
+          onExport={handleExport}
+        />
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
+                  <button
+                    onClick={() => handleSelectAll(selectedIds.size !== pendingApprovals.length)}
+                    className="p-1 hover:bg-gray-200 rounded"
+                  >
+                    {selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0 ? (
+                      <CheckSquareIcon className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <Square className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请单号</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请人</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">部门</th>
@@ -231,7 +316,23 @@ export default function ProductionApproval() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedData.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(item.id) ? 'bg-emerald-50' : ''}`}>
+                  <td className="px-4 py-3">
+                    {item.status === ApprovalStatus.PENDING ? (
+                      <button
+                        onClick={() => handleToggleSelect(item.id)}
+                        className="p-1 hover:bg-gray-200 rounded"
+                      >
+                        {selectedIds.has(item.id) ? (
+                          <CheckSquareIcon className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="w-4 h-4 block" />
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.applicantDepartment}</td>

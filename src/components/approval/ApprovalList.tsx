@@ -7,6 +7,8 @@
 import React from 'react';
 import { CheckCircle, XCircle, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
 import type { Approval, ApprovalStatus } from '../../types/approval';
+import { ApprovalLevelBadge } from './ApprovalLevelBadge';
+import { ApprovalLevel } from '../../config/approvalHierarchy';
 
 interface ApprovalListProps {
   approvals: Approval[];
@@ -106,10 +108,13 @@ export function ApprovalList({
                 <p className="text-sm text-gray-500 mt-1">
                   {approval.applicantName} · {approval.applicantDepartment} · {approval.applyDate}
                 </p>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
                     {approval.typeName}
                   </span>
+                  {approval.approvalLevel && (
+                    <ApprovalLevelBadge level={approval.approvalLevel} compact />
+                  )}
                   <span className="text-xs text-gray-400">
                     审批进度：{approval.currentStep}/{approval.totalSteps}
                   </span>

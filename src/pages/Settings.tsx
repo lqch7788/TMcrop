@@ -7,6 +7,7 @@ const settingsSections = [
   { icon: BookOpen, label: '数据字典', path: '/settings/dictionary', desc: '管理所有枚举值和状态' },
   { icon: Shield, label: '用户权限', path: '/settings/user-permission', desc: '角色和权限管理' },
   { icon: GitBranch, label: '审批流程', path: '/settings/approval-workflow', desc: '审批流程配置' },
+  { icon: Shield, label: '分级审批', path: '/settings/approval-level-config', desc: '金额阈值和审批级别配置' },
   { icon: Bell, label: '通知设置', path: '/settings/notification', desc: '消息通知渠道和规则' },
   { icon: Monitor, label: '设备管理', path: '/settings/device', desc: 'IoT设备配置' },
   { icon: Warehouse, label: '仓库管理', path: '/settings/warehouse', desc: '仓库信息配置' },

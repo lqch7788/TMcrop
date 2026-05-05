@@ -29,7 +29,9 @@ export type ApprovalActionPayload =
   | { type: 'APPROVE'; payload: { id: string; comment?: string; approverId?: string; approverName?: string } }
   | { type: 'REJECT'; payload: { id: string; comment: string; approverId?: string; approverName?: string } }
   | { type: 'PARTIALLY_APPROVE'; payload: { id: string; items: Record<string, number>; comment?: string; approverId?: string; approverName?: string } }
-  | { type: 'CANCEL'; payload: { id: string; reason?: string } };
+  | { type: 'CANCEL'; payload: { id: string; reason?: string } }
+  | { type: 'AUTO_APPROVE'; payload: { id: string; reason?: string } }
+  | { type: 'APPLY_LEVEL'; payload: { id: string; level: string; approvers: Approval['approvers']; totalSteps: number } };
 
 // ============================================================
 // 初始状态
@@ -259,6 +261,67 @@ export function approvalReducer(
                 ...a,
                 status: ApprovalStatus.CANCELLED,
                 records: [...a.records, record],
+                updatedAt: new Date().toISOString(),
+              }
+            : a
+        ),
+      };
+    }
+
+    // 自动审批（免审批场景）
+    case 'AUTO_APPROVE': {
+      const { id, reason = '系统自动审批（金额低于阈值）' } = action.payload;
+      const approval = state.approvals.find(a => a.id === id);
+      if (!approval) return state;
+
+      // 创建自动审批记录
+      const record = createApprovalRecord(
+        id,
+        'approve',
+        'system',
+        '系统自动',
+        reason
+      );
+
+      // 更新所有待审批的审批人状态
+      const updatedApprovers = approval.approvers.map(approver => ({
+        ...approver,
+        status: 'approved' as const,
+        comment: reason,
+        actionTime: new Date().toISOString(),
+      }));
+
+      return {
+        ...state,
+        approvals: state.approvals.map(a =>
+          a.id === id
+            ? {
+                ...a,
+                status: ApprovalStatus.APPROVED,
+                currentStep: a.totalSteps,
+                approvers: updatedApprovers,
+                records: [...a.records, record],
+                updatedAt: new Date().toISOString(),
+              }
+            : a
+        ),
+      };
+    }
+
+    // 应用分级审批配置
+    case 'APPLY_LEVEL': {
+      const { id, level, approvers, totalSteps } = action.payload;
+      return {
+        ...state,
+        approvals: state.approvals.map(a =>
+          a.id === id
+            ? {
+                ...a,
+                approvalLevel: level,
+                approvers,
+                totalSteps,
+                currentStep: level === 'exempt' ? totalSteps : 1,
+                status: level === 'exempt' ? ApprovalStatus.APPROVED : a.status,
                 updatedAt: new Date().toISOString(),
               }
             : a
