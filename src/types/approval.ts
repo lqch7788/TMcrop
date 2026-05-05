@@ -3,6 +3,9 @@
 // 文件路径：src/types/approval.ts
 // ============================================================
 
+// 导入分级审批级别（延迟导入避免循环依赖）
+export type { ApprovalLevel } from '../config/approvalHierarchy';
+
 // ============================================================
 // 审批类型枚举 - 完整37种审批类型
 // ============================================================
@@ -287,6 +290,8 @@ export interface Approval {
   notificationSent: boolean;
   amount?: string;
   materials?: MaterialItem[];
+  /** 审批级别 - 用于分级审批 */
+  approvalLevel?: string;
 }
 
 // ============================================================

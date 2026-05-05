@@ -10,6 +10,7 @@ import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge
 import { useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 import { overtimeCalculationService } from '../../services/overtimeCalculationService';
 import { OvertimeType } from '../../types/labor/overtime';
 
@@ -112,10 +113,11 @@ export default function OvertimePage() {
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // Context
+  // Context & Hooks
   // ============================================================
 
   const { addApproval, approve, reject, approvals } = useApprovalContext();
+  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 数据处理
@@ -275,6 +277,9 @@ export default function OvertimePage() {
       remarks: formData.remarks,
     };
 
+    // 创建审批记录 - 使用分级审批动态生成审批人配置（加班2小时内免审批）
+    const approvalLevelResult = generateApprovers(ApprovalType.OVERTIME, 0, { overtimeHours: formData.hours });
+
     const approval: Approval = {
       id: `APR-${Date.now()}`,
       code: `OT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
@@ -291,10 +296,8 @@ export default function OvertimePage() {
       priority: 'normal',
       status: ApprovalStatus.PENDING,
       currentStep: 1,
-      totalSteps: 2,
-      approvers: [
-        { userId: 'U003', userName: '王建国', role: '部门经理', order: 1, status: 'pending', comment: '' },
-      ],
+      totalSteps: approvalLevelResult.totalSteps,
+      approvers: approvalLevelResult.approvers,
       records: [],
       remark: formData.remarks,
       reminderCount: 0,

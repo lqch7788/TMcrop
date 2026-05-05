@@ -99,6 +99,27 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
     name: '任务通用',
     icon: 'ClipboardList',
     categories: ['cost_category', 'performance_status', 'task_priority', 'task_status']
+  },
+  {
+    code: 'approval',
+    name: '审批配置',
+    icon: 'Shield',
+    categories: [
+      'approval_level',        // 审批级别
+      'approval_level_config', // 级别配置
+      'amount_threshold',       // 金额阈值
+      'approval_rule',          // 审批规则
+      'timeout_config',          // 超时配置
+      'delegation_rule',        // 委托规则
+      'approval_flow',          // 审批流程配置
+      'leave_config',            // 请假配置
+      'overtime_config',        // 加班配置
+      'order_config',           // 订单配置
+      'budget_config',          // 预算配置
+      'batch_config',           // 批次配置
+      'recruitment_config',     // 招聘配置
+      'notification_config',     // 系统通知配置
+    ]
   }
 ];
 
@@ -203,6 +224,21 @@ export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   seedling_plan_type: '育苗计划类型',
   seedling_site: '育苗场地',
   seedling_type: '育苗方式',
+  // 审批配置相关
+  approval_level: '审批级别',
+  approval_level_config: '级别配置',
+  amount_threshold: '金额阈值',
+  approval_rule: '审批规则',
+  timeout_config: '超时配置',
+  delegation_rule: '委托规则',
+  approval_flow: '审批流程配置',
+  leave_config: '请假配置',
+  overtime_config: '加班配置',
+  order_config: '订单配置',
+  budget_config: '预算配置',
+  batch_config: '批次配置',
+  recruitment_config: '招聘配置',
+  notification_config: '系统通知配置',
 };
 
 // 获取分类的中文名称
@@ -355,6 +391,78 @@ const DEFAULT_DICTIONARIES: Dictionary[] = [
   { id: 'DICT051', category: 'planting_mode', code: 'open', name: '露天种植', sortNumber: 2 },
   { id: 'DICT052', category: 'planting_mode', code: 'hydroponic', name: '水培', sortNumber: 3 },
   { id: 'DICT053', category: 'planting_mode', code: 'substrate', name: '基质栽培', sortNumber: 4 },
+  // ========== 审批级别 ==========
+  { id: 'DICT070', category: 'approval_level', code: 'exempt', name: '免审批', sortNumber: 1 },
+  { id: 'DICT071', category: 'approval_level', code: 'quick', name: '快速审批', sortNumber: 2 },
+  { id: 'DICT072', category: 'approval_level', code: 'standard', name: '标准审批', sortNumber: 3 },
+  { id: 'DICT073', category: 'approval_level', code: 'strict', name: '严格审批', sortNumber: 4 },
+  // ========== 金额阈值 ==========
+  { id: 'DICT080', category: 'amount_threshold', code: '1000', name: '免审批上限(元)', sortNumber: 1 },
+  { id: 'DICT081', category: 'amount_threshold', code: '10000', name: '快速审批上限(元)', sortNumber: 2 },
+  { id: 'DICT082', category: 'amount_threshold', code: '50000', name: '标准审批上限(元)', sortNumber: 3 },
+  // ========== 审批规则 ==========
+  { id: 'DICT090', category: 'approval_rule', code: 'force_exempt', name: '强制免审', sortNumber: 1 },
+  { id: 'DICT091', category: 'approval_rule', code: 'force_strict', name: '强制严格', sortNumber: 2 },
+  { id: 'DICT092', category: 'approval_rule', code: 'by_amount', name: '按金额判断', sortNumber: 3 },
+  { id: 'DICT093', category: 'approval_rule', code: 'batch_supported', name: '支持批量审批', sortNumber: 4 },
+  { id: 'DICT094', category: 'approval_rule', code: 'high_value_threshold', name: '高价值订单阈值(元)', sortNumber: 5 },
+  { id: 'DICT095', category: 'approval_rule', code: 'high_value_order_strict', name: '高价值订单强制严格', sortNumber: 6 },
+  // ========== 超时配置 ==========
+  { id: 'DICT100', category: 'timeout_config', code: 'urgent_timeout', name: '紧急审批超时(小时)', sortNumber: 1 },
+  { id: 'DICT101', category: 'timeout_config', code: 'urgent_escalation', name: '紧急审批升级(小时)', sortNumber: 2 },
+  { id: 'DICT102', category: 'timeout_config', code: 'normal_timeout', name: '普通审批超时(小时)', sortNumber: 3 },
+  { id: 'DICT103', category: 'timeout_config', code: 'normal_escalation', name: '普通审批升级(小时)', sortNumber: 4 },
+  { id: 'DICT104', category: 'timeout_config', code: 'hr_timeout', name: 'HR审批超时(小时)', sortNumber: 5 },
+  { id: 'DICT105', category: 'timeout_config', code: 'hr_escalation', name: 'HR审批升级(小时)', sortNumber: 6 },
+  { id: 'DICT106', category: 'timeout_config', code: 'finance_timeout', name: '财务审批超时(小时)', sortNumber: 7 },
+  { id: 'DICT107', category: 'timeout_config', code: 'finance_escalation', name: '财务审批升级(小时)', sortNumber: 8 },
+  { id: 'DICT108', category: 'timeout_config', code: 'ultimate_timeout', name: '最终超时(小时)', sortNumber: 9 },
+  { id: 'DICT109', category: 'timeout_config', code: 'ultimate_action', name: '最终超时动作', sortNumber: 10 },
+  // ========== 委托规则 ==========
+  { id: 'DICT110', category: 'delegation_rule', code: 'manager_to_dept_head', name: '经理→部门主管', sortNumber: 1 },
+  { id: 'DICT111', category: 'delegation_rule', code: 'dept_head_to_manager', name: '部门主管→经理', sortNumber: 2 },
+  { id: 'DICT112', category: 'delegation_rule', code: 'director_to_manager', name: '总监→经理', sortNumber: 3 },
+  { id: 'DICT113', category: 'delegation_rule', code: 'hr_to_hr_manager', name: '人事专员→人事经理', sortNumber: 4 },
+
+  // ========== 审批流程配置 ==========
+  { id: 'DICT120', category: 'approval_flow', code: 'urgent_priority_threshold', name: '紧急优先级阈值', sortNumber: 1 },
+  { id: 'DICT121', category: 'approval_flow', code: 'high_priority_threshold', name: '高优先级阈值', sortNumber: 2 },
+  { id: 'DICT122', category: 'approval_flow', code: 'max_reminder_count', name: '最大催办次数', sortNumber: 3 },
+  { id: 'DICT123', category: 'approval_flow', code: 'reminder_interval_hours', name: '催办间隔(小时)', sortNumber: 4 },
+  { id: 'DICT124', category: 'approval_flow', code: 'withdraw_allowed_hours', name: '允许撤回时间(小时)', sortNumber: 5 },
+  { id: 'DICT125', category: 'approval_flow', code: 'approval_validity_days', name: '审批单有效期(天)', sortNumber: 6 },
+  { id: 'DICT126', category: 'approval_flow', code: 'auto_cancel_days', name: '超时自动取消(天)', sortNumber: 7 },
+
+  // ========== 请假配置 ==========
+  { id: 'DICT130', category: 'leave_config', code: 'quick_approval_days', name: '快速审批天数阈值', sortNumber: 1 },
+  { id: 'DICT131', category: 'leave_config', code: 'standard_approval_days', name: '标准审批天数阈值', sortNumber: 2 },
+  { id: 'DICT132', category: 'leave_config', code: 'strict_approval_days', name: '严格审批天数阈值', sortNumber: 3 },
+
+  // ========== 加班配置 ==========
+  { id: 'DICT140', category: 'overtime_config', code: 'exempt_overtime_hours', name: '免审批加班小时阈值', sortNumber: 1 },
+  { id: 'DICT141', category: 'overtime_config', code: 'quick_approval_hours', name: '快速审批加班小时阈值', sortNumber: 2 },
+
+  // ========== 订单配置 ==========
+  { id: 'DICT150', category: 'order_config', code: 'high_value_order_amount', name: '高价值订单金额阈值', sortNumber: 1 },
+  { id: 'DICT151', category: 'order_config', code: 'urgent_delivery_days', name: '紧急订单交货天数', sortNumber: 2 },
+
+  // ========== 预算配置 ==========
+  { id: 'DICT160', category: 'budget_config', code: 'large_budget_amount', name: '大额预算金额阈值', sortNumber: 1 },
+  { id: 'DICT161', category: 'budget_config', code: 'budget_adjust_limit_ratio', name: '预算调整限制比例(%)', sortNumber: 2 },
+
+  // ========== 批次配置 ==========
+  { id: 'DICT170', category: 'batch_config', code: 'batch_void_require_director', name: '批次作废需总监审批', sortNumber: 1 },
+  { id: 'DICT171', category: 'batch_config', code: 'batch_change_threshold', name: '批次变更数量阈值', sortNumber: 2 },
+
+  // ========== 招聘配置 ==========
+  { id: 'DICT180', category: 'recruitment_config', code: 'urgent_recruitment_days', name: '紧急招聘天数阈值', sortNumber: 1 },
+  { id: 'DICT181', category: 'recruitment_config', code: 'high_salary_threshold', name: '高薪招聘金额阈值', sortNumber: 2 },
+
+  // ========== 系统通知配置 ==========
+  { id: 'DICT190', category: 'notification_config', code: 'email_notification_enabled', name: '启用邮件通知', sortNumber: 1 },
+  { id: 'DICT191', category: 'notification_config', code: 'sms_notification_enabled', name: '启用短信通知', sortNumber: 2 },
+  { id: 'DICT192', category: 'notification_config', code: 'wechat_notification_enabled', name: '启用微信通知', sortNumber: 3 },
+  { id: 'DICT193', category: 'notification_config', code: 'notification_reminder_hours', name: '通知提醒间隔(小时)', sortNumber: 4 },
 ];
 
 /**

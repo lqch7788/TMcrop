@@ -30,6 +30,7 @@ import SystemConfig from './pages/SystemConfig';
 import DictionaryManagement from './pages/DictionaryManagement';
 import UserPermission from './pages/UserPermission';
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
+import ApprovalLevelConfig from './pages/ApprovalLevelConfig';
 import NotificationSettings from './pages/NotificationSettings';
 import DeviceManagement from './pages/DeviceManagement';
 import WarehouseManagement from './pages/WarehouseManagement';
@@ -193,6 +194,7 @@ function AppContent() {
             <Route path="dictionary" element={<DictionaryManagement />} />
             <Route path="user-permission" element={<UserPermission />} />
             <Route path="approval-workflow" element={<ApprovalWorkflowConfig />} />
+            <Route path="approval-level-config" element={<ApprovalLevelConfig />} />
             <Route path="notification" element={<NotificationSettings />} />
             <Route path="device" element={<DeviceManagement />} />
             <Route path="warehouse" element={<WarehouseManagement />} />

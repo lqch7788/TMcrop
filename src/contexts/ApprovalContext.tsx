@@ -21,6 +21,9 @@ import {
   registerApprovalIntegration,
   registerAllHandlers,
 } from '../types/approvalIntegration';
+import { registerBusinessIntegration } from '../services/approvalBusinessIntegration';
+import { approvalTimeoutService, useTimeoutChecker } from '../services/approvalTimeoutService';
+import { TimeoutCheckResult, TimeoutLevel } from '../config/approvalTimeout';
 
 // ============================================================
 // API 配置
@@ -55,6 +58,10 @@ interface ApprovalContextValue {
   reject: (id: string, comment: string) => void;
   partiallyApprove: (id: string, items: Record<string, number>, comment?: string) => void;
   cancel: (id: string, reason?: string) => void;
+
+  // 批量审批操作
+  batchApprove: (ids: string[], comment?: string) => Promise<void>;
+  batchReject: (ids: string[], comment: string) => Promise<void>;
 
   // 查询方法
   getApprovalById: (id: string) => Approval | undefined;
@@ -126,6 +133,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
   // 注册业务联动处理器（仅注册一次）
   useEffect(() => {
     registerAllHandlers();
+    registerBusinessIntegration();
   }, []);
 
   // 组件挂载时从 API 加载数据
@@ -133,10 +141,25 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     loadApprovalsFromAPI();
   }, [loadApprovalsFromAPI]);
 
+  // 超时检测处理器
+  const handleTimeoutFound = useCallback((approval: Approval, result: TimeoutCheckResult) => {
+    console.log('【审批中心】发现超时审批', {
+      approvalCode: approval.code,
+      level: result.level,
+      waitedHours: result.waitedHours.toFixed(1),
+    });
+  }, []);
+
+  // 启动定时超时检查
+  useTimeoutChecker(state.approvals, handleTimeoutFound, 5 * 60 * 1000);
+
   // 计算统计数据
   const stats = useMemo<ApprovalStats>(() => {
     const now = new Date();
     const overdueThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // 超时统计
+    const timeoutStats = approvalTimeoutService.getTimeoutStats(state.approvals);
 
     return {
       total: state.approvals.length,
@@ -146,10 +169,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
       partiallyApproved: state.approvals.filter(a => a.status === ApprovalStatus.PARTIALLY_APPROVED).length,
       myPending: 0, // 需要结合当前用户ID计算
       mySubmitted: 0, // 需要结合当前用户ID计算
-      overdue: state.approvals.filter(a =>
-        a.status === ApprovalStatus.PENDING &&
-        a.applyDate < overdueThreshold.toISOString().substring(0, 10)
-      ).length,
+      overdue: timeoutStats.overdue + timeoutStats.ultimate,
       urgent: state.approvals.filter(a => a.priority === 'urgent' && a.status === ApprovalStatus.PENDING).length,
     };
   }, [state.approvals]);
@@ -286,6 +306,61 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
       await loadApprovalsFromAPI();
     } catch (error) {
       console.error('Failed to cancel via API:', error);
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
+
+  // 批量审批操作
+  const batchApprove = useCallback(async (ids: string[], comment?: string) => {
+    // 依次执行每个审批
+    const promises = ids.map(async (id) => {
+      const approval = state.approvals.find(a => a.id === id);
+      if (approval) {
+        executeApprovalIntegration('approved', approval, { comment });
+      }
+      try {
+        await fetch(`${API_BASE}/${id}/action`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', comment }),
+        });
+      } catch (error) {
+        console.error(`Failed to batch approve ${id}:`, error);
+        throw error;
+      }
+    });
+    try {
+      await Promise.all(promises);
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to batch approve:', error);
+      throw error;
+    }
+  }, [state.approvals, loadApprovalsFromAPI]);
+
+  const batchReject = useCallback(async (ids: string[], comment: string) => {
+    // 依次执行每个拒绝
+    const promises = ids.map(async (id) => {
+      const approval = state.approvals.find(a => a.id === id);
+      if (approval) {
+        executeApprovalIntegration('rejected', approval, { reason: comment });
+      }
+      try {
+        await fetch(`${API_BASE}/${id}/action`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reject', comment }),
+        });
+      } catch (error) {
+        console.error(`Failed to batch reject ${id}:`, error);
+        throw error;
+      }
+    });
+    try {
+      await Promise.all(promises);
+      await loadApprovalsFromAPI();
+    } catch (error) {
+      console.error('Failed to batch reject:', error);
+      throw error;
     }
   }, [state.approvals, loadApprovalsFromAPI]);
 

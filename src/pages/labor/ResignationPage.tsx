@@ -11,6 +11,7 @@ import { LaborStatusBadge } from '../../components/common/labor/LaborStatusBadge
 import { useUsers } from '../../components/common/settings';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 
 // ============================================================
 // 类型定义
@@ -139,10 +140,11 @@ export default function ResignationPage() {
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // Context
+  // Context & Hooks
   // ============================================================
 
   const { addApproval, approve, reject, getFilteredApprovals, approvals } = useApprovalContext();
+  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 数据处理
@@ -314,7 +316,9 @@ export default function ResignationPage() {
       createTime: new Date().toISOString().slice(0, 10),
     };
 
-    // 创建审批记录
+    // 创建审批记录 - 使用分级审批动态生成审批人配置（离职强制严格审批）
+    const approvalLevelResult = generateApprovers(ApprovalType.RESIGNATION, 0);
+
     const approval: Approval = {
       id: `APR-${Date.now()}`,
       code: newRecord.resignationCode,
@@ -331,10 +335,8 @@ export default function ResignationPage() {
       priority: 'normal',
       status: ApprovalStatus.PENDING,
       currentStep: 1,
-      totalSteps: 2,
-      approvers: [
-        { userId: 'U003', userName: '王建国', role: '部门经理', order: 1, status: 'pending', comment: '' },
-      ],
+      totalSteps: approvalLevelResult.totalSteps,
+      approvers: approvalLevelResult.approvers,
       records: [],
       reminderCount: 0,
       createdAt: new Date().toISOString(),
