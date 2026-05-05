@@ -43,62 +43,62 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
 const router = Router();
 
-// 作物品种路由 - 需要认证
-router.use('/crop-varieties', requireAuth, cropVarietyRouter);
+// 作物品种路由 - 公开访问
+router.use('/crop-varieties', cropVarietyRouter);
 
-// 库存路由 - 需要认证
-router.use('/inventory', requireAuth, inventoryRouter);
+// 库存路由 - 公开访问
+router.use('/inventory', inventoryRouter);
 
-// 育苗管理路由 - 需要认证
-router.use('/seedlings', requireAuth, seedlingRouter);
+// 育苗管理路由 - 公开访问
+router.use('/seedlings', seedlingRouter);
 
-// 种源管理路由 - 需要认证
-router.use('/seed-sources', requireAuth, seedSourceRouter);
+// 种源管理路由 - 公开访问
+router.use('/seed-sources', seedSourceRouter);
 
-// 种植管理路由 - 需要认证
-router.use('/plantings', requireAuth, plantingRouter);
+// 种植管理路由 - 公开访问
+router.use('/plantings', plantingRouter);
 
-// 采收管理路由 - 需要认证
-router.use('/harvest', requireAuth, harvestRouter);
+// 采收管理路由 - 公开访问
+router.use('/harvest', harvestRouter);
 
-// 供应商路由 - 需要认证
-router.use('/suppliers', requireAuth, supplierRouter);
+// 供应商路由 - 公开访问
+router.use('/suppliers', supplierRouter);
 
-// 作物实例路由 - 需要认证
-router.use('/crop-instances', requireAuth, cropInstanceRouter);
+// 作物实例路由 - 公开访问
+router.use('/crop-instances', cropInstanceRouter);
 
-// 农事任务路由 - 需要认证
-router.use('/farm-tasks', requireAuth, farmTaskRouter);
+// 农事任务路由 - 公开访问
+router.use('/farm-tasks', farmTaskRouter);
 
-// 巡查记录路由 - 需要认证
-router.use('/inspections', requireAuth, inspectionRouter);
+// 巡查记录路由 - 公开访问
+router.use('/inspections', inspectionRouter);
 
-// 问题记录路由 - 需要认证
-router.use('/problems', requireAuth, problemRouter);
+// 问题记录路由 - 公开访问
+router.use('/problems', problemRouter);
 
-// 人工记录路由 - 需要认证
-router.use('/labor', requireAuth, laborRouter);
+// 人工记录路由 - 公开访问
+router.use('/labor', laborRouter);
 
-// 加班记录路由 - 需要认证
-router.use('/overtime', requireAuth, overtimeRouter);
+// 加班记录路由 - 公开访问
+router.use('/overtime', overtimeRouter);
 
-// 请假记录路由 - 需要认证
-router.use('/leave', requireAuth, leaveRouter);
+// 请假记录路由 - 公开访问
+router.use('/leave', leaveRouter);
 
-// 临时任务路由 - 需要认证
-router.use('/temp-tasks', requireAuth, tempTaskRouter);
+// 临时任务路由 - 公开访问
+router.use('/temp-tasks', tempTaskRouter);
 
-// 采购计划路由 - 需要认证
-router.use('/purchase-plans', requireAuth, purchasePlanRouter);
+// 采购计划路由 - 公开访问
+router.use('/purchase-plans', purchasePlanRouter);
 
-// 物料申请路由 - 需要认证
-router.use('/material-requests', requireAuth, materialRequestRouter);
+// 物料申请路由 - 公开访问
+router.use('/material-requests', materialRequestRouter);
 
-// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 需要认证
-router.use('/basic-data', requireAuth, basicDataRouter);
+// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 公开访问
+router.use('/basic-data', basicDataRouter);
 
-// 数据字典路由 - 需要认证
-router.use('/dictionary', requireAuth, dictionaryRouter);
+// 数据字典路由 - 公开访问
+router.use('/dictionary', dictionaryRouter);
 
 // 组织与权限路由 - 公开（登录/验证接口）
 router.use('/authority', authorityRouter);
@@ -106,38 +106,38 @@ router.use('/authority', authorityRouter);
 // 通知设置路由 - 公开
 router.use('/notifications', notificationRouter);
 
-// 审批工作流路由 - 需要认证
-router.use('/approval-workflows', requireAuth, approvalWorkflowRouter);
+// 审批工作流路由 - 公开访问
+router.use('/approval-workflows', approvalWorkflowRouter);
 
-// 审批单路由 - 需要认证
-router.use('/approvals', requireAuth, approvalRouter);
+// 审批单路由 - 公开访问
+router.use('/approvals', approvalRouter);
 
-// 审批联动路由 - 需要认证
-router.use('/approval-linkage', requireAuth, approvalLinkageRouter);
+// 审批联动路由 - 公开访问
+router.use('/approval-linkage', approvalLinkageRouter);
 
-// 操作日志路由 - 需要认证
-router.use('/operation-logs', requireAuth, operationLogRouter);
+// 操作日志路由 - 公开访问
+router.use('/operation-logs', operationLogRouter);
 
-// 订单路由 - 需要认证
-router.use('/crop-orders', requireAuth, cropOrderRouter);
+// 订单路由 - 公开访问
+router.use('/crop-orders', cropOrderRouter);
 
-// 生产计划路由 - 需要认证
-router.use('/production-plans', requireAuth, productionPlanRouter);
+// 生产计划路由 - 公开访问
+router.use('/production-plans', productionPlanRouter);
 
-// 生产计划路由别名（兼容前端 /production/plans 调用）- 需要认证
-router.use('/production/plans', requireAuth, productionPlanRouter);
+// 生产计划路由别名（兼容前端 /production/plans 调用）- 公开访问
+router.use('/production/plans', productionPlanRouter);
 
-// 生产汇总统计路由 - 需要认证
-router.use('/summary', requireAuth, summaryRouter);
+// 生产汇总统计路由 - 公开访问
+router.use('/summary', summaryRouter);
 
-// 成本管理路由（物料成本 + 能源成本）- 需要认证
-router.use('/material-costs', requireAuth, materialCostRouter);
+// 成本管理路由（物料成本 + 能源成本）- 公开访问
+router.use('/material-costs', materialCostRouter);
 
-// 性能监控路由 - 需要认证
-router.use('/monitoring', requireAuth, monitoringRouter);
+// 性能监控路由 - 公开访问
+router.use('/monitoring', monitoringRouter);
 
-// 数据同步路由 - 需要认证
-router.use('/sync', requireAuth, syncRouter);
+// 数据同步路由 - 公开访问
+router.use('/sync', syncRouter);
 
 // 健康检查
 router.get('/health', (req, res) => {
