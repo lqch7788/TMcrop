@@ -499,12 +499,29 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const rawData = await response.json();
 
     // 调试日志
-    console.log('[DictionaryService] API 返回数据量:', Array.isArray(data) ? data.length : '非数组');
+    console.log('[DictionaryService] API 返回数据类型:', typeof rawData, Array.isArray(rawData) ? '数组' : '非数组');
 
-    if (Array.isArray(data) && data.length > 0) {
+    // 处理多种可能的响应格式
+    let data: Record<string, unknown>[] = [];
+
+    if (Array.isArray(rawData)) {
+      // 格式1: 直接返回数组
+      data = rawData;
+    } else if (rawData && typeof rawData === 'object') {
+      // 格式2: 包装格式 {success: true, data: [...]} 或 {data: [...]}
+      if (Array.isArray((rawData as any).data)) {
+        data = (rawData as any).data;
+      } else if (Array.isArray((rawData as any).result)) {
+        data = (rawData as any).result;
+      }
+    }
+
+    console.log('[DictionaryService] 处理后的数据量:', data.length);
+
+    if (data.length > 0) {
       // 字段映射：将后端字段转换为前端字段
       const mappedData: Dictionary[] = data.map((item: Record<string, unknown>) => ({
         id: item.id as string,
@@ -554,23 +571,40 @@ export async function getDictionaryCategories(): Promise<string[]> {
   try {
     // 后端直接返回数组格式，不用 apiClient
     const response = await fetch('/api/dictionary/dictionaries/categories');
-    const data = await response.json();
-    if (Array.isArray(data)) {
+
+    // 检查响应状态
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const rawData = await response.json();
+
+    // 处理多种可能的响应格式
+    let data: string[] = [];
+
+    if (Array.isArray(rawData)) {
+      // 格式1: 直接返回数组
+      data = rawData;
+    } else if (rawData && typeof rawData === 'object') {
+      // 格式2: 包装格式
+      if (Array.isArray((rawData as any).data)) {
+        data = (rawData as any).data;
+      } else if (Array.isArray((rawData as any).result)) {
+        data = (rawData as any).result;
+      }
+    }
+
+    if (data.length > 0) {
+      console.log('[DictionaryService] 从API获取到分类:', data.length);
       return data;
     }
     throw new Error('Invalid response format');
   } catch (error) {
-    // 返回本地存储中的分类
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed: Dictionary[] = JSON.parse(stored);
-        return [...new Set(parsed.map(d => d.category))];
-      } catch {
-        return ['crop_type', 'unit', 'status'];
-      }
-    }
-    return ['crop_type', 'unit', 'status'];
+    console.log('[DictionaryService] 获取分类失败，使用默认数据:', error);
+    // 从默认字典数据中提取分类
+    const categories = [...new Set(DEFAULT_DICTIONARIES.map(d => d.category))];
+    console.log('[DictionaryService] 默认分类数量:', categories.length);
+    return categories;
   }
 }
 
