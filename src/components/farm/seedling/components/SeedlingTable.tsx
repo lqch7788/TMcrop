@@ -113,28 +113,45 @@ export function SeedlingTable({
     loadVarieties();
   }, []);
 
-  // 根据 cropCode 获取品种信息
-  const getVarietyByCode = (cropCode: string): CropVariety | undefined => {
-    if (!cropCode) return undefined;
-    // 尝试直接用编码查找
-    let variety = varietyCache.get(cropCode);
-    if (variety) return variety;
+  // 根据 cropCode 或 cropName 获取品种信息
+  const getVarietyByCodeOrName = (cropCode: string, cropName?: string): CropVariety | undefined => {
+    // 如果有 cropCode，先尝试用编码查找
+    if (cropCode) {
+      // 尝试直接用编码查找
+      let variety = varietyCache.get(cropCode);
+      if (variety) return variety;
 
-    // 尝试用前9位匹配
-    if (cropCode.length >= 9) {
-      const prefix9 = cropCode.substring(0, 9);
+      // 尝试用前9位匹配
+      if (cropCode.length >= 9) {
+        const prefix9 = cropCode.substring(0, 9);
+        for (const [key, v] of varietyCache.entries()) {
+          if (key.startsWith(prefix9) || prefix9.startsWith(key.substring(0, Math.min(9, key.length)))) {
+            return v;
+          }
+        }
+      }
+    }
+
+    // 如果有 cropName，尝试用名称查找
+    if (cropName) {
+      // 尝试用 sub_variety1_name 查找
+      let variety = varietyCache.get(cropName);
+      if (variety) return variety;
+
+      // 尝试用 variety_name 查找
       for (const [key, v] of varietyCache.entries()) {
-        if (key.startsWith(prefix9) || prefix9.startsWith(key.substring(0, Math.min(9, key.length)))) {
+        if (key === cropName || v.variety_name === cropName || v.sub_variety1_name === cropName) {
           return v;
         }
       }
     }
+
     return undefined;
   };
 
   // 获取作物品种路径显示
   const getCropVarietyPath = (record: Seedling) => {
-    const variety = getVarietyByCode(record.cropCode);
+    const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
     if (variety && variety.category_name) {
       return {
         categoryName: variety.category_name,
@@ -152,14 +169,14 @@ export function SeedlingTable({
   };
 
   // 获取标准作物编码
-  const getStandardCropCode = (cropCode: string): string => {
-    const variety = getVarietyByCode(cropCode);
-    return variety?.crop_code || cropCode;
+  const getStandardCropCode = (record: Seedling): string => {
+    const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
+    return variety?.crop_code || record.cropCode || '';
   };
 
   // 获取作物品种（最细分）
   const getCropVarietyName = (record: Seedling): string => {
-    const variety = getVarietyByCode(record.cropCode);
+    const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
     if (variety) {
       return variety.sub_variety1_name || variety.variety_name || record.cropVariety || '';
     }
@@ -452,7 +469,7 @@ export function SeedlingTable({
                     ) : '-'}
                   </td>
                   <td className="px-3 py-2 text-sm">
-                    <span className="font-mono text-orange-600">{getStandardCropCode(record.cropCode) || record.cropCode || '-'}</span>
+                    <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.sourceCode}</td>
                   <td className="px-3 py-2 text-sm text-gray-900 truncate" title={record.cropVariety || record.cropName}>

@@ -71,17 +71,43 @@ export default function SeedlingPage() {
 
   // 育苗方式选项
   const seedlingTypes = useMemo(() => {
-    return getDictItems('seedling_type').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_type').map(d => ({ value: d.code, label: d.name }));
+    // 去重：使用 value 作为唯一键
+    const seen = new Set<string>();
+    return items.filter(t => {
+      if (seen.has(t.value)) return false;
+      seen.add(t.value);
+      return true;
+    });
   }, [getDictItems]);
 
   // 场地选项
   const sites = useMemo(() => {
-    return getDictItems('seedling_site').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_site').map(d => ({ value: d.code, label: d.name }));
+    // 去重
+    const seen = new Set<string>();
+    return items.filter(s => {
+      if (seen.has(s.value)) return false;
+      seen.add(s.value);
+      return true;
+    });
   }, [getDictItems]);
 
   // 育苗状态选项
   const seedlingStatusOptions = useMemo(() => {
-    return getDictItems('seedling_status').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_status').map(d => ({ value: d.code, label: d.name }));
+    // 去重
+    const seen = new Set<string>();
+    return items.filter(s => {
+      if (seen.has(s.value)) return false;
+      seen.add(s.value);
+      return true;
+    });
+  }, [getDictItems]);
+
+  // 种植区域选项（用于定植操作）
+  const areas = useMemo(() => {
+    return getDictItems('planting_area').map(d => ({ value: d.code, label: d.name }));
   }, [getDictItems]);
 
   // 刷新数据（异步调用API）
@@ -151,6 +177,7 @@ export default function SeedlingPage() {
       if (filters.lossRateMax !== undefined && item.lossRate > filters.lossRateMax) return false;
       return true;
     });
+    return result;
   }, [seedlings, filters]);
 
   // 统计卡片数据
@@ -197,11 +224,16 @@ export default function SeedlingPage() {
     setLightboxOpen(true);
   };
 
-  const handleDelete = (ids: string[]) => {
+  const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      seedlingService.deleteSeedlings(ids);
-      refreshData();
-      setSelectedRows([]);
+      try {
+        await seedlingService.deleteSeedlings(ids);
+        await refreshData();
+        setSelectedRows([]);
+      } catch (error) {
+        console.error('删除失败:', error);
+        alert('删除失败，请重试');
+      }
     }
   };
 
