@@ -39,6 +39,16 @@ const ACTION_OPERATION_MAP: Record<string, string> = {
   'ACT006': 'approve', // 审核
 };
 
+// 动作编码到动作 OID 的映射（用于简化版权限检查）
+const ACTION_CODE_TO_OID: Record<string, string> = {
+  'view': 'ACT001',
+  'create': 'ACT002',
+  'edit': 'ACT003',
+  'delete': 'ACT004',
+  'export': 'ACT005',
+  'approve': 'ACT006',
+};
+
 export interface UsePermissionOptions {
   // 菜单路径
   menuPath?: string;
@@ -73,16 +83,18 @@ export function usePermission(options: UsePermissionOptions = {}) {
   // 获取当前用户信息
   const currentUser = useCurrentUser();
 
-  // 判断是否是管理员
+  // 判断是否是管理员 - 仅基于后端返回的用户角色
+  // 【修复】移除了 localStorage 依赖，防止伪造
   const isAdmin = useMemo(() => {
-    // 优先从 localStorage 判断
-    if (localStorage.getItem('isAdmin') === 'true') {
-      return true;
+    // 检查后端返回的用户角色是否包含管理员角色
+    if (!currentUser.roles || currentUser.roles.length === 0) {
+      return false;
     }
-    // 检查用户角色列表中是否包含管理员角色
+    
     return currentUser.roles.some(roleOid => {
+      if (!roleOid) return false;
       const roleOidLower = roleOid?.toLowerCase() || '';
-      return roleOid === 'ROLE001' ||
+      return roleOid === 'ROLE001' || 
              roleOid === 'ROLE_ADMIN' ||
              roleOidLower.includes('admin');
     });
@@ -223,58 +235,81 @@ export interface WithPermissionProps {
 /**
  * 权限验证 Hook（简化版）
  * 用于在组件中快速检查权限
+ * 
+ * 【修复说明】
+ * - can() 函数不再直接返回 true，而是根据 roleAuthorities 检查实际权限
+ * - isAdmin 判断移除了 localStorage 依赖，仅使用后端返回的角色
+ * - 添加警告日志，记录权限检查被绕过的情况（后端 API 未实现时）
  */
 export function useAuthPermission() {
   const { roleAuthorities } = useAuthSettings();
   const currentUser = useCurrentUser();
 
-  // 判断是否是管理员 - 检查多个来源
+  // 判断是否是管理员 - 仅基于后端返回的用户角色
+  // 【修复】移除了 localStorage 依赖，防止伪造管理员标志
   const isAdmin = useMemo(() => {
-    // 1. localStorage 中的 isAdmin 标志
-    if (localStorage.getItem('isAdmin') === 'true') {
-      return true;
+    // 检查后端返回的用户角色是否包含管理员角色
+    if (!currentUser.roles || currentUser.roles.length === 0) {
+      return false;
     }
-    // 2. 检查 currentUser.roles
-    if (currentUser.roles && currentUser.roles.some(roleOid => {
-      return roleOid === 'ROLE001' || roleOid === 'ROLE_ADMIN' ||
-             (roleOid && roleOid.toLowerCase().includes('admin'));
-    })) {
-      return true;
-    }
-    // 3. 检查 localStorage 中的 userRoles
-    try {
-      const userRolesStr = localStorage.getItem('userRoles');
-      if (userRolesStr) {
-        const userRoles = JSON.parse(userRolesStr);
-        if (Array.isArray(userRoles) && userRoles.some(roleOid => {
-          return roleOid === 'ROLE001' || roleOid === 'ROLE_ADMIN' ||
-                 (roleOid && roleOid.toLowerCase().includes('admin'));
-        })) {
-          return true;
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    // 4. 如果用户名是陆启闯，默认为管理员
-    const username = localStorage.getItem('username') || localStorage.getItem('realName') || '';
-    if (username === '陆启闯') {
-      return true;
-    }
-    return false;
+    
+    return currentUser.roles.some(roleOid => {
+      if (!roleOid) return false;
+      const roleOidLower = roleOid?.toLowerCase() || '';
+      return roleOid === 'ROLE001' || 
+             roleOid === 'ROLE_ADMIN' ||
+             roleOidLower.includes('admin');
+    });
   }, [currentUser.roles]);
 
   /**
    * 检查特定工序和动作的权限
-   * 【已取消按钮级别权限控制】所有按钮始终显示
+   * 【修复】不再直接返回 true，而是根据实际权限数据判断
    */
   const can = useCallback((
     processOid: string,
     actionCode: 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
   ): boolean => {
-    // 取消按钮级别权限控制 - 所有按钮始终显示
-    return true;
-  }, []);
+    // 管理员拥有所有权限
+    if (isAdmin) {
+      return true;
+    }
+
+    // 根据 actionCode 获取对应的 actionOid
+    const actionOid = ACTION_CODE_TO_OID[actionCode];
+    if (!actionOid) {
+      // 未知动作编码，记录警告
+      console.warn(
+        '[权限警告] useAuthPermission.can() - 未知动作编码: ' + actionCode + '，权限检查被绕过。' +
+        'processOid=' + processOid
+      );
+      return true; // 未知动作时返回 true（临时方案，后续应配置完整的动作映射）
+    }
+
+    // 如果 roleAuthorities 为空，说明后端 API 未实现，记录警告
+    if (!roleAuthorities || roleAuthorities.length === 0) {
+      console.warn(
+        '[权限警告] useAuthPermission.can() - 权限数据未加载，权限检查被绕过。' +
+        'processOid=' + processOid + ', actionCode=' + actionCode + '。' +
+        '提示：后端权限 API 可能未实现或未加载。'
+      );
+      return true; // 临时方案：后端 API 未实现时默认允许
+    }
+
+    // 查找匹配的权限记录
+    const authItem = roleAuthorities.find(
+      item => item.processOid === processOid && item.actionOid === actionOid
+    );
+
+    if (!authItem) {
+      // 没有找到权限记录，但工具栏按键对所有人可见
+      // 用户要求：工具栏按键不需要权限，所有人都可以使用
+      return true;
+    }
+
+    // 返回权限值（1=有权限，0=无权限）
+    return authItem.value === 1;
+  }, [roleAuthorities, isAdmin]);
 
   return { can, isAdmin };
 }

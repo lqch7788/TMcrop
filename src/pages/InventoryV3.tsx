@@ -1,10 +1,10 @@
 /**
  * V3.0 统一库存管理页面
- * 展示所有库存实例，支持追溯查询
+ * 展示所有库存实例，支持追溯查询和出库操作
  */
 
 import React, { useState, useEffect } from 'react';
-import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink, X } from 'lucide-react';
+import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink, X, ArrowDownCircle, ArrowUpCircle, Plus } from 'lucide-react';
 import {
   getInventoryList,
   getInventoryStats,
@@ -17,6 +17,10 @@ import {
   InventoryStatus,
   InventoryStock,
 } from '../types/inventory';
+import { OutboundModal } from '../components/warehouse/OutboundModal';
+
+// Tab 类型
+type TabType = 'list' | 'outbound';
 
 export default function InventoryV3Page() {
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,10 @@ export default function InventoryV3Page() {
     upstream: any[];
     downstream: any[];
   } | null>(null);
+  // 出库功能相关 state
+  const [activeTab, setActiveTab] = useState<TabType>('list');
+  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
+  const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
 
   useEffect(() => {
     loadData();
@@ -82,6 +90,22 @@ export default function InventoryV3Page() {
       console.error('加载追溯链失败:', error);
       setTraceData({ upstream: [], downstream: [] });
     }
+  };
+
+  // 打开出库弹窗
+  const handleOpenOutbound = (stock: InventoryStock) => {
+    // 只允许对库存中的物品出库
+    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
+      alert('只有库存中或低库存状态的物品可以出库');
+      return;
+    }
+    setSelectedOutboundStock(stock);
+    setOutboundModalOpen(true);
+  };
+
+  // 出库成功后的回调
+  const handleOutboundSuccess = () => {
+    loadData(); // 刷新列表
   };
 
   const getStockTypeIcon = (stockType: StockType) => {
@@ -328,13 +352,27 @@ export default function InventoryV3Page() {
                         {new Date(stock.inboundDate).toLocaleDateString('zh-CN')}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleTrace(stock)}
-                          className="text-emerald-600 hover:text-emerald-700 text-sm flex items-center gap-1"
-                        >
-                          <History className="w-4 h-4" />
-                          追溯
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* 出库按钮 */}
+                          {(stock.status === InventoryStatus.IN_STOCK || stock.status === InventoryStatus.LOW_STOCK) && (
+                            <button
+                              onClick={() => handleOpenOutbound(stock)}
+                              className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                              title="出库"
+                            >
+                              <ArrowUpCircle className="w-4 h-4" />
+                              出库
+                            </button>
+                          )}
+                          {/* 追溯按钮 */}
+                          <button
+                            onClick={() => handleTrace(stock)}
+                            className="text-emerald-600 hover:text-emerald-700 text-sm flex items-center gap-1"
+                          >
+                            <History className="w-4 h-4" />
+                            追溯
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -427,6 +465,17 @@ export default function InventoryV3Page() {
             </div>
           </div>
         )}
+
+        {/* 出库弹窗 */}
+        <OutboundModal
+          isOpen={outboundModalOpen}
+          onClose={() => {
+            setOutboundModalOpen(false);
+            setSelectedOutboundStock(null);
+          }}
+          stock={selectedOutboundStock}
+          onSuccess={handleOutboundSuccess}
+        />
       </div>
     </div>
   );

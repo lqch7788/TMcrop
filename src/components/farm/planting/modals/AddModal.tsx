@@ -133,7 +133,7 @@ export function AddModal({
         pictures: pictures,
         remarks: formData.remarks,
         status: PlantingStatus.PLANTED,
-        createBy: '当前用户',
+        createBy: localStorage.getItem('username') || '陆启闯',
         productionPlanId: formData.productionPlanId || undefined,
         productionPlanCode: formData.productionPlanCode || undefined
       });

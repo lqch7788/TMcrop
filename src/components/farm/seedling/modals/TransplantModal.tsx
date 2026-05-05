@@ -80,7 +80,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
         pictures: [],
         remarks: formData.remarks,
         status: PlantingStatus.PLANTED,
-        createBy: '当前用户'
+        createBy: localStorage.getItem('username') || '陆启闯'
       });
 
       // 更新育苗的已定植数量

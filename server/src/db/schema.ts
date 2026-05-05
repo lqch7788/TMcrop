@@ -423,6 +423,7 @@ export function initializeDatabase() {
       source_id TEXT,
       source_name TEXT,
       production_plan_code TEXT,
+      crop_code TEXT,
       crop_name TEXT,
       crop_variety TEXT,
       seedling_type TEXT,
@@ -434,6 +435,9 @@ export function initializeDatabase() {
       seedling_quantity INTEGER DEFAULT 0,
       survival_quantity INTEGER DEFAULT 0,
       survival_rate REAL DEFAULT 0,
+      planted_count INTEGER DEFAULT 0,
+      pictures TEXT,
+      quality_grade TEXT,
       status TEXT DEFAULT 'in_progress',
       seedling_status TEXT,
       remarks TEXT,
@@ -807,6 +811,100 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+  // 为农事任务表添加更多字段（支持完整任务流程）
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN title TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN source_type TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN source_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN progress INTEGER DEFAULT 0`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN assigner_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN assigner_name TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN due_date TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN accepted_at TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN completed_at TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN rework_count INTEGER DEFAULT 0`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN version INTEGER DEFAULT 1`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN dispatch_mode TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN feedback_requirements TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE farm_tasks ADD COLUMN remarks TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 创建任务操作记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS task_operation_records (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      task_code TEXT NOT NULL,
+      task_title TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      action TEXT NOT NULL,
+      action_name TEXT,
+      from_status TEXT,
+      to_status TEXT NOT NULL,
+      progress INTEGER,
+      progress_increment INTEGER,
+      comment TEXT,
+      reason TEXT,
+      feedback TEXT,
+      action_time TEXT NOT NULL,
+      create_time TEXT NOT NULL
+    )
+  `);
 
   // 为巡查记录表添加关联字段
   try {
@@ -1237,6 +1335,159 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+
+  // ========== V8.0: 加班记录表 ==========
+  // 加班记录表 - 用于存储员工加班申请记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS overtime_records (
+      id TEXT PRIMARY KEY,
+      worker_id TEXT,
+      worker_name TEXT,
+      overtime_type TEXT DEFAULT 'workday',
+      work_date TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      hours REAL DEFAULT 0,
+      base_salary REAL DEFAULT 0,
+      hourly_rate REAL DEFAULT 0,
+      overtime_pay REAL DEFAULT 0,
+      reason TEXT,
+      status TEXT DEFAULT 'pending',
+      approval_code TEXT,
+      approved_at TEXT,
+      department_id TEXT,
+      department_name TEXT,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 请假记录表 ==========
+  // 请假记录表 - 用于存储员工请假申请记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leave_records (
+      id TEXT PRIMARY KEY,
+      worker_id TEXT,
+      worker_name TEXT,
+      leave_type TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      days INTEGER DEFAULT 0,
+      reason TEXT,
+      status TEXT DEFAULT 'pending',
+      approval_code TEXT,
+      approved_at TEXT,
+      department_id TEXT,
+      department_name TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 请假额度表 ==========
+  // 请假额度表 - 用于存储员工每年的请假额度
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leave_quotas (
+      id TEXT PRIMARY KEY,
+      worker_id TEXT NOT NULL,
+      worker_name TEXT,
+      year INTEGER NOT NULL,
+      leave_category TEXT NOT NULL,
+      total_days REAL DEFAULT 0,
+      used_days REAL DEFAULT 0,
+      frozen_days REAL DEFAULT 0,
+      remaining_days REAL DEFAULT 0,
+      department_id TEXT,
+      department_name TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT,
+      UNIQUE(worker_id, year, leave_category)
+    )
+  `);
+
+  // ========== V8.0: 每日记录表 ==========
+  // 每日记录表 - 用于存储各类业务的每日汇总或明细记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS daily_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      record_type TEXT NOT NULL,
+      record_date TEXT NOT NULL,
+      related_id TEXT,
+      related_code TEXT,
+      related_type TEXT,
+      crop_name TEXT,
+      crop_variety TEXT,
+      greenhouse_name TEXT,
+      quantity REAL DEFAULT 0,
+      unit TEXT,
+      data TEXT,
+      status TEXT DEFAULT 'active',
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 打印记录表 ==========
+  // 打印记录表 - 用于存储打印操作的历史记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS print_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      print_type TEXT NOT NULL,
+      print_title TEXT,
+      related_id TEXT,
+      related_code TEXT,
+      related_type TEXT,
+      printer_name TEXT,
+      paper_size TEXT,
+      copies INTEGER DEFAULT 1,
+      print_status TEXT DEFAULT 'success',
+      error_message TEXT,
+      data TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 定植记录表 ==========
+  // 定植记录表 - 用于存储定植操作的相关记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS transplant_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      transplant_code TEXT NOT NULL,
+      source_type TEXT,
+      source_id TEXT,
+      source_name TEXT,
+      crop_name TEXT,
+      crop_variety TEXT,
+      greenhouse_name TEXT,
+      area_name TEXT,
+      from_location TEXT,
+      to_location TEXT,
+      transplant_date TEXT,
+      transplant_quantity INTEGER DEFAULT 0,
+      survival_quantity INTEGER DEFAULT 0,
+      survival_rate REAL DEFAULT 0,
+      operator_id TEXT,
+      operator_name TEXT,
+      status TEXT DEFAULT 'completed',
+      remarks TEXT,
+      data TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
 
   console.log('数据库表初始化完成');
 

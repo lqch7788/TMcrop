@@ -45,7 +45,12 @@ export function EditModal({
     initialCount: record.initialCount,
     survivalCount: record.survivalCount,
     plantedCount: record.plantedCount,
-    remarks: record.remarks || ''
+    remarks: record.remarks || '',
+    // 新增缺失字段
+    qualityGrade: record.qualityGrade || '',
+    isFinished: record.isFinished || false,
+    chargePerson: record.chargePerson || '',
+    targetSurvivalCount: record.targetSurvivalCount || 0
   });
 
   // 当 record 变化时重置表单
@@ -65,7 +70,12 @@ export function EditModal({
       initialCount: record.initialCount,
       survivalCount: record.survivalCount,
       plantedCount: record.plantedCount,
-      remarks: record.remarks || ''
+      remarks: record.remarks || '',
+      // 新增缺失字段
+      qualityGrade: record.qualityGrade || '',
+      isFinished: record.isFinished || false,
+      chargePerson: record.chargePerson || '',
+      targetSurvivalCount: record.targetSurvivalCount || 0
     });
   }, [record]);
 
@@ -104,7 +114,12 @@ export function EditModal({
         survivalRate,
         lossCount,
         lossRate,
-        remarks: formData.remarks
+        remarks: formData.remarks,
+        // 新增缺失字段
+        qualityGrade: formData.qualityGrade,
+        isFinished: formData.isFinished,
+        chargePerson: formData.chargePerson,
+        targetSurvivalCount: formData.targetSurvivalCount
       });
     } catch (error) {
       console.error('更新育苗记录失败:', error);
@@ -132,7 +147,7 @@ export function EditModal({
   };
 
   // 处理作物品种选择
-  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
+  const handleCropCodeChange = (cropCode: string, varietyInfo: unknown) => {
     setFormData({
       ...formData,
       selectedCropCode: cropCode,
@@ -162,7 +177,7 @@ export function EditModal({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">请选择</option>
-            {seedSources.map(s => (
+            {Array.isArray(seedSources) && seedSources.map(s => (
               <option key={s.id} value={s.id}>
                 {s.seedCode} - {s.cropName} ({s.cropVariety})
               </option>
@@ -279,6 +294,55 @@ export function EditModal({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="请输入备注信息"
           />
+        </div>
+
+        {/* 负责人 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">负责人</label>
+          <input
+            type="text"
+            value={formData.chargePerson}
+            onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="请输入负责人"
+          />
+        </div>
+
+        {/* 目标成活数量 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">目标成活数量</label>
+          <input
+            type="number"
+            value={formData.targetSurvivalCount || ''}
+            onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="请输入目标成活数量"
+          />
+        </div>
+
+        {/* 品质等级 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">品质等级</label>
+          <input
+            type="text"
+            value={formData.qualityGrade}
+            onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="请输入品质等级"
+          />
+        </div>
+
+        {/* 是否结束 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">是否结束</label>
+          <select
+            value={formData.isFinished ? '1' : '0'}
+            onChange={(e) => setFormData({ ...formData, isFinished: e.target.value === '1' })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="0">否</option>
+            <option value="1">是</option>
+          </select>
         </div>
       </div>
     </UnifiedModal>

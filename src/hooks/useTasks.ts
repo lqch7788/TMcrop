@@ -34,13 +34,13 @@ import {
 import { taskDispatchTasks, TaskDispatchTask } from '../data/farmMockData';
 
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
-import { updateSeedling, getSeedlings } from '../services/seedlingService';
+import { updateSeedling } from '../services/apiSeedlingService';
 import { SeedlingStatus } from '../types/crop';
 // 导入临时任务数据和巡查反馈处理任务数据
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, InspectionFeedbackTaskData } from '../data/mockData';
 import { TempTask } from '../hooks/useTempTasks';
 // 导入农事任务API服务
-import { getAllTasks } from '../services/apiFarmTaskService';
+import { getAllTasks, createTask as apiCreateTask, completeTask as apiCompleteTask, archiveTask as apiArchiveTask } from '../services/apiFarmTaskService';
 
 // ============================================
 // 状态标签配置
@@ -121,7 +121,8 @@ function convertToTask(t: TaskDispatchTask): Task {
     sopContent: t.sopContent,
     typeConfig: t.typeConfig,
     sourceProblemId: t.sourceProblemId,
-    sourceInspectionId: (t as any).sourceInspectionId,
+    // sourceInspectionId 可能存在于 TaskDispatchTask 但不在 Task 类型中
+    sourceInspectionId: (t as unknown as { sourceInspectionId?: string }).sourceInspectionId,
     reworkCount: 0,
     reworkHistory: [],
     deadlineExtensions: [],
@@ -706,7 +707,8 @@ export function useTasks(): UseTasksReturn {
     const taskId = generateTaskCode([]);
 
     // 确保执行人信息完整
-    const finalAssigneeName = taskData.assigneeName || (taskData as any).assignee || '';
+    // assignee 可能存在于 TaskDispatchTask 但不在 Task 类型中
+    const finalAssigneeName = taskData.assigneeName || (taskData as unknown as { assignee?: string }).assignee || '';
     const finalAssigneeId = taskData.assigneeId ||
       (finalAssigneeName ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}` : '');
 
@@ -750,6 +752,48 @@ export function useTasks(): UseTasksReturn {
     });
 
     console.log('[createTask] 返回任务:', savedTask ? savedTask.id : 'null');
+
+    // 调用后端API创建任务（失败不影响本地操作）
+    if (savedTask) {
+      Promise.resolve().then(async () => {
+        try {
+          // 准备API创建任务的数据（排除自动生成的字段）
+          const apiTaskData = {
+            title: savedTask.title,
+            type: savedTask.type,
+            typeName: savedTask.typeName,
+            status: savedTask.status,
+            priority: savedTask.priority,
+            sourceType: savedTask.sourceType,
+            assigneeId: savedTask.assigneeId,
+            assigneeName: savedTask.assigneeName,
+            assignerId: savedTask.assignerId,
+            assignerName: savedTask.assignerName,
+            dueDate: savedTask.dueDate,
+            planStart: savedTask.planStart,
+            planEnd: savedTask.planEnd,
+            estimatedDays: savedTask.estimatedDays,
+            estimatedHours: savedTask.estimatedHours,
+            description: savedTask.description,
+            remarks: savedTask.remarks,
+            materials: savedTask.materials,
+            tools: savedTask.tools,
+            requiredFeedback: savedTask.requiredFeedback,
+            typeConfig: savedTask.typeConfig,
+            greenhouseId: savedTask.greenhouseId,
+            greenhouseName: savedTask.greenhouseName,
+            cropName: savedTask.cropName,
+            batchId: savedTask.batchId,
+            batchCode: savedTask.batchCode,
+          };
+          await apiCreateTask(apiTaskData);
+          console.log('[createTask] 后端API创建任务成功:', savedTask.id);
+        } catch (error) {
+          console.error('[createTask] 后端API创建任务失败:', error);
+        }
+      });
+    }
+
     return savedTask || newTask;
   }, [setTasks]);
 
@@ -1134,6 +1178,9 @@ export function useTasks(): UseTasksReturn {
 
   // 验收通过
   const acceptCompletion = useCallback((id: string, comments?: string) => {
+    // 用于存储需要更新育苗的任务信息（在 setTasks 回调中提取）
+    let seedlingSourceId: string | null = null;
+
     setTasks(prev => {
       const updated = prev.map(task => {
         if (task.id !== id || task.status !== 'waiting_acceptance') return task;
@@ -1160,11 +1207,9 @@ export function useTasks(): UseTasksReturn {
 
         // ========== 回传更新育苗状态 ==========
         // 如果是育苗任务，验收通过后更新育苗状态为已完成
+        // 注意：现在使用 apiSeedlingService，需要异步等待
         if (task.type === 'seedling' && task.sourceId) {
-          updateSeedling(task.sourceId, {
-            status: SeedlingStatus.COMPLETED,
-            isFinished: true
-          });
+          seedlingSourceId = task.sourceId;
         }
         // ==========================================
 
@@ -1187,6 +1232,31 @@ export function useTasks(): UseTasksReturn {
       // 持久化到 localStorage
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
+    });
+
+    // 在 setTasks 完成后执行异步更新育苗状态
+    if (seedlingSourceId) {
+      Promise.resolve().then(async () => {
+        try {
+          await updateSeedling(seedlingSourceId!, {
+            status: SeedlingStatus.COMPLETED,
+            isFinished: true
+          });
+          console.log('[acceptCompletion] 育苗状态已更新为已完成:', seedlingSourceId);
+        } catch (error) {
+          console.error('[acceptCompletion] 更新育苗状态失败:', error);
+        }
+      });
+    }
+
+    // 调用后端API完成任务验收（失败不影响本地操作）
+    Promise.resolve().then(async () => {
+      try {
+        await apiCompleteTask(id, comments);
+        console.log('[acceptCompletion] 后端API完成任务验收成功:', id);
+      } catch (error) {
+        console.error('[acceptCompletion] 后端API完成任务验收失败:', error);
+      }
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, attendance, updateAttendance]);
 

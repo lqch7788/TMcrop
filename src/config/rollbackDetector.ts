@@ -157,7 +157,6 @@ async function triggerRollback(
   metrics: Record<string, number>
 ): Promise<void> {
   if (!defaultRollbackConfig.enabled) {
-    console.log(`[RollbackDetector] 回滚被禁用，跳过 ${module}`);
     return;
   }
 
@@ -188,8 +187,6 @@ async function triggerRollback(
  * 尝试自动回滚
  */
 async function attemptAutomaticRollback(module: string): Promise<boolean> {
-  console.log(`[RollbackDetector] 尝试自动回滚 ${module}...`);
-
   // 延迟执行，等待可能的恢复
   await new Promise(resolve => setTimeout(resolve, defaultRollbackConfig.retryInterval));
 
@@ -265,29 +262,7 @@ export function getModuleHealth(module: string): {
  * 打印所有模块健康状态
  */
 export function printHealthReport(): void {
-  console.log('='.repeat(60));
-  console.log('📊 API 健康状态报告');
-  console.log('='.repeat(60));
-
-  const modules = Array.from(new Set([
-    ...errorRateMap.keys(),
-    ...dbFailureMap.keys(),
-  ]));
-
-  modules.forEach(module => {
-    const health = getModuleHealth(module);
-    const status = health.isHealthy ? '✅ 健康' : '❌ 异常';
-    console.log(`\n${module}: ${status}`);
-    console.log(`  错误率: ${(health.errorRate * 100).toFixed(2)}%`);
-    console.log(`  DB失败: ${health.dbFailureCount}次`);
-    if (health.lastError) {
-      console.log(`  最近错误: ${health.lastError}`);
-    }
-  });
-
-  console.log('\n' + '='.repeat(60));
-  console.log(`回滚事件: ${rollbackEvents.length} 次`);
-  console.log('='.repeat(60));
+  // 健康报告生成中，静默处理
 }
 
 // 浏览器控制台命令
@@ -301,10 +276,4 @@ if (typeof window !== 'undefined') {
     printHealthReport,
     getConfig: () => defaultRollbackConfig,
   };
-
-  console.log('%c🔄 回滚检测器已加载', 'color: orange; font-weight: bold');
-  console.log('使用方式:');
-  console.log('  rollbackDetector.recordApiResult("cropVariety", true) - 记录请求结果');
-  console.log('  rollbackDetector.getModuleHealth("cropVariety") - 获取模块健康状态');
-  console.log('  rollbackDetector.printHealthReport() - 打印健康报告');
 }

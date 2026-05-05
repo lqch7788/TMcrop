@@ -29,6 +29,9 @@ const mockOvertimeRecords: OvertimeRecord[] = [
 
 /**
  * 计算加班费
+ * @param hours 加班小时数
+ * @param type 加班类型
+ * @param hourlyRate 时薪（默认50元/小时，应从员工工资配置中获取）
  */
 function calculateOvertimePay(hours: number, type: OvertimeType, hourlyRate: number = 50): number {
   return hours * hourlyRate * OVERTIME_MULTIPLIERS[type];
@@ -84,8 +87,8 @@ export function useOvertime(): UseOvertimeReturn {
 
   // 保存记录（新建/编辑）
   const handleSave = useCallback((data: OvertimeFormData) => {
-    // 实际项目中这里会调用 API 保存数据
-    const hourlyRate = 50; // 模拟时薪
+    // TODO: 实际项目中应从员工工资配置 API 获取时薪
+    const hourlyRate = 50; // TODO: 临时使用默认值50，应替换为实际时薪
     const newRecord: OvertimeRecord = {
       id: `OT${Date.now()}`,
       ...data,
@@ -93,7 +96,6 @@ export function useOvertime(): UseOvertimeReturn {
       hourlyRate,
       totalPay: calculateOvertimePay(data.hours, data.type, hourlyRate),
     };
-    console.log('保存加班记录:', newRecord);
     setIsFormOpen(false);
   }, []);
 

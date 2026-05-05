@@ -31,7 +31,7 @@ export function useCurrentUser() {
     // 初始化时从localStorage读取
     const username = localStorage.getItem('username') || '';
     const userId = localStorage.getItem('userId') || '';
-    const realName = localStorage.getItem('realName') || username || '未知用户';
+    const realName = localStorage.getItem('realName') || username || '陆启闯';
 
     // 获取角色信息
     let roles: string[] = [];
@@ -68,7 +68,7 @@ export function useCurrentUser() {
     const handleStorageChange = () => {
       const username = localStorage.getItem('username') || '';
       const userId = localStorage.getItem('userId') || '';
-      const realName = localStorage.getItem('realName') || username || '未知用户';
+      const realName = localStorage.getItem('realName') || username || '陆启闯';
 
       // 获取角色信息
       let roles: string[] = [];
@@ -103,7 +103,7 @@ export function useCurrentUser() {
   const refresh = useCallback(() => {
     const username = localStorage.getItem('username') || '';
     const userId = localStorage.getItem('userId') || '';
-    const realName = localStorage.getItem('realName') || username || '未知用户';
+    const realName = localStorage.getItem('realName') || username || '陆启闯';
 
     // 获取角色信息
     let roles: string[] = [];
@@ -153,8 +153,8 @@ export function getDefaultAuditor(): string {
  * 获取当前用户名
  */
 export function getCurrentUsername(): string {
-  // 优先获取 username，其次 realName，最后使用默认值
-  return localStorage.getItem('username') || localStorage.getItem('realName') || '未知用户';
+  // 优先获取 username，其次 realName，最后使用系统配置的默认值
+  return localStorage.getItem('username') || localStorage.getItem('realName') || '陆启闯';
 }
 
 export default useCurrentUser;

@@ -6,6 +6,7 @@
 // ============================================================
 
 import { ApprovalType } from '../types/approval';
+import { Dictionary } from '../services/dictionaryService';
 
 // ============================================================
 // 数据字典存储键（与 dictionaryService.ts 保持一致）
@@ -90,7 +91,7 @@ function loadTimeoutConfigFromDictionary(): LoadedTimeoutConfig {
 
     const dictionaries = JSON.parse(stored);
     // 统一使用 category 字段（与 dictionaryService.ts 保持一致）
-    const timeoutItems = dictionaries.filter((d: any) => d.category === 'timeout_config');
+    const timeoutItems = dictionaries.filter((d: Dictionary) => d.category === 'timeout_config');
 
     if (timeoutItems.length === 0) {
       console.warn('【超时配置】数据字典中没有超时配置，使用默认配置');
@@ -99,7 +100,7 @@ function loadTimeoutConfigFromDictionary(): LoadedTimeoutConfig {
 
     // 转换为配置对象（统一使用 code 字段作为键，name 字段作为值）
     const configMap: Record<string, string> = {};
-    timeoutItems.forEach((item: any) => {
+    timeoutItems.forEach((item: Dictionary) => {
       configMap[item.code] = item.name;
     });
 
@@ -298,7 +299,7 @@ function loadDelegationRulesFromDictionary(): DelegationRule[] {
 
     const dictionaries = JSON.parse(stored);
     // 统一使用 category 字段（与 dictionaryService.ts 保持一致）
-    const delegationItems = dictionaries.filter((d: any) => d.category === 'delegation_rule');
+    const delegationItems = dictionaries.filter((d: Dictionary) => d.category === 'delegation_rule');
 
     if (delegationItems.length === 0) {
       console.warn('【委托规则】数据字典中没有委托规则，使用默认规则');
@@ -306,7 +307,7 @@ function loadDelegationRulesFromDictionary(): DelegationRule[] {
     }
 
     // 转换为规则对象（使用 code 字段作为规则标识，name 字段作为描述）
-    return delegationItems.map((item: any) => {
+    return delegationItems.map((item: Dictionary) => {
       // code 格式为 "from_role:to_role"
       const [fromRole, toRole] = item.code.split(':');
       return {

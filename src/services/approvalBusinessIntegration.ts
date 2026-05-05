@@ -16,6 +16,13 @@ import {
 // ============================================================
 const API_BASE = '/api/approval-linkage';
 
+// 批量更新结果项类型
+interface BatchUpdateResultItem {
+  success: boolean;
+  approvalId?: string;
+  error?: string;
+}
+
 // ============================================================
 // 业务状态更新接口
 // ============================================================
@@ -96,8 +103,8 @@ async function batchUpdateBusinessTableAPI(
 
     const result = await response.json();
     if (result.success && result.data) {
-      results.successCount = result.data.filter((r: any) => r.success).length;
-      results.failCount = result.data.filter((r: any) => !r.success).length;
+      results.successCount = (result.data as BatchUpdateResultItem[]).filter((r) => r.success).length;
+      results.failCount = (result.data as BatchUpdateResultItem[]).filter((r) => !r.success).length;
     }
   } catch (error) {
     console.error('【审批联动】批量更新失败:', error);

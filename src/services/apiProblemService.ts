@@ -3,7 +3,7 @@
  * 对接后端 /api/problems
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 
 // 问题类型定义（基于 farm/common.ts 中的定义）
 export interface Problem {
@@ -54,30 +54,21 @@ export interface Problem {
  * 获取所有问题记录
  */
 export async function getAllProblems(): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>('/problems');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems');
 }
 
 /**
  * 根据ID获取问题
  */
 export async function getProblemById(id: number): Promise<Problem | undefined> {
-  if (USE_API) {
-    return apiClient.get<Problem>(`/problems/${id}`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem>(`/problems/${id}`);
 }
 
 /**
  * 根据问题编码获取问题
  */
 export async function getProblemByCode(problemCode: string): Promise<Problem | undefined> {
-  if (USE_API) {
-    return apiClient.get<Problem>(`/problems/code/${problemCode}`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem>(`/problems/code/${problemCode}`);
 }
 
 /**
@@ -94,174 +85,126 @@ export async function getProblems(filters?: {
   endDate?: string;
   keyword?: string;
 }): Promise<Problem[]> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.status) params.status = filters.status;
-      if (filters.category) params.category = filters.category;
-      if (filters.severity) params.severity = filters.severity;
-      if (filters.greenhouseId) params.greenhouseId = filters.greenhouseId;
-      if (filters.batchId) params.batchId = filters.batchId;
-      if (filters.sourceType) params.sourceType = filters.sourceType;
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-      if (filters.keyword) params.keyword = filters.keyword;
-    }
-    return apiClient.get<Problem[]>('/problems', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.status) params.status = filters.status;
+    if (filters.category) params.category = filters.category;
+    if (filters.severity) params.severity = filters.severity;
+    if (filters.greenhouseId) params.greenhouseId = filters.greenhouseId;
+    if (filters.batchId) params.batchId = filters.batchId;
+    if (filters.sourceType) params.sourceType = filters.sourceType;
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+    if (filters.keyword) params.keyword = filters.keyword;
   }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems', params);
 }
 
 /**
  * 创建问题
  */
 export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' | 'createTime' | 'updateTime'>): Promise<Problem> {
-  if (USE_API) {
-    return apiClient.post<Problem>('/problems', problem);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.post<Problem>('/problems', problem);
 }
 
 /**
  * 更新问题
  */
 export async function updateProblem(id: number, updates: Partial<Problem>): Promise<Problem | null> {
-  if (USE_API) {
-    return apiClient.put<Problem>(`/problems/${id}`, updates);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.put<Problem>(`/problems/${id}`, updates);
 }
 
 /**
  * 删除问题
  */
 export async function deleteProblem(id: number): Promise<boolean> {
-  if (USE_API) {
-    await apiClient.delete(`/problems/${id}`);
-    return true;
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  await apiClient.delete(`/problems/${id}`);
+  return true;
 }
 
 /**
  * 批量删除问题
  */
 export async function deleteProblems(ids: number[]): Promise<boolean> {
-  if (USE_API) {
-    await apiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
-    return true;
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  await apiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
+  return true;
 }
 
 /**
  * 分派问题
  */
 export async function assignProblem(id: number, handlerId: string, handlerName: string): Promise<Problem | null> {
-  if (USE_API) {
-    return apiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
 }
 
 /**
  * 开始处理问题
  */
 export async function startProcessing(id: number): Promise<Problem | null> {
-  if (USE_API) {
-    return apiClient.post<Problem>(`/problems/${id}/start-processing`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.post<Problem>(`/problems/${id}/start-processing`);
 }
 
 /**
  * 标记问题为已处理
  */
 export async function resolveProblem(id: number, handleResult?: string): Promise<Problem | null> {
-  if (USE_API) {
-    return apiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
 }
 
 /**
  * 根据大棚获取问题列表
  */
 export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
 }
 
 /**
  * 根据批次获取问题列表
  */
 export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>(`/problems/batch/${batchId}`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>(`/problems/batch/${batchId}`);
 }
 
 /**
  * 根据来源获取问题列表
  */
 export async function getProblemsBySource(sourceType: string, sourceId: string): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
 }
 
 /**
  * 获取待处理的问题列表
  */
 export async function getPendingProblems(): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>('/problems/pending');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems/pending');
 }
 
 /**
  * 获取处理中的问题列表
  */
 export async function getProcessingProblems(): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>('/problems/processing');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems/processing');
 }
 
 /**
  * 获取已处理的问题列表
  */
 export async function getResolvedProblems(): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>('/problems/resolved');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems/resolved');
 }
 
 /**
  * 获取严重问题列表
  */
 export async function getSeriousProblems(): Promise<Problem[]> {
-  if (USE_API) {
-    return apiClient.get<Problem[]>('/problems/serious');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<Problem[]>('/problems/serious');
 }
 
 /**
  * 生成问题编码
  */
 export async function generateProblemCode(): Promise<string> {
-  if (USE_API) {
-    return apiClient.get<string>('/problems/generate-code');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get<string>('/problems/generate-code');
 }
 
 /**
@@ -279,21 +222,15 @@ export async function getProblemStats(filters?: {
   byCategory: Record<string, number>;
   bySeverity: Record<string, number>;
 }> {
-  if (USE_API) {
-    return apiClient.get('/problems/stats');
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  return apiClient.get('/problems/stats');
 }
 
 /**
  * 关联任务
  */
 export async function linkTask(problemId: number, taskId: string, taskCode: string): Promise<boolean> {
-  if (USE_API) {
-    await apiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
-    return true;
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  await apiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
+  return true;
 }
 
 /**
@@ -305,9 +242,6 @@ export async function addProblemHandleRecord(problemId: number, record: {
   action: string;
   description?: string;
 }): Promise<boolean> {
-  if (USE_API) {
-    await apiClient.post(`/problems/${problemId}/handle-records`, record);
-    return true;
-  }
-  throw new Error('本地服务 problemService 尚未实现');
+  await apiClient.post(`/problems/${problemId}/handle-records`, record);
+  return true;
 }

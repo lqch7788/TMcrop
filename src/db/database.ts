@@ -17,6 +17,55 @@ import Dexie, { Table } from 'dexie';
 // 类型定义
 // ============================================
 
+// 打印记录
+interface PrintRecordItem {
+  id?: string;
+  printTime: string;
+  printType: string;
+  printCount: number;
+  operator: string;
+  labelNumbers?: string[];
+}
+
+// 每日记录
+interface DailyRecordItem {
+  id?: string;
+  recordDate: string;
+  temperature?: number;
+  humidity?: number;
+  watering: boolean;
+  abnormality?: string;
+}
+
+// 栽种记录
+interface TransplantRecordItem {
+  id?: string;
+  transplantDate: string;
+  areaId: string;
+  areaName: string;
+  zoneId?: string;
+  zoneName?: string;
+  bedId?: string;
+  bedName?: string;
+  transplantCount: number;
+  remainingCount: number;
+  status: string;
+}
+
+// 采收产品明细
+interface HarvestProductItem {
+  productCode: string;
+  cropName: string;
+  variety: string;
+  subCategory: string;
+  batchCode: string;
+  harvestQuantity: number;
+  targetYield: number;
+  grade: string;
+  remarks?: string;
+}
+
+
 // 订单
 export interface CropOrder {
   id?: number;
@@ -85,7 +134,7 @@ export interface SeedSource {
   orderId: string;
   orderCode: string;
   status: string;
-  printRecords: any[];
+  printRecords: PrintRecordItem[];
   createBy: string;
   createTime: string;
   updateTime: string;
@@ -115,9 +164,9 @@ export interface Seedling {
   startDate: string;
   endDate: string;
   status: string;
-  dailyRecords: any[];
-  transplantRecords: any[];
-  printRecords: any[];
+  dailyRecords: DailyRecordItem[];
+  transplantRecords: TransplantRecordItem[];
+  printRecords: PrintRecordItem[];
   createBy: string;
   createTime: string;
   updateTime: string;
@@ -143,8 +192,8 @@ export interface Planting {
   lossCount: number;
   survivalCount: number;
   status: string;
-  harvestRecords: any[];
-  printRecords: any[];
+  harvestRecords: HarvestProductItem[];
+  printRecords: PrintRecordItem[];
   createBy: string;
   createTime: string;
   updateTime: string;
@@ -279,7 +328,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (orders) {
     const parsed = JSON.parse(orders);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.orders.bulkAdd(parsed.map((item: any) => {
+      await db.orders.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));
@@ -292,7 +341,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (instances) {
     const parsed = JSON.parse(instances);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.instances.bulkAdd(parsed.map((item: any) => {
+      await db.instances.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));
@@ -305,7 +354,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (seedSources) {
     const parsed = JSON.parse(seedSources);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.seedSources.bulkAdd(parsed.map((item: any) => {
+      await db.seedSources.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));
@@ -318,7 +367,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (seedlings) {
     const parsed = JSON.parse(seedlings);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.seedlings.bulkAdd(parsed.map((item: any) => {
+      await db.seedlings.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));
@@ -331,7 +380,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (plantings) {
     const parsed = JSON.parse(plantings);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.plantings.bulkAdd(parsed.map((item: any) => {
+      await db.plantings.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));
@@ -344,7 +393,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   if (harvests) {
     const parsed = JSON.parse(harvests);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      await db.harvestRecords.bulkAdd(parsed.map((item: any) => {
+      await db.harvestRecords.bulkAdd(parsed.map((item: unknown) => {
         const { id, ...rest } = item;
         return rest;
       }));

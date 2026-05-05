@@ -3,7 +3,7 @@
  * 提供温室的本地存储和API获取功能
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 import { greenhouses as defaultGreenhouses } from '../data/mockData';
 
 // 温室大棚数据结构
@@ -59,28 +59,21 @@ export function initGreenhouses(): Greenhouse[] {
  * 获取所有温室（API模式优先）
  */
 export async function getGreenhouses(): Promise<Greenhouse[]> {
-  if (USE_API) {
-    try {
-      const data = await apiClient.get<Greenhouse[]>('/basic-data/greenhouses');
-      saveGreenhousesToStorage(data);
-      return data;
-    } catch (error) {
-      console.error('API获取温室数据失败，使用本地数据:', error);
-      return getStoredGreenhouses();
-    }
+  try {
+    const data = await apiClient.get<Greenhouse[]>('/basic-data/greenhouses');
+    saveGreenhousesToStorage(data);
+    return data;
+  } catch (error) {
+    console.error('API获取温室数据失败，使用本地数据:', error);
+    return getStoredGreenhouses();
   }
-  return getStoredGreenhouses();
 }
 
 /**
  * 根据ID获取温室
  */
 export async function getGreenhouseById(id: string): Promise<Greenhouse | undefined> {
-  if (USE_API) {
-    const greenhouses = await getGreenhouses();
-    return greenhouses.find(g => g.id === id);
-  }
-  const greenhouses = getStoredGreenhouses();
+  const greenhouses = await getGreenhouses();
   return greenhouses.find(g => g.id === id);
 }
 
@@ -104,10 +97,8 @@ export async function getGreenhousesByType(type: string): Promise<Greenhouse[]> 
  * 保存温室数据
  */
 export async function saveGreenhouses(greenhouses: Greenhouse[]): Promise<void> {
-  if (USE_API) {
-    // API模式下通过后端保存
-    await apiClient.post('/basic-data/greenhouses', greenhouses);
-  }
+  // API模式下通过后端保存
+  await apiClient.post('/basic-data/greenhouses', greenhouses);
   saveGreenhousesToStorage(greenhouses);
 }
 

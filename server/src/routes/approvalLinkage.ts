@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
 
 const router = Router();
 
@@ -518,6 +519,7 @@ function updateBusinessTable(
         return { success: true, message: '物料入库状态已更新' };
       } catch (e) {
         console.error('更新物料入库失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -535,6 +537,7 @@ function updateBusinessTable(
         return { success: true, message: '库存调拨状态已更新' };
       } catch (e) {
         console.error('更新库存调拨失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -552,6 +555,7 @@ function updateBusinessTable(
         return { success: true, message: '种源入库状态已更新' };
       } catch (e) {
         console.error('更新种源入库失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -569,6 +573,7 @@ function updateBusinessTable(
         return { success: true, message: '育苗计划状态已更新' };
       } catch (e) {
         console.error('更新育苗计划失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -586,6 +591,7 @@ function updateBusinessTable(
         return { success: true, message: '种植计划状态已更新' };
       } catch (e) {
         console.error('更新种植计划失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -617,6 +623,7 @@ function updateBusinessTable(
         return { success: true, message: '生产批次状态已更新' };
       } catch (e) {
         console.error('更新生产批次失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -635,6 +642,7 @@ function updateBusinessTable(
         return { success: true, message: '批次状态已更新' };
       } catch (e) {
         console.error('更新批次状态失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -652,6 +660,7 @@ function updateBusinessTable(
         return { success: true, message: '技术方案状态已更新' };
       } catch (e) {
         console.error('更新技术方案失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -696,6 +705,7 @@ function updateBusinessTable(
         return { success: true, message: '种源补录状态已更新' };
       } catch (e) {
         console.error('更新种源补录失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -712,6 +722,7 @@ function updateBusinessTable(
         return { success: true, message: '育苗补录状态已更新' };
       } catch (e) {
         console.error('更新育苗补录失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -728,6 +739,7 @@ function updateBusinessTable(
         return { success: true, message: '作物入库补录状态已更新' };
       } catch (e) {
         console.error('更新作物入库补录失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -767,11 +779,28 @@ function updateBusinessTable(
               update_time = ?
             WHERE id = ?
           `, [status, approvalCode, now, now, requestId]);
+          
+          // 额度服务调用
+          if (action === 'approved') {
+            // 审批通过，扣减额度
+            const leaveRecord = db.prepare('SELECT * FROM leave_records WHERE id = ?').get(requestId);
+            if (leaveRecord) {
+              deductLeaveQuota(db, leaveRecord);
+            }
+          } else if (action === 'rejected') {
+            // 审批拒绝，释放冻结额度
+            const leaveRecord = db.prepare('SELECT * FROM leave_records WHERE id = ?').get(requestId);
+            if (leaveRecord) {
+              releaseLeaveQuota(db, leaveRecord);
+            }
+          }
+          
           return { success: true, message: '请假记录状态已更新' };
         }
         tableCheck.free();
       } catch (e) {
         console.error('更新请假记录失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -789,16 +818,31 @@ function updateBusinessTable(
               update_time = ?
             WHERE id = ?
           `, [status, approvalCode, now, now, requestId]);
+          
+          // 额度服务调用
+          if (action === 'approved') {
+            // 审批通过，扣减加班额度
+            const overtimeRecord = db.prepare('SELECT * FROM overtime_records WHERE id = ?').get(requestId);
+            if (overtimeRecord) {
+              deductOvertimeQuota(db, overtimeRecord);
+            }
+          }
+          
           return { success: true, message: '加班记录状态已更新' };
         }
         tableCheck.free();
       } catch (e) {
         console.error('更新加班记录失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
     case 'resign':
       if (updateEmployee(db, requestId, 'resigned', approvalCode, extra)) {
+        // 额度服务调用 - 离职审批通过后删除员工额度
+        if (action === 'approved' && extra && extra.worker_id) {
+          deleteEmployeeQuotas(db, extra.worker_id as string);
+        }
         return { success: true, message: '员工离职状态已更新' };
       }
       break;
@@ -817,11 +861,16 @@ function updateBusinessTable(
         return { success: true, message: '招聘状态已更新' };
       } catch (e) {
         console.error('更新招聘状态失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
     case 'onboarding':
       if (updateEmployee(db, requestId, 'onboarding_completed', approvalCode, extra)) {
+        // 额度服务调用 - 入职审批通过后初始化员工额度
+        if (action === 'approved' && extra && extra.worker_id) {
+          initEmployeeQuotas(db, extra.worker_id as string, (extra.worker_name as string) || '', new Date().getFullYear());
+        }
         return { success: true, message: '员工入职状态已更新' };
       }
       break;
@@ -857,6 +906,7 @@ function updateBusinessTable(
         tableCheck.free();
       } catch (e) {
         console.error('更新合同续签失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -879,6 +929,7 @@ function updateBusinessTable(
         tableCheck.free();
       } catch (e) {
         console.error('更新工资预算失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -902,6 +953,7 @@ function updateBusinessTable(
         return { success: true, message: '退料单状态已更新' };
       } catch (e) {
         console.error('更新退料单失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 

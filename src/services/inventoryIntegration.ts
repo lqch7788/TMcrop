@@ -12,6 +12,9 @@ import {
   FreezeRequest,
   TransactionType,
   InventoryStatus,
+  TraceResult,
+  DownstreamTraceResult,
+  InventoryStock,
 } from '../types/inventory';
 import * as inventoryService from './inventoryService';
 import { SeedSource } from '../types/crop';
@@ -341,14 +344,14 @@ export async function outboundHarvest(
  * 获取种源的完整追溯链
  */
 export async function traceSeedSource(seedSourceId: string): Promise<{
-  seedSource: any;
-  upstream: any[];
-  downstream: any[];
+  seedSource: InventoryStock | null;
+  upstream: TraceResult[];
+  downstream: DownstreamTraceResult[];
 }> {
   const stock = await inventoryService.getInventoryByBusinessId(seedSourceId);
 
-  let upstream: any[] = [];
-  let downstream: any[] = [];
+  let upstream: TraceResult[] = [];
+  let downstream: DownstreamTraceResult[] = [];
 
   if (stock) {
     upstream = await inventoryService.traceUpstream(stock.instanceId);
@@ -362,14 +365,14 @@ export async function traceSeedSource(seedSourceId: string): Promise<{
  * 获取育苗的完整追溯链
  */
 export async function traceSeedling(seedlingId: string): Promise<{
-  seedling: any;
-  upstream: any[];
-  downstream: any[];
+  seedling: InventoryStock | null;
+  upstream: TraceResult[];
+  downstream: DownstreamTraceResult[];
 }> {
   const stock = await inventoryService.getInventoryByBusinessId(seedlingId);
 
-  let upstream: any[] = [];
-  let downstream: any[] = [];
+  let upstream: TraceResult[] = [];
+  let downstream: DownstreamTraceResult[] = [];
 
   if (stock) {
     upstream = await inventoryService.traceUpstream(stock.instanceId);
@@ -383,14 +386,14 @@ export async function traceSeedling(seedlingId: string): Promise<{
  * 获取采收入库的完整追溯链
  */
 export async function traceHarvest(harvestRecordId: string): Promise<{
-  harvest: any;
-  upstream: any[];
-  downstream: any[];
+  harvest: InventoryStock | null;
+  upstream: TraceResult[];
+  downstream: DownstreamTraceResult[];
 }> {
   const stock = await inventoryService.getInventoryByBusinessId(harvestRecordId);
 
-  let upstream: any[] = [];
-  let downstream: any[] = [];
+  let upstream: TraceResult[] = [];
+  let downstream: DownstreamTraceResult[] = [];
 
   if (stock) {
     upstream = await inventoryService.traceUpstream(stock.instanceId);

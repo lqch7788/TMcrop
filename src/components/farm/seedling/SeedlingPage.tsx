@@ -16,7 +16,7 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaries } from '../../common/settings';
-import { Seedling, SeedlingFilters, SeedlingStatus } from '../../../types/crop';
+import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as seedlingService from '../../../services/apiSeedlingService';
 import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
@@ -54,6 +54,10 @@ export default function SeedlingPage() {
 
   // 从API加载数据，初始为空数组
   const [seedlings, setSeedlings] = useState<Seedling[]>([]);
+  // 种源数据
+  const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
+  // Loading状态
+  const [loading, setLoading] = useState(false);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -112,12 +116,28 @@ export default function SeedlingPage() {
 
   // 刷新数据（异步调用API）
   const refreshData = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await seedlingService.getSeedlings();
       setSeedlings(data);
     } catch (error) {
       console.error('获取育苗数据失败:', error);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  // 加载种源数据
+  useEffect(() => {
+    const loadSeedSources = async () => {
+      try {
+        const data = await seedSourceService.getSeedSources();
+        setSeedSources(data);
+      } catch (error) {
+        console.error('获取种源数据失败:', error);
+      }
+    };
+    loadSeedSources();
   }, []);
 
   // 初始化数据
@@ -151,15 +171,16 @@ export default function SeedlingPage() {
   // 筛选后的数据
   const filteredData = useMemo(() => {
     return seedlings.filter(item => {
-      if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
-      if (filters.seedlingCode && !item.seedlingCode.includes(filters.seedlingCode)) return false;
-      if (filters.sourceCode && !item.sourceCode.includes(filters.sourceCode)) return false;
+      // 使用 startsWith 替代 includes，避免误匹配（如筛选"黄"会匹配到"黄瓜"和"黄番茄"）
+      if (filters.cropName && !item.cropName.startsWith(filters.cropName)) return false;
+      if (filters.seedlingCode && !item.seedlingCode.startsWith(filters.seedlingCode)) return false;
+      if (filters.sourceCode && !item.sourceCode.startsWith(filters.sourceCode)) return false;
       if (filters.siteName && item.siteName !== filters.siteName) return false;
       if (filters.seedlingType && item.seedlingType !== filters.seedlingType) return false;
       if (filters.status && item.status !== filters.status) return false;
       if (filters.startDate && item.startDate < filters.startDate) return false;
       if (filters.endDate && item.startDate > filters.endDate) return false;
-      if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
+      if (filters.createBy && !item.createBy.startsWith(filters.createBy)) return false;
       // 更多筛选条件（新增）
       if (filters.initialCountMin !== undefined && item.initialCount < filters.initialCountMin) return false;
       if (filters.initialCountMax !== undefined && item.initialCount > filters.initialCountMax) return false;
@@ -177,7 +198,6 @@ export default function SeedlingPage() {
       if (filters.lossRateMax !== undefined && item.lossRate > filters.lossRateMax) return false;
       return true;
     });
-    return result;
   }, [seedlings, filters]);
 
   // 统计卡片数据
@@ -226,6 +246,7 @@ export default function SeedlingPage() {
 
   const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
+      setLoading(true);
       try {
         await seedlingService.deleteSeedlings(ids);
         await refreshData();
@@ -233,20 +254,24 @@ export default function SeedlingPage() {
       } catch (error) {
         console.error('删除失败:', error);
         alert('删除失败，请重试');
+      } finally {
+        setLoading(false);
       }
     }
   };
 
   // 处理结束计划
   const handleEnd = (record: Seedling, endType: 'normal' | 'abnormal') => {
-    if (!record.productionPlanCode) {
+    // 检查是否有关联的生产计划
+    const planCode = record.productionPlanCode;
+    if (!planCode || planCode.trim() === '') {
       alert('该育苗没有关联的生产计划，无法结束');
       return;
     }
 
-    const batch = cropBatchService.getCropBatchByCode(record.productionPlanCode);
+    const batch = cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      alert('未找到关联的生产计划');
+      alert('未找到关联的生产计划 [' + planCode + ']，请检查生产计划是否存在');
       return;
     }
 
@@ -268,7 +293,7 @@ export default function SeedlingPage() {
     const result = cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
-      window.location.reload();
+      refreshData();
     } else {
       alert('结束失败');
     }
@@ -368,7 +393,7 @@ export default function SeedlingPage() {
     ];
 
     // 计算剩余总数
-    const getRemainingCount = (record: any) => record.initialCount - record.lossCount;
+    const getRemainingCount = (record: Seedling) => record.initialCount - record.lossCount;
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -481,6 +506,14 @@ export default function SeedlingPage() {
       />
 
       {/* 数据表格 */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-500">加载中...</span>
+          </div>
+        </div>
+      )}
       <SeedlingTable
         data={filteredData}
         pagination={pagination}
@@ -517,7 +550,7 @@ export default function SeedlingPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSuccess={refreshData}
-        seedSources={seedSourceService.getSeedSources()}
+        seedSources={seedSources}
         cropVarietyOptions={cropVarietyOptions}
         seedlingTypes={seedlingTypes}
         sites={sites}
@@ -529,7 +562,7 @@ export default function SeedlingPage() {
           onClose={() => setEditModalOpen(false)}
           onSuccess={refreshData}
           record={currentRecord}
-          seedSources={seedSourceService.getSeedSources()}
+          seedSources={seedSources}
           cropVarietyOptions={cropVarietyOptions}
           seedlingTypes={seedlingTypes}
           sites={sites}

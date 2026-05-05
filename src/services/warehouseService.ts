@@ -3,7 +3,7 @@
  * 提供仓库的本地存储和API获取功能
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 import { warehouses as defaultWarehouses } from '../data/mockData';
 
 // 仓库数据结构
@@ -60,28 +60,21 @@ export function initWarehouses(): Warehouse[] {
  * 获取所有仓库（API模式优先）
  */
 export async function getWarehouses(): Promise<Warehouse[]> {
-  if (USE_API) {
-    try {
-      const data = await apiClient.get<Warehouse[]>('/basic-data/warehouses');
-      saveWarehousesToStorage(data);
-      return data;
-    } catch (error) {
-      console.error('API获取仓库数据失败，使用本地数据:', error);
-      return getStoredWarehouses();
-    }
+  try {
+    const data = await apiClient.get<Warehouse[]>('/basic-data/warehouses');
+    saveWarehousesToStorage(data);
+    return data;
+  } catch (error) {
+    console.error('API获取仓库数据失败，使用本地数据:', error);
+    return getStoredWarehouses();
   }
-  return getStoredWarehouses();
 }
 
 /**
  * 根据ID获取仓库
  */
 export async function getWarehouseById(id: string): Promise<Warehouse | undefined> {
-  if (USE_API) {
-    const warehouses = await getWarehouses();
-    return warehouses.find(w => w.id === id);
-  }
-  const warehouses = getStoredWarehouses();
+  const warehouses = await getWarehouses();
   return warehouses.find(w => w.id === id);
 }
 
@@ -97,10 +90,8 @@ export async function getWarehouseName(id: string): Promise<string> {
  * 保存仓库数据
  */
 export async function saveWarehouses(warehouses: Warehouse[]): Promise<void> {
-  if (USE_API) {
-    // API模式下通过后端保存
-    await apiClient.post('/basic-data/warehouses', warehouses);
-  }
+  // API模式下通过后端保存
+  await apiClient.post('/basic-data/warehouses', warehouses);
   saveWarehousesToStorage(warehouses);
 }
 

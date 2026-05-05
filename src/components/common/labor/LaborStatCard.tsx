@@ -17,7 +17,7 @@ export interface LaborStatCardProps {
   className?: string
 }
 
-export function LaborStatCard({
+export const LaborStatCard = React.memo<LaborStatCardProps>(({
   title,
   value,
   icon: Icon,
@@ -26,7 +26,7 @@ export function LaborStatCard({
   prefix,
   description,
   className,
-}: LaborStatCardProps) {
+}: LaborStatCardProps) => {
   // 计算趋势方向
   const getTrendDirection = () => {
     if (!trend) return 'neutral'
@@ -98,8 +98,8 @@ export function LaborStatCard({
         </div>
       </CardContent>
     </Card>
-  )
-}
+  );
+});
 
 // 简洁版统计卡片
 export interface LaborStatSimpleCardProps {
@@ -110,13 +110,13 @@ export interface LaborStatSimpleCardProps {
   className?: string
 }
 
-export function LaborStatSimpleCard({
+export const LaborStatSimpleCard = React.memo<LaborStatSimpleCardProps>(({
   label,
   value,
   change,
   changeLabel = '较上期',
   className,
-}: LaborStatSimpleCardProps) {
+}: LaborStatSimpleCardProps) => {
   const isPositive = change && change > 0
   const isNegative = change && change < 0
 
@@ -140,5 +140,5 @@ export function LaborStatSimpleCard({
         </div>
       )}
     </div>
-  )
-}
+  );
+});

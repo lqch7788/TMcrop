@@ -21,6 +21,68 @@ function generateId(prefix: string): string {
 }
 
 /**
+ * 数据库字段映射：snake_case -> camelCase
+ * 用于将后端数据库字段转换为前端期望的格式
+ * 完整支持 CropBatch 类型的所有字段
+ */
+function mapFieldsToCamelCase(item: Record<string, unknown>): Record<string, unknown> {
+  const fieldMap: Record<string, string> = {
+    id: 'id',
+    plan_code: 'batchCode',
+    plan_name: 'batchName',
+    plan_type: 'planType',
+    crop_name: 'cropName',
+    crop_variety: 'variety',
+    greenhouse_name: 'greenhouseName',
+    greenhouse_id: 'greenhouseId',
+    area_name: 'areaName',
+    area_id: 'areaId',
+    planned_quantity: 'plannedQuantity',
+    actual_quantity: 'actualQuantity',
+    planting_date: 'startDate',
+    expected_harvest_date: 'expectedHarvestDate',
+    actual_harvest_date: 'actualHarvestDate',
+    planting_area: 'plantingArea',
+    planting_mode: 'plantingMode',
+    responsible_person: 'responsiblePerson',
+    status: 'status',
+    stage: 'stage',
+    stage_name: 'stageName',
+    target_yield: 'targetYield',
+    actual_yield: 'actualYield',
+    priority: 'priority',
+    remarks: 'remarks',
+    create_by: 'publisher',
+    create_time: 'createTime',
+    update_time: 'updateTime',
+    // 额外字段
+    plan_detail: 'planDetail',
+    location_name: 'locationName',
+    target_quantity: 'targetQuantity',
+    unit: 'unit',
+    supplier_name: 'supplierName',
+    seed_quantity: 'seedQuantity',
+    seedling_site_name: 'seedlingSiteName',
+    target_seedling_count: 'targetSeedlingCount',
+    end_type: 'endType',
+  };
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(item)) {
+    const camelKey = fieldMap[key] || key;
+    result[camelKey] = value;
+  }
+  return result;
+}
+
+/**
+ * 将数组中所有对象进行字段转换
+ */
+function mapArrayToCamelCase(items: Record<string, unknown>[]): Record<string, unknown>[] {
+  return items.map(item => mapFieldsToCamelCase(item));
+}
+
+/**
  * 生成生产计划编码
  */
 function generatePlanCode(type: string): string {
@@ -91,9 +153,12 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
+    // 转换字段格式为camelCase
+    const camelItems = mapArrayToCamelCase(items as Record<string, unknown>[]);
+
     res.json({
       success: true,
-      data: items,
+      data: camelItems,
       meta: { total, page: Number(page), limit: Number(limit) }
     });
   } catch (error) {
@@ -123,7 +188,9 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '生产计划不存在' });
     }
 
-    res.json({ success: true, data: item });
+    // 转换字段格式为camelCase
+    const camelItem = mapFieldsToCamelCase(item);
+    res.json({ success: true, data: camelItem });
   } catch (error) {
     console.error('获取生产计划详情失败:', error);
     res.status(500).json({ success: false, error: '获取生产计划详情失败' });

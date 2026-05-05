@@ -739,10 +739,27 @@ export async function getInventoryStats(filters?: {
 // ============================================
 
 /**
+ * 本地库存聚合类型（用于纯前端模式）
+ * 使用 InventoryStock[] 而非 ProduceInventory[]，避免类型断言
+ */
+interface LocalInventoryAggregation {
+  cropName: string;
+  seed: InventoryStock[];
+  seedling: InventoryStock[];
+  product: InventoryStock[];
+  total: number;
+  totalQuantity: {
+    seed: number;
+    seedling: number;
+    product: number;
+  };
+}
+
+/**
  * 按作物名称聚合查询库存（多形态搜索）- 本地版本
  * 用于纯前端模式（不启动后端时）
  */
-export async function searchInventoryByCropNameLocal(cropName?: string): Promise<CropInventoryAggregation> {
+export async function searchInventoryByCropNameLocal(cropName?: string): Promise<LocalInventoryAggregation> {
   const stocks = await stockRepo.findAll({
     cropName: cropName,
   });
@@ -755,9 +772,9 @@ export async function searchInventoryByCropNameLocal(cropName?: string): Promise
 
   return {
     cropName: cropName || '',
-    seed: grouped.seed as any[],
-    seedling: grouped.seedling as any[],
-    product: grouped.product as any[],
+    seed: grouped.seed,
+    seedling: grouped.seedling,
+    product: grouped.product,
     total: stocks.length,
     totalQuantity: {
       seed: grouped.seed.reduce((sum, s) => sum + s.currentQuantity, 0),
@@ -853,7 +870,9 @@ export async function getInventoryListFromServer(filters?: {
 }
 
 // ============================================
-// 导出 Repository 接口（供依赖注入使用）
+// 导出 Repository 接口（供依赖注入使用，内部实现）
+// 注意：这些导出是内部实现细节，供依赖注入使用
+// 外部代码应使用上面定义的公共 API 函数
 // ============================================
 
 export {

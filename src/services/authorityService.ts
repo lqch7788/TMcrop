@@ -4,7 +4,7 @@
  * 本地模式回退数据
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 import {
   Organization,
   Role,
@@ -113,16 +113,12 @@ export async function getOrganizations(params?: {
   sort?: string;
   order?: 'asc' | 'desc';
 }): Promise<Organization[]> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params?.rows !== undefined) queryParams.rows = String(params.rows);
-    if (params?.id) queryParams.id = params.id;
-    if (params?.sort) queryParams.sort = params.sort;
-    if (params?.order) queryParams.order = params.order;
-    return apiClient.get<Organization[]>('/authority/organizations', queryParams);
-  }
-  // 本地模式回退
-  return getStoredData(STORAGE_KEYS.organizations, DEFAULT_ORGANIZATIONS);
+  const queryParams: Record<string, string> = {};
+  if (params?.rows !== undefined) queryParams.rows = String(params.rows);
+  if (params?.id) queryParams.id = params.id;
+  if (params?.sort) queryParams.sort = params.sort;
+  if (params?.order) queryParams.order = params.order;
+  return apiClient.get<Organization[]>('/authority/organizations', queryParams);
 }
 
 /**
@@ -137,43 +133,7 @@ export async function saveOrganizations(data: {
   updated: Organization[];
   deleted: string[];
 }> {
-  if (USE_API) {
-    return apiClient.post('/authority/organizations', data);
-  }
-  // 本地模式回退
-  const stored = getStoredData(STORAGE_KEYS.organizations, DEFAULT_ORGANIZATIONS);
-  const result = { inserted: [] as Organization[], updated: [] as Organization[], deleted: [] as string[] };
-
-  if (data.inserted) {
-    data.inserted.forEach(org => {
-      const newOrg = { ...org, oid: 'ORG' + Date.now() } as Organization;
-      stored.push(newOrg);
-      result.inserted.push(newOrg);
-    });
-  }
-
-  if (data.updated) {
-    data.updated.forEach(org => {
-      const index = stored.findIndex(o => o.oid === org.oid);
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...org };
-        result.updated.push(stored[index]);
-      }
-    });
-  }
-
-  if (data.deleted) {
-    data.deleted.forEach(oid => {
-      const index = stored.findIndex(o => o.oid === oid);
-      if (index !== -1) {
-        stored.splice(index, 1);
-        result.deleted.push(oid);
-      }
-    });
-  }
-
-  saveStoredData(STORAGE_KEYS.organizations, stored);
-  return result;
+  return apiClient.post('/authority/organizations', data);
 }
 
 // ============================================
@@ -188,19 +148,11 @@ export async function getRoles(params?: {
   sort?: string;
   order?: 'asc' | 'desc';
 }): Promise<Role[]> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params?.orgOid) queryParams.orgOid = params.orgOid;
-    if (params?.sort) queryParams.sort = params.sort;
-    if (params?.order) queryParams.order = params.order;
-    return apiClient.get<Role[]>('/authority/roles', queryParams);
-  }
-  // 本地模式回退
-  let roles = getStoredData(STORAGE_KEYS.roles, DEFAULT_ROLES);
-  if (params?.orgOid) {
-    roles = roles.filter(r => r.orgOid === params.orgOid);
-  }
-  return roles;
+  const queryParams: Record<string, string> = {};
+  if (params?.orgOid) queryParams.orgOid = params.orgOid;
+  if (params?.sort) queryParams.sort = params.sort;
+  if (params?.order) queryParams.order = params.order;
+  return apiClient.get<Role[]>('/authority/roles', queryParams);
 }
 
 /**
@@ -215,43 +167,7 @@ export async function saveRoles(data: {
   updated: Role[];
   deleted: string[];
 }> {
-  if (USE_API) {
-    return apiClient.post('/authority/roles', data);
-  }
-  // 本地模式回退
-  const stored = getStoredData(STORAGE_KEYS.roles, DEFAULT_ROLES);
-  const result = { inserted: [] as Role[], updated: [] as Role[], deleted: [] as string[] };
-
-  if (data.inserted) {
-    data.inserted.forEach(role => {
-      const newRole = { ...role, oid: 'ROLE' + Date.now() } as Role;
-      stored.push(newRole);
-      result.inserted.push(newRole);
-    });
-  }
-
-  if (data.updated) {
-    data.updated.forEach(role => {
-      const index = stored.findIndex(r => r.oid === role.oid);
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...role };
-        result.updated.push(stored[index]);
-      }
-    });
-  }
-
-  if (data.deleted) {
-    data.deleted.forEach(oid => {
-      const index = stored.findIndex(r => r.oid === oid);
-      if (index !== -1) {
-        stored.splice(index, 1);
-        result.deleted.push(oid);
-      }
-    });
-  }
-
-  saveStoredData(STORAGE_KEYS.roles, stored);
-  return result;
+  return apiClient.post('/authority/roles', data);
 }
 
 // ============================================
@@ -265,21 +181,10 @@ export async function getUsers(params?: {
   orgOid?: string;
   status?: string;
 }): Promise<User[]> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params?.orgOid) queryParams.orgOid = params.orgOid;
-    if (params?.status) queryParams.status = params.status;
-    return apiClient.get<User[]>('/authority/users', queryParams);
-  }
-  // 本地模式回退
-  let users = getStoredData(STORAGE_KEYS.users, DEFAULT_USERS);
-  if (params?.orgOid) {
-    users = users.filter(u => u.orgOid === params.orgOid);
-  }
-  if (params?.status) {
-    users = users.filter(u => u.status === params.status);
-  }
-  return users;
+  const queryParams: Record<string, string> = {};
+  if (params?.orgOid) queryParams.orgOid = params.orgOid;
+  if (params?.status) queryParams.status = params.status;
+  return apiClient.get<User[]>('/authority/users', queryParams);
 }
 
 /**
@@ -294,43 +199,7 @@ export async function saveUsers(data: {
   updated: User[];
   deleted: string[];
 }> {
-  if (USE_API) {
-    return apiClient.post('/authority/users', data);
-  }
-  // 本地模式回退
-  const stored = getStoredData(STORAGE_KEYS.users, DEFAULT_USERS);
-  const result = { inserted: [] as User[], updated: [] as User[], deleted: [] as string[] };
-
-  if (data.inserted) {
-    data.inserted.forEach(user => {
-      const newUser = { ...user, oid: 'USER' + Date.now() } as User;
-      stored.push(newUser);
-      result.inserted.push(newUser);
-    });
-  }
-
-  if (data.updated) {
-    data.updated.forEach(user => {
-      const index = stored.findIndex(u => u.oid === user.oid);
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...user };
-        result.updated.push(stored[index]);
-      }
-    });
-  }
-
-  if (data.deleted) {
-    data.deleted.forEach(oid => {
-      const index = stored.findIndex(u => u.oid === oid);
-      if (index !== -1) {
-        stored.splice(index, 1);
-        result.deleted.push(oid);
-      }
-    });
-  }
-
-  saveStoredData(STORAGE_KEYS.users, stored);
-  return result;
+  return apiClient.post('/authority/users', data);
 }
 
 /**
@@ -340,63 +209,14 @@ export async function saveUserRoles(
   userOid: string,
   roleOids: string[]
 ): Promise<{ success: boolean }> {
-  if (USE_API) {
-    return apiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
-  }
-  // 本地模式回退
-  const userRoles = getStoredData<LocalUserRole>('yuanxingtu_user_roles', LOCAL_USER_ROLES);
-  const index = userRoles.findIndex(ur => ur.userOid === userOid);
-  if (index !== -1) {
-    userRoles[index].roleOids = roleOids;
-  } else {
-    userRoles.push({ userOid, roleOids });
-  }
-  saveStoredData('yuanxingtu_user_roles', userRoles);
-  return { success: true };
+  return apiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
 }
 
 /**
  * 获取用户角色
  */
 export async function getUserRoles(userOid: string): Promise<string[]> {
-  if (USE_API) {
-    return apiClient.get<string[]>('/authority/users/' + userOid + '/roles');
-  }
-  // 本地模式回退
-  const userRoles = getStoredData<LocalUserRole>('yuanxingtu_user_roles', LOCAL_USER_ROLES);
-  const userRole = userRoles.find(ur => ur.userOid === userOid);
-  return userRole?.roleOids || [];
-}
-
-// ============================================
-// 工序管理
-// ============================================
-
-/**
- * 获取工序树
- */
-export async function getProcesses(params?: {
-  rows?: number;
-  id?: string;
-  appType?: AppType;
-  sort?: string;
-  order?: 'asc' | 'desc';
-}): Promise<Process[]> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params?.rows !== undefined) queryParams.rows = String(params.rows);
-    if (params?.id) queryParams.id = params.id;
-    if (params?.appType !== undefined) queryParams.appType = String(params.appType);
-    if (params?.sort) queryParams.sort = params.sort;
-    if (params?.order) queryParams.order = params.order;
-    return apiClient.get<Process[]>('/authority/processes', queryParams);
-  }
-  // 本地模式回退
-  let processes = getStoredData(STORAGE_KEYS.processes, DEFAULT_PROCESSES);
-  if (params?.appType !== undefined) {
-    processes = processes.filter(p => p.appType === params.appType);
-  }
-  return processes;
+  return apiClient.get<string[]>('/authority/users/' + userOid + '/roles');;
 }
 
 /**
@@ -411,43 +231,7 @@ export async function saveProcesses(data: {
   updated: Process[];
   deleted: string[];
 }> {
-  if (USE_API) {
-    return apiClient.post('/authority/processes', data);
-  }
-  // 本地模式回退
-  const stored = getStoredData(STORAGE_KEYS.processes, DEFAULT_PROCESSES);
-  const result = { inserted: [] as Process[], updated: [] as Process[], deleted: [] as string[] };
-
-  if (data.inserted) {
-    data.inserted.forEach(proc => {
-      const newProc = { ...proc, oid: 'PROC' + Date.now() } as Process;
-      stored.push(newProc);
-      result.inserted.push(newProc);
-    });
-  }
-
-  if (data.updated) {
-    data.updated.forEach(proc => {
-      const index = stored.findIndex(p => p.oid === proc.oid);
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...proc };
-        result.updated.push(stored[index]);
-      }
-    });
-  }
-
-  if (data.deleted) {
-    data.deleted.forEach(oid => {
-      const index = stored.findIndex(p => p.oid === oid);
-      if (index !== -1) {
-        stored.splice(index, 1);
-        result.deleted.push(oid);
-      }
-    });
-  }
-
-  saveStoredData(STORAGE_KEYS.processes, stored);
-  return result;
+  return apiClient.post('/authority/processes', data);
 }
 
 // ============================================
@@ -461,18 +245,10 @@ export async function getActions(params?: {
   appType?: AppType;
   category?: string;
 }): Promise<Action[]> {
-  if (USE_API) {
-    const queryParams: Record<string, string> = {};
-    if (params?.appType !== undefined) queryParams.appType = String(params.appType);
-    if (params?.category) queryParams.category = params.category;
-    return apiClient.get<Action[]>('/authority/actions', queryParams);
-  }
-  // 本地模式回退
-  let actions = DEFAULT_ACTIONS;
-  if (params?.category) {
-    actions = actions.filter(a => a.category === params.category);
-  }
-  return actions;
+  const queryParams: Record<string, string> = {};
+  if (params?.appType !== undefined) queryParams.appType = String(params.appType);
+  if (params?.category) queryParams.category = params.category;
+  return apiClient.get<Action[]>('/authority/actions', queryParams);
 }
 
 // ============================================
@@ -486,14 +262,10 @@ export async function getRoleAuthority(
   roleOid: string,
   appType: AppType = 0
 ): Promise<RoleAuthorityItem[]> {
-  if (USE_API) {
-    return apiClient.get<RoleAuthorityItem[]>(
-      '/authority/roles/' + roleOid + '/authority',
-      { appType: String(appType) }
-    );
-  }
-  // 本地模式回退 - 返回空权限
-  return [];
+  return apiClient.get<RoleAuthorityItem[]>(
+    '/authority/roles/' + roleOid + '/authority',
+    { appType: String(appType) }
+  );
 }
 
 /**
@@ -507,11 +279,7 @@ export async function saveRoleAuthority(
     value: AuthValue;
   }[]
 ): Promise<{ success: boolean }> {
-  if (USE_API) {
-    return apiClient.post('/authority/roles/' + roleOid + '/authority', { authorities });
-  }
-  // 本地模式回退
-  return { success: true };
+  return apiClient.post('/authority/roles/' + roleOid + '/authority', { authorities });
 }
 
 // ============================================
@@ -524,13 +292,9 @@ export async function saveRoleAuthority(
 export async function getRoleDataAuthority(
   roleOid: string
 ): Promise<RoleDataAuthorityItem[]> {
-  if (USE_API) {
-    return apiClient.get<RoleDataAuthorityItem[]>(
-      '/authority/roles/' + roleOid + '/data-authority'
-    );
-  }
-  // 本地模式回退
-  return [];
+  return apiClient.get<RoleDataAuthorityItem[]>(
+    '/authority/roles/' + roleOid + '/data-authority'
+  );
 }
 
 /**
@@ -541,12 +305,8 @@ export async function saveRoleDataAuthority(
   orgOids: string[],
   isAuthorize: boolean
 ): Promise<{ success: boolean }> {
-  if (USE_API) {
-    return apiClient.post('/authority/roles/' + roleOid + '/data-authority', {
-      orgOids,
-      isAuthorize,
-    });
-  }
-  // 本地模式回退
-  return { success: true };
+  return apiClient.post('/authority/roles/' + roleOid + '/data-authority', {
+    orgOids,
+    isAuthorize,
+  });
 }

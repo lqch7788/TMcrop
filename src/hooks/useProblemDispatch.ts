@@ -171,7 +171,7 @@ export function useProblemDispatch() {
       batchCode: '',
       greenhouseId: problem.greenhouseId,
       greenhouseName: problem.greenhouseName,
-      mode: 'glass' as any,
+      mode: 'glass' as 'glass' | 'solar',
       assigneeId,
       assigneeName,
       assignerId: dispatcherId,
@@ -186,8 +186,8 @@ export function useProblemDispatch() {
       // 保留原始巡查单号（用于追踪问题处理全过程）
       sourceId: problem.sourceId,
       sourceCode: problem.sourceId,
-      // 派发模式标记
-      dispatchMode: 'problem' as any,
+      // 派发模式标记（问题处理模式）
+      dispatchMode: 'problem' as 'farm' | 'tempTask' | 'smart' | 'problem',
     });
 
     // 创建流转记录

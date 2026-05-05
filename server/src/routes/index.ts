@@ -15,6 +15,8 @@ import farmTaskRouter from './farmTask';
 import inspectionRouter from './inspection';
 import problemRouter from './problem';
 import laborRouter from './labor';
+import overtimeRouter from './overtime';
+import leaveRouter from './leave';
 import tempTaskRouter from './tempTask';
 import purchasePlanRouter from './purchasePlan';
 import materialRequestRouter from './materialRequest';
@@ -32,6 +34,7 @@ import summaryRouter from './summary';
 import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -71,6 +74,12 @@ router.use('/problems', problemRouter);
 // 人工记录路由
 router.use('/labor', laborRouter);
 
+// 加班记录路由
+router.use('/overtime', overtimeRouter);
+
+// 请假记录路由
+router.use('/leave', leaveRouter);
+
 // 临时任务路由
 router.use('/temp-tasks', tempTaskRouter);
 
@@ -109,6 +118,9 @@ router.use('/crop-orders', cropOrderRouter);
 
 // 生产计划路由
 router.use('/production-plans', productionPlanRouter);
+
+// 生产计划路由别名（兼容前端 /production/plans 调用）
+router.use('/production/plans', productionPlanRouter);
 
 // 生产汇总统计路由
 router.use('/summary', summaryRouter);

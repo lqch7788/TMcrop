@@ -3,7 +3,7 @@
  * 对接后端 /api/crop-varieties
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 import { CropVariety } from '../types/crop';
 import { CropVarietyOption } from '../types/crop';
 
@@ -25,17 +25,17 @@ export function getVarietyOptions(): CropVarietyOption[] {
 }
 
 /**
- * 将 snake_case 转换为 camelCase
+ * 将 snake_case 转换为 camelCase（用于处理后端返回的原始数据）
  */
-function snakeToCamel(obj: any): any {
+function snakeToCamel(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(snakeToCamel);
+  if (Array.isArray(obj)) return (obj as unknown[]).map(snakeToCamel);
   if (typeof obj !== 'object') return obj;
 
-  const result: any = {};
-  for (const key in obj) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    result[camelKey] = snakeToCamel(obj[key]);
+  const result: Record<string, unknown> = {};
+  for (const key in obj as Record<string, unknown>) {
+    const camelKey = key.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
+    result[camelKey] = snakeToCamel((obj as Record<string, unknown>)[key]);
   }
   return result;
 }
@@ -44,67 +44,78 @@ function snakeToCamel(obj: any): any {
  * 获取所有作物品种
  */
 export async function getAllVarieties(): Promise<CropVariety[]> {
-  if (USE_API) {
-    const data = await apiClient.get<any[]>('/crop-varieties');
-    return data.map(snakeToCamel);
+  try {
+    const data = await apiClient.get<Record<string, unknown>[]>('/crop-varieties');
+    return data.map(item => snakeToCamel(item) as CropVariety);
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.getAllVarieties();
   }
-  // 回退到本地服务
-  return localService.getAllVarieties();
 }
 
 /**
  * 根据ID获取单个品种
  */
 export async function getVarietyById(id: string): Promise<CropVariety | undefined> {
-  if (USE_API) {
+  try {
     const data = await apiClient.get<any>(`/crop-varieties/${id}`);
     return snakeToCamel(data);
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.getVarietyById(id);
   }
-  return localService.getVarietyById(id);
 }
 
 /**
  * 创建品种
  */
 export async function createVariety(data: Partial<CropVariety>): Promise<string> {
-  if (USE_API) {
+  try {
     const result = await apiClient.post<{ id: string }>('/crop-varieties', data);
     return result.id;
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.createVariety(data);
   }
-  return localService.createVariety(data);
 }
 
 /**
  * 更新品种
  */
 export async function updateVariety(id: string, data: Partial<CropVariety>): Promise<string | null> {
-  if (USE_API) {
+  try {
     const result = await apiClient.put<{ id: string }>(`/crop-varieties/${id}`, data);
     return result.id;
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.updateVariety(id, data);
   }
-  return localService.updateVariety(id, data);
 }
 
 /**
  * 删除品种
  */
 export async function deleteVariety(id: string): Promise<boolean> {
-  if (USE_API) {
+  try {
     await apiClient.delete(`/crop-varieties/${id}`);
     return true;
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.deleteVariety(id);
   }
-  return localService.deleteVariety(id);
 }
 
 /**
  * 根据作物名称查找品种
  */
 export async function findByCropName(cropName: string): Promise<CropVariety[]> {
-  if (USE_API) {
+  try {
     const all = await getAllVarieties();
     return all.filter(v => v.varietyName?.includes(cropName) || v.typeName?.includes(cropName));
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.findByCropName(cropName);
   }
-  return localService.findByCropName(cropName);
 }
 
 /**
@@ -112,11 +123,13 @@ export async function findByCropName(cropName: string): Promise<CropVariety[]> {
  * 所有作物必须有编码！品种库中必须存在该编码
  */
 export async function getVarietyByCode(cropCode: string): Promise<CropVariety | undefined> {
-  if (USE_API) {
+  try {
     const all = await getAllVarieties();
     return all.find(v => v.cropCode === cropCode);
+  } catch (error) {
+    console.warn('API 调用失败，降级到 localStorage:', error);
+    return localService.getVarietyByCode(cropCode);
   }
-  return localService.getVarietyByCode(cropCode);
 }
 
 /**

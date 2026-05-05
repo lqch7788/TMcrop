@@ -257,6 +257,10 @@ export function getCategoryChineseName(category: string): string {
   return CATEGORY_CHINESE_NAMES[category] || category;
 }
 
+// 系统默认用户配置键名
+export const DEFAULT_USERNAME_KEY = 'default_username';
+export const DEFAULT_USERNAME_VALUE = '陆启闯';
+
 // 系统配置类型
 export interface SystemConfig {
   id?: string;
@@ -632,6 +636,7 @@ export async function getSystemConfigs(configKey?: string): Promise<SystemConfig
     { id: '4', configKey: 'theme_color', configValue: 'emerald', configType: 'string', description: '系统主题色' },
     { id: '5', configKey: 'page_size', configValue: '10', configType: 'number', description: '列表默认分页大小' },
     { id: '6', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', description: '是否启用系统通知' },
+    { id: '7', configKey: DEFAULT_USERNAME_KEY, configValue: DEFAULT_USERNAME_VALUE, configType: 'string', description: '系统默认用户名' },
   ];
 
   try {

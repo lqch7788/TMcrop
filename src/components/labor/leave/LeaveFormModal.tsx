@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { LeaveFormModalProps, LeaveRecord, LeaveType } from './types';
+import { getWorkerSelectList } from '../../../services/apiWorkerService';
+
+// 员工选择列表状态
+interface StaffOption {
+  id: string;
+  name: string;
+}
 
 /**
  * 请假表单弹窗组件（新建/编辑）
@@ -9,6 +16,7 @@ import type { LeaveFormModalProps, LeaveRecord, LeaveType } from './types';
 export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModalProps) {
   const [formData, setFormData] = useState<Partial<LeaveRecord>>({
     staffName: '',
+    staffId: '',
     leaveType: '事假',
     startDate: '',
     endDate: '',
@@ -16,6 +24,16 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
     reason: '',
     remarks: '',
   });
+  const [staffList, setStaffList] = useState<StaffOption[]>([]);
+
+  // 加载员工列表
+  useEffect(() => {
+    if (open) {
+      getWorkerSelectList().then(list => {
+        setStaffList(list);
+      });
+    }
+  }, [open]);
 
   // 当弹窗打开或 record 变化时，初始化表单数据
   useEffect(() => {
@@ -26,6 +44,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         // 新建时设置默认值
         setFormData({
           staffName: '',
+          staffId: '',
           leaveType: '事假',
           startDate: '',
           endDate: '',
@@ -36,6 +55,14 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
       }
     }
   }, [open, record]);
+
+  // 处理员工选择
+  const handleStaffChange = (staffId: string) => {
+    const staff = staffList.find(s => s.id === staffId);
+    if (staff) {
+      setFormData(prev => ({ ...prev, staffId, staffName: staff.name }));
+    }
+  };
 
   if (!open) return null;
 
@@ -77,13 +104,16 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         <label className="block text-sm font-medium text-gray-700 mb-1">
           员工姓名 <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
-          value={formData.staffName || ''}
-          onChange={(e) => handleChange('staffName', e.target.value)}
+        <select
+          value={formData.staffId || ''}
+          onChange={(e) => handleStaffChange(e.target.value)}
           className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          placeholder="请输入员工姓名"
-        />
+        >
+          <option value="">请选择员工</option>
+          {staffList.map((staff) => (
+            <option key={staff.id} value={staff.id}>{staff.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* 请假类型 */}

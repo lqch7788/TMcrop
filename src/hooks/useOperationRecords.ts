@@ -706,7 +706,7 @@ export function useOperationRecords(): UseOperationRecordsReturn {
         const childRecord: FarmOperationRecordChild = {
           id: newRecord.id,
           recordCode: newRecord.recordCode,
-          operationType: recordData.operationType as any,
+          operationType: recordData.operationType as 'accept' | 'progress' | 'complete' | 'reject' | 'accept_confirm' | 'create',
           operationTypeName: recordData.operationTypeName,
           operatorId: recordData.operatorId,
           operatorName: recordData.operatorName,

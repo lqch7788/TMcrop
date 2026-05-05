@@ -260,8 +260,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
     for (const batch of activeBatches) {
       // 检查超期任务
       const batchTasks = tasks.filter(t =>
-        (t as any).batchId === batch.id ||
-        (t as any).batchCode === batch.batchCode
+        t.batchId === batch.id ||
+        t.batchCode === batch.batchCode
       );
 
       for (const task of batchTasks) {
@@ -278,10 +278,10 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
             plantingArea: batch.plantingArea,
             stage: batch.stage,
             stageName: batch.stageName,
-            taskType: (task as any).taskType || 'irrigation',
-            taskTypeName: (task as any).taskTypeName || '灌溉',
+            taskType: (task as Task).taskType || (task as unknown as Record<string, unknown>).taskType as string || 'irrigation',
+            taskTypeName: (task as Task).taskTypeName || (task as unknown as Record<string, unknown>).taskTypeName as string || '灌溉',
             suggestedDate: targetDate,
-            estimatedHours: (task as any).estimatedHours || 2,
+            estimatedHours: (task as Task).estimatedHours || (task as unknown as Record<string, unknown>).estimatedHours as number || 2,
             estimatedWorkers: 1,
             priority: delayDays > 3 ? 'high' : 'medium',
             urgency: delayDays > 3 ? 'urgent' : 'high',
@@ -380,6 +380,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
 
         if (suggestion) {
           // 创建任务
+          // 注意：createTask 参数类型与 PredictedTask 不完全匹配，这里使用 as any 进行类型断言
+          // 因为 createTask 来自外部 hook，可能接受不同的参数结构
           await createTask({
             title: `${task.greenhouseName}-${task.taskTypeName}`,
             taskType: task.taskType,

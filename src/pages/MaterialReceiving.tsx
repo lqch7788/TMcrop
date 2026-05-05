@@ -57,29 +57,8 @@ import { ExecuteEditModal } from '../components/materialReceiving/modals/Execute
 import { StatDetailModal } from '../components/materialReceiving/modals/StatDetailModal';
 import { StatSearchBar } from '../components/materialReceiving/stats/StatSearchBar';
 
-// 成本核算组件
-import { CostTabSwitcher } from '../components/cost/CostTabSwitcher';
-import { CostFiltersForm, CostFilters } from '../components/cost/CostFiltersForm';
-import { CostKPICards } from '../components/cost/CostKPICards';
-import { CostPieChart } from '../components/cost/CostPieChart';
-import { CostTrendChart } from '../components/cost/CostTrendChart';
-import { CostComparisonTable } from '../components/cost/CostComparisonTable';
-import { CostDetailModal } from '../components/cost/CostDetailModal';
-import {
-  filterCostRecords,
-  calcCostTotal,
-  calcMonthlyCost,
-  aggregateByCategory,
-  aggregateByDepartment,
-  aggregateByBatch,
-  aggregateByMonth,
-  getFilteredMaterialDetails,
-  getBatchMaterialDetails,
-  CategoryAgg,
-  DepartmentAgg,
-  BatchAgg,
-  MonthlyAgg,
-} from '../data/costData';
+// 成本核算Tab组件
+import CostTab from '../components/materialReceiving/tabs/CostTab';
 
 export default function MaterialReceiving() {
   // 领料申请数据状态化（支持 CRUD 操作）
@@ -273,29 +252,6 @@ export default function MaterialReceiving() {
   const [statShowMaterialDetailModal, setStatShowMaterialDetailModal] = useState(false);
   const [statSelectedRecord, setStatSelectedRecord] = useState<any>(null);
   const [statSelectedOrder, setStatSelectedOrder] = useState<any>(null);
-
-  // 成本核算页面状态
-  const [costActiveTab, setCostActiveTab] = useState<'overview' | 'comparison'>('overview');
-  const [costDetailModalOpen, setCostDetailModalOpen] = useState(false);
-  const [costDetailTitle, setCostDetailTitle] = useState('');
-  const [costDetailData, setCostDetailData] = useState<any[]>([]);
-
-  // 成本核算筛选状态
-  const getInitialCostFilters = (): CostFilters => {
-    const now = new Date();
-    return {
-      quickPeriod: 'year',
-      dateRange: {
-        start: `${now.getFullYear()}-01-01`,
-        end: now.toISOString().split('T')[0],
-      },
-      departments: [],
-      categories: [],
-      batches: [],
-      warehouses: [],
-    };
-  };
-  const [costFilters, setCostFilters] = useState<CostFilters>(getInitialCostFilters);
 
   // 成本核算页面快捷筛选
   const handleStatQuickFilter = (period: string) => {
@@ -4061,101 +4017,7 @@ export default function MaterialReceiving() {
 
       {/* 成本核算 Tab内容 */}
       <div className={activeTab === 'cost' ? '' : 'hidden'}>
-        <div className="space-y-4">
-          {/* Tab切换 - 放在时间筛选上方 */}
-          <CostTabSwitcher activeTab={costActiveTab} onTabChange={setCostActiveTab} />
-
-          {/* 筛选表单 */}
-          <CostFiltersForm filters={costFilters} onChange={setCostFilters} />
-
-          {/* Tab 1: 成本概览 */}
-          {costActiveTab === 'overview' && (
-            <div className="space-y-4">
-              {/* 动态计算KPI */}
-              {(() => {
-                const filteredRecords = filterCostRecords(costFilters);
-                const totalCost = calcCostTotal(filteredRecords);
-                const monthlyCost = calcMonthlyCost(filteredRecords);
-                const batchData = aggregateByBatch(filteredRecords);
-                const avgBatchCost = batchData.length > 0 ? totalCost / batchData.length : 0;
-                const costDiffRate = -2.3; // 简化处理
-                return (
-                  <CostKPICards
-                    totalCost={totalCost}
-                    monthlyCost={monthlyCost}
-                    avgBatchCost={avgBatchCost}
-                    costDiffRate={costDiffRate}
-                  />
-                );
-              })()}
-
-              <div className="grid grid-cols-3 gap-4">
-                {/* 成本构成饼图 */}
-                <div className="col-span-1">
-                  {(() => {
-                    const filteredRecords = filterCostRecords(costFilters);
-                    const categoryData = aggregateByCategory(filteredRecords);
-                    const pieData = categoryData.map(cat => ({
-                      name: cat.category,
-                      value: cat.totalAmount,
-                      percentage: cat.percentage,
-                      solid: '#10B981',
-                    }));
-                    return <CostPieChart data={pieData} />;
-                  })()}
-                </div>
-
-                {/* 成本趋势图 */}
-                <div className="col-span-2">
-                  {(() => {
-                    const filteredRecords = filterCostRecords(costFilters);
-                    const monthData = aggregateByMonth(filteredRecords);
-                    const trendData = monthData.map(m => ({
-                      month: m.month,
-                      totalCost: m.totalAmount,
-                    }));
-                    return <CostTrendChart data={trendData} />;
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tab 2: 分类对比 */}
-          {costActiveTab === 'comparison' && (
-            <div className="space-y-4">
-              {(() => {
-                const filteredRecords = filterCostRecords(costFilters);
-                const categoryData = aggregateByCategory(filteredRecords);
-                const deptData = aggregateByDepartment(filteredRecords);
-                const batchData = aggregateByBatch(filteredRecords);
-                const batchMaterialDetails = getBatchMaterialDetails(filteredRecords);
-                return (
-                  <CostComparisonTable
-                    categoryData={categoryData}
-                    departmentData={deptData}
-                    batchData={batchData}
-                    batchMaterialDetails={batchMaterialDetails}
-                    onViewDetail={(dimension, value) => {
-                      const details = getFilteredMaterialDetails(filteredRecords, dimension as 'category' | 'department' | 'batch', value);
-                      setCostDetailTitle(`${value} 明细`);
-                      setCostDetailData(details);
-                      setCostDetailModalOpen(true);
-                    }}
-                  />
-                );
-              })()}
-            </div>
-          )}
-        </div>
-
-        {/* 成本明细弹窗 */}
-        <CostDetailModal
-          isOpen={costDetailModalOpen}
-          onClose={() => setCostDetailModalOpen(false)}
-          title={costDetailTitle}
-          data={costDetailData}
-        />
+        <CostTab />
       </div>
       </div>
     </div>

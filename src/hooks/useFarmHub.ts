@@ -542,7 +542,7 @@ export function useFarmHub(): UseFarmHubReturn {
     if (taskRecordsData) {
       try {
         const taskRecords = JSON.parse(taskRecordsData);
-        taskRecords.slice(0, 20).forEach((record: any) => {
+        taskRecords.slice(0, 20).forEach((record: { id?: string; actionTime?: string; createdAt?: string; operatorName?: string; action?: string; taskCode?: string; taskTitle?: string }) => {
           records.push({
             id: record.id || `task-${Date.now()}-${Math.random()}`,
             timestamp: record.actionTime || record.createdAt,

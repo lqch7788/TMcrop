@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { OvertimeFormModalProps, OvertimeType, OvertimeFormData } from './types';
+import { getWorkerSelectList } from '../../../services/apiWorkerService';
 
-// 模拟员工列表
-const MOCK_STAFF = [
-  { id: 'S001', name: '郭靖' },
-  { id: 'S002', name: '杨过' },
-  { id: 'S003', name: '张无忌' },
-  { id: 'S004', name: '令狐冲' },
-  { id: 'S005', name: '段誉' },
-  { id: 'S006', name: '黄蓉' },
-  { id: 'S007', name: '陈家洛' },
-  { id: 'S008', name: '任盈盈' },
-];
+// 员工选择列表状态
+interface StaffOption {
+  id: string;
+  name: string;
+}
 
 const overtimeTypes: OvertimeType[] = ['普通加班', '周末加班', '节假日加班'];
 
@@ -28,6 +23,16 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
     type: '普通加班',
     reason: '',
   });
+  const [staffList, setStaffList] = useState<StaffOption[]>([]);
+
+  // 加载员工列表
+  useEffect(() => {
+    if (open) {
+      getWorkerSelectList().then(list => {
+        setStaffList(list);
+      });
+    }
+  }, [open]);
 
   // 编辑时填充数据
   useEffect(() => {
@@ -54,7 +59,7 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
 
   // 处理员工选择
   const handleStaffChange = (staffId: string) => {
-    const staff = MOCK_STAFF.find((s) => s.id === staffId);
+    const staff = staffList.find((s) => s.id === staffId);
     if (staff) {
       setFormData({ ...formData, staffId, staffName: staff.name });
     }
@@ -84,7 +89,7 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           <option value="">请选择员工</option>
-          {MOCK_STAFF.map((staff) => (
+          {staffList.map((staff) => (
             <option key={staff.id} value={staff.id}>{staff.name}</option>
           ))}
         </select>

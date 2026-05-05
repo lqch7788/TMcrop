@@ -256,7 +256,7 @@ export function AddModal({
       pictures: pictures,
       printCount: 0,
       remarks: formData.remarks,
-      createBy: '当前用户',
+      createBy: localStorage.getItem('username') || '未知用户',
       planType: formData.planType,
       targetSurvivalRate: formData.targetSurvivalRate,
       targetSurvivalCount: targetSurvivalCount,
@@ -399,7 +399,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
   };
 
   // 处理作物品种选择
-  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
+  const handleCropCodeChange = (cropCode: string, varietyInfo: unknown) => {
     setFormData({
       ...formData,
       selectedCropCode: cropCode,

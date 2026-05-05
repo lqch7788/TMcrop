@@ -11,9 +11,11 @@
  * 6. estimateCost - 成本预估
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { CropBatch } from '../types';
 import { useLocalStorage } from './useLocalStorage';
+import { COST_CONFIG } from '../data/costConfig';
+import { CROP_STAGE_TASK_CONFIG, DEFAULT_TASK_CONFIG } from '../data/cropStageTaskConfig';
 
 // ============================================
 // 预测任务类型定义
@@ -130,98 +132,6 @@ export interface MonthlyPlan {
   generatedBy: string;
   planningHorizon: 'monthly';
 }
-
-// ============================================
-// 生长阶段任务配置
-// ============================================
-const CROP_STAGE_TASK_CONFIG: Record<string, Record<string, { taskType: string; taskTypeName: string; intervalDays: number; baseHours: number; baseWorkers: number }[]>> = {
-  '番茄': {
-    'seedling': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 7, baseHours: 2, baseWorkers: 1 },
-    ],
-    'vegetative': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2.5, baseWorkers: 2 },
-      { taskType: 'pruning', taskTypeName: '修剪', intervalDays: 7, baseHours: 3, baseWorkers: 2 },
-      { taskType: 'weeding', taskTypeName: '除草', intervalDays: 10, baseHours: 2, baseWorkers: 1 },
-    ],
-    'flowering': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2.5, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-    ],
-    'fruiting': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2.5, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 2, baseHours: 4, baseWorkers: 3 },
-    ],
-    'harvest': [
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 1, baseHours: 5, baseWorkers: 4 },
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-    ],
-  },
-  '黄瓜': {
-    'seedling': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 7, baseHours: 2, baseWorkers: 1 },
-    ],
-    'vegetative': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'pruning', taskTypeName: '修剪', intervalDays: 7, baseHours: 2.5, baseWorkers: 2 },
-    ],
-    'flowering': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-    ],
-    'fruiting': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 1, baseHours: 1.5, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 4, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 1, baseHours: 4, baseWorkers: 3 },
-    ],
-    'harvest': [
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 1, baseHours: 5, baseWorkers: 4 },
-    ],
-  },
-  '辣椒': {
-    'seedling': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 7, baseHours: 2, baseWorkers: 1 },
-    ],
-    'vegetative': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'pruning', taskTypeName: '修剪', intervalDays: 10, baseHours: 2, baseWorkers: 1 },
-    ],
-    'flowering': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-    ],
-    'fruiting': [
-      { taskType: 'irrigation', taskTypeName: '灌溉', intervalDays: 2, baseHours: 1, baseWorkers: 1 },
-      { taskType: 'fertilization', taskTypeName: '施肥', intervalDays: 5, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'plant_protection', taskTypeName: '植保', intervalDays: 7, baseHours: 2, baseWorkers: 2 },
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 2, baseHours: 3.5, baseWorkers: 3 },
-    ],
-    'harvest': [
-      { taskType: 'harvest', taskTypeName: '采收', intervalDays: 1, baseHours: 4, baseWorkers: 3 },
-    ],
-  },
-};
-
-// 默认配置（当作物没有特定配置时使用）
-const DEFAULT_TASK_CONFIG = {
-  taskType: 'irrigation',
-  taskTypeName: '灌溉',
-  intervalDays: 2,
-  baseHours: 1.5,
-  baseWorkers: 1,
-};
 
 // ============================================
 // 工具函数
@@ -853,11 +763,11 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
     // 物资成本
     const materialCost = materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0);
 
-    // 工具成本（按物资成本的10%估算磨损）
-    const toolCost = materialCost * 0.1;
+    // 工具成本（按物资成本的比例估算磨损）
+    const toolCost = materialCost * COST_CONFIG.TOOL_COST_RATIO;
 
-    // 人工成本（按每小时15元计算）
-    const laborCost = tasks.reduce((sum, t) => sum + t.estimatedHours * 15, 0);
+    // 人工成本（按配置的人工费率计算）
+    const laborCost = tasks.reduce((sum, t) => sum + t.estimatedHours * COST_CONFIG.LABOR_RATE_PER_HOUR, 0);
 
     return {
       materialCost: Math.round(materialCost * 100) / 100,

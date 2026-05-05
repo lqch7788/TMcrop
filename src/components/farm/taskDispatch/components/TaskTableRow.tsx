@@ -40,7 +40,7 @@ interface TaskTableRowProps {
   ) => void;
 }
 
-export function TaskTableRow({
+export const TaskTableRow = React.memo<TaskTableRowProps>(({
   task,
   index,
   showCheckbox,
@@ -60,7 +60,7 @@ export function TaskTableRow({
   remindProps,
   canRemind,
   sendReminder,
-}: TaskTableRowProps) {
+}: TaskTableRowProps) => {
   const statusInfo = STATUS_MAP[task.status] || { label: task.status, bg: 'bg-gray-100', color: 'text-gray-600' };
 
   return (
@@ -302,4 +302,4 @@ export function TaskTableRow({
       </td>
     </tr>
   );
-}
+});

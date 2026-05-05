@@ -84,7 +84,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   errors,
 }) => {
   // 获取当前登录用户
-  const currentOperator = getCurrentUsername() || '未知用户';
+  const currentOperator = getCurrentUsername() || '陆启闯';
 
   // 获取数据字典（品质等级、采收类型等）
   const { getDictItems } = useDictionaries();

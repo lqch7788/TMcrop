@@ -3,7 +3,7 @@
  * 对接后端 /api/summary 和 /api/problems/daily-summary
  */
 
-import { apiClient, USE_API } from './apiClient';
+import { apiClient } from './apiClient';
 
 // ============================================
 // 类型定义
@@ -169,18 +169,15 @@ export async function getBatchStats(filters?: {
   start_date?: string;
   end_date?: string;
 }): Promise<BatchStatsItem[]> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.crop_name) params.crop_name = filters.crop_name;
-      if (filters.status) params.status = filters.status;
-      if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-    }
-    return apiClient.get<BatchStatsItem[]>('/summary/batch-stats', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.crop_name) params.crop_name = filters.crop_name;
+    if (filters.status) params.status = filters.status;
+    if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<BatchStatsItem[]>('/summary/batch-stats', params);
 }
 
 // ============================================
@@ -198,18 +195,15 @@ export async function getYieldStats(filters?: {
   crop_name?: string;
   greenhouse_name?: string;
 }): Promise<YieldStatsItem[]> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      if (filters.group_by) params.group_by = filters.group_by;
-      if (filters.crop_name) params.crop_name = filters.crop_name;
-      if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
-    }
-    return apiClient.get<YieldStatsItem[]>('/summary/yield-stats', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
+    if (filters.group_by) params.group_by = filters.group_by;
+    if (filters.crop_name) params.crop_name = filters.crop_name;
+    if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<YieldStatsItem[]>('/summary/yield-stats', params);
 }
 
 // ============================================
@@ -233,17 +227,14 @@ export async function getCostStats(filters?: {
     avg_hourly_rate: number;
   };
 }> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      if (filters.group_by) params.group_by = filters.group_by;
-      if (filters.batch_code) params.batch_code = filters.batch_code;
-    }
-    return apiClient.get('/summary/cost-stats', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
+    if (filters.group_by) params.group_by = filters.group_by;
+    if (filters.batch_code) params.batch_code = filters.batch_code;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get('/summary/cost-stats', params);
 }
 
 // ============================================
@@ -264,18 +255,15 @@ export async function getLaborStats(filters?: {
   details: LaborStatsItem[];
   summary: LaborStatsSummary;
 }> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      if (filters.group_by) params.group_by = filters.group_by;
-      if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
-      if (filters.worker_name) params.worker_name = filters.worker_name;
-    }
-    return apiClient.get('/summary/labor-stats', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
+    if (filters.group_by) params.group_by = filters.group_by;
+    if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
+    if (filters.worker_name) params.worker_name = filters.worker_name;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get('/summary/labor-stats', params);
 }
 
 // ============================================
@@ -292,17 +280,14 @@ export async function getProblemDailySummary(filters?: {
   greenhouse_name?: string;
   group_by?: 'date' | 'greenhouse' | 'status' | 'priority';
 }): Promise<ProblemDailyItem[]> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
-      if (filters.group_by) params.group_by = filters.group_by;
-    }
-    return apiClient.get<ProblemDailyItem[]>('/problems/daily-summary', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
+    if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
+    if (filters.group_by) params.group_by = filters.group_by;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<ProblemDailyItem[]>('/problems/daily-summary', params);
 }
 
 /**
@@ -313,15 +298,12 @@ export async function getProblemSummaryOverview(filters?: {
   start_date?: string;
   end_date?: string;
 }): Promise<ProblemSummaryOverview> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-    }
-    return apiClient.get<ProblemSummaryOverview>('/problems/summary-overview', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<ProblemSummaryOverview>('/problems/summary-overview', params);
 }
 
 // ============================================
@@ -336,15 +318,12 @@ export async function getProductionOverview(filters?: {
   start_date?: string;
   end_date?: string;
 }): Promise<ProductionOverview> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-    }
-    return apiClient.get<ProductionOverview>('/summary/overview', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<ProductionOverview>('/summary/overview', params);
 }
 
 // ============================================
@@ -359,15 +338,12 @@ export async function getProductionIndicators(filters?: {
   start_date?: string;
   end_date?: string;
 }): Promise<ProductionIndicators> {
-  if (USE_API) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-    }
-    return apiClient.get<ProductionIndicators>('/summary/indicators', params);
+  const params: Record<string, string> = {};
+  if (filters) {
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
   }
-  throw new Error('本地服务模式未实现');
+  return apiClient.get<ProductionIndicators>('/summary/indicators', params);
 }
 
 // ============================================
