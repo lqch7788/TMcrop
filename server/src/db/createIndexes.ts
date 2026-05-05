@@ -232,24 +232,40 @@ export function createIndexes() {
 // 导出索引信息查询函数
 export function getIndexes() {
   const db = getDatabase();
-  const indexes = db.prepare(`
+  const result = db.exec(`
     SELECT name, tbl_name, sql
     FROM sqlite_master
     WHERE type = 'index'
     AND sql IS NOT NULL
     ORDER BY tbl_name, name
-  `).all();
-  return indexes;
+  `);
+  if (result.length === 0) return [];
+  const { columns, values } = result[0];
+  return values.map(row => {
+    const obj: Record<string, unknown> = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
 }
 
 // 导出索引统计函数
 export function analyzeIndexes() {
   const db = getDatabase();
   db.run('ANALYZE');
-  const stats = db.prepare(`
+  const result = db.exec(`
     SELECT name, tbl_name
     FROM sqlite_master
     WHERE type = 'table'
-  `).all();
-  return stats;
+  `);
+  if (result.length === 0) return [];
+  const { columns, values } = result[0];
+  return values.map(row => {
+    const obj: Record<string, unknown> = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
 }

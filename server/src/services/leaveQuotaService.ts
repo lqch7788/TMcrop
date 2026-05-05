@@ -18,10 +18,10 @@ export function deductLeaveQuota(db: any, leaveRecord: Record<string, unknown>):
     }
 
     const year = new Date().getFullYear();
-    const leaveCategory = normalizeLeaveCategory(leave_type);
+    const leaveCategory = normalizeLeaveCategory(String(leave_type));
 
     const stmt = db.prepare('SELECT * FROM leave_quotas WHERE worker_id = ? AND year = ? AND leave_category = ?');
-    stmt.bind([worker_id, year, leaveCategory]);
+    stmt.bind([String(worker_id), Number(year), String(leaveCategory)]);
     const quota = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
 
@@ -64,7 +64,7 @@ export function deductOvertimeQuota(db: any, overtimeRecord: Record<string, unkn
     const leaveCategory = 'overtime';
 
     const stmt = db.prepare('SELECT * FROM leave_quotas WHERE worker_id = ? AND year = ? AND leave_category = ?');
-    stmt.bind([worker_id, year, leaveCategory]);
+    stmt.bind([String(worker_id), Number(year), String(leaveCategory)]);
     const quota = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
 
@@ -166,10 +166,10 @@ export function releaseLeaveQuota(db: any, leaveRecord: Record<string, unknown>)
     }
 
     const year = new Date().getFullYear();
-    const leaveCategory = normalizeLeaveCategory(leave_type);
+    const leaveCategory = normalizeLeaveCategory(String(leave_type));
 
     const stmt = db.prepare('SELECT * FROM leave_quotas WHERE worker_id = ? AND year = ? AND leave_category = ?');
-    stmt.bind([worker_id, year, leaveCategory]);
+    stmt.bind([String(worker_id), Number(year), String(leaveCategory)]);
     const quota = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
 
@@ -213,10 +213,10 @@ export function freezeLeaveQuota(db: any, leaveRecord: Record<string, unknown>):
     }
 
     const year = new Date().getFullYear();
-    const leaveCategory = normalizeLeaveCategory(leave_type);
+    const leaveCategory = normalizeLeaveCategory(String(leave_type));
 
     const stmt = db.prepare('SELECT * FROM leave_quotas WHERE worker_id = ? AND year = ? AND leave_category = ?');
-    stmt.bind([worker_id, year, leaveCategory]);
+    stmt.bind([String(worker_id), Number(year), String(leaveCategory)]);
     const quota = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
 

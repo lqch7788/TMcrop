@@ -3,7 +3,7 @@
  * 将备份数据恢复到新数据库
  */
 
-import initSqlJs, { Database } from 'sql.js';
+import initSqlJs, { Database, SqlValue } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -53,7 +53,7 @@ async function restoreData() {
 
     for (const row of rows as Record<string, unknown>[]) {
       const columns = Object.keys(row);
-      const values = Object.values(row);
+      const values = Object.values(row) as SqlValue[];
       const placeholders = columns.map(() => '?').join(', ');
 
       try {

@@ -17,7 +17,7 @@ function seedCropVarieties() {
 
   // 检查是否已有数据
   const existing = db.exec('SELECT COUNT(*) FROM crop_varieties');
-  const count = existing[0]?.values[0]?.[0] || 0;
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
 
   if (count > 0) {
     console.log(`作物品种数据已存在 (${count} 条)，跳过导入`);
@@ -277,7 +277,7 @@ function seedSeedSources() {
 
   // 检查是否已有数据
   const existing = db.exec('SELECT COUNT(*) FROM seed_sources');
-  const count = existing[0]?.values[0]?.[0] || 0;
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
 
   if (count > 0) {
     console.log(`种源数据已存在 (${count} 条)，跳过导入`);

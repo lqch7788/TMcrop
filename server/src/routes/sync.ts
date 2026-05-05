@@ -31,7 +31,7 @@ router.post('/device', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
@@ -59,7 +59,7 @@ router.get('/status', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
@@ -84,7 +84,7 @@ router.post('/pull', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
@@ -116,7 +116,7 @@ router.post('/push', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
@@ -137,7 +137,7 @@ router.post('/full', (req, res) => {
     }
 
     // 先推送变更
-    let pushResult = { success: true, results: [] };
+    let pushResult: { success: boolean; results: unknown[] } = { success: true, results: [] };
     if (Array.isArray(changes) && changes.length > 0) {
       pushResult = syncService.submitChanges(deviceId, changes);
     }
@@ -156,7 +156,7 @@ router.post('/full', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
@@ -184,7 +184,7 @@ router.get('/devices', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });

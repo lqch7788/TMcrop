@@ -96,6 +96,7 @@ router.post('/', (req: Request, res: Response) => {
       sub_variety1_code,
       sub_variety1_name,
       detail_variety_code,
+      detail_variety_name = '',
       status = 'active'
     } = req.body;
 
