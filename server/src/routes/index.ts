@@ -24,6 +24,7 @@ import authorityRouter from './authority';
 import notificationRouter from './notification';
 import approvalWorkflowRouter from './approvalWorkflow';
 import approvalRouter from './approval';
+import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
@@ -94,6 +95,9 @@ router.use('/approval-workflows', approvalWorkflowRouter);
 
 // 审批单路由
 router.use('/approvals', approvalRouter);
+
+// 审批联动路由
+router.use('/approval-linkage', approvalLinkageRouter);
 
 // 操作日志路由
 router.use('/operation-logs', operationLogRouter);
