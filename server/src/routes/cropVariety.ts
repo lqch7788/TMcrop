@@ -9,28 +9,38 @@ const router = Router();
 
 /**
  * 获取所有作物品种
+ * 支持 keyword 参数搜索
  */
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const results = db.exec('SELECT * FROM crop_varieties ORDER BY crop_code');
+    const { keyword } = req.query;
 
-    if (results.length === 0) {
-      return res.json({
-        success: true,
-        data: [],
-        meta: { total: 0 }
-      });
+    let sql = 'SELECT * FROM crop_varieties WHERE 1=1';
+    const params: string[] = [];
+
+    if (keyword) {
+      sql += ' AND (variety_name LIKE ? OR sub_variety1_name LIKE ? OR detail_variety_name LIKE ? OR crop_code LIKE ?)';
+      const kw = `%${keyword}%`;
+      // Use separate parameter entries for each LIKE clause to avoid sql.js binding issues
+      params.push(kw);
+      params.push(kw);
+      params.push(kw);
+      params.push(kw);
     }
 
-    const { columns, values } = results[0];
-    const varieties = values.map((row: any[]) => {
-      const obj: any = {};
-      columns.forEach((col: string, i: number) => {
-        obj[col] = row[i];
-      });
-      return obj;
-    });
+    sql += ' ORDER BY crop_code';
+
+    const stmt = db.prepare(sql);
+    if (params.length > 0) {
+      stmt.bind(params);
+    }
+
+    const varieties: Record<string, unknown>[] = [];
+    while (stmt.step()) {
+      varieties.push(stmt.getAsObject());
+    }
+    stmt.free();
 
     res.json({
       success: true,
