@@ -251,6 +251,12 @@ export interface BusinessLink {
   announcementContent?: string;
   publishDate?: string;
 
+  // ========== 技术方案相关字段 ==========
+  solutionTitle?: string;
+  plantingMode?: string;
+  stage?: string;
+  version?: string;
+
   // ========== 通用字段 ==========
   remarks?: string;
   attachments?: string[];
