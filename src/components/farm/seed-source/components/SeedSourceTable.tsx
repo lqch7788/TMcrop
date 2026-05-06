@@ -88,14 +88,14 @@ export function SeedSourceTable({
       const varieties = await cropVarietyService.getAllVarieties();
       const cache = new Map<string, CropVariety>();
       varieties.forEach(v => {
-        // 缓存最细分品种（sub_variety1_name 优先）
-        const key = v.sub_variety1_name || v.variety_name;
+        // 缓存最细分品种（subVariety1Name 优先）
+        const key = v.subVariety1Name || v.varietyName;
         if (key && !cache.has(key)) {
           cache.set(key, v);
         }
-        // 也按 variety_name 缓存
-        if (v.variety_name && !cache.has(v.variety_name)) {
-          cache.set(v.variety_name, v);
+        // 也按 varietyName 缓存
+        if (v.varietyName && !cache.has(v.varietyName)) {
+          cache.set(v.varietyName, v);
         }
       });
       setVarietyCache(cache);
@@ -108,24 +108,24 @@ export function SeedSourceTable({
     const variety = varietyCache.get(varietyName);
     if (!variety) return varietyName || '';
     const parts: string[] = [];
-    if (variety.category_name) parts.push(variety.category_name);
-    if (variety.type_name) parts.push(variety.type_name);
-    if (variety.variety_name) parts.push(variety.variety_name);
-    if (variety.sub_variety1_name) parts.push(variety.sub_variety1_name);
+    if (variety.categoryName) parts.push(variety.categoryName);
+    if (variety.typeName) parts.push(variety.typeName);
+    if (variety.varietyName) parts.push(variety.varietyName);
+    if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
     return parts.join('-');
   };
 
   // 根据品种名称获取标准作物编码
   const getStandardCropCode = (varietyName: string): string => {
     const variety = varietyCache.get(varietyName);
-    return variety?.crop_code || '';
+    return variety?.cropCode || '';
   };
 
   // 根据品种名称获取作物品种（最细分）
   const getCropVarietyName = (varietyName: string): string => {
     const variety = varietyCache.get(varietyName);
     if (!variety) return varietyName || '';
-    return variety.sub_variety1_name || variety.variety_name || '';
+    return variety.subVariety1Name || variety.varietyName || '';
   };
 
   // 计算分页
@@ -156,17 +156,20 @@ export function SeedSourceTable({
     [SourceType.OTHER]: '其他'
   };
 
-  // 来源途径映射 - V3.0扩展至9项
+  // 来源途径映射 - 与数据库字典保持一致
   const sourceOriginMap: Record<string, string> = {
     'internal_seed': '内部种源',
+    'self_produced': '自产自繁',
+    'commissioned': '委托培育',
     'external_purchase': '外部采购',
+    'gift': '政府/机构赠送',
     'tissue_culture': '组培苗',
     'grafting': '嫁接苗',
     'seedling_split': '分株繁殖',
     'cutting': '扦插繁殖',
-    'direct_seedling': '直接育苗',
-    'direct_planting': '直接种植',
-    'external_harvest': '外购成品入库',
+    'direct_seedling': '直播育苗',
+    'direct_planting': '直接定植',
+    'external_harvest': '外部采收',
     'other': '其他'
   };
 

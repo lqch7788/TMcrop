@@ -564,7 +564,7 @@ router.get('/dictionary-categories', (req, res) => {
     const db = getDatabase();
     const result = db.exec(`
       SELECT id, code, name, module, description, sort_order, status, created_at
-      FROM sys_dictionary_categories
+      FROM dictionary_categories
       WHERE status = 'active'
       ORDER BY sort_order
     `);
