@@ -6,6 +6,7 @@ import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
 import { useGreenhouses } from '../common/settings';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
@@ -22,6 +23,7 @@ import {
 
 export default function ProductionPage() {
   const { greenhouses } = useGreenhouses();
+  const { refreshApprovals } = useApproval();
 
   // 权限控制 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -40,42 +42,72 @@ export default function ProductionPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // 从 API 加载生产计划数据
-  useEffect(() => {
-    const loadProductionData = async () => {
-      setIsLoading(true);
-      try {
-        if (USE_API) {
-          // 尝试从 API 获取生产计划数据
+  const loadProductionData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (USE_API) {
+        // 尝试从 API 获取生产计划数据
+        const apiData = await apiClient.get<CropBatch[]>('/production/plans');
+        if (apiData && apiData.length > 0) {
+          setBatches(apiData);
+        } else {
+          setBatches(cropBatches);
+        }
+      } else {
+        // 非 API 模式，检查是否后端已实现
+        try {
           const apiData = await apiClient.get<CropBatch[]>('/production/plans');
           if (apiData && apiData.length > 0) {
             setBatches(apiData);
           } else {
             setBatches(cropBatches);
           }
-        } else {
-          // 非 API 模式，检查是否后端已实现
-          try {
-            const apiData = await apiClient.get<CropBatch[]>('/production/plans');
-            if (apiData && apiData.length > 0) {
-              setBatches(apiData);
-            } else {
-              setBatches(cropBatches);
-            }
-          } catch {
-            // API 不可用，使用 mock 数据
-            setBatches(cropBatches);
-          }
+        } catch {
+          // API 不可用，使用 mock 数据
+          setBatches(cropBatches);
         }
-      } catch (error) {
-        console.error('加载生产计划数据失败，使用 mock 数据:', error);
-        setBatches(cropBatches);
-      } finally {
-        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('加载生产计划数据失败，使用 mock 数据:', error);
+      setBatches(cropBatches);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    loadProductionData();
+  }, [loadProductionData]);
+
+  // 页面可见性变化时自动刷新数据（从审批中心返回时自动更新）
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadProductionData();
       }
     };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadProductionData]);
 
-    loadProductionData();
-  }, []);
+  // 模态框打开时初始化表单默认值
+  useEffect(() => {
+    if (showCreateModal) {
+      // 获取第一个活跃的温室、默认种植模式、第一个负责人
+      const activeGreenhouses = greenhouses.filter(g => g.status === 'active');
+      const firstGreenhouseId = activeGreenhouses[0]?.id || '';
+      const defaultMode = 'open_field'; // 露天栽培
+      const firstResponsiblePerson = '郭靖'; // 默认负责人
+
+      setFormData(prev => ({
+        ...prev,
+        greenhouseId: firstGreenhouseId,
+        plantingMode: defaultMode,
+        responsiblePerson: firstResponsiblePerson,
+      }));
+    }
+  }, [showCreateModal, greenhouses]);
 
   // Search filters
   const [batchCodeSearch, setBatchCodeSearch] = useState('');
@@ -111,7 +143,6 @@ export default function ProductionPage() {
     plantingMode: '',
     responsiblePerson: '',
     publisher: localStorage.getItem('username') || '陆启闯',
-    batchStatus: 'draft' as const,
     description: '',
     planDetail: ''
   }));
@@ -163,39 +194,51 @@ export default function ProductionPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 提交处理 - 调用后端 API 创建生产计划
-  const handleSubmit = async () => {
+  // 存为草稿
+  const handleSaveDraft = async () => {
     if (!validateForm()) return;
 
     const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
     const crop = cropTypes.find(c => c.name === formData.cropName);
     const today = new Date().toISOString().slice(0, 10);
 
-    // 构造符合后端期望的字段格式
+    // 构造符合后端期望的字段格式 (camelCase)
     const apiData = {
-      id: `B${String(batches.length + 1).padStart(3, '0')}`,
-      plan_code: formData.batchCode,
-      plan_name: formData.batchCode, // 后端 plan_name 使用 batchCode
-      plan_type: formData.planType,
-      crop_name: formData.cropName,
-      crop_variety: formData.variety,
-      greenhouse_id: formData.greenhouseId,
-      greenhouse_name: greenhouse?.name || '',
-      area_name: greenhouse?.name || '',
-      planting_area: parseInt(formData.plantingArea) || 0,
-      planting_mode: formData.plantingMode,
-      responsible_person: formData.responsiblePerson,
-      planting_date: formData.startDate,
-      expected_harvest_date: formData.expectedHarvestDate,
-      target_yield: parseInt(formData.targetYield) || 0,
-      actual_yield: 0,
-      status: formData.batchStatus === 'published' ? 'published' : 'draft',
+      id: `PP${Date.now()}`,
+      batchCode: formData.batchCode,
+      batchName: formData.batchCode,
+      planType: formData.planType,
+      cropName: formData.cropName,
+      variety: formData.variety,
+      greenhouseId: formData.greenhouseId,
+      greenhouseName: greenhouse?.name || '',
+      areaName: greenhouse?.name || '',
+      areaId: '',
+      targetQuantity: parseInt(formData.targetYield) || 0,
+      targetYield: parseInt(formData.targetYield) || 0,
+      actualYield: 0,
+      startDate: formData.startDate,
+      expectedHarvestDate: formData.expectedHarvestDate,
+      actualHarvestDate: '',
+      status: 'draft',
       stage: 'seedling',
-      stage_name: '苗期',
+      stageName: '苗期',
       priority: 'normal',
       remarks: formData.description || '',
-      create_by: formData.publisher || localStorage.getItem('username') || '陆启闯',
-      plan_detail: formData.planDetail || '',
+      publisher: formData.publisher || localStorage.getItem('username') || '陆启闯',
+      createBy: formData.publisher || localStorage.getItem('username') || '陆启闯',
+      responsiblePerson: formData.responsiblePerson,
+      unit: 'kg',
+      publishDate: '',
+      batchStatus: 'draft',
+      planDetail: formData.planDetail || '',
+      planDetailFileName: '',
+      plantingArea: parseFloat(formData.plantingArea) || 0,
+      plantingMode: formData.plantingMode,
+      supplierName: '',
+      seedlingSiteName: '',
+      seedQuantity: 0,
+      targetSeedlingCount: 0,
     };
 
     try {
@@ -224,9 +267,9 @@ export default function ProductionPage() {
         plantingMode: formData.plantingMode,
         responsiblePerson: formData.responsiblePerson,
         publisher: formData.publisher,
-        publishDate: formData.batchStatus === 'published' ? today : undefined,
+        publishDate: undefined,
         lastModifyDate: today,
-        batchStatus: formData.batchStatus,
+        batchStatus: 'draft',
         planType: formData.planType,
         planTypeName: formData.planTypeName,
       };
@@ -234,34 +277,143 @@ export default function ProductionPage() {
       // 更新本地状态
       setBatches([newBatch, ...batches]);
       setShowCreateModal(false);
-      setFormData({
-        batchCode: '',
-        planType: PlanType.PLANTING as PlanType,
-        planTypeName: '种植计划',
-        cropName: '',
-        variety: '',
-        greenhouseId: '',
-        plantingArea: '',
-        startDate: '',
-        expectedHarvestDate: '',
-        targetYield: '',
-        plantingMode: '',
-        responsiblePerson: '',
-        publisher: localStorage.getItem('username') || '陆启闯',
-        batchStatus: 'draft',
-        description: ''
-      });
+      resetForm();
       setErrors({});
     } catch (error) {
-      console.error('创建生产计划失败:', error);
-      alert('创建生产计划失败，请重试');
+      console.error('保存草稿失败:', error);
+      alert('保存草稿失败，请重试');
     }
   };
 
-  const handleClose = () => {
-    setShowCreateModal(false);
+  // 提交审批
+  const handleSubmitForApproval = async () => {
+    if (!validateForm()) return;
+
+    const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
+    const crop = cropTypes.find(c => c.name === formData.cropName);
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 构造符合后端期望的字段格式 (camelCase)
+    const apiData = {
+      id: `PP${Date.now()}`,
+      batchCode: formData.batchCode,
+      batchName: formData.batchCode,
+      planType: formData.planType,
+      cropName: formData.cropName,
+      variety: formData.variety,
+      greenhouseId: formData.greenhouseId,
+      greenhouseName: greenhouse?.name || '',
+      areaName: greenhouse?.name || '',
+      areaId: '',
+      targetQuantity: parseInt(formData.targetYield) || 0,
+      targetYield: parseInt(formData.targetYield) || 0,
+      actualYield: 0,
+      startDate: formData.startDate,
+      expectedHarvestDate: formData.expectedHarvestDate,
+      actualHarvestDate: '',
+      status: 'pending',
+      stage: 'seedling',
+      stageName: '苗期',
+      priority: 'normal',
+      remarks: formData.description || '',
+      publisher: formData.publisher || localStorage.getItem('username') || '陆启闯',
+      createBy: formData.publisher || localStorage.getItem('username') || '陆启闯',
+      responsiblePerson: formData.responsiblePerson,
+      unit: 'kg',
+      publishDate: today,
+      batchStatus: 'pending',
+      planDetail: formData.planDetail || '',
+      planDetailFileName: '',
+      plantingArea: parseFloat(formData.plantingArea) || 0,
+      plantingMode: formData.plantingMode,
+      supplierName: '',
+      seedlingSiteName: '',
+      seedQuantity: 0,
+      targetSeedlingCount: 0,
+    };
+
+    try {
+      // 调用后端 API 创建生产计划
+      if (USE_API) {
+        await apiClient.post('/production/plans', apiData);
+
+        // 创建审批单
+        const approvalData = {
+          id: `AP${Date.now()}`,
+          type: 'production_plan',
+          typeName: '生产计划',
+          title: `生产计划审批：${formData.batchCode}`,
+          description: `作物：${formData.cropName} ${formData.variety}\n种植区域：${greenhouse?.name || ''}\n目标产量：${formData.targetYield}kg`,
+          applicantId: localStorage.getItem('userId') || '',
+          applicantName: formData.publisher || localStorage.getItem('username') || '陆启闯',
+          applicantDepartment: localStorage.getItem('department') || '',
+          applyDate: today,
+          status: 'pending',
+          priority: 'normal',
+          businessLink: {
+            type: 'production',
+            requestId: apiData.id,
+            requestCode: apiData.batchCode,
+            cropName: formData.cropName,
+            variety: formData.variety,
+            greenhouseName: greenhouse?.name || '',
+            startDate: formData.startDate,
+            expectedHarvestDate: formData.expectedHarvestDate,
+            responsiblePerson: formData.responsiblePerson,
+            targetYield: parseInt(formData.targetYield) || 0,
+            plantingArea: parseFloat(formData.plantingArea) || 0,
+            plantingMode: formData.plantingMode,
+          },
+        };
+        await apiClient.post('/approvals', approvalData);
+        // 刷新审批中心数据
+        await refreshApprovals();
+      }
+
+      // 构造前端本地状态使用的 CropBatch 对象
+      const newBatch: CropBatch = {
+        id: apiData.id,
+        batchCode: formData.batchCode,
+        cropName: formData.cropName,
+        cropType: crop?.category || '',
+        variety: formData.variety,
+        greenhouseId: formData.greenhouseId,
+        greenhouseName: greenhouse?.name || '',
+        plantingArea: parseInt(formData.plantingArea),
+        stage: 'seedling',
+        stageName: '苗期',
+        startDate: formData.startDate,
+        expectedHarvestDate: formData.expectedHarvestDate,
+        targetYield: parseInt(formData.targetYield),
+        actualYield: 0,
+        status: 'planned',
+        plantingMode: formData.plantingMode,
+        responsiblePerson: formData.responsiblePerson,
+        publisher: formData.publisher,
+        publishDate: today,
+        lastModifyDate: today,
+        batchStatus: 'pending',
+        planType: formData.planType,
+        planTypeName: formData.planTypeName,
+      };
+
+      // 更新本地状态
+      setBatches([newBatch, ...batches]);
+      setShowCreateModal(false);
+      resetForm();
+      setErrors({});
+    } catch (error) {
+      console.error('提交审批失败:', error);
+      alert('提交审批失败，请重试');
+    }
+  };
+
+  // 重置表单
+  const resetForm = () => {
     setFormData({
       batchCode: '',
+      planType: PlanType.PLANTING as PlanType,
+      planTypeName: '种植计划',
       cropName: '',
       variety: '',
       greenhouseId: '',
@@ -272,10 +424,14 @@ export default function ProductionPage() {
       plantingMode: '',
       responsiblePerson: '',
       publisher: localStorage.getItem('username') || '陆启闯',
-      batchStatus: 'draft',
       description: '',
       planDetail: ''
     });
+  };
+
+  const handleClose = () => {
+    setShowCreateModal(false);
+    resetForm();
     setErrors({});
   };
 
@@ -455,9 +611,43 @@ export default function ProductionPage() {
     setSelectedRows([]);
   };
 
-  const handlePublish = () => {
-    // Apply all edits
+  const handlePublish = async () => {
+    // Apply all edits and save to backend
     if (Object.keys(editedBatches).length > 0) {
+      try {
+        if (USE_API) {
+          // Save each edited batch to backend
+          for (const batch of batches) {
+            const edited = editedBatches[batch.batchCode];
+            if (edited) {
+              // Prepare API data with proper field mapping
+              const apiData = {
+                targetQuantity: edited.targetQuantity ?? batch.targetQuantity,
+                targetYield: edited.targetYield ?? batch.targetYield,
+                cropName: edited.cropName ?? batch.cropName,
+                variety: edited.variety ?? batch.variety,
+                greenhouseName: edited.greenhouseName ?? batch.greenhouseName,
+                greenhouseId: edited.greenhouseId ?? batch.greenhouseId,
+                plantingArea: edited.plantingArea ?? batch.plantingArea,
+                plantingMode: edited.plantingMode ?? batch.plantingMode,
+                startDate: edited.startDate ?? batch.startDate,
+                expectedHarvestDate: edited.expectedHarvestDate ?? batch.expectedHarvestDate,
+                responsiblePerson: edited.responsiblePerson ?? batch.responsiblePerson,
+                remarks: edited.remarks ?? batch.remarks,
+                planDetail: edited.planDetail ?? batch.planDetail,
+                planDetailFileName: edited.planDetailFileName ?? batch.planDetailFileName,
+              };
+              await apiClient.put(`/production/plans/${batch.id}`, apiData);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('保存编辑失败:', error);
+        alert('保存编辑失败，请重试');
+        return;
+      }
+
+      // Update local state after successful API save
       setBatches(batches.map(batch => {
         const edited = editedBatches[batch.batchCode];
         if (edited) {
@@ -646,7 +836,8 @@ export default function ProductionPage() {
       <CreateBatchModal
         isOpen={showCreateModal}
         onClose={handleClose}
-        onSubmit={handleSubmit}
+        onSaveDraft={handleSaveDraft}
+        onSubmitForApproval={handleSubmitForApproval}
         formData={formData}
         errors={errors}
         greenhouses={greenhouses}
