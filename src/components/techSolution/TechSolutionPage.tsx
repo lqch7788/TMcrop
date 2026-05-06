@@ -124,7 +124,7 @@ export function TechSolutionPage() {
     if (code && !tech.code.toLowerCase().includes(code.toLowerCase())) {
       return false;
     }
-    // 作物种类过滤
+    // 作物品种过滤
     if (cropFilter && cropFilter !== '全部' && tech.crop !== cropFilter) {
       return false;
     }
@@ -352,12 +352,12 @@ export function TechSolutionPage() {
   // 导出数据处理
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
-    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物种类', '种植模式', '适用范围', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
+    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
     const exportData = selectedData.map(row => ({
       '方案编号': row.code,
       '关联生产计划批次': row.relatedBatchCode || '-',
       '方案标题': row.title,
-      '作物种类': row.crop,
+      '作物品种': row.crop,
       '种植模式': row.plantingMode,
       '适用范围': row.stage,
       '版本': row.version,
@@ -710,7 +710,7 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案编号</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">关联生产计划批次</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物种类</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">适用范围</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
@@ -768,7 +768,7 @@ export function TechSolutionPage() {
                           // 下载方案详情文件
                           const fileName = tech.planDetailFileName!;
                           const isDocx = fileName.endsWith('.docx');
-                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物种类：${tech.crop}\n种植模式：${tech.plantingMode}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
+                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${tech.plantingMode}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
                           const blob = new Blob([content], {
                             type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
                           });
@@ -863,7 +863,7 @@ export function TechSolutionPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">作物种类</label>
+                <label className="text-sm font-medium text-gray-500">作物品种</label>
                 <p className="text-gray-900">{selectedTech.crop}</p>
               </div>
               <div>
@@ -961,7 +961,7 @@ export function TechSolutionPage() {
               />
             </FormField>
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="作物种类">
+              <FormField label="作物品种">
                 <Select
                   value={editForm.crop}
                   onChange={(e) => setEditForm({...editForm, crop: e.target.value})}
@@ -1250,9 +1250,9 @@ export function TechSolutionPage() {
                   />
                 </div>
 
-                {/* 作物种类 - 可编辑 */}
+                {/* 作物品种 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">作物种类</div>
+                  <div className="text-xs text-gray-500 mb-1">作物品种</div>
                   <select
                     value={editedData.crop ?? currentTech.crop}
                     onChange={(e) => {
