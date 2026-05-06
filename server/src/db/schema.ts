@@ -1213,9 +1213,56 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      responsible_person TEXT,
+      unit TEXT,
+      publish_date TEXT,
+      batch_status TEXT DEFAULT 'draft',
+      plan_detail TEXT,
+      plan_detail_file_name TEXT,
+      planting_area REAL DEFAULT 0,
+      planting_mode TEXT,
+      supplier_name TEXT,
+      seedling_site_name TEXT,
+      seed_quantity INTEGER DEFAULT 0,
+      target_seedling_count INTEGER DEFAULT 0
     )
   `);
+
+  // ========== V8.0: 技术方案表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tech_solutions (
+      id TEXT PRIMARY KEY,
+      solution_code TEXT NOT NULL,
+      solution_title TEXT NOT NULL,
+      crop_name TEXT,
+      crop_code TEXT,
+      planting_mode TEXT,
+      stage TEXT,
+      version TEXT DEFAULT 'V1.0',
+      content TEXT,
+      author TEXT,
+      author_id TEXT,
+      create_time TEXT,
+      update_time TEXT,
+      status TEXT DEFAULT 'draft',
+      batch_status TEXT DEFAULT 'draft',
+      approval_code TEXT,
+      approved_at TEXT,
+      approver TEXT,
+      related_batch_code TEXT,
+      plan_detail_file_name TEXT,
+      priority TEXT DEFAULT 'normal',
+      remarks TEXT
+    )
+  `);
+
+  // 为技术方案表添加作物编码字段（如果不存在）
+  try {
+    db.run(`ALTER TABLE tech_solutions ADD COLUMN crop_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // ========== 作物品种库扩展表（用户新增的类型/品种/子品种）==========
   db.run(`
@@ -1488,6 +1535,37 @@ export function initializeDatabase() {
       update_time TEXT
     )
   `);
+
+  // 为生产计划表添加新字段（向后兼容）
+  const productionPlanColumns = [
+    'responsible_person',
+    'unit',
+    'publish_date',
+    'batch_status',
+    'plan_detail',
+    'plan_detail_file_name',
+    'planting_area',
+    'planting_mode',
+    'supplier_name',
+    'seedling_site_name',
+    'seed_quantity',
+    'target_seedling_count'
+  ];
+
+  for (const col of productionPlanColumns) {
+    try {
+      db.run(`ALTER TABLE production_plans ADD COLUMN ${col} TEXT`);
+    } catch (e) {
+      // 列可能已存在，忽略错误
+    }
+  }
+
+  // 确保 batch_status 有默认值
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN batch_status TEXT DEFAULT 'draft'`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   console.log('数据库表初始化完成');
 

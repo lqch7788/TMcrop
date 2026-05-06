@@ -40,6 +40,7 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     code: item.solution_code,
     title: item.solution_title,
     crop: item.crop_name,
+    cropCode: item.crop_code,
     plantingMode: item.planting_mode,
     stage: item.stage,
     version: item.version || 'V1.0',
@@ -204,6 +205,7 @@ router.post('/', (req: Request, res: Response) => {
       code, // 前端传入的方案编号
       solutionTitle,
       cropName,
+      cropCode,
       plantingMode,
       stage,
       version,
@@ -224,16 +226,17 @@ router.post('/', (req: Request, res: Response) => {
 
     db.run(`
       INSERT INTO tech_solutions (
-        id, solution_code, solution_title, crop_name, planting_mode, stage,
+        id, solution_code, solution_title, crop_name, crop_code, planting_mode, stage,
         version, content, author, author_id, create_time, update_time,
         status, batch_status, related_batch_code, plan_detail_file_name,
         priority, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       solutionCode,
       solutionTitle,
       cropName,
+      cropCode || '',
       plantingMode,
       stage,
       version || 'V1.0',
