@@ -21,14 +21,14 @@ function generateId(prefix: string): string {
 
 /**
  * 生成技术方案编码
+ * 格式：T + 年月 + 3位流水号
  */
 function generateSolutionCode(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-  return `T${year}${month}${day}${seq}`;
+  const seq = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+  return `T${year}${month}${seq}`;
 }
 
 /**
@@ -201,6 +201,7 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const {
+      code, // 前端传入的方案编号
       solutionTitle,
       cropName,
       plantingMode,
@@ -217,7 +218,8 @@ router.post('/', (req: Request, res: Response) => {
     } = req.body;
 
     const id = generateId('TS');
-    const solutionCode = generateSolutionCode();
+    // 优先使用前端传入的编号，否则按规则生成
+    const solutionCode = code || generateSolutionCode();
     const now = new Date().toISOString();
 
     db.run(`
