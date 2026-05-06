@@ -9,6 +9,114 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+// 状态文本映射
+const STATUS_TEXT: Record<string, string> = {
+  draft: '草稿',
+  pending: '待审批',
+  approved: '已通过',
+  in_progress: '执行中',
+  purchasing: '采购中',
+  completed: '已完成',
+  cancelled: '已作废',
+  rejected: '已拒绝',
+};
+
+// 优先级文本映射
+const PRIORITY_TEXT: Record<string, string> = {
+  urgent: '紧急',
+  high: '高',
+  normal: '中',
+  low: '低',
+};
+
+// 采购类型显示名称映射
+const PURCHASE_TYPE_TEXT: Record<string, string> = {
+  production: '生产物资采购',
+  urgent: '紧急采购',
+  routine: '常规采购',
+  safety: '劳保用品',
+  material: '通用物资',
+  equipment: '设备采购',
+  other: '其他',
+};
+
+/**
+ * 将下划线命名字段转换为驼峰命名
+ */
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * 将对象的所有下划线字段转换为驼峰命名
+ */
+function mapItemToCamelCase<T>(obj: any): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  const result: any = {};
+  for (const key of Object.keys(obj)) {
+    const camelKey = toCamelCase(key);
+    result[camelKey] = obj[key];
+  }
+  return result as T;
+}
+
+/**
+ * 将数据库记录映射为前端期望的字段格式
+ * 注意：queryToObjects 已通过 mapToCamelCase 转换字段名，所以这里是 camelCase
+ */
+function mapToFrontendFormat(record: Record<string, unknown>): Record<string, unknown> {
+  const status = (record.status as string) || 'draft';
+  const priority = (record.priority as string) || 'normal';
+  const planType = (record.planType as string) || '';
+
+  // 处理 items 数组中的字段转换
+  let itemsArray: any[] = [];
+  if (Array.isArray(record.items)) {
+    itemsArray = record.items.map((item: any) => mapItemToCamelCase(item));
+  }
+
+  return {
+    // 前端期望的字段名
+    id: record.id,
+    purchaseApplicationCode: record.planCode || record.plan_code || '',           // 采购申请批次号
+    relatedBatchCode: record.relatedBatchCode || record.related_batch_code || '', // 关联生产批次
+    purchaseType: planType,                           // 采购类型
+    purchaseTypeName: PURCHASE_TYPE_TEXT[planType] || planType, // 类型显示名称
+    applicant: record.applicantName || record.applicant_name || '',           // 申请人
+    applicantId: record.applicantId || record.applicant_id || '',           // 申请人ID
+    applicantDepartment: record.departmentName || record.department_name || '', // 申请部门
+    applyDate: record.applyDate || record.apply_date || '',              // 申请日期
+    requiredDate: record.expectedDate || record.expected_date || '',        // 需求日期
+    priority: priority,                             // 优先级
+    priorityText: PRIORITY_TEXT[priority] || priority, // 优先级显示文本
+    status: status,                                 // 状态
+    statusText: STATUS_TEXT[status] || status,      // 状态显示文本
+    itemCount: Array.isArray(itemsArray) ? itemsArray.length : 0,
+    items: itemsArray,
+    remarks: record.remarks || '',
+    approvalPerson: record.approvalPerson || record.approval_person || '',
+    approvalStatus: record.approvalStatus || record.approval_status || '',
+    // 时间戳
+    createdAt: record.createTime || record.create_time || '',
+    updatedAt: record.updateTime || record.update_time || '',
+    // 保留原始字段（兼容）
+    planCode: record.planCode || record.plan_code || '',
+    planTitle: record.planTitle || record.plan_title || '',
+    planType: planType,
+    departmentName: record.departmentName || record.department_name || '',
+    applicantName: record.applicantName || record.applicant_name || '',
+    applyDate2: record.applyDate || record.apply_date || '',
+    expectedDate: record.expectedDate || record.expected_date || '',
+    supplierId: record.supplierId || record.supplier_id || '',
+    supplierName: record.supplierName || record.supplier_name || '',
+    totalAmount: record.totalAmount || record.total_amount || 0,
+    attachments: record.attachments || [],
+  };
+}
+
 /**
  * 生成采购计划编码
  */
@@ -71,13 +179,17 @@ router.get('/', (req: Request, res: Response) => {
     const offset = (Number(page) - 1) * Number(limit);
     sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
 
-    const items = queryToObjects(db, sql, params);
+    const dbItems = queryToObjects(db, sql, params);
 
-    // 解析 attachments JSON 字段
-    const result = items.map((item: Record<string, unknown>) => ({
-      ...item,
-      attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
-    }));
+    // 解析 attachments 和 items JSON 字段，并映射为前端期望的格式
+    const result = dbItems.map((item: Record<string, unknown>) => {
+      const parsed = {
+        ...item,
+        attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
+        items: item.items ? JSON.parse(item.items as string) : [],
+      };
+      return mapToFrontendFormat(parsed);
+    });
 
     res.json({ success: true, data: result, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
@@ -106,11 +218,13 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '采购计划不存在' });
     }
 
-    // 解析 attachments JSON 字段
-    const result = {
+    // 解析 attachments 和 items JSON 字段，并映射为前端期望的格式
+    const parsed = {
       ...item,
       attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
+      items: item.items ? JSON.parse(item.items as string) : [],
     };
+    const result = mapToFrontendFormat(parsed);
 
     res.json({ success: true, data: result });
   } catch (error) {
@@ -130,21 +244,22 @@ router.post('/', (req: Request, res: Response) => {
       plan_code,
       plan_title,
       plan_type,
-      department_id,
-      department_name,
-      applicant_id,
-      applicant_name,
+      department_id = '',
+      department_name = '',
+      applicant_id = '',
+      applicant_name = '',
       apply_date,
       expected_date,
-      supplier_id,
-      supplier_name,
-      total_amount,
-      priority,
-      status,
-      approval_status,
-      remarks,
-      attachments,
-      create_by,
+      supplier_id = '',
+      supplier_name = '',
+      total_amount = 0,
+      priority = 'medium',
+      status = 'draft',
+      approval_status = 'pending',
+      remarks = '',
+      attachments = [],
+      items = [],
+      create_by = '',
     } = req.body;
 
     const newId = id || `PP${Date.now()}`;
@@ -152,6 +267,7 @@ router.post('/', (req: Request, res: Response) => {
     const planCode = plan_code || generatePurchasePlanCode();
 
     const db = getDatabase();
+
     db.run(`
       INSERT INTO purchase_plans (
         id, plan_code, plan_title, plan_type,
@@ -160,9 +276,9 @@ router.post('/', (req: Request, res: Response) => {
         apply_date, expected_date,
         supplier_id, supplier_name, total_amount,
         priority, status, approval_status,
-        remarks, attachments, create_by,
+        remarks, attachments, items, create_by,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       planCode,
@@ -176,12 +292,13 @@ router.post('/', (req: Request, res: Response) => {
       expected_date,
       supplier_id,
       supplier_name,
-      total_amount || 0,
-      priority || 'medium',
-      status || 'draft',
-      approval_status || 'pending',
+      total_amount,
+      priority,
+      status,
+      approval_status,
       remarks,
-      JSON.stringify(attachments || []),
+      JSON.stringify(attachments),
+      JSON.stringify(items),
       create_by,
       now,
       now,
