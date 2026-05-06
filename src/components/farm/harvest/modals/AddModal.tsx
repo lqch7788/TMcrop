@@ -194,20 +194,16 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">入库类型</label>
-          <select
+          <DictSelect
+            category="inbound_type"
             value={addForm.inboundType}
-            onChange={(e) => {
-              const value = e.target.value as 'seed_source' | 'seedling' | 'planting_harvest';
+            onChange={(value) => {
               onFormChange('inboundType', value);
               // 切换入库类型时清空已选的批次
               onFormChange('batchCode', '');
             }}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="planting_harvest">种植采收入库</option>
-            <option value="seedling">育苗成活入库</option>
-            <option value="seed_source">种源入库</option>
-          </select>
+            placeholder="选择入库类型"
+          />
           <p className="mt-1 text-xs text-gray-400">{inboundTypeLabels[addForm.inboundType]}</p>
         </div>
         <div>
@@ -265,34 +261,27 @@ export const AddModal: React.FC<AddModalProps> = ({
         {/* V3.0 采收类型 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">采收类型</label>
-          <select
+          <DictSelect
+            category="harvest_type"
             value={addForm.harvestType}
-            onChange={(e) => {
-              const value = e.target.value as 'seed' | 'seedling' | 'product';
+            onChange={(value) => {
               onFormChange('harvestType', value);
               // 联动更新目标库存
               onFormChange('targetInventory', value);
             }}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            {harvestTypeOptions.map(t => (
-              <option key={t.code} value={t.code}>{t.name}</option>
-            ))}
-          </select>
+            placeholder="选择采收类型"
+          />
           <p className="mt-1 text-xs text-gray-400">种子/种苗采收将入库到相应库存</p>
         </div>
         {/* V3.0 目标库存 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">目标库存</label>
-          <select
+          <DictSelect
+            category="target_inventory"
             value={addForm.targetInventory}
-            onChange={(e) => onFormChange('targetInventory', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="product">产品库存</option>
-            <option value="seed">种源库存</option>
-            <option value="seedling">育苗库存</option>
-          </select>
+            onChange={(value) => onFormChange('targetInventory', value)}
+            placeholder="选择目标库存"
+          />
           <p className="mt-1 text-xs text-gray-400">
             {addForm.targetInventory === 'seed' && '采收种子将回到种源库存，形成循环'}
             {addForm.targetInventory === 'seedling' && '采收购苗将回到育苗库存，待下次定植'}
@@ -302,14 +291,12 @@ export const AddModal: React.FC<AddModalProps> = ({
         {/* V3.1 补录字段 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
-          <select
-            value={addForm.isSupplementary ? 'true' : 'false'}
-            onChange={(e) => onFormChange('isSupplementary', e.target.value === 'true')}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="false">否</option>
-            <option value="true">是</option>
-          </select>
+          <DictSelect
+            category="is_supplementary"
+            value={addForm.isSupplementary ? 'yes' : 'no'}
+            onChange={(value) => onFormChange('isSupplementary', value === 'yes')}
+            placeholder="选择是否补录"
+          />
         </div>
         {addForm.isSupplementary && (
           <div>

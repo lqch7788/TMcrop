@@ -20,6 +20,7 @@ import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -608,16 +609,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 育苗方式 <span className="text-red-500">*</span>
               </label>
-              <select
+              <DictSelect
+                category="seedling_type"
                 value={formData.seedlingType}
-                onChange={(e) => handleSeedlingTypeChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">请选择</option>
-                {seedlingTypes.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                onChange={(value) => handleSeedlingTypeChange(value)}
+                placeholder="请选择育苗方式"
+              />
             </div>
 
             {/* 其他育苗方式输入框（占满整行） */}
@@ -701,30 +698,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             <label className="block text-sm font-medium text-gray-900 mb-2">
               育苗计算模式 <span className="text-red-500">*</span>
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="calculateMode"
-                  value={SeedlingCalculateMode.SINGLE}
-                  checked={formData.calculateMode === SeedlingCalculateMode.SINGLE}
-                  onChange={() => handleCalculateModeChange(SeedlingCalculateMode.SINGLE)}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-700">单株育苗</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="calculateMode"
-                  value={SeedlingCalculateMode.PROPAGATION}
-                  checked={formData.calculateMode === SeedlingCalculateMode.PROPAGATION}
-                  onChange={() => handleCalculateModeChange(SeedlingCalculateMode.PROPAGATION)}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-700">扩繁育苗</span>
-              </label>
-            </div>
+            <DictSelect
+              category="calculate_mode"
+              value={formData.calculateMode}
+              onChange={(value) => handleCalculateModeChange(value as SeedlingCalculateMode)}
+              placeholder="选择育苗计算模式"
+            />
           </div>
 
           {/* 单株育苗模式 */}
@@ -918,14 +897,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* V3.1 补录字段 */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
-              <select
-                value={formData.isSupplementary ? 'true' : 'false'}
-                onChange={(e) => setFormData({ ...formData, isSupplementary: e.target.value === 'true' })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="false">否</option>
-                <option value="true">是</option>
-              </select>
+              <DictSelect
+                category="is_supplementary"
+                value={formData.isSupplementary ? 'yes' : 'no'}
+                onChange={(value) => setFormData({ ...formData, isSupplementary: value === 'yes' })}
+                placeholder="选择是否补录"
+              />
               <p className="mt-1 text-xs text-amber-500">选择"是"时，该育苗记录将提交审批审核</p>
             </div>
 

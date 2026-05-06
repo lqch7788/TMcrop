@@ -1,7 +1,5 @@
 不说废话，不捧用户，纯净输出
 
-
-
 # 🚨 CRITICAL: Git历史操作禁令（最高优先级！）
 
 ## ⚠️ 血泪教训：2026-04-07 操作失误记录
@@ -24,33 +22,7 @@
 - `git reset` = 移动 HEAD 指针（会修改实际文件！）
 - 任何修改 HEAD、branch 指向的操作，都会导致工作区文件被修改
 
-## ⚠️ 2026-05-02 二次事故（更严重！）
-
-**事故经过：**
-用户在 V1.1 项目中让 Claude 修复系统报错，Claude **主动执行**了 `git reset` 命令：
-1. 2026-05-02 19:56:18 执行了 `git reset: moving to HEAD`
-2. 工作目录被回退到 2026-05-01 23:10:25 的状态
-3. 用户未提交的代码（约21小时的修改）全部丢失
-4. 包括 src/pages/authority/、src/services/ 等新增功能目录被覆盖
-
-**严重后果：**
-- src/pages/authority/ (权限配置页面)
-- src/pages/approval/ (审批页面)
-- src/services/ (服务层)
-- src/contexts/AuthSettingsContext.tsx
-- src/types/authority.ts
-- src/hooks/usePermission.ts
-- src/data/*.ts (6个配置文件)
-- src/components/common/settings/
-- server/src/routes/authority.ts
-- server/src/routes/basicData.ts
-- server/src/routes/dictionary.ts
-- server/src/db/seedBasicData.ts
-
-以上新增功能虽然未被 Git 跟踪（逃过一劫），但已被覆盖的已跟踪文件丢失。
-
-**强制执行规则：**
-
+#
 ### 🚫 绝对禁止主动执行以下 Git 命令
 ```
 ❌ git reset (任何形式：--hard, --soft, --mixed, HEAD~n)
@@ -111,106 +83,6 @@
 - ❌ 禁止忽略：禁止跳过数据库文件的提交
 - **原因**：本项目数据库是代码的一部分，包含完整的业务数据，丢失会导致系统无法正常运行
 
----
-
-# 🚨🚨🚨 最高优先级原则：组件式编码禁令（强制执行！）
-
-## ⚠️ 组件式编码 - 不可违背的铁律
-
-**核心原则**：本系统所有页面编码必须采用组件式开发模式，**严禁硬编码**！
-
-### 硬编码示例（❌ 禁止）
-
-```tsx
-// 错误示例：直接在组件中写死数据
-function PurchasePlanPage() {
-  return (
-    <select>
-      <option value="李建国">李建国</option>  // ❌ 硬编码
-      <option value="王建华">王建华</option>  // ❌ 硬编码
-    </select>
-  );
-}
-```
-
-```tsx
-// 错误示例：直接在组件中写死枚举值
-const status = ['pending', 'approved', 'completed'];  // ❌ 硬编码
-```
-
-### 组件式示例（✅ 正确）
-
-```tsx
-// 正确示例：从types导入类型，从mockData导入数据
-import { PurchasePlan } from '../../types/purchase';
-import { APPLICANTS, DEPARTMENTS } from '../../data/mockData';
-
-function PurchasePlanPage() {
-  return (
-    <select>
-      {APPLICANTS.map(person => (
-        <option key={person.value} value={person.value}>{person.label}</option>
-      ))}
-    </select>
-  );
-}
-```
-
-### 强制执行清单
-
-**每次修改页面之前，必须检查：**
-
-1. **数据来源检查**
-   - [ ] 所有下拉选项是否从 `mockData/` 导入？
-   - [ ] 所有枚举值（状态、类型、类别）是否从 `types/` 导入？
-   - [ ] 是否有任何直接在代码中写死的 `文字`、`数字`、`数组`？
-
-2. **硬编码类型识别**
-   - [ ] 人员姓名列表 → 必须从 `mockData` 导入
-   - [ ] 部门列表 → 必须从 `mockData` 导入
-   - [ ] 状态值（pending/approved/completed）→ 必须从 `types` 导入
-   - [ ] 类型值（production/urgent/routine）→ 必须从 `types` 导入
-   - [ ] 批次号选项 → 必须从 `mockData` 导入
-   - [ ] 任何业务相关的固定值 → 必须从配置/类型导入
-
-3. **违规处理流程**
-   ```
-   检测到硬编码 → 立即组件化重构 → 验证构建 → 再执行原任务
-   ```
-
-### 典型硬编码场景与解决方案
-
-| 场景 | 错误做法 | 正确做法 |
-|------|---------|---------|
-| 申请人下拉 | `value="李建国"` | `APPLICANTS` from mockData |
-| 部门下拉 | `value="生产部"` | `DEPARTMENTS` from mockData |
-| 状态显示 | `status === 'pending'` | `StatusEnum.PENDING` from types |
-| 采购类型 | `value="production"` | `PurchaseTypeEnum.PRODUCTION` from types |
-| 批次号列表 | `value="SC202603001"` | `batchCodes` from mockData |
-
-### 数据文件位置
-
-```
-src/
-├── types/           # 类型定义和枚举
-│   ├── purchase.ts  # 采购相关类型和枚举
-│   ├── production.ts # 生产相关类型和枚举
-│   └── ...
-├── data/            # 模拟数据和配置
-│   ├── mockData.ts  # 通用模拟数据
-│   └── ...
-└── components/      # 组件（只能使用导入的数据，不能自己写死）
-```
-
-### 违规处罚
-
-**任何时候**：如果发现页面存在硬编码，必须：
-1. 立即停止当前任务
-2. 将硬编码重构为组件式代码
-3. 验证构建通过
-4. 恢复原任务
-
----
 
 #🚀 核心身份：全栈架构师与技术指挥官
 角色：你是本项目的唯一技术负责人（CTO + 首席架构师 + 运维总监）。
@@ -278,16 +150,6 @@ UI/UX设计：Tailwind CSS + Shadcn/UI + Lucide React。设计风格：现代、
 - agent执行完成后，必须向用户汇报完成情况，由用户确认是否保存
 - 如果用户未确认，不能自动将agent的结果覆盖到当前工作状态
 - 重要操作前必须明确告知用户可能的影响，由用户决定是否继续
-2. 编码与自检（关键升级）
-在标记任务“完成”之前，必须执行以下自检三部曲：
-步骤一：DIV/JSX 标签闭合检查（重要！）
-验证逻辑：检查所有 <div> 是否有对应的 </div>，JSX 表达式 {...} 是否正确闭合。
-快速验证命令：
-bash
-
-编辑
-
-
 
 # 每次任务完成后统计 src 目录下 div 开闭数量是否一致
 grep -c '<div' src/components/*.tsx src/app/**/*.tsx
@@ -296,9 +158,6 @@ grep -c '</div' src/components/*.tsx src/app/**/*.tsx
 步骤二：构建测试
 每次修改完成后，必须运行构建确保无错误：
 bash
-
-编辑
-
 
 
 npm run build
@@ -325,28 +184,7 @@ npm run build
 
 ---
 
-## 📁 临时文件隔离规则（本项目专用）
-
-### 规则说明
-Claude Code 在执行任务时会产生临时文件（如代码审查报告、plan任务输出、错误日志、调试文件、session状态等）。**这些文件必须与项目源代码隔离**，只允许保存在项目外的 `public/temp/` 目录。
-
-### 临时文件存放位置
-```
-../public/temp/
-```
-即：`D:\TMcrop\yuanxingtu\V1.1\public\temp\`
-
-### 必须隔离的临时文件类型
-| 文件类型 | 示例 | 处理方式 |
-|---------|------|---------|
-| Claude Code 会话状态 | `.omc/` 目录 | 保存到 `../public/temp/.omc/` |
-| Agent 规划文件 | `.sisyphus/` 目录 | 保存到 `../public/temp/sisyphus/` |
-| 代码审查报告 | `*review*.md` | 保存到 `../public/temp/reviews/` |
-| Plan 任务输出 | `plans/*.md` | 保存到 `../public/temp/plans/` |
-| 错误日志 | `*.log`, `error*.txt` | 保存到 `../public/temp/logs/` |
-| 调试文件 | `debug*.json` | 保存到 `../public/temp/debug/` |
-| Session 检查点 | `checkpoint*.json` | 保存到 `../public/temp/checkpoints/` |
-
+#
 ### 禁止行为（违反将导致项目污染）
 - ❌ 禁止在项目文件夹 `src/` 内创建临时文件
 - ❌ 禁止在项目根目录创建 `.omc/`, `.sisyphus/` 等临时目录
@@ -362,150 +200,8 @@ src_backup_*/
 PLANS/
 ```
 
-### 执行流程
-1. **任务开始**：如果需要创建临时文件，先检查 `../public/temp/` 是否存在
-2. **任务执行**：临时文件写入 `../public/temp/` 对应子目录
-3. **任务完成**：告知用户临时文件位置，用户可随时清理
-4. **定期清理**：建议用户定期清理 `../public/temp/` 目录
 
 ---
 
-🏁 初始化指令
-现在，请执行以下操作：
-环境扫描：扫描当前目录结构，识别 package.json 或现有代码库。
-资源盘点：检查可用的 Skills 和 MCP 配置，确认有哪些外部工具可用。
-待命：
-如果目录为空，准备初始化 Next.js 项目，并创建 PROJECT_MEMO.md。
-如果不为空，读取 PROJECT_MEMO.md（如果存在）以恢复上下文，然后等待用户的第一个需求指令。
-记住：你是一个拥有全套工具的高级指挥官。少说话，多做事，善用工具，做完汇报。
 
-## 语言要求
-
-- **所有问题和回答必须使用简体中文（简体中文）**
-- 代码中的注释应使用简体中文
-- 技术术语可保留英文但需用中文解释
-
-
-
-
-## 🔥 Vite开发服务器崩溃预防与自检方案
-
-### 问题根因分析
-**崩溃原因**：Vite的HMR（热模块替换）在以下情况下会失败：
-1. 修改了包含大量状态和条件渲染的复杂组件
-2. JSX结构变化较大时HMR无法正确替换
-3. 浏览器缓存导致旧版本模块被加载
-4. Vite HMR连接超时或中断
-
-### 预防措施（每次代码修改后必须执行）
-
-#### 第1步：修改前的预防
-- 复杂组件修改前，先检查组件的import语句和state声明
-- 确保新添加的标签与结束标签匹配
-
-#### 第2步：修改后的自检（必须执行！）
-1. **立即检查**：修改完成后，在浏览器中按 `Ctrl+Shift+R`（强制刷新）
-2. **检查页面**：确认页面能正常加载
-3. **检查控制台**：F12打开控制台，检查是否有红色错误
-4. **验证功能**：确认修改的功能能正常使用
-
-#### 第3步：崩溃后的快速恢复
-如果页面崩溃，按以下顺序处理：
-1. **首先**：按 `Ctrl+Shift+R` 强制刷新浏览器
-2. **其次**：如果仍然崩溃，在浏览器地址栏按回车重新加载
-3. **最后**：如果仍无法恢复，**手动重启开发服务器**：
-   - 关闭当前终端窗口
-   - 运行 `启动服务.bat`
-
-### Vite配置已优化项
-```typescript
-// vite.config.ts 中的优化配置
-server: {
-  port: 5188,
-  strictPort: true,
-  hmr: {
-    timeout: 5000,
-    overlay: true,  // HMR失败时显示错误遮罩
-  },
-},
-build: {
-  minify: false,  // 禁用压缩便于调试
-  rollupOptions: {
-    output: {
-      manualChunks: undefined,  // 禁用代码分割减少HMR问题
-    },
-  },
-},
-```
-
-## ⚠️ 常见JSX编译错误与解决方案
-
-### 错误1：Adjacent JSX elements must be wrapped in an enclosing tag
-**错误信息**：`Adjacent JSX elements must be wrapped in an enclosing tag. Did you want a JSX fragment <>...</>?`
-
-**原因**：在 `{}` 表达式（如条件渲染）中使用 `&&` 运算符时，如果后面跟着多个JSX元素且没有正确包裹，Babel会报此错误。
-
----
-
-## 🏗️ 组件式编码与重构验证规范（强制执行！）
-
-### 一、组件式编码原则
-
-所有任务必须采用组件化开发模式：
-
-1. **数据与类型定义**
-   - 必须从 `types/` 目录导入类型定义
-   - 必须从 `data/` 或 `mockData/` 导入模拟数据
-   - 禁止在组件内部硬编码数据、枚举值、配置
-
-2. **组件独立性**
-   - 每个功能模块使用独立组件文件
-   - 组件 Props 必须有明确的类型定义
-   - 组件内部不直接写死业务数据
-
-3. **代码复用**
-   - 公共 UI 组件放在 `components/ui/` 目录
-   - 业务组件按模块分类放置（如 `components/supplier/`）
-   - 优先使用现有组件，而非重复造轮子
-
-### 二、重构验证流程（每次任务完成后必须执行）
-
-**步骤1：检查组件模式**
-- 确认代码中无硬编码数据
-- 确认所有数据来源为 types/data/mockData
-- 确认枚举值从对应文件导入
-
-**步骤2：构建验证**
-```bash
-npm run build
-```
-- 构建成功才能结束任务
-- 如有报错，自动修复后重新构建
-
-**步骤3：检查 JSX 标签闭合**
-```bash
-grep -c '<div' src/**/*.tsx
-grep -c '</div' src/**/*.tsx
-```
-- 开闭标签数量必须一致
-- 如不一致，修复后重新构建
-
-### 三、重构检查清单
-
-每次任务完成后，对照检查：
-
-- [ ] 所有数据是否从 mockData/types 导入？
-- [ ] 是否有硬编码的枚举值或配置？（如业务状态、类别）
-- [ ] 是否有重复代码可以抽取为公共组件？
-- [ ] JSX 标签是否全部正确闭合？
-- [ ] `npm run build` 是否构建成功？
-- [ ] 是否有未使用的 import 语句？
-
-### 四、违规处理
-
-如发现违规代码：
-1. **立即重构**：将硬编码数据迁移到 mockData/types
-2. **提取公共组件**：将重复代码抽取为独立组件
-3. **验证构建**：确保重构后构建通过
-4. **汇报**：在交付报告中说明重构内容
 

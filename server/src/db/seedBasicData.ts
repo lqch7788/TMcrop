@@ -465,6 +465,28 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC105', code: 'batch_summary_config', name: '批次汇总配置', module: 'production', description: '批次完成情况汇总配置', sortOrder: 105, status: 'active' },
   { id: 'DC106', code: 'alert_threshold', name: '预警阈值配置', module: 'production', description: '各类预警阈值设置', sortOrder: 106, status: 'active' },
   { id: 'DC107', code: 'report_display_config', name: '报表显示配置', module: 'production', description: '生产报表显示相关配置', sortOrder: 107, status: 'active' },
+  // ============================================
+  // V1.0方案新增分类
+  // ============================================
+  { id: 'DC030', code: 'inbound_type', name: '入库类型', module: 'crop', description: '入库类型分类', sortOrder: 30, status: 'active' },
+  { id: 'DC031', code: 'target_inventory', name: '目标库存', module: 'crop', description: '目标库存分类', sortOrder: 31, status: 'active' },
+  { id: 'DC032', code: 'is_supplementary', name: '是否补录', module: 'crop', description: '是否补录选项', sortOrder: 32, status: 'active' },
+  { id: 'DC033', code: 'supplier_is_internal', name: '来源类型', module: 'crop', description: '供应商来源类型', sortOrder: 33, status: 'active' },
+  { id: 'DC034', code: 'unit', name: '单位', module: 'crop', description: '计量单位', sortOrder: 34, status: 'active' },
+  { id: 'DC035', code: 'yes_no', name: '是否', module: 'common', description: '通用是否选项', sortOrder: 35, status: 'active' },
+  { id: 'DC036', code: 'harvest_type', name: '采收类型', module: 'crop', description: '采收类型分类', sortOrder: 36, status: 'active' },
+  { id: 'DC037', code: 'stock_form', name: '库存形态', module: 'crop', description: '库存物品形态', sortOrder: 37, status: 'active' },
+  { id: 'DC038', code: 'production_plan_type', name: '生产计划类型', module: 'crop', description: '生产计划类型分类', sortOrder: 38, status: 'active' },
+  { id: 'DC039', code: 'calculate_mode', name: '育苗计算模式', module: 'crop', description: '育苗计算模式', sortOrder: 39, status: 'active' },
+  { id: 'DC040', code: 'batch_status', name: '生产计划状态', module: 'crop', description: '生产计划状态', sortOrder: 40, status: 'active' },
+  { id: 'DC041', code: 'planting_mode', name: '种植模式', module: 'crop', description: '种植模式分类', sortOrder: 41, status: 'active' },
+  { id: 'DC042', code: 'responsible_person', name: '负责人', module: 'crop', description: '负责人列表', sortOrder: 42, status: 'active' },
+  { id: 'DC043', code: 'seedling_site', name: '育苗场地', module: 'crop', description: '育苗场地分类', sortOrder: 43, status: 'active' },
+  { id: 'DC044', code: 'planting_source_type', name: '种植来源类型', module: 'crop', description: '种植来源类型', sortOrder: 44, status: 'active' },
+  { id: 'DC045', code: 'quality_level', name: '品质评定', module: 'crop', description: '品质等级评定', sortOrder: 45, status: 'active' },
+  { id: 'DC046', code: 'warehouse', name: '仓库', module: 'warehouse', description: '仓库分类', sortOrder: 46, status: 'active' },
+  { id: 'DC047', code: 'harvest_greenhouse', name: '采收区域', module: 'crop', description: '采收区域分类', sortOrder: 47, status: 'active' },
+  { id: 'DC048', code: 'source_type', name: '种源类型', module: 'crop', description: '种源类型(繁殖方式)', sortOrder: 48, status: 'active' },
 ];
 
 // ============================================
@@ -583,10 +605,15 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D090', categoryCode: 'seedling_type', dictCode: 'plug', dictLabel: '穴盘育苗', dictValue: 'plug', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D091', categoryCode: 'seedling_type', dictCode: 'direct', dictLabel: '直播育苗', dictValue: 'direct', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'D092', categoryCode: 'seedling_type', dictCode: 'grafting', dictLabel: '嫁接育苗', dictValue: 'grafting', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
-  // 采收状态
+  // 采收状态 - V3.0扩展至8项
   { id: 'D100', categoryCode: 'harvest_status', dictCode: 'pending', dictLabel: '待采收', dictValue: 'pending', color: 'orange', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D101', categoryCode: 'harvest_status', dictCode: 'harvested', dictLabel: '已采收', dictValue: 'harvested', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D102', categoryCode: 'harvest_status', dictCode: 'graded', dictLabel: '已分级', dictValue: 'graded', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D101', categoryCode: 'harvest_status', dictCode: 'in_progress', dictLabel: '采收中', dictValue: 'in_progress', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D102', categoryCode: 'harvest_status', dictCode: 'harvested', dictLabel: '已采收', dictValue: 'harvested', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D103', categoryCode: 'harvest_status', dictCode: 'graded', dictLabel: '已分级', dictValue: 'graded', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D104', categoryCode: 'harvest_status', dictCode: 'packaged', dictLabel: '已包装', dictValue: 'packaged', color: 'purple', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'D105', categoryCode: 'harvest_status', dictCode: 'in_storage', dictLabel: '已入库', dictValue: 'in_storage', color: 'cyan', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'D106', categoryCode: 'harvest_status', dictCode: 'shipped', dictLabel: '已发货', dictValue: 'shipped', color: 'brown', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'D107', categoryCode: 'harvest_status', dictCode: 'cancelled', dictLabel: '已取消', dictValue: 'cancelled', color: 'gray', sortOrder: 8, isDefault: 0, status: 'active' },
   // 物料类型
   { id: 'D110', categoryCode: 'material_type', dictCode: 'seed', dictLabel: '种子', dictValue: 'seed', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D111', categoryCode: 'material_type', dictCode: 'seedling', dictLabel: '种苗', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -608,13 +635,110 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D137', categoryCode: 'material_cost_type', dictCode: 'seed', dictLabel: '种子种苗', dictValue: 'seed', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
   { id: 'D138', categoryCode: 'material_cost_type', dictCode: 'film', dictLabel: '基质农膜', dictValue: 'film', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'D139', categoryCode: 'material_cost_type', dictCode: 'other', dictLabel: '其他物料', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
-  // 来源途径
-  { id: 'D140', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D141', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '内部自繁', dictValue: 'self_produced', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D142', categoryCode: 'source_origin', dictCode: 'commissioned', dictLabel: '委托培育', dictValue: 'commissioned', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'D143', categoryCode: 'source_origin', dictCode: 'gift', dictLabel: '政府/机构赠送', dictValue: 'gift', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'D144', categoryCode: 'source_origin', dictCode: 'self_retained', dictLabel: '自留种', dictValue: 'self_retained', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
-  { id: 'D145', categoryCode: 'source_origin', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 来源途径 - V3.0扩展至9项
+  { id: 'D140', categoryCode: 'source_origin', dictCode: 'internal_seed', dictLabel: '内部种源', dictValue: 'internal_seed', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'D141', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'D142', categoryCode: 'source_origin', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'D143', categoryCode: 'source_origin', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'D144', categoryCode: 'source_origin', dictCode: 'seedling_split', dictLabel: '分株繁殖', dictValue: 'seedling_split', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'D145', categoryCode: 'source_origin', dictCode: 'cutting', dictLabel: '扦插繁殖', dictValue: 'cutting', color: 'cyan', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'D146', categoryCode: 'source_origin', dictCode: 'direct_seedling', dictLabel: '直播育苗', dictValue: 'direct_seedling', color: 'lime', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'D147', categoryCode: 'source_origin', dictCode: 'direct_planting', dictLabel: '直接定植', dictValue: 'direct_planting', color: 'teal', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'D148', categoryCode: 'source_origin', dictCode: 'external_harvest', dictLabel: '外部采收', dictValue: 'external_harvest', color: 'pink', sortOrder: 9, isDefault: 0, status: 'active' },
+  // ============================================
+  // 作物管理字典项（V5.0方案补充）
+  // ============================================
+  // 入库类型
+  { id: 'IT001', categoryCode: 'inbound_type', dictCode: 'seed_source', dictLabel: '种源入库', dictValue: 'seed_source', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'IT002', categoryCode: 'inbound_type', dictCode: 'seedling', dictLabel: '种苗入库', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'IT003', categoryCode: 'inbound_type', dictCode: 'planting_harvest', dictLabel: '种植采收', dictValue: 'planting_harvest', color: 'orange', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 目标库存
+  { id: 'TI001', categoryCode: 'target_inventory', dictCode: 'seed', dictLabel: '种子库存', dictValue: 'seed', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'TI002', categoryCode: 'target_inventory', dictCode: 'seedling', dictLabel: '种苗库存', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'TI003', categoryCode: 'target_inventory', dictCode: 'product', dictLabel: '成品库存', dictValue: 'product', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 是否补录
+  { id: 'IS001', categoryCode: 'is_supplementary', dictCode: 'yes', dictLabel: '是', dictValue: 'yes', color: 'orange', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'IS002', categoryCode: 'is_supplementary', dictCode: 'no', dictLabel: '否', dictValue: 'no', color: 'gray', sortOrder: 2, isDefault: 0, status: 'active' },
+  // 来源类型（供应商是否内部）
+  { id: 'SI001', categoryCode: 'supplier_is_internal', dictCode: 'internal', dictLabel: '内部自产', dictValue: 'internal', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'SI002', categoryCode: 'supplier_is_internal', dictCode: 'external', dictLabel: '外部采购', dictValue: 'external', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  // 单位
+  { id: 'UT001', categoryCode: 'unit', dictCode: 'bag', dictLabel: '袋', dictValue: 'bag', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'UT002', categoryCode: 'unit', dictCode: 'plant', dictLabel: '株', dictValue: 'plant', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'UT003', categoryCode: 'unit', dictCode: 'grain', dictLabel: '粒', dictValue: 'grain', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'UT004', categoryCode: 'unit', dictCode: 'kg', dictLabel: '千克', dictValue: 'kg', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'UT005', categoryCode: 'unit', dictCode: 'g', dictLabel: '克', dictValue: 'g', color: 'purple', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'UT006', categoryCode: 'unit', dictCode: 'ton', dictLabel: '吨', dictValue: 'ton', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'UT007', categoryCode: 'unit', dictCode: 'mu', dictLabel: '亩', dictValue: 'mu', color: 'green', sortOrder: 7, isDefault: 0, status: 'active' },
+  // 通用是否
+  { id: 'YN001', categoryCode: 'yes_no', dictCode: 'yes', dictLabel: '是', dictValue: 'yes', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'YN002', categoryCode: 'yes_no', dictCode: 'no', dictLabel: '否', dictValue: 'no', color: 'gray', sortOrder: 2, isDefault: 0, status: 'active' },
+  // 采收类型
+  { id: 'HT001', categoryCode: 'harvest_type', dictCode: 'seed', dictLabel: '种子采收', dictValue: 'seed', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'HT002', categoryCode: 'harvest_type', dictCode: 'seedling', dictLabel: '种苗采收', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'HT003', categoryCode: 'harvest_type', dictCode: 'product', dictLabel: '成品采收', dictValue: 'product', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  // ============================================
+  // V1.0方案补充的字典项
+  // ============================================
+  // 库存形态
+  { id: 'SF001', categoryCode: 'stock_form', dictCode: 'seed', dictLabel: '种子/种源', dictValue: 'seed', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'SF002', categoryCode: 'stock_form', dictCode: 'seedling', dictLabel: '种苗', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'SF003', categoryCode: 'stock_form', dictCode: 'product', dictLabel: '成品', dictValue: 'product', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'SF004', categoryCode: 'stock_form', dictCode: 'seed_breeding', dictLabel: '育种材料', dictValue: 'seed_breeding', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 生产计划类型
+  { id: 'PP001', categoryCode: 'production_plan_type', dictCode: 'seed_breeding', dictLabel: '育种计划', dictValue: 'seed_breeding', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PP002', categoryCode: 'production_plan_type', dictCode: 'seedling_plan', dictLabel: '育苗计划', dictValue: 'seedling_plan', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PP003', categoryCode: 'production_plan_type', dictCode: 'planting_plan', dictLabel: '种植计划', dictValue: 'planting_plan', color: 'orange', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 育苗计算模式
+  { id: 'CM001', categoryCode: 'calculate_mode', dictCode: 'single', dictLabel: '单批计算', dictValue: 'single', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'CM002', categoryCode: 'calculate_mode', dictCode: 'propagation', dictLabel: '扩繁计算', dictValue: 'propagation', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  // 生产计划状态
+  { id: 'BS001', categoryCode: 'batch_status', dictCode: 'planning', dictLabel: '规划中', dictValue: 'planning', color: 'gray', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'BS002', categoryCode: 'batch_status', dictCode: 'in_progress', dictLabel: '执行中', dictValue: 'in_progress', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'BS003', categoryCode: 'batch_status', dictCode: 'completed', dictLabel: '已完成', dictValue: 'completed', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'BS004', categoryCode: 'batch_status', dictCode: 'cancelled', dictLabel: '已取消', dictValue: 'cancelled', color: 'red', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 种植模式
+  { id: 'PM001', categoryCode: 'planting_mode', dictCode: 'direct_seeding', dictLabel: '直播', dictValue: 'direct_seeding', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PM002', categoryCode: 'planting_mode', dictCode: 'transplanting', dictLabel: '移栽', dictValue: 'transplanting', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PM003', categoryCode: 'planting_mode', dictCode: 'grafting', dictLabel: '嫁接', dictValue: 'grafting', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PM004', categoryCode: 'planting_mode', dictCode: 'tissue_culture', dictLabel: '组培', dictValue: 'tissue_culture', color: 'pink', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PM005', categoryCode: 'planting_mode', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 负责人
+  { id: 'RP001', categoryCode: 'responsible_person', dictCode: 'lu_qichuang', dictLabel: '陆启闯', dictValue: '陆启闯', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'RP002', categoryCode: 'responsible_person', dictCode: 'wang_jianguo', dictLabel: '王建国', dictValue: '王建国', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'RP003', categoryCode: 'responsible_person', dictCode: 'li_minghui', dictLabel: '李明辉', dictValue: '李明辉', color: 'orange', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'RP004', categoryCode: 'responsible_person', dictCode: 'zhang_wei', dictLabel: '张伟', dictValue: '张伟', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 育苗场地
+  { id: 'SS001', categoryCode: 'seedling_site', dictCode: 'seedling_greenhouse_A', dictLabel: '育苗温室A区', dictValue: '育苗温室A区', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'SS002', categoryCode: 'seedling_site', dictCode: 'seedling_greenhouse_B', dictLabel: '育苗温室B区', dictValue: '育苗温室B区', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'SS003', categoryCode: 'seedling_site', dictCode: 'glass_greenhouse_A', dictLabel: '玻璃温室A区', dictValue: '玻璃温室A区', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 种植来源类型
+  { id: 'PST001', categoryCode: 'planting_source_type', dictCode: 'seedling_planting', dictLabel: '种苗种植', dictValue: 'seedling_planting', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PST002', categoryCode: 'planting_source_type', dictCode: 'seed_planting', dictLabel: '种子种植', dictValue: 'seed_planting', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PST003', categoryCode: 'planting_source_type', dictCode: 'inventory_transfer', dictLabel: '库存调拨', dictValue: 'inventory_transfer', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 品质评定
+  { id: 'QL001', categoryCode: 'quality_level', dictCode: 'special', dictLabel: '特优', dictValue: 'special', color: 'gold', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'QL002', categoryCode: 'quality_level', dictCode: 'excellent', dictLabel: '优', dictValue: 'excellent', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'QL003', categoryCode: 'quality_level', dictCode: 'good', dictLabel: '良', dictValue: 'good', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'QL004', categoryCode: 'quality_level', dictCode: 'qualified', dictLabel: '合格', dictValue: 'qualified', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'QL005', categoryCode: 'quality_level', dictCode: 'unqualified', dictLabel: '不合格', dictValue: 'unqualified', color: 'red', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 仓库
+  { id: 'WH001', categoryCode: 'warehouse', dictCode: 'seed_warehouse', dictLabel: '种源库', dictValue: 'seed_warehouse', color: 'yellow', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'WH002', categoryCode: 'warehouse', dictCode: 'seedling_warehouse', dictLabel: '种苗库', dictValue: 'seedling_warehouse', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'WH003', categoryCode: 'warehouse', dictCode: 'product_warehouse', dictLabel: '成品库', dictValue: 'product_warehouse', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'WH004', categoryCode: 'warehouse', dictCode: 'postharvest_warehouse', dictLabel: '采后库', dictValue: 'postharvest_warehouse', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 采收区域
+  { id: 'HG001', categoryCode: 'harvest_greenhouse', dictCode: 'glass_greenhouse_A', dictLabel: '玻璃温室A区', dictValue: '玻璃温室A区', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'HG002', categoryCode: 'harvest_greenhouse', dictCode: 'glass_greenhouse_B', dictLabel: '玻璃温室B区', dictValue: '玻璃温室B区', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  // 种源类型（繁殖方式）
+  { id: 'ST001', categoryCode: 'source_type', dictCode: 'seed', dictLabel: '种子', dictValue: 'seed', color: 'yellow', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'ST002', categoryCode: 'source_type', dictCode: 'seedling', dictLabel: '种苗/实生苗', dictValue: 'seedling', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'ST003', categoryCode: 'source_type', dictCode: 'cutting', dictLabel: '扦插苗', dictValue: 'cutting', color: 'cyan', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'ST004', categoryCode: 'source_type', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'ST005', categoryCode: 'source_type', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'pink', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'ST006', categoryCode: 'source_type', dictCode: 'split', dictLabel: '分株苗', dictValue: 'split', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'ST007', categoryCode: 'source_type', dictCode: 'bulb', dictLabel: '种球/球根', dictValue: 'bulb', color: 'brown', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'ST008', categoryCode: 'source_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 8, isDefault: 0, status: 'active' },
   // ============================================
   // 生产汇总表字典项（V8.0新增）
   // ============================================

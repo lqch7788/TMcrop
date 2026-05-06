@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
 import { produceInventory } from '../../data/mockData';
 import { useWarehouses } from '../common/settings';
+import { DictSelect } from '../common/settings/DictSelect';
 
 interface ProduceInventoryAddModalProps {
   isOpen: boolean;
@@ -211,27 +212,12 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           <label className="block text-sm font-medium text-gray-700 mb-1">
             作物形态 <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { value: StockType.SEED, label: '种源', desc: '种子/种球' },
-              { value: StockType.SEEDLING, label: '种苗', desc: '幼苗/秧苗' },
-              { value: StockType.PRODUCT, label: '成品', desc: '采收成品' },
-            ].map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setStockType(item.value)}
-                className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                  stockType === item.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                }`}
-              >
-                <div className="font-semibold">{item.label}</div>
-                <div className="text-xs text-gray-500">{item.desc}</div>
-              </button>
-            ))}
-          </div>
+          <DictSelect
+            category="stock_form"
+            value={stockType}
+            onChange={(value) => setStockType(value as StockType)}
+            placeholder="选择作物形态"
+          />
         </div>
 
         {/* 作物名称和品种 */}
@@ -302,18 +288,12 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
-            <select
+            <DictSelect
+              category="unit"
               value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="公斤">公斤</option>
-              <option value="粒">粒</option>
-              <option value="株">株</option>
-              <option value="个">个</option>
-              <option value="箱">箱</option>
-              <option value="盒">盒</option>
-            </select>
+              onChange={(value) => setUnit(value)}
+              placeholder="选择单位"
+            />
           </div>
         </div>
 
@@ -464,19 +444,12 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">种植模式</label>
-            <select
+            <DictSelect
+              category="planting_mode"
               value={plantingMode}
-              onChange={(e) => setPlantingMode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">请选择</option>
-              <option value="土壤种植">土壤种植</option>
-              <option value="无土栽培">无土栽培</option>
-              <option value="水培">水培</option>
-              <option value="基质栽培">基质栽培</option>
-              <option value="穴盘育苗">穴盘育苗</option>
-              <option value="种子繁殖">种子繁殖</option>
-            </select>
+              onChange={(value) => setPlantingMode(value)}
+              placeholder="选择种植模式"
+            />
           </div>
         </div>
 

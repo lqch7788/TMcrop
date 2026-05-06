@@ -646,10 +646,11 @@ export function AddModal({
           {/* V3.0 自产/外购标识 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">来源类型</label>
-            <select
+            <DictSelect
+              category="supplier_is_internal"
               value={formData.supplierIsInternal ? 'internal' : 'external'}
-              onChange={(e) => {
-                const isInternal = e.target.value === 'internal';
+              onChange={(value) => {
+                const isInternal = value === 'internal';
                 setFormData(prev => ({
                   ...prev,
                   supplierIsInternal: isInternal,
@@ -658,11 +659,8 @@ export function AddModal({
                   baseName: isInternal ? prev.baseName : '',
                 }));
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="external">外购</option>
-              <option value="internal">自产</option>
-            </select>
+              placeholder="选择来源类型"
+            />
             <p className="mt-1 text-xs text-gray-400">
               {formData.supplierIsInternal ? '自产种源：必选选择所属基地' : '外购种源：必选选择供应商'}
             </p>
@@ -745,15 +743,12 @@ export function AddModal({
                 onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <select
+              <DictSelect
+                category="unit"
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {units.map(u => (
-                  <option key={u.value} value={u.value}>{u.label}</option>
-                ))}
-              </select>
+                onChange={(value) => setFormData({ ...formData, unit: value })}
+                placeholder="单位"
+              />
             </div>
           </div>
 
@@ -840,14 +835,12 @@ export function AddModal({
           {/* V3.1 补录字段 - 占两列 */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
-            <select
-              value={formData.isSupplementary ? 'true' : 'false'}
-              onChange={(e) => setFormData({ ...formData, isSupplementary: e.target.value === 'true' })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="false">否</option>
-              <option value="true">是</option>
-            </select>
+            <DictSelect
+              category="is_supplementary"
+              value={formData.isSupplementary ? 'yes' : 'no'}
+              onChange={(value) => setFormData({ ...formData, isSupplementary: value === 'yes' })}
+              placeholder="选择是否补录"
+            />
             <p className="mt-1 text-xs text-amber-500">选择"是"时，该入库记录将提交审批审核</p>
           </div>
 
