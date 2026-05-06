@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { SearchableSelect } from '../materialReturn/modals/SearchableSelect';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
+import { getAllVarieties, getVarietyByCode } from '../../services/apiCropVarietyService';
 
 // 技术方案类型定义
 export interface TechSolution {
@@ -12,6 +14,7 @@ export interface TechSolution {
   code: string;
   title: string;
   crop: string;
+  cropCode?: string;
   plantingMode: string;
   stage: string;
   author: string;
@@ -55,6 +58,27 @@ export function TechSolutionPage() {
 
   // 技术方案数据状态
   const [techSolutions, setTechSolutions] = useState<TechSolution[]>([]);
+
+  // 作物品种选项
+  const [cropVarietyOptions, setCropVarietyOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // 加载作物品种数据
+  useEffect(() => {
+    async function loadCropVarieties() {
+      try {
+        const varieties = await getAllVarieties();
+        const options = varieties.map(v => ({
+          value: v.varietyName || v.varietyName || '',
+          label: `${v.varietyName}${v.subVariety1Name ? ` > ${v.subVariety1Name}` : ''}${v.detailVarietyName ? ` > ${v.detailVarietyName}` : ''}`,
+          cropCode: v.cropCode,
+        }));
+        setCropVarietyOptions(options);
+      } catch (error) {
+        console.error('加载作物品种失败:', error);
+      }
+    }
+    loadCropVarieties();
+  }, []);
 
   // 从 API 加载技术方案数据
   const loadTechSolutions = useCallback(async () => {
@@ -167,7 +191,8 @@ export function TechSolutionPage() {
   const [newPlanForm, setNewPlanForm] = useState({
     code: '',
     title: '',
-    crop: '番茄',
+    crop: '',
+    cropCode: '',
     plantingMode: '水培',
     stage: '',
     version: 'V1.0',
@@ -175,6 +200,16 @@ export function TechSolutionPage() {
     planDetailFileName: '',
     relatedBatchCode: '',
   });
+
+  // 处理作物品种选择变化，自动获取作物编码
+  const handleCropChange = (varietyName: string) => {
+    const selected = cropVarietyOptions.find(opt => opt.value === varietyName);
+    setNewPlanForm(prev => ({
+      ...prev,
+      crop: varietyName,
+      cropCode: selected?.cropCode || '',
+    }));
+  };
 
   const generateCode = () => {
     return `T${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
@@ -214,6 +249,7 @@ export function TechSolutionPage() {
     const techSolutionData = {
       solutionTitle: newPlanForm.title,
       cropName: newPlanForm.crop,
+      cropCode: newPlanForm.cropCode,
       plantingMode: newPlanForm.plantingMode,
       stage: newPlanForm.stage,
       version: newPlanForm.version || 'V1.0',
@@ -269,7 +305,8 @@ export function TechSolutionPage() {
       setNewPlanForm({
         code: '',
         title: '',
-        crop: '番茄',
+        crop: '',
+        cropCode: '',
         plantingMode: '水培',
         stage: '',
         version: 'V1.0',
@@ -429,7 +466,8 @@ export function TechSolutionPage() {
     setNewPlanForm({
       code: generateCode(),
       title: '',
-      crop: '番茄',
+      crop: '',
+      cropCode: '',
       plantingMode: '水培',
       stage: '',
       version: 'V1.0',
@@ -1011,18 +1049,24 @@ export function TechSolutionPage() {
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="作物种类">
-              <Select
+            <FormField label="作物品种">
+              <SearchableSelect
                 value={newPlanForm.crop}
-                onChange={(e) => setNewPlanForm({...newPlanForm, crop: e.target.value})}
-                options={[
-                  { value: '番茄', label: '番茄' },
-                  { value: '黄瓜', label: '黄瓜' },
-                  { value: '草莓', label: '草莓' },
-                  { value: '辣椒', label: '辣椒' },
-                ]}
+                options={cropVarietyOptions}
+                onChange={handleCropChange}
+                placeholder="请搜索并选择作物品种"
               />
             </FormField>
+            <FormField label="作物编码">
+              <Input
+                value={newPlanForm.cropCode}
+                placeholder="自动获取"
+                disabled
+                className="bg-gray-50"
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <FormField label="种植模式">
               <Select
                 value={newPlanForm.plantingMode}
