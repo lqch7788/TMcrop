@@ -87,18 +87,18 @@ export function PlantingTable({
       const varieties = await cropVarietyService.getAllVarieties();
       const cache = new Map<string, CropVariety>();
       varieties.forEach(v => {
-        // 缓存最细分品种（sub_variety1_name 优先）
-        const key1 = v.sub_variety1_name || '';
+        // 缓存最细分品种（subVariety1Name 优先）
+        const key1 = v.subVariety1Name || '';
         if (key1 && !cache.has(key1)) {
           cache.set(key1, v);
         }
-        // 也按 variety_name 缓存
-        const key2 = v.variety_name || '';
+        // 也按 varietyName 缓存
+        const key2 = v.varietyName || '';
         if (key2 && !cache.has(key2)) {
           cache.set(key2, v);
         }
-        // 也按 crop_code 缓存
-        const key3 = v.crop_code || '';
+        // 也按 cropCode 缓存
+        const key3 = v.cropCode || '';
         if (key3 && !cache.has(key3)) {
           cache.set(key3, v);
         }
@@ -122,7 +122,7 @@ export function PlantingTable({
       if (v) return v;
       // 模糊匹配
       for (const [key, variety] of varietyCache.entries()) {
-        const varietyFullName = (variety.sub_variety1_name || variety.variety_name || '');
+        const varietyFullName = (variety.subVariety1Name || variety.varietyName || '');
         if (varietyFullName.includes(record.sourceCode) || record.sourceCode.includes(varietyFullName)) {
           return variety;
         }
@@ -134,7 +134,7 @@ export function PlantingTable({
       if (v) return v;
       // 模糊匹配
       for (const [key, variety] of varietyCache.entries()) {
-        const varietyFullName = (variety.sub_variety1_name || variety.variety_name || '');
+        const varietyFullName = (variety.subVariety1Name || variety.varietyName || '');
         if (varietyFullName.includes(record.cropName) || record.cropName.includes(varietyFullName)) {
           return variety;
         }
@@ -142,19 +142,19 @@ export function PlantingTable({
     }
 
     // 找不到时，在同品种下找"其他"子品种
-    // 遍历品种库，查找 variety_name 相同但 sub_variety1_name 为"其他"的品种
+    // 遍历品种库，查找 varietyName 相同但 subVariety1Name 为"其他"的品种
     for (const [key, variety] of varietyCache.entries()) {
       const searchName = record.sourceCode || record.cropName || '';
       if (!searchName) continue;
 
-      // 检查该品种的 variety_name 是否匹配
-      if (variety.variety_name && searchName.includes(variety.variety_name)) {
+      // 检查该品种的 varietyName 是否匹配
+      if (variety.varietyName && searchName.includes(variety.varietyName)) {
         // 在同品种下查找"其他"子品种
         for (const [k2, v2] of varietyCache.entries()) {
-          if (v2.variety_name === variety.variety_name &&
-              v2.type_name === variety.type_name &&
-              v2.category_name === variety.category_name &&
-              v2.sub_variety1_name?.includes('其他')) {
+          if (v2.varietyName === variety.varietyName &&
+              v2.typeName === variety.typeName &&
+              v2.categoryName === variety.categoryName &&
+              v2.subVariety1Name?.includes('其他')) {
             return v2;
           }
         }
@@ -173,10 +173,10 @@ export function PlantingTable({
       return record.sourceCode || record.cropName || '-';
     }
     const parts: string[] = [];
-    if (variety.category_name) parts.push(variety.category_name);
-    if (variety.type_name) parts.push(variety.type_name);
-    if (variety.variety_name) parts.push(variety.variety_name);
-    if (variety.sub_variety1_name) parts.push(variety.sub_variety1_name);
+    if (variety.categoryName) parts.push(variety.categoryName);
+    if (variety.typeName) parts.push(variety.typeName);
+    if (variety.varietyName) parts.push(variety.varietyName);
+    if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
     return parts.join('-') || record.sourceCode || record.cropName || '-';
   };
 
@@ -187,7 +187,7 @@ export function PlantingTable({
       // 找不到品种（不应该发生），返回空编码提示
       return '-';
     }
-    return variety.crop_code || '-';
+    return variety.cropCode || '-';
   };
 
   // 获取作物品种（最细分）
@@ -197,7 +197,7 @@ export function PlantingTable({
       // 找不到品种（不应该发生），返回原始名称
       return record.sourceCode || record.cropName || '-';
     }
-    return variety.sub_variety1_name || variety.variety_name || record.sourceCode || record.cropName || '-';
+    return variety.subVariety1Name || variety.varietyName || record.sourceCode || record.cropName || '-';
   };
 
   const totalPages = Math.ceil(data.length / pagination.pageSize);

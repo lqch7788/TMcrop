@@ -25,7 +25,7 @@ router.get('/', (req: Request, res: Response) => {
       COALESCE(ss.source_origin, 'external_purchase') AS sourceOrigin,
       COALESCE(cv.category_name, ss.crop_category, '') AS cropCategory,
       COALESCE(cv.type_name, ss.type_name, '') AS typeName,
-      COALESCE(cv.variety_name, ss.variety_name, '') AS varietyName,
+      COALESCE(cv.sub_variety1_name, cv.variety_name, ss.variety_name, '') AS varietyName,
       ss.crop_name AS cropName,
       COALESCE(ss.crop_variety, '') AS cropVariety,
       -- 直接使用 crop_varieties.crop_code（已包含正确的11位字母数字混合编码）

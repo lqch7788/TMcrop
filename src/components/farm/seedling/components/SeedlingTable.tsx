@@ -92,18 +92,18 @@ export function SeedlingTable({
       const varieties = await cropVarietyService.getAllVarieties();
       const cache = new Map<string, CropVariety>();
       varieties.forEach(v => {
-        // 缓存最细分品种（sub_variety1_name 优先）
-        const key1 = v.sub_variety1_name || '';
+        // 缓存最细分品种（subVariety1Name 优先）
+        const key1 = v.subVariety1Name || '';
         if (key1 && !cache.has(key1)) {
           cache.set(key1, v);
         }
-        // 也按 variety_name 缓存
-        const key2 = v.variety_name || '';
+        // 也按 varietyName 缓存
+        const key2 = v.varietyName || '';
         if (key2 && !cache.has(key2)) {
           cache.set(key2, v);
         }
-        // 也按 crop_code 缓存
-        const key3 = v.crop_code || '';
+        // 也按 cropCode 缓存
+        const key3 = v.cropCode || '';
         if (key3 && !cache.has(key3)) {
           cache.set(key3, v);
         }
@@ -134,13 +134,13 @@ export function SeedlingTable({
 
     // 如果有 cropName，尝试用名称查找
     if (cropName) {
-      // 尝试用 sub_variety1_name 查找
+      // 尝试用 subVariety1Name 查找
       let variety = varietyCache.get(cropName);
       if (variety) return variety;
 
-      // 尝试用 variety_name 查找
+      // 尝试用 varietyName 查找
       for (const [key, v] of varietyCache.entries()) {
-        if (key === cropName || v.variety_name === cropName || v.sub_variety1_name === cropName) {
+        if (key === cropName || v.varietyName === cropName || v.subVariety1Name === cropName) {
           return v;
         }
       }
@@ -162,12 +162,12 @@ export function SeedlingTable({
     }
     // 如果后端没有返回品种路径，则通过 cropCode 或 cropName 查询品种库
     const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
-    if (variety && variety.category_name) {
+    if (variety && variety.categoryName) {
       return {
-        categoryName: variety.category_name,
-        typeName: variety.type_name,
-        varietyName: variety.variety_name,
-        subVarietyName: variety.sub_variety1_name || ''
+        categoryName: variety.categoryName,
+        typeName: variety.typeName,
+        varietyName: variety.varietyName,
+        subVarietyName: variety.subVariety1Name || ''
       };
     }
     return {
@@ -181,7 +181,7 @@ export function SeedlingTable({
   // 获取标准作物编码
   const getStandardCropCode = (record: Seedling): string => {
     const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
-    return variety?.crop_code || record.cropCode || '';
+    return variety?.cropCode || record.cropCode || '';
   };
 
   // 获取作物品种（最细分）
@@ -197,7 +197,7 @@ export function SeedlingTable({
     // 如果后端没有返回品种路径，则通过 cropCode 或 cropName 查询品种库
     const variety = getVarietyByCodeOrName(record.cropCode, record.cropName);
     if (variety) {
-      return variety.sub_variety1_name || variety.variety_name || record.cropVariety || '';
+      return variety.subVariety1Name || variety.varietyName || record.cropVariety || '';
     }
     return record.cropVariety || record.cropName || '';
   };
