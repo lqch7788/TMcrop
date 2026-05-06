@@ -13,6 +13,7 @@ import * as cropInstanceService from '../../../../services/apiCropInstanceServic
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { cropBatches } from '../../../../data/mockData';
 import { PlanType } from '../../../../types';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -232,21 +233,12 @@ export function AddModal({
         {/* 来源类型 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">来源类型</label>
-          <div className="flex gap-4">
-            {sourceTypeOptions.map(opt => (
-              <label key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="sourceType"
-                  value={opt.value}
-                  checked={formData.sourceType === opt.value}
-                  onChange={() => handleSourceTypeChange(opt.value as SourceType)}
-                  className="w-4 h-4 text-emerald-600"
-                />
-                <span className="text-sm">{opt.label}</span>
-              </label>
-            ))}
-          </div>
+          <DictSelect
+            category="planting_source_type"
+            value={formData.sourceType}
+            onChange={(value) => handleSourceTypeChange(value as SourceType)}
+            placeholder="选择来源类型"
+          />
         </div>
 
         {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
@@ -334,16 +326,12 @@ export function AddModal({
         {/* 种植区域 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植区域</label>
-          <select
+          <DictSelect
+            category="planting_area"
             value={formData.areaId}
-            onChange={(e) => handleAreaChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {areas.map(a => (
-              <option key={a.value} value={a.value}>{a.label}</option>
-            ))}
-          </select>
+            onChange={(value) => handleAreaChange(value)}
+            placeholder="选择种植区域"
+          />
         </div>
 
         {/* 种植数量 */}

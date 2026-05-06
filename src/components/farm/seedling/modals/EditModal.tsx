@@ -8,6 +8,7 @@ import { Seedling, SeedSource } from '../../../../types/crop';
 import { updateSeedling } from '../../../../services/apiSeedlingService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -335,14 +336,12 @@ export function EditModal({
         {/* 是否结束 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">是否结束</label>
-          <select
-            value={formData.isFinished ? '1' : '0'}
-            onChange={(e) => setFormData({ ...formData, isFinished: e.target.value === '1' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="0">否</option>
-            <option value="1">是</option>
-          </select>
+          <DictSelect
+            category="yes_no"
+            value={formData.isFinished ? 'yes' : 'no'}
+            onChange={(value) => setFormData({ ...formData, isFinished: value === 'yes' })}
+            placeholder="选择是否结束"
+          />
         </div>
       </div>
     </UnifiedModal>

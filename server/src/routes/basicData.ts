@@ -755,7 +755,7 @@ router.get('/devices', (req, res) => {
     const result = db.exec(`
       SELECT d.id, d.oid, d.device_code, d.device_name, d.device_type, d.manufacturer, d.serial_number,
              d.greenhouse_oid, d.location, d.install_date, d.status, d.last_maintenance_date,
-             d.next_maintenance_date, d.description, d.created_at,
+             d.next_maintenance_date, d.created_at,
              g.name as greenhouse_name
       FROM devices d
       LEFT JOIN greenhouses g ON d.greenhouse_oid = g.oid
@@ -1034,7 +1034,7 @@ router.get('/devices', (req, res) => {
     const result = db.exec(`
       SELECT d.id, d.oid, d.device_code, d.device_name, d.device_type, d.manufacturer, d.serial_number,
              d.greenhouse_oid, d.location, d.install_date, d.status, d.last_maintenance_date,
-             d.next_maintenance_date, d.description, d.created_at,
+             d.next_maintenance_date, d.created_at,
              g.name as greenhouse_name
       FROM devices d
       LEFT JOIN greenhouses g ON d.greenhouse_oid = g.oid

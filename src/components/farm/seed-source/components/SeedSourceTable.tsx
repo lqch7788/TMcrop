@@ -156,13 +156,17 @@ export function SeedSourceTable({
     [SourceType.OTHER]: '其他'
   };
 
-  // 来源途径映射
+  // 来源途径映射 - V3.0扩展至9项
   const sourceOriginMap: Record<string, string> = {
+    'internal_seed': '内部种源',
     'external_purchase': '外部采购',
-    'self_produced': '内部自繁',
-    'commissioned': '委托培育',
-    'gift': '政府/机构赠送',
-    'self_retained': '自留种',
+    'tissue_culture': '组培苗',
+    'grafting': '嫁接苗',
+    'seedling_split': '分株繁殖',
+    'cutting': '扦插繁殖',
+    'direct_seedling': '直接育苗',
+    'direct_planting': '直接种植',
+    'external_harvest': '外购成品入库',
     'other': '其他'
   };
 

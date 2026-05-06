@@ -8,6 +8,7 @@ import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { updatePlanting } from '../../../../services/apiPlantingService';
+import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -95,16 +96,12 @@ export function EditModal({
         {/* 种植区域 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植区域</label>
-          <select
+          <DictSelect
+            category="planting_area"
             value={formData.areaId}
-            onChange={(e) => setFormData({ ...formData, areaId: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {areas.map(a => (
-              <option key={a.value} value={a.value}>{a.label}</option>
-            ))}
-          </select>
+            onChange={(value) => setFormData({ ...formData, areaId: value })}
+            placeholder="选择种植区域"
+          />
         </div>
 
         {/* 种植数量 */}

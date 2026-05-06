@@ -292,15 +292,12 @@ export function EditModal({
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-            <select
+            <DictSelect
+              category="unit"
               value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {units.map(u => (
-                <option key={u.value} value={u.value}>{u.label}</option>
-              ))}
-            </select>
+              onChange={(value) => setFormData({ ...formData, unit: value })}
+              placeholder="单位"
+            />
           </div>
         </div>
 

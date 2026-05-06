@@ -48,14 +48,18 @@ export const RESPONSIBLE_PERSONS = [
 // ============================================
 
 /**
- * 育种计划（种源采购）模式
+ * 育种计划（种源采购）模式 - V3.0扩展
  */
 export const SEED_BREEDING_MODES = [
   { value: 'supplier_direct', label: '供应商直供' },
   { value: 'bidding', label: '招标采购' },
   { value: 'designated', label: '定点采购' },
-  { value: 'commissioned', label: '委托培育' },
-  { value: 'self_produced', label: '自繁自育' },
+  { value: 'internal_seed', label: '内部种源' },
+  { value: 'external_purchase', label: '外部采购' },
+  { value: 'tissue_culture', label: '组培苗' },
+  { value: 'grafting', label: '嫁接苗' },
+  { value: 'seedling_split', label: '分株繁殖' },
+  { value: 'cutting', label: '扦插繁殖' },
 ];
 
 /**
