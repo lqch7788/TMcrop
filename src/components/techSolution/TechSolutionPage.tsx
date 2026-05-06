@@ -1,39 +1,35 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { useApproval } from '../../hooks/useApproval';
+import { apiClient, USE_API } from '../../services/apiClient';
 
 // 技术方案类型定义
 export interface TechSolution {
-  id: number;
+  id: string;
   code: string;
   title: string;
   crop: string;
   plantingMode: string;
   stage: string;
   author: string;
+  authorId?: string;
   createDate: string;
   status: string;
-  statusClass: 'normal' | 'pending' | 'draft';
+  batchStatus?: string;
+  statusClass?: 'normal' | 'pending' | 'draft';
   version: string;
-  approveStatus: string;
+  approveStatus?: string;
   content: string;
-  approvalDate: string;
-  approver: string;
+  approvalDate?: string;
+  approver?: string;
   relatedBatchCode?: string;
   planDetailFileName?: string;
 }
 
-// 模拟数据
-const techSolutions: TechSolution[] = [
-  { id: 1, code: 'T202601001', title: '番茄春季高产栽培技术方案', crop: '番茄', plantingMode: '水培', stage: '生长全周期', author: '李建国', createDate: '2026-01-10', status: '已发布', statusClass: 'normal', version: 'V2.1', approveStatus: '已审批', content: '本方案针对春季番茄栽培，从品种选择、育苗、定植、田间管理、病虫害防治等方面进行详细介绍，旨在提高番茄产量和品质。', approvalDate: '2026-01-12', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '番茄春季高产栽培技术方案-T202601001.md' },
-  { id: 2, code: 'T202601002', title: '黄瓜设施栽培技术方案', crop: '黄瓜', plantingMode: '土培', stage: '设施栽培', author: '王建华', createDate: '2026-01-15', status: '已发布', statusClass: 'normal', version: 'V1.5', approveStatus: '已审批', content: '本方案介绍黄瓜设施栽培的关键技术，包括温室环境调控、水肥管理、植株调整等内容，适用于温室大棚种植。', approvalDate: '2026-01-18', approver: 'Susan', relatedBatchCode: 'ZZB2026-002', planDetailFileName: '黄瓜设施栽培技术方案-T202601002.docx' },
-  { id: 3, code: 'T202602001', title: '草莓冬季促成栽培技术方案', crop: '草莓', plantingMode: '基质培', stage: '冬季促成', author: '李建国', createDate: '2026-02-01', status: '审核中', statusClass: 'pending', version: 'V1.0', approveStatus: '审核中', content: '本方案针对草莓冬季促成栽培技术，包括保温措施、光照调控、肥水管理等进行详细说明。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'ZZB2026-003', planDetailFileName: '草莓冬季促成栽培技术方案-T202602001.md' },
-  { id: 4, code: 'T202602002', title: '辣椒越夏栽培技术方案', crop: '辣椒', plantingMode: '土培', stage: '越夏管理', author: '王建华', createDate: '2026-02-20', status: '已发布', statusClass: 'normal', version: 'V1.2', approveStatus: '已审批', content: '本方案介绍辣椒越夏栽培技术，重点解决夏季高温对辣椒生长的影响，确保高产稳产。', approvalDate: '2026-02-25', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '辣椒越夏栽培技术方案-T202602002.docx' },
-  { id: 5, code: 'T202603001', title: '番茄灰霉病防治方案', crop: '番茄', plantingMode: '水培', stage: '病虫害防治', author: '张技术', createDate: '2026-03-01', status: '草稿', statusClass: 'draft', version: 'V1.0', approveStatus: '未提交', content: '本方案针对番茄灰霉病的预防和治理措施，包括农业防治、化学防治等技术要点。', approvalDate: '-', approver: 'Susan', relatedBatchCode: 'ZZB2026-001', planDetailFileName: '番茄灰霉病防治方案-T202603001.md' },
-];
-
+// 种植模式选项
 const plantingModes = ['水培', '土培', '基质培', '雾培'];
 
 export function TechSolutionPage() {
@@ -44,14 +40,59 @@ export function TechSolutionPage() {
   const canDelete = true;
   const canExport = true;
 
+  // 审批相关
+  const { refreshApprovals } = useApproval();
+
   const [code, setCode] = useState('');
-  const [crop, setCrop] = useState('全部');
+  const [cropFilter, setCropFilter] = useState('全部');
   const [author, setAuthor] = useState('');
   const [status, setStatus] = useState('全部');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 技术方案数据状态
+  const [techSolutions, setTechSolutions] = useState<TechSolution[]>([]);
+
+  // 从 API 加载技术方案数据
+  const loadTechSolutions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (USE_API) {
+        const response = await apiClient.get<TechSolution[]>('/tech-solutions');
+        if (response && response.length > 0) {
+          setTechSolutions(response);
+        } else {
+          setTechSolutions([]);
+        }
+      } else {
+        setTechSolutions([]);
+      }
+    } catch (error) {
+      console.error('加载技术方案数据失败:', error);
+      setTechSolutions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    loadTechSolutions();
+  }, [loadTechSolutions]);
+
+  // 页面可见性变化时自动刷新数据
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadTechSolutions();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadTechSolutions]);
 
   // 过滤后的技术方案数据
   const filteredTechSolutions = techSolutions.filter(tech => {
@@ -60,7 +101,7 @@ export function TechSolutionPage() {
       return false;
     }
     // 作物种类过滤
-    if (crop && crop !== '全部' && tech.crop !== crop) {
+    if (cropFilter && cropFilter !== '全部' && tech.crop !== cropFilter) {
       return false;
     }
     // 编制人过滤
@@ -90,7 +131,7 @@ export function TechSolutionPage() {
   // 重置处理函数
   const handleReset = () => {
     setCode('');
-    setCrop('全部');
+    setCropFilter('全部');
     setAuthor('');
     setStatus('全部');
     setStartDate('');
@@ -107,7 +148,7 @@ export function TechSolutionPage() {
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedTech, setSelectedTech] = useState<TechSolution | null>(null);
@@ -166,19 +207,80 @@ export function TechSolutionPage() {
     setEditModalOpen(false);
   };
 
-  const handleCreateSubmit = () => {
-    setCreateModalOpen(false);
-    setNewPlanForm({
-      code: '',
-      title: '',
-      crop: '番茄',
-      plantingMode: '水培',
-      stage: '',
-      version: 'V1.0',
-      content: '',
-      planDetailFileName: '',
-      relatedBatchCode: '',
-    });
+  const handleCreateSubmit = async () => {
+    const today = new Date().toISOString().split('T')[0];
+
+    // 构造技术方案数据
+    const techSolutionData = {
+      solutionTitle: newPlanForm.title,
+      cropName: newPlanForm.crop,
+      plantingMode: newPlanForm.plantingMode,
+      stage: newPlanForm.stage,
+      version: newPlanForm.version || 'V1.0',
+      content: newPlanForm.content,
+      author: localStorage.getItem('username') || '陆启闯',
+      authorId: localStorage.getItem('userId') || '',
+      relatedBatchCode: newPlanForm.relatedBatchCode || '',
+      planDetailFileName: newPlanForm.planDetailFileName || '',
+      priority: 'normal',
+      batchStatus: 'pending', // 待审批状态
+    };
+
+    try {
+      if (USE_API) {
+        // 调用后端 API 创建技术方案
+        const result = await apiClient.post<{ id: string; code: string }>('/tech-solutions', techSolutionData);
+
+        // 创建审批单推送到审批中心
+        const approvalData = {
+          id: `AP${Date.now()}`,
+          type: 'tech_solution',
+          typeName: '技术方案',
+          title: `技术方案审批：${newPlanForm.title}`,
+          description: `作物：${newPlanForm.crop}\n种植模式：${newPlanForm.plantingMode}\n适用范围：${newPlanForm.stage}`,
+          applicantId: localStorage.getItem('userId') || '',
+          applicantName: localStorage.getItem('username') || '陆启闯',
+          applicantDepartment: localStorage.getItem('department') || '',
+          applyDate: today,
+          status: 'pending',
+          priority: 'normal',
+          businessLink: {
+            type: 'tech_solution',
+            requestId: result.id,
+            requestCode: result.code,
+            solutionTitle: newPlanForm.title,
+            cropName: newPlanForm.crop,
+            plantingMode: newPlanForm.plantingMode,
+            stage: newPlanForm.stage,
+            version: newPlanForm.version || 'V1.0',
+          },
+        };
+        await apiClient.post('/approvals', approvalData);
+
+        // 刷新审批中心数据
+        await refreshApprovals();
+      }
+
+      // 刷新技术方案列表
+      await loadTechSolutions();
+
+      // 关闭模态框
+      setCreateModalOpen(false);
+      setNewPlanForm({
+        code: '',
+        title: '',
+        crop: '番茄',
+        plantingMode: '水培',
+        stage: '',
+        version: 'V1.0',
+        content: '',
+        planDetailFileName: '',
+        relatedBatchCode: '',
+      });
+    } catch (error) {
+      console.error('创建技术方案失败:', error);
+      alert('创建技术方案失败，请重试');
+    }
   };
 
   const handleExportClick = () => {
@@ -194,7 +296,7 @@ export function TechSolutionPage() {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string | number) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -213,14 +315,14 @@ export function TechSolutionPage() {
   // 导出数据处理
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
-    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物种类', '种植模式', '生长阶段', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
+    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物种类', '种植模式', '适用范围', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
     const exportData = selectedData.map(row => ({
       '方案编号': row.code,
       '关联生产计划批次': row.relatedBatchCode || '-',
       '方案标题': row.title,
       '作物种类': row.crop,
       '种植模式': row.plantingMode,
-      '生长阶段': row.stage,
+      '适用范围': row.stage,
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
@@ -300,13 +402,27 @@ export function TechSolutionPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // 实际应用中这里会调用API删除数据
-    console.log('删除选中的方案:', selectedRows);
+  const handleDeleteConfirm = async () => {
+    // 获取选中的技术方案的ID
+    const selectedIds = techSolutions
+      .filter(t => selectedRows.includes(t.id))
+      .map(t => t.id);
+
+    try {
+      if (USE_API) {
+        // 调用API批量删除
+        await apiClient.post('/tech-solutions/batch-delete', { ids: selectedIds });
+      }
+      // 刷新技术方案列表
+      await loadTechSolutions();
+    } catch (error) {
+      console.error('删除技术方案失败:', error);
+      alert('删除失败，请重试');
+    }
+
     setShowDeleteModal(false);
     setBatchDeleteMode(false);
     setSelectedRows([]);
-    alert(`已删除 ${selectedRows.length} 个技术方案`);
   };
 
   const handleOpenCreateModal = () => {
@@ -318,6 +434,8 @@ export function TechSolutionPage() {
       stage: '',
       version: 'V1.0',
       content: '',
+      planDetailFileName: '',
+      relatedBatchCode: '',
     });
     setCreateModalOpen(true);
   };
@@ -351,8 +469,8 @@ export function TechSolutionPage() {
           <div className="min-w-[150px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">作物</label>
             <select
-              value={crop}
-              onChange={(e) => setCrop(e.target.value)}
+              value={cropFilter}
+              onChange={(e) => setCropFilter(e.target.value)}
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option>全部</option>
@@ -556,7 +674,7 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案标题</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物种类</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长阶段</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">适用范围</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
@@ -612,7 +730,7 @@ export function TechSolutionPage() {
                           // 下载方案详情文件
                           const fileName = tech.planDetailFileName!;
                           const isDocx = fileName.endsWith('.docx');
-                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物种类：${tech.crop}\n种植模式：${tech.plantingMode}\n生长阶段：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
+                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物种类：${tech.crop}\n种植模式：${tech.plantingMode}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
                           const blob = new Blob([content], {
                             type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
                           });
@@ -717,7 +835,7 @@ export function TechSolutionPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">生长阶段</label>
+                <label className="text-sm font-medium text-gray-500">适用范围</label>
                 <p className="text-gray-900">{selectedTech.stage}</p>
               </div>
             </div>
@@ -825,7 +943,7 @@ export function TechSolutionPage() {
                 />
               </FormField>
             </div>
-            <FormField label="生长阶段">
+            <FormField label="适用范围">
               <Input
                 value={editForm.stage}
                 onChange={(e) => setEditForm({...editForm, stage: e.target.value})}
@@ -930,11 +1048,11 @@ export function TechSolutionPage() {
               />
             </FormField>
           </div>
-          <FormField label="生长阶段">
+          <FormField label="适用范围">
             <Input
               value={newPlanForm.stage}
               onChange={(e) => setNewPlanForm({...newPlanForm, stage: e.target.value})}
-              placeholder="请输入生长阶段"
+              placeholder="请输入适用范围"
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
@@ -1135,9 +1253,9 @@ export function TechSolutionPage() {
                   </select>
                 </div>
 
-                {/* 生长阶段 - 可编辑 */}
+                {/* 适用范围 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">生长阶段</div>
+                  <div className="text-xs text-gray-500 mb-1">适用范围</div>
                   <input
                     type="text"
                     value={editedData.stage ?? currentTech.stage}
