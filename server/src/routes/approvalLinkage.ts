@@ -120,14 +120,22 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
 function updateProductionPlan(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
   try {
     const now = new Date().toISOString();
+    // 映射审批状态到生产计划状态
+    // approved -> published (已发布)
+    // rejected -> cancelled (已作废)
+    let planStatus = status;
+    if (status === 'approved') {
+      planStatus = 'published';
+    } else if (status === 'rejected' || status === 'cancelled') {
+      planStatus = 'cancelled';
+    }
     db.run(`
       UPDATE production_plans SET
         status = ?,
-        approval_code = ?,
-        approved_at = ?,
+        batch_status = ?,
         update_time = ?
       WHERE id = ?
-    `, [status, approvalCode, now, now, id]);
+    `, [planStatus, planStatus, now, id]);
     return true;
   } catch (e) {
     console.error('更新生产计划失败:', e);
@@ -459,7 +467,7 @@ function updateAnnouncement(db: any, id: string, status: string, approvalCode: s
 /**
  * 根据业务类型更新业务表
  */
-function updateBusinessTable(
+export function updateBusinessTable(
   db: any,
   businessType: string,
   requestId: string,
@@ -604,7 +612,11 @@ function updateBusinessTable(
 
     // ========== 生产审批（5种）==========
     case 'production':
-      if (updateProductionPlan(db, requestId, status, approvalCode, extra)) {
+      // 审批动作 -> 生产计划状态映射
+      // approved -> published (已发布)
+      // rejected -> cancelled (已作废)
+      // cancelled -> cancelled (已作废)
+      if (updateProductionPlan(db, requestId, action, approvalCode, extra)) {
         return { success: true, message: '生产计划状态已更新' };
       }
       break;
