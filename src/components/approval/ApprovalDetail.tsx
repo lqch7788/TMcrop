@@ -7,6 +7,7 @@
 import React from 'react';
 import { CheckCircle, XCircle, Clock, User, Calendar, FileText, MessageSquare } from 'lucide-react';
 import type { Approval, ApprovalStatus, ApprovalAction } from '../../types/approval';
+import { BusinessPreview } from './BusinessPreview';
 
 interface ApprovalDetailProps {
   approval: Approval;
@@ -236,11 +237,7 @@ export function ApprovalDetail({
       {/* 业务关联信息（如果有） */}
       {approval.businessLink && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">业务关联</h3>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-500">关联类型</div>
-            <div className="font-medium text-gray-900">{approval.businessLink.type}</div>
-          </div>
+          <BusinessPreview approval={approval} businessLink={approval.businessLink} />
         </div>
       )}
 

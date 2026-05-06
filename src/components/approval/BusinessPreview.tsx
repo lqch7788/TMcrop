@@ -224,6 +224,44 @@ export function BusinessPreview({ approval, businessLink }: BusinessPreviewProps
     </div>
   );
 
+  // 技术方案预览
+  const renderTechSolutionPreview = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="text-xs text-gray-500 mb-1">计划编号</div>
+          <div className="text-sm font-medium text-gray-900">{businessLink.requestCode || '-'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 mb-1">方案标题</div>
+          <div className="text-sm text-gray-900">{businessLink.solutionTitle || '-'}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="text-xs text-gray-500 mb-1">作物名称</div>
+          <div className="text-sm text-gray-900">{businessLink.cropName || '-'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 mb-1">种植方式</div>
+          <div className="text-sm text-gray-900">{businessLink.plantingMode || '-'}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="text-xs text-gray-500 mb-1">生长阶段</div>
+          <div className="text-sm text-gray-900">{businessLink.stage || '-'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 mb-1">版本</div>
+          <div className="text-sm text-gray-900">{businessLink.version || '-'}</div>
+        </div>
+      </div>
+    </div>
+  );
+
   // 根据业务类型选择渲染函数
   const renderContent = () => {
     switch (businessLink.type) {
@@ -240,6 +278,8 @@ export function BusinessPreview({ approval, businessLink }: BusinessPreviewProps
       case 'production_plan':
       case 'production_batch':
         return renderProductionPreview();
+      case 'tech_solution':
+        return renderTechSolutionPreview();
       default:
         return (
           <div className="text-center py-8 text-gray-500">
