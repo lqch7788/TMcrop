@@ -77,6 +77,9 @@ interface ApprovalContextValue {
   getFilteredApprovals: () => Approval[];
   getStatusText: (status: ApprovalStatus) => string;
   getTypeText: (type: ApprovalType) => string;
+
+  // 刷新方法
+  refreshApprovals: () => Promise<void>;
 }
 
 const ApprovalContext = createContext<ApprovalContextValue | null>(null);
@@ -246,13 +249,22 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     if (approval) {
       executeApprovalIntegration('approved', approval, { comment });
     }
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     try {
-      await fetch(`${API_BASE}/${id}/action`, {
+      const response = await fetch(`${API_BASE}/${id}/action`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve', comment }),
+        body: JSON.stringify({ action: 'approve', comment, approverId, approverName }),
       });
-      await loadApprovalsFromAPI();
+      const result = await response.json();
+      if (result.success) {
+        await loadApprovalsFromAPI();
+      } else {
+        console.error('审批失败:', result.error);
+        alert('审批失败: ' + result.error);
+      }
     } catch (error) {
       console.error('Failed to approve via API:', error);
     }
@@ -263,13 +275,22 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     if (approval) {
       executeApprovalIntegration('rejected', approval, { reason: comment });
     }
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     try {
-      await fetch(`${API_BASE}/${id}/action`, {
+      const response = await fetch(`${API_BASE}/${id}/action`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reject', comment }),
+        body: JSON.stringify({ action: 'reject', comment, approverId, approverName }),
       });
-      await loadApprovalsFromAPI();
+      const result = await response.json();
+      if (result.success) {
+        await loadApprovalsFromAPI();
+      } else {
+        console.error('审批失败:', result.error);
+        alert('审批失败: ' + result.error);
+      }
     } catch (error) {
       console.error('Failed to reject via API:', error);
     }
@@ -280,11 +301,14 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     try {
       await fetch(`${API_BASE}/${id}/action`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'partially_approve', comment, approvedItems: items }),
+        body: JSON.stringify({ action: 'partially_approve', comment, approvedItems: items, approverId, approverName }),
       });
       await loadApprovalsFromAPI();
     } catch (error) {
@@ -297,11 +321,14 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     if (approval) {
       executeApprovalIntegration('cancelled', approval, { reason });
     }
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     try {
       await fetch(`${API_BASE}/${id}/action`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', comment: reason }),
+        body: JSON.stringify({ action: 'cancel', comment: reason, approverId, approverName }),
       });
       await loadApprovalsFromAPI();
     } catch (error) {
@@ -311,6 +338,9 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
 
   // 批量审批操作
   const batchApprove = useCallback(async (ids: string[], comment?: string) => {
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     // 依次执行每个审批
     const promises = ids.map(async (id) => {
       const approval = state.approvals.find(a => a.id === id);
@@ -321,7 +351,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
         await fetch(`${API_BASE}/${id}/action`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'approve', comment }),
+          body: JSON.stringify({ action: 'approve', comment, approverId, approverName }),
         });
       } catch (error) {
         console.error(`Failed to batch approve ${id}:`, error);
@@ -338,6 +368,9 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
   }, [state.approvals, loadApprovalsFromAPI]);
 
   const batchReject = useCallback(async (ids: string[], comment: string) => {
+    // 获取当前用户信息
+    const approverId = localStorage.getItem('userId') || '';
+    const approverName = localStorage.getItem('username') || '系统';
     // 依次执行每个拒绝
     const promises = ids.map(async (id) => {
       const approval = state.approvals.find(a => a.id === id);
@@ -348,7 +381,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
         await fetch(`${API_BASE}/${id}/action`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'reject', comment }),
+          body: JSON.stringify({ action: 'reject', comment, approverId, approverName }),
         });
       } catch (error) {
         console.error(`Failed to batch reject ${id}:`, error);
@@ -465,6 +498,11 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     return statusMap[status] || status;
   }, []);
 
+  // 刷新审批数据
+  const refreshApprovals = useCallback(async () => {
+    await loadApprovalsFromAPI();
+  }, [loadApprovalsFromAPI]);
+
   // 辅助方法：获取类型文本
   const getTypeText = useCallback((type: ApprovalType): string => {
     const typeMap: Record<ApprovalType, string> = {
@@ -508,6 +546,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     getFilteredApprovals,
     getStatusText,
     getTypeText,
+    refreshApprovals,
   }), [
     state.approvals,
     state.filters,
@@ -533,6 +572,7 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     getFilteredApprovals,
     getStatusText,
     getTypeText,
+    refreshApprovals,
   ]);
 
   return (

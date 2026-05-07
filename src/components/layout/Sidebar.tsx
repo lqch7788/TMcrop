@@ -4,11 +4,11 @@ import {
   LayoutDashboard, Sprout, ClipboardList, Package, Eye,
   Warehouse, BarChart3, CheckSquare, Bell, Menu, X,
   Users, MapPin, Target, ScrollText,
-  Wifi, Thermometer, Activity, Search, AlertTriangle, Gauge, FileText, Hash,
+  Wifi, Thermometer, Activity, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
-  Briefcase, GraduationCap, Clipboard, Play, Bot, UserMinus, FileSpreadsheet,
+  Briefcase, GraduationCap, Clipboard, Play, Bot,
   Leaf, Flower2, Trees, CheckCircle
 } from 'lucide-react';
 
@@ -46,15 +46,12 @@ const cropSubItems = [
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
 
-// 人工管理5大模块（任务中心已移出到农事管理）
+// 人工管理4大模块（离职申请、招聘申请、工资预算已整合到人事管理）
 const laborSubItems = [
   { icon: Users, label: '考勤管理', path: '/labor/attendance' },
   { icon: UserPlus, label: '人事管理', path: '/labor/personnel' },
   { icon: Banknote, label: '薪酬管理', path: '/labor/compensation' },
   { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
-  { icon: UserMinus, label: '离职申请', path: '/labor/resignation' },
-  { icon: Search, label: '招聘申请', path: '/labor/recruitment' },
-  { icon: FileSpreadsheet, label: '工资预算', path: '/labor/salary-budget' },
 ];
 
 // 生产汇总表（问题分派、每日工单汇总已移出到农事管理）

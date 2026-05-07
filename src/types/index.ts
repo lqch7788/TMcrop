@@ -68,7 +68,7 @@ export interface CropBatch {
   publisher?: string; // 发布人
   publishDate?: string; // 初次发布时间
   lastModifyDate?: string; // 最后修改时间
-  batchStatus?: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
+  batchStatus?: 'draft' | 'pending' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
   planDetailFileName?: string; // 计划详情文件名
   planDetail?: string; // 计划详情内容
   // 计划类型（用于区分育种/育苗/种植）

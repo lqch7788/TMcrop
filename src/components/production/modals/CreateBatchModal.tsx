@@ -1,6 +1,6 @@
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
 import { CropBatch, Greenhouse, CropType, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
-import { RESPONSIBLE_PERSONS, batchStatusLabels, planTypeOptions, getModesByPlanType } from '../constants';
+import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState, useRef, useEffect } from 'react';
 import { Upload, Search, X } from 'lucide-react';
 import { searchVarieties, getVarietyByCode, CropVarietySearchResult } from '../../../services/cropVarietyService';
@@ -8,7 +8,8 @@ import { searchVarieties, getVarietyByCode, CropVarietySearchResult } from '../.
 interface CreateBatchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: () => void;
+  onSaveDraft: () => void;
+  onSubmitForApproval: () => void;
   formData: {
     batchCode: string;
     planType: PlanType;  // 计划类型
@@ -24,7 +25,6 @@ interface CreateBatchModalProps {
     plantingMode: string;
     responsiblePerson: string;
     publisher: string;
-    batchStatus: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled';
     description: string;
     planDetail: string;
   };
@@ -39,7 +39,8 @@ interface CreateBatchModalProps {
 export function CreateBatchModal({
   isOpen,
   onClose,
-  onSubmit,
+  onSaveDraft,
+  onSubmitForApproval,
   formData,
   errors,
   greenhouses,
@@ -127,7 +128,25 @@ export function CreateBatchModal({
       onClose={onClose}
       title="新增生产计划批次"
       size="xl"
-      onSubmit={onSubmit}
+      showFooter={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+          >
+            存为草稿
+          </button>
+          <button
+            type="button"
+            onClick={onSubmitForApproval}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
+          >
+            提交审批
+          </button>
+        </div>
+      }
     >
       <div className="space-y-4 modal-form-inputs">
         {/* 计划类型和生产计划批次号同一行 */}
@@ -315,14 +334,6 @@ export function CreateBatchModal({
               value={formData.publisher}
               disabled
               className="bg-blue-50 text-blue-700 font-medium"
-            />
-          </FormField>
-
-          <FormField label="当前状态">
-            <Select
-              value={formData.batchStatus}
-              onChange={(e) => onFormChange('batchStatus', e.target.value)}
-              options={Object.entries(batchStatusLabels).map(([key, label]) => ({ value: key, label }))}
             />
           </FormField>
 

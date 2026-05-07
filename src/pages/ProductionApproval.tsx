@@ -10,10 +10,10 @@ import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon
+  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, X, ShoppingCart
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
-import { ApprovalStatus, ApprovalType } from '../types/approval';
+import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import BatchActionBar from '../components/approval/BatchActionBar';
 
 export default function ProductionApproval() {
@@ -27,15 +27,59 @@ export default function ProductionApproval() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [detailModal, setDetailModal] = useState<{ show: boolean; approval: Approval | null }>({ show: false, approval: null });
+  const [approvalModal, setApprovalModal] = useState<{ show: boolean; approval: Approval | null; action: 'approve' | 'reject' | null }>({ show: false, approval: null, action: null });
+  const [approvalComment, setApprovalComment] = useState('');
+
+  // 查看详情处理
+  const handleViewDetail = (approval: Approval) => {
+    setDetailModal({ show: true, approval });
+  };
+
+  // 审批操作处理
+  const handleApprove = (approval: Approval) => {
+    setApprovalModal({ show: true, approval, action: 'approve' });
+    setApprovalComment('');
+  };
+
+  const handleReject = (approval: Approval) => {
+    setApprovalModal({ show: true, approval, action: 'reject' });
+    setApprovalComment('');
+  };
+
+  // 确认审批操作
+  const confirmApproval = () => {
+    if (!approvalModal.approval || !approvalModal.action) return;
+
+    if (approvalModal.action === 'approve') {
+      approve(approvalModal.approval.id, approvalComment);
+    } else {
+      reject(approvalModal.approval.id, approvalComment || '审批拒绝');
+    }
+    setApprovalModal({ show: false, approval: null, action: null });
+    setApprovalComment('');
+  };
+
+  // 取消审批
+  const cancelApproval = () => {
+    setApprovalModal({ show: false, approval: null, action: null });
+    setApprovalComment('');
+  };
+
+  // 关闭详情弹窗
+  const closeDetailModal = () => {
+    setDetailModal({ show: false, approval: null });
+  };
 
   // Tab配置 - 生产类审批
   const tabs = [
-    { key: 'tech', label: '技术方案', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
-    { key: 'plan', label: '生产计划', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
-    { key: 'batch', label: '生产批次', icon: Package, path: '/production', types: [ApprovalType.PRODUCTION_BATCH] },
-    { key: 'batch_change', label: '批次变更', icon: RefreshCw, path: '/production', types: [ApprovalType.BATCH_CHANGE] },
-    { key: 'batch_void', label: '批次作废', icon: XCircle, path: '/production', types: [ApprovalType.BATCH_VOID] },
-    { key: 'harvest', label: '采收申请', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
+    { key: 'plan', label: '生产计划审批', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
+    { key: 'tech', label: '技术方案审批', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
+    { key: 'purchase', label: '采购计划审批', icon: ShoppingCart, path: '/purchase-plan', types: [ApprovalType.PURCHASE_REQUEST] },
+    { key: 'batch', label: '生产批次审批', icon: Package, path: '/production', types: [ApprovalType.PRODUCTION_BATCH] },
+    { key: 'batch_change', label: '批次变更审批', icon: RefreshCw, path: '/production', types: [ApprovalType.BATCH_CHANGE] },
+    { key: 'batch_void', label: '批次作废审批', icon: XCircle, path: '/production', types: [ApprovalType.BATCH_VOID] },
+    { key: 'harvest', label: '采收申请审批', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
   ] as const;
 
   // 根据Tab类型筛选数据
@@ -344,14 +388,14 @@ export default function ProductionApproval() {
                       {item.status === ApprovalStatus.PENDING && (
                         <>
                           <button
-                            onClick={() => approve(item.id)}
+                            onClick={() => handleApprove(item)}
                             className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                             title="通过"
                           >
                             <CheckCircle className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => reject(item.id, '审批拒绝')}
+                            onClick={() => handleReject(item)}
                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="拒绝"
                           >
@@ -360,6 +404,7 @@ export default function ProductionApproval() {
                         </>
                       )}
                       <button
+                        onClick={() => handleViewDetail(item)}
                         className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="查看详情"
                       >
@@ -418,6 +463,308 @@ export default function ProductionApproval() {
           </div>
         )}
       </div>
+
+      {/* 详情弹窗 */}
+      {detailModal.show && detailModal.approval && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeDetailModal}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* 弹窗头部 - 绿色 */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-emerald-600 to-green-500">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">审批详情</h3>
+                  <p className="text-sm text-white/80">{detailModal.approval.code}</p>
+                </div>
+              </div>
+              <button onClick={closeDetailModal} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* 状态标签 */}
+            <div className="px-6 pt-4">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                detailModal.approval.status === ApprovalStatus.PENDING ? 'bg-amber-100 text-amber-700' :
+                detailModal.approval.status === ApprovalStatus.APPROVED ? 'bg-emerald-100 text-emerald-700' :
+                detailModal.approval.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {detailModal.approval.status === ApprovalStatus.PENDING ? '⏳ 待审批' :
+                 detailModal.approval.status === ApprovalStatus.APPROVED ? '✅ 已通过' :
+                 detailModal.approval.status === ApprovalStatus.REJECTED ? '❌ 已拒绝' :
+                 detailModal.approval.status}
+              </span>
+            </div>
+
+            {/* 弹窗内容 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)] space-y-4">
+              {/* 基本信息卡片 */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> 申请信息
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400">申请标题</label>
+                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.title}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400">申请人</label>
+                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantName || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400">申请部门</label>
+                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantDepartment || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400">申请时间</label>
+                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applyDate} {detailModal.approval.applyTime}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 业务关联信息卡片 */}
+              {detailModal.approval.businessLink && (
+                <div className="bg-emerald-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-emerald-600 mb-3 flex items-center gap-2">
+                    <Sprout className="w-4 h-4" /> {(() => {
+                      const typeLabelMap: Record<string, string> = {
+                        'production': '生产计划信息',
+                        'production_batch': '生产批次信息',
+                        'batch_change': '批次变更信息',
+                        'batch_void': '批次作废信息',
+                        'tech_solution': '技术方案信息',
+                        'harvest': '采收申请信息',
+                        'material': '领料申请信息',
+                        'purchase': '采购申请信息',
+                        'leave': '请假申请信息',
+                        'overtime': '加班申请信息',
+                        'transfer': '转岗申请信息',
+                        'resign': '离职申请信息'
+                      };
+                      return typeLabelMap[detailModal.approval.businessLink?.type || ''] || '业务信息';
+                    })()}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(detailModal.approval.businessLink).map(([key, value]) => {
+                      // 字段中文映射
+                      const fieldLabels: Record<string, string> = {
+                        type: '业务类型',
+                        requestId: '请求ID',
+                        requestCode: '计划编号',
+                        batchCode: '批次编号',
+                        cropName: '作物名称',
+                        cropCode: '作物编码',
+                        variety: '品种',
+                        greenhouseName: '温室区域',
+                        greenhouseId: '温室ID',
+                        startDate: '开始日期',
+                        expectedHarvestDate: '预计采收',
+                        responsiblePerson: '负责人',
+                        targetYield: '目标产量',
+                        plantingArea: '种植面积',
+                        plantingMode: '种植方式',
+                        unit: '单位',
+                        quantity: '数量',
+                        // 技术方案相关字段
+                        solutionTitle: '方案标题',
+                        stage: '阶段',
+                        version: '版本号',
+                        // 通用字段
+                        remarks: '备注',
+                        description: '描述'
+                      };
+                      const label = fieldLabels[key] || key;
+                      // 格式化值显示
+                      let displayValue = String(value);
+                      if (key === 'type') {
+                        const typeMap: Record<string, string> = {
+                          'production': '生产计划',
+                          'production_batch': '生产批次',
+                          'batch_change': '批次变更',
+                          'batch_void': '批次作废',
+                          'tech_solution': '技术方案',
+                          'harvest': '采收申请',
+                          'material': '领料申请',
+                          'purchase': '采购申请',
+                          'leave': '请假',
+                          'overtime': '加班',
+                          'transfer': '转岗',
+                          'resign': '离职'
+                        };
+                        displayValue = typeMap[value as string] || value as string;
+                      }
+                      if (key === 'targetYield') displayValue = `${value} kg`;
+                      if (key === 'plantingArea') displayValue = `${value} m²`;
+                      if (key === 'quantity') displayValue = `${value}`;
+                      // 种植方式翻译
+                      if (key === 'plantingMode') {
+                        const modeMap: Record<string, string> = {
+                          'internal_seed': '自育苗',
+                          'external_purchase': '外购苗',
+                          'open_field': '露天栽培',
+                          'greenhouse': '温室栽培',
+                          'hydroponics': '水培',
+                          'aeroponics': '气雾培',
+                          'substrate': '基质培',
+                          'soil': '土培'
+                        };
+                        displayValue = modeMap[value as string] || value as string;
+                      }
+                      // 阶段翻译
+                      if (key === 'stage') {
+                        const stageMap: Record<string, string> = {
+                          'seedling': '苗期',
+                          'vegetative': '营养生长期',
+                          'flowering': '开花期',
+                          'fruiting': '结果期',
+                          'harvest': '采收期',
+                          'entire': '整个生命周期',
+                          'whole_lifecycle': '整个生命周期'
+                        };
+                        displayValue = stageMap[value as string] || value as string;
+                      }
+                      return (
+                        <div key={key} className="flex flex-col">
+                          <span className="text-xs text-gray-500">{label}</span>
+                          <span className="text-sm font-medium text-gray-900">{displayValue}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 申请描述卡片 */}
+              {detailModal.approval.description && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> 申请描述
+                  </h4>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{detailModal.approval.description}</p>
+                </div>
+              )}
+
+              {/* 审批记录卡片 */}
+              {detailModal.approval.records && detailModal.approval.records.length > 0 && (
+                <div className="bg-purple-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-purple-600 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> 审批记录
+                  </h4>
+                  <div className="space-y-3">
+                    {detailModal.approval.records.map((record: any, index: number) => (
+                      <div key={index} className="flex items-start gap-3 p-2 bg-white rounded-lg">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${
+                          record.action === 'approve' ? 'bg-emerald-500' :
+                          record.action === 'reject' ? 'bg-red-500' : 'bg-gray-400'
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-900">
+                            <span className="font-medium">{record.approverName}</span>
+                            <span className="text-gray-500 mx-1">
+                              {record.action === 'approve' ? '✅ 通过了申请' :
+                               record.action === 'reject' ? '❌ 拒绝了申请' :
+                               record.action === 'partially_approve' ? '🔄 部分通过了' : '📝 操作了'}
+                            </span>
+                          </p>
+                          {record.comment && (
+                            <p className="text-xs text-gray-500 mt-1">备注：{record.comment}</p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">{record.actionTime}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 弹窗底部 */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={closeDetailModal}
+                className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 审批确认弹窗 */}
+      {approvalModal.show && approvalModal.approval && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelApproval}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* 弹窗头部 */}
+            <div className={`flex items-center justify-between px-6 py-4 ${approvalModal.action === 'approve' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  {approvalModal.action === 'approve' ? (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
+                  </h3>
+                  <p className="text-sm text-white/80">{approvalModal.approval.code}</p>
+                </div>
+              </div>
+              <button onClick={cancelApproval} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* 弹窗内容 */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {approvalModal.action === 'approve' ? '通过意见（可选）' : '拒绝原因（可选）'}
+                </label>
+                <textarea
+                  value={approvalComment}
+                  onChange={(e) => setApprovalComment(e.target.value)}
+                  placeholder={approvalModal.action === 'approve' ? '请输入通过意见...' : '请输入拒绝原因...'}
+                  className="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+                />
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">申请标题：</span>{approvalModal.approval.title}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  <span className="font-medium">申请人：</span>{approvalModal.approval.applicantName}
+                </p>
+              </div>
+            </div>
+
+            {/* 弹窗底部 */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={cancelApproval}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmApproval}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 ${
+                  approvalModal.action === 'approve' ? 'bg-emerald-600' : 'bg-red-600'
+                }`}
+              >
+                {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

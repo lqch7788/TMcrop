@@ -1,6 +1,7 @@
 // 批次状态颜色配置
 export const batchStatusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',       // 草稿
+  pending: 'bg-amber-100 text-amber-700',    // 待审批
   published: 'bg-blue-100 text-blue-700',    // 已发布
   in_progress: 'bg-emerald-100 text-emerald-700', // 执行中
   completed: 'bg-green-600 text-white',   // 已完成 - 深绿色底色白字
@@ -24,6 +25,7 @@ export const planTypeOptions = Object.entries(PlanTypeLabels).map(([value, label
 // 批次状态文本配置
 export const batchStatusLabels: Record<string, string> = {
   draft: '草稿',
+  pending: '待审批',
   published: '已发布',
   in_progress: '执行中',
   completed: '已完成',

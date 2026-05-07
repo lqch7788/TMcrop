@@ -338,7 +338,7 @@ export function TechSolutionPage() {
     }
   };
 
-  const handleCreateSubmit = async () => {
+  const handleCreateSubmit = async (submitMode: 'draft' | 'submit') => {
     const today = new Date().toISOString().split('T')[0];
 
     // 构造技术方案数据
@@ -355,7 +355,7 @@ export function TechSolutionPage() {
       relatedBatchCode: newPlanForm.relatedBatchCode || '',
       planDetailFileName: newPlanForm.planDetailFileName || '',
       priority: 'normal',
-      batchStatus: 'pending', // 待审批状态
+      batchStatus: submitMode === 'draft' ? 'draft' : 'pending', // 草稿或待审批
     };
 
     try {
@@ -363,34 +363,36 @@ export function TechSolutionPage() {
         // 调用后端 API 创建技术方案
         const result = await apiClient.post<{ id: string; code: string }>('/tech-solutions', techSolutionData);
 
-        // 创建审批单推送到审批中心
-        const approvalData = {
-          id: `AP${Date.now()}`,
-          type: 'tech_solution',
-          typeName: '技术方案',
-          title: `技术方案审批：${newPlanForm.title}`,
-          description: `作物：${newPlanForm.crop}\n种植模式：${newPlanForm.plantingMode}\n适用范围：${newPlanForm.stage}`,
-          applicantId: localStorage.getItem('userId') || '',
-          applicantName: localStorage.getItem('username') || '陆启闯',
-          applicantDepartment: localStorage.getItem('department') || '',
-          applyDate: today,
-          status: 'pending',
-          priority: 'normal',
-          businessLink: {
+        // 只有提交审批模式才创建审批单
+        if (submitMode === 'submit') {
+          const approvalData = {
+            id: `AP${Date.now()}`,
             type: 'tech_solution',
-            requestId: result.id,
-            requestCode: result.code,
-            solutionTitle: newPlanForm.title,
-            cropName: newPlanForm.crop,
-            plantingMode: newPlanForm.plantingMode,
-            stage: newPlanForm.stage,
-            version: newPlanForm.version || 'V1.0',
-          },
-        };
-        await apiClient.post('/approvals', approvalData);
+            typeName: '技术方案',
+            title: `技术方案审批：${newPlanForm.title}`,
+            description: `作物：${newPlanForm.crop}\n种植模式：${newPlanForm.plantingMode}\n适用范围：${newPlanForm.stage}`,
+            applicantId: localStorage.getItem('userId') || '',
+            applicantName: localStorage.getItem('username') || '陆启闯',
+            applicantDepartment: localStorage.getItem('department') || '',
+            applyDate: today,
+            status: 'pending',
+            priority: 'normal',
+            businessLink: {
+              type: 'tech_solution',
+              requestId: result.id,
+              requestCode: result.code,
+              solutionTitle: newPlanForm.title,
+              cropName: newPlanForm.crop,
+              plantingMode: newPlanForm.plantingMode,
+              stage: newPlanForm.stage,
+              version: newPlanForm.version || 'V1.0',
+            },
+          };
+          await apiClient.post('/approvals', approvalData);
 
-        // 刷新审批中心数据
-        await refreshApprovals();
+          // 刷新审批中心数据
+          await refreshApprovals();
+        }
       }
 
       // 刷新技术方案列表
@@ -1108,9 +1110,25 @@ export function TechSolutionPage() {
         onClose={() => setCreateModalOpen(false)}
         title="新增方案"
         size="xxxl"
-        onSubmit={handleCreateSubmit}
-        submitText="提交"
-        cancelText="取消"
+        showFooter={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => handleCreateSubmit('draft')}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+            >
+              存为草稿
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCreateSubmit('submit')}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
+            >
+              提交审批
+            </button>
+          </div>
+        }
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

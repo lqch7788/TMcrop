@@ -30,6 +30,7 @@ import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
+import techSolutionRouter from './techSolution';
 import summaryRouter from './summary';
 import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
@@ -126,6 +127,9 @@ router.use('/production-plans', productionPlanRouter);
 
 // 生产计划路由别名（兼容前端 /production/plans 调用）- 公开访问
 router.use('/production/plans', productionPlanRouter);
+
+// 技术方案路由 - 公开访问
+router.use('/tech-solutions', techSolutionRouter);
 
 // 生产汇总统计路由 - 公开访问
 router.use('/summary', summaryRouter);

@@ -334,6 +334,7 @@ router.put('/:id', (req: Request, res: Response) => {
       planName: 'plan_name',
       planType: 'plan_type',
       cropName: 'crop_name',
+      variety: 'crop_variety',
       cropVariety: 'crop_variety',
       greenhouseName: 'greenhouse_name',
       areaName: 'area_name',

@@ -213,8 +213,8 @@ export default function RecruitmentPage() {
   /** 根据选择的部门筛选岗位 */
   const availablePositions = useMemo(() => {
     if (!formData.deptId) return positions;
-    return positions.filter(p => p.departmentId === formData.deptId);
-  }, [formData.deptId]);
+    return positions.filter(p => p.departmentOid === formData.deptId);
+  }, [formData.deptId, positions]);
 
   // ============================================================
   // 事件处理
@@ -601,7 +601,7 @@ export default function RecruitmentPage() {
           >
             <option value="">全部部门</option>
             {departments.map(dept => (
-              <option key={dept.id} value={dept.id}>{dept.name}</option>
+              <option key={dept.oid} value={dept.oid}>{dept.name}</option>
             ))}
           </select>
 
@@ -778,7 +778,7 @@ export default function RecruitmentPage() {
             >
               <option value="">请选择部门</option>
               {departments.map(dept => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                <option key={dept.oid} value={dept.oid}>{dept.name}</option>
               ))}
             </select>
           </div>

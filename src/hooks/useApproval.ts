@@ -61,6 +61,9 @@ export interface UseApprovalReturn {
   // 辅助方法
   getStatusText: (status: ApprovalStatus) => string;
   getTypeText: (type: ApprovalType) => string;
+
+  // 刷新方法
+  refreshApprovals: () => Promise<void>;
 }
 
 // ============================================================
@@ -100,6 +103,7 @@ export function useApproval(): UseApprovalReturn {
     getFilteredApprovals,
     getStatusText,
     getTypeText,
+    refreshApprovals,
   } = context;
 
   return {
@@ -128,6 +132,7 @@ export function useApproval(): UseApprovalReturn {
     getFilteredApprovals,
     getStatusText,
     getTypeText,
+    refreshApprovals,
   };
 }
 

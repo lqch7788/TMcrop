@@ -293,7 +293,8 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
   {
     type: ApprovalType.RECRUITMENT,
     batchApprovalSupported: false,
-    remark: '招聘',
+    forcedLevel: ApprovalLevel.STANDARD,
+    remark: '招聘，标准二级审批（部门主管+经理）',
   },
   {
     type: ApprovalType.ONBOARDING,

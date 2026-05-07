@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, UserPlus, Briefcase, Edit, Trash2, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, UserPlus, Briefcase, Edit, Trash2, Download, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useRecruitment } from './hooks/useRecruitment';
 import { RecruitmentFilters } from './RecruitmentFilters';
@@ -7,7 +7,10 @@ import { RecruitmentTable } from './RecruitmentTable';
 import { RecruitmentDetailModal } from './RecruitmentDetailModal';
 import { RecruitmentFormModal } from './RecruitmentFormModal';
 import { RecruitmentBatchEditModal } from './RecruitmentBatchEditModal';
-import { RecruitmentRequest, RecruitmentFormData, RecruitmentSource } from './types';
+import { RecruitmentRequest, RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
+import { useApprovalContext } from '../../../contexts/ApprovalContext';
+import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
+import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -133,6 +136,12 @@ export function RecruitmentPage() {
     deleteRecruitment,
   } = useRecruitment();
 
+  // 审批上下文
+  const { addApproval, approvals, approve, reject } = useApprovalContext();
+
+  // 分级审批hook
+  const { generateApprovers } = useApprovalLevel();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -168,6 +177,10 @@ export function RecruitmentPage() {
     requirements: '',
     source: '' as RecruitmentSource,
     expectedDate: '',
+    employmentType: '正式工' as EmploymentType,
+    salaryMin: 0,
+    salaryMax: 0,
+    priority: '普通' as Priority,
     remarks: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -195,6 +208,10 @@ export function RecruitmentPage() {
       requirements: '',
       source: '' as RecruitmentSource,
       expectedDate: '',
+      employmentType: '正式工' as EmploymentType,
+      salaryMin: 0,
+      salaryMax: 0,
+      priority: '普通' as Priority,
       remarks: '',
     });
     setFormErrors({});
@@ -218,6 +235,10 @@ export function RecruitmentPage() {
       requirements: recruitment.requirements,
       source: recruitment.source,
       expectedDate: recruitment.expectedDate,
+      employmentType: recruitment.employmentType || '正式工',
+      salaryMin: recruitment.salaryMin || 0,
+      salaryMax: recruitment.salaryMax || 0,
+      priority: recruitment.priority || '普通',
       remarks: recruitment.remarks || '',
     });
     setIsFormModalOpen(true);
@@ -246,8 +267,14 @@ export function RecruitmentPage() {
     if (!formData.quantity || formData.quantity < 1) errors.quantity = '请输入有效人数';
     if (!formData.source) errors.source = '请选择招聘来源';
     if (!formData.expectedDate) errors.expectedDate = '请选择期望到岗日期';
+    if (!formData.employmentType) errors.employmentType = '请选择用工类型';
+    if (!formData.priority) errors.priority = '请选择优先级';
     if (!formData.reason.trim()) errors.reason = '请输入招聘原因';
     if (!formData.requirements.trim()) errors.requirements = '请输入岗位要求';
+    // 薪资校验：最低薪资不能大于最高薪资
+    if (formData.salaryMin > 0 && formData.salaryMax > 0 && formData.salaryMin > formData.salaryMax) {
+      errors.salaryMax = '最低薪资不能大于最高薪资';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -257,16 +284,96 @@ export function RecruitmentPage() {
     if (!validateForm()) return;
     if (editingRecruitment) {
       updateRecruitment(editingRecruitment.id, formData);
+      closeFormModal();
     } else {
-      createRecruitment(formData, currentUser.id, currentUser.name);
+      // 创建招聘申请记录
+      const newRecruitment = createRecruitment(formData, currentUser.id, currentUser.name);
+
+      // 转换优先级: 招聘表单的 priority 到审批的 priority
+      const priorityMap: Record<Priority, 'low' | 'normal' | 'high' | 'urgent'> = {
+        '低': 'low',
+        '普通': 'normal',
+        '高': 'high',
+        '紧急': 'urgent',
+      };
+
+      // 薪资范围
+      const salaryRange = formData.salaryMin > 0 || formData.salaryMax > 0
+        ? `${formData.salaryMin}-${formData.salaryMax}元/月`
+        : '面议';
+
+      // 使用分级审批系统生成审批人配置
+      const approvalLevelResult = generateApprovers(ApprovalType.RECRUITMENT, 0);
+
+      // 创建审批记录
+      const approval: Approval = {
+        id: `APR-RE-${Date.now()}`,
+        code: `SP-RE-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
+        type: ApprovalType.RECRUITMENT,
+        typeName: '招聘申请',
+        category: 'hr',
+        title: `${formData.department}${formData.position}招聘${formData.quantity}人`,
+        description: `申请招聘${formData.quantity}名${formData.position}到${formData.department}，用工类型：${formData.employmentType}，薪资：${salaryRange}，优先级：${formData.priority}\n\n招聘原因：${formData.reason}`,
+        applicantId: currentUser.id,
+        applicantName: currentUser.name,
+        applicantDepartment: formData.department,
+        applyDate: new Date().toISOString().slice(0, 10),
+        applyTime: new Date().toISOString().slice(11, 19),
+        priority: priorityMap[formData.priority] || 'normal',
+        status: ApprovalStatus.PENDING,
+        currentStep: 1,
+        totalSteps: approvalLevelResult.totalSteps,
+        approvers: approvalLevelResult.approvers,
+        records: [],
+        remark: formData.remarks,
+        reminderCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notificationSent: true,
+        businessLink: {
+          type: 'recruitment',
+          requestId: newRecruitment.id,
+          recruitmentId: newRecruitment.id,
+          department: formData.department,
+          position: formData.position,
+          headcount: formData.quantity,
+          employmentType: formData.employmentType,
+          salaryMin: formData.salaryMin,
+          salaryMax: formData.salaryMax,
+          priority: formData.priority as 'low' | 'normal' | 'high' | 'urgent',
+          expectedDate: formData.expectedDate,
+          reason: formData.reason,
+          requirements: formData.requirements,
+          source: formData.source,
+        },
+      };
+
+      // 添加到审批上下文
+      addApproval(approval);
+
+      closeFormModal();
+      alert('提交成功！');
     }
-    closeFormModal();
   };
 
   // 审批通过
   const handleApprove = (recruitment: RecruitmentRequest) => {
     if (window.confirm(`确定审批通过招聘申请 "${recruitment.requestCode}" 吗？`)) {
+      // 调用审批中心的审批通过
+      approve(recruitment.id, '同意招聘');
+      // 更新本地状态
       approveRecruitment(recruitment.id, 'u005', '王经理', '同意招聘');
+    }
+  };
+
+  // 审批驳回
+  const handleReject = (recruitment: RecruitmentRequest) => {
+    const reason = window.prompt('请输入驳回原因：');
+    if (reason !== null && reason.trim() !== '') {
+      // 调用审批中心的审批驳回
+      reject(recruitment.id, reason);
+      // 更新本地状态
+      cancelRecruitment(recruitment.id, 'u005', '王经理', reason);
     }
   };
 
