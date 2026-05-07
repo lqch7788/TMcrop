@@ -54,12 +54,27 @@ export default defineConfig({
   build: {
     // 启用源码映射便于调试
     sourcemap: false,
-    // 禁用变量名混淆便于HMR
-    minify: false,
+    // 生产环境压缩代码
+    minify: 'esbuild',
     rollupOptions: {
       output: {
-        // 禁用代码分割以减少复杂组件的HMR问题
-        manualChunks: undefined,
+        // 按需分割代码，优化首屏加载
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react', 'clsx', 'tailwind-merge'],
+          'vendor-charts': ['recharts'],
+          'vendor-office': ['xlsx', 'file-saver', 'docx'],
+          'vendor-radix': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-label',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ],
+        },
       },
     },
   },
