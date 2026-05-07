@@ -279,16 +279,16 @@ router.put('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     const {
-      solutionTitle,
-      cropName,
-      plantingMode,
-      stage,
-      version,
-      content,
-      relatedBatchCode,
-      planDetailFileName,
-      priority,
-      remarks,
+      solutionTitle = '',
+      cropName = '',
+      plantingMode = '',
+      stage = '',
+      version = 'V1.0',
+      content = '',
+      relatedBatchCode = '',
+      planDetailFileName = '',
+      priority = 'normal',
+      remarks = '',
     } = req.body;
 
     const now = new Date().toISOString();

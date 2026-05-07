@@ -3,6 +3,8 @@ import { ShoppingCart, Plus, Search, Eye, Edit, Trash2, ChevronLeft, ChevronRigh
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { getPurchasePlansWithStatus, getPurchasePlansWithStatusAsync, subscribeToStatusChanges } from '../../hooks/usePurchasePlanStore';
+import { apiClient, USE_API } from '../../services/apiClient';
+import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import * as XLSX from 'xlsx';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
@@ -335,8 +337,66 @@ export function PurchasePlanPage() {
     }));
   };
 
-  const handleCreateSubmit = () => {
-    setShowCreateModal(false);
+  const handleCreateSubmit = async () => {
+    try {
+      // 计算总金额
+      const totalAmount = createItems.reduce((sum, item) => sum + (item.estimatedTotalPrice || 0), 0);
+
+      // 准备创建采购计划的数据
+      const planData = {
+        plan_code: createForm.purchaseApplicationCode,
+        plan_title: `${createForm.purchaseType} - ${createForm.purchaseApplicationCode}`,
+        plan_type: createForm.purchaseType,
+        department_id: '',
+        department_name: createForm.applicantDepartment,
+        applicant_id: localStorage.getItem('userId') || '',
+        applicant_name: createForm.applicant,
+        apply_date: createForm.applyDate,
+        expected_date: createForm.requiredDate,
+        supplier_id: '',
+        supplier_name: '',
+        total_amount: totalAmount,
+        priority: createForm.priority === '紧急' ? 'urgent' :
+                 createForm.priority === '高' ? 'high' :
+                 createForm.priority === '中' ? 'normal' : 'low',
+        status: 'draft',
+        approval_status: 'pending',
+        remarks: createForm.remark,
+        attachments: [],
+        items: createItems,
+        create_by: createForm.applicant,
+      };
+
+      // 调用 API 创建采购计划
+      const result = await apiClient.post<{ id: string; plan_code: string }>('/purchase-plans', planData);
+
+      if (result && result.id) {
+        // 计算总金额作为审批金额
+        const approvalAmount = totalAmount;
+
+        // 提交审批
+        await submitPurchaseApproval({
+          purchaseId: result.id,
+          purchaseCode: result.plan_code || createForm.purchaseApplicationCode,
+          purchaseName: planData.plan_title,
+          amount: approvalAmount,
+          applicantId: planData.applicant_id,
+          applicantName: planData.applicant_name,
+          department: planData.department_name,
+        });
+
+        // 刷新数据
+        const data = await getPurchasePlansWithStatusAsync();
+        setPurchasePlansData(data);
+
+        alert('采购计划已创建并提交审批');
+      }
+    } catch (error) {
+      console.error('创建采购计划失败:', error);
+      alert('创建采购计划失败，请重试');
+    } finally {
+      setShowCreateModal(false);
+    }
   };
 
   const handleReset = () => {
@@ -483,12 +543,31 @@ export function PurchasePlanPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = () => {
-    console.log('删除选中的采购计划:', selectedRows);
-    setShowDeleteModal(false);
-    setBatchDeleteMode(false);
-    setSelectedRows([]);
-    alert(`已删除 ${selectedRows.length} 个采购计划`);
+  const handleDeleteConfirm = async () => {
+    try {
+      // 获取选中项的ID（需要从purchaseApplicationCode映射到id）
+      const selectedIds = purchasePlansData
+        .filter(p => selectedRows.includes(p.purchaseApplicationCode))
+        .map(p => p.id);
+
+      if (USE_API) {
+        // 调用API逐条删除
+        for (const id of selectedIds) {
+          await apiClient.delete(`/purchase-plans/${id}`);
+        }
+      }
+
+      // 刷新数据
+      const data = await getPurchasePlansWithStatusAsync();
+      setPurchasePlansData(data);
+      setShowDeleteModal(false);
+      setBatchDeleteMode(false);
+      setSelectedRows([]);
+      alert(`已删除 ${selectedIds.length} 个采购计划`);
+    } catch (error) {
+      console.error('删除采购计划失败:', error);
+      alert('删除失败，请重试');
+    }
   };
 
   return (
@@ -1874,51 +1953,31 @@ export function PurchasePlanPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!currentEditingPlan) return;
-                // 保存编辑内容
-                console.log('保存采购申请单编辑:', {
-                  purchaseApplicationCode: currentEditingPlan.purchaseApplicationCode,
-                  relatedBatchCode: currentEditingPlan.relatedBatchCode,
-                  purchaseType: batchEditData.purchaseType,
-                  priority: batchEditData.priority,
-                  requiredDate: batchEditData.requiredDate,
-                  remark: batchEditData.remark,
-                  // 状态保持不变，由业务流程自动生成
-                  status: currentEditingPlan.status,
-                  items: batchEditItems, // 使用编辑后的物料明细
-                });
-                // 更新数据
-                setPurchasePlansData(prev => prev.map(plan => {
-                  if (plan.purchaseApplicationCode === currentEditingPlan.purchaseApplicationCode) {
-                    return {
-                      ...plan,
+                try {
+                  // 调用API更新采购计划
+                  if (USE_API) {
+                    await apiClient.put(`/purchase-plans/${currentEditingPlan.id}`, {
                       relatedBatchCode: currentEditingPlan.relatedBatchCode,
                       purchaseType: batchEditData.purchaseType,
-                      purchaseTypeName: batchEditData.purchaseType === 'production' ? '生产物资采购' :
-                                       batchEditData.purchaseType === 'urgent' ? '紧急采购' :
-                                       batchEditData.purchaseType === 'routine' ? '常规采购' :
-                                       batchEditData.purchaseType === 'material' ? '通用物资' :
-                                       batchEditData.purchaseType === 'safety' ? '劳保用品' :
-                                       batchEditData.purchaseType === 'equipment' ? '设备采购' : '其他',
-                      applicant: currentEditingPlan.applicant,
-                      applicantDepartment: currentEditingPlan.applicantDepartment,
-                      requiredDate: batchEditData.requiredDate,
                       priority: batchEditData.priority,
-                      priorityText: batchEditData.priority === 'urgent' ? '紧急' :
-                                   batchEditData.priority === 'high' ? '高' :
-                                   batchEditData.priority === 'normal' ? '中' : '低',
+                      requiredDate: batchEditData.requiredDate,
                       remark: batchEditData.remark,
-                      items: batchEditItems, // 使用编辑后的物料明细
-                    };
+                    });
                   }
-                  return plan;
-                }));
-                setShowBatchEditModal(false);
-                setBatchEditMode(false);
-                setSelectedRows([]);
-                setBatchEditItems([]); // 清理物料明细
-                alert('保存成功');
+                  // 刷新数据
+                  const data = await getPurchasePlansWithStatusAsync();
+                  setPurchasePlansData(data);
+                  setShowBatchEditModal(false);
+                  setBatchEditMode(false);
+                  setSelectedRows([]);
+                  setBatchEditItems([]);
+                  alert('保存成功');
+                } catch (error) {
+                  console.error('保存失败:', error);
+                  alert('保存失败，请重试');
+                }
               }}
               className="px-6 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
             >
