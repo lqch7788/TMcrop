@@ -19,12 +19,12 @@ import { TaskAcceptanceAdapter } from '../../components/farm/hub/modals/TaskAcce
 import { ProblemDispatchModal } from '../../components/farm/hub/ProblemDispatchModal';
 import { InspectionDetailModal } from '../../components/farm/hub/InspectionDetailModal';
 import { SelectExecutorModal } from '../../components/farm/hub/modals/SelectExecutorModal';
+import { CreateTaskModal } from '../../components/farm/hub/modals/CreateTaskModal';
 import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
 import { taskDispatchFields, taskDispatchStaff } from '../../data/farmMockData';
-import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../types/farm/common';
-import { TaskConfigValues } from '../../types/farm/taskTypeConfig';
+import { FARM_OPERATION_TYPES } from '../../types/farm/common';
 import { cropBatches } from '../../data/mockData';
 import { useUsers } from '../../components/common/settings';
 import { format, parse, addDays, addHours } from 'date-fns';
@@ -125,6 +125,178 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
   }
 }
 
+// CSV解析函数
+const parseCSV = (file: File): Promise<ImportRow[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+          reject(new Error('文件内容为空或格式不正确'));
+          return;
+        }
+
+        // 解析表头
+        const headers = lines[0].split(',').map(h => h.trim());
+
+        // 解析数据行
+        const data: ImportRow[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim());
+          if (values.length >= 7) {
+            const typeValue = values[0].toLowerCase();
+            const taskType = FARM_OPERATION_TYPES.find(t =>
+              t.value === typeValue || t.label === values[0]
+            );
+
+            data.push({
+              type: taskType?.value || typeValue || 'irrigation',
+              typeLabel: taskType?.label || values[0] || '灌溉',
+              field: values[1] || '',
+              crop: values[2] || '',
+              assignee: values[3] || '',
+              planStart: values[4] || '',
+              planEnd: values[5] || '',
+              priority: values[6] || 'normal',
+            });
+          }
+        }
+
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsText(file);
+  });
+};
+
+// 处理文件选择
+const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setImportFile: (f: File | null) => void, setImportData: (d: ImportRow[]) => void, setImportPreview: (p: ImportRow[]) => void) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
+  if (fileExt !== 'csv' && fileExt !== 'xlsx') {
+    alert('请上传 CSV 或 XLSX 格式的文件');
+    return;
+  }
+
+  setImportFile(file);
+
+  try {
+    const data = await parseCSV(file);
+    setImportData(data);
+    setImportPreview(data.slice(0, 5));
+  } catch (error) {
+    alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
+    setImportFile(null);
+    setImportPreview([]);
+    setImportData([]);
+  }
+};
+
+// 处理文件拖拽
+const handleFileDrop = async (e: React.DragEvent, setImportFile: (f: File | null) => void, setImportData: (d: ImportRow[]) => void, setImportPreview: (p: ImportRow[]) => void) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files?.[0];
+  if (!file) return;
+
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
+  if (fileExt !== 'csv' && fileExt !== 'xlsx') {
+    alert('请上传 CSV 或 XLSX 格式的文件');
+    return;
+  }
+
+  setImportFile(file);
+
+  try {
+    const data = await parseCSV(file);
+    setImportData(data);
+    setImportPreview(data.slice(0, 5));
+  } catch (error) {
+    alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
+    setImportFile(null);
+    setImportPreview([]);
+    setImportData([]);
+  }
+};
+
+// 确认导入
+const handleImportConfirm = (
+  importData: ImportRow[],
+  setShowImportModal: (b: boolean) => void,
+  setImportFile: (f: File | null) => void,
+  setImportPreview: (p: ImportRow[]) => void,
+  setImportData: (d: ImportRow[]) => void,
+  tasksHook: { createTask: (task: any) => void },
+  users: any[],
+  hub: { refresh: () => void }
+) => {
+  if (importData.length === 0) {
+    alert('没有可导入的数据');
+    return;
+  }
+
+  // 使用 tasksHook.createTask 创建任务
+  importData.forEach(row => {
+    const typeLabels = row.typeLabel || row.type;
+    const finalAssigneeName = row.assignee || '';
+    const finalAssigneeId = finalAssigneeName
+      ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}`
+      : '';
+
+    const defaultDispatcher = users.find(u => u.id === 'U001');
+    const assignerId = defaultDispatcher?.id || 'U001';
+    const assignerName = defaultDispatcher?.name || '系统';
+
+    const matchedField = taskDispatchFields.find(f => f.name === row.field);
+    const greenhouseId = matchedField?.id?.toString() || '';
+
+    const estimatedHours = ((row.estimatedDays || 0) * 8) + (row.estimatedHours || 0);
+
+    tasksHook.createTask({
+      title: typeLabels || '农事任务',
+      type: row.type || 'other',
+      typeName: typeLabels,
+      batchId: '',
+      batchCode: '',
+      greenhouseId: greenhouseId,
+      greenhouseName: row.field,
+      cropName: row.crop,
+      priority: (row.priority as 'urgent' | 'high' | 'normal') || 'normal',
+      assigneeId: finalAssigneeId,
+      assigneeName: finalAssigneeName,
+      assignerId: assignerId,
+      assignerName: assignerName,
+      dueDate: row.planEnd?.split(' ')[0] || '',
+      estimatedDays: row.estimatedDays || 0,
+      estimatedHours: estimatedHours,
+      description: '',
+      remarks: '',
+      sourceType: 'dispatch',
+      materials: [],
+      tools: [],
+      toolsRemarks: '',
+      requiredFeedback: ['workload_confirm'],
+      typeConfig: {},
+      status: 'pending',
+    });
+  });
+
+  alert(`成功导入 ${importData.length} 条任务`);
+
+  // 关闭模态框并重置状态
+  setShowImportModal(false);
+  setImportFile(null);
+  setImportPreview([]);
+  setImportData([]);
+  hub.refresh();
+};
+
 /**
  * 农事任务中心主组件
  */
@@ -150,63 +322,6 @@ export function FarmTaskHub() {
 
   // 新建任务状态
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createStep, setCreateStep] = useState(1);
-  const [stepError, setStepError] = useState('');
-  const [newTask, setNewTask] = useState<{
-    taskId: string;
-    types: string[];
-    typeRemarks: string;
-    fields: string[];
-    crops: string[];
-    cropRemarks: string;
-    areaRemarks: string;
-    assignee: string;
-    planStart: string;
-    planEnd: string;
-    sopContent: string;
-    materials: { name: string; qty: number; unit: string }[];
-    tools: { name: string; qty: number; unit: string }[];
-    requiredFeedback: string[];
-    priority: string;
-    estimatedDays: number;
-    estimatedHours: number;
-    typeConfig: TaskConfigValues;
-    toolsRemarks: string;
-    batchId: string;
-    batchCode: string;
-    batchSearch: string;
-    remarks: string;
-    workHoursPerDay: number;
-  }>({
-    taskId: '',
-    types: [],
-    typeRemarks: '',
-    fields: [],
-    crops: [],
-    cropRemarks: '',
-    areaRemarks: '',
-    assignee: '',
-    planStart: '',
-    planEnd: '',
-    sopContent: '',
-    materials: [],
-    tools: [],
-    requiredFeedback: ['workload_confirm'],
-    priority: 'normal',
-    estimatedDays: 0,
-    estimatedHours: 1,
-    typeConfig: {},
-    toolsRemarks: '',
-    batchId: '',
-    batchCode: '',
-    batchSearch: '',
-    remarks: '',
-    workHoursPerDay: 8,
-  });
-  const [showBatchDropdown, setShowBatchDropdown] = useState(false);
-  const [showFieldDropdown, setShowFieldDropdown] = useState(false);
-  const [showCropDropdown, setShowCropDropdown] = useState(false);
-  const [showTaskTypeDropdown, setShowTaskTypeDropdown] = useState(false);
 
   // AI推荐相关状态
   const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>('manual');
@@ -216,12 +331,6 @@ export function FarmTaskHub() {
 
   // AI推荐 Hook
   const smartRecommend = useSmartRecommendation();
-
-  // 从 cropBatches 提取唯一作物列表（避免硬编码）
-  const uniqueCrops = useMemo(() => {
-    const crops = cropBatches.map(b => b.cropName).filter(Boolean);
-    return [...new Set(crops)] as string[];
-  }, [cropBatches]);
 
   // 批量导入相关状态
   const [showImportModal, setShowImportModal] = useState(false);
@@ -239,410 +348,6 @@ export function FarmTaskHub() {
       // 保存引用用于拖动
     }
   }, []);
-
-  // ========== 新建任务相关函数 ==========
-  const handleNextStep = () => {
-    let error = '';
-    if (createStep === 1) {
-      if (!newTask.taskId) {
-        error = '请生成任务编号';
-      } else if (newTask.types.length === 0) {
-        error = '请选择任务类型';
-      } else if (newTask.fields.length === 0) {
-        error = '请选择任务区域';
-      } else if (newTask.crops.length === 0) {
-        error = '请选择作物';
-      } else if (newTask.types.includes('other') && !newTask.typeRemarks.trim()) {
-        error = '请输入其他任务备注';
-      }
-    }
-    // Step 2 不需要验证执行人（执行人在任务列表中单独选择）
-
-    if (error) {
-      setStepError(error);
-      return;
-    }
-
-    setStepError('');
-    setCreateStep(createStep + 1);
-  };
-
-  // 获取AI推荐
-  const fetchAIRecommendations = useCallback(async () => {
-    const taskInfo = {
-      id: newTask.taskId || '',
-      taskCode: newTask.taskId || '',
-      title: newTask.types[0] || '农事任务',
-      type: newTask.types[0] || '',
-      typeName: newTask.types[0] || '',
-      priority: (newTask.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
-      workZone: newTask.fields[0] || '',
-      greenhouse: newTask.fields[0] || '',
-      cropName: newTask.crops[0] || '',
-      batchId: newTask.batchId,
-      batchCode: newTask.batchCode,
-      estimatedHours: newTask.estimatedHours,
-      dueDate: newTask.planEnd?.split(' ')[0] || '',
-    };
-
-    try {
-      const recommendations = await smartRecommend.getRecommendations(taskInfo);
-      setAiRecommendations(recommendations || []);
-    } catch {
-      setAiRecommendations([]);
-    }
-  }, [newTask, smartRecommend]);
-
-  // CSV解析函数
-  const parseCSV = (file: File): Promise<ImportRow[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const lines = text.split('\n').filter(line => line.trim());
-          if (lines.length < 2) {
-            reject(new Error('文件内容为空或格式不正确'));
-            return;
-          }
-
-          // 解析表头
-          const headers = lines[0].split(',').map(h => h.trim());
-
-          // 解析数据行
-          const data: ImportRow[] = [];
-          for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
-            if (values.length >= 7) {
-              const typeValue = values[0].toLowerCase();
-              const taskType = FARM_OPERATION_TYPES.find(t =>
-                t.value === typeValue || t.label === values[0]
-              );
-
-              data.push({
-                type: taskType?.value || typeValue || 'irrigation',
-                typeLabel: taskType?.label || values[0] || '灌溉',
-                field: values[1] || '',
-                crop: values[2] || '',
-                assignee: values[3] || '',
-                planStart: values[4] || '',
-                planEnd: values[5] || '',
-                priority: values[6] || 'normal',
-              });
-            }
-          }
-
-          resolve(data);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('文件读取失败'));
-      reader.readAsText(file);
-    });
-  };
-
-  // 处理文件选择
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (fileExt !== 'csv' && fileExt !== 'xlsx') {
-      alert('请上传 CSV 或 XLSX 格式的文件');
-      return;
-    }
-
-    setImportFile(file);
-
-    try {
-      const data = await parseCSV(file);
-      setImportData(data);
-      setImportPreview(data.slice(0, 5));
-    } catch (error) {
-      alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
-      setImportFile(null);
-      setImportPreview([]);
-      setImportData([]);
-    }
-  };
-
-  // 处理文件拖拽
-  const handleFileDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (fileExt !== 'csv' && fileExt !== 'xlsx') {
-      alert('请上传 CSV 或 XLSX 格式的文件');
-      return;
-    }
-
-    setImportFile(file);
-
-    try {
-      const data = await parseCSV(file);
-      setImportData(data);
-      setImportPreview(data.slice(0, 5));
-    } catch (error) {
-      alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
-      setImportFile(null);
-      setImportPreview([]);
-      setImportData([]);
-    }
-  };
-
-  // 确认导入
-  const handleImportConfirm = () => {
-    if (importData.length === 0) {
-      alert('没有可导入的数据');
-      return;
-    }
-
-    // 使用 tasksHook.createTask 创建任务
-    importData.forEach(row => {
-      const typeLabels = row.typeLabel || row.type;
-      const assigneeStaff = taskDispatchStaff.find(s => s.name === row.assignee);
-      const finalAssigneeName = row.assignee || '';
-      const finalAssigneeId = finalAssigneeName
-        ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}`
-        : '';
-
-      const defaultDispatcher = users.find(u => u.id === 'U001');
-      const assignerId = defaultDispatcher?.id || 'U001';
-      const assignerName = defaultDispatcher?.name || '系统';
-
-      const matchedField = taskDispatchFields.find(f => f.name === row.field);
-      const greenhouseId = matchedField?.id?.toString() || '';
-
-      const estimatedHours = ((row.estimatedDays || 0) * 8) + (row.estimatedHours || 0);
-
-      tasksHook.createTask({
-        title: typeLabels || '农事任务',
-        type: row.type || 'other',
-        typeName: typeLabels,
-        batchId: '',
-        batchCode: '',
-        greenhouseId: greenhouseId,
-        greenhouseName: row.field,
-        cropName: row.crop,
-        priority: (row.priority as 'urgent' | 'high' | 'normal') || 'normal',
-        assigneeId: finalAssigneeId,
-        assigneeName: finalAssigneeName,
-        assignerId: assignerId,
-        assignerName: assignerName,
-        dueDate: row.planEnd?.split(' ')[0] || '',
-        estimatedDays: row.estimatedDays || 0,
-        estimatedHours: estimatedHours,
-        description: '',
-        remarks: '',
-        sourceType: 'dispatch',
-        materials: [],
-        tools: [],
-        toolsRemarks: '',
-        requiredFeedback: ['workload_confirm'],
-        typeConfig: {},
-        status: 'pending',
-      });
-    });
-
-    alert(`成功导入 ${importData.length} 条任务`);
-
-    // 关闭模态框并重置状态
-    setShowImportModal(false);
-    setImportFile(null);
-    setImportPreview([]);
-    setImportData([]);
-    hub.refresh();
-  };
-
-  // 智能推荐弹窗拖动功能
-  const handleRecommendModalDragStart = useCallback((e: React.MouseEvent) => {
-    if (recommendModalMaximized) return;
-    document.addEventListener('mousemove', handleRecommendModalDrag);
-    document.addEventListener('mouseup', handleRecommendModalDragEnd);
-  }, [recommendModalMaximized]);
-
-  const handleRecommendModalDrag = useCallback((e: MouseEvent) => {
-    setRecommendModalPosition(prev => ({
-      x: prev.x + e.movementX,
-      y: prev.y + e.movementY,
-    }));
-  }, []);
-
-  const handleRecommendModalDragEnd = useCallback(() => {
-    document.removeEventListener('mousemove', handleRecommendModalDrag);
-    document.removeEventListener('mouseup', handleRecommendModalDragEnd);
-  }, [handleRecommendModalDrag]);
-
-  const toggleRecommendModalMaximize = useCallback(() => {
-    setRecommendModalMaximized(prev => !prev);
-    if (recommendModalMaximized) {
-      setRecommendModalSize({ width: 1200, height: 700 });
-      setRecommendModalPosition({ x: 0, y: 0 });
-    } else {
-      setRecommendModalSize({ width: window.innerWidth - 40, height: window.innerHeight - 40 });
-      setRecommendModalPosition({ x: 20, y: 20 });
-    }
-  }, [recommendModalMaximized]);
-
-  const handleTypeConfigChange = (type: string, values: Record<string, string>) => {
-    setNewTask(prev => ({
-      ...prev,
-      typeConfig: {
-        ...prev.typeConfig,
-        [type]: values,
-      },
-    }));
-  };
-
-  const handleCreateTask = (publish: boolean = true) => {
-    const typeLabels = newTask.types.map(t => getTypeLabel(t)).join(',');
-    const fieldValue = newTask.fields?.includes('other')
-      ? newTask.areaRemarks
-      : (newTask.fields?.join(',') || '');
-    const cropValue = newTask.crops?.includes('other')
-      ? newTask.cropRemarks
-      : (newTask.crops?.join(',') || '');
-
-    const assigneeStaff = taskDispatchStaff.find(s => s.name === newTask.assignee);
-    const finalAssigneeName = newTask.assignee || '';
-    const finalAssigneeId = finalAssigneeName
-      ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}`
-      : '';
-
-    const defaultDispatcher = users.find(u => u.id === 'U001');
-    const assignerId = defaultDispatcher?.id || 'U001';
-    const assignerName = defaultDispatcher?.name || '系统';
-
-    const firstFieldName = fieldValue.split(',')[0]?.trim() || '';
-    const matchedField = taskDispatchFields.find(f => f.name === firstFieldName);
-    const greenhouseId = matchedField?.id?.toString() || '';
-
-    const estimatedHours = ((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8)) + (newTask.estimatedHours || 0);
-    const planEndTime = calculateEndDateTime(
-      newTask.planStart,
-      newTask.estimatedDays || 0,
-      newTask.estimatedHours || 0,
-      newTask.workHoursPerDay || 8
-    );
-
-    let taskStatus: 'pending' | 'draft' = 'draft';
-    if (publish) {
-      taskStatus = 'pending';
-    }
-
-    tasksHook.createTask({
-      title: typeLabels || '农事任务',
-      type: newTask.types[0] || 'other',
-      typeName: typeLabels,
-      batchId: newTask.batchId,
-      batchCode: newTask.batchCode,
-      greenhouseId: greenhouseId,
-      greenhouseName: fieldValue,
-      cropName: cropValue,
-      priority: (newTask.priority as 'urgent' | 'high' | 'normal') || 'normal',
-      assigneeId: finalAssigneeId,
-      assigneeName: finalAssigneeName,
-      assignerId: assignerId,
-      assignerName: assignerName,
-      planStart: newTask.planStart || '',
-      planEnd: planEndTime || '',
-      dueDate: planEndTime?.split(' ')[0] || '',
-      estimatedDays: newTask.estimatedDays || 0,
-      estimatedHours: estimatedHours,
-      description: newTask.sopContent || '',
-      remarks: newTask.toolsRemarks || '',
-      sourceType: 'dispatch',
-      materials: newTask.materials,
-      tools: newTask.tools,
-      toolsRemarks: newTask.toolsRemarks,
-      requiredFeedback: newTask.requiredFeedback,
-      typeConfig: newTask.typeConfig || {},
-      status: taskStatus,
-      // ========== 兼容旧界面字段（TaskTableRow 使用这些字段）==========
-      types: newTask.types,
-      typeLabel: typeLabels,
-      field: fieldValue,
-      assignee: finalAssigneeName,
-      crop: cropValue,
-      sopContent: newTask.sopContent || '',
-    });
-
-    setShowCreateModal(false);
-    setCreateStep(1);
-    setStepError('');
-    setTaskRefresh(t => t + 1);
-    // 显式调用 hub.refresh() 确保任务列表更新
-    hub.refresh();
-    setNewTask({
-      taskId: '',
-      types: [],
-      typeRemarks: '',
-      fields: [],
-      crops: [],
-      cropRemarks: '',
-      areaRemarks: '',
-      assignee: '',
-      planStart: '',
-      planEnd: '',
-      sopContent: '',
-      materials: [],
-      tools: [],
-      requiredFeedback: ['workload_confirm'],
-      priority: 'normal',
-      estimatedDays: 0,
-      estimatedHours: 1,
-      typeConfig: {},
-      toolsRemarks: '',
-      batchId: '',
-      batchCode: '',
-      batchSearch: '',
-      remarks: '',
-      workHoursPerDay: 8,
-    });
-    hub.forceRefresh();
-  };
-
-  const handleSaveDraft = () => {
-    let error = '';
-    if (!newTask.taskId) {
-      error = '请生成任务编号';
-    } else if (newTask.types.length === 0) {
-      error = '请选择任务类型';
-    }
-
-    if (error) {
-      setStepError(error);
-      return;
-    }
-
-    setStepError('');
-    handleCreateTask(false);
-  };
-
-  const handleFinalCreate = () => {
-    let error = '';
-    if (!newTask.taskId) {
-      error = '请生成任务编号';
-    } else if (newTask.types.length === 0) {
-      error = '请选择任务类型';
-    } else if (newTask.fields.length === 0) {
-      error = '请选择任务区域';
-    } else if (newTask.crops.length === 0) {
-      error = '请选择作物';
-    }
-    // 执行人不再在新建时选择，而是在任务列表中单独选择
-
-    if (error) {
-      setStepError(error);
-      return;
-    }
-
-    setStepError('');
-    handleCreateTask(true);
-  };
 
   // 迁移弹窗状态
   const [withdrawTask, setWithdrawTask] = useState<import('../../types/task').Task | null>(null);
@@ -1039,765 +744,15 @@ export function FarmTaskHub() {
       />
 
       {/* 新建任务模态框 */}
-      <Modal
+      <CreateTaskModal
         isOpen={showCreateModal}
-        onClose={() => { setShowCreateModal(false); setStepError(''); setCreateStep(1); }}
-        title="新建任务"
-        size="xl"
-        showFooter={false}
-        bottomContent={
-          <div className="flex justify-between">
-            {createStep > 1 && (
-              <button
-                onClick={() => setCreateStep(createStep - 1)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600"
-              >
-                上一步
-              </button>
-            )}
-            {createStep === 2 ? (
-              <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={handleSaveDraft}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 flex items-center gap-2"
-                >
-                  保存草稿
-                </button>
-                <button
-                  onClick={handleFinalCreate}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2"
-                >
-                  发布任务
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleNextStep}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2 ml-auto"
-              >
-                下一步 <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        }
-      >
-        {stepError && (
-          <div className="px-6 pt-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <span className="text-sm text-red-700">{stepError}</span>
-            </div>
-          </div>
-        )}
-
-        {/* 步骤指示器 */}
-        <div className="px-6 py-4 border-b border-gray-100 -mx-6">
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-2 ${createStep >= 1 ? 'text-emerald-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>1</div>
-              <span className="text-sm font-medium">任务定义</span>
-            </div>
-            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
-              <div className={`h-full bg-emerald-500 transition-all ${createStep >= 2 ? 'w-full' : 'w-0'}`} />
-            </div>
-            <div className={`flex items-center gap-2 ${createStep >= 2 ? 'text-emerald-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>2</div>
-              <span className="text-sm font-medium">资源与时间</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-          {/* Step 1: 任务定义 */}
-          {createStep === 1 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newTask.taskId || ''}
-                      onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
-                      className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="点击下方生成按钮"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode(tasksHook.tasks) })}
-                      className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
-                    >
-                      生成
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">关联生产批次</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={newTask.batchCode || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewTask(prev => ({ ...prev, batchCode: val, batchId: val ? prev.batchId : '' }));
-                      }}
-                      onFocus={() => setShowBatchDropdown(true)}
-                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="搜索或选择生产批次..."
-                    />
-                    {showBatchDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {cropBatches
-                          .filter(b =>
-                            !newTask.batchCode ||
-                            b.batchCode.toLowerCase().includes(newTask.batchCode.toLowerCase()) ||
-                            b.cropName.includes(newTask.batchCode)
-                          )
-                          .slice(0, 10)
-                          .map(batch => (
-                            <div
-                              key={batch.id}
-                              className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
-                              onClick={() => {
-                                setNewTask(prev => ({
-                                  ...prev,
-                                  batchId: batch.id,
-                                  batchCode: batch.batchCode,
-                                }));
-                                setShowBatchDropdown(false);
-                              }}
-                            >
-                              <div className="font-medium text-gray-900">{batch.batchCode}</div>
-                              <div className="text-xs text-gray-500">{batch.cropName} · {batch.greenhouseName}</div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                  {showBatchDropdown && (
-                    <div className="fixed inset-0 z-0" onClick={() => setShowBatchDropdown(false)} />
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <div
-                      className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
-                      onClick={() => setShowFieldDropdown(!showFieldDropdown)}
-                    >
-                      {(!newTask.fields || newTask.fields.length === 0) && (
-                        <span className="text-gray-400 text-sm">请选择任务区域</span>
-                      )}
-                      {(newTask.fields || []).map((fieldValue: string) => {
-                        const field = taskDispatchFields.find(f => f.name === fieldValue);
-                        return (
-                          <span
-                            key={fieldValue}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm"
-                          >
-                            {field?.name || fieldValue}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== fieldValue) });
-                              }}
-                              className="hover:text-red-500"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                    {showFieldDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {taskDispatchFields.slice(0, 12).map(f => (
-                          <label
-                            key={f.id}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={(newTask.fields || []).includes(f.name)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewTask({ ...newTask, fields: [...(newTask.fields || []), f.name] });
-                                } else {
-                                  setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== f.name) });
-                                }
-                              }}
-                              className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <span className="text-sm text-gray-700">{f.name}</span>
-                          </label>
-                        ))}
-                        <label
-                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={(newTask.fields || []).includes('other')}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewTask({ ...newTask, fields: [...(newTask.fields || []), 'other'] });
-                              } else {
-                                setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== 'other') });
-                              }
-                            }}
-                            className="w-4 h-4 text-emerald-600 rounded"
-                          />
-                          <span className="text-sm text-gray-700">其他</span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  {showFieldDropdown && (
-                    <div className="fixed inset-0 z-0" onClick={() => setShowFieldDropdown(false)} />
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">作物 <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <div
-                      className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
-                      onClick={() => setShowCropDropdown(!showCropDropdown)}
-                    >
-                      {(!newTask.crops || newTask.crops.length === 0) && (
-                        <span className="text-gray-400 text-sm">请选择作物</span>
-                      )}
-                      {(newTask.crops || []).map((cropValue: string) => (
-                        <span
-                          key={cropValue}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
-                        >
-                          {cropValue}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== cropValue) });
-                            }}
-                            className="hover:text-red-500"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    {showCropDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {uniqueCrops.map(crop => (
-                          <label
-                            key={crop}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={(newTask.crops || []).includes(crop)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewTask({ ...newTask, crops: [...(newTask.crops || []), crop] });
-                                } else {
-                                  setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== crop) });
-                                }
-                              }}
-                              className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <span className="text-sm text-gray-700">{crop}</span>
-                          </label>
-                        ))}
-                        <label
-                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={(newTask.crops || []).includes('other')}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewTask({ ...newTask, crops: [...(newTask.crops || []), 'other'] });
-                              } else {
-                                setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== 'other') });
-                              }
-                            }}
-                            className="w-4 h-4 text-emerald-600 rounded"
-                          />
-                          <span className="text-sm text-gray-700">其他</span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  {showCropDropdown && (
-                    <div className="fixed inset-0 z-0" onClick={() => setShowCropDropdown(false)} />
-                  )}
-                  {newTask.crops?.includes('other') && (
-                    <div className="mt-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        value={newTask.cropRemarks || ''}
-                        onChange={(e) => setNewTask({ ...newTask, cropRemarks: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="请输入作物说明"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <div
-                    className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
-                    onClick={() => setShowTaskTypeDropdown(!showTaskTypeDropdown)}
-                  >
-                    {(!newTask.types || newTask.types.length === 0) && (
-                      <span className="text-gray-400 text-sm">请选择任务类型</span>
-                    )}
-                    {(newTask.types || []).map((typeValue: string) => {
-                      const type = FARM_OPERATION_TYPES.find(t => t.value === typeValue);
-                      return (
-                        <span
-                          key={typeValue}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm"
-                        >
-                          {type?.label || typeValue}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewTask({ ...newTask, types: newTask.types.filter(v => v !== typeValue) });
-                            }}
-                            className="hover:text-red-500"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                  {showTaskTypeDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {FARM_OPERATION_TYPES.map(t => (
-                        <label
-                          key={t.value}
-                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={newTask.types.includes(t.value)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewTask({ ...newTask, types: [...newTask.types, t.value] });
-                              } else {
-                                setNewTask({ ...newTask, types: newTask.types.filter(v => v !== t.value) });
-                              }
-                            }}
-                            className="w-4 h-4 text-emerald-600 rounded"
-                          />
-                          <span className="text-sm text-gray-700">{t.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {showTaskTypeDropdown && (
-                  <div className="fixed inset-0 z-0" onClick={() => setShowTaskTypeDropdown(false)} />
-                )}
-              </div>
-
-              {newTask.types.includes('other') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">其他任务备注 <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    value={newTask.typeRemarks || ''}
-                    onChange={(e) => setNewTask({ ...newTask, typeRemarks: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="请输入其他任务说明"
-                  />
-                </div>
-              )}
-
-              <TaskTypeConfigPanel
-                taskTypes={newTask.types}
-                configValues={newTask.typeConfig}
-                onConfigChange={handleTypeConfigChange}
-              />
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">作业标准 (SOP)</label>
-                <textarea
-                  value={newTask.sopContent}
-                  onChange={(e) => setNewTask({ ...newTask, sopContent: e.target.value })}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="请输入作业标准...（简单任务可在此直接输入，复杂任务可点击导入文件）"
-                />
-                <div className="mt-2 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // 创建隐藏的文件输入框
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.txt,.doc,.docx,.pdf';
-                      input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const content = event.target?.result as string;
-                            setNewTask({ ...newTask, sopContent: content });
-                          };
-                          reader.readAsText(file);
-                        }
-                      };
-                      input.click();
-                    }}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    导入文件
-                  </button>
-                  <span className="text-xs text-gray-500">支持 .txt, .doc, .docx, .pdf 格式</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: 资源与时间 */}
-          {createStep === 2 && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">所需物资</label>
-                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-                  {(!newTask.materials || newTask.materials.length === 0) ? (
-                    <p className="text-sm text-gray-400 text-center py-2">暂无所需物资</p>
-                  ) : (
-                    newTask.materials.map((m, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={m.name}
-                          onChange={(e) => {
-                            const newMaterials = [...(newTask.materials || [])];
-                            newMaterials[i].name = e.target.value;
-                            setNewTask({ ...newTask, materials: newMaterials });
-                          }}
-                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                          placeholder="物资名称"
-                        />
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={m.qty}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/[^\d.]/g, '');
-                            if (raw === '' || raw === '-') {
-                              const newMaterials = [...(newTask.materials || [])];
-                              newMaterials[i].qty = 0;
-                              setNewTask({ ...newTask, materials: newMaterials });
-                              return;
-                            }
-                            const val = parseFloat(raw);
-                            if (!isNaN(val)) {
-                              const newMaterials = [...(newTask.materials || [])];
-                              newMaterials[i].qty = Math.round(val * 100) / 100;
-                              setNewTask({ ...newTask, materials: newMaterials });
-                            }
-                          }}
-                          className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
-                        />
-                        <select
-                          value={m.unit}
-                          onChange={(e) => {
-                            const newMaterials = [...(newTask.materials || [])];
-                            newMaterials[i].unit = e.target.value;
-                            setNewTask({ ...newTask, materials: newMaterials });
-                          }}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm"
-                        >
-                          <option value="个">个</option>
-                          <option value="件">件</option>
-                          <option value="kg">kg</option>
-                          <option value="g">g</option>
-                          <option value="L">L</option>
-                          <option value="mL">mL</option>
-                          <option value="袋">袋</option>
-                          <option value="箱">箱</option>
-                        </select>
-                        <button
-                          onClick={() => {
-                            const newMaterials = (newTask.materials || []).filter((_, idx) => idx !== i);
-                            setNewTask({ ...newTask, materials: newMaterials });
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))
-                  )}
-                  <button
-                    onClick={() => setNewTask({ ...newTask, materials: [...(newTask.materials || []), { name: '', qty: 1, unit: '个' }] })}
-                    className="text-sm text-emerald-600 hover:text-emerald-700"
-                  >
-                    + 物资
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">所需工具</label>
-                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-                  {(!newTask.tools || newTask.tools.length === 0) ? (
-                    <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
-                  ) : (
-                    newTask.tools.map((t, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={t.name}
-                          onChange={(e) => {
-                            const newTools = [...(newTask.tools || [])];
-                            newTools[i].name = e.target.value;
-                            setNewTask({ ...newTask, tools: newTools });
-                          }}
-                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                          placeholder="工具名称"
-                        />
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={t.qty}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/[^\d.]/g, '');
-                            if (raw === '' || raw === '-') {
-                              const newTools = [...(newTask.tools || [])];
-                              newTools[i].qty = 0;
-                              setNewTask({ ...newTask, tools: newTools });
-                              return;
-                            }
-                            const val = parseFloat(raw);
-                            if (!isNaN(val)) {
-                              const newTools = [...(newTask.tools || [])];
-                              newTools[i].qty = Math.round(val * 100) / 100;
-                              setNewTask({ ...newTask, tools: newTools });
-                            }
-                          }}
-                          className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
-                        />
-                        <select
-                          value={t.unit}
-                          onChange={(e) => {
-                            const newTools = [...(newTask.tools || [])];
-                            newTools[i].unit = e.target.value;
-                            setNewTask({ ...newTask, tools: newTools });
-                          }}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm"
-                        >
-                          <option value="把">把</option>
-                          <option value="个">个</option>
-                          <option value="台">台</option>
-                          <option value="套">套</option>
-                          <option value="件">件</option>
-                        </select>
-                        <button
-                          onClick={() => {
-                            const newTools = (newTask.tools || []).filter((_, idx) => idx !== i);
-                            setNewTask({ ...newTask, tools: newTools });
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))
-                  )}
-                  <button
-                    onClick={() => setNewTask({ ...newTask, tools: [...(newTask.tools || []), { name: '', qty: 1, unit: '把' }] })}
-                    className="text-sm text-emerald-600 hover:text-emerald-700"
-                  >
-                    + 工具
-                  </button>
-                </div>
-              </div>
-              {/* 资源备注 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注（可选）</label>
-                <textarea
-                  value={newTask.toolsRemarks || ''}
-                  onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
-                  placeholder="补充说明资源相关要求"
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              {/* 时间与要求 */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {/* 工作制 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">工作制</label>
-                  <select
-                    value={newTask.workHoursPerDay}
-                    onChange={(e) => {
-                      const newWorkHours = Number(e.target.value);
-                      setNewTask({ ...newTask, workHoursPerDay: newWorkHours });
-                      if ((newTask.estimatedHours || 0) >= newWorkHours) {
-                        setNewTask({ ...newTask, workHoursPerDay: newWorkHours, estimatedHours: newWorkHours - 1 });
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value={8}>8小时/天</option>
-                    <option value={10}>10小时/天</option>
-                    <option value={12}>12小时/天</option>
-                  </select>
-                </div>
-                {/* 计划开始日期 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">开始日期 <span className="text-red-500">*</span></label>
-                  <input
-                    type="date"
-                    value={newTask.planStart?.split(' ')[0] || ''}
-                    onChange={(e) => {
-                      const timePart = newTask.planStart?.split(' ')[1] || '08:00';
-                      setNewTask({ ...newTask, planStart: e.target.value + ' ' + timePart });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                {/* 开始时间 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
-                  <select
-                    value={newTask.planStart?.split(' ')[1] || '08:00'}
-                    onChange={(e) => {
-                      const datePart = newTask.planStart?.split(' ')[0] || '';
-                      setNewTask({ ...newTask, planStart: datePart + ' ' + e.target.value });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    {[7,8,9,10,11,12,13,14,15,16,17,18,19].map(h => (
-                      <option key={h} value={`${String(h).padStart(2, '0')}:00`}>{String(h).padStart(2, '0')}:00</option>
-                    ))}
-                  </select>
-                </div>
-                {/* 天数 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">天数</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={newTask.estimatedDays || 0}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
-                      setNewTask({ ...newTask, estimatedDays: isNaN(val) ? 0 : val });
-                    }}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                {/* 小时 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={newTask.estimatedHours || 0}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
-                      const maxHours = (newTask.workHoursPerDay || 8) - 1;
-                      if (!isNaN(val) && val >= 0 && val <= maxHours) {
-                        setNewTask({ ...newTask, estimatedHours: val });
-                      } else if (isNaN(val) || val === 0) {
-                        setNewTask({ ...newTask, estimatedHours: 0 });
-                      }
-                    }}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-              {/* 任务截止时间自动计算显示 */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-blue-700">
-                    任务截止时间：
-                  </span>
-                  <span className="text-sm font-medium text-blue-900">
-                    {newTask.planStart ? calculateEndDateTime(newTask.planStart, newTask.estimatedDays || 0, newTask.estimatedHours || 0, newTask.workHoursPerDay || 8) : '-'}
-                  </span>
-                  <span className="text-xs text-blue-500">
-                    (共 {(newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)} 小时)
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
-                <select
-                  value={newTask.priority}
-                  onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="normal">普通</option>
-                  <option value="high">高</option>
-                  <option value="urgent">紧急</option>
-                </select>
-              </div>
-                <div>
-                <label className="block text-sm font-bold text-red-600 mb-2">必填反馈 <span className="text-red-500">*</span></label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: 'workload_confirm', label: '工作量确认', icon: Clock, iconBg: 'bg-emerald-500', iconColor: 'text-white' },
-                    { key: 'gps', label: '位置打卡', icon: MapPin, iconBg: 'bg-blue-500', iconColor: 'text-white' },
-                    { key: 'material', label: '物资扫码', icon: Package, iconBg: 'bg-amber-500', iconColor: 'text-white' },
-                    { key: 'photo_before', label: '作业前照片', icon: Camera, iconBg: 'bg-purple-500', iconColor: 'text-white' },
-                    { key: 'photo_after', label: '作业后照片', icon: Camera, iconBg: 'bg-pink-500', iconColor: 'text-white' },
-                    { key: 'voice', label: '语音备注', icon: Mic, iconBg: 'bg-teal-500', iconColor: 'text-white' },
-                  ].map(item => {
-                    const isSelected = newTask.requiredFeedback.includes(item.key);
-                    const Icon = item.icon;
-                    return (
-                      <label
-                        key={item.key}
-                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-gray-100 border-2 border-emerald-300' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewTask({ ...newTask, requiredFeedback: [...newTask.requiredFeedback, item.key] });
-                            } else {
-                              setNewTask({ ...newTask, requiredFeedback: newTask.requiredFeedback.filter(f => f !== item.key) });
-                            }
-                          }}
-                          className="w-4 h-4 text-emerald-500 rounded focus:ring-emerald-500 sr-only"
-                        />
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? item.iconBg : 'bg-gray-200'}`}>
-                          <Icon className={`w-4 h-4 ${isSelected ? item.iconColor : 'text-gray-400'}`} />
-                        </div>
-                        <span className={`text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+        onClose={() => { setShowCreateModal(false); }}
+        onCreated={() => {
+          setTaskRefresh(t => t + 1);
+          hub.refresh();
+          hub.forceRefresh();
+        }}
+      />
 
       {/* 撤回任务弹窗 */}
       {withdrawTask && (
@@ -1906,7 +861,7 @@ export function FarmTaskHub() {
             <div className="p-6 space-y-6">
               {/* 文件上传区域 */}
               <div
-                onDrop={handleFileDrop}
+                onDrop={(e) => handleFileDrop(e, setImportFile, setImportData, setImportPreview)}
                 onDragOver={(e) => e.preventDefault()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
                   importFile ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 hover:border-gray-400'
@@ -1915,7 +870,7 @@ export function FarmTaskHub() {
                 <input
                   type="file"
                   accept=".csv,.xlsx"
-                  onChange={handleFileChange}
+                  onChange={(e) => handleFileChange(e, setImportFile, setImportData, setImportPreview)}
                   className="hidden"
                   id="file-upload"
                 />
@@ -2024,7 +979,7 @@ export function FarmTaskHub() {
                 取消
               </button>
               <button
-                onClick={handleImportConfirm}
+                onClick={() => handleImportConfirm(importData, setShowImportModal, setImportFile, setImportPreview, setImportData, tasksHook, users, hub)}
                 disabled={importData.length === 0}
                 className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
