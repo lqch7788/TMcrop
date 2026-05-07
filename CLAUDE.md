@@ -200,5 +200,78 @@ src_backup_*/
 PLANS/
 ```
 
+# UI 组件库文档
+
+> AI 编程时应优先使用 `src/components/ui/` 下的组件，禁止引入 Ant Design。
+
+## 技术栈
+
+| 技术 | 说明 |
+|------|------|
+| 组件路径 | `src/components/ui/` |
+| 图标 | Lucide React |
+| 样式 | Tailwind CSS |
+
+## 已有组件清单
+
+### 基础组件 (15个)
+Button, Card, Badge, Table, Dialog, Input, Select, Checkbox, Label, Popover, DropdownMenu, NumberInput, Toast, Modal, Space
+
+### 高级组件 - 第一批 (13个)
+DatePicker, DateRangePicker, Drawer, Sheet, Alert, Notification, Breadcrumb, Steps, Pagination, Skeleton, Progress, TextArea, Tabs
+
+### 高级组件 - 第二批 (12个)
+Calendar, Tree, TreeSelect, Cascader, TimePicker, Tooltip, Avatar, ImageUploader, Statistic, EmptyState, Divider, QRCode
+
+### 高级组件 - 第三批 (4个)
+FilterBar, KanbanBoard, GanttChart
+
+## 导入方式
+
+```tsx
+import { Button, Card, DatePicker } from '@/components/ui'
+```
+
+## 使用示例
+
+```tsx
+// 按钮
+<Button variant="default">默认</Button>
+<Button variant="destructive">危险</Button>
+
+// 卡片
+<Card>
+  <CardHeader><CardTitle>标题</CardTitle></CardHeader>
+  <CardContent>内容</CardContent>
+</Card>
+
+// 日期选择
+<DatePicker selected={date} onChange={setDate} />
+
+// 抽屉
+<Drawer open={isOpen} onClose={() => setIsOpen(false)}>
+  <DrawerHeader><DrawerTitle>标题</DrawerTitle></DrawerHeader>
+  <DrawerContent>内容</DrawerContent>
+</Drawer>
+
+// 通知 (需在App根部包裹NotificationProvider)
+const { addNotification } = useNotification()
+addNotification({ title: '成功', variant: 'success' })
+```
+
+## 禁用 Ant Design
+
+```tsx
+// ❌ 禁止
+import { DatePicker, Table, Tag } from 'antd'
+
+// ✅ 使用已有组件
+import { DatePicker, Table, Badge } from '@/components/ui'
+```
+
+## 相关文档
+- 组件导入规划：`public/UI组件导入V1.0.md`
+- UI统一执行指南：`UI统一执行指南.md`
+
 
 
