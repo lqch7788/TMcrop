@@ -416,8 +416,8 @@ export default function HrApproval() {
             <CheckCircle className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">HR审批中心</h1>
-            <p className="text-xs text-gray-500">管理所有HR相关审批申请</p>
+            <h1 className="text-lg font-bold text-gray-900">人事审批中心</h1>
+            <p className="text-xs text-gray-500">管理所有人相关审批申请</p>
           </div>
         </div>
       </div>

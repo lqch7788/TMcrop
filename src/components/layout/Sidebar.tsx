@@ -68,7 +68,7 @@ const approvalSubItems = [
   { icon: ClipboardCheck, label: '农事审批', path: '/farm-approval' },
   { icon: BarChart3, label: '指标预算审批', path: '/indicator-budget-approval' },
   { icon: FileText, label: '我的申请', path: '/my-applications' },
-  { icon: Users, label: 'HR审批单', path: '/hr-approval' },
+  { icon: Users, label: '人事审批', path: '/hr-approval' },
 ];
 
 // 库存管理子菜单（仓库物料拆分为库存总览和物料入库，采收入库已迁移到作物管理）

@@ -458,7 +458,7 @@ export default function HrApproval() {
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">HR审批中心</h1>
+            <h1 className="text-2xl font-bold text-gray-900">人事审批中心</h1>
             <p className="text-gray-500">人事相关审批流程管理</p>
           </div>
         </div>
