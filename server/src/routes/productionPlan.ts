@@ -21,56 +21,60 @@ function generateId(prefix: string): string {
 }
 
 /**
- * 数据库字段映射：snake_case -> camelCase
- * 用于将后端数据库字段转换为前端期望的格式
- * 完整支持 CropBatch 类型的所有字段
+ * API字段映射：queryToObjects返回的camelCase字段 -> 前端期望的字段名
+ * 注意：queryToObjects已经将数据库snake_case转为camelCase，所以这里直接映射camelCase字段
  */
-function mapFieldsToCamelCase(item: Record<string, unknown>): Record<string, unknown> {
+function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unknown> {
   const fieldMap: Record<string, string> = {
+    // id保持不变
     id: 'id',
-    plan_code: 'batchCode',
-    plan_name: 'batchName',
-    plan_type: 'planType',
-    crop_name: 'cropName',
-    crop_variety: 'variety',
-    greenhouse_name: 'greenhouseName',
-    greenhouse_id: 'greenhouseId',
-    area_name: 'areaName',
-    area_id: 'areaId',
-    planned_quantity: 'plannedQuantity',
-    actual_quantity: 'actualQuantity',
-    planting_date: 'startDate',
-    expected_harvest_date: 'expectedHarvestDate',
-    actual_harvest_date: 'actualHarvestDate',
-    planting_area: 'plantingArea',
-    planting_mode: 'plantingMode',
-    responsible_person: 'responsiblePerson',
+    // planCode -> batchCode (前端期望)
+    planCode: 'batchCode',
+    planName: 'batchName',
+    planType: 'planType',
+    cropName: 'cropName',
+    // cropVariety -> variety (前端期望)
+    cropVariety: 'variety',
+    greenhouseName: 'greenhouseName',
+    greenhouseId: 'greenhouseId',
+    areaName: 'areaName',
+    areaId: 'areaId',
+    plannedQuantity: 'targetQuantity',
+    actualQuantity: 'actualYield',
+    plantingDate: 'startDate',
+    expectedHarvestDate: 'expectedHarvestDate',
+    actualHarvestDate: 'actualHarvestDate',
+    plantingArea: 'plantingArea',
+    plantingMode: 'plantingMode',
+    responsiblePerson: 'responsiblePerson',
     status: 'status',
     stage: 'stage',
-    stage_name: 'stageName',
-    target_yield: 'targetYield',
-    actual_yield: 'actualYield',
+    stageName: 'stageName',
+    targetYield: 'targetYield',
+    actualYield: 'actualYield',
     priority: 'priority',
     remarks: 'remarks',
-    create_by: 'publisher',
-    create_time: 'createTime',
-    update_time: 'updateTime',
+    createBy: 'publisher',
+    createTime: 'createTime',
+    updateTime: 'updateTime',
     // 额外字段
-    plan_detail: 'planDetail',
-    location_name: 'locationName',
-    target_quantity: 'targetQuantity',
+    planDetail: 'planDetail',
+    locationName: 'locationName',
+    targetQuantity: 'targetQuantity',
     unit: 'unit',
-    supplier_name: 'supplierName',
-    seed_quantity: 'seedQuantity',
-    seedling_site_name: 'seedlingSiteName',
-    target_seedling_count: 'targetSeedlingCount',
-    end_type: 'endType',
+    supplierName: 'supplierName',
+    seedQuantity: 'seedQuantity',
+    seedlingSiteName: 'seedlingSiteName',
+    targetSeedlingCount: 'targetSeedlingCount',
+    endType: 'endType',
+    batchStatus: 'batchStatus',
+    planDetailFileName: 'planDetailFileName',
   };
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(item)) {
-    const camelKey = fieldMap[key] || key;
-    result[camelKey] = value;
+    const mappedKey = fieldMap[key] || key;
+    result[mappedKey] = value;
   }
   return result;
 }
@@ -78,8 +82,8 @@ function mapFieldsToCamelCase(item: Record<string, unknown>): Record<string, unk
 /**
  * 将数组中所有对象进行字段转换
  */
-function mapArrayToCamelCase(items: Record<string, unknown>[]): Record<string, unknown>[] {
-  return items.map(item => mapFieldsToCamelCase(item));
+function mapArrayToFrontend(items: Record<string, unknown>[]): Record<string, unknown>[] {
+  return items.map(item => mapFieldsToFrontend(item));
 }
 
 /**
@@ -154,7 +158,7 @@ router.get('/', (req: Request, res: Response) => {
     const items = queryToObjects(db, sql, params);
 
     // 转换字段格式为camelCase
-    const camelItems = mapArrayToCamelCase(items as Record<string, unknown>[]);
+    const camelItems = mapArrayToFrontend(items as Record<string, unknown>[]);
 
     res.json({
       success: true,
@@ -188,8 +192,8 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '生产计划不存在' });
     }
 
-    // 转换字段格式为camelCase
-    const camelItem = mapFieldsToCamelCase(item);
+    // 转换字段格式为前端期望格式
+    const camelItem = mapFieldsToFrontend(item);
     res.json({ success: true, data: camelItem });
   } catch (error) {
     console.error('获取生产计划详情失败:', error);
@@ -206,22 +210,38 @@ router.post('/', (req: Request, res: Response) => {
     const db = getDatabase();
     const {
       id,
-      plan_code,
-      plan_name,
-      plan_type,
-      crop_name,
-      crop_variety,
-      greenhouse_name,
-      area_name,
-      planned_quantity,
-      actual_quantity,
-      planting_date,
-      expected_harvest_date,
-      actual_harvest_date,
+      batchCode,
+      batchName,
+      planType,
+      cropName,
+      variety,
+      greenhouseName,
+      greenhouseId,
+      areaName,
+      areaId,
+      targetQuantity,
+      targetYield,
+      actualYield,
+      startDate,
+      expectedHarvestDate,
+      actualHarvestDate,
       status,
       priority,
       remarks,
-      create_by
+      publisher,
+      createBy,
+      responsiblePerson,
+      unit,
+      publishDate,
+      batchStatus,
+      planDetail,
+      planDetailFileName,
+      plantingArea,
+      plantingMode,
+      supplierName,
+      seedlingSiteName,
+      seedQuantity,
+      targetSeedlingCount
     } = req.body;
 
     if (!id) {
@@ -229,35 +249,50 @@ router.post('/', (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
-    const code = plan_code || generatePlanCode(plan_type);
+    const code = batchCode || generatePlanCode(planType);
 
     db.run(`
       INSERT INTO production_plans (
         id, plan_code, plan_name, plan_type, crop_name, crop_variety,
         greenhouse_name, area_name, planned_quantity, actual_quantity,
         planting_date, expected_harvest_date, actual_harvest_date,
-        status, priority, remarks, create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, priority, remarks, create_by, create_time, update_time,
+        responsible_person, unit, publish_date, batch_status,
+        plan_detail, plan_detail_file_name, planting_area, planting_mode,
+        supplier_name, seedling_site_name, seed_quantity, target_seedling_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
-      plan_name || '',
-      plan_type || '',
-      crop_name || '',
-      crop_variety || '',
-      greenhouse_name || '',
-      area_name || '',
-      planned_quantity || 0,
-      actual_quantity || 0,
-      planting_date || '',
-      expected_harvest_date || '',
-      actual_harvest_date || '',
+      batchName || '',
+      planType || '',
+      cropName || '',
+      variety || '',
+      greenhouseName || '',
+      areaName || '',
+      targetQuantity || targetYield || 0,
+      actualYield || 0,
+      startDate || '',
+      expectedHarvestDate || '',
+      actualHarvestDate || '',
       status || 'planning',
       priority || 'normal',
       remarks || '',
-      create_by || '',
+      publisher || createBy || '',
       now,
-      now
+      now,
+      responsiblePerson || '',
+      unit || '',
+      publishDate || '',
+      batchStatus || 'draft',
+      planDetail || '',
+      planDetailFileName || '',
+      plantingArea || 0,
+      plantingMode || '',
+      supplierName || '',
+      seedlingSiteName || '',
+      seedQuantity || 0,
+      targetSeedlingCount || 0
     ]);
 
     saveDatabase();
@@ -303,6 +338,8 @@ router.put('/:id', (req: Request, res: Response) => {
       greenhouseName: 'greenhouse_name',
       areaName: 'area_name',
       plannedQuantity: 'planned_quantity',
+      targetQuantity: 'planned_quantity',
+      targetYield: 'planned_quantity',
       actualQuantity: 'actual_quantity',
       plantingDate: 'planting_date',
       expectedHarvestDate: 'expected_harvest_date',
@@ -310,7 +347,19 @@ router.put('/:id', (req: Request, res: Response) => {
       status: 'status',
       priority: 'priority',
       remarks: 'remarks',
-      createBy: 'create_by'
+      createBy: 'create_by',
+      responsiblePerson: 'responsible_person',
+      unit: 'unit',
+      publishDate: 'publish_date',
+      batchStatus: 'batch_status',
+      planDetail: 'plan_detail',
+      planDetailFileName: 'plan_detail_file_name',
+      plantingArea: 'planting_area',
+      plantingMode: 'planting_mode',
+      supplierName: 'supplier_name',
+      seedlingSiteName: 'seedling_site_name',
+      seedQuantity: 'seed_quantity',
+      targetSeedlingCount: 'target_seedling_count'
     };
 
     const updateFields: string[] = [];
@@ -364,8 +413,8 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '生产计划不存在' });
     }
 
-    // 只允许删除草稿或已取消的计划
-    if (plan.status !== 'draft' && plan.status !== 'cancelled') {
+    // 只允许删除草稿或已取消的计划（检查 batch_status 字段）
+    if (plan.batch_status !== 'draft' && plan.batch_status !== 'cancelled') {
       return res.status(400).json({ success: false, error: '只允许删除草稿或已取消的生产计划' });
     }
 

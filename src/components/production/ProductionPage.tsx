@@ -600,15 +600,32 @@ export default function ProductionPage() {
     setShowBatchEditModal(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
-    const toDelete = selectedRows.filter(id => {
-      const batch = batches.find(b => b.id === id);
-      return batch?.batchStatus === 'draft';
-    });
-    setBatches(batches.filter(b => !toDelete.includes(b.id)));
-    setSelectedRows([]);
+    // selectedRows 是 id 数组，需要用 id 查找实际的 batch
+    const toDelete = selectedRows
+      .map(id => batches.find(b => b.id === id))
+      .filter(batch => batch && batch.batchStatus === 'draft')
+      .map(batch => batch.id);
+
+    if (toDelete.length === 0) {
+      setSelectedRows([]);
+      return;
+    }
+
+    try {
+      if (USE_API) {
+        for (const id of toDelete) {
+          await apiClient.delete(`/production/plans/${id}`);
+        }
+      }
+      setBatches(batches.filter(b => !toDelete.includes(b.id)));
+      setSelectedRows([]);
+    } catch (error) {
+      console.error('删除生产计划失败:', error);
+      alert('删除失败，请重试');
+    }
   };
 
   const handlePublish = async () => {

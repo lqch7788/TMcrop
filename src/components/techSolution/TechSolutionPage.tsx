@@ -309,8 +309,33 @@ export function TechSolutionPage() {
     setEditModalOpen(true);
   };
 
-  const handleEditSubmit = () => {
-    setEditModalOpen(false);
+  const handleEditSubmit = async () => {
+    if (!selectedTech) return;
+
+    const updateData = {
+      solutionTitle: editForm.title,
+      cropName: editForm.crop,
+      plantingMode: editForm.plantingMode,
+      stage: editForm.stage,
+      version: editForm.version,
+      content: editForm.content,
+      relatedBatchCode: selectedTech.relatedBatchCode || '',
+      planDetailFileName: selectedTech.planDetailFileName || '',
+      priority: selectedTech.priority || 'normal',
+      remarks: '',
+    };
+
+    try {
+      if (USE_API) {
+        await apiClient.put(`/tech-solutions/${selectedTech.id}`, updateData);
+      }
+      // 刷新技术方案列表
+      await loadTechSolutions();
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error('更新技术方案失败:', error);
+      alert('更新失败，请重试');
+    }
   };
 
   const handleCreateSubmit = async () => {
@@ -1634,14 +1659,40 @@ export function TechSolutionPage() {
               取消
             </button>
             <button
-              onClick={() => {
-                console.log('保存编辑:', editedTechs);
-                setShowBatchEditModal(false);
-                setBatchEditMode(false);
-                setSelectedRows([]);
-                setEditedTechCodes([]);
-                setEditedTechs({});
-                alert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
+              onClick={async () => {
+                try {
+                  if (USE_API) {
+                    // 逐条调用API更新
+                    for (const tech of techSolutions) {
+                      const edited = editedTechs[tech.code];
+                      if (edited) {
+                        await apiClient.put(`/tech-solutions/${tech.id}`, {
+                          solutionTitle: edited.title ?? tech.title,
+                          cropName: edited.crop ?? tech.crop,
+                          plantingMode: edited.plantingMode ?? tech.plantingMode,
+                          stage: edited.stage ?? tech.stage,
+                          version: edited.version ?? tech.version,
+                          content: edited.content ?? tech.content,
+                          relatedBatchCode: tech.relatedBatchCode || '',
+                          planDetailFileName: tech.planDetailFileName || '',
+                          priority: tech.priority || 'normal',
+                          remarks: '',
+                        });
+                      }
+                    }
+                  }
+                  // 刷新技术方案列表
+                  await loadTechSolutions();
+                  setShowBatchEditModal(false);
+                  setBatchEditMode(false);
+                  setSelectedRows([]);
+                  setEditedTechCodes([]);
+                  setEditedTechs({});
+                  alert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
+                } catch (error) {
+                  console.error('批量保存失败:', error);
+                  alert('保存失败，请重试');
+                }
               }}
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
             >

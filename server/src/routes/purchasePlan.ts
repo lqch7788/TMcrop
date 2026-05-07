@@ -276,9 +276,9 @@ router.post('/', (req: Request, res: Response) => {
         apply_date, expected_date,
         supplier_id, supplier_name, total_amount,
         priority, status, approval_status,
-        remarks, attachments, items, create_by,
+        remarks, attachments, items, related_batch_code, approval_person, create_by,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       planCode,
@@ -289,7 +289,7 @@ router.post('/', (req: Request, res: Response) => {
       applicant_id,
       applicant_name,
       apply_date || now.substring(0, 10),
-      expected_date,
+      expected_date || null,
       supplier_id,
       supplier_name,
       total_amount,
@@ -299,6 +299,8 @@ router.post('/', (req: Request, res: Response) => {
       remarks,
       JSON.stringify(attachments),
       JSON.stringify(items),
+      '',  // related_batch_code
+      '',  // approval_person
       create_by,
       now,
       now,
@@ -311,6 +313,34 @@ router.post('/', (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: '创建采购计划失败' });
   }
 });
+
+/**
+ * 采购计划更新字段映射（camelCase -> snake_case）
+ */
+const PURCHASE_PLAN_FIELD_MAP: Record<string, string> = {
+  // 基本字段映射
+  planCode: 'plan_code',
+  planTitle: 'plan_title',
+  planType: 'plan_type',
+  departmentId: 'department_id',
+  departmentName: 'department_name',
+  applicantId: 'applicant_id',
+  applicantName: 'applicant_name',
+  applyDate: 'apply_date',
+  expectedDate: 'expected_date',
+  supplierId: 'supplier_id',
+  supplierName: 'supplier_name',
+  totalAmount: 'total_amount',
+  priority: 'priority',
+  status: 'status',
+  approvalStatus: 'approval_status',
+  remarks: 'remarks',
+  relatedBatchCode: 'related_batch_code',
+  approvalPerson: 'approval_person',
+  createBy: 'create_by',
+  createTime: 'create_time',
+  updateTime: 'update_time',
+};
 
 /**
  * 更新采购计划
@@ -341,29 +371,38 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '已审批通过的采购计划不允许修改' });
     }
 
-    // 过滤掉 id 和自动生成的字段
-    const excludeFields = ['id', 'plan_code', 'create_time'];
-    const fields = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
-      .map(k => `${k} = ?`)
-      .join(', ');
+    // 过滤掉 id 和自动生成的字段，构建字段映射
+    const excludeFields = ['id', 'plan_code', 'create_time', 'items'];
+    const updateFields: string[] = [];
+    const values: any[] = [];
 
-    if (fields.length === 0) {
+    for (const [camelKey, value] of Object.entries(updates)) {
+      if (excludeFields.includes(camelKey) || excludeFields.includes(PURCHASE_PLAN_FIELD_MAP[camelKey])) {
+        continue;
+      }
+
+      // 处理特殊字段
+      if (camelKey === 'attachments') {
+        updateFields.push(`${PURCHASE_PLAN_FIELD_MAP[camelKey] || camelKey} = ?`);
+        values.push(JSON.stringify(value || []));
+      } else if (camelKey === 'items') {
+        // items 单独处理，不在这里更新
+        continue;
+      } else {
+        // 转换为 snake_case 字段名
+        const dbField = PURCHASE_PLAN_FIELD_MAP[camelKey] || camelKey;
+        updateFields.push(`${dbField} = ?`);
+        values.push(value);
+      }
+    }
+
+    if (updateFields.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
-      .map(k => {
-        // 处理 attachments 数组序列化
-        if (k === 'attachments') {
-          return JSON.stringify(updates[k] || []);
-        }
-        return updates[k];
-      });
     values.push(now, id);
 
-    db.run(`UPDATE purchase_plans SET ${fields}, update_time = ? WHERE id = ?`, values);
+    db.run(`UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
