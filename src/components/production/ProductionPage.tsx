@@ -570,11 +570,12 @@ export default function ProductionPage() {
   };
 
   const handleBatchDeleteSelectAll = () => {
-    const draftBatches = filteredBatches.filter(b => b.batchStatus === 'draft');
-    if (selectedRows.length === draftBatches.length) {
+    // 草稿和已作废状态都可以删除
+    const deletableBatches = filteredBatches.filter(b => b.batchStatus === 'draft' || b.batchStatus === 'cancelled');
+    if (selectedRows.length === deletableBatches.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(draftBatches.map(b => b.id));
+      setSelectedRows(deletableBatches.map(b => b.id));
     }
   };
 
@@ -595,18 +596,103 @@ export default function ProductionPage() {
     }
   };
 
-  const handleVoidConfirm = () => {
+  // 申请作废 - 创建作废审批（只对当前选中的计划执行）
+  const handleVoidConfirm = async () => {
+    // 获取当前用户信息
+    const currentUserId = localStorage.getItem('userId') || '';
+    const currentUserName = localStorage.getItem('username') || '陆启闯';
+    const currentDepartment = localStorage.getItem('department') || '';
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 找到当前选中的计划
+    const currentBatch = batches.find(b => b.batchCode === selectedBatchCode);
+    if (!currentBatch) {
+      alert('请先选择一个生产计划');
+      return;
+    }
+
+    // 记录已申请作废的批次ID，用于从选择列表中移除
+    const voidedBatchIds: number[] = [];
+
+    try {
+      // 创建批次作废审批 - 只对当前选中的批次
+      const voidId = `BV${Date.now()}_${currentBatch.id}`;
+      const voidCode = `BV${today.replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+      const approvalData = {
+        id: voidId,
+        type: 'production_plan',
+        typeName: '生产计划',
+        title: `生产计划作废审批：${currentBatch.batchCode}`,
+        description: `申请作废生产计划：${currentBatch.batchCode}\n作物：${currentBatch.cropName} ${currentBatch.variety}\n区域：${currentBatch.greenhouseName}`,
+        applicantId: currentUserId,
+        applicantName: currentUserName,
+        applicantDepartment: currentDepartment,
+        applyDate: today,
+        status: 'pending',
+        priority: 'normal',
+        businessLink: {
+          type: 'production',
+          approvalAction: 'void', // 标记为作废操作
+          requestId: currentBatch.id,
+          requestCode: currentBatch.batchCode,
+          cropName: currentBatch.cropName,
+          variety: currentBatch.variety,
+          greenhouseName: currentBatch.greenhouseName,
+          startDate: currentBatch.startDate,
+          expectedHarvestDate: currentBatch.expectedHarvestDate,
+          responsiblePerson: currentBatch.responsiblePerson,
+        },
+      };
+
+      if (USE_API) {
+        // 同时更新生产计划的 batchStatus 为 pending
+        await apiClient.put(`/production/plans/${currentBatch.id}`, { batchStatus: 'pending' });
+        await apiClient.post('/approvals', approvalData);
+      }
+
+      // 记录已申请作废的批次ID
+      voidedBatchIds.push(currentBatch.id);
+
+      // 刷新审批中心数据
+      await refreshApprovals();
+
+      // 更新本地状态 - 设置为待审批状态
+      setBatches(batches.map(batch => {
+        if (voidedBatchIds.includes(batch.id)) {
+          return { ...batch, batchStatus: 'pending' as const };
+        }
+        return batch;
+      }));
+
+      // 从已选择列表中移除已申请作废的批次（不再允许编辑）
+      setSelectedRows(selectedRows.filter(id => !voidedBatchIds.includes(id)));
+
+      // 清除已申请作废批次的编辑数据
+      delete editedBatches[currentBatch.batchCode];
+      setEditedBatches({ ...editedBatches });
+
+      // 提示用户
+      alert(`已提交作废申请：${currentBatch.batchCode}`);
+
+      // 关闭弹窗，因为只处理一个
+      setShowBatchEditModal(false);
+    } catch (error) {
+      console.error('提交作废申请失败:', error);
+      alert('提交作废申请失败，请重试');
+    }
+
     setShowVoidWarning(false);
-    setShowBatchEditModal(false);
   };
 
   const handleDeleteConfirm = async () => {
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
     // selectedRows 是 id 数组，需要用 id 查找实际的 batch
+    // 草稿和已作废状态都可以删除
     const toDelete = selectedRows
       .map(id => batches.find(b => b.id === id))
-      .filter(batch => batch && batch.batchStatus === 'draft')
+      .filter(batch => batch && (batch.batchStatus === 'draft' || batch.batchStatus === 'cancelled'))
       .map(batch => batch.id);
 
     if (toDelete.length === 0) {
@@ -628,55 +714,150 @@ export default function ProductionPage() {
     }
   };
 
+  // 提交编辑审批
   const handlePublish = async () => {
-    // Apply all edits and save to backend
+    // Apply all edits and create approval for each edited batch
     if (Object.keys(editedBatches).length > 0) {
+      // 记录已提交的批次ID
+      const submittedBatchIds: number[] = [];
+
       try {
-        if (USE_API) {
-          // Save each edited batch to backend
-          for (const batch of batches) {
-            const edited = editedBatches[batch.batchCode];
-            if (edited) {
+        // 获取当前用户信息
+        const currentUserId = localStorage.getItem('userId') || '';
+        const currentUserName = localStorage.getItem('username') || '陆启闯';
+        const currentDepartment = localStorage.getItem('department') || '';
+
+        // 为每个编辑的批次创建审批
+        for (const batch of batches) {
+          const edited = editedBatches[batch.batchCode];
+          if (edited) {
+            // 1. 先更新后端数据（不改变状态，等审批通过后才会变更）
+            if (USE_API) {
               // Prepare API data with proper field mapping
-              const apiData = {
-                targetQuantity: edited.targetQuantity ?? batch.targetQuantity,
-                targetYield: edited.targetYield ?? batch.targetYield,
-                cropName: edited.cropName ?? batch.cropName,
-                variety: edited.variety ?? batch.variety,
-                greenhouseName: edited.greenhouseName ?? batch.greenhouseName,
-                greenhouseId: edited.greenhouseId ?? batch.greenhouseId,
-                plantingArea: edited.plantingArea ?? batch.plantingArea,
-                plantingMode: edited.plantingMode ?? batch.plantingMode,
-                startDate: edited.startDate ?? batch.startDate,
-                expectedHarvestDate: edited.expectedHarvestDate ?? batch.expectedHarvestDate,
-                responsiblePerson: edited.responsiblePerson ?? batch.responsiblePerson,
-                remarks: edited.remarks ?? batch.remarks,
-                planDetail: edited.planDetail ?? batch.planDetail,
-                planDetailFileName: edited.planDetailFileName ?? batch.planDetailFileName,
-              };
+              const apiData: Record<string, unknown> = {};
+              if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
+              if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
+              if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
+              if (edited.variety !== undefined) apiData.variety = edited.variety;
+              if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
+              if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
+              if (edited.plantingArea !== undefined) apiData.plantingArea = edited.plantingArea;
+              if (edited.plantingMode !== undefined) apiData.plantingMode = edited.plantingMode;
+              if (edited.startDate !== undefined) apiData.startDate = edited.startDate;
+              if (edited.expectedHarvestDate !== undefined) apiData.expectedHarvestDate = edited.expectedHarvestDate;
+              if (edited.responsiblePerson !== undefined) apiData.responsiblePerson = edited.responsiblePerson;
+              if (edited.remarks !== undefined) apiData.remarks = edited.remarks;
+              if (edited.planDetail !== undefined) apiData.planDetail = edited.planDetail;
+              if (edited.planDetailFileName !== undefined) apiData.planDetailFileName = edited.planDetailFileName;
+
+              // 重要：同时更新 batchStatus 为 pending，表示已提交审批
+              apiData.batchStatus = 'pending';
+
+              console.log('保存编辑:', batch.id, apiData);
               await apiClient.put(`/production/plans/${batch.id}`, apiData);
             }
+
+            // 2. 创建批次变更审批
+            const today = new Date().toISOString().slice(0, 10);
+            const changeId = `BC${Date.now()}_${batch.id}`;
+            const changeCode = `BG${today.replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+            // 构造变更描述
+            const changes: string[] = [];
+            if (edited.cropName) changes.push(`作物名称: ${batch.cropName} → ${edited.cropName}`);
+            if (edited.variety) changes.push(`品种: ${batch.variety} → ${edited.variety}`);
+            if (edited.plantingArea) changes.push(`种植面积: ${batch.plantingArea} → ${edited.plantingArea}`);
+            if (edited.startDate) changes.push(`开始时间: ${batch.startDate} → ${edited.startDate}`);
+            if (edited.expectedHarvestDate) changes.push(`预计结束: ${batch.expectedHarvestDate} → ${edited.expectedHarvestDate}`);
+            if (edited.responsiblePerson) changes.push(`负责人: ${batch.responsiblePerson} → ${edited.responsiblePerson}`);
+            if (edited.targetYield) changes.push(`目标产量: ${batch.targetYield} → ${edited.targetYield}`);
+
+            const approvalData = {
+              id: changeId,
+              type: 'production_plan',
+              typeName: '生产计划',
+              title: `生产计划编辑审批：${batch.batchCode}`,
+              description: changes.join('\n'),
+              applicantId: currentUserId,
+              applicantName: currentUserName,
+              applicantDepartment: currentDepartment,
+              applyDate: today,
+              status: 'pending',
+              priority: 'normal',
+              businessLink: {
+                type: 'production',
+                requestId: batch.id,
+                requestCode: batch.batchCode,
+                cropName: edited.cropName || batch.cropName,
+                variety: edited.variety || batch.variety,
+                greenhouseName: edited.greenhouseName || batch.greenhouseName,
+                startDate: edited.startDate || batch.startDate,
+                expectedHarvestDate: edited.expectedHarvestDate || batch.expectedHarvestDate,
+                responsiblePerson: edited.responsiblePerson || batch.responsiblePerson,
+                targetYield: edited.targetYield || batch.targetYield,
+                plantingArea: edited.plantingArea || batch.plantingArea,
+                plantingMode: edited.plantingMode || batch.plantingMode,
+              },
+            };
+
+            if (USE_API) {
+              await apiClient.post('/approvals', approvalData);
+            }
+
+            // 记录已提交的批次ID
+            submittedBatchIds.push(batch.id);
           }
         }
+
+        // 刷新审批中心数据
+        await refreshApprovals();
       } catch (error) {
-        console.error('保存编辑失败:', error);
-        alert('保存编辑失败，请重试');
+        console.error('提交审批失败:', error);
+        alert('提交审批失败，请重试');
         return;
       }
 
-      // Update local state after successful API save
+      // Update local state - 设置为待审批状态
       setBatches(batches.map(batch => {
         const edited = editedBatches[batch.batchCode];
         if (edited) {
-          return { ...batch, ...edited, lastModifyDate: new Date().toISOString().slice(0, 10) };
+          // 只有编辑了数据的批次才进入待审批状态
+          return { ...batch, ...edited, lastModifyDate: new Date().toISOString().slice(0, 10), batchStatus: 'pending' as const };
         }
         return batch;
       }));
+
+      // 从已选择列表中移除已提交的批次（它们已经是待审批状态了）
+      const remainingSelectedRows = selectedRows.filter(id => !submittedBatchIds.includes(id));
+      setSelectedRows(remainingSelectedRows);
+
+      // 清除已提交批次的编辑数据
+      const remainingEditedBatches: Record<string, Partial<typeof batches[0]>> = {};
+      const remainingEditedBatchCodes: string[] = [];
+      batches.forEach(batch => {
+        if (submittedBatchIds.includes(batch.id)) {
+          // 这个批次已提交，清除它的编辑数据
+        } else if (editedBatches[batch.batchCode]) {
+          remainingEditedBatches[batch.batchCode] = editedBatches[batch.batchCode];
+          remainingEditedBatchCodes.push(batch.batchCode);
+        }
+      });
+      setEditedBatches(remainingEditedBatches);
+      setEditedBatchCodes(remainingEditedBatchCodes);
+
+      // 如果所有选中项都已提交，关闭弹窗；否则提示用户
+      if (submittedBatchIds.length === selectedRows.length) {
+        setShowBatchEditModal(false);
+        setEditedBatches({});
+        setEditedBatchCodes([]);
+        setSelectedRows([]);
+      } else {
+        alert(`已提交 ${submittedBatchIds.length} 项编辑申请，还有 ${remainingSelectedRows.length} 项待处理`);
+      }
+    } else {
+      // 没有编辑任何批次，不做任何操作
+      alert('请先编辑至少一个生产计划');
     }
-    setShowBatchEditModal(false);
-    setEditedBatches({});
-    setEditedBatchCodes([]);
-    setSelectedRows([]);
   };
 
   const handlePageSizeChange = (size: number) => {
