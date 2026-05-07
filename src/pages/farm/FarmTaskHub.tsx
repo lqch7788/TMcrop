@@ -20,6 +20,7 @@ import { ProblemDispatchModal } from '../../components/farm/hub/ProblemDispatchM
 import { InspectionDetailModal } from '../../components/farm/hub/InspectionDetailModal';
 import { SelectExecutorModal } from '../../components/farm/hub/modals/SelectExecutorModal';
 import { CreateTaskModal } from '../../components/farm/hub/modals/CreateTaskModal';
+import { TodayOperationRecords } from '../../components/farm/hub/TodayOperationRecords';
 import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
@@ -628,46 +629,10 @@ export function FarmTaskHub() {
         </div>
 
         {/* 今日操作记录 */}
-        <div className="bg-white rounded-xl shadow-sm">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-gray-400" />
-              今日操作记录
-            </h2>
-            <button
-              onClick={() => setShowRecordPanel(true)}
-              className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-            >
-              查看全部
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-          <div className="p-4">
-            {hub.state.recentRecords.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">暂无操作记录</p>
-            ) : (
-              <div className="space-y-3">
-                {hub.state.recentRecords.slice(0, 5).map((record) => (
-                  <div key={record.id} className="flex items-start gap-3 text-sm">
-                    <span className="text-gray-400 whitespace-nowrap">
-                      {new Date(record.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-xs ${
-                      record.operatorType === 'system'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {record.operatorType === 'system' ? '系统' : record.operatorName}
-                    </span>
-                    <span className="text-gray-600 flex-1">{record.content}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <TodayOperationRecords
+          records={hub.state.recentRecords}
+          onShowAll={() => setShowRecordPanel(true)}
+        />
 
       {/* 操作记录面板 */}
       {showRecordPanel && (
