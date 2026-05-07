@@ -1,0 +1,176 @@
+<mxfile host="Electron" agent="Claude">
+  <diagram name="招聘申请审批流程" id="recruitment-approval-flow">
+    <mxGraphModel dx="710" dy="521" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="3000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" value="招聘申请审批完整流程图" vertex="1">
+          <mxGeometry height="40" width="400" x="600" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="phase1-bg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="阶段一：创建申请" vertex="1">
+          <mxGeometry height="40" width="280" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="node1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=11;verticalAlign=top;spacingTop=6;spacingLeft=8;spacingRight=8;spacingBottom=6;fontColor=#0A0A0A;" value="1. 点击【新建招聘】按钮&#xa;位置：招聘管理页面&#xa;操作：用户点击按钮打开表单弹窗" vertex="1">
+          <mxGeometry height="70" width="240" x="60" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" edge="1" parent="1" source="node1" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#ffa500;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="2. 填写招聘表单&#xa;表单字段：&#xa;- 招聘岗位 (position)&#xa;- 需求部门 (department)&#xa;- 招聘人数 (quantity)&#xa;- 用工类型 (employmentType)&#xa;- 薪资范围 (salaryMin/salaryMax)&#xa;- 优先级 (priority)&#xa;- 招聘来源 (source)&#xa;- 期望到岗日期 (expectedDate)&#xa;- 招聘原因 (reason)&#xa;- 岗位要求 (requirements)" vertex="1">
+          <mxGeometry height="200" width="240" x="60" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" edge="1" parent="1" source="node2" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=10;verticalAlign=top;spacingTop=6;spacingLeft=8;spacingRight=8;spacingBottom=6;fontColor=#0A0A0A;" value="3. 点击【提交申请】按钮&#xa;前端状态变化：&#xa;- formData 校验通过&#xa;- 创建 recruitment 数据记录&#xa;- 记录 applicantId (当前用户ID)" vertex="1">
+          <mxGeometry height="80" width="240" x="60" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" edge="1" parent="1" source="node3" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontSize=8;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="4. 生成分级审批配置&#xa;调用 generateApprovers()&#xa;&#xa;配置内容：&#xa;- approvalLevel: STANDARD (二级审批)&#xa;- totalSteps: 2&#xa;- approvers: [&#xa;  {order:1, userId:部门主管ID, userName:部门主管, role:department_head, required:true}&#xa;  {order:2, userId:经理ID, userName:经理, role:manager, required:true}&#xa;]" vertex="1">
+          <mxGeometry height="130" width="240" x="60" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" edge="1" parent="1" source="node4" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontSize=8;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="5. 创建 Approval 对象&#xa;&#xa;Approval 对象字段：&#xa;- id: APR-RE-{timestamp}&#xa;- code: SP-RE-{date}-{random}&#xa;- type: &quot;recruitment&quot;&#xa;- typeName: &quot;招聘申请&quot;&#xa;- category: &quot;hr&quot;&#xa;- title: &quot;部门+岗位+人数&quot;&#xa;- description: 完整申请详情&#xa;- applicantId: &quot;u001&quot;&#xa;- applicantName: &quot;张明&quot;&#xa;- applicantDepartment: 部门&#xa;- applyDate: 当前日期&#xa;- currentStep: 1&#xa;- totalSteps: 2&#xa;- approvers: [审批人数组]&#xa;- records: []&#xa;- status: &quot;pending&quot;&#xa;- businessLink: {type, requestId, ...}&#xa;- priority: &quot;normal&quot;" vertex="1">
+          <mxGeometry height="220" width="240" x="60" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" edge="1" parent="1" source="node5" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7e6;strokeColor=#228b22;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="6. POST /api/approvals&#xa;&#xa;请求体：Approval 对象 (JSON)&#xa;&#xa;后端处理：&#xa;- 验证必填字段&#xa;- 生成审批单编码&#xa;- INSERT INTO approvals&#xa;- 返回 {success:true, id, code}" vertex="1">
+          <mxGeometry height="130" width="240" x="60" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" edge="1" parent="1" source="node6" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#ffa500;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="7. loadApprovalsFromAPI()&#xa;&#xa;调用 GET /api/approvals&#xa;&#xa;API返回（camelCase格式）：&#xa;- id, code, type, typeName&#xa;- applicantId, applicantName&#xa;- currentStep, totalSteps&#xa;- approvers, records&#xa;- status, businessLink&#xa;&#xa;重要：返回字段必须是 camelCase！&#xa;旧版API返回 snake_case 会导致&#xa;前端状态同步失败" vertex="1">
+          <mxGeometry height="150" width="240" x="60" y="1090" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" edge="1" parent="1" source="node7" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="8. 更新 ApprovalContext 状态&#xa;&#xa;dispatch(SET_APPROVALS, payload)&#xa;&#xa;状态变化：&#xa;- approvals数组新增该审批&#xa;- 触发重渲染&#xa;&#xa;UI更新：&#xa;- 招聘管理页面：显示新申请&#xa;- 审批中心：&quot;我发起的&quot;显示审批单&#xa;- 统计数字更新" vertex="1">
+          <mxGeometry height="120" width="240" x="60" y="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow8" edge="1" parent="1" source="node8" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7e6;strokeColor=#228b22;fontSize=11;verticalAlign=top;spacingTop=6;spacingLeft=8;spacingRight=8;spacingBottom=6;fontColor=#0A0A0A;" value="9. 弹出提示&#xa;&#xa;UI变化：&#xa;- 显示 alert(&quot;提交成功！&quot;)&#xa;- 关闭表单弹窗&#xa;- 清空表单数据&#xa;- 招聘列表刷新显示新申请" vertex="1">
+          <mxGeometry height="80" width="240" x="60" y="1400" as="geometry" />
+        </mxCell>
+        <mxCell id="phase2-bg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="阶段二：审批中心" vertex="1">
+          <mxGeometry height="40" width="280" x="380" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="node10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=9;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="10. 导航到审批中心&#xa;路由：/#/approval&#xa;&#xa;页面加载：&#xa;- ApprovalProvider 初始化&#xa;- loadApprovalsFromAPI() 自动调用&#xa;- 获取当前用户的所有审批单&#xa;- 根据 applicantId 过滤显示" vertex="1">
+          <mxGeometry height="100" width="240" x="400" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" edge="1" parent="1" source="node10" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#ffa500;fontSize=9;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="11. 查看审批列表&#xa;&#xa;显示内容：&#xa;- 标题 (title)&#xa;- 申请人 (applicantName)&#xa;- 申请部门 (applicantDepartment)&#xa;- 申请日期 (applyDate)&#xa;- 当前状态 (status)&#xa;- 当前步骤 (currentStep/totalSteps)&#xa;&#xa;筛选状态：&#xa;- 全部/待审批/已通过/已拒绝&#xa;- 按类型/部门/优先级筛选" vertex="1">
+          <mxGeometry height="150" width="240" x="400" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow11" edge="1" parent="1" source="node11" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="12. 点击审批单查看详情&#xa;&#xa;显示详情面板：&#xa;- 基本信息（标题、描述、申请人）&#xa;- 审批进度 (currentStep/totalSteps)&#xa;- 审批人列表&#xa;  - 步骤1：部门主管 [状态]&#xa;  - 步骤2：经理 [状态]&#xa;- 审批历史记录&#xa;- 操作按钮（批准/拒绝）" vertex="1">
+          <mxGeometry height="150" width="240" x="400" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="phase3-bg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="阶段三：审批操作" vertex="1">
+          <mxGeometry height="40" width="280" x="720" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="node13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="13. 审批人执行审批操作&#xa;&#xa;操作类型：&#xa;- 【批准】：同意申请&#xa;- 【拒绝】：拒绝申请&#xa;- 【部分通过】：仅批准部分内容&#xa;- 【撤回】：申请人撤回申请&#xa;&#xa;触发：approve()/reject() 函数" vertex="1">
+          <mxGeometry height="150" width="240" x="740" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow13" edge="1" parent="1" source="node13" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#ffa500;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="14. PATCH /api/approvals/:id/action&#xa;&#xa;请求体：&#xa;- action: &quot;approve&quot; | &quot;reject&quot;&#xa;- comment: 审批意见&#xa;- approverId: 当前审批人ID&#xa;- approverName: 当前审批人姓名&#xa;&#xa;后端验证：&#xa;- 审批单状态必须是 pending&#xa;- 当前审批人必须匹配&#xa;- 审批人必须与预设审批人一致" vertex="1">
+          <mxGeometry height="180" width="240" x="740" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow14" edge="1" parent="1" source="node14" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7e6;strokeColor=#228b22;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="15. 后端处理审批&#xa;&#xa;数据库更新：&#xa;- 更新当前审批人状态&#xa;- 添加审批记录到 records&#xa;- 更新审批单状态&#xa;- 更新当前步骤 currentStep&#xa;&#xa;判断逻辑：&#xa;- 批准：currentStep &amp;gt;= totalSteps?&#xa;  → 全部完成：status=&quot;approved&quot;&#xa;  → 未完成：currentStep++&#xa;- 拒绝：status=&quot;rejected&quot;" vertex="1">
+          <mxGeometry height="190" width="240" x="740" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow15" edge="1" parent="1" source="node15" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node16" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#ffa500;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="16. 审批联动更新业务表&#xa;&#xa;当 status 变为 approved/rejected/cancelled 时：&#xa;&#xa;调用 updateBusinessTable():&#xa;- businessLink.type = &quot;recruitment&quot;&#xa;- 根据 action 更新业务状态&#xa;- 记录审批单编码到业务表&#xa;&#xa;业务表变化：&#xa;- recruitment 表 status 更新&#xa;- 招聘申请状态变为&quot;已通过&quot;" vertex="1">
+          <mxGeometry height="190" width="240" x="740" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow16" edge="1" parent="1" source="node16" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontSize=11;verticalAlign=top;spacingTop=6;spacingLeft=8;spacingRight=8;spacingBottom=6;fontColor=#0A0A0A;" value="17. 返回审批结果&#xa;&#xa;响应内容：&#xa;- success: true&#xa;- newStatus: &quot;approved&quot;/&quot;rejected&quot;/...&#xa;- newCurrentStep: 步骤号&#xa;- totalSteps: 总步骤数&#xa;- isCompleted: boolean" vertex="1">
+          <mxGeometry height="130" width="240" x="740" y="1010" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow17" edge="1" parent="1" source="node17" style="endArrow=classic;html=1;strokeColor=#666666;fontColor=#0A0A0A;" target="node18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="node18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#1e90ff;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="18. 前端状态同步&#xa;&#xa;dispatch(SET_APPROVALS, payload)&#xa;&#xa;状态变化：&#xa;- approvals 数组更新该审批&#xa;- 状态变为 approved/rejected&#xa;- 审批记录追加到 records&#xa;- 当前步骤更新&#xa;&#xa;UI更新：&#xa;- 审批列表重新渲染&#xa;- 审批详情更新&#xa;- 进度条更新" vertex="1">
+          <mxGeometry height="200" width="240" x="740" y="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="node19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7e6;strokeColor=#228b22;fontSize=11;verticalAlign=top;spacingTop=6;spacingLeft=8;spacingRight=8;spacingBottom=6;fontColor=#0A0A0A;" value="19. 显示审批结果提示&#xa;&#xa;批准：alert(&quot;审批已通过&quot;)&#xa;拒绝：alert(&quot;审批已拒绝&quot;)&#xa;&#xa;页面跳转：&#xa;- 审批列表页面&#xa;- 审批详情更新状态" vertex="1">
+          <mxGeometry height="80" width="240" x="740" y="1400" as="geometry" />
+        </mxCell>
+        <mxCell id="approval-flow-title" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="多级审批流程详解" vertex="1">
+          <mxGeometry height="40" width="280" x="1060" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="node20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#dc143c;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="20. 一级审批（部门主管）&#xa;&#xa;审批人：department_head&#xa;- userId: 部门主管用户ID&#xa;- userName: 部门主管姓名&#xa;- order: 1&#xa;&#xa;审批动作：&#xa;- 批准 → 进入二级审批&#xa;- 拒绝 → 审批结束" vertex="1">
+          <mxGeometry height="100" width="240" x="1080" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow20" edge="1" parent="1" source="node20" style="endArrow=classic;html=1;strokeColor=#228b22;strokeWidth=2;fontColor=#0A0A0A;fontSize=11;dashed=0;" target="node21" value="批准">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow20-reject" edge="1" parent="1" source="node20" style="endArrow=classic;html=1;strokeColor=#dc143c;strokeWidth=2;fontColor=#0A0A0A;fontSize=11;dashed=0;" target="node22" value="拒绝">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1320" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="node21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#dc143c;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="21. 二级审批（经理）&#xa;&#xa;审批人：manager&#xa;- userId: 经理用户ID&#xa;- userName: 经理姓名&#xa;- order: 2&#xa;&#xa;审批动作：&#xa;- 批准 → 审批完成，status=&quot;approved&quot;&#xa;- 拒绝 → 审批结束" vertex="1">
+          <mxGeometry height="100" width="240" x="1080" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow21-approve" edge="1" parent="1" source="node21" style="endArrow=classic;html=1;strokeColor=#228b22;strokeWidth=2;fontColor=#0A0A0A;fontSize=11;dashed=0;" target="node23" value="批准">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow21-reject" edge="1" parent="1" source="node21" style="endArrow=classic;html=1;strokeColor=#dc143c;strokeWidth=2;fontColor=#0A0A0A;fontSize=11;dashed=0;edgeStyle=orthogonalEdgeStyle;" target="node24" value="拒绝">
+          <mxGeometry relative="1" x="0.0333" y="-52" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1040" y="330" />
+              <mxPoint x="1040" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="node23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f7e6;strokeColor=#228b22;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="22. 审批通过&#xa;&#xa;最终状态：status = &quot;approved&quot;&#xa;&#xa;后续处理：&#xa;- 审批联动更新业务表&#xa;- recruitment.status → &quot;approved&quot;&#xa;- 发送通知（可选）&#xa;- 记录最终审批时间" vertex="1">
+          <mxGeometry height="140" width="240" x="1080" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="node24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#dc143c;fontSize=11;verticalAlign=top;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fontColor=#0A0A0A;" value="23. 审批拒绝&#xa;&#xa;最终状态：status = &quot;rejected&quot;&#xa;&#xa;后续处理：&#xa;- 审批联动更新业务表&#xa;- recruitment.status → &quot;rejected&quot;&#xa;- 跳过剩余审批步骤&#xa;- 记录拒绝原因" vertex="1">
+          <mxGeometry height="150" width="200" x="1100" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="node22" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dc143c;strokeColor=#8b0000;fontColor=#0A0A0A;fontSize=12;fontStyle=1;verticalAlign=middle;" value="拒绝结束&#xa;status=&quot;rejected&quot;" vertex="1">
+          <mxGeometry height="60" width="100" x="1380" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="data-flow-title" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f8;strokeColor=#33495f;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="关键数据字段映射" vertex="1">
+          <mxGeometry height="40" width="400" x="40" y="1520" as="geometry" />
+        </mxCell>
+        <mxCell id="data-table" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=9;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;fillColor=#008a00;fontColor=#ffffff;strokeColor=#005700;" value="字段名 (前端) | 字段名 (数据库/API) | 说明 | 示例值&#xa;-------------- | ---------------- | --- | -------&#xa;id | id | 审批单唯一ID | APR-RE-1234567890&#xa;code | code | 审批单编码 | SP-RE-20260507-ABC&#xa;type | type | 审批类型 | recruitment&#xa;typeName | type_name | 类型名称 | 招聘申请&#xa;category | category | 审批类别 | hr&#xa;title | title | 审批标题 | 生产部测试工程师招聘3人&#xa;description | description | 详细描述 | 申请招聘3名...&#xa;applicantId | applicant_id | 申请人ID | u001&#xa;applicantName | applicant_name | 申请人姓名 | 张明&#xa;applicantDepartment | applicant_department | 申请人部门 | 生产部&#xa;applyDate | apply_date | 申请日期 | 2026-05-07&#xa;applyTime | apply_time | 申请时间 | 14:30:00&#xa;currentStep | current_step | 当前步骤 | 1&#xa;totalSteps | total_steps | 总步骤数 | 2&#xa;status | status | 审批状态 | pending&#xa;priority | priority | 优先级 | normal&#xa;approvers | approvers (JSON) | 审批人列表 | [{order:1,...}]&#xa;records | records (JSON) | 审批记录 | [{action:...}]&#xa;businessLink | business_link (JSON) | 业务关联 | {type:...,...}&#xa;reminderCount | reminder_count | 催办次数 | 0&#xa;dueDate | due_date | 截止日期 | 2026-05-10" vertex="1">
+          <mxGeometry height="280" width="410" x="40" y="1580" as="geometry" />
+        </mxCell>
+        <mxCell id="notes-title" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3cd;strokeColor=#856404;fontStyle=1;fontSize=14;verticalAlign=top;spacingTop=6;spacingLeft=12;spacingRight=12;spacingBottom=6;fontColor=#0A0A0A;" value="重要注意事项" vertex="1">
+          <mxGeometry height="40" width="400" x="40" y="1880" as="geometry" />
+        </mxCell>
+        <mxCell id="notes" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=11;spacingTop=4;spacingLeft=8;spacingRight=8;spacingBottom=4;" value="1. API字段格式问题&#xa;   - 后端数据库使用 snake_case (applicant_id, type_name)&#xa;   - 前端期望 camelCase (applicantId, typeName)&#xa;   - 修复：server/src/routes/approval.ts 中转换字段格式&#xa;&#xa;2. 审批人匹配问题&#xa;   - createApproverConfig() 生成 approvers 数组&#xa;   - 审批时验证 approverId 是否与预设审批人匹配&#xa;   - 未预设审批人时允许任何审批人审批&#xa;&#xa;3. 审批联动触发条件&#xa;   - 仅当 status 变为 approved/rejected/cancelled 时触发&#xa;   - 联动更新业务表（如 recruitment 表）&#xa;   - businessLink.type = &quot;recruitment&quot; 时执行招聘业务更新&#xa;&#xa;4. 状态同步机制&#xa;   - addApproval() 是异步函数，不阻塞 UI&#xa;   - API 成功后调用 loadApprovalsFromAPI() 重新加载&#xa;   - dispatch(SET_APPROVALS) 触发状态更新和重渲染&#xa;&#xa;5. 分级审批配置&#xa;   - forcedLevel: STANDARD 启用二级审批&#xa;   - totalSteps = 2 (部门主管 + 经理)&#xa;   - 每级审批完成后 currentStep++" vertex="1">
+          <mxGeometry height="220" width="1400" x="40" y="1940" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -68,7 +68,28 @@
       "Read(//tmp/**)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('总条数:', d['meta']['total']\\); [print\\(f\\\\\"{i['seedCode']} | {i['sourceName']} | {i['productionPlanCode']}\\\\\"\\) for i in d['data'][:5]]\")",
       "Bash(cmd *)",
-      "mcp__MiniMax__understand_image"
+      "mcp__MiniMax__understand_image",
+      "Bash(D:/TMcrop/yuanxingtu/sqlite3.exe *)",
+      "Bash(taskkill //F //PID 17344)",
+      "Bash(cp apiProblemService.ts.bak apiProblemService.ts)",
+      "Bash(rm -f *.bak)",
+      "Read(//d/d/TMcrop/yuanxingtu/V1.1/src/pages/**)",
+      "Bash(sed -i '15,68d' Login.tsx)",
+      "Bash(sed -i '14r /tmp/login_handle.txt' Login.tsx)",
+      "Bash(echo '// leaveQuotaService.ts - quota management service')",
+      "Read(//d/d/TMcrop/yuanxingtu/V1.1/server/src/services/**)",
+      "Bash(/c/Python314/python)",
+      "Bash(cat)",
+      "Bash(python /tmp/patch_useTasks.py)",
+      "Bash(sed -i \"707s/.*/        console.error\\('更新种源补录失败:', e\\);\\\\n        return { success: false, message: '数据库更新失败: ' + \\(e instanceof Error ? e.message : String\\(e\\)\\) };/\" approvalLinkage.ts)",
+      "Bash(sed -i \"723s/.*/        console.error\\('更新育苗补录失败:', e\\);\\\\n        return { success: false, message: '数据库更新失败: ' + \\(e instanceof Error ? e.message : String\\(e\\)\\) };/\" approvalLinkage.ts)",
+      "Bash(sed -i \"739s/.*/        console.error\\('更新作物入库补录失败:', e\\);\\\\n        return { success: false, message: '数据库更新失败: ' + \\(e instanceof Error ? e.message : String\\(e\\)\\) };/\" approvalLinkage.ts)",
+      "Bash(D:/TMcrop/sqlite3.exe *)",
+      "Bash(sqlite3.exe *)",
+      "Bash(findstr :3001)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(sqlite3 *)",
+      "mcp__plugin_playwright_playwright__browser_select_option"
     ]
   }
 }

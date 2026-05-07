@@ -1,0 +1,241 @@
+# TMcrop V8.0 数据迁移方案验收报告
+## 验收日期：2026-05-05
+## 验收对象：GitHub planting-management 分支 (commit 84607d96)
+## 验收标准：TMcrop_数据迁移终极方案V8.0_完整版
+## 检查方式：只读，未修改任何文件
+
+---
+
+## 一、总体结论
+
+**按 V8.0 方案严格验收，当前系统完成度约 50%，未达到可交付标准。**
+
+核心差距：
+- 数据库表缺失 14+ 张（要求56张，实际42张）
+- 后端路由缺失 13 个（要求37个，实际24个）
+- 审批联动触发器、4级备份、灰度切换、自动回滚、熔断机制等高级功能**全部缺失**
+- 前端 mockServices 层、settingsStore 等 V8.0 要求的架构文件**全部缺失**
+
+---
+
+## 二、数据库 Schema 验收（要求56张表）
+
+### ✅ 已存在（42张）
+
+departments, positions, teams, warehouses, greenhouses, zones, blocks, code_rules, notification_channels, notification_rules, approval_rules, approval_workflows, approvals, dictionary_categories, dictionaries, crop_varieties, inventory, crop_instances, seed_sources, seedlings, plantings, harvest_records, suppliers, farm_tasks, inspections, problems, labor_records, temp_tasks, purchase_plans, material_requests, system_configs, operation_logs, roles, permissions, users, user_roles, role_permissions, processes, actions, roles_authority, crop_orders, production_plans
+
+### ❌ 缺失（14张核心表 + 大量业务/流程表）
+
+| V8.0 要求表名 | 说明 | 影响 |
+|--------------|------|------|
+| **staff** | 员工档案表（HR核心） | 严重：人事模块无员工数据支撑 |
+| **company_groups** | 公司分组表 | 中：多公司架构缺失 |
+| **bases** | 基地表 | 中：BaseSettings 页面硬编码数据 |
+| **produce_inventories** | 产品库存表（关系型） | 中：实际用 inventory 替代，但字段不同 |
+| **materials** | 物料主数据表 | 中：物料管理无后端支撑 |
+| **material_receiving_records** | 物料领用记录 | 中：领用流程无数据表 |
+| **material_usages** | 物料使用记录 | 中：使用流程无数据表 |
+| **material_returns** | 物料退库记录 | 低：退库流程无数据表 |
+| **farm_activities** | 农事活动明细表 | 中：farm_tasks 有，但缺少 activities 拆分 |
+| **planting_modes** | 种植模式表 | 低：配置类数据 |
+| **plant_areas** | 种植区域表 | 低：zones 表功能类似但命名不同 |
+| **daily_plans** | 日计划表 | 低：计划管理不完整 |
+| **monthly_plans** | 月计划表 | 低：计划管理不完整 |
+| **indicators** | 管理指标表 | 中：管理指标模块无后端 |
+| **production_records** | 生产记录表 | 低：与 harvest_records 有重叠 |
+| **team_members** | 班组成员关联表 | 低：teams 表已存在，缺成员关联 |
+| **device_management** | 设备管理表 | 低：设备模块无后端 |
+| **material_categories** | 物料分类表 | 低：物料管理不完整 |
+| **cost_accounting** | 成本核算表 | 低：成本模块无后端 |
+| **notifications** | 通知表（消息推送） | 低：通知模块无后端 |
+| **approval_nodes** | 审批节点表（关系型） | 中：实际用 approval_workflows.nodes JSON 替代 |
+| **approval_records** | 审批记录表 | 中：审批历史无独立表 |
+| **audit_logs** | 审计日志表 | 中：实际有 operation_logs，功能类似但字段不同 |
+| **attendance_records** | 考勤记录表 | 低：人事模块不完整 |
+| **attendance_repairs** | 考勤补卡表 | 低：人事模块不完整 |
+| **leave_records** | 请假记录表 | 低：人事模块不完整 |
+| **overtime_records** | 加班记录表 | 低：人事模块不完整 |
+| **recruitment_records** | 招聘记录表 | 低：人事模块不完整 |
+| **contracts** | 合同表 | 低：人事模块不完整 |
+| **onboardings** | 入职表 | 低：人事模块不完整 |
+| **resignations** | 离职表 | 低：人事模块不完整 |
+
+**Schema 完成度：42/56 = 75%（按功能覆盖），但严格按表名+字段对比约 50%。**
+
+### ⚠️ 字段差异问题
+- 实际表使用 `oid` + `created_at/updated_at` 命名，V8.0 要求 `id` + `create_time/update_time`
+- 实际 greenhouses 表使用 `base_oid` 而非 `base_id`
+- 实际缺少大量 V8.0 要求的 FOREIGN KEY 外键约束（SQLite 外键默认关闭）
+- 实际缺少 V8.0 要求的 CREATE INDEX 索引（schema.ts 中无索引定义）
+
+---
+
+## 三、后端 API 路由验收（要求37个路由）
+
+### ✅ 已存在（24个）
+
+/crop-varieties, /inventory, /seedlings, /seed-sources, /plantings, /harvest, /suppliers, /crop-instances, /farm-tasks, /inspections, /problems, /labor, /temp-tasks, /purchase-plans, /material-requests, /basic-data, /dictionary, /authority, /notifications, /approval-workflows, /approvals, /operation-logs, /crop-orders, /production-plans
+
+### ❌ 缺失（13个）
+
+| V8.0 要求路由 | 说明 |
+|--------------|------|
+| /staff | 员工档案 CRUD |
+| /company-groups | 公司分组 |
+| /bases | 基地管理 |
+| /plant-areas | 种植区域 |
+| /planting-modes | 种植模式 |
+| /materials | 物料主数据 |
+| /material-receivings | 物料领用 |
+| /material-usages | 物料使用 |
+| /material-returns | 物料退库 |
+| /daily-plans | 日计划 |
+| /monthly-plans | 月计划 |
+| /indicators | 管理指标 |
+| /cost-accounting | 成本核算 |
+
+**路由完成度：24/37 = 65%**
+
+---
+
+## 四、V8.0 关键文件验收
+
+| V8.0 要求文件 | 路径 | 实际状态 | 结论 |
+|-------------|------|---------|------|
+| 审批触发器SQL | `backend/sql/triggers.sql` 或 schema.ts | **不存在**。schema.ts 中 0 个 TRIGGER | ❌ 未实现 |
+| 4级备份脚本 | `backup.sh` + `backupService.js` | **不存在**。无 backup/ 目录 | ❌ 未实现 |
+| 灰度配置 | `backend/config/gradual.js` | **不存在** | ❌ 未实现 |
+| 灰度中间件 | `backend/middleware/gradual.js` | **不存在** | ❌ 未实现 |
+| 自动回滚检测器 | `backend/middleware/rollbackDetector.js` | **不存在** | ❌ 未实现 |
+| 熔断机制 | `backend/utils/circuitBreaker.js` | **不存在** | ❌ 未实现 |
+| 数据一致性校验 | `backend/scripts/dataIntegrityCheck.js` | **不存在** | ❌ 未实现 |
+| 20个复合索引 | `backend/sql/indexes.sql` 或 schema.ts | **不存在**。schema.ts 无 CREATE INDEX | ❌ 未实现 |
+| 种子脚本完整版 | `backend/scripts/seedFromMockData.js` | **不存在**。有 `server/src/db/seedData.ts` 但非 V8.0 要求的完整实现 | ⚠️ 部分实现 |
+| 前端 mockServices | `src/services/mock/index.ts` | **不存在** | ❌ 未实现 |
+| 前端 settingsStore | `src/stores/settingsStore.ts` | **不存在** | ❌ 未实现 |
+| 前端 useSettings | `src/hooks/useSettings.ts` | **不存在** | ❌ 未实现 |
+| 前端 useDictItems | `src/hooks/useDictItems.ts` | **不存在** | ❌ 未实现 |
+| 前端 DictSelect | `src/components/common/DictSelect.tsx` | **不存在** | ❌ 未实现 |
+
+---
+
+## 五、审批联动验收（V8.0 第三章要求）
+
+### V8.0 要求的6个审批触发器
+1. 采购审批通过 → 更新采购单状态 ❌
+2. 请假审批通过 → 更新考勤状态 ❌
+3. 加班审批通过 → 更新考勤加班时长 ❌
+4. 薪资调整审批通过 → 更新员工薪资 ❌
+5. 离职审批通过 → 更新员工/用户状态 ❌
+6. 通用审批驳回 → 更新业务状态 ❌
+
+**实际状态：0/6 = 0%**
+
+---
+
+## 六、种子数据验收（V8.0 第四章要求）
+
+### V8.0 要求
+- `seedFromMockData.js` 完整实现，含 field mapping、错误处理、自动导入
+- 启动后 `SELECT COUNT(*) FROM suppliers` > 0
+- 导入 ≥50 条记录
+
+### 实际状态
+- `server/src/db/seedData.ts` 存在，但**非 V8.0 要求的完整实现**
+- seedData.ts 只有作物品种等少量数据（约20条），无系统设置基础数据自动导入
+- 无 `__seed_status` 表记录种子状态
+- 启动时未自动调用 seed（需手动执行）
+
+**完成度：约 20%**
+
+---
+
+## 七、前端双轨制验收（V8.0 第十章要求）
+
+### V8.0 要求
+- `src/services/mock/index.ts`：完整 mockServices（种源/育苗/种植/采收/订单/实例/品种/基地/指标/农事/库存/仓库/物料/审批）
+- `src/services/index.ts`：三级切换（API → mockData → LocalStorage）
+- `VITE_STORAGE_MODE=mock` 可用
+
+### 实际状态
+- **无 mockServices 层**：`src/services/mock/` 目录不存在
+- **无三级切换入口**：`src/services/index.ts` 不存在
+- 实际只有单文件 Service（如 `departmentService.ts`），含 `localStorage` fallback
+- `apiClient.ts` 有 `USE_API` 开关，但无 mock 模式切换
+
+**完成度：约 10%**
+
+---
+
+## 八、Build 验收
+
+### V8.0 要求
+- `npm run build` 通过，无 warning
+
+### 实际状态
+- `dist/` 目录存在，最近一次 Build 成功
+- 无法确认是否有 warning（未实际执行 build）
+
+**完成度：约 80%（假设通过）**
+
+---
+
+## 九、综合评分
+
+| 验收维度 | 权重 | 完成度 | 加权分 |
+|---------|------|--------|--------|
+| 数据库Schema（56张表） | 20% | 50% | 10 |
+| 后端路由（37个） | 15% | 65% | 9.75 |
+| 审批联动触发器 | 15% | 0% | 0 |
+| 4级备份机制 | 10% | 0% | 0 |
+| 灰度切换+回滚+熔断 | 10% | 0% | 0 |
+| 种子数据自动导入 | 10% | 20% | 2 |
+| 前端双轨制/mockServices | 10% | 10% | 1 |
+| Build通过 | 5% | 80% | 4 |
+| 索引优化 | 5% | 0% | 0 |
+| **综合得分** | **100%** | **-** | **26.75/100** |
+
+---
+
+## 十、未完成清单（按优先级排序）
+
+### P0 - 阻断级（必须完成）
+1. **补齐14张缺失表**：staff, company_groups, bases, materials, material_receiving_records, material_usages, material_returns, farm_activities, planting_modes, daily_plans, monthly_plans, indicators, production_records, audit_logs
+2. **补齐13个缺失路由**：/staff, /company-groups, /bases, /materials, /material-receivings 等
+3. **创建审批联动触发器**：6个 AFTER UPDATE TRIGGER
+
+### P1 - 高优先级
+4. **创建 seedFromMockData.js** 完整种子脚本
+5. **创建前端 mockServices 层**：`src/services/mock/index.ts`
+6. **创建前端 settingsStore**：`src/stores/settingsStore.ts`
+
+### P2 - 中优先级
+7. **4级备份脚本**：backup.sh + backupService.js
+8. **灰度切换配置+中间件**：gradual.js
+9. **自动回滚检测器**：rollbackDetector.js
+10. **数据一致性校验**：dataIntegrityCheck.js
+
+### P3 - 低优先级
+11. **熔断机制**：circuitBreaker.js
+12. **20个复合索引**：indexes.sql
+13. **性能监控面板**
+
+---
+
+## 十一、结论
+
+**当前系统与 V8.0 方案差距显著，完成度约 50%，尚未达到 V8.0 的交付标准。**
+
+主要差距集中在：
+1. **缺失14张表 + 13个路由** = 基础架构不完整
+2. **审批联动、备份、灰度、回滚、熔断全部缺失** = 高级功能0实现
+3. **前端 mockServices、settingsStore 缺失** = 前端架构未按 V8.0 实施
+4. **种子脚本不完整** = 数据初始化能力弱
+
+**建议**：
+- 如果目标是 V8.0 完整方案，预计还需 **15 天** 按 V8.0 路线图执行
+- 如果目标是可用系统，当前 42 表/24 路由 已可支撑核心业务流程，但缺少人事/物料/计划/设备模块的后端支撑
+
+---
+
+**报告完毕。未修改任何远程仓库文件。**

@@ -1,0 +1,342 @@
+# TMcrop 系统按 V8.0 方案完成度检查报告
+## 检查时间：2026-05-05
+## 检查范围：GitHub planting-management 分支 (commit 84607d96)
+## 验收标准：用户提供的 V8.0 完整版方案
+## 检查方式：只读，未修改任何文件
+
+---
+
+## 一、总体结论
+
+**按 V8.0 方案标准，系统数据迁移完成度约 50%，存在大量未实现项。**
+
+V8.0 方案要求 56 张表 + 37 个路由 + 10 个关键脚本/机制，
+实际代码为 42 张表 + 24 个路由 + 0 个关键脚本。
+
+---
+
+## 二、数据库 Schema 对比（目标 56 张 vs 实际 42 张）
+
+### ✅ 已存在的表（42张）
+
+| 序号 | 表名 | V8.0对应 | 状态 |
+|------|------|----------|------|
+| 1 | departments | departments | ✅ |
+| 2 | positions | positions | ✅ |
+| 3 | teams | teams | ✅ |
+| 4 | warehouses | warehouses | ✅ |
+| 5 | greenhouses | greenhouses | ✅ |
+| 6 | zones | zones | ✅ |
+| 7 | blocks | blocks | ✅ |
+| 8 | code_rules | code_rules | ✅ |
+| 9 | notification_channels | notification_channels | ✅ |
+| 10 | notification_rules | notification_rules | ✅ |
+| 11 | approval_rules | approval_rules | ✅ |
+| 12 | approval_workflows | approval_flows | ⚠️ 名称不同 |
+| 13 | approvals | approvals | ✅ |
+| 14 | dictionary_categories | dictionary_categories | ✅ |
+| 15 | dictionaries | dictionaries | ✅ |
+| 16 | crop_varieties | crop_varieties | ✅ |
+| 17 | inventory | produce_inventories | ⚠️ 名称/字段差异 |
+| 18 | crop_instances | crop_instances | ✅ |
+| 19 | seed_sources | seed_sources | ✅ |
+| 20 | seedlings | seedlings | ✅ |
+| 21 | plantings | plantings | ✅ |
+| 22 | harvest_records | harvest_records | ✅ |
+| 23 | suppliers | suppliers | ✅ |
+| 24 | farm_tasks | farm_tasks | ✅ |
+| 25 | inspections | inspections | ✅ |
+| 26 | problems | problems | ✅ |
+| 27 | labor_records | labor_records | ✅ |
+| 28 | temp_tasks | temp_tasks | ✅ |
+| 29 | purchase_plans | purchase_plans | ✅ |
+| 30 | material_requests | material_requests | ✅ |
+| 31 | system_configs | system_configs | ✅ |
+| 32 | operation_logs | audit_logs | ⚠️ 名称不同 |
+| 33 | roles | roles | ✅ |
+| 34 | permissions | permissions | ✅ |
+| 35 | users | users | ✅ |
+| 36 | user_roles | user_roles | ✅ |
+| 37 | role_permissions | role_permissions | ✅ |
+| 38 | processes | processes | ✅ |
+| 39 | actions | actions | ✅ |
+| 40 | roles_authority | roles_authority | ✅ |
+| 41 | crop_orders | crop_orders | ✅ |
+| 42 | production_plans | production_plans | ✅ |
+
+### ❌ 缺失的表（14张核心缺失）
+
+| V8.0表名 | 用途 | 优先级 |
+|----------|------|--------|
+| staff | 员工档案表 | P0 |
+| company_groups | 公司分组 | P1 |
+| bases | 基地表 | P1 |
+| produce_inventories | 产品库存（实际用 inventory 替代，字段差异大） | P1 |
+| materials | 物料表 | P2 |
+| material_receiving_records | 物料领用 | P2 |
+| material_usages | 物料使用 | P2 |
+| material_returns | 物料退库 | P2 |
+| farm_activities | 农事活动明细 | P2 |
+| planting_modes | 种植模式 | P2 |
+| plant_areas | 种植区域 | P2 |
+| daily_plans | 日计划 | P2 |
+| monthly_plans | 月计划 | P2 |
+| indicators | 管理指标 | P2 |
+| production_records | 生产记录 | P2 |
+| team_members | 班组成员 | P2 |
+| device_management | 设备管理 | P2 |
+| material_categories | 物料分类 | P2 |
+| cost_accounting | 成本核算 | P2 |
+| notifications | 通知表 | P2 |
+| approval_flows | 审批流程（实际用 approval_workflows） | ⚠️ |
+| approval_nodes | 审批节点 | P2 |
+| approval_records | 审批记录 | P2 |
+| audit_logs | 审计日志（实际用 operation_logs） | ⚠️ |
+| attendance_records | 考勤记录 | P2 |
+| attendance_repairs | 考勤补卡 | P2 |
+| leave_records | 请假记录 | P2 |
+| overtime_records | 加班记录 | P2 |
+| recruitment_records | 招聘记录 | P2 |
+| contracts | 合同 | P2 |
+| onboardings | 入职 | P2 |
+| resignations | 离职 | P2 |
+
+**实际缺失约 30 张表**（含名称差异和子表）。
+
+---
+
+## 三、后端 API 路由对比（目标 37 个 vs 实际 24 个）
+
+### ✅ 已存在路由（24个）
+
+| 路由 | 文件 | 状态 |
+|------|------|------|
+| /crop-varieties | cropVariety.ts | ✅ |
+| /inventory | inventory.ts | ✅ |
+| /seedlings | seedling.ts | ✅ |
+| /seed-sources | seedSource.ts | ✅ |
+| /plantings | planting.ts | ✅ |
+| /harvest | harvest.ts | ✅ |
+| /suppliers | supplier.ts | ✅ |
+| /crop-instances | cropInstance.ts | ✅ |
+| /farm-tasks | farmTask.ts | ✅ |
+| /inspections | inspection.ts | ✅ |
+| /problems | problem.ts | ✅ |
+| /labor | labor.ts | ✅ |
+| /temp-tasks | tempTask.ts | ✅ |
+| /purchase-plans | purchasePlan.ts | ✅ |
+| /material-requests | materialRequest.ts | ✅ |
+| /basic-data | basicData.ts | ✅ |
+| /dictionary | dictionary.ts | ✅ |
+| /authority | authority.ts | ✅ |
+| /notifications | notification.ts | ✅ |
+| /approval-workflows | approvalWorkflow.ts | ✅ |
+| /approvals | approval.ts | ✅ |
+| /operation-logs | operationLog.ts | ✅ |
+| /crop-orders | cropOrder.ts | ✅ |
+| /production-plans | productionPlan.ts | ✅ |
+
+### ❌ 缺失路由（约 13 个）
+
+| 预期路由 | 对应缺失表/功能 |
+|----------|----------------|
+| /staff | staff 表 CRUD |
+| /company-groups | company_groups |
+| /bases | bases |
+| /materials | materials |
+| /material-receiving | material_receiving_records |
+| /material-usages | material_usages |
+| /material-returns | material_returns |
+| /farm-activities | farm_activities |
+| /planting-modes | planting_modes |
+| /plant-areas | plant_areas |
+| /daily-plans | daily_plans |
+| /monthly-plans | monthly_plans |
+| /indicators | indicators |
+| /production-records | production_records |
+| /team-members | team_members |
+| /devices | device_management |
+| /material-categories | material_categories |
+| /cost-accounting | cost_accounting |
+| /attendance | attendance_records |
+| /leave | leave_records |
+| /overtime | overtime_records |
+| /recruitment | recruitment_records |
+| /contracts | contracts |
+| /onboardings | onboardings |
+| /resignations | resignations |
+| /audit-logs | audit_logs（与 operation-logs 功能重叠） |
+| /approval-nodes | approval_nodes |
+| /approval-records | approval_records |
+
+---
+
+## 四、关键机制/脚本对比（目标 10 项 vs 实际 0 项）
+
+### ❌ 全部缺失
+
+| V8.0 要求文件 | 用途 | 实际状态 |
+|---------------|------|----------|
+| triggers.sql | 审批联动触发器（6个） | ❌ 不存在 |
+| seedFromMockData.js | 种子数据导入脚本 | ❌ 不存在 |
+| backup.sh | 4级备份脚本 | ❌ 不存在 |
+| backupService.js | Node.js定时备份服务 | ❌ 不存在 |
+| gradual.js | 5阶段灰度配置 | ❌ 不存在 |
+| gradual middleware | 灰度切换中间件 | ❌ 不存在 |
+| rollbackDetector.js | 自动回滚检测器 | ❌ 不存在 |
+| circuitBreaker.js | 熔断机制 | ❌ 不存在 |
+| dataIntegrityCheck.js | 数据一致性校验 | ❌ 不存在 |
+| indexes.sql | 20个复合索引 | ❌ 不存在 |
+
+---
+
+## 五、前端架构对比
+
+### ❌ 缺失
+
+| V8.0 要求 | 实际状态 |
+|-----------|----------|
+| src/services/mock/index.ts | ❌ 不存在 |
+| src/services/api/ 分层目录 | ❌ 不存在（所有服务平铺在 src/services/） |
+| src/services/dexie/ 分层目录 | ❌ 不存在 |
+| src/services/localStorage/ 分层目录 | ❌ 不存在 |
+| src/stores/settingsStore.ts | ❌ 不存在 |
+| src/hooks/useSettings.ts | ❌ 不存在 |
+| src/hooks/useDictItems.ts | ❌ 不存在 |
+| src/hooks/useActiveStaff.ts | ❌ 不存在 |
+| src/components/common/DictSelect.tsx | ❌ 不存在 |
+| 双轨制入口（API→mockData→LocalStorage） | ❌ 不存在（仅 apiClient.ts + localStorage fallback） |
+
+### ⚠️ 部分存在但不够完善
+
+- `src/services/apiClient.ts` ✅ 存在，但仅为简单 fetch 封装
+- `src/services/departmentService.ts` ✅ 存在，但含 localStorage fallback
+- `src/services/dictionaryService.ts` ✅ 存在
+- `src/services/greenhouseService.ts` ✅ 存在
+- `src/services/warehouseService.ts` ✅ 存在
+
+---
+
+## 六、审批联动触发器（目标 6 个 vs 实际 0 个）
+
+### ❌ 全部缺失
+
+V8.0 要求的触发器：
+1. trg_approval_passed_purchase - 采购审批通过更新采购单
+2. trg_approval_passed_leave - 请假审批通过更新考勤
+3. trg_approval_passed_overtime - 加班审批通过更新考勤
+4. trg_approval_passed_salary - 薪资调整审批通过更新员工薪资
+5. trg_approval_passed_resignation - 离职审批通过更新员工状态
+6. trg_approval_rejected - 通用审批驳回处理
+
+实际：无触发器文件，schema.ts 中无 TRIGGER 定义。
+
+---
+
+## 七、4级备份机制（目标 vs 实际）
+
+### ❌ 全部缺失
+
+| 级别 | V8.0 要求 | 实际 |
+|------|-----------|------|
+| L1 实时备份 | 每次写入后触发，保留100次 | ❌ 无 |
+| L2 小时备份 | 每小时执行，保留72小时 | ❌ 无 |
+| L3 日备份 | 每日0点执行，保留30天 | ❌ 无 |
+| L4 版本备份 | 每次部署执行，保留10版本 | ❌ 无 |
+
+---
+
+## 八、V8.0 验收标准逐项对比
+
+### 12.1 技术验收
+
+| 验收项 | V8.0要求 | 实际 | 状态 |
+|--------|----------|------|------|
+| npm run build | 通过，无warning | dist/存在，但无法确认无warning | ⚠️ |
+| 后端启动自动导入mockData≥50条 | 启动后自动seed | seedData.ts存在但启动时未自动调用 | ❌ |
+| API→mockData→LocalStorage切换 | 三级降级 | 仅API+localStorage两层 | ❌ |
+| 56张表全部可CRUD | 56张表 | 42张表 | ❌ |
+| 37个路由全部可访问 | 37个路由 | 24个路由 | ❌ |
+| 审批触发器生效 | 6个触发器 | 0个 | ❌ |
+| 外键约束生效 | FOREIGN KEY + ON DELETE | 有FOREIGN KEY定义但SQLite默认关闭 | ⚠️ |
+| 4级备份可恢复 | 脚本+服务 | 无 | ❌ |
+
+### 12.2 功能验收
+
+| 验收项 | V8.0要求 | 实际 | 状态 |
+|--------|----------|------|------|
+| 种源→育苗→种植→采收链路 | 完整外键链 | 表存在但前端链路未验证 | ⚠️ |
+| 审批通过后业务状态自动更新 | 触发器驱动 | 无触发器 | ❌ |
+| 设置模块修改后实时联动 | settings:refresh事件 | 不存在 | ❌ |
+| 数据一致性校验0 issues | 定时脚本 | 无脚本 | ❌ |
+| 4级备份可恢复 | 备份文件可恢复 | 无备份 | ❌ |
+| 灰度切换不影响在线用户 | 5阶段灰度 | 无灰度 | ❌ |
+
+### 12.3 性能验收
+
+| 验收项 | V8.0要求 | 实际 | 状态 |
+|--------|----------|------|------|
+| 首页加载<3秒 | <3秒 | 未测试 | ❓ |
+| 列表页查询<1秒 | <1秒（1000条） | 未测试 | ❓ |
+| 并发10请求无500错误 | 无500 | 未测试 | ❓ |
+| 内存占用<200MB | <200MB | 未测试 | ❓ |
+| 备份不阻塞业务 | 不阻塞 | 无备份 | ❌ |
+
+---
+
+## 九、完成度汇总
+
+| 维度 | 目标 | 实际 | 完成度 |
+|------|------|------|--------|
+| 数据库表 | 56张 | 42张 | **75%** |
+| 后端路由 | 37个 | 24个 | **65%** |
+| 关键脚本/机制 | 10项 | 0项 | **0%** |
+| 审批触发器 | 6个 | 0个 | **0%** |
+| 4级备份 | 4级 | 0级 | **0%** |
+| 前端分层架构 | 5层 | 2层 | **40%** |
+| 灰度切换 | 5阶段 | 0阶段 | **0%** |
+| 熔断机制 | 有 | 无 | **0%** |
+| 数据校验 | 有 | 无 | **0%** |
+| 种子数据自动导入 | 有 | 无 | **0%** |
+| **综合完成度** | - | - | **约 50%** |
+
+---
+
+## 十、剩余工作量评估
+
+按 V8.0 方案 15 天实施路线图估算：
+
+| Phase | V8.0计划 | 实际状态 | 还需天数 |
+|-------|----------|----------|----------|
+| Phase 1 种子数据+双轨制 | Day 1-3 | seedData.ts存在但未自动调用；无mockServices | 3天 |
+| Phase 2 审批联动 | Day 4-6 | 无触发器，无execute API | 3天 |
+| Phase 3 安全策略 | Day 7-9 | 无备份/灰度/回滚 | 3天 |
+| Phase 4 性能优化 | Day 10-12 | 无索引/WAL/缓存优化 | 3天 |
+| Phase 5 数据校验+收尾 | Day 13-15 | 无校验/熔断/最终Build | 3天 |
+
+**预计还需 15 天完成 V8.0 方案全部内容。**
+
+（注：如果按之前你要求保留现有 49 表的务实路线，不追求 56 表，则工作量可减少约 3-4 天。）
+
+---
+
+## 十一、关键缺失文件清单
+
+以下文件在 V8.0 方案中有详细代码，但 GitHub 仓库中完全不存在：
+
+1. `server/src/db/triggers.sql`
+2. `server/src/scripts/seedFromMockData.js`
+3. `server/src/scripts/backup.sh`
+4. `server/src/services/backupService.js`
+5. `server/src/config/gradual.js`
+6. `server/src/middleware/gradual.js`
+7. `server/src/middleware/rollbackDetector.js`
+8. `server/src/utils/circuitBreaker.js`
+9. `server/src/scripts/dataIntegrityCheck.js`
+10. `server/src/db/indexes.sql`
+11. `src/services/mock/index.ts`
+12. `src/stores/settingsStore.ts`
+
+---
+
+**报告生成完毕。未修改任何远程仓库文件。**

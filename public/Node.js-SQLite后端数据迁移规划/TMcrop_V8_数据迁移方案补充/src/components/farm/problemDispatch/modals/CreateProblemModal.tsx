@@ -1,0 +1,117 @@
+import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { cropTypes } from '../../../../data/mockData';
+import { useGreenhouses } from '../../../common/settings';
+
+interface CreateProblemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+  formData: {
+    greenhouseId: string;
+    greenhouseName: string;
+    cropName: string;
+    inspectorId: string;
+    inspectorName: string;
+    checkDate: string;
+    checkTime: string;
+    issueText: string;
+    issueSeverity: '轻微' | '中等' | '严重';
+  };
+  errors: Record<string, string>;
+  onFormChange: (field: string, value: string) => void;
+}
+
+export function CreateProblemModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  formData,
+  errors,
+  onFormChange,
+}: CreateProblemModalProps) {
+  const { greenhouses } = useGreenhouses();
+
+  const handleGreenhouseChange = (greenhouseId: string) => {
+    const greenhouse = greenhouses.find(g => g.id === greenhouseId);
+    onFormChange('greenhouseId', greenhouseId);
+    onFormChange('greenhouseName', greenhouse?.name || '');
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="新增问题记录"
+      size="xl"
+      onSubmit={onSubmit}
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField label="温室区域" required error={errors.greenhouseId}>
+            <Select
+              value={formData.greenhouseId}
+              onChange={(e) => handleGreenhouseChange(e.target.value)}
+              options={greenhouses.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.name }))}
+            />
+          </FormField>
+
+          <FormField label="作物名称" required error={errors.cropName}>
+            <Select
+              value={formData.cropName}
+              onChange={(e) => onFormChange('cropName', e.target.value)}
+              options={cropTypes.map(c => ({ value: c.name, label: c.name }))}
+            />
+          </FormField>
+
+          <FormField label="巡检人员" required error={errors.inspectorName}>
+            <Input
+              value={formData.inspectorName}
+              onChange={(e) => onFormChange('inspectorName', e.target.value)}
+              placeholder="输入巡检人员姓名"
+            />
+          </FormField>
+
+          <FormField label="巡检日期" required error={errors.checkDate}>
+            <Input
+              type="date"
+              value={formData.checkDate}
+              onChange={(e) => onFormChange('checkDate', e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="巡检时间" required error={errors.checkTime}>
+            <Input
+              type="time"
+              value={formData.checkTime}
+              onChange={(e) => onFormChange('checkTime', e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="问题严重程度" required error={errors.issueSeverity}>
+            <Select
+              value={formData.issueSeverity}
+              onChange={(e) => onFormChange('issueSeverity', e.target.value)}
+              options={[
+                { value: '轻微', label: '轻微' },
+                { value: '中等', label: '中等' },
+                { value: '严重', label: '严重' },
+              ]}
+            />
+          </FormField>
+
+          <div className="md:col-span-3">
+            <FormField label="问题描述" required error={errors.issueText}>
+              <textarea
+                value={formData.issueText}
+                onChange={(e) => onFormChange('issueText', e.target.value)}
+                placeholder="详细描述发现的问题..."
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none"
+                rows={3}
+              />
+            </FormField>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}

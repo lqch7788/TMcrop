@@ -1,0 +1,2753 @@
+// 智慧种植生产管理系统模拟数据
+
+import {
+  User, CropBatch, Task, Material, MaterialRequest, Greenhouse,
+  IoTSensor, InspectionRecord, HarvestRecord, Message,
+  DashboardStats, CropType, Process, Department, TempTask, Worker,
+  Equipment, Infrastructure, Position, PlanType
+} from '../types';
+import { Approval } from '../types/approval';
+import { ProduceInventory, StockType } from '../types/inventory';
+
+// 用户数据
+export const users: User[] = [
+  { id: 'U001', name: '王建华', avatar: 'WJH', role: 'admin', department: '管理层', position: '管理员' },
+  { id: 'U002', name: '李明辉', avatar: 'LMH', role: 'manager', department: '生产部', position: '生产主管' },
+  { id: 'U003', name: '王建国', avatar: 'WJG', role: 'manager', department: '生产部', position: '生产经理' },
+  { id: 'U006', name: '陈小芳', avatar: 'CXF', role: 'worker', department: '生产部', position: '种植工' },
+  { id: 'U007', name: '周志强', avatar: 'ZZQ', role: 'worker', department: '生产部', position: '种植工' },
+  { id: 'U008', name: '吴美丽', avatar: 'WML', role: 'worker', department: '生产部', position: '种植工' },
+  { id: 'U009', name: '郑胜利', avatar: 'ZSL', role: 'worker', department: '生产部', position: '农机手' },
+  { id: 'U012', name: '黄敏', avatar: 'HM', role: 'supervisor', department: '生产部', position: '生产组长' },
+  { id: 'U013', name: '陆启闯', avatar: 'LQC', role: 'admin', department: '管理层', position: '管理员' },
+];
+
+// 基地数据
+export interface Base {
+  id: string;
+  name: string;
+  location: string;
+  type: 'glass' | 'solar' | 'open';
+  area: number;
+  status: 'active' | 'inactive';
+}
+
+export const bases: Base[] = [
+  { id: 'BASE001', name: '总部基地', location: 'A区', type: 'glass', area: 50000, status: 'active' },
+  { id: 'BASE002', name: '东区基地', location: 'B区', type: 'solar', area: 30000, status: 'active' },
+  { id: 'BASE003', name: '南区基地', location: 'C区', type: 'open', area: 40000, status: 'active' },
+  { id: 'BASE004', name: '西区基地', location: 'D区', type: 'glass', area: 25000, status: 'inactive' },
+];
+
+// 温室大棚数据
+export const greenhouses: Greenhouse[] = [
+  { id: 'G001', code: 'BLT-001', name: '玻璃温室A区', type: 'glass', area: 5000, location: 'A区东侧', status: 'active' },
+  { id: 'G002', code: 'BLT-002', name: '玻璃温室B区', type: 'glass', area: 5000, location: 'A区西侧', status: 'active' },
+  { id: 'G003', code: 'BLT-003', name: '玻璃温室C区', type: 'glass', area: 3000, location: 'B区东侧', status: 'active' },
+  { id: 'G004', code: 'RGT-001', name: '日光温室1号', type: 'solar', area: 800, location: 'C区北侧', status: 'active' },
+  { id: 'G005', code: 'RGT-002', name: '日光温室2号', type: 'solar', area: 800, location: 'C区北侧', status: 'active' },
+  { id: 'G006', code: 'RGT-003', name: '日光温室3号', type: 'solar', area: 800, location: 'C区中侧', status: 'maintenance' },
+  { id: 'G007', code: 'RGT-004', name: '日光温室4号', type: 'solar', area: 800, location: 'C区南侧', status: 'active' },
+  { id: 'G008', code: 'PLT-001', name: '塑料大棚1号', type: 'open', area: 1200, location: 'D区', status: 'active' },
+  { id: 'G009', code: 'PLT-002', name: '塑料大棚2号', type: 'open', area: 1200, location: 'D区', status: 'active' },
+  { id: 'G010', code: 'PLT-003', name: '露天种植区', type: 'open', area: 10000, location: 'E区', status: 'active' },
+];
+
+// 作物类型数据
+export const cropTypes: CropType[] = [
+  { id: 'C001', name: '番茄', category: '茄果类', growthDays: 120, suitableTemp: '20-30℃', varieties: ['红果番茄', '樱桃番茄', '黄果番茄'] },
+  { id: 'C002', name: '黄瓜', category: '瓜类', growthDays: 90, suitableTemp: '18-28℃', varieties: ['水果黄瓜', '刺黄瓜', '荷兰黄瓜'] },
+  { id: 'C003', name: '辣椒', category: '茄果类', growthDays: 100, suitableTemp: '20-30℃', varieties: ['青椒', '彩椒', '尖椒'] },
+  { id: 'C004', name: '草莓', category: '浆果类', growthDays: 180, suitableTemp: '15-25℃', varieties: ['红颜', '章姬', '甜查理'] },
+  { id: 'C005', name: '生菜', category: '叶菜类', growthDays: 60, suitableTemp: '15-22℃', varieties: ['散叶生菜', '结球生菜', '罗马生菜'] },
+  { id: 'C006', name: '菠菜', category: '叶菜类', growthDays: 45, suitableTemp: '15-20℃', varieties: ['圆叶菠菜', '尖叶菠菜'] },
+  { id: 'C007', name: '茄子', category: '茄果类', growthDays: 110, suitableTemp: '20-30℃', varieties: ['紫茄', '绿茄', '白茄'] },
+  { id: 'C008', name: '西瓜', category: '瓜类', growthDays: 90, suitableTemp: '25-35℃', varieties: ['小型西瓜', '中型西瓜'] },
+];
+
+// 工序数据
+export const processes: Process[] = [
+  { id: 'P001', name: '基质消毒', category: '准备', unit: '平方米', unitPrice: 2.5, rewardRate: 1.0 },
+  { id: 'P002', name: '定植', category: '种植', unit: '株', unitPrice: 0.3, rewardRate: 1.2 },
+  { id: 'P003', name: '浇水', category: '灌溉', unit: '次', unitPrice: 50, rewardRate: 1.0 },
+  { id: 'P004', name: '施肥', category: '施肥', unit: '次', unitPrice: 80, rewardRate: 1.1 },
+  { id: 'P005', name: '打药', category: '植保', unit: '次', unitPrice: 100, rewardRate: 1.2 },
+  { id: 'P006', name: '中耕除草', category: '田间管理', unit: '平方米', unitPrice: 3, rewardRate: 1.0 },
+  { id: 'P007', name: '疏花疏果', category: '田间管理', unit: '株', unitPrice: 0.5, rewardRate: 1.3 },
+  { id: 'P008', name: '人工授粉', category: '田间管理', unit: '次', unitPrice: 60, rewardRate: 1.1 },
+  { id: 'P009', name: '绑蔓', category: '田间管理', unit: '次', unitPrice: 40, rewardRate: 1.0 },
+  { id: 'P010', name: '采收', category: '收获', unit: '公斤', unitPrice: 1.5, rewardRate: 1.5 },
+  { id: 'P011', name: '整枝', category: '田间管理', unit: '次', unitPrice: 70, rewardRate: 1.2 },
+  { id: 'P012', name: '巡田', category: '巡查', unit: '次', unitPrice: 30, rewardRate: 1.0 },
+];
+
+// 种植模式数据
+export const plantingModes = [
+  { id: 'M001', name: '混合基质种植', description: '使用椰糠、珍珠岩混合基质' },
+  { id: 'M002', name: '土壤种植', description: '传统土壤栽培方式' },
+  { id: 'M003', name: '椰糠种植', description: '纯椰糠基质栽培' },
+  { id: 'M004', name: '水培', description: '营养液水培方式' },
+  { id: 'M005', name: '岩棉培', description: '岩棉基质栽培' },
+];
+
+// 物资数据
+export const materials: Material[] = [
+  { id: 'MT001', code: 'FERT-001', name: '复合肥NPK', category: '化肥', specification: '15-15-15 50kg/袋', unit: '袋', unitPrice: 120, stockQuantity: 150, safeStock: 50, supplier: '金正大化肥', location: '仓库A区' },
+  { id: 'MT002', code: 'FERT-002', name: '尿素', category: '化肥', specification: '46% 50kg/袋', unit: '袋', unitPrice: 85, stockQuantity: 200, safeStock: 80, supplier: '中化化肥', location: '仓库A区' },
+  { id: 'MT003', code: 'FERT-003', name: '水溶肥', category: '化肥', specification: '20-20-20 5kg/袋', unit: '袋', unitPrice: 150, stockQuantity: 80, safeStock: 30, supplier: '以色列化工', location: '仓库B区' },
+  { id: 'MT004', code: 'PEST-001', name: '吡虫啉', category: '农药', specification: '10% 100g/袋', unit: '袋', unitPrice: 25, stockQuantity: 300, safeStock: 100, supplier: '拜耳作物', location: '农药库' },
+  { id: 'MT005', code: 'PEST-002', name: '多菌灵', category: '农药', specification: '50% 200g/袋', unit: '袋', unitPrice: 18, stockQuantity: 250, safeStock: 80, supplier: '先正达', location: '农药库' },
+  { id: 'MT006', code: 'PEST-003', name: '阿维菌素', category: '农药', specification: '1.8% 100ml/瓶', unit: '瓶', unitPrice: 12, stockQuantity: 180, safeStock: 60, supplier: '巴斯夫', location: '农药库' },
+  { id: 'MT007', code: 'SUB-001', name: '椰糠', category: '基质', specification: '50L/袋', unit: '袋', unitPrice: 35, stockQuantity: 500, safeStock: 200, supplier: '海南绿洲', location: '基质库' },
+  { id: 'MT008', code: 'SUB-002', name: '珍珠岩', category: '基质', specification: '50L/袋', unit: '袋', unitPrice: 20, stockQuantity: 300, safeStock: 100, supplier: '建材市场', location: '基质库' },
+  { id: 'MT009', code: 'FILM-001', name: 'PO膜', category: '农膜', specification: '0.1mm 2m宽', unit: '平方米', unitPrice: 2.5, stockQuantity: 5000, safeStock: 2000, supplier: '山东华熔', location: '农膜库' },
+  { id: 'MT010', code: 'SEED-001', name: '番茄种子', category: '种子', specification: '1000粒/袋', unit: '袋', unitPrice: 150, stockQuantity: 50, safeStock: 20, supplier: '先正达', location: '种子库' },
+  { id: 'MT011', code: 'SEED-002', name: '黄瓜种子', category: '种子', specification: '1000粒/袋', unit: '袋', unitPrice: 120, stockQuantity: 60, safeStock: 25, supplier: '圣尼斯', location: '种子库' },
+  { id: 'MT012', code: 'SEED-003', name: '草莓苗', category: '种苗', specification: '裸根苗', unit: '株', unitPrice: 0.8, stockQuantity: 10000, safeStock: 3000, supplier: '丹东草莓', location: '种苗区' },
+];
+
+// 种植批次数据
+// ========== 三阶段生产计划数据 ==========
+// 种源计划（2条）：JZB前缀，蓝色标签
+// 育苗计划（3条）：YMB前缀，绿色标签
+// 种植计划（3条）：ZZB前缀，橙色标签
+export const cropBatches: CropBatch[] = [
+  // ========== 种源计划（育种计划）==========
+  { id: 'B101', batchCode: 'JZB2026-001', planType: PlanType.SEED_BREEDING, planTypeName: '育种计划', cropName: '番茄', cropType: '茄果类', variety: '红果番茄', greenhouseId: '', greenhouseName: '', plantingArea: 0, stage: 'seedling', stageName: '种子期', startDate: '2026-01-05', expectedHarvestDate: '2026-01-15', targetYield: 0, actualYield: 0, status: 'planned', plantingMode: '', responsiblePerson: '王建国', publisher: '陆启闯', publishDate: '2026-01-03', lastModifyDate: '2026-01-03', batchStatus: 'published', supplierName: '先正达种业', seedQuantity: 500, unit: 'kg', targetQuantity: 500, planDetailFileName: '番茄种子采购计划-JZB2026-001.md', planDetail: '# 番茄种子采购计划 JZB2026-001\n\n## 基本信息\n- 批次号：JZB2026-001\n- 计划类型：育种计划（种源采购）\n- 作物：番茄\n- 品种：红果番茄\n- 供应商：先正达种业\n- 采购数量：500 kg\n- 采购负责人：王建国\n\n## 时间安排\n- 采购日期：2026-01-05\n- 预计到货：2026-01-15' },
+  { id: 'B102', batchCode: 'JZB2026-002', planType: PlanType.SEED_BREEDING, planTypeName: '育种计划', cropName: '黄瓜', cropType: '瓜类', variety: '水果黄瓜', greenhouseId: '', greenhouseName: '', plantingArea: 0, stage: 'seedling', stageName: '种子期', startDate: '2026-01-08', expectedHarvestDate: '2026-01-18', targetYield: 0, actualYield: 0, status: 'planned', plantingMode: '', responsiblePerson: '李明辉', publisher: '陆启闯', publishDate: '2026-01-06', lastModifyDate: '2026-01-06', batchStatus: 'in_progress', supplierName: '圣尼斯种业', seedQuantity: 300, unit: 'kg', targetQuantity: 300, planDetailFileName: '黄瓜种子采购计划-JZB2026-002.md', planDetail: '# 黄瓜种子采购计划 JZB2026-002\n\n## 基本信息\n- 批次号：JZB2026-002\n- 计划类型：育种计划（种源采购）\n- 作物：黄瓜\n- 品种：水果黄瓜\n- 供应商：圣尼斯种业\n- 采购数量：300 kg\n- 采购负责人：李明辉' },
+  // ========== 育苗计划 ==========
+  { id: 'B201', batchCode: 'YMB2026-001', planType: PlanType.SEEDLING, planTypeName: '育苗计划', cropName: '番茄', cropType: '茄果类', variety: '红果番茄', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', plantingArea: 500, stage: 'seedling', stageName: '苗期', startDate: '2026-01-20', expectedHarvestDate: '2026-03-20', targetYield: 0, actualYield: 0, status: 'planned', plantingMode: '椰糠育苗', responsiblePerson: '陈小芳', publisher: '陆启闯', publishDate: '2026-01-15', lastModifyDate: '2026-01-15', batchStatus: 'published', seedlingSiteName: '育苗基地A区', targetSeedlingCount: 45000, unit: '株', targetQuantity: 45000, planDetailFileName: '番茄育苗计划-YMB2026-001.md', planDetail: '# 番茄育苗计划 YMB2026-001\n\n## 基本信息\n- 批次号：YMB2026-001\n- 计划类型：育苗计划\n- 作物：番茄\n- 品种：红果番茄\n- 育苗场地：育苗基地A区\n- 负责人：陈小芳\n\n## 育苗目标\n- 目标成苗数：45000株\n- 开始日期：2026-01-20\n- 预计结束：2026-03-20' },
+  { id: 'B202', batchCode: 'YMB2026-002', planType: PlanType.SEEDLING, planTypeName: '育苗计划', cropName: '黄瓜', cropType: '瓜类', variety: '水果黄瓜', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', plantingArea: 400, stage: 'seedling', stageName: '苗期', startDate: '2026-01-25', expectedHarvestDate: '2026-03-15', targetYield: 0, actualYield: 0, status: 'planned', plantingMode: '水培育苗', responsiblePerson: '周志强', publisher: '陆启闯', publishDate: '2026-01-20', lastModifyDate: '2026-01-20', batchStatus: 'in_progress', seedlingSiteName: '育苗基地B区', targetSeedlingCount: 35000, unit: '株', targetQuantity: 35000, planDetailFileName: '黄瓜育苗计划-YMB2026-002.md', planDetail: '# 黄瓜育苗计划 YMB2026-002\n\n## 基本信息\n- 批次号：YMB2026-002\n- 计划类型：育苗计划\n- 作物：黄瓜\n- 品种：水果黄瓜\n- 育苗场地：育苗基地B区\n- 负责人：周志强' },
+  { id: 'B203', batchCode: 'YMB2026-003', planType: PlanType.SEEDLING, planTypeName: '育苗计划', cropName: '草莓', cropType: '浆果类', variety: '红颜', greenhouseId: 'G004', greenhouseName: '日光温室1号', plantingArea: 200, stage: 'seedling', stageName: '苗期', startDate: '2026-02-01', expectedHarvestDate: '2026-04-01', targetYield: 0, actualYield: 0, status: 'planned', plantingMode: '土壤育苗', responsiblePerson: '吴美丽', publisher: '陆启闯', publishDate: '2026-01-28', lastModifyDate: '2026-01-28', batchStatus: 'published', seedlingSiteName: '草莓育苗区', targetSeedlingCount: 15000, unit: '株', targetQuantity: 15000, planDetailFileName: '草莓育苗计划-YMB2026-003.md', planDetail: '# 草莓育苗计划 YMB2026-003\n\n## 基本信息\n- 批次号：YMB2026-003\n- 计划类型：育苗计划\n- 作物：草莓\n- 品种：红颜\n- 育苗场地：草莓育苗区\n- 负责人：吴美丽' },
+  // ========== 种植计划 ==========
+  { id: 'B301', batchCode: 'ZZB2026-001', planType: PlanType.PLANTING, planTypeName: '种植计划', cropName: '番茄', cropType: '茄果类', variety: '红果番茄', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', plantingArea: 3000, stage: 'vegetative', stageName: '生长期', startDate: '2026-03-25', expectedHarvestDate: '2026-07-15', targetYield: 30000, actualYield: 0, status: 'planned', plantingMode: '椰糠种植', responsiblePerson: '郭靖', publisher: '陆启闯', publishDate: '2026-03-20', lastModifyDate: '2026-03-20', batchStatus: 'published', targetQuantity: 30000, planDetailFileName: '番茄种植计划-ZZB2026-001.md', planDetail: '# 番茄种植计划 ZZB2026-001\n\n## 基本信息\n- 批次号：ZZB2026-001\n- 计划类型：种植计划\n- 作物：番茄\n- 品种：红果番茄\n- 种植区域：玻璃温室A区\n- 种植面积：3000 m²\n- 负责人：郭靖' },
+  { id: 'B302', batchCode: 'ZZB2026-002', planType: PlanType.PLANTING, planTypeName: '种植计划', cropName: '黄瓜', cropType: '瓜类', variety: '水果黄瓜', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', plantingArea: 2500, stage: 'seedling', stageName: '苗期', startDate: '2026-03-20', expectedHarvestDate: '2026-06-20', targetYield: 25000, actualYield: 0, status: 'planned', plantingMode: '椰糠种植', responsiblePerson: '黄蓉', publisher: '陆启闯', publishDate: '2026-03-15', lastModifyDate: '2026-03-15', batchStatus: 'published', targetQuantity: 25000, planDetailFileName: '黄瓜种植计划-ZZB2026-002.md', planDetail: '# 黄瓜种植计划 ZZB2026-002\n\n## 基本信息\n- 批次号：ZZB2026-002\n- 计划类型：种植计划\n- 作物：黄瓜\n- 品种：水果黄瓜\n- 种植区域：玻璃温室B区\n- 种植面积：2500 m²\n- 负责人：黄蓉' },
+  { id: 'B303', batchCode: 'ZZB2026-003', planType: PlanType.PLANTING, planTypeName: '种植计划', cropName: '草莓', cropType: '浆果类', variety: '红颜', greenhouseId: 'G004', greenhouseName: '日光温室1号', plantingArea: 800, stage: 'harvest', stageName: '采收期', startDate: '2025-11-01', expectedHarvestDate: '2026-04-30', targetYield: 5000, actualYield: 2100, status: 'in_progress', plantingMode: '土壤种植', responsiblePerson: '张无忌', publisher: '陆启闯', publishDate: '2025-10-25', lastModifyDate: '2026-04-10', batchStatus: 'in_progress', targetQuantity: 5000, planDetailFileName: '草莓种植计划-ZZB2026-003.md', planDetail: '# 草莓种植计划 ZZB2026-003\n\n## 基本信息\n- 批次号：ZZB2026-003\n- 计划类型：种植计划\n- 作物：草莓\n- 品种：红颜\n- 种植区域：日光温室1号\n- 种植面积：800 m²\n- 负责人：张无忌' },
+];
+
+
+
+// 任务工单数据
+export const tasks: Task[] = [
+  { id: 'T001', taskCode: 'WD20240315-001', title: '番茄浇水', type: 'irrigation', typeName: '浇水', priority: 'high', status: 'pending', batchId: 'B001', batchCode: 'FQ2024-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', mode: 'glass', assigneeId: 'U006', assigneeName: '陈小芳', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-15', workDuration: 2, requiredMaterials: [], description: '按照灌溉方案进行浇水，水量控制在每株2升', actualWorkload: 0 },
+  { id: 'T002', taskCode: 'WD20240315-002', title: '黄瓜施肥', type: 'fertilization', typeName: '施肥', priority: 'high', status: 'in_progress', batchId: 'B002', batchCode: 'FQ2024-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', mode: 'glass', assigneeId: 'U007', assigneeName: '周志强', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-15', startTime: '2024-03-15 08:30', workDuration: 3, requiredMaterials: [{ materialId: 'MT003', materialName: '水溶肥', requiredQuantity: 5, actualQuantity: 0, unit: '袋' }], description: '使用水溶肥20-20-20进行叶面喷施，每亩用量5公斤', actualWorkload: 0 },
+  { id: 'T003', taskCode: 'WD20240315-003', title: '草莓采收', type: 'harvest', typeName: '采收', priority: 'high', status: 'completed', batchId: 'B003', batchCode: 'FQ2024-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', mode: 'solar', assigneeId: 'U008', assigneeName: '吴美丽', assignerId: 'U012', assignerName: '马超', dueDate: '2024-03-14', startTime: '2024-03-14 07:00', endTime: '2024-03-14 11:00', workDuration: 4, requiredMaterials: [], description: '采摘成熟度达到90%的草莓果', actualWorkload: 120, notes: '采摘草莓120公斤，品质良好', images: [] },
+  { id: 'T004', taskCode: 'WD20240315-004', title: '生菜巡田', type: 'scouting', typeName: '巡田', priority: 'medium', status: 'pending', batchId: 'B004', batchCode: 'FQ2024-004', greenhouseId: 'G005', greenhouseName: '日光温室2号', mode: 'solar', assigneeId: 'U004', assigneeName: '赵文静', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-15', workDuration: 1, requiredMaterials: [], description: '检查生菜生长情况，记录温湿度数据', actualWorkload: 0 },
+  { id: 'T005', taskCode: 'WD20240315-005', title: '辣椒打药', type: 'spraying', typeName: '打药', priority: 'medium', status: 'pending', batchId: 'B005', batchCode: 'FQ2024-005', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', mode: 'glass', assigneeId: 'U009', assigneeName: '郑胜利', assignerId: 'U005', assignerName: '刘大海', dueDate: '2024-03-16', workDuration: 2, requiredMaterials: [{ materialId: 'MT004', materialName: '吡虫啉', requiredQuantity: 3, actualQuantity: 0, unit: '袋' }, { materialId: 'MT005', materialName: '多菌灵', requiredQuantity: 2, actualQuantity: 0, unit: '袋' }], description: '预防白粉虱和灰霉病', actualWorkload: 0 },
+  { id: 'T006', taskCode: 'WD20240315-006', title: '西瓜定植', type: 'pruning', typeName: '定植', priority: 'high', status: 'completed', batchId: 'B007', batchCode: 'FQ2024-007', greenhouseId: 'G010', greenhouseName: '露天种植区', mode: 'solar', assigneeId: 'U011', assigneeName: '马超', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-15', startTime: '2024-03-15 06:00', endTime: '2024-03-15 12:00', workDuration: 6, requiredMaterials: [{ materialId: 'MT012', materialName: '草莓苗', requiredQuantity: 1000, actualQuantity: 1000, unit: '株' }], description: '按照行株距1.5m×0.5m进行定植', actualWorkload: 1000, notes: '已完成1000株西瓜苗的定植工作', images: [] },
+  { id: 'T007', taskCode: 'WD20240315-007', title: '菠菜浇水', type: 'irrigation', typeName: '浇水', priority: 'medium', status: 'pending', batchId: 'B006', batchCode: 'FQ2024-006', greenhouseId: 'G008', greenhouseName: '塑料大棚1号', mode: 'solar', assigneeId: 'U006', assigneeName: '陈小芳', assignerId: 'U012', assignerName: '马超', dueDate: '2024-03-15', workDuration: 1.5, requiredMaterials: [], description: '保持土壤湿润', actualWorkload: 0 },
+  { id: 'T008', taskCode: 'WD20240315-008', title: '茄子整枝', type: 'pruning', typeName: '整枝', priority: 'low', status: 'pending', batchId: 'B008', batchCode: 'FQ2024-008', greenhouseId: 'G007', greenhouseName: '日光温室4号', mode: 'solar', assigneeId: 'U007', assigneeName: '周志强', assignerId: 'U004', assignerName: '赵文静', dueDate: '2024-03-17', workDuration: 2, requiredMaterials: [], description: '去除侧枝和老叶', actualWorkload: 0 },
+  { id: 'T009', taskCode: 'WD20240320-009', title: '水稻除草', type: 'weeding', typeName: '除草', priority: 'high', status: 'pending', batchId: 'B009', batchCode: 'FQ2024-009', greenhouseId: 'G011', greenhouseName: '大田A区', mode: 'field', assigneeId: 'U004', assigneeName: '赵文静', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-20', workDuration: 3, requiredMaterials: [], description: '人工除草，保持田间清洁', actualWorkload: 0 },
+  { id: 'T010', taskCode: 'WD20240320-010', title: '玉米施肥', type: 'fertilization', typeName: '施肥', priority: 'high', status: 'in_progress', batchId: 'B010', batchCode: 'FQ2024-010', greenhouseId: 'G012', greenhouseName: '大田B区', mode: 'field', assigneeId: 'U007', assigneeName: '周志强', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-20', startTime: '2024-03-20 08:00', workDuration: 4, requiredMaterials: [{ materialId: 'MT006', materialName: '尿素', requiredQuantity: 10, actualQuantity: 0, unit: '袋' }], description: '使用尿素进行追肥，每亩用量15公斤', actualWorkload: 0 },
+  { id: 'T011', taskCode: 'WD20240321-011', title: '小麦巡田', type: 'scouting', typeName: '巡田', priority: 'medium', status: 'pending', batchId: 'B011', batchCode: 'FQ2024-011', greenhouseId: 'G013', greenhouseName: '大田C区', mode: 'field', assigneeId: 'U008', assigneeName: '吴美丽', assignerId: 'U012', assignerName: '马超', dueDate: '2024-03-21', workDuration: 2, requiredMaterials: [], description: '检查小麦生长情况，记录病虫害情况', actualWorkload: 0 },
+  { id: 'T012', taskCode: 'WD20240322-012', title: '水稻采收', type: 'harvest', typeName: '采收', priority: 'high', status: 'pending', batchId: 'B012', batchCode: 'FQ2024-012', greenhouseId: 'G014', greenhouseName: '大田D区', mode: 'field', assigneeId: 'U011', assigneeName: '马超', assignerId: 'U003', assignerName: '王建国', dueDate: '2024-03-22', workDuration: 6, requiredMaterials: [], description: '机械采收水稻，预计产量5000公斤', actualWorkload: 0 },
+];
+
+// 物资申请数据
+export const materialRequests: MaterialRequest[] = [
+  { id: 'MR001', requestCode: 'RQ20240315-001', batchId: 'B002', batchCode: 'FQ2024-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', requesterId: 'U003', requesterName: '王建国', requestDate: '2024-03-15', materials: [{ materialId: 'MT003', materialName: '水溶肥', requiredQuantity: 5, actualQuantity: 5, unit: '袋' }], status: 'approved', approverId: 'U002', approverName: '李明辉', approveDate: '2024-03-15', approverComment: '同意领取' },
+  { id: 'MR002', requestCode: 'RQ20240315-002', batchId: 'B005', batchCode: 'FQ2024-005', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', requesterId: 'U005', requesterName: '刘大海', requestDate: '2024-03-14', materials: [{ materialId: 'MT004', materialName: '吡虫啉', requiredQuantity: 3, actualQuantity: 0, unit: '袋' }, { materialId: 'MT005', materialName: '多菌灵', requiredQuantity: 2, actualQuantity: 0, unit: '袋' }], status: 'pending' },
+  { id: 'MR003', requestCode: 'RQ20240315-003', batchId: 'B001', batchCode: 'FQ2024-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', requesterId: 'U003', requesterName: '王建国', requestDate: '2024-03-13', materials: [{ materialId: 'MT007', materialName: '椰糠', requiredQuantity: 50, actualQuantity: 50, unit: '袋' }, { materialId: 'MT008', materialName: '珍珠岩', requiredQuantity: 30, actualQuantity: 30, unit: '袋' }], status: 'fulfilled', approverId: 'U010', approverName: '孙丽娜', approveDate: '2024-03-13' },
+];
+
+// IoT传感器数据
+export const iotSensors: IoTSensor[] = [
+  // 玻璃温室A区
+  { id: 'S001', sensorId: 'TEMP-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'air_temp', typeName: '空气温度', value: 24.5, unit: '℃', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S002', sensorId: 'HUMI-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'air_humidity', typeName: '空气湿度', value: 68, unit: '%', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S003', sensorId: 'SOIL-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'soil_moisture', typeName: '土壤湿度', value: 45, unit: '%', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S004', sensorId: 'LIGHT-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'light', typeName: '光照强度', value: 850, unit: 'lux', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S005', sensorId: 'CO2-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'co2', typeName: 'CO2含量', value: 420, unit: 'ppm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S011', sensorId: 'SOILTEMP-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'soil_temp', typeName: '土壤温度', value: 22.3, unit: '℃', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S012', sensorId: 'SOILEC-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'soil_ec', typeName: '土壤EC值', value: 1.2, unit: 'mS/cm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S013', sensorId: 'SOILPH-001', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', type: 'soil_ph', typeName: '土壤PH值', value: 6.5, unit: '', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  // 玻璃温室B区
+  { id: 'S006', sensorId: 'TEMP-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'air_temp', typeName: '空气温度', value: 26.2, unit: '℃', status: 'warning', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S007', sensorId: 'HUMI-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'air_humidity', typeName: '空气湿度', value: 75, unit: '%', status: 'warning', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S014', sensorId: 'SOIL-003', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'soil_moisture', typeName: '土壤湿度', value: 52, unit: '%', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S015', sensorId: 'LIGHT-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'light', typeName: '光照强度', value: 920, unit: 'lux', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S016', sensorId: 'CO2-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'co2', typeName: 'CO2含量', value: 380, unit: 'ppm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S017', sensorId: 'SOILTEMP-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'soil_temp', typeName: '土壤温度', value: 23.1, unit: '℃', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S018', sensorId: 'SOILEC-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'soil_ec', typeName: '土壤EC值', value: 1.5, unit: 'mS/cm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S019', sensorId: 'SOILPH-002', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', type: 'soil_ph', typeName: '土壤PH值', value: 6.8, unit: '', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  // 日光温室1号
+  { id: 'S008', sensorId: 'TEMP-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'air_temp', typeName: '空气温度', value: 22.8, unit: '℃', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S020', sensorId: 'HUMI-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'air_humidity', typeName: '空气湿度', value: 72, unit: '%', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S009', sensorId: 'SOIL-002', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'soil_moisture', typeName: '土壤湿度', value: 55, unit: '%', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S021', sensorId: 'LIGHT-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'light', typeName: '光照强度', value: 1200, unit: 'lux', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S022', sensorId: 'CO2-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'co2', typeName: 'CO2含量', value: 450, unit: 'ppm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S023', sensorId: 'SOILTEMP-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'soil_temp', typeName: '土壤温度', value: 21.5, unit: '℃', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S024', sensorId: 'SOILEC-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'soil_ec', typeName: '土壤EC值', value: 0.8, unit: 'mS/cm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S025', sensorId: 'SOILPH-003', greenhouseId: 'G004', greenhouseName: '日光温室1号', type: 'soil_ph', typeName: '土壤PH值', value: 7.2, unit: '', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  // 玻璃温室C区
+  { id: 'S010', sensorId: 'TEMP-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'air_temp', typeName: '空气温度', value: 32.1, unit: '℃', status: 'critical', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S026', sensorId: 'HUMI-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'air_humidity', typeName: '空气湿度', value: 45, unit: '%', status: 'critical', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S027', sensorId: 'SOIL-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'soil_moisture', typeName: '土壤湿度', value: 38, unit: '%', status: 'warning', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S028', sensorId: 'LIGHT-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'light', typeName: '光照强度', value: 1500, unit: 'lux', status: 'critical', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S029', sensorId: 'CO2-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'co2', typeName: 'CO2含量', value: 350, unit: 'ppm', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S030', sensorId: 'SOILTEMP-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'soil_temp', typeName: '土壤温度', value: 26.8, unit: '℃', status: 'critical', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S031', sensorId: 'SOILEC-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'soil_ec', typeName: '土壤EC值', value: 2.1, unit: 'mS/cm', status: 'warning', lastUpdate: '2024-03-15 10:30:00' },
+  { id: 'S032', sensorId: 'SOILPH-004', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', type: 'soil_ph', typeName: '土壤PH值', value: 6.2, unit: '', status: 'normal', lastUpdate: '2024-03-15 10:30:00' },
+];
+
+// 巡田记录数据
+// 番茄图片（红色系）- 使用简化SVG
+const tomatoImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff6b6b"%3E🍅%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ee5a5a"%3E🍅%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff8787"%3E🍅%3C/text%3E%3C/svg%3E',
+];
+
+// 黄瓜图片（绿色系）
+const cucumberImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300cc00"%3E🥒%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300e600"%3E🥒%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300ff00"%3E🥒%3C/text%3E%3C/svg%3E',
+];
+
+// 草莓图片（粉红色系）
+const strawberryImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff6b9d"%3E🍓%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff8fab"%3E🍓%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff5a8a"%3E🍓%3C/text%3E%3C/svg%3E',
+];
+
+// 辣椒图片（红色系）
+const pepperImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff0000"%3E🌶️%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ee1111"%3E🌶️%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff3333"%3E🌶️%3C/text%3E%3C/svg%3E',
+];
+
+// 生菜图片（绿色系）
+const lettuceImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300cc00"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300dd00"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
+// 菠菜图片（深绿色系）
+const spinachImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23006600"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23008800"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
+// 茄子图片（紫色系）
+const eggplantImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%238B00FF"%3E🍆%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%239900FF"%3E🍆%3C/text%3E%3C/svg%3E',
+];
+
+// 白菜图片（浅绿色系）
+const cabbageImages = [
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2399ff00"%3E🥬%3C/text%3E%3C/svg%3E',
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2388ee00"%3E🥬%3C/text%3E%3C/svg%3E',
+];
+
+// 巡查记录数据 - 完整模拟数据，匹配新建弹窗和表格所有字段
+export const inspectionRecords: InspectionRecord[] = [
+  // ========== 种植区域巡查记录 ==========
+  {
+    id: 'IR002',
+    recordCode: 'XT20260409-001',
+    inspectorId: 'U004',
+    inspectorName: '郭靖',
+    greenhouseId: 'G002',
+    greenhouseName: '玻璃温室B区',
+    cropName: '黄瓜',
+    checkDate: '2026-04-09',
+    checkTime: '14:30:00',
+    cropStatus: '轻微萎蔫',
+    plantHeight: 85,
+    leafCount: 8,
+    issues: ['轻微缺水', '温度偏高'],
+    images: cucumberImages,
+    weather: '晴',
+    temperature: 32,
+    humidity: 58,
+    remarks: '黄瓜有轻微缺水现象，需要及时浇水',
+    status: 'attention',
+    airTemperature: 32.2,
+    airHumidity: 58,
+    lightIntensity: 45000,
+    co2Concentration: 390,
+    soilTemperature: 26.1,
+    soilMoisture: 38,
+    soilEc: 1.5,
+    soilPh: 6.8,
+    inspectionType: 'farm',
+    batchId: 'B002',
+    batchCode: 'FQ2026-002',
+    issueCategories: ['environment'],
+    issuePresets: ['温度过高', '湿度过大', '缺水'],
+    issueText: '黄瓜叶片出现轻微萎蔫，大棚内温度偏高导致，建议增加通风遮阳',
+    issueSeverity: '中等',
+    issuePhotos: cucumberImages.slice(0, 2),
+    feedbackUsers: ['U003', 'U002'],
+    expectedCompletion: 'today',
+    issueStatus: 'processing',
+    problemId: 1,
+  },
+  {
+    id: 'IR003',
+    recordCode: 'XT20260408-001',
+    inspectorId: 'U005',
+    inspectorName: '杨过',
+    greenhouseId: 'G004',
+    greenhouseName: '日光温室1号',
+    cropName: '草莓',
+    checkDate: '2026-04-08',
+    checkTime: '10:00:00',
+    cropStatus: '生长正常',
+    plantHeight: 25,
+    leafCount: 6,
+    issues: ['白粉虱'],
+    images: strawberryImages,
+    weather: '多云',
+    temperature: 22,
+    humidity: 70,
+    remarks: '发现少量白粉虱，建议近期安排打药',
+    status: 'attention',
+    airTemperature: 22.1,
+    airHumidity: 70,
+    lightIntensity: 28000,
+    co2Concentration: 520,
+    soilTemperature: 20.5,
+    soilMoisture: 65,
+    soilEc: 1.0,
+    soilPh: 6.2,
+    inspectionType: 'farm',
+    batchId: 'B003',
+    batchCode: 'FQ2026-003',
+    issueCategories: ['pest'],
+    issuePresets: ['白粉虱', '蚜虫'],
+    issueText: '草莓叶片发现白粉虱成虫，数量较少但需密切关注，发现2株有虫害迹象',
+    issueSeverity: '轻微',
+    issuePhotos: strawberryImages.slice(0, 3),
+    feedbackUsers: ['U003'],
+    expectedCompletion: 'tomorrow',
+    issueStatus: 'pending',
+    problemId: 2,
+  },
+  {
+    id: 'IR006',
+    recordCode: 'XT20260406-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G006',
+    greenhouseName: '日光温室3号',
+    cropName: '菠菜',
+    checkDate: '2026-04-06',
+    checkTime: '15:30:00',
+    cropStatus: '轻微萎蔫',
+    plantHeight: 28,
+    leafCount: 8,
+    issues: ['土壤偏干'],
+    images: spinachImages,
+    weather: '阴',
+    temperature: 18,
+    humidity: 58,
+    remarks: '菠菜需要尽快浇水，土壤湿度偏低',
+    status: 'attention',
+    airTemperature: 18.2,
+    airHumidity: 58,
+    lightIntensity: 22000,
+    co2Concentration: 400,
+    soilTemperature: 18.5,
+    soilMoisture: 38,
+    soilEc: 1.1,
+    soilPh: 6.4,
+    inspectionType: 'farm',
+    batchId: 'B006',
+    batchCode: 'FQ2026-006',
+    issueCategories: ['environment'],
+    issuePresets: ['缺水', '土壤偏干'],
+    issueText: '菠菜出现轻微萎蔫，土壤湿度偏低，需要立即灌溉',
+    issueSeverity: '轻微',
+    issuePhotos: spinachImages.slice(0, 2),
+    feedbackUsers: ['U002', 'U003'],
+    expectedCompletion: 'today',
+    issueStatus: 'resolved',
+    problemId: 3,
+  },
+  {
+    id: 'IR008',
+    recordCode: 'XT20260404-001',
+    inspectorId: 'U008',
+    inspectorName: '小龙女',
+    greenhouseId: 'G008',
+    greenhouseName: '塑料大棚1号',
+    cropName: '白菜',
+    checkDate: '2026-04-04',
+    checkTime: '14:15:00',
+    cropStatus: '生长正常',
+    plantHeight: 35,
+    leafCount: 9,
+    issues: ['少量菜青虫'],
+    images: cabbageImages,
+    weather: '多云',
+    temperature: 19,
+    humidity: 72,
+    remarks: '发现少量菜青虫，已做记录',
+    status: 'attention',
+    airTemperature: 19.2,
+    airHumidity: 72,
+    lightIntensity: 26000,
+    co2Concentration: 410,
+    soilTemperature: 18.8,
+    soilMoisture: 62,
+    soilEc: 0.8,
+    soilPh: 6.2,
+    inspectionType: 'farm',
+    batchId: undefined,
+    batchCode: undefined,
+    issueCategories: ['pest'],
+    issuePresets: ['菜青虫', '蚜虫'],
+    issueText: '大白菜叶片发现菜青虫虫害，发现3株有虫害迹象',
+    issueSeverity: '中等',
+    issuePhotos: cabbageImages.slice(0, 2),
+    feedbackUsers: ['U003'],
+    expectedCompletion: 'tomorrow',
+    issueStatus: 'pending',
+    problemId: 4,
+  },
+  // ========== 设备保养巡查记录 ==========
+  {
+    id: 'IR009',
+    recordCode: 'XT20260403-001',
+    inspectorId: 'U003',
+    inspectorName: '令狐冲',
+    greenhouseId: 'G001',
+    greenhouseName: '玻璃温室A区',
+    cropName: '',
+    checkDate: '2026-04-03',
+    checkTime: '10:00:00',
+    cropStatus: '',
+    plantHeight: undefined,
+    leafCount: undefined,
+    issues: ['水泵轴承磨损'],
+    images: [],
+    weather: '晴',
+    temperature: 22,
+    humidity: 60,
+    remarks: '1号水泵需要更换轴承，运行时异响',
+    status: 'attention',
+    inspectionType: 'equipment',
+    batchId: undefined,
+    batchCode: undefined,
+    equipmentId: 'EQ001',
+    equipmentName: '1号灌溉水泵',
+    duration: 45,
+    issueCategories: ['equipment'],
+    issuePresets: ['滴灌异常', '设备异响'],
+    issueText: '1号灌溉水泵运行时异响，拆检发现轴承磨损严重，需要更换轴承',
+    issueSeverity: '中等',
+    issuePhotos: [],
+    feedbackUsers: ['U003', 'U004'],
+    expectedCompletion: 'three_days',
+    issueStatus: 'processing',
+    problemId: 5,
+  },
+  // ========== 基础设施巡检记录 ==========
+  {
+    id: 'IR012',
+    recordCode: 'XT20260412-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G005',
+    greenhouseName: '日光温室2号',
+    cropName: '',
+    checkDate: '2026-04-12',
+    checkTime: '09:00:00',
+    cropStatus: '',
+    plantHeight: undefined,
+    leafCount: undefined,
+    issues: ['滴灌主管道漏水'],
+    images: [],
+    weather: '晴',
+    temperature: 20,
+    humidity: 70,
+    remarks: '滴灌系统主管道接头处漏水，已临时封堵',
+    status: 'critical',
+    inspectionType: 'infrastructure',
+    batchId: undefined,
+    batchCode: undefined,
+    infrastructureId: 'INF001',
+    infrastructureName: '2号温室滴灌系统',
+    duration: 60,
+    issueCategories: ['equipment'],
+    issuePresets: ['滴灌异常', '管道漏水'],
+    issueText: '2号温室滴灌系统主供水管道接头处严重漏水，已用胶带临时封堵，需要采购新接头进行修复',
+    issueSeverity: '严重',
+    issuePhotos: [],
+    feedbackUsers: ['U002', 'U003'],
+    expectedCompletion: 'today',
+    issueStatus: 'processing',
+    problemId: 6,
+  },
+  {
+    id: 'IR015',
+    recordCode: 'XT20260409-002',
+    inspectorId: 'U013',
+    inspectorName: '一灯大师',
+    greenhouseId: '',
+    greenhouseName: '园区主干道',
+    cropName: '',
+    checkDate: '2026-04-09',
+    checkTime: '16:00:00',
+    cropStatus: '',
+    plantHeight: undefined,
+    leafCount: undefined,
+    issues: ['路面破损'],
+    images: [],
+    weather: '晴',
+    temperature: 25,
+    humidity: 50,
+    remarks: '园区环形通道K+200处路面破损，面积约2平方米',
+    status: 'attention',
+    inspectionType: 'infrastructure',
+    batchId: undefined,
+    batchCode: undefined,
+    infrastructureId: 'INF008',
+    infrastructureName: '园区主干道',
+    duration: 30,
+    issueCategories: ['other'],
+    issuePresets: ['路面破损'],
+    issueText: '园区环形通道K+200处路面破损，面积约2平方米，影响农机通行',
+    issueSeverity: '中等',
+    issuePhotos: [],
+    feedbackUsers: ['U002'],
+    expectedCompletion: 'week',
+    issueStatus: 'pending',
+    problemId: 7,
+  },
+  // ========== 其他类型巡查记录 ==========
+  {
+    id: 'IR016',
+    recordCode: 'XT20260408-002',
+    inspectorId: 'U003',
+    inspectorName: '令狐冲',
+    greenhouseId: '',
+    greenhouseName: '',
+    cropName: '',
+    checkDate: '2026-04-08',
+    checkTime: '11:00:00',
+    cropStatus: '',
+    plantHeight: undefined,
+    leafCount: undefined,
+    issues: [],
+    images: [],
+    weather: '多云',
+    temperature: 24,
+    humidity: 60,
+    remarks: '巡查途中发现B区排水沟渠有少量淤泥堆积，已安排清理',
+    status: 'normal',
+    inspectionType: 'other',
+    batchId: undefined,
+    batchCode: undefined,
+    issueCategories: [],
+    issuePresets: [],
+    issueText: '',
+    issueSeverity: undefined,
+    issuePhotos: [],
+    feedbackUsers: [],
+    expectedCompletion: '',
+    issueStatus: undefined,
+  },
+];
+
+// 设备数据（用于设备保养巡查）
+export const equipmentRecords: Equipment[] = [
+  { id: 'EQ001', code: 'EQ001', name: '1号灌溉水泵', type: '水泵', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal', lastMaintenanceDate: '2026-01-15', nextMaintenanceDate: '2026-04-15' },
+  { id: 'EQ002', code: 'EQ002', name: '2号灌溉水泵', type: '水泵', location: '玻璃温室B区', greenhouseId: 'G002', status: 'normal', lastMaintenanceDate: '2026-01-20', nextMaintenanceDate: '2026-04-20' },
+  { id: 'EQ003', code: 'EQ003', name: '1号通风扇', type: '通风设备', location: '玻璃温室C区', greenhouseId: 'G003', status: 'normal', lastMaintenanceDate: '2026-02-10', nextMaintenanceDate: '2026-05-10' },
+  { id: 'EQ004', code: 'EQ004', name: '2号通风扇', type: '通风设备', location: '日光温室1号', greenhouseId: 'G004', status: 'maintenance', lastMaintenanceDate: '2025-12-01', nextMaintenanceDate: '2026-03-01' },
+  { id: 'EQ005', code: 'EQ005', name: '1号卷帘机', type: '卷帘设备', location: '日光温室2号', greenhouseId: 'G005', status: 'normal', lastMaintenanceDate: '2026-02-28', nextMaintenanceDate: '2026-05-28' },
+  { id: 'EQ006', code: 'EQ006', name: '自动施肥机', type: '施肥设备', location: '塑料大棚1号', greenhouseId: 'G008', status: 'normal', lastMaintenanceDate: '2026-03-01', nextMaintenanceDate: '2026-06-01' },
+  { id: 'EQ007', code: 'EQ007', name: '滴灌控制系统', type: '灌溉设备', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal', lastMaintenanceDate: '2026-01-10', nextMaintenanceDate: '2026-04-10' },
+  { id: 'EQ008', code: 'EQ008', name: '温室监控摄像头', type: '监控设备', location: '玻璃温室A区', greenhouseId: 'G001', status: 'broken', lastMaintenanceDate: '2025-11-20', nextMaintenanceDate: '2026-02-20' },
+];
+
+// 基础设施数据（用于基础设施巡检）
+export const infrastructureRecords: Infrastructure[] = [
+  { id: 'INF001', code: 'INF001', name: '2号温室滴灌系统', type: '灌溉', location: '日光温室2号', greenhouseId: 'G005', status: 'warning' },
+  { id: 'INF002', code: 'INF002', name: '1号温室滴灌系统', type: '灌溉', location: '玻璃温室A区', greenhouseId: 'G001', status: 'normal' },
+  { id: 'INF003', code: 'INF003', name: 'A区排水沟渠', type: '排水', location: '园区A区', status: 'normal' },
+  { id: 'INF004', code: 'INF004', name: 'B区排水沟渠', type: '排水', location: '园区B区', status: 'normal' },
+  { id: 'INF005', code: 'INF005', name: '供电线路A', type: '供电', location: '园区主干道', status: 'normal' },
+  { id: 'INF006', code: 'INF006', name: '管理房仓库', type: '房屋', location: '园区入口', status: 'normal' },
+  { id: 'INF007', code: 'INF007', name: '生产资料仓库', type: '房屋', location: '园区中部', status: 'warning' },
+  { id: 'INF008', code: 'INF008', name: '园区主干道', type: '道路', location: '园区环形通道', status: 'normal' },
+];
+
+// 采收记录数据
+export const harvestRecords: HarvestRecord[] = [
+  { id: 'H001', harvestCode: 'HS20260314-001', batchId: 'B303', batchCode: 'ZZB2026-003', cropName: '草莓', greenhouseId: 'G004', greenhouseName: '日光温室1号', harvestDate: '2026-03-14', harvestArea: 600, harvestQuantity: 120, unit: '公斤', quality: 'good', grade: 'A', harvesterIds: ['U008'], harvesterNames: ['小龙女'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'stored', auditor: '陆启闯', variety: '红颜', plantingMode: '土壤种植', targetYield: 3000 },
+  { id: 'H002', harvestCode: 'HS20260313-001', batchId: 'B004', batchCode: 'FQ2026-004', cropName: '生菜', greenhouseId: 'G005', greenhouseName: '日光温室2号', harvestDate: '2026-03-13', harvestArea: 500, harvestQuantity: 350, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007'], harvesterNames: ['郭靖', '黄蓉'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'pending', auditor: '陆启闯', variety: '散叶生菜', plantingMode: '水培', targetYield: 5000 },
+  { id: 'H003', harvestCode: 'HS20260312-001', batchId: 'B006', batchCode: 'FQ2026-006', cropName: '菠菜', greenhouseId: 'G008', greenhouseName: '塑料大棚1号', harvestDate: '2026-03-12', harvestArea: 800, harvestQuantity: 280, unit: '公斤', quality: 'good', grade: 'B', harvesterIds: ['U006'], harvesterNames: ['杨过'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'harvesting', auditor: '陆启闯', variety: '圆叶菠菜', plantingMode: '土壤种植', targetYield: 4000 },
+  { id: 'H004', harvestCode: 'HS20260310-001', batchId: 'B301', batchCode: 'ZZB2026-001', cropName: '番茄', greenhouseId: 'G001', greenhouseName: '玻璃温室A区', harvestDate: '2026-03-10', harvestArea: 3000, harvestQuantity: 1850, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U006', 'U007', 'U008'], harvesterNames: ['张无忌', '令狐冲', '段誉'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'harvested', auditor: '陆启闯', variety: '红果番茄', plantingMode: '椰糠种植', targetYield: 30000 },
+  { id: 'H005', harvestCode: 'HS20260315-001', batchId: 'B302', batchCode: 'ZZB2026-002', cropName: '黄瓜', greenhouseId: 'G002', greenhouseName: '玻璃温室B区', harvestDate: '2026-03-15', harvestArea: 2500, harvestQuantity: 680, unit: '公斤', quality: 'excellent', grade: 'A', harvesterIds: ['U007', 'U008'], harvesterNames: ['萧峰', '虚竹'], warehouseId: 'W001', warehouseName: '冷库A区', status: 'graded', auditor: '陆启闯', variety: '水果黄瓜', plantingMode: '椰糠种植', targetYield: 20000 },
+  { id: 'H006', harvestCode: 'HS20260316-001', batchId: 'B005', batchCode: 'FQ2026-005', cropName: '辣椒', greenhouseId: 'G003', greenhouseName: '玻璃温室C区', harvestDate: '2026-03-16', harvestArea: 2000, harvestQuantity: 420, unit: '公斤', quality: 'good', grade: 'B', harvesterIds: ['U006'], harvesterNames: ['周伯通'], warehouseId: 'W002', warehouseName: '冷库B区', status: 'stored', auditor: '陆启闯', variety: '青椒', plantingMode: '椰糠种植', targetYield: 15000 },
+];
+
+// 采购计划数据
+export const purchasePlans = [
+  {
+    id: 'PP001',
+    purchaseApplicationCode: 'PA202601001',  // 采购申请编号
+    relatedBatchCode: 'ZZB2026-001',         // 关联番茄种植批次
+    purchaseType: 'production',
+    purchaseTypeName: '生产物资采购',
+    applicant: '郭靖',
+    applicantId: 'U003',
+    applicantDepartment: '生产部',
+    applyDate: '2026-01-05',
+    requiredDate: '2026-02-15',
+    priority: 'high',
+    priorityText: '高',
+    status: 'completed',
+    statusText: '已完成',
+    itemCount: 2,
+    remark: '春季番茄种植基肥和追肥采购',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I001', relatedBatchCode: 'ZZB2026-001', materialId: 'MT001', materialCode: 'SP0202001', materialName: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 50, estimatedPrice: 120, estimatedTotalPrice: 6000, supplier: '鑫源农资公司', location: 'A区-01-01', batchNo: 'F20240101', productionDate: '2024-01-10', expiryDate: '2026-01-10', purpose: '春季基肥施用', remark: '用于番茄种植区' },
+      { id: 'I002', relatedBatchCode: 'ZZB2026-001', materialId: 'MT002', materialCode: 'SP0201001', materialName: '商品有机肥', category: '肥料与土壤改良剂-有机肥', specification: '40kg/袋', unit: '袋', quantity: 30, estimatedPrice: 85, estimatedTotalPrice: 2550, supplier: '鑫源农资公司', location: 'A区-01-02', batchNo: 'U20240102', productionDate: '2024-01-15', expiryDate: '2026-01-15', purpose: '追肥使用', remark: '分两次施用' },
+    ],
+  },
+  {
+    id: 'PP002',
+    purchaseApplicationCode: 'PA202601002',  // 采购申请编号
+    relatedBatchCode: 'ZZB2026-002',         // 关联黄瓜种植批次
+    purchaseType: 'production',
+    purchaseTypeName: '生产物资采购',
+    applicant: '黄蓉',
+    applicantId: 'U003',
+    applicantDepartment: '生产部',
+    applyDate: '2026-02-10',
+    requiredDate: '2026-03-20',
+    priority: 'high',
+    priorityText: '高',
+    status: 'purchasing',
+    statusText: '采购中',
+    itemCount: 2,
+    remark: '黄瓜种植水溶肥和尿素采购',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I003', relatedBatchCode: 'ZZB2026-002', materialId: 'MT003', materialCode: 'SP0203001', materialName: '水溶肥', category: '肥料与土壤改良剂-水溶肥', specification: '20-20-20 5kg/袋', unit: '袋', quantity: 40, estimatedPrice: 150, estimatedTotalPrice: 6000, supplier: '丰达化肥厂', location: 'A区-02-01', batchNo: 'WF20240201', productionDate: '2024-02-01', expiryDate: '2025-08-01', purpose: '叶面喷施', remark: '稀释1000倍使用' },
+      { id: 'I004', relatedBatchCode: 'ZZB2026-002', materialId: 'MT002', materialCode: 'SP0202001', materialName: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 60, estimatedPrice: 85, estimatedTotalPrice: 5100, supplier: '丰达化肥厂', location: 'A区-01-02', batchNo: 'U20240201', productionDate: '2024-02-05', expiryDate: '2026-02-05', purpose: '根部追肥', remark: '分三次施用' },
+    ],
+  },
+  {
+    id: 'PP003',
+    purchaseApplicationCode: 'PA202601003',  // 采购申请编号
+    relatedBatchCode: 'SC202604001',         // 关联茄子种植批次
+    purchaseType: 'production',
+    purchaseTypeName: '生产物资采购',
+    applicant: '杨过',
+    applicantId: 'U003',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    requiredDate: '2026-05-01',
+    priority: 'high',
+    priorityText: '高',
+    status: 'pending',
+    statusText: '待审批',
+    itemCount: 2,
+    remark: '茄子种植基地夏季肥料储备',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I005', relatedBatchCode: 'SC202604001', materialId: 'MT001', materialCode: 'SP0202001', materialName: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 80, estimatedPrice: 120, estimatedTotalPrice: 9600, supplier: '待确定', location: '待分配', batchNo: '', productionDate: '', expiryDate: '2026-05-01', purpose: '夏季基肥', remark: '用于黄瓜种植区' },
+      { id: 'I006', relatedBatchCode: 'SC202604001', materialId: 'MT003', materialCode: 'SP0203001', materialName: '水溶肥', category: '肥料与土壤改良剂-水溶肥', specification: '20-20-20 5kg/袋', unit: '袋', quantity: 60, estimatedPrice: 150, estimatedTotalPrice: 9000, supplier: '待确定', location: '待分配', batchNo: '', productionDate: '', expiryDate: '2025-11-01', purpose: '滴灌施用', remark: '配合滴灌系统使用' },
+    ],
+  },
+  {
+    id: 'PP004',
+    purchaseApplicationCode: 'PA202601004',  // 采购申请编号
+    relatedBatchCode: 'SC202604002',         // 关联辣椒种植批次
+    purchaseType: 'production',
+    purchaseTypeName: '生产物资采购',
+    applicant: '小龙女',
+    applicantId: 'U004',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-10',
+    requiredDate: '2026-04-15',
+    priority: 'normal',
+    priorityText: '中',
+    status: 'pending',
+    statusText: '待审批',
+    itemCount: 2,
+    remark: '辣椒病虫害防治农药采购',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I007', relatedBatchCode: 'SC202604002', materialId: 'MT004', materialCode: 'SP0301001', materialName: '吡虫啉', category: '农药与植保产品-杀虫剂', specification: '10% 100g/袋', unit: '袋', quantity: 100, estimatedPrice: 25, estimatedTotalPrice: 2500, supplier: '拜耳作物科学', location: 'B区-01-01', batchNo: 'P20240301', productionDate: '2024-01-20', expiryDate: '2026-01-20', purpose: '防治蚜虫和白粉虱', remark: '安全间隔期7天' },
+      { id: 'I008', relatedBatchCode: 'SC202604002', materialId: 'MT005', materialCode: 'SP0302001', materialName: '多菌灵', category: '农药与植保产品-杀菌剂', specification: '50% 200g/袋', unit: '袋', quantity: 80, estimatedPrice: 18, estimatedTotalPrice: 1440, supplier: '拜耳作物科学', location: 'B区-01-02', batchNo: 'P20240302', productionDate: '2024-02-10', expiryDate: '2026-02-10', purpose: '防治灰霉病和早疫病', remark: '可与吡虫啉混用' },
+    ],
+  },
+  // ========== 非生产物资采购示例 ==========
+  {
+    id: 'PP005',
+    purchaseApplicationCode: 'PA202602001',  // 采购申请编号
+    relatedBatchCode: '',                     // 不关联批次
+    purchaseType: 'safety',
+    purchaseTypeName: '劳保用品',
+    applicant: '张无忌',
+    applicantId: 'U005',
+    applicantDepartment: '后勤部',
+    applyDate: '2026-03-12',
+    requiredDate: '2026-03-25',
+    priority: 'low',
+    priorityText: '低',
+    status: 'completed',
+    statusText: '已完成',
+    itemCount: 2,
+    remark: '第二季度生产车间劳保用品配发',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I009', relatedBatchCode: '', materialId: 'SA001', materialCode: 'SP0501001', materialName: '防护手套', category: '劳保用品-手部防护', specification: 'PU涂层 L码', unit: '双', quantity: 200, estimatedPrice: 8, estimatedTotalPrice: 1600, supplier: '安全用品批发中心', location: '仓库C区-02-01', batchNo: '', productionDate: '', expiryDate: '', purpose: '大棚作业防护', remark: '适合大棚潮湿环境使用' },
+      { id: 'I010', relatedBatchCode: '', materialId: 'SA002', materialCode: 'SP0502001', materialName: '安全帽', category: '劳保用品-头部防护', specification: 'ABS塑料 蓝色', unit: '个', quantity: 50, estimatedPrice: 25, estimatedTotalPrice: 1250, supplier: '安全用品批发中心', location: '仓库C区-02-02', batchNo: '', productionDate: '', expiryDate: '', purpose: '车间施工防护', remark: '符合GB标准' },
+    ],
+  },
+  {
+    id: 'PP006',
+    purchaseApplicationCode: 'PA202602002',  // 采购申请编号
+    relatedBatchCode: '',                     // 不关联批次
+    purchaseType: 'material',
+    purchaseTypeName: '通用物资',
+    applicant: '令狐冲',
+    applicantId: 'U007',
+    applicantDepartment: '办公室',
+    applyDate: '2026-04-02',
+    requiredDate: '2026-04-10',
+    priority: 'normal',
+    priorityText: '中',
+    status: 'completed',
+    statusText: '已完成',
+    itemCount: 3,
+    remark: '办公区域日常用品采购',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I011', relatedBatchCode: '', materialId: 'OF001', materialCode: 'SP0601001', materialName: '打印纸', category: '办公用品-纸张', specification: 'A4 70g 500张/包', unit: '包', quantity: 50, estimatedPrice: 22, estimatedTotalPrice: 1100, supplier: '得力文具供应商', location: '办公室仓库', batchNo: '', productionDate: '', expiryDate: '', purpose: '日常办公使用', remark: '' },
+      { id: 'I012', relatedBatchCode: '', materialId: 'OF002', materialCode: 'SP0602001', materialName: '中性笔', category: '办公用品-书写工具', specification: '黑色 0.5mm', unit: '支', quantity: 200, estimatedPrice: 1.5, estimatedTotalPrice: 300, supplier: '得力文具供应商', location: '办公室仓库', batchNo: '', productionDate: '', expiryDate: '', purpose: '日常办公使用', remark: '每季度配发一次' },
+      { id: 'I013', relatedBatchCode: '', materialId: 'OF003', materialCode: 'SP0603001', materialName: '垃圾桶', category: '办公用品-清洁用品', specification: '塑料 10L', unit: '个', quantity: 20, estimatedPrice: 15, estimatedTotalPrice: 300, supplier: '得力文具供应商', location: '办公室各楼层', batchNo: '', productionDate: '', expiryDate: '', purpose: '办公室日常清洁', remark: '按楼层配置' },
+    ],
+  },
+  {
+    id: 'PP007',
+    purchaseApplicationCode: 'PA202603001',  // 采购申请编号
+    relatedBatchCode: 'SC202603001',         // 关联番茄种植批次
+    purchaseType: 'equipment',
+    purchaseTypeName: '设备采购',
+    applicant: '任我行',
+    applicantId: 'U006',
+    applicantDepartment: '技术部',
+    applyDate: '2026-04-02',
+    requiredDate: '2026-05-15',
+    priority: 'urgent',
+    priorityText: '紧急',
+    status: 'pending',
+    statusText: '待审批',
+    itemCount: 2,
+    remark: '番茄基地环境监测设备升级',
+    approvalPerson: 'Susan',
+    items: [
+      { id: 'I014', relatedBatchCode: 'SC202603001', materialId: 'IT001', materialCode: 'IT0101001', materialName: '土壤温湿度传感器', category: '监测设备-传感器', specification: 'RS485 Modbus', unit: '个', quantity: 20, estimatedPrice: 580, estimatedTotalPrice: 11600, supplier: '深圳传感科技', location: 'D区-01-01', batchNo: 'EQ20240401', productionDate: '2024-03-15', expiryDate: '', purpose: '测量土壤温湿度和EC值', remark: '精度±0.5%' },
+      { id: 'I015', relatedBatchCode: 'SC202603001', materialId: 'IT002', materialCode: 'IT0102001', materialName: '温湿度记录仪', category: '监测设备-记录仪', specification: 'TH-200/台', unit: '台', quantity: 15, estimatedPrice: 320, estimatedTotalPrice: 4800, supplier: '深圳传感科技', location: 'D区-01-02', batchNo: 'EQ20240402', productionDate: '2024-03-20', expiryDate: '', purpose: '记录温室环境数据', remark: '数据可导出' },
+    ],
+  },
+];
+
+// 审批数据 - 使用V1.2完整Approval类型
+export const approvals: Approval[] = [
+  // ========== 物料审批模拟数据 ==========
+  // 领料审批
+  {
+    id: 'MAT-AP-001',
+    code: 'LL20260301001',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '郭靖的领料申请',
+    description: '申请从仓库A区领取肥料，用于襄阳城防种植基地',
+    applicantId: 'U003',
+    applicantName: '郭靖',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    applyTime: '08:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '黄药师', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'high',
+    reminderCount: 0,
+    createdAt: '2026-03-01T08:30:00.000Z',
+    updatedAt: '2026-03-01T08:30:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', requestedQuantity: 10, stockQuantity: 100, unitPrice: 120.00, warehousePosition: 'A区-01-01', remark: '有机肥用于基肥' },
+      { materialId: 'SP0202001', materialCode: 'SP0202001', materialName: '尿素', spec: '50kg/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 80, unitPrice: 95.00, warehousePosition: 'A区-01-02', remark: '追肥用' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '1',
+      requestCode: 'LL20260301001',
+      warehouseLocation: '仓库A区',
+      plantArea: '1号大棚/番茄种植区',
+      batchCode: 'SC202603001',
+      materials: [
+        { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', requestedQuantity: 10, stockQuantity: 100, unitPrice: 120.00, warehousePosition: 'A区-01-01', remark: '有机肥用于基肥' },
+        { materialId: 'SP0202001', materialCode: 'SP0202001', materialName: '尿素', spec: '50kg/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 80, unitPrice: 95.00, warehousePosition: 'A区-01-02', remark: '追肥用' },
+      ],
+    },
+  },
+  {
+    id: 'MAT-AP-002',
+    code: 'LL20260302002',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '杨过的领料申请',
+    description: '申请从仓库B区领取农药，用于绝情谷基地',
+    applicantId: 'U004',
+    applicantName: '杨过',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-02',
+    applyTime: '09:15:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '郭靖', role: '审批人', order: 1, status: 'approved', comment: '同意领取', actionTime: '2026-03-02T14:00:00.000Z' }],
+    records: [{ id: 'REC-MAT-002', approvalId: 'MAT-AP-002', approverId: 'U002', approverName: '郭靖', action: 'approve', comment: '同意领取', actionTime: '2026-03-02T14:00:00.000Z' }],
+    status: 'approved',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-02T09:15:00.000Z',
+    updatedAt: '2026-03-02T14:00:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'SP0301001', materialCode: 'SP0301001', materialName: '吡虫啉', spec: '100ml/瓶', unit: '瓶', requestedQuantity: 8, stockQuantity: 50, unitPrice: 25.00, warehousePosition: 'B区-02-03', remark: '防治蚜虫' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '2',
+      requestCode: 'LL20260302002',
+      warehouseLocation: '仓库B区',
+      plantArea: '2号大棚/黄瓜种植区',
+      batchCode: 'SC202603002',
+      materials: [
+        { materialId: 'SP0301001', materialCode: 'SP0301001', materialName: '吡虫啉', spec: '100ml/瓶', unit: '瓶', requestedQuantity: 8, stockQuantity: 50, unitPrice: 25.00, warehousePosition: 'B区-02-03', remark: '防治蚜虫' },
+      ],
+    },
+  },
+  {
+    id: 'MAT-AP-003',
+    code: 'LL20260401003',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '张无忌的领料申请',
+    description: '申请从仓库A区领取种子及育苗物资，用于明教光明顶基地',
+    applicantId: 'U005',
+    applicantName: '张无忌',
+    applicantDepartment: '生产部',
+    applyDate: '2026-04-01',
+    applyTime: '07:45:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '张三丰', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'high',
+    reminderCount: 0,
+    createdAt: '2026-04-01T07:45:00.000Z',
+    updatedAt: '2026-04-01T07:45:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'SP0101001', materialCode: 'SP0101001', materialName: '辣椒种子', spec: '100g/袋', unit: '袋', requestedQuantity: 50, stockQuantity: 200, unitPrice: 15.00, warehousePosition: 'A区-02-01', remark: '红椒种子' },
+      { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '育苗基质', spec: '50L/袋', unit: '袋', requestedQuantity: 20, stockQuantity: 80, unitPrice: 35.00, warehousePosition: 'A区-02-02', remark: '适用于蔬菜育苗' },
+      { materialId: 'SP0202001', materialCode: 'SP0202001', materialName: '微量元素肥', spec: '500g/袋', unit: '公斤', requestedQuantity: 10, stockQuantity: 60, unitPrice: 28.00, warehousePosition: 'A区-02-03', remark: '补充锌、硼等微量元素' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '3',
+      requestCode: 'LL20260401003',
+      warehouseLocation: '仓库A区',
+      plantArea: '3号大棚/辣椒育苗区',
+      batchCode: 'SC202604001',
+    },
+  },
+  {
+    id: 'MAT-AP-004',
+    code: 'LL20260402004',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '令狐冲的领料申请',
+    description: '用于病虫害防治，需领取农药及喷洒设备',
+    applicantId: 'U006',
+    applicantName: '令狐冲',
+    applicantDepartment: '技术部',
+    applyDate: '2026-04-02',
+    applyTime: '10:20:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '任我行', role: '审批人', order: 1, status: 'approved', comment: '同意，优先处理', actionTime: '2026-04-02T11:30:00.000Z' }],
+    records: [{ id: 'REC-MAT-004', approvalId: 'MAT-AP-004', approverId: 'U002', approverName: '任我行', action: 'approve', comment: '同意，优先处理', actionTime: '2026-04-02T11:30:00.000Z' }],
+    status: 'approved',
+    priority: 'high',
+    reminderCount: 0,
+    createdAt: '2026-04-02T10:20:00.000Z',
+    updatedAt: '2026-04-02T11:30:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'SP0301001', materialCode: 'SP0301001', materialName: '啶虫脒', spec: '200ml/瓶', unit: '瓶', requestedQuantity: 15, stockQuantity: 40, unitPrice: 32.00, warehousePosition: 'B区-01-01', remark: '杀虫剂' },
+      { materialId: 'SP0302001', materialCode: 'SP0302001', materialName: '高效氯氰菊酯', spec: '100ml/瓶', unit: '瓶', requestedQuantity: 10, stockQuantity: 35, unitPrice: 18.00, warehousePosition: 'B区-01-02', remark: '杀虫剂' },
+      { materialId: 'EQ0101001', materialCode: 'EQ0101001', materialName: '电动喷雾器', spec: '16L/台', unit: '台', requestedQuantity: 2, stockQuantity: 10, unitPrice: 280.00, warehousePosition: 'C区-03-01', remark: '便携式电动喷雾器' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '4',
+      requestCode: 'LL20260402004',
+      warehouseLocation: '仓库B区',
+      plantArea: '全场/病虫害防治',
+      batchCode: 'SC202604002',
+    },
+  },
+  {
+    id: 'MAT-AP-005',
+    code: 'LL20260403005',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '韦小宝的领料申请',
+    description: '肥料采购，用于皇宫菜园追肥',
+    applicantId: 'U007',
+    applicantName: '韦小宝',
+    applicantDepartment: '生产部',
+    applyDate: '2026-04-03',
+    applyTime: '14:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '康熙', role: '审批人', order: 1, status: 'rejected', comment: '库存不足，请分批领取', actionTime: '2026-04-03T16:00:00.000Z' }],
+    records: [{ id: 'REC-MAT-005', approvalId: 'MAT-AP-005', approverId: 'U002', approverName: '康熙', action: 'reject', comment: '库存不足，请分批领取', actionTime: '2026-04-03T16:00:00.000Z' }],
+    status: 'rejected',
+    priority: 'normal',
+    reminderCount: 1,
+    createdAt: '2026-04-03T14:00:00.000Z',
+    updatedAt: '2026-04-03T16:00:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'SP0203001', materialCode: 'SP0203001', materialName: '硫酸钾', spec: '50kg/袋', unit: '公斤', requestedQuantity: 200, stockQuantity: 50, unitPrice: 8.50, warehousePosition: 'A区-03-01', remark: '膨果期追肥' },
+      { materialId: 'SP0204001', materialCode: 'SP0204001', materialName: '钙镁磷肥', spec: '25kg/袋', unit: '公斤', requestedQuantity: 100, stockQuantity: 30, unitPrice: 6.80, warehousePosition: 'A区-03-02', remark: '补充钙镁元素' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '5',
+      requestCode: 'LL20260403005',
+      warehouseLocation: '仓库A区',
+      plantArea: '5号大棚/番茄种植区',
+      batchCode: 'SC202604003',
+    },
+  },
+  {
+    id: 'MAT-AP-006',
+    code: 'LL20260404006',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '段誉的领料申请',
+    description: '日常劳保用品领用',
+    applicantId: 'U008',
+    applicantName: '段誉',
+    applicantDepartment: '后勤部',
+    applyDate: '2026-04-04',
+    applyTime: '08:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '鸠摩智', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'low',
+    reminderCount: 0,
+    createdAt: '2026-04-04T08:30:00.000Z',
+    updatedAt: '2026-04-04T08:30:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'OP0101001', materialCode: 'OP0101001', materialName: '防护手套', spec: '耐磨款/双', unit: '双', requestedQuantity: 20, stockQuantity: 100, unitPrice: 8.50, warehousePosition: 'C区-01-01', remark: '防刺穿手套' },
+      { materialId: 'OP0102001', materialCode: 'OP0102001', materialName: '劳保手套', spec: '棉纱/双', unit: '双', requestedQuantity: 15, stockQuantity: 120, unitPrice: 5.00, warehousePosition: 'C区-01-02', remark: '普通劳保' },
+      { materialId: 'OP0201001', materialCode: 'OP0201001', materialName: '口罩', spec: '一次性/个', unit: '个', requestedQuantity: 50, stockQuantity: 200, unitPrice: 0.80, warehousePosition: 'C区-01-03', remark: '一次性医用口罩' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '6',
+      requestCode: 'LL20260404006',
+      warehouseLocation: '仓库C区',
+      plantArea: '办公区/后勤保障',
+      batchCode: 'SC202604004',
+    },
+  },
+  {
+    id: 'MAT-AP-007',
+    code: 'LL20260405007',
+    type: 'material_request',
+    typeName: '领料单',
+    category: 'business',
+    title: '乔峰的领料申请',
+    description: '监测设备更换及配件申领',
+    applicantId: 'U009',
+    applicantName: '乔峰',
+    applicantDepartment: '技术部',
+    applyDate: '2026-04-05',
+    applyTime: '09:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '慕容复', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'urgent',
+    reminderCount: 2,
+    createdAt: '2026-04-05T09:00:00.000Z',
+    updatedAt: '2026-04-05T09:00:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'IT0101001', materialCode: 'IT0101001', materialName: '土壤传感器', spec: 'EC-100/个', unit: '个', requestedQuantity: 5, stockQuantity: 15, unitPrice: 580.00, warehousePosition: 'D区-01-01', remark: '测量土壤温湿度和EC值' },
+      { materialId: 'IT0102001', materialCode: 'IT0102001', materialName: '温湿度记录仪', spec: 'TH-200/台', unit: '台', requestedQuantity: 3, stockQuantity: 8, unitPrice: 320.00, warehousePosition: 'D区-01-02', remark: '记录温室环境数据' },
+    ],
+    businessLink: {
+      type: 'material',
+      requestId: '7',
+      requestCode: 'LL20260405007',
+      warehouseLocation: '仓库B区',
+      plantArea: '智能温室/监测系统',
+      batchCode: 'SC202604005',
+    },
+  },
+  // ========== 退料审批 ==========
+  {
+    id: 'RET-AP-001',
+    code: 'TL20260301001',
+    type: 'return_material',
+    typeName: '退料单',
+    category: 'business',
+    title: '李建国的退料申请',
+    description: '从仓库A区退回剩余有机肥，因种植面积缩减',
+    applicantId: 'U003',
+    applicantName: '李建国',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    applyTime: '15:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-01T15:30:00.000Z',
+    updatedAt: '2026-03-01T15:30:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', requestedQuantity: 3, stockQuantity: 100, unitPrice: 120.00, warehousePosition: 'A区-01-01', remark: '生产剩余退料' },
+    ],
+    businessLink: {
+      type: 'return',
+      requestId: '1',
+      requestCode: 'TL20260301001',
+      sourceApplicationCode: 'LL20260225001',
+      materials: [
+        { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', requestedQuantity: 3, stockQuantity: 100, unitPrice: 120.00, warehousePosition: 'A区-01-01', remark: '生产剩余退料' },
+      ],
+      warehouseLocation: '仓库A区',
+    },
+  },
+  {
+    id: 'RET-AP-002',
+    code: 'TL20260305002',
+    type: 'return_material',
+    typeName: '退料单',
+    category: 'business',
+    title: '王五的退料申请',
+    description: '退回多领的尿素，因计划变更取消追肥作业',
+    applicantId: 'U004',
+    applicantName: '王五',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-05',
+    applyTime: '10:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'approved', comment: '确认物料完好，同意退料入库', actionTime: '2026-03-05T14:30:00.000Z' }],
+    records: [{ id: 'REC-RET-002', approvalId: 'RET-AP-002', approverId: 'U002', approverName: '李明辉', action: 'approve', comment: '确认物料完好，同意退料入库', actionTime: '2026-03-05T14:30:00.000Z' }],
+    status: 'approved',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-05T10:00:00.000Z',
+    updatedAt: '2026-03-05T14:30:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'SP0202001', materialCode: 'SP0202001', materialName: '尿素', spec: '46% 50kg/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 80, unitPrice: 95.00, warehousePosition: 'A区-01-02', remark: '计划变更退料' },
+    ],
+    businessLink: {
+      type: 'return',
+      requestId: '2',
+      requestCode: 'TL20260305002',
+      sourceApplicationCode: 'LL20260228002',
+      materials: [
+        { materialId: 'SP0202001', materialCode: 'SP0202001', materialName: '尿素', spec: '46% 50kg/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 80, unitPrice: 95.00, warehousePosition: 'A区-01-02', remark: '计划变更退料' },
+      ],
+      warehouseLocation: '仓库A区',
+    },
+  },
+  {
+    id: 'RET-AP-003',
+    code: 'TL20260310003',
+    type: 'return_material',
+    typeName: '退料单',
+    category: 'business',
+    title: '赵六的退料申请',
+    description: '农药过期退料，仓库B区农药库发现库存吡虫啉已过期',
+    applicantId: 'U005',
+    applicantName: '赵六',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-10',
+    applyTime: '09:20:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'rejected', comment: '过期农药需走报废流程，不纳入退料', actionTime: '2026-03-10T11:00:00.000Z' }],
+    records: [{ id: 'REC-RET-003', approvalId: 'RET-AP-003', approverId: 'U002', approverName: '李明辉', action: 'reject', comment: '过期农药需走报废流程，不纳入退料', actionTime: '2026-03-10T11:00:00.000Z' }],
+    status: 'rejected',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-10T09:20:00.000Z',
+    updatedAt: '2026-03-10T11:00:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'SP0301001', materialCode: 'SP0301001', materialName: '吡虫啉', spec: '10% 100g/袋', unit: '袋', requestedQuantity: 10, stockQuantity: 50, unitPrice: 25.00, warehousePosition: 'B区-02-03', remark: '农药已过期' },
+    ],
+    businessLink: {
+      type: 'return',
+      requestId: '3',
+      requestCode: 'TL20260310003',
+      sourceApplicationCode: 'LL20260115003',
+      materials: [
+        { materialId: 'SP0301001', materialCode: 'SP0301001', materialName: '吡虫啉', spec: '10% 100g/袋', unit: '袋', requestedQuantity: 10, stockQuantity: 50, unitPrice: 25.00, warehousePosition: 'B区-02-03', remark: '农药已过期' },
+      ],
+      warehouseLocation: '仓库B区',
+    },
+  },
+  {
+    id: 'RET-AP-004',
+    code: 'TL20260315004',
+    type: 'return_material',
+    typeName: '退料单',
+    category: 'business',
+    title: '孙七的退料申请',
+    description: '因作物品种调整，育苗基质多余需退库',
+    applicantId: 'U006',
+    applicantName: '孙七',
+    applicantDepartment: '技术部',
+    applyDate: '2026-03-15',
+    applyTime: '14:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '周经理', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'high',
+    reminderCount: 1,
+    createdAt: '2026-03-15T14:00:00.000Z',
+    updatedAt: '2026-03-15T14:00:00.000Z',
+    notificationSent: false,
+    materials: [
+      { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '育苗基质', spec: '50L/袋', unit: '袋', requestedQuantity: 8, stockQuantity: 80, unitPrice: 35.00, warehousePosition: 'A区-02-02', remark: '品种变更多余' },
+      { materialId: 'SP0203001', materialCode: 'SP0203001', materialName: '微量元素肥', spec: '500g/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 60, unitPrice: 28.00, warehousePosition: 'A区-02-03', remark: '未开封可退库' },
+    ],
+    businessLink: {
+      type: 'return',
+      requestId: '4',
+      requestCode: 'TL20260315004',
+      sourceApplicationCode: 'LL20260312004',
+      materials: [
+        { materialId: 'SP0201001', materialCode: 'SP0201001', materialName: '育苗基质', spec: '50L/袋', unit: '袋', requestedQuantity: 8, stockQuantity: 80, unitPrice: 35.00, warehousePosition: 'A区-02-02', remark: '品种变更多余' },
+        { materialId: 'SP0203001', materialCode: 'SP0203001', materialName: '微量元素肥', spec: '500g/袋', unit: '袋', requestedQuantity: 5, stockQuantity: 60, unitPrice: 28.00, warehousePosition: 'A区-02-03', remark: '未开封可退库' },
+      ],
+      warehouseLocation: '仓库A区',
+    },
+  },
+  {
+    id: 'RET-AP-005',
+    code: 'TL20260320005',
+    type: 'return_material',
+    typeName: '退料单',
+    category: 'business',
+    title: '周八的退料申请',
+    description: '测量设备故障退料，土壤传感器已损坏需退货',
+    applicantId: 'U007',
+    applicantName: '周八',
+    applicantDepartment: '技术部',
+    applyDate: '2026-03-20',
+    applyTime: '16:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '吴总工', role: '审批人', order: 1, status: 'approved', comment: '设备质量问题，同意退换', actionTime: '2026-03-20T17:00:00.000Z' }],
+    records: [{ id: 'REC-RET-005', approvalId: 'RET-AP-005', approverId: 'U002', approverName: '吴总工', action: 'approve', comment: '设备质量问题，同意退换', actionTime: '2026-03-20T17:00:00.000Z' }],
+    status: 'approved',
+    priority: 'urgent',
+    reminderCount: 0,
+    createdAt: '2026-03-20T16:30:00.000Z',
+    updatedAt: '2026-03-20T17:00:00.000Z',
+    notificationSent: true,
+    materials: [
+      { materialId: 'IT0101001', materialCode: 'IT0101001', materialName: '土壤传感器', spec: 'EC-100/个', unit: '个', requestedQuantity: 2, stockQuantity: 15, unitPrice: 580.00, warehousePosition: 'D区-01-01', remark: '设备故障需退换' },
+    ],
+    businessLink: {
+      type: 'return',
+      requestId: '5',
+      requestCode: 'TL20260320005',
+      sourceApplicationCode: 'LL20260318005',
+      materials: [
+        { materialId: 'IT0101001', materialCode: 'IT0101001', materialName: '土壤传感器', spec: 'EC-100/个', unit: '个', requestedQuantity: 2, stockQuantity: 15, unitPrice: 580.00, warehousePosition: 'D区-01-01', remark: '设备故障需退换' },
+      ],
+      warehouseLocation: '仓库D区',
+    },
+  },
+  // ========== 采购审批 ==========
+  {
+    id: 'PUR-AP-001',
+    code: 'PP20260301',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '春季生产物资采购计划',
+    description: '采购类型：生产物资，供应商：鑫源农资公司，总金额：12.5万元',
+    applicantId: 'U003',
+    applicantName: '李志强',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    applyTime: '08:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'high',
+    reminderCount: 0,
+    createdAt: '2026-03-01T08:00:00.000Z',
+    updatedAt: '2026-03-01T08:00:00.000Z',
+    notificationSent: false,
+    amount: '12.5万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '1',
+      requestCode: 'PP20260301',
+      expectedDeliveryDate: '2026-04-15',
+      totalAmount: 125000,
+      items: [
+        { materialId: 'MT001', materialName: '复合肥NPK', quantity: 50, estimatedPrice: 120, supplier: '鑫源农资公司' },
+        { materialId: 'MT002', materialName: '尿素', quantity: 30, estimatedPrice: 85, supplier: '鑫源农资公司' },
+      ],
+    },
+  },
+  {
+    id: 'PUR-AP-002',
+    code: 'PP20260308',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '春季肥料采购计划',
+    description: '采购类型：肥料，供应商：丰达化肥厂，总金额：8.3万元',
+    applicantId: 'U004',
+    applicantName: '王建国',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-08',
+    applyTime: '09:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'approved', comment: '同意采购，已纳入春季生产计划', actionTime: '2026-03-08T14:00:00.000Z' }],
+    records: [{ id: 'REC-PUR-002', approvalId: 'PUR-AP-002', approverId: 'U002', approverName: '李明辉', action: 'approve', comment: '同意采购，已纳入春季生产计划', actionTime: '2026-03-08T14:00:00.000Z' }],
+    status: 'approved',
+    priority: 'high',
+    reminderCount: 0,
+    createdAt: '2026-03-08T09:30:00.000Z',
+    updatedAt: '2026-03-08T14:00:00.000Z',
+    notificationSent: true,
+    amount: '8.3万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '2',
+      requestCode: 'PP20260308',
+      expectedDeliveryDate: '2026-04-01',
+      totalAmount: 83000,
+      items: [
+        { materialId: 'MT003', materialName: '水溶肥', quantity: 40, estimatedPrice: 150, supplier: '丰达化肥厂' },
+        { materialId: 'MT002', materialName: '尿素', quantity: 60, estimatedPrice: 85, supplier: '丰达化肥厂' },
+      ],
+    },
+  },
+  {
+    id: 'PUR-AP-003',
+    code: 'PP20260315',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '夏季种植用肥采购计划',
+    description: '采购类型：肥料，供应商：待确定，总金额：15.8万元',
+    applicantId: 'U005',
+    applicantName: '赵文静',
+    applicantDepartment: '技术部',
+    applyDate: '2026-03-15',
+    applyTime: '10:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'high',
+    reminderCount: 1,
+    createdAt: '2026-03-15T10:00:00.000Z',
+    updatedAt: '2026-03-15T10:00:00.000Z',
+    notificationSent: false,
+    amount: '15.8万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '3',
+      requestCode: 'PP20260315',
+      expectedDeliveryDate: '2026-05-01',
+      totalAmount: 158000,
+      items: [
+        { materialId: 'MT001', materialName: '复合肥NPK', quantity: 80, estimatedPrice: 120, supplier: '待确定' },
+        { materialId: 'MT003', materialName: '水溶肥', quantity: 60, estimatedPrice: 150, supplier: '待确定' },
+      ],
+    },
+  },
+  {
+    id: 'PUR-AP-004',
+    code: 'PP20260320',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '病虫害防治药剂采购',
+    description: '采购类型：农药，供应商：拜耳作物科学，总金额：5.6万元',
+    applicantId: 'U006',
+    applicantName: '陈小芳',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-20',
+    applyTime: '14:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'rejected', comment: '农药库存充足，暂不采购', actionTime: '2026-03-20T16:00:00.000Z' }],
+    records: [{ id: 'REC-PUR-004', approvalId: 'PUR-AP-004', approverId: 'U002', approverName: '李明辉', action: 'reject', comment: '农药库存充足，暂不采购', actionTime: '2026-03-20T16:00:00.000Z' }],
+    status: 'rejected',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-20T14:30:00.000Z',
+    updatedAt: '2026-03-20T16:00:00.000Z',
+    notificationSent: true,
+    amount: '5.6万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '4',
+      requestCode: 'PP20260320',
+      expectedDeliveryDate: '2026-04-15',
+      totalAmount: 56000,
+      items: [
+        { materialId: 'MT004', materialName: '吡虫啉', quantity: 100, estimatedPrice: 25, supplier: '拜耳作物科学' },
+        { materialId: 'MT005', materialName: '多菌灵', quantity: 80, estimatedPrice: 18, supplier: '拜耳作物科学' },
+      ],
+    },
+  },
+  {
+    id: 'PUR-AP-005',
+    code: 'PP20260325',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '大棚保温材料采购',
+    description: '采购类型：物资，供应商：建材市场A店，总金额：3.2万元',
+    applicantId: 'U007',
+    applicantName: '周志强',
+    applicantDepartment: '后勤部',
+    applyDate: '2026-03-25',
+    applyTime: '08:30:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '吴总工', role: '审批人', order: 1, status: 'approved', comment: '同意采购，用于春季大棚维护', actionTime: '2026-03-25T11:00:00.000Z' }],
+    records: [{ id: 'REC-PUR-005', approvalId: 'PUR-AP-005', approverId: 'U002', approverName: '吴总工', action: 'approve', comment: '同意采购，用于春季大棚维护', actionTime: '2026-03-25T11:00:00.000Z' }],
+    status: 'approved',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-25T08:30:00.000Z',
+    updatedAt: '2026-03-25T11:00:00.000Z',
+    notificationSent: true,
+    amount: '3.2万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '5',
+      requestCode: 'PP20260325',
+      expectedDeliveryDate: '2026-04-10',
+      totalAmount: 32000,
+      items: [
+        { materialId: 'MT009', materialName: 'PO膜', quantity: 500, estimatedPrice: 2.5, supplier: '建材市场A店' },
+      ],
+    },
+  },
+  {
+    id: 'PUR-AP-006',
+    code: 'PP20260402',
+    type: 'purchase_request',
+    typeName: '采购申请',
+    category: 'business',
+    title: '智能温室传感器设备采购',
+    description: '采购类型：设备，供应商：深圳传感科技，总金额：18.6万元',
+    applicantId: 'U008',
+    applicantName: '刘大海',
+    applicantDepartment: '技术部',
+    applyDate: '2026-04-02',
+    applyTime: '09:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '李明辉', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'urgent',
+    reminderCount: 2,
+    createdAt: '2026-04-02T09:00:00.000Z',
+    updatedAt: '2026-04-02T09:00:00.000Z',
+    notificationSent: false,
+    amount: '18.6万元',
+    businessLink: {
+      type: 'purchase',
+      requestId: '6',
+      requestCode: 'PP20260402',
+      expectedDeliveryDate: '2026-05-15',
+      totalAmount: 186000,
+      items: [
+        { materialId: 'IT001', materialName: '土壤传感器', quantity: 20, estimatedPrice: 580, supplier: '深圳传感科技' },
+        { materialId: 'IT002', materialName: '温湿度记录仪', quantity: 15, estimatedPrice: 320, supplier: '深圳传感科技' },
+      ],
+    },
+  },
+  // ========== 生产计划审批 ==========
+  {
+    id: 'PRD-AP-001',
+    code: 'SC20260301001',
+    type: 'production_plan',
+    typeName: '生产计划',
+    category: 'business',
+    title: '王志刚的生产计划申请',
+    description: '番茄种植计划申请',
+    applicantId: 'U002',
+    applicantName: '王志刚',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    applyTime: '09:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U001', userName: '系统管理员', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-01T09:00:00.000Z',
+    updatedAt: '2026-03-01T09:00:00.000Z',
+    notificationSent: false,
+    businessLink: {
+      type: 'production',
+      requestId: '1',
+      requestCode: 'SC20260301001',
+    },
+  },
+  // ========== 采收审批 ==========
+  {
+    id: 'HRV-AP-001',
+    code: 'CS20260301001',
+    type: 'harvest_request',
+    typeName: '采收申请',
+    category: 'business',
+    title: '张伟民的采收申请',
+    description: '番茄采收入库申请',
+    applicantId: 'U003',
+    applicantName: '张伟民',
+    applicantDepartment: '生产部',
+    applyDate: '2026-03-01',
+    applyTime: '14:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U002', userName: '王志刚', role: '审批人', order: 1, status: 'pending' }],
+    records: [],
+    status: 'pending',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2026-03-01T14:00:00.000Z',
+    updatedAt: '2026-03-01T14:00:00.000Z',
+    notificationSent: false,
+    businessLink: {
+      type: 'harvest',
+      requestId: '1',
+      requestCode: 'CS20260301001',
+    },
+  },
+  // ========== HR审批 ==========
+  {
+    id: 'LV-AP-001',
+    code: 'AP20240315-001',
+    type: 'leave',
+    typeName: '请假申请',
+    category: 'hr',
+    title: '陈小芳的事假申请',
+    description: '家中急事需要处理',
+    applicantId: 'U006',
+    applicantName: '陈小芳',
+    applicantDepartment: '生产部',
+    applyDate: '2024-03-12',
+    applyTime: '09:00:00',
+    currentStep: 1,
+    totalSteps: 1,
+    approvers: [{ userId: 'U003', userName: '王建国', role: '部门经理', order: 1, status: 'approved', comment: '同意', actionTime: '2024-03-12T14:00:00.000Z' }],
+    records: [{ id: 'REC-LV-001', approvalId: 'LV-AP-001', approverId: 'U003', approverName: '王建国', action: 'approve', comment: '同意', actionTime: '2024-03-12T14:00:00.000Z' }],
+    status: 'approved',
+    priority: 'normal',
+    reminderCount: 0,
+    createdAt: '2024-03-12T09:00:00.000Z',
+    updatedAt: '2024-03-12T14:00:00.000Z',
+    notificationSent: true,
+    businessLink: {
+      type: 'leave',
+      leaveId: 'LV001',
+      leaveType: 'personal',
+      startDate: '2024-03-15',
+      endDate: '2024-03-17',
+      totalDays: 3,
+      reason: '家中急事需要处理',
+    },
+  },
+];
+
+// 消息数据
+export const messages: Message[] = [
+  { id: 'M001', type: 'task', title: '新任务派发', content: '您有一个新的浇水任务：番茄浇水（玻璃温室A区）', senderId: 'U003', senderName: '王建国', receiverId: 'U006', isRead: false, sendTime: '2024-03-15 10:00:00', link: '/tasks' },
+  { id: 'M002', type: 'approval', title: '审批通知', content: '您提交的物资申请已通过审批', senderId: 'U002', senderName: '李明辉', receiverId: 'U003', isRead: false, sendTime: '2024-03-15 09:30:00', link: '/approvals' },
+  { id: 'M003', type: 'alert', title: '温度预警', content: '玻璃温室C区当前温度32.1℃，超过警戒值30℃', senderId: 'SYSTEM', senderName: '系统', receiverId: 'U002', isRead: false, sendTime: '2024-03-15 10:35:00', link: '/iot' },
+  { id: 'M004', type: 'notice', title: '天气提醒', content: '预计明天有强降雨，请各班组做好防雨措施', senderId: 'SYSTEM', senderName: '系统', receiverId: 'U003', isRead: true, sendTime: '2024-03-14 16:00:00' },
+  { id: 'M005', type: 'system', title: '系统通知', content: '系统将于今晚22:00进行例行维护，预计持续30分钟', senderId: 'SYSTEM', senderName: '系统', receiverId: 'U001', isRead: true, sendTime: '2024-03-14 15:00:00' },
+];
+
+// 设备统计数据
+export const equipmentStats = {
+  autoMode: 8,
+  manualMode: 2,
+  faults: 1,
+  offlineSensors: 3,
+};
+
+// 今日能耗数据
+export const energyConsumption = {
+  water: 120,
+  electricity: 380,
+  gas: 25,
+  waterTrend: 10,
+  electricityTrend: -5,
+  gasTrend: 0,
+  date: '2024-03-15',
+};
+
+// 生产进度数据
+export const productionProgress = {
+  harvestReady: 3,
+  batches: [
+    { name: '番茄', daysLeft: 3 },
+    { name: '黄瓜', daysLeft: 5 },
+    { name: '生菜', daysLeft: 7 },
+  ],
+};
+
+// 库存预警数据
+export const inventoryAlerts = {
+  lowStockCount: 5,
+  materials: [
+    { name: '复合肥NPK', stock: 30, safeStock: 50 },
+    { name: '尿素', stock: 50, safeStock: 80 },
+    { name: '吡虫啉', stock: 60, safeStock: 100 },
+  ],
+};
+
+// 今日任务分类数据
+export const todayTasksBreakdown = {
+  total: 12,
+  farming: 5,      // 农事任务
+  harvest: 2,     // 采收任务
+  equipment: 3,   // 设备任务
+  approval: 2,    // 待审批
+};
+
+// 告警分类数据（4种告警）
+export const alertsBreakdown = {
+  total: 5,
+  environment: 2,    // 环境告警
+  equipment: 1,      // 设备故障告警
+  pest: 1,           // 病虫害预警
+  farming: 1,        // 农事任务预警
+};
+
+// 仪表盘统计数据
+export const dashboardStats: DashboardStats = {
+  activeBatches: 8,
+  tasksDueToday: 8,
+  pendingApprovals: 2,
+  alerts: 3,
+  inventoryAlerts: 5,
+  totalYield: 6550,
+  averageYield: 818.75,
+  costThisMonth: 156800,
+  workerCount: 12,
+};
+
+// 温度趋势数据
+export const temperatureTrend = [
+  { time: '00:00', value: 18.5 },
+  { time: '02:00', value: 17.2 },
+  { time: '04:00', value: 16.8 },
+  { time: '06:00', value: 17.5 },
+  { time: '08:00', value: 20.3 },
+  { time: '10:00', value: 24.5 },
+  { time: '12:00', value: 28.1 },
+  { time: '14:00', value: 29.5 },
+  { time: '16:00', value: 28.8 },
+  { time: '18:00', value: 26.2 },
+  { time: '20:00', value: 23.5 },
+  { time: '22:00', value: 20.8 },
+];
+
+// 产量统计
+export const yieldStats = [
+  { month: '1月', yield: 1250, region: 'G001', crop: 'C001' },
+  { month: '2月', yield: 1580, region: 'G001', crop: 'C001' },
+  { month: '3月', yield: 2100, region: 'G002', crop: 'C002' },
+  { month: '4月', yield: 1850, region: 'G002', crop: 'C002' },
+  { month: '5月', yield: 2200, region: 'G003', crop: 'C003' },
+  { month: '6月', yield: 1950, region: 'G004', crop: 'C004' },
+];
+
+// 成本分析
+export const costAnalysis = [
+  { name: '人工成本', value: 45000, period: 'month', crop: '', areaType: '' },
+  { name: '化肥成本', value: 28000, period: 'month', crop: 'C001', areaType: 'greenhouse' },
+  { name: '农药成本', value: 15000, period: 'month', crop: 'C002', areaType: 'greenhouse' },
+  { name: '种子种苗', value: 22000, period: 'quarter', crop: '', areaType: '' },
+  { name: '基质农膜', value: 18000, period: 'quarter', crop: 'C001', areaType: 'field' },
+  { name: '能源成本', value: 15000, period: 'year', crop: '', areaType: '' },
+  { name: '其他成本', value: 13800, period: 'month', crop: 'C003', areaType: 'field' },
+];
+
+// 当前登录用户
+export const currentUser: User = users.find(u => u.id === 'U013') || users[0]; // 陆启闯
+
+// 部门数据
+export const departments: Department[] = [
+  { id: 'D001', name: '生产部', managerId: 'U002', managerName: '李明辉' },
+  { id: 'D002', name: '技术部', managerId: 'U004', managerName: '赵文静' },
+  { id: 'D003', name: '仓储部', managerId: 'U010', managerName: '孙丽娜' },
+  { id: 'D004', name: '财务部', managerId: 'U013', managerName: '财务经理' },
+  { id: 'D005', name: '综合办', managerId: 'U014', managerName: '行政经理' },
+];
+
+// 岗位数据 - 与部门关联
+export const positions: Position[] = [
+  // 生产部岗位
+  { id: 'P001', name: '生产主管', departmentId: 'D001', level: 1 },
+  { id: 'P002', name: '生产经理', departmentId: 'D001', level: 2 },
+  { id: 'P003', name: '生产组长', departmentId: 'D001', level: 3 },
+  { id: 'P004', name: '种植工', departmentId: 'D001', level: 4 },
+  { id: 'P005', name: '农技员', departmentId: 'D001', level: 3 },
+  { id: 'P006', name: '农机手', departmentId: 'D001', level: 4 },
+  // 技术部岗位
+  { id: 'P007', name: '技术总监', departmentId: 'D002', level: 1 },
+  { id: 'P008', name: '技术员', departmentId: 'D002', level: 3 },
+  { id: 'P009', name: '设备维护员', departmentId: 'D002', level: 4 },
+  // 仓储部岗位
+  { id: 'P010', name: '仓储主管', departmentId: 'D003', level: 1 },
+  { id: 'P011', name: '仓库管理员', departmentId: 'D003', level: 4 },
+  { id: 'P012', name: '搬运工', departmentId: 'D003', level: 5 },
+  // 财务部岗位
+  { id: 'P013', name: '财务经理', departmentId: 'D004', level: 1 },
+  { id: 'P014', name: '会计', departmentId: 'D004', level: 3 },
+  { id: 'P015', name: '出纳', departmentId: 'D004', level: 4 },
+  // 综合办岗位
+  { id: 'P016', name: '行政经理', departmentId: 'D005', level: 1 },
+  { id: 'P017', name: '行政助理', departmentId: 'D005', level: 3 },
+  { id: 'P018', name: '招聘专员', departmentId: 'D005', level: 3 },
+  { id: 'P019', name: '人事专员', departmentId: 'D005', level: 3 },
+];
+
+// 临时任务数据 - 6条不同状态的模拟数据
+export const tempTasks: TempTask[] = [
+  // 状态1: 草稿 (draft)
+  {
+    id: 'TT001',
+    taskCode: 'TT20260418-001',
+    title: '设备日常维护检查',
+    type: 'equipment_repair',
+    typeName: '设备维修',
+    priority: 'low',
+    status: 'draft',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-25T08:00:00',
+    description: '对温室内的灌溉系统进行例行检查和维护',
+    notes: '计划下周进行',
+    urgency: 'normal',
+    location: '玻璃温室A区',
+    greenhouseId: 'G001',
+    greenhouseName: '玻璃温室A区',
+    estimatedDays: 2,
+    estimatedHours: 4,
+    workerCount: 2,
+    actualHours: 0,
+    rejectCount: 0,
+    createdAt: '2026-04-18T09:00:00.000Z',
+    updatedAt: '2026-04-18T09:00:00.000Z',
+    startDate: '2026-04-18T08:00',
+  },
+  // 状态2: 待接受 (pending)
+  {
+    id: 'TT002',
+    taskCode: 'TT20260418-002',
+    title: '紧急处理大棚A区虫害',
+    type: 'farm_repair',
+    typeName: '农事抢修',
+    priority: 'high',
+    status: 'pending',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-20T17:00:00',
+    description: '大棚A区发现蚜虫大量繁殖，需要紧急喷洒农药处理',
+    notes: '',
+    urgency: 'urgent',
+    location: '大棚A区',
+    greenhouseId: 'G001',
+    greenhouseName: '大棚A区',
+    estimatedDays: 0,
+    estimatedHours: 2,
+    workerCount: 1,
+    actualHours: 0,
+    rejectCount: 0,
+    createdAt: '2026-04-18T08:00:00.000Z',
+    updatedAt: '2026-04-18T08:00:00.000Z',
+    startDate: '2026-04-18T08:00',
+  },
+  // 状态3: 已接受 (accepted)
+  {
+    id: 'TT003',
+    taskCode: 'TT20260417-003',
+    title: '外出协助兄弟基地',
+    type: 'farm_repair',
+    typeName: '农事抢修',
+    priority: 'medium',
+    status: 'accepted',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-20T17:00:00',
+    description: '协助南京绿野农场基地进行番茄移栽作业',
+    notes: '需要自带工具',
+    urgency: 'normal',
+    location: '外出协助',
+    greenhouseId: '',
+    greenhouseName: '外出协助',
+    estimatedDays: 1,
+    estimatedHours: 0,
+    workerCount: 3,
+    actualHours: 0,
+    acceptedAt: '2026-04-17T14:00:00.000Z',
+    rejectCount: 0,
+    createdAt: '2026-04-17T10:00:00.000Z',
+    updatedAt: '2026-04-17T14:00:00.000Z',
+    startDate: '2026-04-17T08:00',
+  },
+  // 状态4: 进行中 (in_progress)
+  {
+    id: 'TT004',
+    taskCode: 'TT20260418-004',
+    title: 'B区番茄追肥作业',
+    type: 'farm_repair',
+    typeName: '农事抢修',
+    priority: 'normal',
+    status: 'in_progress',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-22T17:00:00',
+    description: '番茄进入结果期，需要追加钾肥促进果实发育',
+    notes: '已完成部分施肥',
+    urgency: 'normal',
+    location: '玻璃温室B区',
+    greenhouseId: 'G002',
+    greenhouseName: '玻璃温室B区',
+    estimatedDays: 1,
+    estimatedHours: 4,
+    workerCount: 2,
+    actualHours: 2,
+    acceptedAt: '2026-04-17T09:00:00.000Z',
+    rejectCount: 0,
+    createdAt: '2026-04-17T09:00:00.000Z',
+    updatedAt: '2026-04-18T10:00:00.000Z',
+    startDate: '2026-04-17T08:00',
+  },
+  // 状态5: 待验收 (waiting_acceptance)
+  {
+    id: 'TT005',
+    taskCode: 'TT20260416-005',
+    title: 'D区黄瓜采摘',
+    type: 'farm_repair',
+    typeName: '农事抢修',
+    priority: 'normal',
+    status: 'waiting_acceptance',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-18T17:00:00',
+    description: 'D区黄瓜已成熟，需要及时采摘',
+    notes: '已完成黄瓜采摘，共采摘约50公斤',
+    urgency: 'normal',
+    location: '大棚D区',
+    greenhouseId: '',
+    greenhouseName: '大棚D区',
+    estimatedDays: 0,
+    estimatedHours: 4,
+    workerCount: 2,
+    actualHours: 5,
+    completionRemarks: '已完成黄瓜采摘，共采摘约50公斤',
+    acceptedAt: '2026-04-16T08:00:00.000Z',
+    rejectCount: 0,
+    createdAt: '2026-04-16T08:00:00.000Z',
+    updatedAt: '2026-04-18T16:00:00.000Z',
+    startDate: '2026-04-16T08:00',
+  },
+  // 状态6: 已完成 (completed)
+  {
+    id: 'TT006',
+    taskCode: 'TT20260415-006',
+    title: '大棚B区消杀作业',
+    type: 'farm_repair',
+    typeName: '农事抢修',
+    priority: 'high',
+    status: 'completed',
+    assigneeId: 'U013',
+    assigneeName: '陆启闯',
+    assignerId: 'admin',
+    assignerName: '管理员',
+    dueDate: '2026-04-18T12:00:00',
+    description: '对大棚B区进行病虫害消杀作业',
+    notes: '已使用生物农药，符合有机标准',
+    urgency: 'urgent',
+    location: '玻璃温室B区',
+    greenhouseId: 'G002',
+    greenhouseName: '玻璃温室B区',
+    estimatedDays: 1,
+    estimatedHours: 2,
+    workerCount: 2,
+    actualHours: 6,
+    completionRemarks: '消杀作业已完成，用药量符合标准',
+    acceptedAt: '2026-04-15T08:00:00.000Z',
+    rejectCount: 0,
+    createdAt: '2026-04-15T08:00:00.000Z',
+    updatedAt: '2026-04-16T16:00:00.000Z',
+    startDate: '2026-04-15T08:00',
+  },
+];
+
+// 员工数据 - 农业种植管理系统
+export const workers: Worker[] = [
+  {
+    id: 'W011', workerId: 'EMP20240011', name: '陆启闯', gender: '男', age: 32,
+    birthDate: '1994-05-10', idCard: '320105199405101234', phone: '13811112222',
+    email: 'luqc@example.com', wechat: 'luqichuang2024',
+    address: '江苏省南京市江宁区科学园街道1号', residenceAddress: '江苏省南京市江宁区百家湖花园1栋101室',
+    emergencyContact: '陆明', emergencyRelation: '父亲', emergencyPhone: '13911112222',
+    department: '生产部', team: 'A班', position: '农技员', workArea: '全部生产区域',
+    skillLevel: '高级', skillTags: ['浇水灌溉', '施肥作业', '病虫害防治', '温控管理'],
+    workYears: 6, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2020-03-01', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2027-02-28', contractNo: 'HT-2020-008',
+    education: '本科', major: '农学', trainingRecords: [
+      { id: 'TR011', trainingDate: '2024-06-15', trainingType: '技能培训', trainingContent: '设施农业技术', trainingHours: 24, trainer: '张博士', certificate: '高级农技师证书', score: 92 }
+    ],
+    workExperiences: [
+      { id: 'WE011', company: '南京绿野农场', position: '农技员', startDate: '2018-07-01', endDate: '2020-02-28', workContent: '温室作物管理', leavingReason: '个人发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS011', year: 2024, assessmentDate: '2024-12-20', assessor: '王建国', rating: '优秀', score: 95, strengths: '技术全面，能独立解决生产问题', weaknesses: '对新品种接受较慢', goals: '成为技术带头人' }
+    ],
+    status: '在职', remarks: '技术骨干，农技方面的带头人'
+  },
+  {
+    id: 'W001', workerId: 'EMP20240001', name: '张伟民', gender: '男', age: 35,
+    birthDate: '1991-01-01', idCard: '320105199101011234', phone: '13812345678',
+    email: 'zhangwm@example.com', wechat: 'zhangweimin2024',
+    address: '江苏省南京市江宁区东山街道1号', residenceAddress: '江苏省南京市江宁区百家湖花园10栋201室',
+    emergencyContact: '张伟', emergencyRelation: '兄弟', emergencyPhone: '13912345678',
+    department: '生产部', team: 'A班', position: '种植工', workArea: '玻璃温室A区/B区',
+    skillLevel: '高级', skillTags: ['浇水灌溉', '施肥作业', '采摘技能', '修剪整枝'],
+    workYears: 8, wagesType: '计件', hourlyRate: 0,
+    hireDate: '2022-03-15', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2026-03-14', contractNo: 'HT-2022-001',
+    education: '初中', trainingRecords: [
+      { id: 'TR001', trainingDate: '2023-06-15', trainingType: '安全培训', trainingContent: '农业安全生产规范', trainingHours: 8, trainer: '李明辉', certificate: '安全员证书', score: 95 }
+    ],
+    workExperiences: [
+      { id: 'WE001', company: '南京绿野农场', position: '种植工', startDate: '2016-03-01', endDate: '2022-02-28', workContent: '蔬菜大棚种植管理', leavingReason: '个人发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS001', year: 2024, assessmentDate: '2024-12-20', assessor: '王建国', rating: '优秀', score: 92, strengths: '技术过硬，能独立完成各项工作', weaknesses: '沟通协调能力可提升', goals: '提升管理能力' }
+    ],
+    status: '在职', remarks: '技术骨干，工作认真负责'
+  },
+  {
+    id: 'W002', workerId: 'EMP20240002', name: '李明轩', gender: '女', age: 28,
+    birthDate: '1996-02-15', idCard: '320105199602021234', phone: '13923456789',
+    email: 'limx@example.com', wechat: 'limingxuan1996',
+    address: '江苏省南京市浦口区泰山街道2号', residenceAddress: '江苏省南京市浦口区威尼斯花园5栋301室',
+    emergencyContact: '李强', emergencyRelation: '父亲', emergencyPhone: '13823456789',
+    department: '技术部', team: '技术组', position: '农技员', workArea: '技术部全部区域',
+    skillLevel: '技师', skillTags: ['嫁接技术', '育苗管理', '温控管理', '病虫害防治'],
+    workYears: 6, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2021-06-20', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2025-06-19', contractNo: 'HT-2021-015',
+    education: '大专', major: '园艺技术', trainingRecords: [
+      { id: 'TR002', trainingDate: '2023-03-10', trainingType: '技能培训', trainingContent: '嫁接技术进阶', trainingHours: 16, trainer: '张博士', certificate: '技师证书', score: 88 }
+    ],
+    workExperiences: [
+      { id: 'WE002', company: '上海园艺研究所', position: '技术员', startDate: '2018-07-01', endDate: '2021-05-30', workContent: '花卉育苗与嫁接技术研究', leavingReason: '家庭原因回南京' }
+    ],
+    annualAssessments: [
+      { id: 'AS002', year: 2024, assessmentDate: '2024-12-18', assessor: '李明辉', rating: '优秀', score: 95, strengths: '专业知识扎实，善于技术创新', weaknesses: '现场管理经验不足', goals: '考取高级农技师证书' }
+    ],
+    status: '在职', remarks: '技术骨干，参与多项技术改进项目'
+  },
+  {
+    id: 'W003', workerId: 'EMP20240003', name: '王建国', gender: '男', age: 42,
+    birthDate: '1982-03-20', idCard: '320105198203201234', phone: '13634567890',
+    email: 'wangjg@example.com', wechat: 'wangjianguo1982',
+    address: '江苏省南京市六合区雄州街道3号', residenceAddress: '江苏省南京市江宁区将军山花园3栋501室',
+    emergencyContact: '王芳', emergencyRelation: '妻子', emergencyPhone: '13734567890',
+    department: '生产部', team: 'B班', position: '生产主管', workArea: '全部生产区域',
+    skillLevel: '技师', skillTags: ['基地管理', '灌溉系统操作', '农机驾驶', '质检分级'],
+    workYears: 15, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2019-01-10', contractStatus: '续签', contractType: '无固定期限',
+    contractExpireDate: '2027-01-09', contractNo: 'HT-2019-001',
+    education: '高中', trainingRecords: [
+      { id: 'TR003', trainingDate: '2022-09-15', trainingType: '管理培训', trainingContent: '农业生产管理', trainingHours: 24, trainer: '王总监', certificate: '管理资格证', score: 90 }
+    ],
+    workExperiences: [
+      { id: 'WE003', company: '苏州蔬菜基地', position: '生产主管', startDate: '2012-05-01', endDate: '2018-12-31', workContent: '蔬菜生产全面管理', leavingReason: '返乡就业' }
+    ],
+    annualAssessments: [
+      { id: 'AS003', year: 2024, assessmentDate: '2024-12-15', assessor: '李明辉', rating: '优秀', score: 94, strengths: '管理能力强，团队建设出色', weaknesses: '新技术学习较慢', goals: '推进基地数字化管理' }
+    ],
+    status: '在职', remarks: '优秀管理者，班组建设标兵'
+  },
+  {
+    id: 'W004', workerId: 'EMP20240004', name: '赵文静', gender: '女', age: 30,
+    birthDate: '1994-04-18', idCard: '320105199404181234', phone: '13745678901',
+    email: 'zhaowj@example.com', wechat: 'zhaowenjing1994',
+    address: '江苏省南京市溧水区永阳街道4号', residenceAddress: '江苏省南京市溧水区财智广场6栋202室',
+    emergencyContact: '赵军', emergencyRelation: '父亲', emergencyPhone: '13645678901',
+    department: '技术部', team: '技术组', position: '质检员', workArea: '技术部全部区域',
+    skillLevel: '高级', skillTags: ['质检分级', '采摘技能', '包装发货'],
+    workYears: 5, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2020-09-01', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2026-08-31', contractNo: 'HT-2020-008',
+    education: '中专', major: '农产品质检', trainingRecords: [
+      { id: 'TR004', trainingDate: '2023-11-20', trainingType: '质检培训', trainingContent: '农产品质量检测', trainingHours: 12, trainer: '张博士', certificate: '质检员证书', score: 92 }
+    ],
+    workExperiences: [
+      { id: 'WE004', company: '浙江果蔬集团', position: '质检员', startDate: '2019-06-01', endDate: '2020-08-25', workContent: '水果质量检测与分级', leavingReason: '个人发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS004', year: 2024, assessmentDate: '2024-12-19', assessor: '李明辉', rating: '良好', score: 88, strengths: '工作细致，质检准确率高', weaknesses: '应急处理能力待加强', goals: '提升综合素质' }
+    ],
+    status: '在职', remarks: '质检工作零投诉'
+  },
+  {
+    id: 'W005', workerId: 'EMP20240005', name: '钱文涛', gender: '男', age: 25,
+    birthDate: '1999-05-25', idCard: '320105199905251234', phone: '13556789012',
+    email: 'qianwt@example.com', wechat: 'qianwentao99',
+    address: '江苏省南京市高淳区淳溪街道5号', residenceAddress: '江苏省南京市高淳区碧桂园7栋101室',
+    emergencyContact: '钱明', emergencyRelation: '父亲', emergencyPhone: '13456789012',
+    department: '生产部', team: 'A班', position: '种植工', workArea: '玻璃温室C区',
+    skillLevel: '中级', skillTags: ['浇水灌溉', '施肥作业', '打药操作'],
+    workYears: 3, wagesType: '计件', hourlyRate: 0,
+    hireDate: '2023-02-15', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2026-02-14', contractNo: 'HT-2023-003',
+    education: '初中', trainingRecords: [
+      { id: 'TR005', trainingDate: '2023-04-10', trainingType: '岗前培训', trainingContent: '农业基础知识', trainingHours: 8, trainer: '李明辉', score: 85 }
+    ],
+    workExperiences: [
+      { id: 'WE005', company: '无锡蔬菜基地', position: '种植工', startDate: '2021-03-01', endDate: '2023-01-30', workContent: '大棚蔬菜种植', leavingReason: '回家乡发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS005', year: 2024, assessmentDate: '2024-12-20', assessor: '王建国', rating: '良好', score: 85, strengths: '学习积极，上手快', weaknesses: '重体力活经验不足', goals: '提升技能到高级' }
+    ],
+    status: '在职', remarks: '年轻有潜力，重点培养对象'
+  },
+  {
+    id: 'W006', workerId: 'EMP20240006', name: '孙晓峰', gender: '女', age: 33,
+    birthDate: '1991-08-30', idCard: '320105199108301234', phone: '13467890123',
+    email: 'sunxf@example.com', wechat: 'sxiaofeng1991',
+    address: '江苏省南京市栖霞区迈皋桥街道6号', residenceAddress: '江苏省南京市栖霞区仙林花园8栋302室',
+    emergencyContact: '孙强', emergencyRelation: '兄弟', emergencyPhone: '13367890123',
+    department: '后勤部', team: '后勤组', position: '仓库管理员', workArea: '仓库区',
+    skillLevel: '中级', skillTags: ['包装发货', '物资管理'],
+    workYears: 6, wagesType: '月薪', hourlyRate: 0,
+    hireDate: '2021-11-01', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2025-10-31', contractNo: 'HT-2021-022',
+    education: '高中', trainingRecords: [
+      { id: 'TR006', trainingDate: '2022-05-15', trainingType: '仓储培训', trainingContent: '物资仓储管理', trainingHours: 8, trainer: '孙丽娜', certificate: '仓储管理员证书', score: 90 }
+    ],
+    workExperiences: [
+      { id: 'WE006', company: '南京物流公司', position: '仓库管理员', startDate: '2018-09-01', endDate: '2021-10-20', workContent: '物资出入库管理', leavingReason: '家庭原因换工作' }
+    ],
+    annualAssessments: [
+      { id: 'AS006', year: 2024, assessmentDate: '2024-12-18', assessor: '李明辉', rating: '良好', score: 87, strengths: '细心认真，账目清晰', weaknesses: '设备维护能力不足', goals: '学习叉车操作' }
+    ],
+    status: '在职', remarks: '仓库管理井井有条'
+  },
+  {
+    id: 'W007', workerId: 'EMP20240007', name: '周志强', gender: '男', age: 45,
+    birthDate: '1979-11-12', idCard: '320105197911121234', phone: '13378901234',
+    email: 'zhouzq@example.com', wechat: 'zhouzhiqiang1979',
+    address: '江苏省南京市江宁区禄口街道7号', residenceAddress: '江苏省南京市江宁区翠屏花园9栋401室',
+    emergencyContact: '周涛', emergencyRelation: '儿子', emergencyPhone: '13278901234',
+    department: '生产部', team: 'C班', position: '农机手', workArea: '全部区域',
+    skillLevel: '高级', skillTags: ['农机驾驶', '农机维修', '灌溉系统操作'],
+    workYears: 18, wagesType: '计时', hourlyRate: 35,
+    hireDate: '2018-05-20', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2026-05-19', contractNo: 'HT-2018-012',
+    education: '初中', trainingRecords: [
+      { id: 'TR007', trainingDate: '2021-08-20', trainingType: '技能培训', trainingContent: '新型农机操作', trainingHours: 16, trainer: '农机厂家', certificate: '农机驾驶证', score: 94 }
+    ],
+    workExperiences: [
+      { id: 'WE007', company: '安徽农机合作社', position: '农机手', startDate: '2006-04-01', endDate: '2018-05-10', workContent: '农业机械操作与维修', leavingReason: '来南京发展' }
+    ],
+    annualAssessments: [
+      { id: 'AS007', year: 2024, assessmentDate: '2024-12-16', assessor: '王建国', rating: '优秀', score: 93, strengths: '农机技术全面，经验丰富', weaknesses: '文化程度限制理论提升', goals: '带教更多年轻农机手' }
+    ],
+    status: '在职', remarks: '农机方面的专家，技术带头人'
+  },
+  {
+    id: 'W008', workerId: 'EMP20240008', name: '吴美丽', gender: '女', age: 27,
+    birthDate: '1997-09-05', idCard: '320105199709051234', phone: '13289012345',
+    email: 'wuml@example.com', wechat: 'wumeili1997',
+    address: '江苏省南京市雨花台区铁心桥街道8号', residenceAddress: '江苏省南京市雨花台区锦明花园11栋102室',
+    emergencyContact: '吴刚', emergencyRelation: '父亲', emergencyPhone: '13189012345',
+    department: '生产部', team: 'A班', position: '采摘工', workArea: '草莓大棚区',
+    skillLevel: '初级', skillTags: ['采摘技能', '修剪整枝'],
+    workYears: 1, wagesType: '计件', hourlyRate: 0,
+    hireDate: '2024-01-10', contractStatus: '新签', contractType: '固定期限',
+    contractExpireDate: '2025-01-09', contractNo: 'HT-2024-001',
+    education: '初中', trainingRecords: [
+      { id: 'TR008', trainingDate: '2024-01-15', trainingType: '岗前培训', trainingContent: '采摘技术基础', trainingHours: 8, trainer: '张伟民', score: 82 }
+    ],
+    workExperiences: [],
+    annualAssessments: [],
+    status: '在职', remarks: '新员工，手脚麻利'
+  },
+  {
+    id: 'W009', workerId: 'EMP20240009', name: '郑胜利', gender: '男', age: 38,
+    birthDate: '1986-12-28', idCard: '320105198612281234', phone: '13190123456',
+    email: 'zhengsl@example.com', wechat: 'zhengshengli1986',
+    address: '江苏省南京市浦口区江浦街道9号', residenceAddress: '江苏省南京市浦口区旭日学府12栋301室',
+    emergencyContact: '郑华', emergencyRelation: '妻子', emergencyPhone: '13090123456',
+    department: '生产部', team: 'B班', position: '打药工', workArea: '日光温室区域',
+    skillLevel: '高级', skillTags: ['打药操作', '病虫害防治', '施肥作业'],
+    workYears: 10, wagesType: '计时', hourlyRate: 32,
+    hireDate: '2020-03-01', contractStatus: '续签', contractType: '固定期限',
+    contractExpireDate: '2026-02-28', contractNo: 'HT-2020-005',
+    education: '初中', trainingRecords: [
+      { id: 'TR009', trainingDate: '2022-04-10', trainingType: '安全培训', trainingContent: '农药安全使用', trainingHours: 12, trainer: '刘大海', certificate: '农药操作证', score: 91 }
+    ],
+    workExperiences: [
+      { id: 'WE009', company: '山东寿光蔬菜基地', position: '打药工', startDate: '2014-06-01', endDate: '2020-02-20', workContent: '大棚打药与病虫害防治', leavingReason: '返乡就业' }
+    ],
+    annualAssessments: [
+      { id: 'AS009', year: 2024, assessmentDate: '2024-12-17', assessor: '王建国', rating: '优秀', score: 91, strengths: '打药技术熟练，效率高', weaknesses: '团队协作意识待加强', goals: '竞聘班长' }
+    ],
+    status: '在职', remarks: '打药效率第一人'
+  },
+  {
+    id: 'W010', workerId: 'EMP20240010', name: '陈小芳', gender: '女', age: 24,
+    birthDate: '2000-03-14', idCard: '320106200003141234', phone: '13001234567',
+    email: 'chenxf@example.com', wechat: 'chenxiaofang2000',
+    address: '江苏省南京市秦淮区中华路街道10号', residenceAddress: '江苏省南京市秦淮区雅居乐花园13栋202室',
+    emergencyContact: '陈伟', emergencyRelation: '父亲', emergencyPhone: '13901234567',
+    department: '生产部', team: 'C班', position: '种植工', workArea: '生菜大棚区',
+    skillLevel: '初级', skillTags: ['浇水灌溉', '采摘技能'],
+    workYears: 1, wagesType: '计件', hourlyRate: 0,
+    hireDate: '2024-03-15', contractStatus: '新签', contractType: '固定期限',
+    contractExpireDate: '2025-03-14', contractNo: 'HT-2024-005',
+    education: '初中', trainingRecords: [
+      { id: 'TR010', trainingDate: '2024-03-20', trainingType: '岗前培训', trainingContent: '叶菜种植技术', trainingHours: 8, trainer: '王建国', score: 80 }
+    ],
+    workExperiences: [],
+    annualAssessments: [],
+    status: '在职', remarks: '年轻员工，可塑性强'
+  },
+];
+
+// ============================================
+// Inspection Feedback Tasks (derived from inspectionRecords with problemId)
+// These appear in "My Tasks - Inspection Feedback Processing" tab
+// Filter condition: taskFilter === 'problem' -> sourceProblemId !== undefined
+// ============================================
+
+const INSPECTION_CATEGORY_MAP: Record<string, string> = {
+  environment: '环境调控',
+  pest: '病虫害防治',
+  equipment: '设备维修',
+  infrastructure: '基础设施维修',
+  other: '其他处理',
+};
+
+const INSPECTION_MATERIALS_MAP: Record<string, { name: string; qty: number; unit: string }[]> = {
+  environment: [{ name: '遮阳网', qty: 2, unit: '卷' }],
+  pest: [{ name: '吡虫啉', qty: 3, unit: '袋' }, { name: '多菌灵', qty: 2, unit: '袋' }],
+  equipment: [{ name: '轴承', qty: 1, unit: '个' }, { name: '润滑油', qty: 1, unit: '瓶' }],
+  infrastructure: [{ name: '管道接头', qty: 2, unit: '个' }, { name: '防水胶带', qty: 1, unit: '卷' }],
+  other: [],
+};
+
+const INSPECTION_TOOLS_MAP: Record<string, { name: string; qty: number; unit: string }[]> = {
+  environment: [{ name: '温度计', qty: 1, unit: '个' }],
+  pest: [{ name: '喷雾器', qty: 2, unit: '台' }],
+  equipment: [{ name: '扳手', qty: 1, unit: '套' }, { name: '螺丝刀', qty: 1, unit: '套' }],
+  infrastructure: [{ name: '管钳', qty: 1, unit: '把' }, { name: '扳手', qty: 1, unit: '套' }],
+  other: [],
+};
+
+const INSPECTION_SOP_MAP: Record<string, string> = {
+  environment: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度、光照等环境参数\n3. 调控措施：通风、遮阳、加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全\n- 高空作业需佩戴安全带',
+  pest: '【病虫害防治作业标准】\n1. 病虫害情况：根据巡查记录确定\n2. 药剂配比：根据药剂说明稀释\n3. 施药方式：叶面喷雾，均匀喷施叶背\n4. 安全间隔期：根据药剂要求确定\n\n【安全要求】\n- 操作人员需佩戴防护手套、口罩\n- 施药后需清洗工具和衣物',
+  equipment: '【设备维修作业标准】\n1. 设备问题：根据巡查记录确定\n2. 维修步骤：关闭电源/水源，拆卸故障部件，更换新部件，重新安装，测试运行\n\n【安全要求】\n- 操作前关闭电源/水源\n- 佩戴防护手套',
+  infrastructure: '【基础设施维修作业标准】\n1. 问题描述：根据巡查记录确定\n2. 维修步骤：关闭相关系统，切割/拆卸损坏部件，安装新部件，测试运行情况\n\n【安全要求】\n- 操作前关闭相关系统\n- 佩戴防护手套',
+  other: '【其他作业标准】\n1. 作业内容：根据巡查记录确定\n2. 作业步骤：根据实际情况确定\n3. 注意事项：根据具体情况确定\n\n【安全要求】\n- 根据实际情况佩戴防护装备',
+};
+
+const INSPECTION_TASK_STATUSES = ['pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected'];
+
+export interface InspectionFeedbackTaskData {
+  id: string;
+  recordCode: string;
+  problemId: number;
+  inspectionId: string;
+  inspectorId: string;
+  inspectorName: string;
+  greenhouseId: string;
+  greenhouseName: string;
+  cropName: string;
+  checkDate: string;
+  checkTime: string;
+  issueText: string;
+  issueSeverity: string;
+  issueCategories: string[];
+  issueStatus: string;
+  expectedCompletion: string;
+  assignee: string;
+  assigneeName: string;
+  dispatchTime: string;
+  status: string;
+  priority: string;
+  sopContent: string;
+  materials: { name: string; qty: number; unit: string }[];
+  tools: { name: string; qty: number; unit: string }[];
+  requiredFeedback: string[];
+  remarks: string;
+  // 巡查反馈处理表格额外字段
+  inspectionType: string;      // 巡查类型：farm/equipment/infrastructure/other
+  submitterId: string;        // 提交人ID
+  submitterName: string;      // 提交人名称
+  location: string;           // 位置/对象
+  checkResult: string;        // 巡查结果：正常/异常
+  photos: string[];           // 问题照片
+  feedbackStatus: string;     // 反馈状态
+  feedbackUsers: string[];     // 反馈人员
+  processProgress: string;     // 处理进度
+}
+
+// 注意：巡查反馈任务现在通过问题分派功能动态创建，不再使用静态模拟数据
+// 原 inspectionFeedbackTasks 已禁用，巡查反馈处理列表数据完全来自 dispatchProblem 创建的任务
+// 以下为演示数据，存储在代码中，清除缓存后会从代码恢复
+// 注意：InspectionFeedbackTaskData 接口中没有 sourceId 字段，但 Task 类型中有
+// 在 convertInspectionFeedbackTaskToTask 函数中会将 inspectionId 作为 sourceId 处理
+export const inspectionFeedbackTasks: InspectionFeedbackTaskData[] = [
+  // 模拟1：待接受状态 - 问题还未被执行人接受（对应 XT20260408-001 巡查记录）
+  {
+    id: 'RW-20260408-001',
+    recordCode: 'PD20260408001',
+    problemId: 2,
+    inspectionId: 'XT20260408-001',
+    inspectorId: 'U005',
+    inspectorName: '杨过',
+    greenhouseId: 'G004',
+    greenhouseName: '日光温室1号',
+    cropName: '草莓',
+    checkDate: '2026-04-08',
+    checkTime: '10:00',
+    issueText: '草莓叶片发现白粉虱成虫，数量较少但需密切关注，发现2株有虫害迹象',
+    issueSeverity: '轻微',
+    issueCategories: ['病虫害防治'],
+    issueStatus: '待处理',
+    expectedCompletion: '2026-04-11',
+    assignee: 'U005',
+    assigneeName: '杨过',
+    dispatchTime: '2026-04-08T10:30:00',
+    status: 'pending',
+    priority: 'normal',
+    sopContent: '【病虫害防治作业标准】\n1. 病虫害情况：根据巡查记录确定\n2. 药剂配比：根据药剂说明稀释\n3. 施药方式：叶面喷雾，均匀喷施叶背\n4. 安全间隔期：根据药剂要求确定\n\n【安全要求】\n- 操作人员需佩戴防护手套、口罩\n- 施药后需清洗工具和衣物',
+    materials: [{ name: '吡虫啉', qty: 3, unit: '袋' }, { name: '多菌灵', qty: 2, unit: '袋' }],
+    tools: [{ name: '喷雾器', qty: 2, unit: '台' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '需密切关注虫害发展情况',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U005',
+    submitterName: '杨过',
+    location: '日光温室1号',
+    checkResult: '异常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23ff6b9d"%3E🍓%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '待接受',
+    feedbackUsers: ['杨过'],
+    processProgress: '0%',
+  },
+  // 模拟2：处理中状态 - 执行人正在处理（对应 XT20260409-001 巡查记录）
+  {
+    id: 'RW-20260409-001',
+    recordCode: 'PD20260409001',
+    problemId: 1,
+    inspectionId: 'XT20260409-001',
+    inspectorId: 'U004',
+    inspectorName: '郭靖',
+    greenhouseId: 'G002',
+    greenhouseName: '玻璃温室B区',
+    cropName: '黄瓜',
+    checkDate: '2026-04-09',
+    checkTime: '14:30',
+    issueText: '黄瓜叶片出现轻微萎蔫，大棚内温度偏高导致，建议增加通风遮阳',
+    issueSeverity: '中等',
+    issueCategories: ['环境调控'],
+    issueStatus: '处理中',
+    expectedCompletion: '2026-04-12',
+    assignee: 'U003',
+    assigneeName: '黄蓉',
+    dispatchTime: '2026-04-09T15:00:00',
+    status: 'in_progress',
+    priority: 'normal',
+    sopContent: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度，光照等环境参数\n3. 调控措施：通风、遮阳，加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全\n- 高空作业需佩戴安全带',
+    materials: [{ name: '遮阳网', qty: 2, unit: '卷' }],
+    tools: [{ name: '温度计', qty: 1, unit: '个' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '已增加通风设备，正在进行处理',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U004',
+    submitterName: '郭靖',
+    location: '玻璃温室B区',
+    checkResult: '异常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%2300cc00"%3E🥬%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '处理中',
+    feedbackUsers: ['黄蓉'],
+    processProgress: '50%',
+  },
+  // 模拟3：被返工状态 - 第一次验收被驳回，执行人需要继续处理（对应 XT20260412-001 巡查记录）
+  {
+    id: 'RW-20260412-001',
+    recordCode: 'PD20260412001',
+    problemId: 6,
+    inspectionId: 'XT20260412-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G005',
+    greenhouseName: '日光温室2号',
+    cropName: '',
+    checkDate: '2026-04-12',
+    checkTime: '09:00',
+    issueText: '2号温室滴灌系统主供水管道接头处严重漏水，已用胶带临时封堵，需要采购新接头进行修复',
+    issueSeverity: '严重',
+    issueCategories: ['设备维修'],
+    issueStatus: '处理中',
+    expectedCompletion: '2026-04-14',
+    assignee: 'U013',
+    assigneeName: '一灯大师',
+    dispatchTime: '2026-04-12T09:30:00',
+    status: 'rejected',
+    priority: 'high',
+    sopContent: '【设备维修作业标准】\n1. 设备问题：根据巡查记录确定\n2. 维修步骤：关闭电源/水源，拆卸故障部件，更换新部件，重新安装，测试运行\n\n【安全要求】\n- 操作前关闭电源/水源\n- 佩戴防护手套',
+    materials: [{ name: '管道接头', qty: 2, unit: '个' }, { name: '防水胶带', qty: 1, unit: '卷' }],
+    tools: [{ name: '扳手', qty: 1, unit: '套' }, { name: '螺丝刀', qty: 1, unit: '套' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_before', 'photo_after'],
+    remarks: '第一次验收不通过，需要重新处理',
+    // 额外字段
+    inspectionType: 'equipment',
+    submitterId: 'U006',
+    submitterName: '黄蓉',
+    location: '日光温室2号',
+    checkResult: '异常',
+    photos: [],
+    feedbackStatus: '返工中',
+    feedbackUsers: ['一灯大师'],
+    processProgress: '30%',
+  },
+  // 模拟4：待验收状态 - 执行人已提交，等待管理者验收（对应 XT20260409-002 巡查记录）
+  {
+    id: 'RW-20260409-002',
+    recordCode: 'PD20260409002',
+    problemId: 7,
+    inspectionId: 'XT20260409-002',
+    inspectorId: 'U013',
+    inspectorName: '一灯大师',
+    greenhouseId: '',
+    greenhouseName: '园区主干道',
+    cropName: '',
+    checkDate: '2026-04-09',
+    checkTime: '16:00',
+    issueText: '园区环形通道K+200处路面破损，面积约2平方米，影响农机通行',
+    issueSeverity: '中等',
+    issueCategories: ['基础设施维修'],
+    issueStatus: '待验收',
+    expectedCompletion: '2026-04-11',
+    assignee: 'U003',
+    assigneeName: '令狐冲',
+    dispatchTime: '2026-04-09T16:30:00',
+    status: 'waiting_acceptance',
+    priority: 'normal',
+    sopContent: '【基础设施维修作业标准】\n1. 问题描述：根据巡查记录确定\n2. 维修步骤：关闭相关系统，切割/拆卸损坏部件，安装新部件，测试运行情况\n\n【安全要求】\n- 操作前关闭相关系统\n- 佩戴防护手套',
+    materials: [{ name: '管道接头', qty: 2, unit: '个' }],
+    tools: [{ name: '管钳', qty: 1, unit: '把' }, { name: '扳手', qty: 1, unit: '套' }],
+    requiredFeedback: ['workload_confirm', 'gps', 'photo_after'],
+    remarks: '已完成路面修复填充，等待验收',
+    // 额外字段
+    inspectionType: 'infrastructure',
+    submitterId: 'U013',
+    submitterName: '一灯大师',
+    location: '园区主干道',
+    checkResult: '异常',
+    photos: [],
+    feedbackStatus: '待验收',
+    feedbackUsers: ['令狐冲'],
+    processProgress: '100%',
+  },
+  // 模拟5：已完成状态 - 问题已处理完毕（对应 XT20260406-001 巡查记录）
+  {
+    id: 'RW-20260406-001',
+    recordCode: 'PD20260406001',
+    problemId: 3,
+    inspectionId: 'XT20260406-001',
+    inspectorId: 'U006',
+    inspectorName: '黄蓉',
+    greenhouseId: 'G006',
+    greenhouseName: '日光温室3号',
+    cropName: '菠菜',
+    checkDate: '2026-04-06',
+    checkTime: '15:30',
+    issueText: '菠菜出现轻微萎蔫，土壤湿度偏低，需要立即灌溉',
+    issueSeverity: '轻微',
+    issueCategories: ['环境调控'],
+    issueStatus: '已处理',
+    expectedCompletion: '2026-04-06',
+    assignee: 'U008',
+    assigneeName: '小龙女',
+    dispatchTime: '2026-04-06T16:00:00',
+    status: 'completed',
+    priority: 'normal',
+    sopContent: '【环境调控作业标准】\n1. 问题描述：根据巡查记录确定\n2. 调控目标：温度、湿度，光照等环境参数\n3. 调控措施：通风、遮阳，加湿等\n4. 注意事项：调控后持续监测环境变化\n\n【安全要求】\n- 操作设备前检查电源安全',
+    materials: [],
+    tools: [{ name: '温度计', qty: 1, unit: '个' }],
+    requiredFeedback: ['workload_confirm', 'gps'],
+    remarks: '已完成灌溉，土壤湿度已恢复正常',
+    // 额外字段
+    inspectionType: 'farm',
+    submitterId: 'U006',
+    submitterName: '黄蓉',
+    location: '日光温室3号',
+    checkResult: '正常',
+    photos: ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ffffff"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="%23006600"%3E🥬%3C/text%3E%3C/svg%3E'],
+    feedbackStatus: '已完成',
+    feedbackUsers: ['小龙女'],
+    processProgress: '100%',
+  },
+];
+
+// ========== 仓库模拟数据 ==========
+export const warehouses = [
+  { id: 'W001', name: '成品冷库A区', location: 'A区', capacity: 1000, currentStock: 650 },
+  { id: 'W002', name: '成品冷库B区', location: 'B区', capacity: 800, currentStock: 400 },
+  { id: 'W003', name: '常温库', location: 'C区', capacity: 500, currentStock: 200 },
+];
+
+// ========== 作物库存模拟数据 ==========
+// 数据分类：种源(SEED)、种苗(SEEDLING)、成品(PRODUCT)
+// 产品编码规则：大类(2位) + 类型(2位) + 品种(2位) + 流水号(3位)
+// 大类：SE=种源类, SL=种苗类, PD=果蔬产品类, FR=水果类, GR=粮食类, FL=花卉类, HB=药材类, MG=食用菌类, OT=其他类
+// 业务ID前缀：SR=种源记录, SL=育苗记录, H=采收记录
+export const produceInventory: ProduceInventory[] = [
+  // ==================== 种源库存（SEED）× 3条 ====================
+  // 种源库存 #1 - 番茄种源
+  {
+    id: 'PI001',
+    harvestRecordId: 'SR001',
+    productCode: 'SE0301001',
+    cropName: '番茄',
+    variety: '红果番茄',
+    stockType: StockType.SEED,
+    quantity: 500,
+    unit: '粒',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W005',
+    warehouseName: '种源库',
+    storageLocation: 'S区-01-01',
+    harvestDate: '2026-01-15',
+    storageDate: '2026-01-16',
+    expirationDate: '2027-01-15',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 180,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 200,
+      maxQuantityThreshold: 1000,
+      minStock: 200,
+      maxStock: 1000,
+      expirationDays: 365,
+    },
+    batchCode: 'SZ2026-001',
+    greenhouseName: '种源繁育中心',
+    plantingMode: '种子繁殖',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT001', type: 'inbound', quantity: 600, date: '2026-01-16', operator: '陆启闯', remarks: '种源入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT001', type: 'outbound', quantity: 100, date: '2026-02-20', operator: '陆启闯', remarks: '发放给育苗车间' },
+    ],
+  },
+  // 种源库存 #2 - 黄瓜种源
+  {
+    id: 'PI002',
+    harvestRecordId: 'SR002',
+    productCode: 'SE0201001',
+    cropName: '黄瓜',
+    variety: '津春四号',
+    stockType: StockType.SEED,
+    quantity: 150,
+    unit: '粒',
+    grade: 'B',
+    quality: 'good',
+    warehouseId: 'W005',
+    warehouseName: '种源库',
+    storageLocation: 'S区-01-02',
+    harvestDate: '2026-02-01',
+    storageDate: '2026-02-02',
+    expirationDate: '2027-02-01',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 180,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 100,
+      maxQuantityThreshold: 500,
+      minStock: 100,
+      maxStock: 500,
+      expirationDays: 365,
+    },
+    batchCode: 'SZ2026-002',
+    greenhouseName: '种源繁育中心',
+    plantingMode: '种子繁殖',
+    status: 'low_stock',
+    inboundRecords: [
+      { id: 'IT002', type: 'inbound', quantity: 300, date: '2026-02-02', operator: '陆启闯', remarks: '种源入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT002', type: 'outbound', quantity: 150, date: '2026-03-10', operator: '陆启闯', remarks: '发放给育苗车间' },
+    ],
+  },
+  // 种源库存 #3 - 生菜种源
+  {
+    id: 'PI003',
+    harvestRecordId: 'SR003',
+    productCode: 'SE0102001',
+    cropName: '生菜',
+    variety: '奶油生菜',
+    stockType: StockType.SEED,
+    quantity: 800,
+    unit: '粒',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W005',
+    warehouseName: '种源库',
+    storageLocation: 'S区-02-01',
+    harvestDate: '2026-02-10',
+    storageDate: '2026-02-11',
+    expirationDate: '2027-02-10',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 180,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 300,
+      maxQuantityThreshold: 1500,
+      minStock: 300,
+      maxStock: 1500,
+      expirationDays: 365,
+    },
+    batchCode: 'SZ2026-003',
+    greenhouseName: '种源繁育中心',
+    plantingMode: '种子繁殖',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT003', type: 'inbound', quantity: 1000, date: '2026-02-11', operator: '陆启闯', remarks: '种源入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT003', type: 'outbound', quantity: 200, date: '2026-03-15', operator: '陆启闯', remarks: '发放给育苗车间' },
+    ],
+  },
+
+  // ==================== 种苗库存（SEEDLING）× 3条 ====================
+  // 种苗库存 #1 - 草莓种苗
+  {
+    id: 'PI004',
+    harvestRecordId: 'SL001',
+    productCode: 'SL0101001',
+    cropName: '草莓',
+    variety: '红颜',
+    stockType: StockType.SEEDLING,
+    quantity: 2000,
+    unit: '株',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W006',
+    warehouseName: '种苗库',
+    storageLocation: 'M区-01-01',
+    harvestDate: '2026-03-01',
+    storageDate: '2026-03-02',
+    expirationDate: '2026-05-01',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 30,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 500,
+      maxQuantityThreshold: 5000,
+      minStock: 500,
+      maxStock: 5000,
+      expirationDays: 60,
+    },
+    batchCode: 'SM2026-001',
+    greenhouseName: '育苗温室A区',
+    plantingMode: '穴盘育苗',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT004', type: 'inbound', quantity: 2500, date: '2026-03-02', operator: '陆启闯', remarks: '种苗入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT004', type: 'outbound', quantity: 500, date: '2026-03-20', operator: '陆启闯', remarks: '移栽到日光温室1号' },
+    ],
+  },
+  // 种苗库存 #2 - 番茄种苗
+  {
+    id: 'PI005',
+    harvestRecordId: 'SL002',
+    productCode: 'SL0301001',
+    cropName: '番茄',
+    variety: '樱桃番茄',
+    stockType: StockType.SEEDLING,
+    quantity: 50,
+    unit: '株',
+    grade: 'C',
+    quality: 'average',
+    warehouseId: 'W006',
+    warehouseName: '种苗库',
+    storageLocation: 'M区-02-02',
+    harvestDate: '2026-02-15',
+    storageDate: '2026-02-16',
+    expirationDate: '2026-03-15',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 15,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 200,
+      maxQuantityThreshold: 2000,
+      minStock: 200,
+      maxStock: 2000,
+      expirationDays: 28,
+    },
+    batchCode: 'SM2026-002',
+    greenhouseName: '育苗温室B区',
+    plantingMode: '穴盘育苗',
+    status: 'expired',
+    inboundRecords: [
+      { id: 'IT005', type: 'inbound', quantity: 800, date: '2026-02-16', operator: '陆启闯', remarks: '种苗入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT005', type: 'outbound', quantity: 750, date: '2026-03-01', operator: '陆启闯', remarks: '移栽及淘汰' },
+    ],
+  },
+  // 种苗库存 #3 - 辣椒种苗
+  {
+    id: 'PI006',
+    harvestRecordId: 'SL003',
+    productCode: 'SL0304001',
+    cropName: '辣椒',
+    variety: '螺丝椒',
+    stockType: StockType.SEEDLING,
+    quantity: 300,
+    unit: '株',
+    grade: 'B',
+    quality: 'good',
+    warehouseId: 'W006',
+    warehouseName: '种苗库',
+    storageLocation: 'M区-03-01',
+    harvestDate: '2026-03-05',
+    storageDate: '2026-03-06',
+    expirationDate: '2026-04-20',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 25,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 500,
+      maxQuantityThreshold: 2000,
+      minStock: 500,
+      maxStock: 2000,
+      expirationDays: 45,
+    },
+    batchCode: 'SM2026-003',
+    greenhouseName: '育苗温室A区',
+    plantingMode: '穴盘育苗',
+    status: 'low_stock',
+    inboundRecords: [
+      { id: 'IT006', type: 'inbound', quantity: 600, date: '2026-03-06', operator: '陆启闯', remarks: '种苗入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT006', type: 'outbound', quantity: 300, date: '2026-03-18', operator: '陆启闯', remarks: '移栽到日光温室2号' },
+    ],
+  },
+
+  // ==================== 成品库存（PRODUCT）× 3条 ====================
+  // 成品库存 #1 - 草莓成品
+  {
+    id: 'PI007',
+    harvestRecordId: 'H001',
+    productCode: 'FR0101001',
+    cropName: '草莓',
+    variety: '红颜',
+    stockType: StockType.PRODUCT,
+    quantity: 150,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-01-03',
+    harvestDate: '2026-03-14',
+    storageDate: '2026-03-15',
+    expirationDate: '2026-04-14',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 25,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 50,
+      maxQuantityThreshold: 300,
+      minStock: 50,
+      maxStock: 300,
+      expirationDays: 30,
+    },
+    batchCode: 'FQ2026-003',
+    greenhouseName: '日光温室1号',
+    plantingMode: '土壤种植',
+    status: 'in_stock',
+    inboundRecords: [
+      { id: 'IT007', type: 'inbound', quantity: 200, date: '2026-03-15', operator: '陆启闯', remarks: '采收入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT007', type: 'outbound', quantity: 50, date: '2026-03-20', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+  // 成品库存 #2 - 黄瓜成品
+  {
+    id: 'PI008',
+    harvestRecordId: 'H002',
+    productCode: 'PD0201001',
+    cropName: '黄瓜',
+    variety: '津春四号',
+    stockType: StockType.PRODUCT,
+    quantity: 0,
+    unit: '公斤',
+    grade: 'B',
+    quality: 'good',
+    warehouseId: 'W002',
+    warehouseName: '成品冷库B区',
+    storageLocation: 'B区-01-05',
+    harvestDate: '2026-03-10',
+    storageDate: '2026-03-11',
+    expirationDate: '2026-03-25',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 10,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 100,
+      maxQuantityThreshold: 500,
+      minStock: 100,
+      maxStock: 500,
+      expirationDays: 14,
+    },
+    batchCode: 'FQ2026-008',
+    greenhouseName: '日光温室2号',
+    plantingMode: '土壤种植',
+    status: 'out_of_stock',
+    inboundRecords: [
+      { id: 'IT008', type: 'inbound', quantity: 300, date: '2026-03-11', operator: '陆启闯', remarks: '采收入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT008', type: 'outbound', quantity: 300, date: '2026-03-20', operator: '陆启闯', remarks: '全部销售出库' },
+    ],
+  },
+  // 成品库存 #3 - 生菜成品
+  {
+    id: 'PI009',
+    harvestRecordId: 'H003',
+    productCode: 'PD0102001',
+    cropName: '生菜',
+    variety: '罗马生菜',
+    stockType: StockType.PRODUCT,
+    quantity: 35,
+    unit: '公斤',
+    grade: 'A',
+    quality: 'excellent',
+    warehouseId: 'W001',
+    warehouseName: '成品冷库A区',
+    storageLocation: 'A区-02-04',
+    harvestDate: '2026-03-25',
+    storageDate: '2026-03-26',
+    expirationDate: '2026-04-02',
+    alertSettings: {
+      enableStorageTimeAlert: true,
+      storageTimeThreshold: 5,
+      enableQuantityAlert: true,
+      minQuantityThreshold: 50,
+      maxQuantityThreshold: 200,
+      minStock: 50,
+      maxStock: 200,
+      expirationDays: 7,
+    },
+    batchCode: 'FQ2026-009',
+    greenhouseName: '日光温室3号',
+    plantingMode: '水培',
+    status: 'low_stock',
+    inboundRecords: [
+      { id: 'IT009', type: 'inbound', quantity: 100, date: '2026-03-26', operator: '陆启闯', remarks: '采收入库' },
+    ],
+    outboundRecords: [
+      { id: 'OT009', type: 'outbound', quantity: 65, date: '2026-03-28', operator: '陆启闯', remarks: '销售出库' },
+    ],
+  },
+];

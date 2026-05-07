@@ -1,0 +1,100 @@
+// 批次状态颜色配置
+export const batchStatusColors: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600',       // 草稿
+  published: 'bg-blue-100 text-blue-700',    // 已发布
+  in_progress: 'bg-emerald-100 text-emerald-700', // 执行中
+  completed: 'bg-green-600 text-white',   // 已完成 - 深绿色底色白字
+  cancelled: 'bg-gray-300 text-gray-600',    // 已作废 - 深灰色
+};
+
+// 计划类型选项配置
+import { PlanType, PlanTypeLabels, PlanTypeColors } from '../../types';
+
+export { PlanType, PlanTypeLabels, PlanTypeColors };
+
+/**
+ * 计划类型下拉选项
+ */
+export const planTypeOptions = Object.entries(PlanTypeLabels).map(([value, label]) => ({
+  value: value as PlanType,
+  label,
+  color: PlanTypeColors[value as PlanType],
+}));
+
+// 批次状态文本配置
+export const batchStatusLabels: Record<string, string> = {
+  draft: '草稿',
+  published: '已发布',
+  in_progress: '执行中',
+  completed: '已完成',
+  cancelled: '已作废',
+};
+
+export const stageProgress: Record<string, number> = {
+  seedling: 15,
+  vegetative: 40,
+  flowering: 65,
+  fruiting: 85,
+  harvest: 100,
+};
+
+// 负责人列表（武侠人物）
+export const RESPONSIBLE_PERSONS = [
+  '郭靖', '黄蓉', '张无忌', '令狐冲', '萧峰', '段誉', '虚竹', '杨过'
+];
+
+// ============================================
+// 各类计划的模式配置
+// ============================================
+
+/**
+ * 育种计划（种源采购）模式
+ */
+export const SEED_BREEDING_MODES = [
+  { value: 'supplier_direct', label: '供应商直供' },
+  { value: 'bidding', label: '招标采购' },
+  { value: 'designated', label: '定点采购' },
+  { value: 'commissioned', label: '委托培育' },
+  { value: 'self_produced', label: '自繁自育' },
+];
+
+/**
+ * 育苗计划模式
+ */
+export const SEEDLING_MODES = [
+  { value: 'plug_seedling', label: '穴盘育苗' },
+  { value: 'floating', label: '漂浮育苗' },
+  { value: 'nutrient_block', label: '营养钵育苗' },
+  { value: 'grafting', label: '嫁接育苗' },
+  { value: 'tissue_culture', label: '组培育苗' },
+  { value: 'direct_seeding', label: '直播育苗' },
+];
+
+/**
+ * 种植计划模式
+ */
+export const PLANTING_MODES = [
+  { value: 'open_field', label: '露天栽培' },
+  { value: 'greenhouse', label: '大棚栽培' },
+  { value: 'mulch', label: '地膜覆盖' },
+  { value: 'intercropping', label: '套种轮作' },
+  { value: 'vertical', label: '立体栽培' },
+  { value: 'hydroponic', label: '水培' },
+  { value: 'substrate', label: '基质栽培' },
+];
+
+/**
+ * 根据计划类型获取对应的模式列表
+ */
+export const getModesByPlanType = (planType: PlanType) => {
+  switch (planType) {
+    case PlanType.SEED_BREEDING:
+      return SEED_BREEDING_MODES;
+    case PlanType.SEEDLING:
+      return SEEDLING_MODES;
+    case PlanType.PLANTING:
+      return PLANTING_MODES;
+    default:
+      return PLANTING_MODES;
+  }
+};

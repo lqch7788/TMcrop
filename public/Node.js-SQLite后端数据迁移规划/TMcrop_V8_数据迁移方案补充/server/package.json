@@ -1,0 +1,25 @@
+{
+  "name": "yuanxingtu-server",
+  "version": "1.0.0",
+  "description": "原形图后端API服务 - Node.js + SQLite",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "tsx src/db/seedData.ts"
+  },
+  "dependencies": {
+    "sql.js": "^1.10.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

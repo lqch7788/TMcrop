@@ -1,0 +1,349 @@
+ TMcrop 代码审查报告
+
+> **审查对象**: GitHub 仓库 `lqch7788/TMcrop`  
+> **分支**: `planting-management`  
+> **Commit**: `ba13cd23`  
+> **审查日期**: 2026-05-05  
+> **审查人**: AI Code Review Agent  
+
+---
+
+  📊 执行摘要
+
+  维度  评分  说明  
+|------|------|------|
+  构建兼容性  [失败] 阻断  缺少 `antd` 依赖，构建失败  
+  安全性  [失败] 高风险  0% 路由有认证，多处 SQL 注入风险  
+  代码规范  [警告] 中等  类型定义完善但 `any` 滥用严重  
+  数据流  [警告] 中等  API 接入基本完成，硬编码 URL  
+  错误处理  [警告] 中等  覆盖不全，格式不统一  
+  性能  [良好] 良好  无明显重复渲染问题  
+
+---
+
+  [致命] 致命问题（阻断上线）
+
+    F1. 构建失败 — 缺少 `antd` 依赖
+  - **文件**: `package.json`（根目录）
+  - **影响**: 前端无法打包，无法部署
+  - **详情**: 代码中大量使用 `import { ... } from 'antd'`（约 200+ 处），但 `package.json` 的 `dependencies` 中**没有 `antd`**。执行 `npm run build` 时 Vite 报错无法解析 `antd` 模块。
+  - **修复方案**:
+  ```json
+  // package.json dependencies 中添加
+  "antd": "^5.x.x",
+  "moment": "^2.x.x"   // 如果用到
+  ```
+
+    F2. 后端所有路由无任何认证/授权中间件
+  - **文件**: `server/src/routes/` 下全部 18+ 个路由文件
+  - **行号**: 全局问题，例如 `server/src/routes/approval.ts:1`、`server/src/routes/authority.ts:1`
+  - **影响**: **任何人**可以直接调用所有 API，无需任何登录凭证。包括：
+  - 删除审批记录 `DELETE /api/approvals/:id`
+  - 修改权限 `POST /api/authority/users`
+  - 修改库存 `PUT /api/inventory/:id`
+  - 查看操作日志 `GET /api/operation-logs`
+  - **修复方案**:
+  1. 创建认证中间件 `server/src/middleware/auth.ts`
+  2. 在 `server/src/routes/index.ts` 中为受保护路由挂载中间件
+  3. 开放路由（如登录、注册）显式标记为 `public`
+  ```typescript
+  // 示例
+  import { authenticate } from '../middleware/auth';
+  router.use('/approvals', authenticate, approvalRoutes);
+  ```
+
+    F3. SQL 注入风险 — `basicData.ts` ALTER TABLE 动态拼接
+  - **文件**: `server/src/routes/basicData.ts`
+  - **行号**: 第 229 行
+  - **代码**:
+  ```typescript
+  const colDef = colDef.split(' ')[0];  // 只是取列名
+  db.run(`ALTER TABLE greenhouses ADD COLUMN ${colDef}`);
+  ```
+  - **风险**: `colDef` 虽然来自硬编码数组，但 `split(' ')[0]` 提取的列名**未做 SQL 标识符转义**。如果列名包含特殊字符（如 `"`）或后续代码修改使得 `colDef` 来自用户输入，可直接注入。
+  - **修复方案**:
+  ```typescript
+  // 添加白名单校验
+  const ALLOWED_COLUMNS = ['company_id', 'company_name', 'lng', 'lat', ...];
+  if (!ALLOWED_COLUMNS.includes(colName)) {
+    throw new Error(`非法列名: ${colName}`);
+  }
+  db.run(`ALTER TABLE greenhouses ADD COLUMN "${colName}" TEXT DEFAULT ""`);
+  ```
+
+    F4. SQL 注入风险 — `approvalLinkage.ts` 动态 UPDATE 拼接
+  - **文件**: `server/src/routes/approvalLinkage.ts`
+  - **行号**: 第 362 行
+  - **代码**:
+  ```typescript
+  db.run(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, values);
+  ```
+  - **风险**: `updates` 数组（如 `'status = ?'`）由代码拼接，但如果 `extra?.resignedAt` 等键名被污染，可导致 SQL 注入。虽然当前实现中键名是硬编码的，但**模式存在风险**，应使用参数化查询的列名白名单。
+  - **修复方案**: 使用白名单映射代替动态拼接。
+
+    F5. SQL 注入风险 — `authority.ts` 动态 UPDATE 拼接
+  - **文件**: `server/src/routes/authority.ts`
+  - **行号**: 第 372 行
+  - **代码**:
+  ```typescript
+  db.run(`UPDATE users SET ${updates.join(', ')} WHERE oid = ?`, bindings);
+  ```
+  - **风险**: `updates` 数组由 `if (user.xxx)` 条件动态构建，虽然列名来自硬编码字符串，但**这种动态 SET 拼接模式是危险的**。如果有人修改了条件逻辑使得 `user.xxx` 的键名来自请求体，会直接注入。
+  - **修复方案**:
+  ```typescript
+  const ALLOWED_FIELDS: Record<string, string> = {
+    orgOid: 'org_oid',
+    aid: 'aid',
+    name: 'name',
+    passwordHash: 'password_hash',
+    email: 'email',
+    phone: 'phone',
+    status: 'status',
+  };
+  // 仅允许白名单字段参与 UPDATE
+  ```
+
+    F6. SQL 注入风险 — `inventory.ts` 动态字段 UPDATE
+  - **文件**: `server/src/routes/inventory.ts`
+  - **行号**: 第 256 行
+  - **代码**:
+  ```typescript
+  db.run(`UPDATE inventory SET ${fields}, update_time = ? WHERE id = ?`, values);
+  ```
+  - **风险**: `fields` 从前端请求体的字段列表动态拼接，这是**最高危的 SQL 注入点**。攻击者可控制 `req.body` 传入任意 SQL 片段到 `fields`。
+  - **修复方案**: 使用白名单映射：
+  ```typescript
+  const ALLOWED_UPDATE_FIELDS = ['name', 'specification', 'unit', 'stock_quantity', ...];
+  // 仅允许白名单字段参与 SET 拼接
+  ```
+
+---
+
+  [严重] 严重问题（必须修复）
+
+    S1. CORS 完全开放（允许任意来源）
+  - **文件**: `server/src/middleware/cors.ts`
+  - **影响**: 任何网站都可以调用后端 API，配合无认证，等于完全开放。
+  - **修复方案**:
+  ```typescript
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5188',
+    credentials: true,
+  }));
+  ```
+
+    S2. 硬编码后端 API URL
+  - **文件**: `src/services/apiClient.ts`
+  - **行号**: 第 3 行
+  - **代码**: `const API_BASE_URL = 'http://localhost:3001/api';`
+  - **影响**: 生产环境无法连接正确的后端地址。
+  - **修复方案**:
+  ```typescript
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  ```
+
+    S3. 数据库文件名多处硬编码
+  - **文件**: `server/src/db/index.ts`、`server/src/routes/index.ts` 等
+  - **详情**: `TMcrop_data.sqlite`、`yuanxingtu.sqlite` 等文件名在多个文件中硬编码，不利于多租户或测试环境配置。
+  - **修复方案**: 统一使用环境变量 `DATABASE_PATH`。
+
+    S4. 密码哈希直接透传，无二次校验
+  - **文件**: `server/src/routes/authority.ts`
+  - **行号**: 约第 360 行
+  - **详情**: `user.passwordHash` 直接从 `req.body` 传入数据库，前端负责哈希。如果前端被绕过，可以写入任意值。后端应接收明文密码并自行做 bcrypt 哈希。
+  - **修复方案**: 后端接收 `password` 明文字段，使用 `bcryptjs` 进行哈希存储。
+
+    S5. 没有任何输入验证/校验中间件
+  - **文件**: `server/src/routes/` 下所有路由文件
+  - **详情**: 没有使用 `zod`、`joi`、`express-validator` 等任何校验库。`req.body`、`req.query`、`req.params` 直接用于 SQL 查询和数据库操作。
+  - **修复方案**: 为所有路由添加 Zod schema 校验：
+  ```typescript
+  import { z } from 'zod';
+  const createApprovalSchema = z.object({
+    title: z.string().min(1).max(200),
+    type: z.enum([...]),
+    applicantId: z.string().uuid(),
+  });
+  ```
+
+    S6. `any` 类型严重滥用
+  - **文件**: `server/src/utils/queryHelper.ts`
+  - **行号**: 第 22 行 `function mapToCamelCase<T>(obj: any)`
+  - **详情**: `any` 类型使 TypeScript 编译时检查失效。queryHelper 中 `mapToCamelCase` 和 `queryToObjects` 都使用 `any`，丧失了类型安全。
+  - **修复方案**:
+  ```typescript
+  function mapToCamelCase<T extends Record<string, unknown>>(obj: T  null  undefined): T  null  undefined {
+    if (obj === null || obj === undefined) return obj;
+    // ...
+  }
+  ```
+
+    S7. 后端缺少基础安全中间件
+  - **文件**: `server/src/index.ts`
+  - **缺失**:
+  - `helmet` — HTTP 安全头部
+  - `express-rate-limit` — API 速率限制
+  - `express-slow-down` — 暴力破解防护
+  - **修复方案**:
+  ```bash
+  npm install helmet express-rate-limit
+  ```
+  ```typescript
+  import helmet from 'helmet';
+  import rateLimit from 'express-rate-limit';
+  app.use(helmet());
+  app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+  ```
+
+    S8. `console.log` 生产环境残留
+  - **文件**: 全局，约 260+ 处
+  - **影响**: 泄露敏感信息（如用户数据、SQL 语句、密码），降低性能。
+  - **修复方案**: 替换为结构化日志库 `winston` 或 `pino`，并区分日志级别。
+
+    S9. 审批联动处理器全是空实现（console.log）
+  - **文件**: `src/hooks/useApprovalIntegration.ts`
+  - **详情**: 全部 37 种审批联动处理器都只有 `console.log('【联动】...')`，没有任何实际业务逻辑。这意味着审批通过/拒绝后，相关业务（如库存扣减、生产计划更新）**不会执行**。
+  - **修复方案**: 逐个实现联动逻辑，或暂时标记为 `TODO` 并在上线前完成。
+
+    S10. 数据导出接口无权限校验
+  - **文件**: `server/src/routes/basicData.ts`（`exportBasicData` 函数）
+  - **影响**: 任何人可通过构造请求触发数据导出，可能导致数据泄露。
+  - **修复方案**: 在导出函数前添加权限校验中间件。
+
+---
+
+  [建议] 建议优化（可后续处理）
+
+    O1. 类型定义文件过于庞大
+  - **文件**: `src/types/approval.ts`（约 1400+ 行）、`src/types/crop.ts`（约 800+ 行）
+  - **建议**: 拆分为多个小文件，按模块组织。
+
+    O2. 前端 `tsconfig` 未启用 `strict: true`
+  - **文件**: `tsconfig.app.json`
+  - **当前**: `strict` 未设置或可能为 `false`
+  - **建议**: 启用 `strict: true` 以捕获更多类型错误。
+
+    O3. 列表查询缺少分页 LIMIT
+  - **文件**: 多个路由文件（`approval.ts`、`operationLog.ts`、`authority.ts` 等）
+  - **建议**: 所有列表 API 都应强制分页，默认 `LIMIT 50`，最大 `LIMIT 500`。
+
+    O4. `vite.config.ts` 代理配置硬编码
+  - **文件**: `vite.config.ts`
+  - **代码**:
+  ```typescript
+  proxy: {
+    '/api': {
+      target: 'http://localhost:3001',
+    }
+  }
+  ```
+  - **建议**: 使用环境变量 `VITE_API_PROXY_TARGET`。
+
+    O5. 数据库连接/操作缺少超时控制
+  - **文件**: `server/src/db/index.ts`
+  - **建议**: SQLite 大查询可能导致 Node.js 事件循环阻塞，考虑设置查询超时或使用 Worker Thread。
+
+    O6. `localStorage` 仍有少量使用（非 API fallback）
+  - **文件**: `src/pages/settings/` 等
+  - **详情**: 用于 UI 主题、侧边栏折叠状态等，这本身不是问题，但应确认没有业务数据残留。
+  - **建议**: 检查确认所有 `localStorage` 仅用于 UI 偏好设置。
+
+    O7. 前端路由缺少路由守卫
+  - **文件**: `src/App.tsx` 或路由配置
+  - **建议**: 为需要登录的页面添加路由守卫，未登录时重定向到登录页。
+
+    O8. 环境变量配置不完善
+  - **文件**: 全局
+  - **缺失**: `.env.example` 文件缺失，环境变量文档缺失。
+  - **建议**: 创建 `.env.example` 列出所有必需环境变量。
+
+    O9. API 错误响应格式不统一
+  - **文件**: 多个路由文件
+  - **详情**: 有的返回 `{ error: '...' }`，有的返回 `{ success: false, error: '...' }`，有的返回 `{ message: '...' }`。
+  - **建议**: 统一错误响应格式：
+  ```json
+  { "code": "ERROR_CODE", "message": "人类可读描述", "details": {} }
+  ```
+
+    O10. 操作日志记录不完整
+  - **文件**: `server/src/routes/operationLog.ts`
+  - **详情**: 虽然可以查询操作日志，但很多敏感操作（如权限变更、数据导出）没有自动写入操作日志。
+  - **建议**: 在关键路由中添加 `logOperation()` 调用。
+
+---
+
+  🔍 逐文件问题速查
+
+    前端文件
+
+  文件  问题  级别  
+|------|------|------|
+  `package.json`  缺少 `antd` 依赖  [致命] 致命  
+  `src/services/apiClient.ts`  硬编码 `localhost:3001`  [严重] 严重  
+  `vite.config.ts`  代理硬编码 `localhost:3001`  [建议] 建议  
+  `src/types/approval.ts`  1400+ 行，过于庞大  [建议] 建议  
+  `src/hooks/useApprovalIntegration.ts`  37 个联动全空实现  [严重] 严重  
+  `src/App.tsx`  缺少路由守卫  [建议] 建议  
+
+    后端文件
+
+  文件  问题  级别  
+|------|------|------|
+  `server/src/middleware/cors.ts`  CORS 允许所有来源  [严重] 严重  
+  `server/src/index.ts`  无认证中间件挂载  [致命] 致命  
+  `server/src/routes/index.ts`  路由聚合无认证保护  [致命] 致命  
+  `server/src/routes/basicData.ts:229`  ALTER TABLE 动态拼接  [致命] 致命  
+  `server/src/routes/approvalLinkage.ts:362`  UPDATE 动态字段拼接  [致命] 致命  
+  `server/src/routes/authority.ts:372`  UPDATE 动态字段拼接  [致命] 致命  
+  `server/src/routes/inventory.ts:256`  UPDATE 动态字段拼接  [致命] 致命  
+  `server/src/routes/authority.ts:~360`  密码直接透传  [严重] 严重  
+  `server/src/utils/queryHelper.ts:22`  `any` 类型滥用  [严重] 严重  
+  `server/src/db/index.ts`  数据库路径硬编码  [严重] 严重  
+  所有 `server/src/routes/*.ts`  无输入校验  [严重] 严重  
+  所有 `server/src/routes/*.ts`  无分页 LIMIT  [建议] 建议  
+
+    数据库 Schema
+
+  文件  问题  级别  
+|------|------|------|
+  `server/src/db/schema.ts`  整体结构清晰，字段完整  [良好] 良好  
+  `server/src/db/schema.ts`  缺少索引优化（大表）  [建议] 建议  
+
+---
+
+  📋 修复优先级建议
+
+    第一批次（上线前必须完成）
+1. F1 — 添加 `antd` 到 `package.json` 并重新安装
+2. F2 — 为所有路由添加 JWT/Session 认证中间件
+3. F3-F6 — 修复所有 SQL 注入风险点（使用白名单 + 参数化查询）
+4. S2 — 移除硬编码 API URL，改为环境变量
+
+    第二批次（上线后 1 周内）
+5. S1 — 收紧 CORS 配置
+6. S4 — 后端自行做密码哈希
+7. S5 — 添加 Zod 输入验证到所有路由
+8. S7 — 添加 Helmet 和 Rate Limit
+9. S8 — 移除生产环境 `console.log`
+
+    第三批次（持续优化）
+10. O1 — 拆分庞大类型文件
+11. O3 — 为列表查询添加强制分页
+12. O9 — 统一 API 错误响应格式
+13. O10 — 完善操作日志自动记录
+
+---
+
+  🏗️ Build 状态
+
+```
+命令: npm run build
+结果: [失败] 失败
+错误: 无法解析模块 "antd"（Node 报错: Cannot find module 'antd'）
+```
+
+**结论**: 当前代码在 `ba13cd23` commit 下**无法构建**，属于阻断级问题。修复 `antd` 依赖后需重新验证构建。
+
+---
+
+*报告生成完毕。如需进一步审查特定文件或深入某类问题，请告知。*
