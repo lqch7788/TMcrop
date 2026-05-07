@@ -2,6 +2,8 @@
 
 export type RecruitmentStatus = '待审批' | '招聘中' | '已完成' | '已取消';
 export type RecruitmentSource = '劳务公司' | '个人零工' | '学生实习' | '内部推荐';
+export type EmploymentType = '正式工' | '临时工' | '季节工' | '实习生';
+export type Priority = '紧急' | '高' | '普通' | '低';
 
 export interface RecruitmentRequest {
   id: string;
@@ -13,6 +15,10 @@ export interface RecruitmentRequest {
   requirements: string;      // 岗位要求
   source: RecruitmentSource; // 来源
   expectedDate: string;      // 期望到岗日期
+  employmentType?: EmploymentType; // 用工类型
+  salaryMin?: number;        // 最低薪资
+  salaryMax?: number;        // 最高薪资
+  priority?: Priority;       // 优先级
   status: RecruitmentStatus;
   applicantId: string;
   applicantName: string;
@@ -44,6 +50,10 @@ export interface RecruitmentFormData {
   requirements: string;
   source: RecruitmentSource;
   expectedDate: string;
+  employmentType: EmploymentType;
+  salaryMin: number;
+  salaryMax: number;
+  priority: Priority;
   remarks?: string;
 }
 

@@ -663,11 +663,35 @@ export function initializeDatabase() {
       approval_status TEXT DEFAULT 'pending',
       remarks TEXT,
       attachments TEXT,
+      items TEXT,
+      related_batch_code TEXT,
+      approval_person TEXT,
       create_by TEXT,
       create_time TEXT,
       update_time TEXT
     )
   `);
+
+  // 为采购计划表添加items列（如果不存在）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN items TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为采购计划表添加related_batch_code列（如果不存在）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN related_batch_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为采购计划表添加approval_person列（如果不存在）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN approval_person TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // 创建物料申请表
   db.run(`

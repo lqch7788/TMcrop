@@ -109,9 +109,6 @@ import AttendancePage from './pages/labor/AttendancePage';
 import PersonnelPage from './pages/labor/PersonnelPage';
 import CompensationPage from './pages/labor/CompensationPage';
 import AnalyticsPage from './pages/labor/AnalyticsPage';
-import ResignationPage from './pages/labor/ResignationPage';
-import RecruitmentPage from './pages/labor/RecruitmentPage';
-import SalaryBudgetPage from './pages/labor/SalaryBudgetPage';
 import HrApprovalDetail from './pages/hr/HrApprovalDetail';
 import { DispatchPage } from './components/dispatch';
 import SeedSource from './pages/crop/SeedSource';
@@ -248,9 +245,6 @@ function AppContent() {
         <Route path="/labor/personnel" element={<PersonnelPage />} />
         <Route path="/labor/compensation" element={<CompensationPage />} />
         <Route path="/labor/analytics" element={<AnalyticsPage />} />
-        <Route path="/labor/resignation" element={<ResignationPage />} />
-        <Route path="/labor/recruitment" element={<RecruitmentPage />} />
-        <Route path="/labor/salary-budget" element={<SalaryBudgetPage />} />
         <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
 
         {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}

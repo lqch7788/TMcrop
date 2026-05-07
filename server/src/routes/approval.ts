@@ -273,16 +273,39 @@ router.get('/', (req, res) => {
     }
     stmt.free();
 
-    // 解析 JSON 字段
+    // 解析 JSON 字段并转换 camelCase
     const result = approvals.map(a => ({
-      ...a,
+      id: a.id,
+      code: a.code,
+      type: a.type,
+      typeName: a.type_name,
+      category: a.category,
+      title: a.title,
+      description: a.description,
+      applicantId: a.applicant_id,
+      applicantName: a.applicant_name,
+      applicantDepartment: a.applicant_department,
+      applyDate: a.apply_date,
+      applyTime: a.apply_time,
+      currentStep: a.current_step,
+      totalSteps: a.total_steps,
       approvers: a.approvers ? JSON.parse(a.approvers as string) : [],
       records: a.records ? JSON.parse(a.records as string) : [],
+      status: a.status,
       businessLink: a.business_link ? JSON.parse(a.business_link as string) : null,
       attachments: a.attachments ? JSON.parse(a.attachments as string) : [],
-      materials: a.materials ? JSON.parse(a.materials as string) : [],
+      priority: a.priority,
+      dueDate: a.due_date,
+      reminderCount: a.reminder_count,
+      relatedBatchCode: a.related_batch_code,
       relatedTaskIds: a.related_task_ids ? JSON.parse(a.related_task_ids as string) : [],
       notificationSent: Boolean(a.notification_sent),
+      amount: a.amount,
+      materials: a.materials ? JSON.parse(a.materials as string) : [],
+      workflowId: a.workflow_id,
+      workflowName: a.workflow_name,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
     }));
 
     res.json({ success: true, data: result });
@@ -313,18 +336,39 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ success: false, error: '审批单不存在' });
     }
 
-    // 解析 JSON 字段
+    // 解析 JSON 字段并转换 camelCase
     const result = {
-      ...approval,
+      id: approval.id,
+      code: approval.code,
+      type: approval.type,
+      typeName: approval.type_name,
+      category: approval.category,
+      title: approval.title,
+      description: approval.description,
+      applicantId: approval.applicant_id,
+      applicantName: approval.applicant_name,
+      applicantDepartment: approval.applicant_department,
+      applyDate: approval.apply_date,
+      applyTime: approval.apply_time,
+      currentStep: approval.current_step || 1,
+      totalSteps: approval.total_steps || 1,
       approvers: approval.approvers ? JSON.parse(approval.approvers as string) : [],
       records: approval.records ? JSON.parse(approval.records as string) : [],
+      status: approval.status,
       businessLink: approval.business_link ? JSON.parse(approval.business_link as string) : null,
       attachments: approval.attachments ? JSON.parse(approval.attachments as string) : [],
-      materials: approval.materials ? JSON.parse(approval.materials as string) : [],
+      priority: approval.priority,
+      dueDate: approval.due_date || '',
+      reminderCount: approval.reminder_count,
+      relatedBatchCode: approval.related_batch_code,
       relatedTaskIds: approval.related_task_ids ? JSON.parse(approval.related_task_ids as string) : [],
       notificationSent: Boolean(approval.notification_sent),
-      dueDate: approval.due_date || '',
-      currentStep: approval.current_step || 1,
+      amount: approval.amount,
+      materials: approval.materials ? JSON.parse(approval.materials as string) : [],
+      workflowId: approval.workflow_id,
+      workflowName: approval.workflow_name,
+      createdAt: approval.created_at,
+      updatedAt: approval.updated_at,
     };
 
     // 计算是否超时
@@ -968,13 +1012,37 @@ router.get('/pending/me', (req, res) => {
 
     // 解析 JSON 字段
     const result = pendingApprovals.map(a => ({
-      ...a,
+      id: a.id,
+      code: a.code,
+      type: a.type,
+      typeName: a.type_name,
+      category: a.category,
+      title: a.title,
+      description: a.description,
+      applicantId: a.applicant_id,
+      applicantName: a.applicant_name,
+      applicantDepartment: a.applicant_department,
+      applyDate: a.apply_date,
+      applyTime: a.apply_time,
+      currentStep: a.current_step,
+      totalSteps: a.total_steps,
       approvers: a.approvers ? JSON.parse(a.approvers as string) : [],
       records: a.records ? JSON.parse(a.records as string) : [],
+      status: a.status,
       businessLink: a.business_link ? JSON.parse(a.business_link as string) : null,
       attachments: a.attachments ? JSON.parse(a.attachments as string) : [],
-      materials: a.materials ? JSON.parse(a.materials as string) : [],
+      priority: a.priority,
+      dueDate: a.due_date,
+      reminderCount: a.reminder_count,
+      relatedBatchCode: a.related_batch_code,
       relatedTaskIds: a.related_task_ids ? JSON.parse(a.related_task_ids as string) : [],
+      notificationSent: Boolean(a.notification_sent),
+      amount: a.amount,
+      materials: a.materials ? JSON.parse(a.materials as string) : [],
+      workflowId: a.workflow_id,
+      workflowName: a.workflow_name,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
     }));
 
     res.json({ success: true, data: result, total: result.length });
@@ -1009,14 +1077,39 @@ router.get('/submitted/me', (req, res) => {
     }
     stmt.free();
 
-    // 解析 JSON 字段
+    // 解析 JSON 字段并转换 camelCase
     const result = approvals.map(a => ({
-      ...a,
+      id: a.id,
+      code: a.code,
+      type: a.type,
+      typeName: a.type_name,
+      category: a.category,
+      title: a.title,
+      description: a.description,
+      applicantId: a.applicant_id,
+      applicantName: a.applicant_name,
+      applicantDepartment: a.applicant_department,
+      applyDate: a.apply_date,
+      applyTime: a.apply_time,
+      currentStep: a.current_step,
+      totalSteps: a.total_steps,
       approvers: a.approvers ? JSON.parse(a.approvers as string) : [],
       records: a.records ? JSON.parse(a.records as string) : [],
+      status: a.status,
       businessLink: a.business_link ? JSON.parse(a.business_link as string) : null,
       attachments: a.attachments ? JSON.parse(a.attachments as string) : [],
+      priority: a.priority,
+      dueDate: a.due_date,
+      reminderCount: a.reminder_count,
+      relatedBatchCode: a.related_batch_code,
+      relatedTaskIds: a.related_task_ids ? JSON.parse(a.related_task_ids as string) : [],
+      notificationSent: Boolean(a.notification_sent),
+      amount: a.amount,
       materials: a.materials ? JSON.parse(a.materials as string) : [],
+      workflowId: a.workflow_id,
+      workflowName: a.workflow_name,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
     }));
 
     res.json({ success: true, data: result, total: result.length });
@@ -1118,11 +1211,39 @@ router.get('/overdue/list', (req, res) => {
       return now > dueDate;
     });
 
-    // 解析 JSON 字段
+    // 解析 JSON 字段并转换 camelCase
     const result = overdueApprovals.map(a => ({
-      ...a,
+      id: a.id,
+      code: a.code,
+      type: a.type,
+      typeName: a.type_name,
+      category: a.category,
+      title: a.title,
+      description: a.description,
+      applicantId: a.applicant_id,
+      applicantName: a.applicant_name,
+      applicantDepartment: a.applicant_department,
+      applyDate: a.apply_date,
+      applyTime: a.apply_time,
+      currentStep: a.current_step,
+      totalSteps: a.total_steps,
       approvers: a.approvers ? JSON.parse(a.approvers as string) : [],
       records: a.records ? JSON.parse(a.records as string) : [],
+      status: a.status,
+      businessLink: a.business_link ? JSON.parse(a.business_link as string) : null,
+      attachments: a.attachments ? JSON.parse(a.attachments as string) : [],
+      priority: a.priority,
+      dueDate: a.due_date,
+      reminderCount: a.reminder_count,
+      relatedBatchCode: a.related_batch_code,
+      relatedTaskIds: a.related_task_ids ? JSON.parse(a.related_task_ids as string) : [],
+      notificationSent: Boolean(a.notification_sent),
+      amount: a.amount,
+      materials: a.materials ? JSON.parse(a.materials as string) : [],
+      workflowId: a.workflow_id,
+      workflowName: a.workflow_name,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
       isOverdue: true,
     }));
 

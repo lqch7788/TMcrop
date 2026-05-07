@@ -526,7 +526,19 @@ function seedProductionPlans() {
       remarks: '用于种源库补充',
       create_by: '李明辉',
       create_time: '2026-01-15T10:00:00.000Z',
-      update_time: '2026-04-20T14:30:00.000Z'
+      update_time: '2026-04-20T14:30:00.000Z',
+      responsible_person: '李明辉',
+      unit: 'kg',
+      publish_date: '2026-01-10',
+      batch_status: 'completed',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '北京某种子公司',
+      seedling_site_name: '',
+      seed_quantity: 50,
+      target_seedling_count: 0
     },
     {
       id: 'PP002',
@@ -547,7 +559,19 @@ function seedProductionPlans() {
       remarks: '',
       create_by: '王建国',
       create_time: '2026-02-01T09:00:00.000Z',
-      update_time: '2026-04-18T11:20:00.000Z'
+      update_time: '2026-04-18T11:20:00.000Z',
+      responsible_person: '王建国',
+      unit: 'kg',
+      publish_date: '2026-01-25',
+      batch_status: 'completed',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '山东寿光种子基地',
+      seedling_site_name: '',
+      seed_quantity: 30,
+      target_seedling_count: 0
     },
     {
       id: 'PP003',
@@ -568,7 +592,19 @@ function seedProductionPlans() {
       remarks: '',
       create_by: '李明辉',
       create_time: '2026-02-15T14:00:00.000Z',
-      update_time: '2026-04-20T09:00:00.000Z'
+      update_time: '2026-04-20T09:00:00.000Z',
+      responsible_person: '李明辉',
+      unit: 'kg',
+      publish_date: '2026-02-10',
+      batch_status: 'completed',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '上海蔬菜种子公司',
+      seedling_site_name: '',
+      seed_quantity: 40,
+      target_seedling_count: 0
     },
     {
       id: 'PP004',
@@ -589,7 +625,19 @@ function seedProductionPlans() {
       remarks: '紧急采购',
       create_by: '张伟',
       create_time: '2026-03-01T08:30:00.000Z',
-      update_time: '2026-04-15T16:00:00.000Z'
+      update_time: '2026-04-15T16:00:00.000Z',
+      responsible_person: '张伟',
+      unit: 'kg',
+      publish_date: '2026-02-25',
+      batch_status: 'completed',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '南京农科院种子站',
+      seedling_site_name: '',
+      seed_quantity: 20,
+      target_seedling_count: 0
     },
     {
       id: 'PP005',
@@ -610,7 +658,19 @@ function seedProductionPlans() {
       remarks: '自繁扦插苗',
       create_by: '王建国',
       create_time: '2026-03-10T09:00:00.000Z',
-      update_time: '2026-04-20T10:00:00.000Z'
+      update_time: '2026-04-20T10:00:00.000Z',
+      responsible_person: '王建国',
+      unit: '株',
+      publish_date: '2026-03-05',
+      batch_status: 'in_progress',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '',
+      seedling_site_name: '育苗基地A区',
+      seed_quantity: 0,
+      target_seedling_count: 100
     },
     {
       id: 'PP006',
@@ -631,7 +691,19 @@ function seedProductionPlans() {
       remarks: '委托培育嫁接苗',
       create_by: '李明辉',
       create_time: '2026-03-15T14:00:00.000Z',
-      update_time: '2026-04-18T16:00:00.000Z'
+      update_time: '2026-04-18T16:00:00.000Z',
+      responsible_person: '李明辉',
+      unit: '株',
+      publish_date: '2026-03-10',
+      batch_status: 'in_progress',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '',
+      seedling_site_name: '育苗基地B区',
+      seed_quantity: 0,
+      target_seedling_count: 50
     },
     {
       id: 'PP007',
@@ -652,7 +724,119 @@ function seedProductionPlans() {
       remarks: '省农业厅赠送组培苗',
       create_by: '张伟',
       create_time: '2026-03-20T10:00:00.000Z',
-      update_time: '2026-04-19T09:00:00.000Z'
+      update_time: '2026-04-19T09:00:00.000Z',
+      responsible_person: '张伟',
+      unit: '株',
+      publish_date: '2026-03-15',
+      batch_status: 'in_progress',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 0,
+      planting_mode: '',
+      supplier_name: '',
+      seedling_site_name: '组培中心',
+      seed_quantity: 0,
+      target_seedling_count: 200
+    },
+    // 种植计划 (ZZB)
+    {
+      id: 'PP008',
+      plan_code: 'ZZB2026-001',
+      plan_name: 'A1区散叶生菜种植计划',
+      plan_type: 'planting',
+      crop_name: '散叶生菜',
+      crop_variety: '散叶生菜',
+      greenhouse_name: 'A1区',
+      area_name: 'A1区',
+      planned_quantity: 500,
+      actual_quantity: 0,
+      planting_date: '2026-04-01',
+      expected_harvest_date: '2026-05-15',
+      actual_harvest_date: '',
+      status: 'planning',
+      priority: 'high',
+      remarks: '春季种植计划',
+      create_by: '王建国',
+      create_time: '2026-03-25T10:00:00.000Z',
+      update_time: '2026-03-25T10:00:00.000Z',
+      responsible_person: '王建国',
+      unit: 'kg',
+      publish_date: '2026-03-28',
+      batch_status: 'published',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 1000,
+      planting_mode: '水培',
+      supplier_name: '',
+      seedling_site_name: '',
+      seed_quantity: 0,
+      target_seedling_count: 0
+    },
+    {
+      id: 'PP009',
+      plan_code: 'ZZB2026-002',
+      plan_name: 'B2区黑美人西瓜种植计划',
+      plan_type: 'planting',
+      crop_name: '黑美人西瓜',
+      crop_variety: '黑美人',
+      greenhouse_name: 'B2区',
+      area_name: 'B2区',
+      planned_quantity: 2000,
+      actual_quantity: 0,
+      planting_date: '2026-03-20',
+      expected_harvest_date: '2026-06-15',
+      actual_harvest_date: '',
+      status: 'in_progress',
+      priority: 'medium',
+      remarks: '春季大棚西瓜',
+      create_by: '李明辉',
+      create_time: '2026-03-15T09:00:00.000Z',
+      update_time: '2026-03-20T08:00:00.000Z',
+      responsible_person: '李明辉',
+      unit: 'kg',
+      publish_date: '2026-03-18',
+      batch_status: 'in_progress',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 2000,
+      planting_mode: '大棚种植',
+      supplier_name: '',
+      seedling_site_name: '',
+      seed_quantity: 0,
+      target_seedling_count: 0
+    },
+    {
+      id: 'PP010',
+      plan_code: 'ZZB2026-003',
+      plan_name: 'C3区圆叶菠菜种植计划',
+      plan_type: 'planting',
+      crop_name: '圆叶菠菜',
+      crop_variety: '圆叶菠菜',
+      greenhouse_name: 'C3区',
+      area_name: 'C3区',
+      planned_quantity: 800,
+      actual_quantity: 0,
+      planting_date: '2026-04-10',
+      expected_harvest_date: '2026-05-20',
+      actual_harvest_date: '',
+      status: 'planning',
+      priority: 'low',
+      remarks: '轮作计划',
+      create_by: '张伟',
+      create_time: '2026-04-05T14:00:00.000Z',
+      update_time: '2026-04-05T14:00:00.000Z',
+      responsible_person: '张伟',
+      unit: 'kg',
+      publish_date: '2026-04-08',
+      batch_status: 'draft',
+      plan_detail: '',
+      plan_detail_file_name: '',
+      planting_area: 800,
+      planting_mode: '露地种植',
+      supplier_name: '',
+      seedling_site_name: '',
+      seed_quantity: 0,
+      target_seedling_count: 0
     }
   ];
 
@@ -662,13 +846,19 @@ function seedProductionPlans() {
       (id, plan_code, plan_name, plan_type, crop_name, crop_variety,
        greenhouse_name, area_name, planned_quantity, actual_quantity,
        planting_date, expected_harvest_date, actual_harvest_date,
-       status, priority, remarks, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       status, priority, remarks, create_by, create_time, update_time,
+       responsible_person, unit, publish_date, batch_status,
+       plan_detail, plan_detail_file_name, planting_area, planting_mode,
+       supplier_name, seedling_site_name, seed_quantity, target_seedling_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       plan.id, plan.plan_code, plan.plan_name, plan.plan_type, plan.crop_name, plan.crop_variety,
       plan.greenhouse_name || '', plan.area_name || '', plan.planned_quantity || 0, plan.actual_quantity || 0,
       plan.planting_date || '', plan.expected_harvest_date || '', plan.actual_harvest_date || '',
-      plan.status || 'planning', plan.priority || 'medium', plan.remarks || '', plan.create_by || '', plan.create_time || '', plan.update_time || ''
+      plan.status || 'planning', plan.priority || 'medium', plan.remarks || '', plan.create_by || '', plan.create_time || '', plan.update_time || '',
+      plan.responsible_person || '', plan.unit || '', plan.publish_date || '', plan.batch_status || 'draft',
+      plan.plan_detail || '', plan.plan_detail_file_name || '', plan.planting_area || 0, plan.planting_mode || '',
+      plan.supplier_name || '', plan.seedling_site_name || '', plan.seed_quantity || 0, plan.target_seedling_count || 0
     ]);
   }
 
@@ -2631,118 +2821,258 @@ function seedBusinessWorkers() {
 
 /**
  * 导入采购计划数据（完整版）
+ * 注意：字段名必须与数据库schema保持一致
  */
 function seedBusinessPurchasePlans() {
   const db = getDatabase();
 
+  // 计算总金额
+  const calculateTotal = (items: any[]) => {
+    return items.reduce((sum, item) => sum + (item.estimated_total_price || 0), 0);
+  };
+
   const purchasePlans = [
     {
-      id: 'PP001', purchase_application_code: 'PA202601001', related_batch_code: 'ZZB2026-001',
-      purchase_type: 'production', purchase_type_name: '生产物资采购',
-      applicant: '郭靖', applicant_id: 'U003', applicant_department: '生产部',
-      apply_date: '2026-01-05', required_date: '2026-02-15',
-      priority: 'high', priority_text: '高', status: 'completed', status_text: '已完成',
-      item_count: 2, remark: '春季番茄种植基肥和追肥采购', approval_person: 'Susan',
+      id: 'PP001',
+      plan_code: 'PA202601001',
+      plan_title: '生产物资采购 - PA202601001',
+      plan_type: 'production',
+      department_id: '',
+      department_name: '生产部',
+      applicant_id: 'U003',
+      applicant_name: '郭靖',
+      apply_date: '2026-01-05',
+      expected_date: '2026-02-15',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 6000 },
+        { estimated_total_price: 2550 },
+      ]),
+      priority: 'high',
+      status: 'completed',
+      approval_status: 'approved',
+      remarks: '春季番茄种植基肥和追肥采购',
+      attachments: JSON.stringify([]),
+      related_batch_code: 'ZZB2026-001',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I001', related_batch_code: 'ZZB2026-001', material_id: 'MT001', material_code: 'SP0202001', material_name: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 50, estimated_price: 120, estimated_total_price: 6000, supplier: '鑫源农资公司', location: 'A区-01-01', batch_no: 'F20240101', production_date: '2024-01-10', expiry_date: '2026-01-10', purpose: '春季基肥施用', remark: '用于番茄种植区' },
         { id: 'I002', related_batch_code: 'ZZB2026-001', material_id: 'MT002', material_code: 'SP0201001', material_name: '商品有机肥', category: '肥料与土壤改良剂-有机肥', specification: '40kg/袋', unit: '袋', quantity: 30, estimated_price: 85, estimated_total_price: 2550, supplier: '鑫源农资公司', location: 'A区-01-02', batch_no: 'U20240102', production_date: '2024-01-15', expiry_date: '2026-01-15', purpose: '追肥使用', remark: '分两次施用' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '郭靖',
+      create_time: '2026-01-05T10:00:00.000Z',
+      update_time: '2026-02-15T10:00:00.000Z'
     },
     {
-      id: 'PP002', purchase_application_code: 'PA202601002', related_batch_code: 'ZZB2026-002',
-      purchase_type: 'production', purchase_type_name: '生产物资采购',
-      applicant: '黄蓉', applicant_id: 'U003', applicant_department: '生产部',
-      apply_date: '2026-02-10', required_date: '2026-03-20',
-      priority: 'high', priority_text: '高', status: 'purchasing', status_text: '采购中',
-      item_count: 2, remark: '黄瓜种植水溶肥和尿素采购', approval_person: 'Susan',
+      id: 'PP002',
+      plan_code: 'PA202601002',
+      plan_title: '生产物资采购 - PA202601002',
+      plan_type: 'production',
+      department_id: '',
+      department_name: '生产部',
+      applicant_id: 'U003',
+      applicant_name: '黄蓉',
+      apply_date: '2026-02-10',
+      expected_date: '2026-03-20',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 6000 },
+        { estimated_total_price: 5100 },
+      ]),
+      priority: 'high',
+      status: 'in_progress',
+      approval_status: 'approved',
+      remarks: '黄瓜种植水溶肥和尿素采购',
+      attachments: JSON.stringify([]),
+      related_batch_code: 'ZZB2026-002',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I003', related_batch_code: 'ZZB2026-002', material_id: 'MT003', material_code: 'SP0203001', material_name: '水溶肥', category: '肥料与土壤改良剂-水溶肥', specification: '20-20-20 5kg/袋', unit: '袋', quantity: 40, estimated_price: 150, estimated_total_price: 6000, supplier: '丰达化肥厂', location: 'A区-02-01', batch_no: 'WF20240201', production_date: '2024-02-01', expiry_date: '2025-08-01', purpose: '叶面喷施', remark: '稀释1000倍使用' },
         { id: 'I004', related_batch_code: 'ZZB2026-002', material_id: 'MT002', material_code: 'SP0202001', material_name: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 60, estimated_price: 85, estimated_total_price: 5100, supplier: '丰达化肥厂', location: 'A区-01-02', batch_no: 'U20240201', production_date: '2024-02-05', expiry_date: '2026-02-05', purpose: '根部追肥', remark: '分三次施用' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '黄蓉',
+      create_time: '2026-02-10T10:00:00.000Z',
+      update_time: '2026-03-20T10:00:00.000Z'
     },
     {
-      id: 'PP003', purchase_application_code: 'PA202601003', related_batch_code: 'SC202604001',
-      purchase_type: 'production', purchase_type_name: '生产物资采购',
-      applicant: '杨过', applicant_id: 'U003', applicant_department: '生产部',
-      apply_date: '2026-03-01', required_date: '2026-05-01',
-      priority: 'high', priority_text: '高', status: 'pending', status_text: '待审批',
-      item_count: 2, remark: '茄子种植基地夏季肥料储备', approval_person: 'Susan',
+      id: 'PP003',
+      plan_code: 'PA202601003',
+      plan_title: '生产物资采购 - PA202601003',
+      plan_type: 'production',
+      department_id: '',
+      department_name: '生产部',
+      applicant_id: 'U003',
+      applicant_name: '杨过',
+      apply_date: '2026-03-01',
+      expected_date: '2026-05-01',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 9600 },
+        { estimated_total_price: 9000 },
+      ]),
+      priority: 'high',
+      status: 'pending',
+      approval_status: 'pending',
+      remarks: '茄子种植基地夏季肥料储备',
+      attachments: JSON.stringify([]),
+      related_batch_code: 'SC202604001',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I005', related_batch_code: 'SC202604001', material_id: 'MT001', material_code: 'SP0202001', material_name: '尿素', category: '肥料与土壤改良剂-化学肥料', specification: '46% 50kg/袋', unit: '袋', quantity: 80, estimated_price: 120, estimated_total_price: 9600, supplier: '待确定', location: '待分配', batch_no: '', production_date: '', expiry_date: '2026-05-01', purpose: '夏季基肥', remark: '用于黄瓜种植区' },
         { id: 'I006', related_batch_code: 'SC202604001', material_id: 'MT003', material_code: 'SP0203001', material_name: '水溶肥', category: '肥料与土壤改良剂-水溶肥', specification: '20-20-20 5kg/袋', unit: '袋', quantity: 60, estimated_price: 150, estimated_total_price: 9000, supplier: '待确定', location: '待分配', batch_no: '', production_date: '', expiry_date: '2025-11-01', purpose: '滴灌施用', remark: '配合滴灌系统使用' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '杨过',
+      create_time: '2026-03-01T10:00:00.000Z',
+      update_time: '2026-03-01T10:00:00.000Z'
     },
     {
-      id: 'PP004', purchase_application_code: 'PA202601004', related_batch_code: 'SC202604002',
-      purchase_type: 'production', purchase_type_name: '生产物资采购',
-      applicant: '小龙女', applicant_id: 'U004', applicant_department: '生产部',
-      apply_date: '2026-03-10', required_date: '2026-04-15',
-      priority: 'normal', priority_text: '中', status: 'pending', status_text: '待审批',
-      item_count: 2, remark: '辣椒病虫害防治农药采购', approval_person: 'Susan',
+      id: 'PP004',
+      plan_code: 'PA202601004',
+      plan_title: '生产物资采购 - PA202601004',
+      plan_type: 'production',
+      department_id: '',
+      department_name: '生产部',
+      applicant_id: 'U004',
+      applicant_name: '小龙女',
+      apply_date: '2026-03-10',
+      expected_date: '2026-04-15',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 2500 },
+        { estimated_total_price: 1440 },
+      ]),
+      priority: 'normal',
+      status: 'pending',
+      approval_status: 'pending',
+      remarks: '辣椒病虫害防治农药采购',
+      attachments: JSON.stringify([]),
+      related_batch_code: 'SC202604002',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I007', related_batch_code: 'SC202604002', material_id: 'MT004', material_code: 'SP0301001', material_name: '吡虫啉', category: '农药与植保产品-杀虫剂', specification: '10% 100g/袋', unit: '袋', quantity: 100, estimated_price: 25, estimated_total_price: 2500, supplier: '拜耳作物科学', location: 'B区-01-01', batch_no: 'P20240301', production_date: '2024-01-20', expiry_date: '2026-01-20', purpose: '防治蚜虫和白粉虱', remark: '安全间隔期7天' },
         { id: 'I008', related_batch_code: 'SC202604002', material_id: 'MT005', material_code: 'SP0302001', material_name: '多菌灵', category: '农药与植保产品-杀菌剂', specification: '50% 200g/袋', unit: '袋', quantity: 80, estimated_price: 18, estimated_total_price: 1440, supplier: '拜耳作物科学', location: 'B区-01-02', batch_no: 'P20240302', production_date: '2024-02-10', expiry_date: '2026-02-10', purpose: '防治灰霉病和早疫病', remark: '可与吡虫啉混用' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '小龙女',
+      create_time: '2026-03-10T10:00:00.000Z',
+      update_time: '2026-03-10T10:00:00.000Z'
     },
     {
-      id: 'PP005', purchase_application_code: 'PA202602001', related_batch_code: '',
-      purchase_type: 'safety', purchase_type_name: '劳保用品',
-      applicant: '张无忌', applicant_id: 'U005', applicant_department: '后勤部',
-      apply_date: '2026-03-12', required_date: '2026-03-25',
-      priority: 'low', priority_text: '低', status: 'completed', status_text: '已完成',
-      item_count: 2, remark: '第二季度生产车间劳保用品配发', approval_person: 'Susan',
+      id: 'PP005',
+      plan_code: 'PA202602001',
+      plan_title: '劳保用品采购 - PA202602001',
+      plan_type: 'safety',
+      department_id: '',
+      department_name: '后勤部',
+      applicant_id: 'U005',
+      applicant_name: '张无忌',
+      apply_date: '2026-03-12',
+      expected_date: '2026-03-25',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 1600 },
+        { estimated_total_price: 1250 },
+      ]),
+      priority: 'low',
+      status: 'completed',
+      approval_status: 'approved',
+      remarks: '第二季度生产车间劳保用品配发',
+      attachments: JSON.stringify([]),
+      related_batch_code: '',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I009', related_batch_code: '', material_id: 'SA001', material_code: 'SP0501001', material_name: '防护手套', category: '劳保用品-手部防护', specification: 'PU涂层 L码', unit: '双', quantity: 200, estimated_price: 8, estimated_total_price: 1600, supplier: '安全用品批发中心', location: '仓库C区-02-01', batch_no: '', production_date: '', expiry_date: '', purpose: '大棚作业防护', remark: '适合大棚潮湿环境使用' },
         { id: 'I010', related_batch_code: '', material_id: 'SA002', material_code: 'SP0502001', material_name: '安全帽', category: '劳保用品-头部防护', specification: 'ABS塑料 蓝色', unit: '个', quantity: 50, estimated_price: 25, estimated_total_price: 1250, supplier: '安全用品批发中心', location: '仓库C区-02-02', batch_no: '', production_date: '', expiry_date: '', purpose: '车间施工防护', remark: '符合GB标准' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '张无忌',
+      create_time: '2026-03-12T10:00:00.000Z',
+      update_time: '2026-03-25T10:00:00.000Z'
     },
     {
-      id: 'PP006', purchase_application_code: 'PA202602002', related_batch_code: '',
-      purchase_type: 'material', purchase_type_name: '通用物资',
-      applicant: '令狐冲', applicant_id: 'U007', applicant_department: '办公室',
-      apply_date: '2026-04-02', required_date: '2026-04-10',
-      priority: 'normal', priority_text: '中', status: 'completed', status_text: '已完成',
-      item_count: 3, remark: '办公区域日常用品采购', approval_person: 'Susan',
+      id: 'PP006',
+      plan_code: 'PA202602002',
+      plan_title: '通用物资采购 - PA202602002',
+      plan_type: 'material',
+      department_id: '',
+      department_name: '办公室',
+      applicant_id: 'U007',
+      applicant_name: '令狐冲',
+      apply_date: '2026-04-02',
+      expected_date: '2026-04-10',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 1100 },
+        { estimated_total_price: 300 },
+        { estimated_total_price: 300 },
+      ]),
+      priority: 'normal',
+      status: 'completed',
+      approval_status: 'approved',
+      remarks: '办公区域日常用品采购',
+      attachments: JSON.stringify([]),
+      related_batch_code: '',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I011', related_batch_code: '', material_id: 'OF001', material_code: 'SP0601001', material_name: '打印纸', category: '办公用品-纸张', specification: 'A4 70g 500张/包', unit: '包', quantity: 50, estimated_price: 22, estimated_total_price: 1100, supplier: '得力文具供应商', location: '办公室仓库', batch_no: '', production_date: '', expiry_date: '', purpose: '日常办公使用', remark: '' },
         { id: 'I012', related_batch_code: '', material_id: 'OF002', material_code: 'SP0602001', material_name: '中性笔', category: '办公用品-书写工具', specification: '黑色 0.5mm', unit: '支', quantity: 200, estimated_price: 1.5, estimated_total_price: 300, supplier: '得力文具供应商', location: '办公室仓库', batch_no: '', production_date: '', expiry_date: '', purpose: '日常办公使用', remark: '每季度配发一次' },
         { id: 'I013', related_batch_code: '', material_id: 'OF003', material_code: 'SP0603001', material_name: '垃圾桶', category: '办公用品-清洁用品', specification: '塑料 10L', unit: '个', quantity: 20, estimated_price: 15, estimated_total_price: 300, supplier: '得力文具供应商', location: '办公室各楼层', batch_no: '', production_date: '', expiry_date: '', purpose: '办公室日常清洁', remark: '按楼层配置' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '令狐冲',
+      create_time: '2026-04-02T10:00:00.000Z',
+      update_time: '2026-04-10T10:00:00.000Z'
     },
     {
-      id: 'PP007', purchase_application_code: 'PA202603001', related_batch_code: 'SC202603001',
-      purchase_type: 'equipment', purchase_type_name: '设备采购',
-      applicant: '任我行', applicant_id: 'U006', applicant_department: '技术部',
-      apply_date: '2026-04-02', required_date: '2026-05-15',
-      priority: 'urgent', priority_text: '紧急', status: 'pending', status_text: '待审批',
-      item_count: 2, remark: '番茄基地环境监测设备升级', approval_person: 'Susan',
+      id: 'PP007',
+      plan_code: 'PA202603001',
+      plan_title: '设备采购 - PA202603001',
+      plan_type: 'equipment',
+      department_id: '',
+      department_name: '技术部',
+      applicant_id: 'U006',
+      applicant_name: '任我行',
+      apply_date: '2026-04-02',
+      expected_date: '2026-05-15',
+      supplier_id: '',
+      supplier_name: '',
+      total_amount: calculateTotal([
+        { estimated_total_price: 11600 },
+        { estimated_total_price: 4800 },
+      ]),
+      priority: 'urgent',
+      status: 'pending',
+      approval_status: 'pending',
+      remarks: '番茄基地环境监测设备升级',
+      attachments: JSON.stringify([]),
+      related_batch_code: 'SC202603001',
+      approval_person: 'Susan',
       items: JSON.stringify([
         { id: 'I014', related_batch_code: 'SC202603001', material_id: 'IT001', material_code: 'IT0101001', material_name: '土壤温湿度传感器', category: '监测设备-传感器', specification: 'RS485 Modbus', unit: '个', quantity: 20, estimated_price: 580, estimated_total_price: 11600, supplier: '深圳传感科技', location: 'D区-01-01', batch_no: 'EQ20240401', production_date: '2024-03-15', expiry_date: '', purpose: '测量土壤温湿度和EC值', remark: '精度±0.5%' },
         { id: 'I015', related_batch_code: 'SC202603001', material_id: 'IT002', material_code: 'IT0102001', material_name: '温湿度记录仪', category: '监测设备-记录仪', specification: 'TH-200/台', unit: '台', quantity: 15, estimated_price: 320, estimated_total_price: 4800, supplier: '深圳传感科技', location: 'D区-01-02', batch_no: 'EQ20240402', production_date: '2024-03-20', expiry_date: '', purpose: '记录温室环境数据', remark: '数据可导出' },
       ]),
-      create_time: new Date().toISOString(), update_time: new Date().toISOString()
+      create_by: '任我行',
+      create_time: '2026-04-02T10:00:00.000Z',
+      update_time: '2026-04-02T10:00:00.000Z'
     },
   ];
 
   for (const plan of purchasePlans) {
     db.run(`
       INSERT OR REPLACE INTO purchase_plans
-      (id, purchase_application_code, related_batch_code, purchase_type, purchase_type_name,
-       applicant, applicant_id, applicant_department, apply_date, required_date,
-       priority, priority_text, status, status_text, item_count, remark, approval_person, items,
-       create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, plan_code, plan_title, plan_type, department_id, department_name,
+       applicant_id, applicant_name, apply_date, expected_date,
+       supplier_id, supplier_name, total_amount, priority, status, approval_status,
+       remarks, attachments, items, related_batch_code, approval_person, create_by, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      plan.id, plan.purchase_application_code, plan.related_batch_code, plan.purchase_type, plan.purchase_type_name,
-      plan.applicant, plan.applicant_id, plan.applicant_department, plan.apply_date, plan.required_date,
-      plan.priority, plan.priority_text, plan.status, plan.status_text, plan.item_count, plan.remark,
-      plan.approval_person, plan.items, plan.create_time, plan.update_time
+      plan.id, plan.plan_code, plan.plan_title, plan.plan_type, plan.department_id, plan.department_name,
+      plan.applicant_id, plan.applicant_name, plan.apply_date, plan.expected_date,
+      plan.supplier_id, plan.supplier_name, plan.total_amount, plan.priority, plan.status, plan.approval_status,
+      plan.remarks, plan.attachments, plan.items, plan.related_batch_code, plan.approval_person, plan.create_by, plan.create_time, plan.update_time
     ]);
   }
 
@@ -2949,7 +3279,7 @@ export function seedAllBusinessData() {
   // 以下种子数据函数引用了 schema 中不存在的表或列，临时注释掉
   // seedBusinessCropBatches(); // crop_batches 表不存在
   // seedBusinessWorkers(); // workers 表不存在
-  // seedBusinessPurchasePlans(); // purchase_plans 表列不匹配
+  seedBusinessPurchasePlans(); // purchase_plans 表列已匹配
   // seedBusinessMaterialRequests(); // material_requests 表列不匹配
   // seedBusinessProduceInventory(); // produce_inventory 表不存在
   // seedBusinessHarvestRecords(); // harvest_records 表列不匹配

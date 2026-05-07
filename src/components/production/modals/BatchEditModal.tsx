@@ -365,7 +365,7 @@ export function BatchEditModal({
               onClick={onPublish}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
             >
-              发布
+              提交
             </button>
           </div>
         </div>

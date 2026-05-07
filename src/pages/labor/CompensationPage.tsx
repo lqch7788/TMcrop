@@ -1,19 +1,21 @@
 /**
  * 薪酬管理聚合页面
- * 包含：工资管理、计件工资、工资预算
+ * 包含：工资管理、计件工资、成本预测、预算申请
  */
 
 import { useState } from 'react';
-import { Banknote, Package, Calculator } from 'lucide-react';
+import { Banknote, Package, Calculator, FileSpreadsheet } from 'lucide-react';
 import { TabHeader } from '../../components/common/TabHeader';
 import { SalaryPage } from '../../components/labor/salary/SalaryPage';
 import { PieceworkPage } from '../../components/labor/piecework/PieceworkPage';
 import { BudgetPage } from '../../components/labor/budget/BudgetPage';
+import SalaryBudgetPage from '../../pages/labor/SalaryBudgetPage';
 
 const TABS = [
   { key: 'salary', label: '工资管理', icon: Banknote },
   { key: 'piecework', label: '计件工资', icon: Package },
-  { key: 'budget', label: '工资预算', icon: Calculator },
+  { key: 'cost-forecast', label: '成本预测', icon: Calculator },
+  { key: 'budget-apply', label: '预算申请', icon: FileSpreadsheet },
 ];
 
 export default function CompensationPage() {
@@ -34,7 +36,8 @@ export default function CompensationPage() {
       <div>
         {activeTab === 'salary' && <SalaryPage />}
         {activeTab === 'piecework' && <PieceworkPage />}
-        {activeTab === 'budget' && <BudgetPage />}
+        {activeTab === 'cost-forecast' && <BudgetPage />}
+        {activeTab === 'budget-apply' && <SalaryBudgetPage />}
       </div>
     </div>
   );
