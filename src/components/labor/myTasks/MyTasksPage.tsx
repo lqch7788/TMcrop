@@ -4,102 +4,32 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, FileText, CheckCircle, XCircle, Play, Upload, Eye, Clock, AlertTriangle, MapPin, User } from 'lucide-react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { Modal } from '../../ui/Modal';
-import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
-import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
-import { FeedbackInput, FEEDBACK_OPTIONS } from '../../common/FeedbackInput';
-import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
 // 导入统一任务管理 Hook（数据闭环核心）
 import { useTasks } from '../../../hooks/useTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 
-// 导入任务配置（用于详情弹窗的流转记录显示）
-import { TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../config/taskConfig';
+// 导入子组件
+import { TaskFilterTabs } from './TaskFilterTabs';
+import { TaskPagination } from './TaskPagination';
+import { TempTaskTableRow } from './TempTaskTableRow';
+import { ProblemTaskTableRow } from './ProblemTaskTableRow';
+import { ProductionTaskTableRow } from './ProductionTaskTableRow';
+import { TaskDetailModal } from './TaskDetailModal';
+import { TaskFeedbackModal } from './TaskFeedbackModal';
+import { TaskRejectModal } from './TaskRejectModal';
+import { TaskSopModal } from './TaskSopModal';
 
-/**
- * 任务扩展类型
- * 统一任务管理中的任务可能包含 TaskDispatchTask 中没有的额外字段
- * 使用索引签名允许访问任何额外属性
- */
-interface TaskWithExtras {
-  id: string;
-  taskCode?: string;
-  title?: string;
-  types?: string[];
-  typeName?: string;
-  typeLabel?: string;
-  field?: string;
-  greenhouseName?: string;
-  crop?: string;
-  cropName?: string;
-  cropRemarks?: string;
-  assignee?: string;
-  assigneeName?: string;
-  assigneeId?: string;
-  planStart?: string;
-  planEnd?: string;
-  progress?: number;
-  status?: string;
-  priority?: string;
-  estimatedDays?: number;
-  estimatedHours?: number;
-  dueDate?: string;
-  startDate?: string;
-  requiredFeedback?: string[];
-  feedbackRequirements?: string[];
-  remarks?: string;
-  typeConfig?: Record<string, unknown>;
-  sopContent?: string;
-  materials?: Array<{ name: string; qty: number; unit: string }>;
-  tools?: Array<{ name: string; qty: number; unit: string }>;
-  // 临时任务特有字段
-  sourceType?: string;
-  sourceProblemId?: string;
-  workLocation?: string;
-  urgency?: string;
-  tempTaskType?: string;
-  workerCount?: number;
-  totalEstimatedHours?: number;
-  // 巡查反馈特有字段
-  sourceId?: string;
-  recordCode?: string;
-  inspectionType?: string;
-  submitterId?: string;
-  submitterName?: string;
-  assignerName?: string;
-  location?: string;
-  checkDate?: string;
-  checkTime?: string;
-  checkResult?: string;
-  issueCategories?: string[];
-  issueSeverity?: string;
-  issueText?: string;
-  photos?: string[];
-  feedbackStatus?: string;
-  feedbackUsers?: Array<{ id: string; name: string }>;
-  processProgress?: number;
-  inspectorId?: string;
-  inspectorName?: string;
-  createdAt?: string;
-  [key: string]: unknown;  // 允许访问任何额外属性
-}
+// 导入类型和常量
+import { TaskFilterType, FeedbackFormData, TaskWithExtras } from './types';
+import { formatDateShort, formatExpectedEndDate, STATUS_MAP } from './constants';
 
-/**
- * 任务物资类型
- */
-interface TaskMaterial {
-  name: string;
-  qty: number;
-  unit: string;
-  code?: string;
-  [key: string]: unknown;
-}
+// 导入 Task 类型（从 useTasks）
+import { Task } from '../../../hooks/useTasks';
 
 // 任务类型定义
 const taskTypes = [
@@ -114,29 +44,6 @@ const taskTypes = [
   { value: 'other', label: '其他', color: 'bg-gray-500' },
 ];
 
-// 状态映射（扩展支持问题处理流程）
-const statusMap: Record<string, { bg: string; color: string; label: string }> = {
-  draft: { bg: 'bg-gray-100', color: 'text-gray-600', label: '草稿' },
-  pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待接受' },
-  accepted: { bg: 'bg-blue-100', color: 'text-blue-600', label: '已接受' },
-  in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
-  completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
-  waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
-  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已拒绝' },
-  failed: { bg: 'bg-purple-100', color: 'text-purple-600', label: '任务失败' },
-  cancelled: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已取消' },
-  abandoned: { bg: 'bg-red-50', color: 'text-red-400', label: '已放弃' },
-};
-
-// 优先级映射
-const priorityMap: Record<string, { color: string; label: string }> = {
-  urgent: { color: 'text-red-500', label: '紧急' },
-  high: { color: 'text-orange-500', label: '高' },
-  medium: { color: 'text-yellow-500', label: '中' },
-  low: { color: 'text-green-500', label: '低' },
-  normal: { color: 'text-gray-500', label: '普通' },
-};
-
 // 获取任务类型颜色
 const getTypeColor = (type: string): string => {
   const taskType = taskTypes.find(t => t.value === type);
@@ -149,80 +56,10 @@ const getTypeLabel = (type: string): string => {
   return taskType?.label || type;
 };
 
-// 格式化日期为短格式（4月19日 8:00）
-function formatDateShort(dateStr: string) {
-  if (!dateStr) return '-';
-  // 尝试解析日期，支持多种格式
-  let date: Date;
-  try {
-    date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
-      date = new Date(dateStr.replace(' ', 'T'));
-    }
-    if (isNaN(date.getTime())) {
-      return '-';
-    }
-  } catch {
-    return '-';
-  }
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hours = date.getHours().toString().padStart(2, '0');
-  return `${month}月${day}日 ${hours}:00`;
-}
-
-// 计算预计结束日期
-function formatExpectedEndDate(startDateStr: string, estimatedDays: number, estimatedHours: number = 0) {
-  if (!startDateStr) return '-';
-  // 如果既没有天数也没有小时，返回 '-'
-  if (!estimatedDays && !estimatedHours) return '-';
-
-  // 尝试解析日期
-  let startDate: Date;
-  try {
-    startDate = new Date(startDateStr);
-    if (isNaN(startDate.getTime())) {
-      startDate = new Date(startDateStr.replace(' ', 'T'));
-    }
-    if (isNaN(startDate.getTime())) {
-      return '-';
-    }
-  } catch {
-    return '-';
-  }
-
-  // 如果只有小时数（没有天数），按半天计算（4小时以内算半天下班12:00，4小时以上算整天下班17:00）
-  if (!estimatedDays && estimatedHours) {
-    const endDate = new Date(startDate);
-    if (estimatedHours <= 4) {
-      // 半天，12:00结束
-      endDate.setHours(12, 0, 0, 0);
-    } else {
-      // 整天，17:00结束
-      endDate.setHours(17, 0, 0, 0);
-    }
-    const month = endDate.getMonth() + 1;
-    const day = endDate.getDate();
-    return `${month}月${day}日 ${estimatedHours <= 4 ? '12:00' : '17:00'}`;
-  }
-
-  // 结束日期 = 开始日期 + (预估天数 - 1) 天
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + Math.floor(estimatedDays) - 1);
-
-  // 如果有0.5天，结束时间是12:00，否则是17:00
-  const hasHalfDay = estimatedDays % 1 !== 0;
-  endDate.setHours(hasHalfDay ? 12 : 17, 0, 0, 0);
-
-  const month = endDate.getMonth() + 1;
-  const day = endDate.getDate();
-  return `${month}月${day}日 ${hasHalfDay ? '12:00' : '17:00'}`;
-}
-
 export function MyTasksPage() {
   // 使用统一任务管理 Hook（数据闭环核心）
-  const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, operationRecords, getTaskRecordsByTaskId } = useTasks();
-  const { addTaskRecord, records: operationRecordsList, getRecordsByTaskId } = useOperationRecords();
+  const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, getTaskRecordsByTaskId } = useTasks();
+  const { addTaskRecord, getRecordsByTaskId } = useOperationRecords();
 
   // 强制刷新key，用于刷新任务列表状态
   const [refreshKey, setRefreshKey] = useState(0);
@@ -300,7 +137,7 @@ export function MyTasksPage() {
     : localTasks.length > 0 ? localTasks : taskDispatchTasks;
 
   // 任务筛选状态：全部 / 问题处理 / 生产任务 / 临时任务
-  const [taskFilter, setTaskFilter] = useState<'all' | 'problem' | 'production' | 'temp'>('all');
+  const [taskFilter, setTaskFilter] = useState<TaskFilterType>('all');
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -346,7 +183,7 @@ export function MyTasksPage() {
               const date = new Date(timeStr);
               return isNaN(date.getTime()) ? 0 : date.getTime();
             };
-            return getTime(b) - getTime(a);
+            return getTime(b as TaskWithExtras) - getTime(a as TaskWithExtras);
           });
       default:
         // 全部任务也按创建时间倒序
@@ -381,8 +218,7 @@ export function MyTasksPage() {
   };
 
   // 使用 useProblemDispatch 获取流转方法
-  const { acceptProblem, rejectProblem, submitProblemFeedback, addProgressRecord, approveProblemCompletion, getProblemFlowRecords } = useProblemDispatch();
-  const { problems } = usePersistentProblems();
+  const { acceptProblem, rejectProblem, submitProblemFeedback, addProgressRecord, getProblemFlowRecords } = useProblemDispatch();
 
   // 反馈表单状态
   const [feedbackModal, setFeedbackModal] = useState<{
@@ -390,21 +226,20 @@ export function MyTasksPage() {
     task: TaskDispatchTask | null;
   }>({ isOpen: false, task: null });
 
-  const [feedbackForm, setFeedbackForm] = useState({
+  const [feedbackForm, setFeedbackForm] = useState<FeedbackFormData>({
     resultStatus: '' as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
     resultText: '',
     progressText: '',
     workloadDays: '',
     workloadHours: '',
-    workloadConfirm: null as { days: number; hours: number; workers: number } | null,
-    photosBefore: [] as string[],
-    photosAfter: [] as string[],
-    gpsLocation: null as { lat: number; lng: number } | null,
+    workloadConfirm: null,
+    photosBefore: [],
+    photosAfter: [],
+    gpsLocation: null,
     materialCode: '',
     voiceNote: '',
-    // 新增：无法继续相关字段
-    cannotContinue: false,     // 是否无法继续
-    cannotContinueReason: '',   // 无法继续的原因
+    cannotContinue: false,
+    cannotContinueReason: '',
   });
 
   // 拒绝原因弹窗
@@ -506,7 +341,6 @@ export function MyTasksPage() {
       gpsLocation: null,
       materialCode: '',
       voiceNote: '',
-      // 新增：无法继续相关字段
       cannotContinue: false,
       cannotContinueReason: '',
     });
@@ -634,8 +468,6 @@ export function MyTasksPage() {
             feedbackData,
           });
         }
-      } else {
-        // task.sourceProblemId 为空，跳过问题流转更新
       }
 
       // ========== 数据闭环：同步到 useTasks ==========
@@ -815,88 +647,20 @@ export function MyTasksPage() {
     }
   };
 
-  // 渲染任务类型单元格
-  const renderTypeCell = (task: TaskDispatchTask) => {
-    const types = task.types || [];
-    return (
-      <div className="flex flex-wrap gap-1 items-center">
-        {types.slice(0, 2).map((typeValue: string, idx: number) => {
-          const typeLabel = getTypeLabel(typeValue);
-          return typeLabel === '其他' ? (
-            <span key={idx} className="text-orange-500 text-xs">其他</span>
-          ) : (
-            <span key={idx} className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(typeValue)}`}>
-              {typeLabel}
-            </span>
-          );
-        })}
-        {types.length > 2 && (
-          <span className="text-xs text-gray-500">+{types.length - 2}</span>
-        )}
-      </div>
-    );
+  // Tab切换时重置页码
+  const handleFilterChange = (filter: TaskFilterType) => {
+    setTaskFilter(filter);
+    setCurrentPage(1);
   };
 
   return (
     <div className="space-y-4">
-
       {/* 任务类型标签页筛选 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => { setTaskFilter('all'); setCurrentPage(1); }}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-              taskFilter === 'all'
-                ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            全部任务
-            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
-              {taskCounts.all}
-            </span>
-          </button>
-          <button
-            onClick={() => { setTaskFilter('problem'); setCurrentPage(1); }}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-              taskFilter === 'problem'
-                ? 'border-orange-500 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            巡查反馈处理
-            <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
-              {taskCounts.problem}
-            </span>
-          </button>
-          <button
-            onClick={() => { setTaskFilter('production'); setCurrentPage(1); }}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-              taskFilter === 'production'
-                ? 'border-blue-500 text-blue-600 bg-blue-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            农事任务处理
-            <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
-              {taskCounts.production}
-            </span>
-          </button>
-          <button
-            onClick={() => { setTaskFilter('temp'); setCurrentPage(1); }}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-              taskFilter === 'temp'
-                ? 'border-orange-500 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            临时任务处理
-            <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
-              {taskCounts.temp}
-            </span>
-          </button>
-        </div>
-      </div>
+      <TaskFilterTabs
+        taskFilter={taskFilter}
+        taskCounts={taskCounts}
+        onFilterChange={handleFilterChange}
+      />
 
       {/* 任务列表 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -966,502 +730,40 @@ export function MyTasksPage() {
                 </tr>
               ) : (
                 paginatedTasks.map((task) => {
-                  const types = task.types || [];
-                  const isTempTask = (task as TaskWithExtras).sourceType === 'tempTask';
-                  const totalHours = ((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) * ((task as TaskWithExtras).workerCount || 1);
+                  const taskWithExtras = task as TaskWithExtras;
+                  const isTempTask = taskWithExtras.sourceType === 'tempTask';
                   return (
-                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && (task as TaskWithExtras).urgency === 'critical' ? 'bg-red-50' : ''}`}>
+                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && taskWithExtras.urgency === 'critical' ? 'bg-red-50' : ''}`}>
                       {taskFilter === 'temp' ? (
-                        <>
-                          <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                            <button
-                              onClick={() => openDetailModal(task)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                              title="点击查看详情"
-                            >
-                              {task.taskCode}
-                            </button>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              {isTempTask && (task as TaskWithExtras).urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                              <span className="font-medium text-gray-900 text-sm">{task.title}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{(task as TaskWithExtras).typeName || '-'}</td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              {task.field || '-'}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              {task.assigneeName || '-'}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              {(task as TaskWithExtras).startDate ? formatDateShort((task as TaskWithExtras).startDate) : '-'}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1 text-sm text-emerald-600">
-                              <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                              {formatExpectedEndDate((task as TaskWithExtras).startDate, (task as TaskWithExtras).estimatedDays, (task as TaskWithExtras).estimatedHours)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-center text-sm text-gray-600">{(task as TaskWithExtras).workerCount || 1}人</td>
-                          <td className="px-3 py-3 text-center text-sm font-medium text-emerald-600">{totalHours}h</td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
-                              {statusMap[task.status]?.label || task.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[(task as TaskWithExtras).urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
-                              {TEMP_TASK_URGENCY_CONFIG[(task as TaskWithExtras).urgency]?.label || (task as TaskWithExtras).urgency || '-'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {/* 超时状态由执行人端判断，暂不显示 */}
-                            <span className="text-xs text-gray-400">-</span>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {task.status === 'pending' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleAccept(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="接受任务"
-                                >
-                                  <CheckCircle className="w-3 h-3" />
-                                  接受
-                                </button>
-                                <button
-                                  onClick={() => openRejectModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="拒绝任务"
-                                >
-                                  <XCircle className="w-3 h-3" />
-                                  拒绝
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'accepted' || task.status === 'in_progress') && (
-                              <button
-                                onClick={() => openFeedbackModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
-                                title="点击提交进度"
-                              >
-                                <Edit className="w-4 h-4" />
-                                提交进度
-                              </button>
-                            )}
-                            {task.status === 'rejected' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleContinueExecution(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击继续执行"
-                                >
-                                  <Play className="w-3 h-3" />
-                                  继续执行
-                                </button>
-                                <button
-                                  onClick={() => openDetailModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击查看详情"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  查看
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
-                            )}
-                          </td>
-                        </>
+                        <TempTaskTableRow
+                          task={task}
+                          onAccept={handleAccept}
+                          onReject={openRejectModal}
+                          onContinueExecution={handleContinueExecution}
+                          onOpenFeedbackModal={openFeedbackModal}
+                          onOpenDetailModal={openDetailModal}
+                        />
                       ) : taskFilter === 'problem' ? (
-                        <>
-                          {/* 巡查编号 - 可点击查看详情 */}
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            <button
-                              onClick={() => openDetailModal(task)}
-                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              {(task as TaskWithExtras).sourceId || (task as TaskWithExtras).recordCode || task.taskCode || '-'}
-                            </button>
-                          </td>
-                          {/* 巡查类型 */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const type = (task as TaskWithExtras).inspectionType || 'farm';
-                              const typeMap: Record<string, { label: string; className: string }> = {
-                                '农场巡查': { label: '种植', className: 'bg-emerald-100 text-emerald-700' },
-                                '设备巡查': { label: '设备', className: 'bg-blue-100 text-blue-700' },
-                                '设施巡查': { label: '设施', className: 'bg-amber-100 text-amber-700' },
-                                '其他巡查': { label: '其他', className: 'bg-purple-100 text-purple-700' },
-                                'farm': { label: '种植', className: 'bg-emerald-100 text-emerald-700' },
-                                'equipment': { label: '设备', className: 'bg-blue-100 text-blue-700' },
-                                'infrastructure': { label: '设施', className: 'bg-amber-100 text-amber-700' },
-                                'other': { label: '其他', className: 'bg-purple-100 text-purple-700' },
-                              };
-                              const config = typeMap[type] || { label: '种植', className: 'bg-emerald-100 text-emerald-700' };
-                              return <span className={`px-2 py-1 text-xs rounded-full ${config.className}`}>{config.label}</span>;
-                            })()}
-                          </td>
-                          {/* 提交人 */}
-                          <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                            <span className="font-medium text-gray-900 truncate block" title={(task as TaskWithExtras).submitterName || task.assignerName || '-'}>
-                              {(task as TaskWithExtras).submitterName || task.assignerName || '-'}
-                            </span>
-                          </td>
-                          {/* 位置/对象 */}
-                          <td className="px-3 py-3 text-sm text-gray-600 min-w-[10em] max-w-[15em]">
-                            <div className="flex items-center gap-1 overflow-hidden">
-                              <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                              <span className="text-gray-900 truncate block" title={(task as TaskWithExtras).location || task.greenhouseName || task.field || '-'}>
-                                {(task as TaskWithExtras).location || task.greenhouseName || task.field || '-'}
-                              </span>
-                            </div>
-                          </td>
-                          {/* 巡查日期 */}
-                          <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">
-                            {(task as TaskWithExtras).checkDate || task.planStart?.split(' ')[0] || '-'}
-                          </td>
-                          {/* 巡查结果 */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const result = (task as TaskWithExtras).checkResult || (task as TaskWithExtras).issueSeverity || '';
-                              const isNormal = result === '正常' || result === '轻微' || result === 'low';
-                              return isNormal ? (
-                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
-                              ) : (
-                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">异常</span>
-                              );
-                            })()}
-                          </td>
-                          {/* 问题分类 */}
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {(() => {
-                              const cats = (task as TaskWithExtras).issueCategories || [];
-                              if (Array.isArray(cats) && cats.length > 0) {
-                                return (
-                                  <div className="flex gap-1 justify-center flex-wrap">
-                                    {cats.slice(0, 2).map((cat: string, i: number) => (
-                                      <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
-                                        {cat}
-                                      </span>
-                                    ))}
-                                    {cats.length > 2 && (
-                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{cats.length - 2}</span>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              return <span className="text-sm text-gray-500">-</span>;
-                            })()}
-                          </td>
-                          {/* 严重程度 */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const severity = (task as TaskWithExtras).issueSeverity || (task as TaskWithExtras).priority || '';
-                              if (severity === '严重' || severity === 'high') {
-                                return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">严重</span>;
-                              }
-                              if (severity === '中等' || severity === 'medium') {
-                                return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">中等</span>;
-                              }
-                              return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">轻微</span>;
-                            })()}
-                          </td>
-                          {/* 问题照片 */}
-                          <td className="px-3 py-3 text-center whitespace-nowrap">
-                            {(() => {
-                              const photos = (task as TaskWithExtras).photos || [];
-                              if (photos.length > 0) {
-                                return (
-                                  <div className="flex justify-center gap-1">
-                                    {photos.slice(0, 3).map((img: string, imgIdx: number) => (
-                                      <div key={imgIdx} className="w-8 h-8 rounded overflow-hidden bg-gray-100">
-                                        <img src={img} alt="" className="w-full h-full object-cover" />
-                                      </div>
-                                    ))}
-                                    {photos.length > 3 && (
-                                      <span className="flex items-center justify-center w-8 h-8 text-xs text-gray-500">+{photos.length - 3}</span>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              return <span className="text-sm text-gray-500">-</span>;
-                            })()}
-                          </td>
-                          {/* 反馈状态 */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const fbStatus = (task as TaskWithExtras).feedbackStatus || task.status;
-                              const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-                                pending: { label: '待接受', bg: 'bg-gray-100', color: 'text-gray-600' },
-                                accepted: { label: '已接受', bg: 'bg-blue-100', color: 'text-blue-600' },
-                                in_progress: { label: '处理中', bg: 'bg-blue-100', color: 'text-blue-600' },
-                                waiting_acceptance: { label: '待验收', bg: 'bg-amber-100', color: 'text-amber-600' },
-                                completed: { label: '已完成', bg: 'bg-green-100', color: 'text-green-600' },
-                                rejected: { label: '返工中', bg: 'bg-red-100', color: 'text-red-600' },
-                                待接受: { label: '待接受', bg: 'bg-gray-100', color: 'text-gray-600' },
-                                已接受: { label: '已接受', bg: 'bg-blue-100', color: 'text-blue-600' },
-                                处理中: { label: '处理中', bg: 'bg-blue-100', color: 'text-blue-600' },
-                                待验收: { label: '待验收', bg: 'bg-amber-100', color: 'text-amber-600' },
-                                已完成: { label: '已完成', bg: 'bg-green-100', color: 'text-green-600' },
-                                返工中: { label: '返工中', bg: 'bg-red-100', color: 'text-red-600' },
-                              };
-                              const s = statusConfig[fbStatus] || { label: fbStatus, bg: 'bg-gray-100', color: 'text-gray-600' };
-                              return <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>{s.label}</span>;
-                            })()}
-                          </td>
-                          {/* 反馈人员 */}
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {(() => {
-                              const users = (task as TaskWithExtras).feedbackUsers || [];
-                              return Array.isArray(users) && users.length > 0 ? users[0] : '-';
-                            })()}
-                          </td>
-                          {/* 处理进度 */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const progress = parseInt(String((task as TaskWithExtras).processProgress || task.progress || 0));
-                              return (
-                                <div className="flex items-center justify-center gap-1">
-                                  <div className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                      className="h-full bg-blue-500 rounded-full"
-                                      style={{ width: `${progress}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs text-gray-500">{progress}%</span>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          {/* 操作列 */}
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {task.status === 'pending' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    const unifiedTask = unifiedTasks.find(t => t.id === task.id || t.taskCode === task.id);
-                                    if (unifiedTask) acceptTask(unifiedTask.id);
-                                    // 同时更新问题的接单状态
-                                    if (task.sourceProblemId) {
-                                      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
-                                    }
-                                  }}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="接受任务"
-                                >
-                                  <CheckCircle className="w-3 h-3" />
-                                  接受
-                                </button>
-                                <button
-                                  onClick={() => openRejectModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="拒绝任务"
-                                >
-                                  <XCircle className="w-3 h-3" />
-                                  拒绝
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'accepted' || task.status === 'in_progress') && (
-                              <button
-                                onClick={() => openFeedbackModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
-                                title="点击提交进度"
-                              >
-                                <Edit className="w-4 h-4" />
-                                提交进度
-                              </button>
-                            )}
-                            {task.status === 'rejected' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleContinueExecution(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击继续执行"
-                                >
-                                  <Play className="w-3 h-3" />
-                                  继续执行
-                                </button>
-                                <button
-                                  onClick={() => openDetailModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击查看详情"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  查看
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
-                            )}
-                          </td>
-                          {/* 备注 */}
-                          <td className="px-3 py-3 text-sm text-gray-600 max-w-[10em]">
-                            <span className="truncate block" title={(task as TaskWithExtras).issueText || (task as TaskWithExtras).remarks || ''}>
-                              {((task as TaskWithExtras).issueText || (task as TaskWithExtras).remarks || '').slice(0, 10) || '-'}
-                            </span>
-                          </td>
-                        </>
+                        <ProblemTaskTableRow
+                          task={task}
+                          unifiedTasks={unifiedTasks}
+                          acceptTask={acceptTask}
+                          onAccept={handleAccept}
+                          onReject={openRejectModal}
+                          onContinueExecution={handleContinueExecution}
+                          onOpenFeedbackModal={openFeedbackModal}
+                          onOpenDetailModal={openDetailModal}
+                        />
                       ) : (
-                        <>
-                          <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                            <button
-                              onClick={() => openDetailModal(task)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                              title="点击查看详情"
-                            >
-                              {task.id}
-                            </button>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {renderTypeCell(task)}
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {task.field || '-'}
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {task.crop || '-'}
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className="text-sm text-gray-700">{task.assigneeName || '-'}</span>
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {task.planStart?.split(' ')[0] || '-'}
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {task.planEnd || '-'}
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) || 0}小时
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : (task.progress || 0) > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
-                                  style={{ width: `${task.progress || 0}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-500">{task.progress || 0}%</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className={`text-xs font-medium ${priorityMap[task.priority]?.color || 'text-gray-500'}`}>
-                              {priorityMap[task.priority]?.label || task.priority}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
-                              {statusMap[task.status]?.label || task.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={task.typeLabel || '-'}>
-                            {task.typeLabel || '-'}
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {types.length >= 2 && task.sopContent ? (
-                              <button
-                                onClick={(e) => openSopModal(task, e)}
-                                className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
-                              >
-                                <FileText className="w-3 h-3" />
-                                SOP文件
-                              </button>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            {task.status === 'pending' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleAccept(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="接受任务"
-                                >
-                                  <CheckCircle className="w-3 h-3" />
-                                  接受
-                                </button>
-                                <button
-                                  onClick={() => openRejectModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="拒绝任务"
-                                >
-                                  <XCircle className="w-3 h-3" />
-                                  拒绝
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'accepted' || task.status === 'in_progress') && (
-                              <button
-                                onClick={() => openFeedbackModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
-                                title="点击提交进度"
-                              >
-                                <Edit className="w-4 h-4" />
-                                提交进度
-                              </button>
-                            )}
-                            {task.status === 'rejected' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleContinueExecution(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击继续执行"
-                                >
-                                  <Play className="w-3 h-3" />
-                                  继续执行
-                                </button>
-                                <button
-                                  onClick={() => openDetailModal(task)}
-                                  className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
-                                  title="点击查看详情"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  查看
-                                </button>
-                              </div>
-                            )}
-                            {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
-                              <button
-                                onClick={() => openDetailModal(task)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                                title="点击查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                                查看
-                              </button>
-                            )}
-                          </td>
-                        </>
+                        <ProductionTaskTableRow
+                          task={task}
+                          onAccept={handleAccept}
+                          onReject={openRejectModal}
+                          onContinueExecution={handleContinueExecution}
+                          onOpenFeedbackModal={openFeedbackModal}
+                          onOpenDetailModal={openDetailModal}
+                          onOpenSopModal={openSopModal}
+                        />
                       )}
                     </tr>
                   );
@@ -1472,861 +774,58 @@ export function MyTasksPage() {
         </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10条</option>
-              <option value={20}>20条</option>
-              <option value={50}>50条</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>共 {filteredTasks.length} 条</span>
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              &lt;
-            </button>
-            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              &gt;
-            </button>
-          </div>
-        </div>
+        <TaskPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={filteredTasks.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {/* 详情弹窗 */}
-      <Modal
+      <TaskDetailModal
         isOpen={showDetailModal && !!selectedTask}
         onClose={() => { setShowDetailModal(false); setSelectedTask(null); }}
-        title={`任务详情 - ${selectedTask?.id || ''}`}
-        size="xl"
-        showFooter={false}
-      >
-        {selectedTask && (
-          <div className="space-y-6">
-            {/* 基本信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">任务区域</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.field || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">作物</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.crop || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">负责人</label>
-                  <p className="font-semibold text-gray-900">陆启闯</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">优先级</label>
-                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
-                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 任务类型 - 单一类型显示详细信息，多类型显示SOP下载 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>
-              {(selectedTask.types || []).length === 1 ? (
-                <TaskTypeConfigDisplay
-                  taskType={selectedTask.types[0]}
-                  configValues={selectedTask.typeConfig || {}}
-                />
-              ) : (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <FileText className="w-5 h-5 text-blue-500" />
-                    <span className="text-sm font-medium text-gray-700">作业标准文件</span>
-                  </div>
-                  {selectedTask.sopContent ? (
-                    <div className="bg-white rounded-lg p-3 border border-blue-100">
-                      <p className="text-sm text-gray-600 mb-2">已导入SOP文档</p>
-                      <button
-                        onClick={() => {
-                          const blob = new Blob([selectedTask.sopContent || ''], { type: 'text/plain' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `任务SOP_${selectedTask.id}.txt`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-1"
-                      >
-                        <FileText className="w-4 h-4" />
-                        下载SOP文件
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">暂无SOP文件</p>
-                  )}
-                  <div className="mt-3">
-                    <p className="text-xs text-gray-500 mb-2">已选择的操作类型：</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(selectedTask.types || []).map((t: string) => {
-                        return (
-                          <span
-                            key={t}
-                            className={`px-2 py-1 rounded text-xs text-white ${getTypeColor(t)}`}
-                          >
-                            {getTypeLabel(t)}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 所需物资 */}
-            {selectedTask.materials && selectedTask.materials.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-xs text-gray-500 border-b border-gray-200">
-                        <th className="text-left pb-2">物资名称</th>
-                        <th className="text-right pb-2">数量</th>
-                        <th className="text-right pb-2">单位</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedTask.materials.map((m: TaskMaterial, i: number) => (
-                        <tr key={i} className="border-b border-gray-100 last:border-0">
-                          <td className="py-2 text-gray-900">{m.name}</td>
-                          <td className="py-2 text-gray-900 text-right">{m.qty}</td>
-                          <td className="py-2 text-gray-500 text-right">{m.unit}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* 时间信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">计划开始</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.planStart || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">计划结束</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.planEnd || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">状态</label>
-                  <p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || ''} ${statusMap[selectedTask.status]?.color || ''}`}>
-                      {statusMap[selectedTask.status]?.label || selectedTask.status}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">预计时长</label>
-                  <p className="font-semibold text-gray-900">
-                    {selectedTask.estimatedDays > 0 ? `${selectedTask.estimatedDays}天` : ''}
-                    {selectedTask.estimatedHours > 0 ? `${selectedTask.estimatedHours}小时` : ''}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 实际完成工作量 */}
-            {(() => {
-              const actualWorkload = getActualWorkload();
-              const hasActualWorkload = actualWorkload.days > 0 || actualWorkload.hours > 0;
-              if (!hasActualWorkload) return null;
-              return (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">实际完成工作量</h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs text-green-600">实际工日</label>
-                        <p className="font-bold text-green-700 text-lg">
-                          {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-xs text-green-600">实际工时</label>
-                        <p className="font-bold text-green-700 text-lg">
-                          {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-xs text-green-600">作业人数</label>
-                        <p className="font-bold text-green-700 text-lg">
-                          {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedTask.estimatedDays !== undefined && selectedTask.estimatedHours !== undefined && (
-                      <div className="mt-3 pt-3 border-t border-green-200">
-                        <p className="text-xs text-green-600">
-                          预估总工时：{(selectedTask.estimatedDays * 8 + selectedTask.estimatedHours)}小时 → 实际总工时：{actualWorkload.days * 8 + actualWorkload.hours}小时
-                          {actualWorkload.days * 8 + actualWorkload.hours > 0 && (
-                            <span className={`ml-2 ${actualWorkload.days * 8 + actualWorkload.hours > selectedTask.estimatedDays * 8 + selectedTask.estimatedHours ? 'text-red-600' : 'text-green-600'}`}>
-                              ({actualWorkload.days * 8 + actualWorkload.hours > selectedTask.estimatedDays * 8 + selectedTask.estimatedHours ? '超出' : '节省'}
-                              {Math.abs((actualWorkload.days * 8 + actualWorkload.hours) - (selectedTask.estimatedDays * 8 + selectedTask.estimatedHours)).toFixed(1)}小时)
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 必填反馈 */}
-            {selectedTask.requiredFeedback && selectedTask.requiredFeedback.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">必填反馈</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedTask.requiredFeedback.map((fb: string) => (
-                    <span key={fb} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                      {fb === 'gps' && '位置打卡'}
-                      {fb === 'material' && '物资扫码'}
-                      {fb === 'photo_before' && '作业前照片'}
-                      {fb === 'photo_after' && '作业后照片'}
-                      {fb === 'voice' && '语音备注'}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 流转记录 */}
-            {selectedTask.sourceProblemId && getCurrentProblemFlowRecords().length > 0 && (
-              <div>
-                <TaskFlowTimeline records={getCurrentProblemFlowRecords()} />
-              </div>
-            )}
-
-            {/* 操作记录（useOperationRecords） */}
-            {(() => {
-              const opRecords = getCurrentOperationRecords();
-              if (opRecords.length === 0) return null;
-              return (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
-                  <div className="space-y-4">
-                    {opRecords.map((record) => (
-                      <div key={record.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                              {record.operationTypeName || record.operationType}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">{record.operationDate}</span>
-                        </div>
-                        {/* 显示子记录（children） */}
-                        {record.children && record.children.length > 0 && (
-                          <div className="mt-3 pl-4 border-l-2 border-gray-300 space-y-3">
-                            {record.children.map((child) => (
-                              <div key={child.id} className="bg-white rounded p-3 shadow-sm">
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
-                                      {child.operationTypeName || child.operationType}
-                                    </span>
-                                    <span className="text-xs text-gray-600">{child.operatorName}</span>
-                                  </div>
-                                  <span className="text-xs text-gray-400">
-                                    {child.time || child.operationDate}
-                                  </span>
-                                </div>
-                                {/* 工作量 */}
-                                {(child.workloadDays || child.workloadHours || child.workers) && (
-                                  <div className="text-xs text-gray-600 mb-1">
-                                    工作量：{child.workloadDays && `${child.workloadDays}天`}
-                                    {child.workloadHours && `${child.workloadHours}小时`}
-                                    {child.workers && `×${child.workers}人`}
-                                  </div>
-                                )}
-                                {/* 进度 */}
-                                {child.progress !== undefined && (
-                                  <div className="text-xs text-gray-600 mb-1">
-                                    进度：{child.progress}%
-                                    {child.progressIncrement !== undefined && child.progressIncrement > 0 && (
-                                      <span className="text-emerald-600 ml-1">(+{child.progressIncrement}%)</span>
-                                    )}
-                                  </div>
-                                )}
-                                {/* GPS位置 */}
-                                {child.gpsLocation && (
-                                  <div className="text-xs text-emerald-600 mb-1">
-                                    GPS：{child.gpsLocation.lat.toFixed(6)}, {child.gpsLocation.lng.toFixed(6)}
-                                  </div>
-                                )}
-                                {/* 照片 */}
-                                {(child.photosBefore?.length || child.photosAfter?.length) && (
-                                  <div className="text-xs text-blue-600 mb-1">
-                                    照片：{child.photosBefore?.length || 0}张(前) + {child.photosAfter?.length || 0}张(后)
-                                  </div>
-                                )}
-                                {/* 语音 */}
-                                {child.voiceNote && (
-                                  <div className="text-xs text-purple-600 mb-1">语音备注</div>
-                                )}
-                                {/* 物料 */}
-                                {child.materials && child.materials.length > 0 && (
-                                  <div className="text-xs text-orange-600 mb-1">
-                                    物料：{child.materials.map(m => `${m.name}×${m.qty}`).join(', ')}
-                                  </div>
-                                )}
-                                {/* 备注 */}
-                                {child.remarks && (
-                                  <div className="text-sm text-gray-700 bg-gray-50 rounded px-2 py-1 mt-1">
-                                    {child.remarks}
-                                  </div>
-                                )}
-                                {/* 驳回原因 */}
-                                {child.rejectReason && (
-                                  <div className="text-sm text-red-600 bg-red-50 rounded px-2 py-1 mt-1">
-                                    驳回原因：{child.rejectReason}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 任务流转记录（useTasks.taskRecords） */}
-            {(() => {
-              const taskRecords = getCurrentTaskRecords();
-              if (taskRecords.length === 0) return null;
-              return (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">任务流转记录</h4>
-                  <div className="space-y-4">
-                    {taskRecords.map((record) => {
-                      const actionConfig = TASK_ACTION_CONFIG[record.action as keyof typeof TASK_ACTION_CONFIG];
-                      const statusFromConfig = record.fromStatus ? TASK_STATUS_CONFIG[record.fromStatus as keyof typeof TASK_STATUS_CONFIG] : null;
-                      const statusToConfig = record.toStatus ? TASK_STATUS_CONFIG[record.toStatus as keyof typeof TASK_STATUS_CONFIG] : null;
-                      return (
-                      <div key={record.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                              {actionConfig?.label || record.actionName || record.action}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {new Date(record.actionTime).toLocaleString('zh-CN')}
-                          </span>
-                        </div>
-                        {/* 状态变化 */}
-                        {(record.fromStatus || record.toStatus) && (
-                          <div className="flex items-center gap-1 mb-2 text-xs">
-                            {record.fromStatus && (
-                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
-                                {statusFromConfig?.label || record.fromStatus}
-                              </span>
-                            )}
-                            <span className="text-gray-400">→</span>
-                            {record.toStatus && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                {statusToConfig?.label || record.toStatus}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {/* 进度 */}
-                        {record.progress !== undefined && (
-                          <div className="text-xs text-gray-600 mb-1">
-                            进度：{record.progress}%
-                            {record.progressIncrement !== undefined && record.progressIncrement > 0 && (
-                              <span className="text-emerald-600 ml-1">(+{record.progressIncrement}%)</span>
-                            )}
-                          </div>
-                        )}
-                        {/* 反馈内容 */}
-                        {record.feedback && (
-                          <div className="mt-2 space-y-1">
-                            {record.feedback.text && (
-                              <div className="text-sm text-gray-700 bg-white rounded p-2">
-                                {record.feedback.text}
-                              </div>
-                            )}
-                            {record.feedback.gpsLocation && (
-                              <div className="text-xs text-emerald-600">
-                                GPS：{record.feedback.gpsLocation.lat.toFixed(6)}, {record.feedback.gpsLocation.lng.toFixed(6)}
-                              </div>
-                            )}
-                            {record.feedback.images && record.feedback.images.length > 0 && (
-                              <div className="text-xs text-blue-600">
-                                照片：{record.feedback.images.length}张
-                              </div>
-                            )}
-                            {record.feedback.voiceNote && (
-                              <div className="text-xs text-purple-600">语音备注</div>
-                            )}
-                            {record.feedback.materials && record.feedback.materials.length > 0 && (
-                              <div className="text-xs text-orange-600">
-                                物料：{record.feedback.materials.map(m => `${m.name}×${m.qty}`).join(', ')}
-                              </div>
-                            )}
-                            {/* 工作量确认 */}
-                            {(record.feedback.workloadDays !== undefined || record.feedback.workloadHours !== undefined || record.feedback.workers !== undefined) && (
-                              <div className="text-xs text-cyan-600">
-                                工作量确认：
-                                {record.feedback.workloadDays !== undefined && `${record.feedback.workloadDays}天`}
-                                {record.feedback.workloadHours !== undefined && `${record.feedback.workloadHours}小时`}
-                                {record.feedback.workers !== undefined && `×${record.feedback.workers}人`}
-                              </div>
-                            )}
-                            {/* 物资编码 */}
-                            {record.feedback.materialCode && (
-                              <div className="text-xs text-pink-600">
-                                物资编码：{record.feedback.materialCode}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {/* 备注 */}
-                        {record.comment && (
-                          <div className="text-sm text-gray-600 bg-white rounded p-2 mt-2">
-                            {record.comment}
-                          </div>
-                        )}
-                        {/* 驳回原因 */}
-                        {record.reason && (
-                          <div className="text-sm text-red-600 bg-red-50 rounded p-2 mt-2">
-                            驳回原因：{record.reason}
-                          </div>
-                        )}
-                      </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 进度（只读） */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all"
-                    style={{ width: `${selectedTask.progress || 0}%` }}
-                  />
-                </div>
-                <span className="w-14 text-sm font-medium text-gray-700 text-center">
-                  {selectedTask.progress || 0}%
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
-              </p>
-            </div>
-          </div>
-        )}
-      </Modal>
+        task={selectedTask}
+        problemFlowRecords={getCurrentProblemFlowRecords()}
+        operationRecords={getCurrentOperationRecords()}
+        taskRecords={getCurrentTaskRecords()}
+        getActualWorkload={getActualWorkload}
+      />
 
       {/* 反馈表单弹窗 */}
-      <Modal
+      <TaskFeedbackModal
         isOpen={feedbackModal.isOpen}
         onClose={() => { setFeedbackModal({ isOpen: false, task: null }); }}
-        title="任务处理"
-        size="xl"
-        showFooter={false}
-        bottomContent={
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => { setFeedbackModal({ isOpen: false, task: null }); }}
-              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              取消
-            </button>
-            {/* 新增：无法继续按钮 */}
-            <button
-              onClick={() => {
-                // 切换无法继续模式
-                setFeedbackForm(prev => ({ ...prev, cannotContinue: !prev.cannotContinue }));
-              }}
-              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                feedbackForm.cannotContinue
-                  ? 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
-                  : 'border-red-300 text-red-600 hover:bg-red-50'
-              }`}
-            >
-              {feedbackForm.cannotContinue ? '取消无法继续' : '无法继续'}
-            </button>
-            <button
-              onClick={handleSubmitFeedback}
-              disabled={
-                !feedbackModal.task ||
-                (feedbackForm.cannotContinue
-                  ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时只需要填写原因
-                  : (!validateRequiredFeedback().valid ||  // 正常模式需要校验必填反馈
-                     !feedbackForm.resultStatus ||  // 必须选择处理结果
-                     ((feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && !feedbackForm.resultText.trim())  // 选择"其他"或"无法继续"时需要填写备注
-                  ))
-              }
-              className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                feedbackForm.cannotContinue
-                  ? 'bg-red-500 hover:bg-red-600'
-                  : 'bg-amber-500 hover:bg-amber-600'
-              }`}
-            >
-              {feedbackForm.cannotContinue ? '确认无法继续' : '提交反馈'}
-            </button>
-          </div>
-        }
-      >
-        {feedbackModal.task && (
-          <div className="space-y-6">
-            {/* 基本信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">任务区域</label>
-                  <p className="font-semibold text-gray-900">{feedbackModal.task.field || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">作物</label>
-                  <p className="font-semibold text-gray-900">{feedbackModal.task.crop || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">负责人</label>
-                  <p className="font-semibold text-gray-900">陆启闯</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">优先级</label>
-                  <p className={`font-semibold ${priorityMap[feedbackModal.task.priority]?.color || ''}`}>
-                    {priorityMap[feedbackModal.task.priority]?.label || feedbackModal.task.priority}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 时间信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">计划开始</label>
-                  <p className="font-semibold text-gray-900">{feedbackModal.task.planStart || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">计划结束</label>
-                  <p className="font-semibold text-gray-900">{feedbackModal.task.planEnd || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">状态</label>
-                  <p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[feedbackModal.task.status]?.bg || ''} ${statusMap[feedbackModal.task.status]?.color || ''}`}>
-                      {statusMap[feedbackModal.task.status]?.label || feedbackModal.task.status}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">任务类型</label>
-                  <p className="font-semibold text-gray-900">{getTypeLabel(feedbackModal.task.types?.[0] || '')}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 流转记录 */}
-            {feedbackModal.task.sourceProblemId && getProblemFlowRecords(feedbackModal.task.sourceProblemId).length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">流转记录</h4>
-                <TaskFlowTimeline records={getProblemFlowRecords(feedbackModal.task.sourceProblemId)} />
-              </div>
-            )}
-
-            {/* 执行进度（可操作） */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={feedbackModal.task.progress || 0}
-                  onChange={(e) => {
-                    const newProgress = parseInt(e.target.value);
-                    // 只更新弹窗内的本地状态，实际提交通过 handleSubmitFeedback 使用 unifiedTasks
-                    setFeedbackModal(prev => ({
-                      ...prev,
-                      task: prev.task ? { ...prev.task, progress: newProgress } : null
-                    }));
-                  }}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                />
-                <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
-                  {feedbackModal.task.progress || 0}%
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                {feedbackModal.task.progress === 100 ? '已完成，可提交反馈' :
-                 feedbackModal.task.progress === 0 ? '未开始' : '进行中'}
-              </p>
-            </div>
-
-            {/* 处理结果/进展情况（进度条下方 - 统一使用下拉选择） */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                处理结果 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={feedbackForm.resultStatus}
-                onChange={(e) => {
-                  const newStatus = e.target.value as '' | '全部完成' | '部分完成' | '延迟完成' | '无法继续' | '其他';
-                  setFeedbackForm(prev => ({
-                    ...prev,
-                    resultStatus: newStatus,
-                    resultText: '',
-                    // 选择"无法继续"时自动设置 cannotContinue 为 true
-                    cannotContinue: newStatus === '无法继续',
-                    cannotContinueReason: newStatus === '无法继续' ? prev.cannotContinueReason : '',
-                  }));
-                }}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-              >
-                <option value="">请选择处理结果</option>
-                <option value="全部完成">全部完成</option>
-                <option value="部分完成">部分完成</option>
-                <option value="延迟完成">延迟完成</option>
-                <option value="无法继续">无法继续</option>
-                <option value="其他">其他</option>
-              </select>
-            </div>
-            {/* 备注输入框 - 仅当选择"其他"或"无法继续"时显示 */}
-            {(feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  备注说明 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={feedbackForm.resultText}
-                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
-                  placeholder="请详细说明处理情况和原因..."
-                  rows={4}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-              </div>
-            )}
-
-            {/* 无法继续原因输入区域（当 cannotContinue 为 true 时显示） */}
-            {feedbackForm.cannotContinue && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <label className="block text-sm font-medium text-red-700 mb-2">
-                  请说明无法继续的原因 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={feedbackForm.cannotContinueReason}
-                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, cannotContinueReason: e.target.value }))}
-                  placeholder="请详细描述无法继续的原因（如：天气原因、设备故障、物料不足、其他紧急任务等）..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                />
-                <p className="text-xs text-red-600 mt-2">
-                  提交后任务将变为"已拒绝"状态，等待重新分派给其他执行人。
-                </p>
-              </div>
-            )}
-
-            {/* 必填反馈输入区域（无法继续模式下不显示） */}
-            {!feedbackForm.cannotContinue && feedbackModal.task.requiredFeedback && feedbackModal.task.requiredFeedback.length > 0 && (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">
-                  必填反馈项
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {feedbackModal.task.requiredFeedback.includes('workload_confirm') && (
-                    <FeedbackInput
-                      type="workload_confirm"
-                      value={feedbackForm.workloadConfirm}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, workloadConfirm: v }))}
-                    />
-                  )}
-                  {feedbackModal.task.requiredFeedback.includes('gps') && (
-                    <FeedbackInput
-                      type="gps"
-                      value={feedbackForm.gpsLocation}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, gpsLocation: v }))}
-                    />
-                  )}
-                  {feedbackModal.task.requiredFeedback.includes('photo_before') && (
-                    <FeedbackInput
-                      type="photo_before"
-                      value={feedbackForm.photosBefore}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, photosBefore: v }))}
-                    />
-                  )}
-                  {feedbackModal.task.requiredFeedback.includes('photo_after') && (
-                    <FeedbackInput
-                      type="photo_after"
-                      value={feedbackForm.photosAfter}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, photosAfter: v }))}
-                    />
-                  )}
-                  {feedbackModal.task.requiredFeedback.includes('material') && (
-                    <FeedbackInput
-                      type="material"
-                      value={feedbackForm.materialCode}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, materialCode: v }))}
-                    />
-                  )}
-                  {feedbackModal.task.requiredFeedback.includes('voice') && (
-                    <FeedbackInput
-                      type="voice"
-                      value={feedbackForm.voiceNote}
-                      onChange={(v) => setFeedbackForm(prev => ({ ...prev, voiceNote: v }))}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 反馈提示信息（根据模式显示不同内容） */}
-            <div className={`rounded-lg p-3 ${
-              feedbackForm.cannotContinue
-                ? 'bg-red-50 border border-red-200'
-                : 'bg-amber-50 border border-amber-200'
-            }`}>
-              <div className={`text-sm ${
-                feedbackForm.cannotContinue ? 'text-red-800' : 'text-amber-800'
-              }`}>
-                {feedbackForm.cannotContinue
-                  ? '确认无法继续后，任务将变为"已拒绝"状态，等待重新分派。'
-                  : feedbackModal.task.progress === 100
-                    ? '提交反馈后，任务将进入"待验收"状态，等待管理者确认完成。'
-                    : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        task={feedbackModal.task}
+        feedbackForm={feedbackForm}
+        setFeedbackForm={setFeedbackForm}
+        problemFlowRecords={feedbackModal.task?.sourceProblemId ? getProblemFlowRecords(feedbackModal.task.sourceProblemId) : []}
+        validateRequiredFeedback={validateRequiredFeedback}
+        onSubmit={handleSubmitFeedback}
+      />
 
       {/* 拒绝原因弹窗 */}
-      <Modal
+      <TaskRejectModal
         isOpen={rejectModal.isOpen}
         onClose={() => { setRejectModal({ isOpen: false, task: null }); setRejectReason(''); }}
-        title="拒绝任务"
-        size="md"
-        showFooter={false}
-        bottomContent={
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => { setRejectModal({ isOpen: false, task: null }); setRejectReason(''); }}
-              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={!rejectReason.trim()}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              确认拒绝
-            </button>
-          </div>
-        }
-      >
-        {rejectModal.task && (
-          <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="text-sm text-red-800">
-                拒绝任务后，该问题将重新回到"待分派"状态。
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                拒绝原因 <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="请输入拒绝原因..."
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
+        task={rejectModal.task}
+        rejectReason={rejectReason}
+        setRejectReason={setRejectReason}
+        onConfirm={handleReject}
+      />
 
       {/* SOP文件查看弹窗 */}
-      <Modal
+      <TaskSopModal
         isOpen={showSopModal}
         onClose={() => { setShowSopModal(false); setSelectedSopTask(null); }}
-        title={`作业标准文件 - ${selectedSopTask?.id || ''}`}
-        size="lg"
-        showFooter={false}
-        bottomContent={
-          <div className="flex justify-end">
-            <button
-              onClick={() => setShowSopModal(false)}
-              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              关闭
-            </button>
-          </div>
-        }
-      >
-        {selectedSopTask && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="mb-3">
-              <span className="text-sm font-medium text-gray-700">任务类型：</span>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {(selectedSopTask.types || []).map((t: string) => (
-                  <span
-                    key={t}
-                    className={`px-2 py-1 rounded text-xs text-white ${getTypeColor(t)}`}
-                  >
-                    {getTypeLabel(t)}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{selectedSopTask.sopContent || '暂无SOP内容'}</pre>
-            </div>
-          </div>
-        )}
-      </Modal>
+        task={selectedSopTask}
+      />
     </div>
   );
 }
