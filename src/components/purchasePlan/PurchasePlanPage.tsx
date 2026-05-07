@@ -11,6 +11,7 @@ import { getPurchasePlansWithStatus, getPurchasePlansWithStatusAsync, subscribeT
 import { apiClient, USE_API } from '../../services/apiClient';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
+import { calculateOverdueAlert } from '../../types/purchase';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -197,9 +198,6 @@ export function PurchasePlanPage() {
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-
-  // 导入逾期预警计算函数
-  const { calculateOverdueAlert } = require('../../types/purchase');
 
   // 打开创建弹窗
   const handleOpenCreateModal = () => {
