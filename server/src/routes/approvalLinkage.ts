@@ -116,16 +116,28 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
 
 /**
  * 更新生产计划状态
+ * @param db - 数据库实例
+ * @param id - 生产计划ID
+ * @param status - 审批状态 (approved/rejected/cancelled)
+ * @param approvalCode - 审批编码
+ * @param extra - 额外参数，包含 approvalAction 用于区分编辑审批和作废审批
  */
 function updateProductionPlan(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
   try {
     const now = new Date().toISOString();
     // 映射审批状态到生产计划状态
-    // approved -> published (已发布)
+    // approved -> published (已发布) - 编辑/新增审批通过
+    // approved with approvalAction='void' -> cancelled (已作废) - 作废审批通过
     // rejected -> cancelled (已作废)
+    // cancelled -> cancelled (已作废)
     let planStatus = status;
     if (status === 'approved') {
-      planStatus = 'published';
+      // 检查是否是作废审批
+      if (extra?.approvalAction === 'void') {
+        planStatus = 'cancelled';
+      } else {
+        planStatus = 'published';
+      }
     } else if (status === 'rejected' || status === 'cancelled') {
       planStatus = 'cancelled';
     }
@@ -139,6 +151,37 @@ function updateProductionPlan(db: any, id: string, status: string, approvalCode:
     return true;
   } catch (e) {
     console.error('更新生产计划失败:', e);
+    return false;
+  }
+}
+
+/**
+ * 更新技术方案状态
+ */
+function updateTechSolution(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
+  try {
+    const now = new Date().toISOString();
+    // 映射审批状态到技术方案状态
+    // approved -> published (已发布)
+    // rejected -> cancelled (已作废)
+    let solutionStatus = status;
+    if (status === 'approved') {
+      solutionStatus = 'published';
+    } else if (status === 'rejected' || status === 'cancelled') {
+      solutionStatus = 'cancelled';
+    }
+    db.run(`
+      UPDATE tech_solutions SET
+        status = ?,
+        batch_status = ?,
+        approval_code = ?,
+        approved_at = ?,
+        update_time = ?
+      WHERE id = ?
+    `, [solutionStatus, solutionStatus, approvalCode, now, now, id]);
+    return true;
+  } catch (e) {
+    console.error('更新技术方案失败:', e);
     return false;
   }
 }
@@ -659,20 +702,9 @@ export function updateBusinessTable(
       break;
 
     case 'tech_solution':
-      // 技术方案使用临时任务表或专门表
-      try {
-        db.run(`
-          UPDATE temp_tasks SET
-            status = ?,
-            approval_code = ?,
-            approved_at = ?,
-            update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
+      // 技术方案使用专门的 tech_solutions 表
+      if (updateTechSolution(db, requestId, action, approvalCode, extra)) {
         return { success: true, message: '技术方案状态已更新' };
-      } catch (e) {
-        console.error('更新技术方案失败:', e);
-        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -996,8 +1028,12 @@ router.post('/update', (req, res) => {
 
     const businessType = businessLink.type;
     const requestId = businessLink.requestId;
+    // 从 businessLink 中提取 approvalAction 用于区分编辑审批和作废审批
+    const approvalAction = businessLink.approvalAction as string | undefined;
+    // 合并 extra 参数，包含 approvalAction
+    const mergedExtra = { ...extra, approvalAction };
 
-    console.log(`【审批联动】开始更新业务表: ${businessType}/${requestId}, 动作: ${action}`);
+    console.log(`【审批联动】开始更新业务表: ${businessType}/${requestId}, 动作: ${action}, approvalAction: ${approvalAction}`);
 
     // 更新业务表
     const result = updateBusinessTable(
@@ -1006,7 +1042,7 @@ router.post('/update', (req, res) => {
       requestId,
       action,
       approvalCode || '',
-      extra
+      mergedExtra
     );
 
     if (result.success) {

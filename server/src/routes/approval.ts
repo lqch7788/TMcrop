@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { updateBusinessTable } from './approvalLinkage';
 
 const router = Router();
 
@@ -390,47 +391,50 @@ router.post('/', (req, res) => {
     const now = new Date().toISOString();
     const approvalCode = code || generateApprovalCode(type);
 
-    db.run(`
-      INSERT INTO approvals (
+    db.run(
+      `INSERT INTO approvals (
         id, code, type, type_name, category, title, description,
         applicant_id, applicant_name, applicant_department,
         apply_date, apply_time, current_step, total_steps,
         approvers, records, status, business_link, attachments,
-        priority, due_date, related_batch_code, related_task_ids,
+        priority, due_date, reminder_count, related_batch_code, related_task_ids, notification_sent,
         amount, materials, workflow_id, workflow_name,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      id,
-      approvalCode,
-      type,
-      typeName || '',
-      category || 'business',
-      title,
-      description || '',
-      applicantId || '',
-      applicantName || '',
-      applicantDepartment || '',
-      applyDate || now.substring(0, 10),
-      applyTime || now.substring(11, 19),
-      currentStep || 1,
-      totalSteps || 1,
-      JSON.stringify(approvers || []),
-      JSON.stringify(records || []),
-      status || 'pending',
-      JSON.stringify(businessLink || null),
-      JSON.stringify(attachments || []),
-      priority || 'normal',
-      dueDate || '',
-      relatedBatchCode || '',
-      JSON.stringify(relatedTaskIds || []),
-      amount || '',
-      JSON.stringify(materials || []),
-      workflowId || '',
-      workflowName || '',
-      now,
-      now,
-    ]);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        approvalCode,
+        type,
+        typeName || '',
+        category || 'business',
+        title,
+        description || '',
+        applicantId || '',
+        applicantName || '',
+        applicantDepartment || '',
+        applyDate || now.substring(0, 10),
+        applyTime || now.substring(11, 19),
+        currentStep || 1,
+        totalSteps || 1,
+        JSON.stringify(approvers || []),
+        JSON.stringify(records || []),
+        status || 'pending',
+        JSON.stringify(businessLink || null),
+        JSON.stringify(attachments || []),
+        priority || 'normal',
+        dueDate || '',
+        0, // reminder_count
+        relatedBatchCode || '',
+        JSON.stringify(relatedTaskIds || []),
+        0, // notification_sent
+        amount || '',
+        JSON.stringify(materials || []),
+        workflowId || '',
+        workflowName || '',
+        now,
+        now,
+      ]
+    );
 
     saveDatabase();
 
@@ -601,9 +605,9 @@ router.patch('/:id/action', (req, res) => {
       return res.status(400).json({ success: false, error: '操作类型不能为空' });
     }
 
-    if (!approverId || !approverName) {
-      return res.status(400).json({ success: false, error: '审批人信息不能为空' });
-    }
+    // 使用默认值（如果未传审批人信息）
+    const finalApproverId = approverId || 'system';
+    const finalApproverName = approverName || '系统';
 
     // 查询当前数据
     const stmt = db.prepare('SELECT * FROM approvals WHERE id = ?');
@@ -630,19 +634,20 @@ router.patch('/:id/action', (req, res) => {
     let newStatus = approval.status as string;
     let newCurrentStep = approval.current_step as number;
 
-    // 查找当前步骤的审批人
-    const currentApproverIndex = approvers.findIndex(
-      (a: Approver) => a.order === newCurrentStep && a.status === 'pending'
-    );
+    // 查找当前步骤的审批人（如果没有预设审批人，则跳过验证）
+    const currentApproverIndex = approvers.length > 0
+      ? approvers.findIndex((a: Approver) => a.order === newCurrentStep && a.status === 'pending')
+      : -1;
 
-    if (currentApproverIndex === -1) {
+    // 如果有预设审批人但找不到，返错
+    if (approvers.length > 0 && currentApproverIndex === -1) {
       return res.status(400).json({ success: false, error: '未找到当前待审批人' });
     }
 
-    const currentApprover = approvers[currentApproverIndex];
+    const currentApprover = approvers.length > 0 ? approvers[currentApproverIndex] : null;
 
-    // 验证审批人匹配
-    if (currentApprover.userId !== approverId && currentApprover.role !== approverId) {
+    // 验证审批人匹配（只有预设了审批人才验证）
+    if (currentApprover && currentApprover.userId !== finalApproverId && currentApprover.role !== finalApproverId) {
       return res.status(403).json({ success: false, error: '您不是当前待审批人' });
     }
 
@@ -650,8 +655,8 @@ router.patch('/:id/action', (req, res) => {
     const record: ApprovalRecord = {
       id: generateId('REC'),
       approvalId: id,
-      approverId,
-      approverName,
+      approverId: finalApproverId,
+      approverName: finalApproverName,
       action,
       comment: comment || '',
       actionTime: now,
@@ -665,13 +670,15 @@ router.patch('/:id/action', (req, res) => {
 
     records.push(record);
 
-    // 更新当前审批人状态
-    approvers[currentApproverIndex] = {
-      ...currentApprover,
-      status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : action === 'partially_approve' ? 'partially_approved' : 'skipped',
-      comment: comment || '',
-      actionTime: now,
-    };
+    // 更新当前审批人状态（只有存在预设审批人才更新）
+    if (currentApprover) {
+      approvers[currentApproverIndex] = {
+        ...currentApprover,
+        status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : action === 'partially_approve' ? 'partially_approved' : 'skipped',
+        comment: comment || '',
+        actionTime: now,
+      };
+    }
 
     // 处理审批结果
     switch (action) {
@@ -743,6 +750,24 @@ router.patch('/:id/action', (req, res) => {
     ]);
 
     saveDatabase();
+
+    // 审批操作完成后，调用审批联动更新业务表
+    if (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'cancelled') {
+      const businessLink = approval.business_link ? JSON.parse(approval.business_link as string) : null;
+      if (businessLink && businessLink.type === 'production') {
+        try {
+          const action = newStatus === 'approved' ? 'approved' : newStatus === 'rejected' ? 'rejected' : 'cancelled';
+          // 提取 approvalAction 用于区分编辑审批和作废审批
+          const approvalAction = businessLink.approvalAction as string | undefined;
+          const result = updateBusinessTable(db, businessLink.type, businessLink.requestId, action, approval.code as string, { approvalAction });
+          if (result.success) {
+            console.log(`【审批联动】生产计划状态已更新: ${businessLink.requestId} -> ${action}, approvalAction: ${approvalAction}`);
+          }
+        } catch (e) {
+          console.error('【审批联动】更新生产计划状态失败:', e);
+        }
+      }
+    }
 
     res.json({
       success: true,
@@ -1242,6 +1267,58 @@ router.post('/batch-action', (req, res) => {
   } catch (error) {
     console.error('批量审批失败:', error);
     res.status(500).json({ success: false, error: '批量审批失败' });
+  }
+});
+
+/**
+ * 审批联动更新（前端调用 /api/approvals/update）
+ * POST /api/approvals/update
+ */
+router.post('/update', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { approvalId, approvalCode, action, businessLink, operatorId, operatorName, extra } = req.body;
+
+    if (!approvalId || !action || !businessLink) {
+      return res.status(400).json({ success: false, error: '缺少必要参数' });
+    }
+
+    const businessType = businessLink.type;
+    const requestId = businessLink.requestId;
+
+    console.log(`【审批联动】开始更新业务表: ${businessType}/${requestId}, 动作: ${action}`);
+
+    // 更新业务表
+    const result = updateBusinessTable(
+      db,
+      businessType,
+      requestId,
+      action,
+      approvalCode || '',
+      extra
+    );
+
+    if (result.success) {
+      saveDatabase();
+      res.json({
+        success: true,
+        message: result.message,
+        data: {
+          businessType,
+          requestId,
+          action,
+          approvalCode,
+        },
+      });
+    } else {
+      res.json({
+        success: false,
+        error: result.message,
+      });
+    }
+  } catch (error) {
+    console.error('审批联动更新失败:', error);
+    res.status(500).json({ success: false, error: '审批联动更新失败' });
   }
 });
 
