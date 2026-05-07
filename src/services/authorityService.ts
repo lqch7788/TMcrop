@@ -220,6 +220,19 @@ export async function getUserRoles(userOid: string): Promise<string[]> {
 }
 
 /**
+ * 获取工序列表
+ */
+export async function getProcesses(params?: {
+  appType?: AppType;
+  id?: string;
+}): Promise<Process[]> {
+  const queryParams: Record<string, string> = {};
+  if (params?.appType !== undefined) queryParams.appType = String(params.appType);
+  if (params?.id) queryParams.id = params.id;
+  return apiClient.get<Process[]>('/authority/processes', queryParams);
+}
+
+/**
  * 保存工序
  */
 export async function saveProcesses(data: {
