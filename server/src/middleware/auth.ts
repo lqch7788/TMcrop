@@ -35,6 +35,7 @@ export interface JwtPayload {
 }
 
 // 扩展 Express Request 类型
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {
@@ -42,6 +43,7 @@ declare global {
     }
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace */
 
 /**
  * 生成 JWT token
