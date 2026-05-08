@@ -3,16 +3,43 @@ hongzhiyun/
 
 # Claude Code 工作目录
 .omc/
+.claude/
+
+# Claude Code 本地设置（不提交）
+.claude/settings.local.json
 
 # Vite 缓存
 .vite/
 node_modules/.vite/
+
+# Git hooks (不提交)
+.husky/
+
+# Playwright MCP 测试产物
+.playwright-mcp/
+
+# Trae AI 文档
+.trae/
 
 # 依赖
 node_modules/
 
 # 构建输出
 dist/
+assets/
+
+# 临时脚本
+*.tmp
+*.log
+.gstack/
+
+# 备份文件
+*.backup
+*.bak
+src_backup_*/
+
+# 计划文档
+PLANS/
 
 # 环境变量
 .env
@@ -26,4 +53,6 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.log
-.gstack/
+
+# 文档（非系统运行必需）
+docs/
