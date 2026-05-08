@@ -6,8 +6,22 @@
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 
-// JWT 密钥（生产环境应从环境变量读取）
-const JWT_SECRET = process.env.JWT_SECRET || 'yuanxingtu-secret-key-2026';
+// JWT 密钥配置
+// 演示模式（默认）：如果未设置 DEMO_MODE 或 DEMO_MODE != 'false'，则启用演示模式
+// 生产模式：设置 DEMO_MODE=false 且必须配置 JWT_SECRET 环境变量
+const DEMO_MODE = process.env.DEMO_MODE === 'false' ? false : true; // 默认为演示模式
+
+let JWT_SECRET: string;
+if (DEMO_MODE) {
+  // 演示模式：使用默认密钥（用于陆启闯等演示账号）
+  JWT_SECRET = process.env.JWT_SECRET || 'yuanxingtu-secret-key-2026';
+} else {
+  // 生产模式：必须设置 JWT_SECRET
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET 环境变量必须设置（非演示模式）');
+  }
+  JWT_SECRET = process.env.JWT_SECRET;
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // JWT Payload 类型
