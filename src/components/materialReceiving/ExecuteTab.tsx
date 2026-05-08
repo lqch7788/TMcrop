@@ -1,4 +1,5 @@
 import { Search, Download, Eye, Edit, ChevronLeft, ChevronRight, Trash2, ChevronDown, ChevronRight as ChevronRightIcon, Plus, AlertTriangle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { MaterialExecuteRecord, ExecuteMaterialItem, MaterialReceivingRecord } from '../../types/materialReceiving';
 
 interface ExecuteTabProps {
@@ -275,12 +276,9 @@ export default function ExecuteTab({
               <option value="已取消">已取消</option>
             </select>
           </div>
-          <button
-            onClick={onReset}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-          >
+          <Button variant="secondary" onClick={onReset}>
             重置
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -290,77 +288,53 @@ export default function ExecuteTab({
           <h3 className="text-lg font-semibold text-gray-900">出库单列表</h3>
           {exportMode ? (
             <div className="flex gap-2">
-              <button
-                onClick={onExportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              <Button onClick={onExportClick}>
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button onClick={onCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+              </Button>
+              <Button variant="secondary" onClick={onCancelExport}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
               {!batchEditMode ? (
                 <>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button onClick={() => setShowAddModal(true)}>
                     <Plus className="w-4 h-4" />
                     新增
-                  </button>
-                  <button
-                    onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="blue" onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}>
                     <Edit className="w-4 h-4" />
                     编辑
-                  </button>
-                  <button
-                    onClick={() => { setBatchEditMode(true); setShowDeleteWarning(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="destructive" onClick={() => { setBatchEditMode(true); setShowDeleteWarning(true); }}>
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
-                  <button
-                    onClick={() => setExportMode(true)}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button onClick={() => setExportMode(true)}>
                     <Download className="w-4 h-4" />
                     导出
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={() => {
+                  <Button onClick={() => {
                       if (selectedRows.length === 0) {
                         alert('请先选择要编辑的记录');
                         setBatchEditMode(false);
                       } else {
                         setShowBatchEditModal(true);
                       }
-                    }}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                    }}>
                     确认编辑
-                  </button>
-                  <button
-                    onClick={() => { setShowBatchDeleteConfirm(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="destructive" onClick={() => { setShowBatchDeleteConfirm(true); }}>
                     确认删除
-                  </button>
-                  <button
-                    onClick={() => { setBatchEditMode(false); setSelectedRows([]); }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="secondary" onClick={() => { setBatchEditMode(false); setSelectedRows([]); }}>
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -533,12 +507,9 @@ export default function ExecuteTab({
         {exportMode && selectedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button
-                onClick={onSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-              >
+              <Button variant="ghost" onClick={onSelectAll}>
                 {selectedRows.length === filteredData.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -561,21 +532,23 @@ export default function ExecuteTab({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

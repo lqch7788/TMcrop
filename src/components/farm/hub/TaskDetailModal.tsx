@@ -9,6 +9,7 @@ import { Task, useTasks } from '../../../hooks/useTasks';
 import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { Modal } from '../../ui/Modal';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
@@ -193,9 +194,9 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
               {statusMap[task.status]?.label || task.status}
             </span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-emerald-500 transition-colors">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-white" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容区域 */}
@@ -579,19 +580,16 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
 
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <Button variant="secondary" onClick={onClose}>
             关闭
-          </button>
+          </Button>
           {canVerify && (
-            <button
+            <Button
+              variant="default"
               onClick={() => onVerify?.(taskId)}
-              className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
             >
               验收
-            </button>
+            </Button>
           )}
         </div>
       </div>

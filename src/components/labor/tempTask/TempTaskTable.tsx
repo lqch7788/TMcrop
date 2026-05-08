@@ -1,6 +1,7 @@
 import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
+import { Button } from '@/components/ui/button';
 
 const statusConfig = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-50' },
@@ -283,52 +284,56 @@ export function TempTaskTable({
                   <div className="flex items-center gap-1 flex-wrap">
                     {/* 待验收 或 进度100% - 验收按钮 */}
                     {(task.status === 'waiting_acceptance' || task.progress === 100) && onAccept && (
-                      <button
+                      <Button
+                        size="sm"
                         onClick={() => onAccept(task)}
-                        className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                       >
                         验收
-                      </button>
+                      </Button>
                     )}
 
                     {/* pending 且进度未100% - 撤回按钮 */}
                     {task.status === 'pending' && task.progress !== 100 && onWithdraw && (
-                      <button
+                      <Button
+                        variant="warning"
+                        size="sm"
                         onClick={() => onWithdraw(task)}
-                        className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
                       >
                         撤回
-                      </button>
+                      </Button>
                     )}
 
                     {/* in_progress - 取消按钮 */}
                     {task.status === 'in_progress' && onCancel && (
-                      <button
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => onCancel(task)}
-                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
                       >
                         取消
-                      </button>
+                      </Button>
                     )}
 
                     {/* rejected/pending_reassign - 重新派发按钮 */}
                     {(task.status === 'rejected' || task.status === 'pending_reassign') && onReassign && (
-                      <button
+                      <Button
+                        variant="blue"
+                        size="sm"
                         onClick={() => onReassign(task)}
-                        className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
                       >
                         重新派发
-                      </button>
+                      </Button>
                     )}
 
                     {/* pending 但没有执行人 - 选择执行人按钮 */}
                     {task.status === 'pending' && !task.assigneeId && onReassign && (
-                      <button
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => onReassign(task)}
-                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
                       >
                         选择执行人
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </td>
@@ -349,9 +354,9 @@ export function TempTaskTable({
       {showCheckbox && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
           <div className="flex items-center gap-4">
-            <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            <Button variant="ghost" size="sm" onClick={onSelectAll}>
               {getAllSelectedForMode() ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">
               已选择 {selectedRows.length} 项
               {batchEditMode && '（进行中/已完成状态不可编辑）'}
@@ -378,21 +383,23 @@ export function TempTaskTable({
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>共 {pagination.total} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => pagination.onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => pagination.onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { taskDispatchFields } from '../../../../data/farmMockData';
+import { Button } from '@/components/ui/button';
 
 // 导入行类型
 export interface ImportRow {
@@ -166,9 +167,9 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
             <Upload className="w-5 h-5 text-emerald-500" />
             <h3 className="text-lg font-semibold text-gray-900">批量导入任务</h3>
           </div>
-          <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             <X className="w-5 h-5 text-gray-400" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-6 space-y-6">
@@ -281,19 +282,16 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <button
-            onClick={handleClose}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={handleClose}>
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
             onClick={handleConfirm}
             disabled={importData.length === 0}
-            className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             确认导入 {importData.length > 0 && `(${importData.length})`}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

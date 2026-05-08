@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AddMidModal } from '../components/codeRule/AddMidModal';
+import { Button } from '../components/ui/button';
 
 // 编码规则配置 - 大类(2位字母) + 中类(2位数字) + 流水号(3位数字)
 // 完整格式: SU_ + 大类代码 + 中类代码 + 流水号
@@ -297,12 +298,12 @@ export default function SupplierCodeRule() {
             className="w-40 px-2 py-1 border border-emerald-500 rounded text-sm focus:outline-none"
             autoFocus
           />
-          <button onClick={saveEdit} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+          <Button variant="ghost" size="icon" onClick={saveEdit}>
             <Save className="w-4 h-4" />
-          </button>
-          <button onClick={cancelEdit} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+          </Button>
+          <Button variant="ghost" size="icon" onClick={cancelEdit}>
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       );
     }
@@ -311,12 +312,14 @@ export default function SupplierCodeRule() {
         <span className="cursor-pointer hover:text-emerald-600" onClick={() => startEdit(type, bigCode, midCode, currentName)}>
           {currentName}
         </span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => startEdit(type, bigCode, midCode, currentName)}
-          className="opacity-0 group-hover:opacity-100 p-1 text-blue-500 hover:bg-blue-50 rounded transition-opacity"
+          className="opacity-0 group-hover:opacity-100"
         >
           <Edit2 className="w-3 h-3" />
-        </button>
+        </Button>
       </div>
     );
   };
@@ -327,12 +330,9 @@ export default function SupplierCodeRule() {
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
+            </Button>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
               <Hash className="w-6 h-6 text-white" />
             </div>
@@ -343,28 +343,19 @@ export default function SupplierCodeRule() {
           </div>
           <div className="flex items-center gap-2">
             {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-              >
+              <Button variant="default" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
                 <Edit2 className="w-4 h-4" />
                 修改规则
-              </button>
+              </Button>
             ) : (
               <>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                >
+                <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex items-center gap-2">
                   取消修改
-                </button>
-                <button
-                  onClick={() => setShowSaveConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
+                </Button>
+                <Button variant="default" onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2">
                   <Save className="w-4 h-4" />
                   保存修改
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -414,16 +405,13 @@ export default function SupplierCodeRule() {
                         placeholder="大类名称"
                         className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
-                      <button onClick={addBigCategory} className="px-3 py-1 bg-emerald-600 text-white rounded text-sm">添加</button>
-                      <button onClick={() => setShowAddBig(false)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">取消</button>
+                      <Button variant="default" size="sm" onClick={addBigCategory}>添加</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setShowAddBig(false)}>取消</Button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setShowAddBig(true)}
-                      className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddBig(true)}>
                       <Plus className="w-4 h-4" /> 添加大类
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>
@@ -438,9 +426,9 @@ export default function SupplierCodeRule() {
                   <tr key={`big-${big.code}`} className="bg-white hover:bg-gray-50">
                     <td className="px-2 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => toggleBig(big.code)} className="p-1 hover:bg-gray-300 rounded">
+                        <Button variant="ghost" size="icon" onClick={() => toggleBig(big.code)}>
                           {expandedBig.has(big.code) ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                        </button>
+                        </Button>
                         <span className="font-mono font-bold text-blue-600 text-sm">{big.code}</span>
                       </div>
                     </td>
@@ -474,12 +462,9 @@ export default function SupplierCodeRule() {
                           <div className="flex items-center gap-4">
                             {isEditing ? renderEditCell('mid', big.code, mid.code, mid.name) : <span className="font-medium text-gray-800 text-sm">{mid.name}</span>}
                             {isEditing && (
-                              <button
-                                onClick={() => deleteMidCategory(big.code, mid.code)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => deleteMidCategory(big.code, mid.code)}>
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -492,12 +477,9 @@ export default function SupplierCodeRule() {
                     <tr key={`add-mid-${big.code}`} className="bg-white hover:bg-gray-50">
                       <td className="px-2 py-2"></td>
                       <td className="px-2 py-2">
-                        <button
-                          onClick={() => setShowAddMid(big.code)}
-                          className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
-                        >
+                        <Button variant="ghost" onClick={() => setShowAddMid(big.code)} className="flex items-center gap-1 text-emerald-600">
                           <Plus className="w-4 h-4" /> 添加中类
-                        </button>
+                        </Button>
                       </td>
                       <td className="px-2 py-2"></td>
                       <td className="px-2 py-2"></td>
@@ -548,22 +530,16 @@ export default function SupplierCodeRule() {
               </ul>
             </div>
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowSaveConfirm(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
+              <Button variant="secondary" onClick={() => setShowSaveConfirm(false)}>
                 取消保存
-              </button>
-              <button
-                onClick={() => {
+              </Button>
+              <Button variant="destructive" onClick={() => {
                   setShowSaveConfirm(false);
                   setIsEditing(false);
                   alert('编码规则已保存！（演示模式）');
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
+                }}>
                 确认保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>

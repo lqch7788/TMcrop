@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '../ui/button';
 
 // 园区/地块数据 - 真实百度地图坐标
 const initialCompanyGroups = [
@@ -302,13 +303,10 @@ export function ParkArchivePage() {
       </div>
 
       {isFullscreen && (
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className="fixed top-4 left-4 z-[1001] bg-white rounded-lg shadow-lg px-4 py-2 flex items-center gap-2 hover:bg-gray-50"
-        >
+        <Button variant="secondary" className="fixed top-4 left-4 z-[1001]" onClick={() => setIsFullscreen(false)}>
           <ChevronLeft className="w-5 h-5 text-gray-600" />
           <span className="text-sm font-medium text-gray-700">返回</span>
-        </button>
+        </Button>
       )}
 
       <div className="flex gap-4 mb-6 px-6">
@@ -336,14 +334,15 @@ export function ParkArchivePage() {
                   <option key={base.id} value={base.id}>{base.name}</option>
                 ))}
               </select>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className={`p-1.5 rounded-lg ${showDetailModal ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
                 disabled={showDetailModal}
                 title={showDetailModal ? "请先关闭详情弹窗" : (isFullscreen ? "退出全屏" : "全屏查看")}
               >
                 {isFullscreen ? <Minimize2 className="w-5 h-5 text-gray-600" /> : <Maximize2 className="w-5 h-5 text-gray-600" />}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -369,14 +368,16 @@ export function ParkArchivePage() {
               <div className="p-2">
                 <p className="text-sm font-semibold text-gray-700 mb-2 px-1">基地列表</p>
                 {parkData.map(base => (
-                  <button
+                  <Button
                     key={base.id}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
                     onClick={() => flyToBase(base)}
-                    className={`w-full text-left px-2 py-1.5 rounded text-xs mb-1 hover:bg-gray-100 flex items-center gap-1`}
                   >
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${base.status === 'planting' ? 'bg-green-500' : base.status === 'warning' ? 'bg-red-500' : base.status === 'fallow' ? 'bg-yellow-500' : 'bg-gray-400'}`}></span>
                     <span className="truncate">{base.name}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -437,9 +438,9 @@ export function ParkArchivePage() {
                       )}
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <button onClick={() => toggleCompany(company.id)} className="p-1 hover:bg-blue-100 rounded cursor-pointer">
+                          <Button variant="ghost" size="icon" onClick={() => toggleCompany(company.id)}>
                             {expandedCompanies.includes(company.id) ? <ChevronDown className="w-4 h-4 text-gray-600" /> : <ChevronRight className="w-4 h-4 text-gray-600" />}
-                          </button>
+                          </Button>
                           <span className="font-bold text-sm text-gray-900">{company.name}</span>
                           <span className="text-xs text-gray-500">({company.bases.length}个基地)</span>
                         </div>
@@ -452,12 +453,12 @@ export function ParkArchivePage() {
                           })
                           .map((item) => (
                             <div key={item.id} className="flex flex-wrap items-center gap-2 py-2 pl-8 pr-2 bg-blue-50/60 hover:bg-blue-100/80 rounded-lg mb-2">
-                              <button onClick={(e) => { e.stopPropagation(); flyToBase(item); }} className="p-1 hover:bg-blue-200/50 rounded cursor-pointer" title="定位到地图">
+                              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); flyToBase(item); }} title="定位到地图">
                                 <MapPin className="w-4 h-4 text-green-600" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); navigate('/', { state: { baseId: item.id, baseName: item.name } }); }} className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/', { state: { baseId: item.id, baseName: item.name } }); }} className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                 {item.name}
-                              </button>
+                              </Button>
                               <span className="text-xs text-gray-600">{item.area}{item.unit}</span>
                               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                                 item.status === 'planting' ? 'bg-green-100 text-green-700' :
@@ -465,9 +466,9 @@ export function ParkArchivePage() {
                                 'bg-gray-100 text-gray-600'
                               }`}>{item.statusText}</span>
                               <span className="text-xs text-gray-600">{item.manager}</span>
-                              <button onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }} className="ml-auto text-xs text-blue-500 hover:text-blue-700 cursor-pointer">
+                              <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }}>
                                 详情&gt;&gt;
-                              </button>
+                              </Button>
                             </div>
                           ))}
                       </td>
@@ -482,14 +483,14 @@ export function ParkArchivePage() {
           {exportMode && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-blue-100 bg-blue-50/50">
               <div className="flex items-center gap-4">
-                <button onClick={handleSelectAll} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
                   {selectedRows.length === filteredData.length ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setExportMode(false)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50">取消</button>
-                <button onClick={() => alert('导出功能') && setExportMode(false)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500">确认导出</button>
+                <Button variant="secondary" size="sm" onClick={() => setExportMode(false)}>取消</Button>
+                <Button variant="blue" size="sm" onClick={() => alert('导出功能') && setExportMode(false)}>确认导出</Button>
               </div>
             </div>
           )}
@@ -503,8 +504,8 @@ export function ParkArchivePage() {
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">{selectedField.name} - 地块档案</h3>
               <div className="flex items-center gap-3">
-                <button onClick={() => navigate('/bases')} className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30">进入{'>>>'}</button>
-                <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-white/20 rounded"><X className="w-5 h-5 text-white" /></button>
+                <Button variant="secondary" size="sm" onClick={() => navigate('/bases')}>进入{'>>>'}</Button>
+                <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)}><X className="w-5 h-5 text-white" /></Button>
               </div>
             </div>
             <div className="p-6 bg-gray-100">
@@ -553,7 +554,7 @@ export function ParkArchivePage() {
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">关闭</button>
+              <Button variant="secondary" onClick={() => setShowDetailModal(false)}>关闭</Button>
             </div>
           </div>
         </div>

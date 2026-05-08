@@ -1,5 +1,6 @@
 // 物料管理表格组件
 import { Eye, Edit, Download } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface MaterialsTableProps {
   filteredMaterials: Array<{
@@ -97,18 +98,12 @@ export default function MaterialsTable({
                 {!exportMode && (
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="查看"
-                      >
+                      <Button variant="ghost" size="icon" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                        title="编辑"
-                      >
+                      </Button>
+                      <Button variant="ghost" size="icon" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 )}
@@ -121,9 +116,9 @@ export default function MaterialsTable({
         {exportMode && selectedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Button variant="ghost" size="sm" onClick={onSelectAll}>
                 {selectedRows.length === filteredMaterials.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -150,27 +145,29 @@ export default function MaterialsTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {filteredMaterials.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-          </button>
+          </Button>
           <span className="text-sm">
             {currentPage} / {totalPages}
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

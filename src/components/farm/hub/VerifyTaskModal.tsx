@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Task, TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
 import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VerifyTaskModalProps {
   taskId: string;
@@ -117,9 +118,9 @@ export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModal
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">任务验收</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-emerald-500">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-white" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容 */}
@@ -218,18 +219,16 @@ export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModal
 
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={verifyResult === 'pass' ? 'default' : 'destructive'}
             onClick={handleSubmit}
             disabled={!verifyResult || (verifyResult === 'reject' && !feedback.trim()) || isSubmitting}
-            className={`px-4 py-2 text-sm text-white rounded-lg disabled:opacity-50 ${
-              verifyResult === 'pass' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
-            }`}
           >
             {isSubmitting ? '提交中...' : verifyResult === 'pass' ? '验收通过' : '驳回'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

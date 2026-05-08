@@ -9,6 +9,7 @@ import { CheckCircle, XCircle, Clock, ChevronRight, AlertTriangle } from 'lucide
 import type { Approval, ApprovalStatus } from '../../types/approval';
 import { ApprovalLevelBadge } from './ApprovalLevelBadge';
 import { ApprovalLevel } from '../../config/approvalHierarchy';
+import { Button } from '../ui/button';
 
 interface ApprovalListProps {
   approvals: Approval[];
@@ -131,12 +132,9 @@ export function ApprovalList({
                 {getStatusText(approval.status)}
               </span>
               {onView && (
-                <button
-                  onClick={() => onView(approval.id)}
-                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium flex items-center gap-1"
-                >
+                <Button variant="ghost" size="sm" onClick={() => onView(approval.id)} className="text-emerald-600 hover:text-emerald-700 p-0 h-auto">
                   查看详情 <ChevronRight className="w-4 h-4" />
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -144,28 +142,19 @@ export function ApprovalList({
           {showActions && approval.status === ApprovalStatus.PENDING && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
               {onApprove && canApprove && (
-                <button
-                  onClick={() => onApprove(approval.id)}
-                  className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
-                >
+                <Button onClick={() => onApprove(approval.id)}>
                   通过
-                </button>
+                </Button>
               )}
               {onPartialApprove && canApprove && (
-                <button
-                  onClick={() => onPartialApprove(approval)}
-                  className="h-10 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
-                >
+                <Button variant="secondary" onClick={() => onPartialApprove(approval)}>
                   部分通过
-                </button>
+                </Button>
               )}
               {onReject && canReject && (
-                <button
-                  onClick={() => onReject(approval.id)}
-                  className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
-                >
+                <Button variant="destructive" onClick={() => onReject(approval.id)}>
                   拒绝
-                </button>
+                </Button>
               )}
             </div>
           )}

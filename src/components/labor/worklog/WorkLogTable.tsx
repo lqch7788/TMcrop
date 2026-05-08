@@ -1,5 +1,6 @@
 import { Eye, Plus, Edit, Trash2, Download } from 'lucide-react';
 import type { WorkLog, WorkLogTableProps } from './types';
+import { Button } from '@/components/ui/button';
 
 /**
  * 工作日志表格组件
@@ -45,40 +46,42 @@ export function WorkLogTable({
         <h3 className="text-lg font-semibold text-gray-900">工作日志列表</h3>
         <div className="flex gap-2">
           {onAddClick && (
-            <button
+            <Button
+              size="sm"
               onClick={onAddClick}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           )}
           {onBatchEditClick && (
-            <button
+            <Button
+              size="sm"
+              variant="blue"
               onClick={onBatchEditClick}
-              className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
             >
               <Edit className="w-4 h-4" />
               编辑
-            </button>
+            </Button>
           )}
           {onBatchDeleteClick && (
-            <button
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={onBatchDeleteClick}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
             >
               <Trash2 className="w-4 h-4" />
               删除
-            </button>
+            </Button>
           )}
           {onExportClick && (
-            <button
+            <Button
+              size="sm"
               onClick={onExportClick}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -150,13 +153,14 @@ export function WorkLogTable({
                 {log.submitTime ? new Date(log.submitTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => onViewDetail(log)}
-                  className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                   title="查看"
                 >
                   <Eye className="w-4 h-4" />
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
@@ -180,21 +184,23 @@ export function WorkLogTable({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {total} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import { Button } from '../ui/button';
 import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
 import { useGreenhouses } from '../common/settings';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
@@ -909,103 +910,81 @@ export default function ProductionPage() {
           <h3 className="text-lg font-semibold text-gray-900">生产计划列表</h3>
           {exportMode ? (
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowExportModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              <Button size="sm" onClick={() => setShowExportModal(true)}>
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
-                onClick={handleCancelExport}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={handleCancelExport}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : batchEditMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                size="sm"
+                variant="blue"
                 onClick={() => setShowBatchEditModal(true)}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
                 批量编辑
-              </button>
-              <button
-                onClick={() => {
-                  setBatchEditMode(false);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => {
+                setBatchEditMode(false);
+                setSelectedRows([]);
+              }}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : batchDeleteMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={() => setShowDeleteWarning(true)}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 确认删除
-              </button>
-              <button
-                onClick={() => {
-                  setBatchDeleteMode(false);
-                  setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => {
+                setBatchDeleteMode(false);
+                setSelectedRows([]);
+              }}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
               {canCreate && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
+                <Button size="sm" onClick={() => setShowCreateModal(true)}>
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {canEdit && (
-                <button
-                  onClick={() => {
-                    setBatchEditMode(true);
-                    setSelectedRows([]);
-                  }}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                >
+                <Button size="sm" variant="blue" onClick={() => {
+                  setBatchEditMode(true);
+                  setSelectedRows([]);
+                }}>
                   <Edit className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {canDelete && (
-                <button
-                  onClick={() => {
-                    setBatchDeleteMode(true);
-                    setSelectedRows([]);
-                  }}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                >
+                <Button size="sm" variant="destructive" onClick={() => {
+                  setBatchDeleteMode(true);
+                  setSelectedRows([]);
+                }}>
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {canExport && (
-                <button
-                  onClick={handleExportClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
+                <Button size="sm" onClick={handleExportClick}>
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </div>
           )}

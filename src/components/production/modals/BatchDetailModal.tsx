@@ -3,6 +3,7 @@ import { X, Link2, Leaf, Sprout, Grid3X3, Package } from 'lucide-react';
 import { CropBatch } from '../../../types';
 import { batchStatusColors, batchStatusLabels, stageProgress } from '../constants';
 import { getProductionPlanRelations, ProductionPlanRelation } from '../../../services/productionPlanService';
+import { Button } from '@/components/ui/button';
 
 interface BatchDetailModalProps {
   batch: CropBatch | null;
@@ -83,9 +84,9 @@ export function BatchDetailModal({
         {/* 绿色背景头部 */}
         <div className="px-6 py-4 bg-emerald-600 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">批次详情</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-emerald-500 rounded-lg">
-            <X className="w-5 h-5 text-white" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-emerald-500">
+            <X className="w-5 h-5" />
+          </Button>
         </div>
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* 标签页切换 */}
@@ -297,16 +298,13 @@ export function BatchDetailModal({
           )}
         </div>
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+          <Button variant="secondary" onClick={onClose}>
             关闭
-          </button>
+          </Button>
           {onViewWorkOrders && (
-            <button
-              onClick={onViewWorkOrders}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            >
+            <Button onClick={onViewWorkOrders}>
               查看工单
-            </button>
+            </Button>
           )}
         </div>
       </div>

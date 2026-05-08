@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Search, Download, Clock, CheckCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Button } from '../ui/button';
 
 const attendanceData = [
   { id: 1, workerId: 'A001', name: '张伟民', dept: '生产部', date: '2024-03-15', checkIn: '08:05', checkOut: '17:30', status: '正常', statusClass: 'normal', hours: 9.4 },
@@ -205,25 +206,25 @@ export function HrAttendancePage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <Button variant="default">
               <Search className="w-4 h-4" />
               搜索
-            </button>
+            </Button>
             {exportMode ? (
               <>
-                <button onClick={() => setShowExportModal(true)} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+                <Button variant="default" onClick={() => setShowExportModal(true)}>
                   <Download className="w-4 h-4" />
                   确认导出
-                </button>
-                <button onClick={handleCancelExport} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                </Button>
+                <Button variant="secondary" onClick={handleCancelExport}>
                   取消
-                </button>
+                </Button>
               </>
             ) : (
-              <button onClick={handleExportClick} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2">
+              <Button variant="secondary" onClick={handleExportClick}>
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -291,12 +292,9 @@ export function HrAttendancePage() {
           {exportMode && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                >
+                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
                   {selectedRows.length === attendanceData.length ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             </div>
@@ -308,33 +306,32 @@ export function HrAttendancePage() {
             共 {attendanceData.length} 条记录，第 {currentPage}/{totalPages} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages)].map((_, i) => (
-              <button
+              <Button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                size="sm"
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -347,9 +344,9 @@ export function HrAttendancePage() {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-                <button onClick={() => setShowExportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <Button variant="ghost" size="icon" onClick={() => setShowExportModal(false)}>
                   <X className="w-5 h-5 text-gray-500" />
-                </button>
+                </Button>
               </div>
               <div className="p-6">
                 <p className="text-sm text-gray-500 mb-4">已选择 {selectedRows.length} 条数据</p>
@@ -384,12 +381,12 @@ export function HrAttendancePage() {
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setShowExportModal(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                <Button variant="secondary" onClick={() => setShowExportModal(false)}>
                   取消
-                </button>
-                <button onClick={handleConfirmExport} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+                </Button>
+                <Button variant="default" onClick={handleConfirmExport}>
                   导出
-                </button>
+                </Button>
               </div>
             </div>
           </div>

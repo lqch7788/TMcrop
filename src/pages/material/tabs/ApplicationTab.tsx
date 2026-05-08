@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Download, Plus, Edit, Trash2, ChevronDown, ChevronRight as ChevronRightIcon, Eye, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 
 // 类型导入
@@ -645,12 +646,9 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
               <option value="已取消">已取消</option>
             </select>
           </div>
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-          >
+          <Button variant="secondary" onClick={handleReset}>
             重置
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -660,83 +658,59 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
           <h3 className="text-lg font-semibold text-gray-900">领料申请单列表</h3>
           {exportMode ? (
             <div className="flex gap-2">
-              <button
-                onClick={handleExportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              <Button onClick={handleExportClick}>
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+              </Button>
+              <Button variant="secondary" onClick={handleCancelExport}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              <Button onClick={() => setShowAddModal(true)}>
                 <Plus className="w-4 h-4" />
                 新增
-              </button>
+              </Button>
               {!batchEditMode && (
                 <>
-                  <button
-                    onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}>
                     <Edit className="w-4 h-4" />
                     编辑
-                  </button>
-                  <button
-                    onClick={() => { setBatchEditMode(true); setShowDeleteWarning(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="destructive" onClick={() => { setBatchEditMode(true); setShowDeleteWarning(true); }}>
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
+                  </Button>
                 </>
               )}
 
               {batchEditMode && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => {
+                  <Button onClick={() => {
                       if (selectedRows.length === 0) {
                         alert('请先选择要编辑的记录');
                         setBatchEditMode(false);
                       } else {
                         setShowBatchEditModal(true);
                       }
-                    }}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                    }}>
                     确认编辑
-                  </button>
-                  <button
-                    onClick={() => { setShowBatchDeleteConfirm(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="destructive" onClick={() => { setShowBatchDeleteConfirm(true); }}>
                     确认删除
-                  </button>
-                  <button
-                    onClick={() => { setBatchEditMode(false); setSelectedRows([]); }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-                  >
+                  </Button>
+                  <Button variant="secondary" onClick={() => { setBatchEditMode(false); setSelectedRows([]); }}>
                     取消
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {!batchEditMode && (
-                <button
-                  onClick={() => setExportMode(true)}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
+                <Button onClick={() => setExportMode(true)}>
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -784,16 +758,17 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
                       </td>
                     )}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => toggleExpandRow(item.id)}
-                        className="p-1 hover:bg-gray-100 rounded"
                       >
                         {expandedRows.has(item.id) ? (
                           <ChevronDown className="w-4 h-4 text-gray-500" />
                         ) : (
                           <ChevronRightIcon className="w-4 h-4 text-gray-500" />
                         )}
-                      </button>
+                      </Button>
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => handleView(item)}>{item.code}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.date}</td>
@@ -887,12 +862,9 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
         {exportMode && selectedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-              >
+              <Button variant="ghost" onClick={handleSelectAll}>
                 {selectedRows.length === filteredData.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -915,21 +887,23 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -949,9 +923,9 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
           <div className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
               <h3 className="text-lg font-semibold text-white">编辑领料单</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-white hover:bg-blue-700 p-1 rounded">
+              <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)} className="text-white hover:bg-blue-700">
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4">
@@ -1039,13 +1013,10 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">物料明细</label>
-                  <button
-                    onClick={handleEditAddMaterial}
-                    className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button onClick={handleEditAddMaterial}>
                     <Plus className="w-4 h-4" />
                     添加物料
-                  </button>
+                  </Button>
                 </div>
                 {editForm.materials.length > 0 ? (
                   <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
@@ -1146,12 +1117,13 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
                               />
                             </td>
                             <td className="px-2 py-2">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleEditRemoveMaterial(idx)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
                             </td>
                           </tr>
                         );
@@ -1166,26 +1138,17 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-gray-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={() => setShowEditModal(false)}>
                 取消
-              </button>
+              </Button>
               {(selectedRecord?.status === '待审批' || selectedRecord?.status === '已审批') && (
-                <button
-                  onClick={handleVoidApply}
-                  className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
-                >
+                <Button variant="warning" onClick={handleVoidApply}>
                   作废申请
-                </button>
+                </Button>
               )}
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
+              <Button onClick={handleSaveEdit}>
                 保存提交
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1197,9 +1160,9 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
           <div className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 sticky top-0">
               <h3 className="text-lg font-semibold text-white">新增领料单</h3>
-              <button onClick={handleCancelAdd} className="text-white hover:bg-emerald-700 p-1 rounded">
+              <Button variant="ghost" size="icon" onClick={handleCancelAdd} className="text-white hover:bg-emerald-700">
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4">
@@ -1213,12 +1176,9 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
                       placeholder="系统自动生成"
                       className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
-                    <button
-                      onClick={handleGenerateAddCode}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
+                    <Button variant="secondary" onClick={handleGenerateAddCode}>
                       生成
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div>
@@ -1300,13 +1260,10 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">物料明细</label>
-                  <button
-                    onClick={handleAddMaterial}
-                    className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button onClick={handleAddMaterial}>
                     <Plus className="w-4 h-4" />
                     添加物料
-                  </button>
+                  </Button>
                 </div>
                 {addForm.materials.length > 0 ? (
                   <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
@@ -1407,12 +1364,13 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
                               />
                             </td>
                             <td className="px-2 py-2">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleRemoveMaterial(idx)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
                             </td>
                           </tr>
                         );
@@ -1427,18 +1385,12 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleCancelAdd}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={handleCancelAdd}>
                 取消
-              </button>
-              <button
-                onClick={handleSaveAdd}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
+              </Button>
+              <Button onClick={handleSaveAdd}>
                 提交申请
-              </button>
+              </Button>
             </div>
           </div>
         </div>

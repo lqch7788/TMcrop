@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface HarvestFilterToolbarProps {
   // 筛选状态
@@ -137,19 +138,13 @@ export function HarvestFilterToolbar({
 
         {/* 按钮行 - 放同一行后面 */}
         <div className="flex gap-2">
-          <button
-            onClick={onReset}
-            className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
-          >
+          <Button variant="secondary" onClick={onReset}>
             重置
-          </button>
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

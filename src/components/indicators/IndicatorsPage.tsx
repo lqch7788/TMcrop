@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Target, Plus, Edit, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface Indicator {
   id: number;
@@ -151,9 +152,9 @@ export function IndicatorsPage() {
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">新增目标</h2>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" onClick={() => setShowModal(false)}>
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -215,8 +216,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <button onClick={() => setShowModal(false)} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-              <button onClick={handleSubmit} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">确定</button>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+              <Button variant="default" onClick={handleSubmit}>确定</Button>
             </div>
           </div>
         </div>
@@ -234,9 +235,9 @@ export function IndicatorsPage() {
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">变更目标</h2>
               </div>
-              <button onClick={() => setShowEditModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -270,8 +271,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <button onClick={() => setShowEditModal(false)} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-              <button onClick={handleEditSubmit} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">提交审核</button>
+              <Button variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
+              <Button variant="blue" onClick={handleEditSubmit}>提交审核</Button>
             </div>
           </div>
         </div>
@@ -345,9 +346,9 @@ export function IndicatorsPage() {
             <input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
           <div className="flex gap-2">
-            <button onClick={resetFilters} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">重置</button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"><Search className="w-4 h-4" />搜索</button>
-            <button onClick={handleOpenModal} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"><Plus className="w-4 h-4" />新增</button>
+            <Button variant="default" onClick={resetFilters} className="flex items-center gap-2">重置</Button>
+            <Button variant="default" className="flex items-center gap-2"><Search className="w-4 h-4" />搜索</Button>
+            <Button variant="default" onClick={handleOpenModal} className="flex items-center gap-1"><Plus className="w-4 h-4" />新增</Button>
           </div>
         </div>
       </div>
@@ -388,8 +389,8 @@ export function IndicatorsPage() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                      <button onClick={() => handleEditClick(ind)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
+                      <Button variant="ghost" size="icon" title="查看"><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(ind)} title="编辑"><Edit className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -407,8 +408,8 @@ export function IndicatorsPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {indicators.length} 条，第 {currentPage} / {Math.ceil(indicators.length / pageSize)} 页</span>
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /></button>
-            <button onClick={() => setCurrentPage(Math.min(Math.ceil(indicators.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(indicators.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(Math.ceil(indicators.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(indicators.length / pageSize)}><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       </div>

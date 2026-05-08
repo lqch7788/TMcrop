@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Search, Plus, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/button';
 
 export interface PlantArea {
   id: number;
@@ -128,14 +129,14 @@ export function PlantAreaPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <Button variant="default">
               <Search className="w-4 h-4" />
               搜索
-            </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            </Button>
+            <Button variant="default">
               <Plus className="w-4 h-4" />
               新增区域
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -180,12 +181,12 @@ export function PlantAreaPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                      <Button variant="ghost" size="icon" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                      </Button>
+                      <Button variant="ghost" size="icon" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -199,33 +200,32 @@ export function PlantAreaPage() {
             共 {filteredAreas.length} 条记录，第 {currentPage}/{totalPages} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages)].map((_, i) => (
-              <button
+              <Button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                size="sm"
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

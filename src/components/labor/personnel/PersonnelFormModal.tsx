@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Worker, SKILL_TAGS } from '../../../types';
+import { Button } from '@/components/ui/button';
 
 interface PersonnelFormModalProps {
   worker?: Worker | null;
@@ -423,19 +424,18 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
 
       {/* 底部按钮 */}
       <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
         >
           取消
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
         >
           保存
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -448,9 +448,9 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
       size="xl"
       showFooter={false}
       headerAction={
-        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5 text-white" />
-        </button>
+        </Button>
       }
     >
       {content}

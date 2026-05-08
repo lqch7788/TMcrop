@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface ActionBarProps {
   // 模式状态
@@ -63,7 +64,9 @@ export function ActionBar({
           {/* 批量编辑模式按钮 */}
           {batchEditMode && (
             <>
-              <button
+              <Button
+                size="sm"
+                variant="blue"
                 onClick={() => {
                   if (selectedRows.length === 0) {
                     alert('请先选择要编辑的数据');
@@ -71,23 +74,21 @@ export function ActionBar({
                   }
                   onBatchEditConfirm();
                 }}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
               >
                 <Edit className="w-4 h-4" />
                 编辑
-              </button>
-              <button
-                onClick={onBatchEditCancel}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
                 取消
-              </button>
+              </Button>
             </>
           )}
           {/* 批量删除模式按钮 */}
           {batchDeleteMode && (
             <>
-              <button
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={() => {
                   if (selectedRows.length === 0) {
                     alert('请先选择要删除的数据');
@@ -96,63 +97,53 @@ export function ActionBar({
                   onBatchDeleteConfirm();
                 }}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
-              <button
-                onClick={onBatchDeleteCancel}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={onBatchDeleteCancel}>
                 取消
-              </button>
+              </Button>
             </>
           )}
           {/* 导出模式按钮 */}
           {exportMode && (
             <>
-              <button onClick={onExportConfirm} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+              <Button size="sm" onClick={onExportConfirm}>
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button onClick={onExportCancel} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+              </Button>
+              <Button size="sm" variant="secondary" onClick={onExportCancel}>
                 取消
-              </button>
+              </Button>
             </>
           )}
         </div>
       ) : (
         <div className="flex gap-2">
           {canCreate && (
-            <button onClick={onCreate} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+            <Button size="sm" onClick={onCreate}>
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           )}
           {canEdit && (
-            <button
-              onClick={onBatchEdit}
-              className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-            >
+            <Button size="sm" variant="blue" onClick={onBatchEdit}>
               <Edit className="w-4 h-4" />
               编辑
-            </button>
+            </Button>
           )}
           {canDelete && (
-            <button
-              onClick={onBatchDelete}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-            >
+            <Button size="sm" variant="destructive" onClick={onBatchDelete}>
               <Trash2 className="w-4 h-4" />
               删除
-            </button>
+            </Button>
           )}
           {canExport && (
-            <button onClick={onExport} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+            <Button size="sm" onClick={onExport}>
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           )}
         </div>
       )}

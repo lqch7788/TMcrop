@@ -14,6 +14,7 @@ import { useTempTaskFilters } from '../../../labor/tempTask/hooks/useTempTaskFil
 import { useTempTaskForm } from '../../../labor/tempTask/hooks/useTempTaskForm';
 import { SearchableSelect } from '../../../materialReturn/modals/SearchableSelect';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../../hooks/useTempTasks';
@@ -95,9 +96,9 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={onClose}>
               ×
-            </button>
+            </Button>
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
@@ -128,18 +129,12 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             </div>
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            </Button>
+            <Button onClick={onConfirm}>
               导出
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -175,18 +170,12 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
             <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -258,9 +247,9 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
               已选择 {selectedRows.length} 条
             </span>
           </div>
-          <button onClick={handleClose} className="text-white hover:bg-blue-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             ×
-          </button>
+          </Button>
         </div>
 
         {/* Info Banner */}
@@ -458,18 +447,12 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
-            <button
-              onClick={handleConfirmNext}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            <Button variant="blue" onClick={handleConfirmNext}>
               确认（下一个）
-            </button>
-            <button
-              onClick={handlePublish}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            </Button>
+            <Button onClick={handlePublish}>
               发布
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -510,9 +493,9 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={onClose}>
               ×
-            </button>
+            </Button>
           </div>
           <div className="p-6 space-y-5">
             {/* 警示信息 */}
@@ -555,22 +538,19 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
 
             {/* 操作按钮 */}
             <div className="flex gap-3 justify-end pt-2">
-              <button
-                onClick={() => {
+              <Button variant="secondary" onClick={() => {
                   setReason('');
                   onClose();
-                }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+                }}>
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSubmit}
                 disabled={!reason.trim()}
-                className={`px-4 py-2 ${buttonClass} text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+                className={buttonClass}
               >
                 确认{title}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -610,9 +590,9 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">重新派发任务</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={onClose}>
               ×
-            </button>
+            </Button>
           </div>
           <div className="p-6 space-y-5">
             {/* 警示信息 */}
@@ -678,23 +658,15 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
 
             {/* 操作按钮 */}
             <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={onClose}>
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSubmit}
                 disabled={!selectedAssignee}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  selectedAssignee
-                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
               >
                 确认派发
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1277,91 +1249,72 @@ export const TempTaskTab: React.FC = () => {
           </div>
           {exportMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                size="sm"
                 onClick={() => setShowExportModal(true)}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
-                onClick={handleCancelExport}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleCancelExport}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : batchEditMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="blue"
+                size="sm"
                 onClick={handleBatchEdit}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
                 批量编辑
-              </button>
-              <button
-                onClick={handleCancelBatch}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : batchDeleteMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={handleBatchDelete}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 确认删除
-              </button>
-              <button
-                onClick={handleCancelBatch}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
                 取消
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={openCreateModal}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              <Button size="sm" onClick={openCreateModal}>
                 <Plus className="w-4 h-4" />
                 新增
-              </button>
-              <button
-                onClick={() => {
+              </Button>
+              <Button variant="blue" size="sm" onClick={() => {
                   setBatchEditMode(true);
                   setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-              >
+                }}>
                 <Edit className="w-4 h-4" />
                 编辑
-              </button>
-              <button
-                onClick={() => {
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => {
                   setBatchDeleteMode(true);
                   setSelectedRows([]);
-                }}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-              >
+                }}>
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
-              <button
-                onClick={handleExportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              </Button>
+              <Button size="sm" onClick={handleExportClick}>
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             </div>
           )}
         </div>

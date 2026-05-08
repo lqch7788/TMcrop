@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Search, RotateCcw, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
+import { Button } from '@/components/ui/button';
 
 interface PlantingFilterProps {
   filters: PlantingFilters;
@@ -104,17 +105,14 @@ export function PlantingFilter({
         {/* 按钮行 */}
         <div className="flex gap-2 ml-auto">
           {onAdd && (
-            <button
-              onClick={onAdd}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
+            <Button onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="blue"
             onClick={() => setShowMore(!showMore)}
-            className="h-10 px-4 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-2"
           >
             {showMore ? (
               <>
@@ -127,21 +125,15 @@ export function PlantingFilter({
                 More
               </>
             )}
-          </button>
-          <button
-            onClick={onReset}
-            className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
-          >
+          </Button>
+          <Button variant="secondary" onClick={onReset}>
             <RotateCcw className="w-4 h-4" />
             重置
-          </button>
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
 

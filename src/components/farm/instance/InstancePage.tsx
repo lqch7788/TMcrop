@@ -6,6 +6,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle, Barcode } from 'lucide-react';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '@/types/crop';
+import { Button } from '@/components/ui/button';
 
 export default function InstancePage() {
   const [searchCode, setSearchCode] = useState('');
@@ -108,10 +109,10 @@ export default function InstancePage() {
             />
           </div>
           <div className="flex items-end">
-            <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <Button variant="default" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
               查询
-            </button>
+            </Button>
           </div>
         </div>
       </div>

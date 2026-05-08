@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import type { Team, UnassignedWorker } from './types';
+import { Button } from '../../../components/ui/button';
 
 interface TeamAssignModalProps {
   team: Team | null;
@@ -80,19 +81,15 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
     <>
       <span className="text-sm text-gray-500">已选择 {selectedWorkers.length} 人</span>
       <div className="flex gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-        >
+        <Button variant="secondary" onClick={onClose}>
           取消
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleAssign}
           disabled={selectedWorkers.length === 0}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
         >
           确认分配
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -105,9 +102,9 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
       size="md"
       showFooter={true}
       headerAction={
-        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { batchStatusLabels, PlanTypeLabels } from './constants';
 import { PlanType } from '../../types';
+import { Button } from '../ui/button';
 
 interface ProductionFiltersProps {
   batchCodeSearch: string;
@@ -119,19 +120,13 @@ export function ProductionFilters({
           </select>
         </div>
         <div className="flex gap-2 ml-2">
-          <button
-            onClick={onReset}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-          >
+          <Button size="sm" onClick={onReset}>
             重置
-          </button>
-          <button
-            onClick={onSearch}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
+          </Button>
+          <Button size="sm" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

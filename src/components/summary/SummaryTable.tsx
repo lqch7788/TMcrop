@@ -5,6 +5,7 @@
 import { Eye } from 'lucide-react';
 import { TableColumn } from './types';
 import { Pagination } from './Pagination';
+import { Button } from '../ui/button';
 
 interface SummaryTableProps<T extends { id: number | string }> {
   columns: TableColumn<T>[];
@@ -82,13 +83,9 @@ export function SummaryTable<T extends { id: number | string }>({
                 ))}
                 {!exportMode && (
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => onView?.(record)}
-                      className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                      title="查看"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => onView?.(record)} title="查看">
                       <Eye className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </td>
                 )}
               </tr>
@@ -98,9 +95,9 @@ export function SummaryTable<T extends { id: number | string }>({
         {exportMode && selectedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Button variant="ghost" onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 {selectedRows.length === data.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>

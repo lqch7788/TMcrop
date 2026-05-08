@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { X, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface OperationRecordPanelProps {
   records: UnifiedOperationRecord[];
@@ -53,13 +54,13 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
             操作记录
           </h2>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-1">
+            <Button variant="default" size="sm" className="flex items-center gap-1">
               <Download className="w-4 h-4" />
               导出
-            </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-emerald-500">
-              <X className="w-5 h-5 text-white" />
-            </button>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
@@ -87,12 +88,13 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
             />
           </div>
           {(filterType !== 'all' || filterDate) && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => { setFilterType('all'); setFilterDate(''); }}
-              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
             >
               重置
-            </button>
+            </Button>
           )}
         </div>
 
@@ -140,13 +142,13 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
         <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
           <p className="text-sm text-gray-500">共 {filteredRecords.length} 条记录</p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50" disabled>
+            <Button variant="ghost" size="sm" disabled>
               上一页
-            </button>
+            </Button>
             <span className="px-3 py-1 text-sm">第 1/1 页</span>
-            <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50" disabled>
+            <Button variant="ghost" size="sm" disabled>
               下一页
-            </button>
+            </Button>
           </div>
         </div>
       </div>

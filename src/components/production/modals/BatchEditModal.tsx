@@ -1,6 +1,7 @@
 import { X, Upload } from 'lucide-react';
 import { CropBatch, Greenhouse, CropType } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS } from '../constants';
+import { Button } from '@/components/ui/button';
 
 interface PlantingMode {
   id: string;
@@ -89,9 +90,9 @@ export function BatchEditModal({
               已选择 {selectedRows.length} 条
             </span>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-blue-700">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Info Banner */}
@@ -288,7 +289,9 @@ export function BatchEditModal({
                       <span className="text-sm text-gray-700">
                         {editedData.planDetailFileName ?? currentBatch.planDetailFileName}
                       </span>
-                      <button
+                      <Button
+                        size="sm"
+                        variant="blue"
                         onClick={() => {
                           const input = document.createElement('input');
                           input.type = 'file';
@@ -307,14 +310,14 @@ export function BatchEditModal({
                           };
                           input.click();
                         }}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1"
                       >
                         <Upload className="w-3 h-3" />
                         重新上传
-                      </button>
+                      </Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => {
                         const input = document.createElement('input');
                         input.type = 'file';
@@ -333,11 +336,10 @@ export function BatchEditModal({
                         };
                         input.click();
                       }}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 flex items-center gap-1"
                     >
                       <Upload className="w-3 h-3" />
                       上传计划文件
-                    </button>
+                    </Button>
                   )}
                   <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
                 </div>
@@ -349,24 +351,15 @@ export function BatchEditModal({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
-            <button
-              onClick={onConfirmNext}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            <Button onClick={onConfirmNext}>
               确认（下一个）
-            </button>
-            <button
-              onClick={onVoidWarning}
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
-            >
+            </Button>
+            <Button variant="warning" onClick={onVoidWarning}>
               申请作废
-            </button>
-            <button
-              onClick={onPublish}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            </Button>
+            <Button variant="blue" onClick={onPublish}>
               提交
-            </button>
+            </Button>
           </div>
         </div>
       </div>

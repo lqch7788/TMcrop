@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Warehouse, Search, Plus, Edit2, Trash2, Layers, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 interface Warehouse {
   id: string;
@@ -212,13 +213,13 @@ export default function WarehouseManagement() {
           </Link>
           <h2 className="text-xl font-bold text-gray-900">仓库管理</h2>
         </div>
-        <button
+        <Button
+          variant="default"
           onClick={() => { setEditingWarehouse(null); setNewWarehouse({ status: 'active' }); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
           新增仓库
-        </button>
+        </Button>
       </div>
 
       {/* 统计卡片 */}
@@ -307,12 +308,12 @@ export default function WarehouseManagement() {
                 <p className="text-xs text-gray-500 mt-2">{warehouse.description}</p>
               )}
               <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-                <button onClick={() => editWarehouse(warehouse)} className="p-1.5 hover:bg-gray-100 rounded">
+                <Button size="icon" variant="ghost" onClick={() => editWarehouse(warehouse)}>
                   <Edit2 className="w-4 h-4 text-gray-600" />
-                </button>
-                <button onClick={() => deleteWarehouse(warehouse.id)} className="p-1.5 hover:bg-red-50 rounded">
+                </Button>
+                <Button size="icon" variant="destructive" onClick={() => deleteWarehouse(warehouse.id)}>
                   <Trash2 className="w-4 h-4 text-red-600" />
-                </button>
+                </Button>
               </div>
             </div>
           );
@@ -404,8 +405,8 @@ export default function WarehouseManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={handleCloseModal} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
-              <button onClick={editingWarehouse ? handleUpdate : handleCreate} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+              <Button variant="secondary" onClick={handleCloseModal}>取消</Button>
+              <Button variant="default" onClick={editingWarehouse ? handleUpdate : handleCreate}>保存</Button>
             </div>
           </div>
         </div>

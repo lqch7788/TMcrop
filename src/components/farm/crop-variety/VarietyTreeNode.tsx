@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, Plus, Eye, Edit2, Trash2, Save, X } from 'lu
 import { VarietyTreeNode as VarietyTreeNodeType } from './types';
 import { CropVariety } from '../../../types/cropVariety';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
+import { Button } from '@/components/ui/button';
 
 interface VarietyTreeNodeProps {
   node: VarietyTreeNodeType;
@@ -363,12 +364,12 @@ export function VarietyTreeNode({
                     className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
                     autoFocus
                   />
-                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }}>
                     <Save className="w-4 h-4" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }}>
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group">
@@ -417,12 +418,12 @@ export function VarietyTreeNode({
                     className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
                     autoFocus
                   />
-                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }}>
                     <Save className="w-4 h-4" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }}>
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group">
@@ -474,12 +475,12 @@ export function VarietyTreeNode({
                     className="w-32 px-2 py-1 border border-amber-500 rounded text-sm focus:outline-none"
                     autoFocus
                   />
-                  <button onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); saveInlineEdit(); }}>
                     <Save className="w-4 h-4" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); cancelInlineEdit(); }}>
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group">
@@ -554,42 +555,26 @@ export function VarietyTreeNode({
         <td className="px-4 py-2 whitespace-nowrap">
           <div className="flex items-center gap-1">
             {(node.isRecorded || node.level === 'detail') && (
-              <button
-                onClick={handleSelect}
-                className={getActionButtonClass('view')}
-                title="查看详情"
-              >
+              <Button size="icon" variant="ghost" onClick={handleSelect} title="查看详情">
                 <Eye className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
             {node.level !== 'detail' && (
-              <button
-                onClick={handleAdd}
-                className={getActionButtonClass('add')}
-                title="新增子品种"
-              >
+              <Button size="icon" variant="ghost" onClick={handleAdd} title="新增子品种">
                 <Plus className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
             {/* 编辑按钮：对于已录入品种或扩展节点（category 级别不显示） */}
             {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && (
-              <button
-                onClick={handleEdit}
-                className={getActionButtonClass('edit')}
-                title={(node as any).isExtension ? '编辑' : '编辑品种'}
-              >
+              <Button size="icon" variant="ghost" onClick={handleEdit} title={(node as any).isExtension ? '编辑' : '编辑品种'}>
                 <Edit2 className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
             {/* 删除按钮：对于已录入品种或扩展节点（category 级别不显示） */}
             {(node.isRecorded || (node as any).isExtension) && node.level !== 'category' && (
-              <button
-                onClick={handleDelete}
-                className={getActionButtonClass('delete')}
-                title={(node as any).isExtension ? '删除' : '删除品种'}
-              >
+              <Button size="icon" variant="ghost" onClick={handleDelete} title={(node as any).isExtension ? '删除' : '删除品种'}>
                 <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
           </div>
         </td>
@@ -619,18 +604,12 @@ export function VarietyTreeNode({
                 placeholder="名称"
                 className="w-40 px-2 py-1.5 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button
-                onClick={onInlineAddSave}
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
-              >
+              <Button variant="default" size="sm" onClick={onInlineAddSave}>
                 保存
-              </button>
-              <button
-                onClick={onInlineAddCancel}
-                className="px-3 py-1.5 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={onInlineAddCancel}>
                 取消
-              </button>
+              </Button>
             </div>
           </td>
         </tr>

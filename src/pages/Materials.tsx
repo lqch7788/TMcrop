@@ -5,6 +5,7 @@ import { ExportFormatModal } from '../components/materials/ExportFormatModal';
 import MaterialsCodeGenerator from '../components/materials/MaterialsCodeGenerator';
 import InboundTable from '../components/materials/InboundTable';
 import MaterialsFilters from '../components/materials/MaterialsFilters';
+import { Button } from '../components/ui/button';
 
 const warehouseMaterials = [
   { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, price: '30元', supplier: '金种子业公司', location: 'A区-01' },
@@ -713,37 +714,34 @@ export default function Materials() {
             </div>
           </div>
           {lowStockCount > 0 && (
-            <button
+            <Button
+              variant={showLowStock ? 'destructive' : 'secondary'}
               onClick={handleLowStockClick}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                showLowStock ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+              className={`flex items-center gap-2 ${
+                showLowStock ? '' : 'text-amber-700 hover:text-amber-800'
               }`}
             >
               <AlertTriangle className="w-5 h-5" />
               <span className="font-medium">库存不足</span>
               <span className="bg-red-500 text-white text-sm px-2 py-0.5 rounded-full">{lowStockCount}</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       <div className="flex gap-2">
-        <button
+        <Button
+          variant={activeTab === 'overview' ? 'default' : 'secondary'}
           onClick={() => { setActiveTab('overview'); setCurrentPage(1); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'overview' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
         >
           库存总览
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={activeTab === 'inbound' ? 'default' : 'secondary'}
           onClick={() => { setActiveTab('inbound'); setCurrentPage(1); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'inbound' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
         >
           物料入库
-        </button>
+        </Button>
       </div>
 
       {activeTab === 'overview' && (

@@ -154,6 +154,97 @@ hongzhiyun/
 
 ---
 
+## 按钮组件使用规范（重要！）
+
+> **强制规则**：系统所有按钮必须使用组件库 Button 组件，禁止使用原生 `<button>` 标签硬编码样式。
+
+### Button 组件位置
+- 位置: `src/components/ui/button.tsx`
+
+### Button Variants（样式变体）
+
+| variant | 样式 | 使用场景 |
+|---------|------|---------|
+| `default` | bg-emerald-600 | 新建、保存、发布、导出、搜索、重置 |
+| `destructive` | bg-red-600 | 删除、危险操作 |
+| `outline` | border-gray-200 bg-white | 次要操作（较少使用） |
+| `secondary` | bg-gray-100 | 取消、关闭 |
+| `ghost` | hover:bg-gray-100 | 图标按钮（关闭等） |
+| `blue` | bg-blue-600 | 编辑、提交、上传文件 |
+| `warning` | bg-amber-500 | 申请作废等警告操作 |
+
+### Button Sizes（尺寸规范）
+
+| size | 高度 | 使用场景 |
+|------|------|---------|
+| `sm` | h-8 (32px) | 工具栏按钮（表格上方的新增、编辑、删除、导出等） |
+| `default` | h-10 (40px) | 模态框底部操作按钮 |
+| `icon` | h-9 w-9 | 图标按钮（关闭、删除图标等） |
+
+### 工具栏按钮尺寸标准（重要！）
+
+**正确示例**：
+```tsx
+// ✅ 工具栏按钮 - 使用 size="sm"
+<Button size="sm" onClick={() => setShowCreateModal(true)}>
+  <Plus className="w-4 h-4" />
+  新增
+</Button>
+
+// ✅ 模态框底部按钮 - 使用 default
+<Button onClick={onSubmit}>提交</Button>
+<Button variant="secondary" onClick={onClose}>取消</Button>
+
+// ✅ 图标按钮 - 使用 variant="ghost" size="icon"
+<Button variant="ghost" size="icon" onClick={onClose}>
+  <X className="w-5 h-5" />
+</Button>
+```
+
+**错误示例**：
+```tsx
+// ❌ 错误 - 使用原生 button 硬编码样式
+<button
+  onClick={() => setShowCreateModal(true)}
+  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+>
+  新增
+</button>
+
+// ❌ 错误 - 工具栏按钮使用 default 尺寸（太大）
+<Button onClick={() => setShowCreateModal(true)}>
+  <Plus className="w-4 h-4" />
+  新增
+</Button>
+```
+
+### 按钮替换映射表
+
+| 原生按钮样式 | Button variant/size |
+|------------|-------------------|
+| h-8 px-3 bg-emerald-600 | `<Button size="sm">` |
+| h-8 px-3 bg-blue-600 | `<Button size="sm" variant="blue">` |
+| h-8 px-3 bg-red-600 | `<Button size="sm" variant="destructive">` |
+| h-8 px-3 bg-gray-100 | `<Button size="sm" variant="secondary">` |
+| h-8 px-3 bg-amber-500 | `<Button size="sm" variant="warning">` |
+| px-4 py-2 (模态框) | `<Button>` 或 `<Button variant="secondary">` |
+| p-1 hover:bg-gray-100 (图标) | `<Button variant="ghost" size="icon">` |
+
+### 筛选区域按钮规范
+
+搜索和重置按钮在筛选工具栏内，也应使用 `size="sm"`：
+```tsx
+<div className="flex gap-2 ml-2">
+  <Button size="sm" onClick={onReset}>重置</Button>
+  <Button size="sm" onClick={onSearch}>
+    <Search className="w-4 h-4" />
+    搜索
+  </Button>
+</div>
+```
+
+---
+
 ## 作物品种术语定义（重要！）
 
 > **强制规则**：作物品种 = 最细化后的名称，是系统中最低层级的品种名称。

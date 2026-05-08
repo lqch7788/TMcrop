@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LaborTable, Column } from '@/components/common/labor/LaborTable';
 import { StaffSkill } from './types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface SkillTableProps {
@@ -175,25 +176,28 @@ export function SkillTable({
       width: '180px',
       render: (row: StaffSkill) => (
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onViewDetail(row)}
-            className="px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
           >
             详情
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onEdit(row)}
-            className="px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 rounded transition-colors"
           >
             编辑
-          </button>
+          </Button>
           {onDelete && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onDelete(row)}
-              className="px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 rounded transition-colors"
             >
               删除
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -211,87 +215,94 @@ export function SkillTable({
               <>
                 {batchEditMode && (
                   <>
-                    <button
+                    <Button
+                      size="sm"
+                      variant="blue"
                       onClick={onBatchEditClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       批量编辑
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={onCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {batchDeleteMode && (
                   <>
-                    <button
+                    <Button
+                      size="sm"
+                      variant="destructive"
                       onClick={onBatchDeleteClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       确认删除
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={onCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {exportMode && (
                   <>
-                    <button
+                    <Button
+                      size="sm"
                       onClick={onBatchExportClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       确认导出
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={onCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
               </>
             ) : (
               <>
                 {onAddClick && (
-                  <button
+                  <Button
+                    size="sm"
                     onClick={onAddClick}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                   >
                     新增
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
+                  size="sm"
+                  variant="blue"
                   onClick={onBatchEditClick}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
                 >
                   编辑
-                </button>
+                </Button>
                 {onBatchDeleteClick && (
-                  <button
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={onBatchDeleteClick}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                   >
                     删除
-                  </button>
+                  </Button>
                 )}
                 {onBatchExportClick && (
-                  <button
+                  <Button
+                    size="sm"
                     onClick={onBatchExportClick}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                   >
                     导出
-                  </button>
+                  </Button>
                 )}
               </>
             )}
@@ -377,25 +388,28 @@ export function SkillTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => onViewDetail(skill)}
-                          className="px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                         >
                           详情
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => onEdit(skill)}
-                          className="px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 rounded transition-colors"
                         >
                           编辑
-                        </button>
+                        </Button>
                         {onDelete && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => onDelete(skill)}
-                            className="px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 rounded transition-colors"
                           >
                             删除
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -425,21 +439,23 @@ export function SkillTable({
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>共 {data.length} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       </div>

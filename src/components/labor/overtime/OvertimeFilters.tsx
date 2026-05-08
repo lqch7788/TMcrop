@@ -1,5 +1,6 @@
 import { Search, Plus } from 'lucide-react';
 import type { OvertimeFilters as OvertimeFiltersType, OvertimeType, OvertimeStatus } from './types';
+import { Button } from '@/components/ui/button';
 
 /**
  * 加班筛选栏组件
@@ -78,22 +79,16 @@ export function OvertimeFilters({ filters, onFiltersChange, onSearch, onAdd }: O
         </div>
 
         {/* 搜索按钮 */}
-        <button
-          onClick={onSearch}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-        >
+        <Button onClick={onSearch}>
           <Search className="w-4 h-4" />
           搜索
-        </button>
+        </Button>
 
         {/* 新增按钮 */}
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <Button variant="blue" onClick={onAdd}>
           <Plus className="w-4 h-4" />
           申请加班
-        </button>
+        </Button>
       </div>
     </div>
   );

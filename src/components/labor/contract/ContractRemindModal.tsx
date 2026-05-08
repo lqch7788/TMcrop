@@ -1,5 +1,6 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type { Contract } from './types';
+import { Button } from '@/components/ui/button';
 
 interface ContractRemindModalProps {
   expiringContracts: Contract[];
@@ -25,9 +26,9 @@ export function ContractRemindModal({ expiringContracts, open, onClose }: Contra
             <AlertTriangle className="w-5 h-5 text-amber-600" />
             <h2 className="text-lg font-semibold">合同到期提醒</h2>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-4 overflow-y-auto max-h-[60vh]">
@@ -77,12 +78,9 @@ export function ContractRemindModal({ expiringContracts, open, onClose }: Contra
         </div>
 
         <div className="p-4 border-t flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose}>
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </div>

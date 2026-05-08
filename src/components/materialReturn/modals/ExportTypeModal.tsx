@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ExportTypeModalProps {
   isOpen: boolean;
@@ -23,9 +24,9 @@ export function ExportTypeModal({
         {/* 标题栏 */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500" />
-          </button>
+          </Button>
         </div>
         {/* 内容区域 */}
         <div className="p-6">
@@ -60,18 +61,12 @@ export function ExportTypeModal({
           </div>
           {/* 底部按钮 */}
           <div className="flex gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 h-10 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            </Button>
+            <Button onClick={onConfirm}>
               确认导出
-            </button>
+            </Button>
           </div>
         </div>
       </div>

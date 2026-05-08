@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useGreenhouses, useWarehouses, useSettingsData } from '../components/common/settings/SettingsDataProvider';
+import { Button } from '../components/ui/button';
 
 type BaseData = {
   id: number;
@@ -257,20 +258,14 @@ export default function BaseSettings() {
                 </div>
               </div>
               <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                <button
-                  onClick={() => setIsAddingNew(true)}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 flex items-center gap-1"
-                >
+                <Button variant="blue" onClick={() => setIsAddingNew(true)}>
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium flex items-center gap-1 ${isEditing ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-600 hover:bg-blue-500'}`}
-                >
+                </Button>
+                <Button variant="blue" onClick={() => setIsEditing(!isEditing)}>
                   <Edit className="w-4 h-4" />
                   {isEditing ? '完成' : '编辑'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -313,14 +308,17 @@ export default function BaseSettings() {
                     <td colSpan={6} className="px-4 py-3">
                       {isEditing && (
                         <div className="flex items-center gap-2">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={(e) => { e.stopPropagation(); setEditingItem({ type: 'company', data: company }); }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                             title="编辑公司"
                           >
                             <Edit className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
                               setConfirmModalConfig({
@@ -341,11 +339,10 @@ export default function BaseSettings() {
                               });
                               setShowConfirmModal(true);
                             }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
                             title="删除公司"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </td>
@@ -362,12 +359,13 @@ export default function BaseSettings() {
                     <tr key={item.id} className="hover:bg-blue-50/40">
                       <td className="px-4 py-3 text-sm text-gray-500"></td>
                       <td className="px-4 py-3">
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => navigate('/', { state: { baseId: item.id, baseName: item.name } })}
                           className="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                         >
                           {item.name}
-                        </button>
+                        </Button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{item.area} {item.unit}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{item.crop}</td>
@@ -386,14 +384,17 @@ export default function BaseSettings() {
                         <div className="flex items-center gap-1">
                           {isEditing && (
                             <>
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => setEditingItem({ type: 'base', data: item, companyId: company.id })}
-                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
                                 title="编辑基地"
                               >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="icon"
                                 onClick={() => {
                                   setConfirmModalConfig({
                                     title: '删除基地警告',
@@ -418,20 +419,20 @@ export default function BaseSettings() {
                                   });
                                   setShowConfirmModal(true);
                                 }}
-                                className="p-1.5 text-red-600 hover:bg-red-100 rounded"
                                 title="删除基地"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </>
                           )}
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setEditingItem({ type: 'base', data: item, companyId: company.id })}
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded"
                             title="查看详情"
                           >
                             <Eye className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -465,38 +466,42 @@ export default function BaseSettings() {
               第 {currentPage} / {totalPages} 页，共 {totalItems} 条
             </span>
             <div className="flex items-center gap-1">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="p-1.5 text-gray-500 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="首页"
               >
                 <ChevronUp className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 text-gray-500 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="上一页"
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="p-1.5 text-gray-500 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="下一页"
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="p-1.5 text-gray-500 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="末页"
               >
                 <ChevronDown className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -515,23 +520,21 @@ export default function BaseSettings() {
               <p className="text-gray-700">{confirmModalConfig.message}</p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={confirmModalConfig.type === 'danger' ? 'destructive' : 'default'}
                 onClick={() => {
                   confirmModalConfig.onConfirm();
                   setShowConfirmModal(false);
                 }}
-                className={`px-4 py-2 text-white rounded-lg text-sm font-medium ${
-                  confirmModalConfig.type === 'danger' ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
-                }`}
               >
                 确认
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -545,9 +548,9 @@ export default function BaseSettings() {
               <h2 className="text-lg font-semibold text-gray-800">
                 {editingItem ? (editingItem.type === 'company' ? '编辑公司' : '编辑基地') : (addType === 'company' ? '新增公司' : '新增基地')}
               </h2>
-              <button onClick={() => { setIsAddingNew(false); setEditingItem(null); }} className="p-1 hover:bg-gray-100 rounded">
+              <Button variant="ghost" size="icon" onClick={() => { setIsAddingNew(false); setEditingItem(null); }}>
                 <X className="w-5 h-5 text-gray-400" />
-              </button>
+              </Button>
             </div>
             <div className="p-6 space-y-4">
               {!editingItem && (
@@ -631,13 +634,14 @@ export default function BaseSettings() {
               )}
             </div>
             <div className="px-6 py-4 border-t border-blue-100 flex justify-end gap-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => { setIsAddingNew(false); setEditingItem(null); }}
-                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
                 onClick={() => {
                   const nameInput = document.getElementById('editName') as HTMLInputElement;
                   const name = nameInput?.value;
@@ -727,10 +731,9 @@ export default function BaseSettings() {
                     setSelectedCompanyId(null);
                   }
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500"
               >
                 保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>

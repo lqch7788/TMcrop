@@ -9,6 +9,7 @@ import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { useUsers } from '../../common/settings';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProblemDispatchModalProps {
   problemId: number;
@@ -117,9 +118,9 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">问题分派</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-emerald-500">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-white" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容 */}
@@ -195,17 +196,18 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                 <label className="block text-sm text-gray-600 mb-2">优先级:</label>
                 <div className="flex gap-2">
                   {(['高', '中', '低'] as const).map((level) => (
-                    <button
+                    <Button
                       key={level}
                       onClick={() => setPriority(level)}
-                      className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                        priority === level
-                          ? level === '高' ? 'bg-red-600 text-white' : level === '中' ? 'bg-yellow-600 text-white' : 'bg-green-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
+                      size="sm"
+                      className={`
+                        ${priority === level
+                          ? level === '高' ? 'bg-red-600 hover:bg-red-700 text-white' : level === '中' ? 'bg-yellow-600 hover:bg-yellow-600 text-white' : 'bg-green-600 hover:bg-green-600 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                      `}
                     >
                       {level}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -247,16 +249,16 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
 
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
             onClick={handleSubmit}
             disabled={!selectedWorkerId || isSubmitting}
-            className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
           >
             {isSubmitting ? '分派中...' : '确认分派'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

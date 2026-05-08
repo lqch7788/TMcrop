@@ -8,6 +8,7 @@ import { Play, Pause, CheckCircle, Clock, MapPin, Camera, Mic, FileText, Package
 import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '../../../ui/Modal';
 import FeedbackInput from '../../../common/FeedbackInput';
+import { Button } from '@/components/ui/button';
 
 interface TaskExecuteCardProps {
   task: Task;
@@ -168,9 +169,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                   )}
                   {req.type === 'image_before' && (
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1 bg-purple-50 text-purple-600 rounded text-sm hover:bg-purple-100">
-                        拍照
-                      </button>
+                      <Button size="sm" variant="secondary" onClick={() => {}}>拍照</Button>
                       {feedback.images && feedback.images.length > 0 && (
                         <span className="text-xs text-gray-500">{feedback.images.length}张</span>
                       )}
@@ -178,17 +177,12 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                   )}
                   {req.type === 'image_after' && (
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm hover:bg-green-100">
-                        拍照
-                      </button>
+                      <Button size="sm" variant="secondary" onClick={() => {}}>拍照</Button>
                     </div>
                   )}
                   {req.type === 'voice' && (
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1 bg-red-50 text-red-600 rounded text-sm hover:bg-red-100 flex items-center gap-1">
-                        <Mic className="w-3 h-3" />
-                        录音
-                      </button>
+                      <Button size="sm" variant="secondary" onClick={() => {}}><Mic className="w-3 h-3" />录音</Button>
                     </div>
                   )}
                   {req.type === 'text' && (
@@ -240,22 +234,14 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
 
         {/* 操作按钮 */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={progress === 100 ? 'default' : 'blue'}
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              canSubmit
-                ? progress === 100
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+            className="flex items-center gap-2"
           >
             {progress === 100 ? (
               <>
@@ -268,7 +254,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                 提交进度
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

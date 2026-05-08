@@ -14,6 +14,7 @@ import {
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType } from '../types/approval';
 import BatchActionBar from '../components/approval/BatchActionBar';
+import { Button } from '../components/ui/button';
 
 export default function FarmApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -175,18 +176,20 @@ export default function FarmApproval() {
       {/* Tab切换 */}
       <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
         {tabs.map(tab => (
-          <button
+          <Button
             key={tab.key}
             onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              activeTab === tab.key
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
+            variant={activeTab === tab.key ? 'default' : 'ghost'}
+            size="sm"
+            className={`flex items-center gap-2 ${
+              activeTab !== tab.key
+                ? 'text-gray-600'
+                : ''
             }`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -234,7 +237,9 @@ export default function FarmApproval() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => handleSelectAll(selectedIds.size !== pendingApprovals.length)}
                   className="p-1 hover:bg-gray-200 rounded"
                 >
@@ -243,7 +248,7 @@ export default function FarmApproval() {
                   ) : (
                     <Square className="w-4 h-4 text-gray-400" />
                   )}
-                </button>
+                </Button>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">审批单号</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">标题</th>
@@ -263,7 +268,9 @@ export default function FarmApproval() {
               <tr key={approval.id} className={`hover:bg-gray-50 ${selectedIds.has(approval.id) ? 'bg-emerald-50' : ''}`}>
                 <td className="px-4 py-3">
                   {approval.status === ApprovalStatus.PENDING ? (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleToggleSelect(approval.id)}
                       className="p-1 hover:bg-gray-200 rounded"
                     >
@@ -272,7 +279,7 @@ export default function FarmApproval() {
                       ) : (
                         <Square className="w-4 h-4 text-gray-400" />
                       )}
-                    </button>
+                    </Button>
                   ) : (
                     <span className="w-4 h-4 block" />
                   )}
@@ -285,23 +292,25 @@ export default function FarmApproval() {
                 <td className="px-4 py-3">{getStatusBadge(approval.status)}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500">
+                    <Button variant="ghost" size="icon">
                       <Eye className="w-4 h-4" />
-                    </button>
+                    </Button>
                     {approval.status === ApprovalStatus.PENDING && (
                       <>
-                        <button
+                        <Button
+                          variant="default"
+                          size="sm"
                           onClick={() => approve(approval.id)}
-                          className="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700"
                         >
                           通过
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
                           onClick={() => reject(approval.id, '审批拒绝')}
-                          className="px-3 py-1 border border-red-200 text-red-600 rounded text-xs hover:bg-red-50"
                         >
                           拒绝
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -318,21 +327,23 @@ export default function FarmApproval() {
               显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredData.length)} 条，共 {filteredData.length} 条
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50"
               >
                 上一页
-              </button>
+              </Button>
               <span className="px-3 py-1 text-sm">第 {currentPage} / {totalPages} 页</span>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50"
               >
                 下一页
-              </button>
+              </Button>
             </div>
           </div>
         )}

@@ -16,6 +16,7 @@ import {
   ProduceType,
   ProduceSubType,
 } from '../data/produceCodeRule';
+import { Button } from '../components/ui/button';
 
 // 深拷贝函数
 function deepClone<T>(obj: T): T {
@@ -322,12 +323,12 @@ export default function ProduceCodeRule() {
             className="w-32 px-2 py-1 border border-emerald-500 rounded text-sm focus:outline-none"
             autoFocus
           />
-          <button onClick={saveEdit} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+          <Button variant="ghost" size="icon" onClick={saveEdit}>
             <Save className="w-4 h-4" />
-          </button>
-          <button onClick={cancelEdit} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+          </Button>
+          <Button variant="ghost" size="icon" onClick={cancelEdit}>
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       );
     }
@@ -358,12 +359,9 @@ export default function ProduceCodeRule() {
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
+            </Button>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
               <Hash className="w-6 h-6 text-white" />
             </div>
@@ -374,28 +372,19 @@ export default function ProduceCodeRule() {
           </div>
           <div className="flex items-center gap-2">
             {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-              >
+              <Button variant="default" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
                 <Edit2 className="w-4 h-4" />
                 修改规则
-              </button>
+              </Button>
             ) : (
               <>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                >
+                <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex items-center gap-2">
                   取消修改
-                </button>
-                <button
-                  onClick={() => setShowSaveConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
+                </Button>
+                <Button variant="default" onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2">
                   <Save className="w-4 h-4" />
                   保存修改
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -481,9 +470,9 @@ export default function ProduceCodeRule() {
                   <tr className="bg-gray-50 hover:bg-gray-100">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => toggleCategory(category.code)} className="p-1 hover:bg-gray-200 rounded">
+                        <Button variant="ghost" size="icon" onClick={() => toggleCategory(category.code)}>
                           {isCategoryExpanded ? <ChevronDown className="w-5 h-5 text-gray-600" /> : <ChevronRight className="w-5 h-5 text-gray-600" />}
-                        </button>
+                        </Button>
                         <span className="font-mono font-bold text-blue-600 text-sm">{category.code}</span>
                       </div>
                     </td>
@@ -642,12 +631,14 @@ export default function ProduceCodeRule() {
                               <tr className="bg-green-50 hover:bg-green-100">
                                 <td colSpan={6} className="px-4 py-1"></td>
                                 <td colSpan={2} className="px-4 py-1">
-                                  <button
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => setShowAddSubVariety1({ categoryCode: category.code, typeCode: type.code, subCode: sub.code })}
                                     className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
                                   >
                                     <Plus className="w-3 h-3" /> 添加子品种
-                                  </button>
+                                  </Button>
                                 </td>
                               </tr>
                             )}
@@ -672,22 +663,24 @@ export default function ProduceCodeRule() {
                                       placeholder="子品种名称"
                                       className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
                                     />
-                                    <button
+                                    <Button
+                                      variant="default"
+                                      size="sm"
                                       onClick={() => addSubVariety1(category.code, type.code, sub.code)}
-                                      className="px-3 py-1 bg-emerald-600 text-white rounded text-sm"
                                     >
                                       添加
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
                                       onClick={() => {
                                         setShowAddSubVariety1(null);
                                         setNewSubVariety1Code('');
                                         setNewSubVariety1Name('');
                                       }}
-                                      className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
                                     >
                                       取消
-                                    </button>
+                                    </Button>
                                   </div>
                                 </td>
                               </tr>
@@ -700,12 +693,14 @@ export default function ProduceCodeRule() {
                         {isEditing && isTypeExpanded && (
                           <tr className="bg-blue-50 hover:bg-blue-100">
                             <td colSpan={8} className="px-4 py-2">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setShowAddSub({ categoryCode: category.code, typeCode: type.code })}
                                 className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
                               >
                                 <Plus className="w-4 h-4" /> 添加品种
-                              </button>
+                              </Button>
                             </td>
                           </tr>
                         )}
@@ -729,22 +724,24 @@ export default function ProduceCodeRule() {
                                   placeholder="品种名称"
                                   className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
                                 />
-                                <button
+                                <Button
+                                  variant="default"
+                                  size="sm"
                                   onClick={() => addSub(category.code, type.code)}
-                                  className="px-3 py-1 bg-emerald-600 text-white rounded text-sm"
                                 >
                                   添加
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
                                   onClick={() => {
                                     setShowAddSub(null);
                                     setNewSubCode('');
                                     setNewSubName('');
                                   }}
-                                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
                                 >
                                   取消
-                                </button>
+                                </Button>
                               </div>
                             </td>
                           </tr>
@@ -758,12 +755,14 @@ export default function ProduceCodeRule() {
                     <tr className="bg-gray-50 hover:bg-gray-100">
                       <td className="px-4 py-2"></td>
                       <td className="px-4 py-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setShowAddType(category.code)}
                           className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
                         >
                           <Plus className="w-4 h-4" /> 添加类型
-                        </button>
+                        </Button>
                       </td>
                       <td className="px-4 py-2"></td>
                       <td className="px-4 py-2"></td>
@@ -793,22 +792,24 @@ export default function ProduceCodeRule() {
                             placeholder="类型名称"
                             className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
                           />
-                          <button
+                          <Button
+                            variant="default"
+                            size="sm"
                             onClick={() => addType(category.code)}
-                            className="px-3 py-1 bg-emerald-600 text-white rounded text-sm"
                           >
                             添加
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => {
                               setShowAddType(null);
                               setNewTypeCode('');
                               setNewTypeName('');
                             }}
-                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
                           >
                             取消
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -822,13 +823,15 @@ export default function ProduceCodeRule() {
         {/* 添加大类按钮 */}
         {isEditing && (
           <div className="p-4 bg-gray-50 border-t border-gray-200">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowAddCategory(true)}
               className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700"
             >
               <Plus className="w-5 h-5" />
               添加大类
-            </button>
+            </Button>
           </div>
         )}
 
@@ -851,22 +854,22 @@ export default function ProduceCodeRule() {
                 placeholder="大类名称"
                 className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
-              <button
+              <Button
+                variant="default"
                 onClick={addCategory}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
               >
                 添加
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setShowAddCategory(false);
                   setNewCategoryCode('');
                   setNewCategoryName('');
                 }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
               >
                 取消
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -902,22 +905,22 @@ export default function ProduceCodeRule() {
               </ul>
             </div>
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowSaveConfirm(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
                 取消保存
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={() => {
                   setShowSaveConfirm(false);
                   setIsEditing(false);
                   handleSave();
                 }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 确认保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>

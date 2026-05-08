@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search, Plus, Download, TrendingUp, TrendingDown, Minus, BarChart3, Edit, Trash2, Eye, Target, Settings, PieChart, Award, ChevronLeft, ChevronRight } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, PieChart as RePieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useToast } from '../contexts/ToastContext'
+import { Button } from '../components/ui/button'
 
 const Indicators = () => {
   const { toast } = useToast()
@@ -201,54 +202,61 @@ const Indicators = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => { setModalType('evaluate'); setShowModal(true) }}
-              className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-50 transition-all duration-300 flex items-center gap-2"
+              className="flex items-center gap-2"
             >
               <Award className="w-4 h-4" />考核评价
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
               onClick={handleExport}
-              className="px-4 py-2 border border-blue-300 text-gray-700 rounded-lg text-sm font-medium hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 flex items-center gap-2"
+              className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="blue"
               onClick={() => { setModalType('add'); setShowModal(true) }}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />新增指标
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
         <div className="flex border-b border-gray-200">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('list')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'list' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 ${activeTab === 'list' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
           >
             <BarChart3 className="w-4 h-4" />指标列表
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('category')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'category' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 ${activeTab === 'category' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
           >
             <PieChart className="w-4 h-4" />分类管理
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('analyze')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'analyze' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 ${activeTab === 'analyze' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
           >
             <Target className="w-4 h-4" />达成分析
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('evaluate')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'evaluate' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 ${activeTab === 'evaluate' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
           >
             <Award className="w-4 h-4" />考核评价
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -260,17 +268,14 @@ const Indicators = () => {
                 <span className="text-sm text-gray-600">类别：</span>
                 <div className="flex flex-wrap gap-2">
                   {categories.map(cat => (
-                    <button
+                    <Button
                       key={cat}
+                      variant={categoryFilter === cat ? 'blue' : 'ghost'}
                       onClick={() => { setCategoryFilter(cat); setCurrentPage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        categoryFilter === cat
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
-                          : 'bg-gray-50 text-gray-600 hover:bg-blue-50 border border-gray-200'
-                      }`}
+                      className="text-xs"
                     >
                       {cat}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -366,34 +371,18 @@ const Indicators = () => {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleView(ind)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded transition-all duration-300"
-                          title="查看"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleView(ind)} title="查看">
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleAnalyze(ind)}
-                          className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded transition-all duration-300"
-                          title="分析"
-                        >
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleAnalyze(ind)} title="分析">
                           <Target className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(ind)}
-                          className="p-1.5 text-gray-500 hover:text-blue-700 hover:bg-blue-100 rounded transition-all duration-300"
-                          title="编辑"
-                        >
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(ind)} title="编辑">
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ind)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded transition-all duration-300"
-                          title="删除"
-                        >
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(ind)} title="删除">
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -430,37 +419,45 @@ const Indicators = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handlePageChange(1)}
                   disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-gray-600"
                 >
                   <ChevronLeft className="w-4 h-4 rotate-180" />
                   <ChevronLeft className="w-4 h-4 rotate-180 -ml-2" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-gray-600"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                </button>
+                </Button>
                 {renderPagination()}
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-gray-600"
                 >
                   <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handlePageChange(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-gray-600"
                 >
                   <ChevronRight className="w-4 h-4" />
                   <ChevronRight className="w-4 h-4 -ml-2" />
-                </button>
+                </Button>
                 <span className="text-sm text-gray-600 ml-2">
                   第 <span className="text-blue-600 font-medium">{currentPage}</span> / {totalPages} 页
                 </span>
@@ -531,7 +528,7 @@ const Indicators = () => {
                       <td className="px-3 py-3 text-sm text-amber-600 font-mono">{ind.warning}</td>
                       <td className="px-3 py-3 text-sm text-gray-700 font-mono">{ind.weight}%</td>
                       <td className="px-3 py-3">
-                        <button className="text-blue-600 hover:underline text-sm">配置</button>
+                        <Button variant="ghost" className="text-blue-600 text-sm">配置</Button>
                       </td>
                     </tr>
                   ))}
@@ -711,9 +708,9 @@ const Indicators = () => {
                 {modalType === 'analyze' && <><Target className="w-5 h-5" /> 达成分析</>}
                 {modalType === 'evaluate' && <><Award className="w-5 h-5" /> 考核评价</>}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-white/80 hover:text-white transition-colors text-2xl leading-none">
+              <Button variant="ghost" size="icon" onClick={() => setShowModal(false)} className="text-white/80 hover:text-white">
                 &times;
-              </button>
+              </Button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {modalType === 'view' && selectedIndex && (
@@ -850,8 +847,8 @@ const Indicators = () => {
               )}
             </div>
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all duration-300">取消</button>
-              <button onClick={() => { setShowModal(false); toast.success('保存成功') }} className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">保存</button>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+              <Button variant="blue" onClick={() => { setShowModal(false); toast.success('保存成功') }}>保存</Button>
             </div>
           </div>
         </div>
@@ -868,8 +865,8 @@ const Indicators = () => {
               <p className="text-gray-600 mb-1">确定要删除指标「{deleteItem.name}」吗？</p>
               <p className="text-gray-400 text-sm mb-6">删除后无法恢复</p>
               <div className="flex justify-center gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all duration-300">取消</button>
-                <button onClick={handleDeleteConfirm} className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-all duration-300">确认删除</button>
+                <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>取消</Button>
+                <Button variant="destructive" onClick={handleDeleteConfirm}>确认删除</Button>
               </div>
             </div>
           </div>
@@ -883,36 +880,36 @@ const Indicators = () => {
               <h3 className="font-semibold flex items-center gap-2">
                 <Download className="w-5 h-5" /> 导出数据
               </h3>
-              <button onClick={() => setShowExportModal(false)} className="text-white/80 hover:text-white transition-colors text-2xl leading-none">
+              <Button variant="ghost" size="icon" onClick={() => setShowExportModal(false)} className="text-white/80 hover:text-white">
                 &times;
-              </button>
+              </Button>
             </div>
             <div className="p-6">
               <p className="text-gray-700 mb-2">确认导出 <span className="text-blue-600 font-medium">{selectedIds.length > 0 ? selectedIds.length : filteredIndicators.length}</span> 条数据</p>
               <p className="text-gray-500 text-sm mb-4">选择导出格式：</p>
               <div className="flex justify-center gap-3 mb-6">
-                <button
+                <Button
+                  variant={exportFormat === 'excel' ? 'blue' : 'ghost'}
                   onClick={() => setExportFormat('excel')}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${exportFormat === 'excel' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300'}`}
                 >
                   Excel (.xlsx)
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant={exportFormat === 'csv' ? 'blue' : 'ghost'}
                   onClick={() => setExportFormat('csv')}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${exportFormat === 'csv' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300'}`}
                 >
                   CSV (.csv)
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant={exportFormat === 'word' ? 'blue' : 'ghost'}
                   onClick={() => setExportFormat('word')}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${exportFormat === 'word' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300'}`}
                 >
                   Word (.docx)
-                </button>
+                </Button>
               </div>
               <div className="flex justify-center gap-3">
-                <button onClick={() => setShowExportModal(false)} className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all duration-300">取消</button>
-                <button onClick={handleExportConfirm} className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">确认导出</button>
+                <Button variant="secondary" onClick={() => setShowExportModal(false)}>取消</Button>
+                <Button variant="blue" onClick={handleExportConfirm}>确认导出</Button>
               </div>
             </div>
           </div>

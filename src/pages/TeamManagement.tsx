@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, Plus, Edit2, Trash2, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 interface Team {
   id: string;
@@ -226,13 +227,13 @@ export default function TeamManagement() {
       {activeTab === 'teams' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button
+            <Button
+              variant="default"
               onClick={() => { setEditingTeam(null); setNewTeam({ status: 'active' }); setShowTeamModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
               新增班组
-            </button>
+            </Button>
           </div>
           <div className="grid gap-4">
             {filteredTeams.map(team => (
@@ -275,12 +276,12 @@ export default function TeamManagement() {
                   <p className="text-xs text-gray-500 mb-3">{team.description}</p>
                 )}
                 <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-                  <button onClick={() => editTeam(team)} className="p-1.5 hover:bg-gray-100 rounded">
+                  <Button size="icon" variant="ghost" onClick={() => editTeam(team)}>
                     <Edit2 className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button onClick={() => deleteTeam(team.id)} className="p-1.5 hover:bg-red-50 rounded">
+                  </Button>
+                  <Button size="icon" variant="destructive" onClick={() => deleteTeam(team.id)}>
                     <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -375,8 +376,8 @@ export default function TeamManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => { setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' }); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
-              <button onClick={handleSaveTeam} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+              <Button variant="secondary" onClick={() => { setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' }); }}>取消</Button>
+              <Button variant="default" onClick={handleSaveTeam}>保存</Button>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Download } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface ActionToolbarProps {
   title: string;
@@ -54,96 +55,66 @@ export default function ActionToolbar({
         {/* 默认模式：库存不足、编辑、删除、导出 */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
-            <button
+            <Button
+              size="sm"
+              variant={filters.showLowStock ? 'destructive' : 'secondary'}
               onClick={onLowStockToggle}
-              className={`h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                filters.showLowStock
-                  ? 'bg-red-100 text-red-700 border border-red-300'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-              }`}
             >
               {lowStockCount > 0 && (
                 <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{lowStockCount}</span>
               )}
               库存不足
-            </button>
+            </Button>
             {canEdit && (
-              <button
-                onClick={onBatchEdit}
-                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
+              <Button size="sm" variant="blue" onClick={onBatchEdit}>
                 编辑
-              </button>
+              </Button>
             )}
             {canDelete && (
-              <button
-                onClick={onDelete}
-                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-              >
+              <Button size="sm" variant="destructive" onClick={onDelete}>
                 删除
-              </button>
+              </Button>
             )}
             {canExport && (
-              <button
-                onClick={onExport}
-                className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-              >
+              <Button size="sm" onClick={onExport}>
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
           </>
         )}
         {/* 编辑模式 */}
         {batchEditMode && (
           <>
-            <button
-              onClick={onConfirmBatchEdit}
-              className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            <Button size="sm" variant="blue" onClick={onConfirmBatchEdit}>
               确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-            </button>
-            <button
-              onClick={onCancelBatchEdit}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onCancelBatchEdit}>
               取消
-            </button>
+            </Button>
           </>
         )}
         {/* 删除模式（已知晓后） */}
         {deleteMode && !batchEditMode && (
           <>
-            <button
-              onClick={onConfirmDelete}
-              className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            <Button size="sm" variant="destructive" onClick={onConfirmDelete}>
               确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-            </button>
-            <button
-              onClick={onCancelDelete}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onCancelDelete}>
               取消
-            </button>
+            </Button>
           </>
         )}
         {/* 导出模式 */}
         {exportMode && !batchEditMode && !deleteMode && (
           <>
-            <button
-              onClick={onConfirmExport}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
+            <Button size="sm" onClick={onConfirmExport}>
               <Download className="w-4 h-4" />
               确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-            </button>
-            <button
-              onClick={onCancelExport}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onCancelExport}>
               取消选择
-            </button>
+            </Button>
           </>
         )}
       </div>

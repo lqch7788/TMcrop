@@ -1,5 +1,7 @@
 import { useDraggable } from '../hooks/useDraggable';
 import { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface DraggableDialogProps {
   title: string;
@@ -21,9 +23,9 @@ export function DraggableDialog({ title, onClose, children, className = '' }: Dr
         onMouseDown={handleMouseDown}
       >
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
-          <span className="text-2xl text-gray-400">&times;</span>
-        </button>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5 text-gray-400" />
+        </Button>
       </div>
       <div className="p-6">
         {children}

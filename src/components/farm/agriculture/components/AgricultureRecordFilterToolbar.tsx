@@ -7,6 +7,7 @@ import { Search, Plus } from 'lucide-react';
 import { SOURCE_CONFIG, type FarmOperationRecord } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { greenhouseOptions, operatorOptions } from '../../../../data/farmMockData';
+import { Button } from '@/components/ui/button';
 
 // 来源类型选项
 const SOURCE_OPTIONS = Object.entries(SOURCE_CONFIG).map(([value, config]) => ({
@@ -143,20 +144,14 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 按钮组 */}
         <div className="flex gap-2">
-          <button
-            onClick={onReset}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onReset}>
             重置
-          </button>
+          </Button>
           {canCreate && (
-            <button
-              onClick={onAdd}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-            >
+            <Button onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           )}
         </div>
       </div>

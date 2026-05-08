@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { WorkLog } from './types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
+import { Button } from '@/components/ui/button';
 
 interface WorkLogBatchEditModalProps {
   isOpen: boolean;
@@ -69,9 +70,9 @@ export function WorkLogBatchEditModal({
               已选择 {selectedRows.length} 条
             </span>
           </div>
-          <button onClick={handleClose} className="text-white hover:bg-blue-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             ×
-          </button>
+          </Button>
         </div>
 
         {/* Info Banner */}
@@ -224,18 +225,12 @@ export function WorkLogBatchEditModal({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
-            <button
-              onClick={handleConfirmNext}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            <Button variant="blue" onClick={handleConfirmNext}>
               确认（下一个）
-            </button>
-            <button
-              onClick={handlePublish}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            </Button>
+            <Button onClick={handlePublish}>
               发布
-            </button>
+            </Button>
           </div>
         </div>
       </div>

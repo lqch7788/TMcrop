@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Mail, MessageSquare, Phone, AlertTriangle, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2 } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 // API基础路径
 const API_BASE = '/api/notifications';
@@ -275,16 +276,18 @@ export default function NotificationSettings() {
           { id: 'channels' as const, label: '通知渠道', icon: Mail },
           { id: 'preferences' as const, label: '个人偏好', icon: AlertTriangle },
         ].map(tab => (
-          <button
+          <Button
             key={tab.id}
+            variant={activeTab === tab.id ? 'default' : 'ghost'}
+            size="sm"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === tab.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`flex items-center gap-2 ${
+              activeTab !== tab.id ? 'text-gray-600' : ''
             }`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -292,13 +295,13 @@ export default function NotificationSettings() {
       {activeTab === 'rules' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button
+            <Button
               onClick={() => { setEditingRule(null); setNewRule({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' }); setShowRuleModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               新增规则
-            </button>
+            </Button>
           </div>
           <div className="grid gap-4">
             {filteredRules.map(rule => (
@@ -321,15 +324,15 @@ export default function NotificationSettings() {
                     }`}>
                       {rule.isActive ? '启用' : '停用'}
                     </span>
-                    <button onClick={() => toggleRule(rule.id)} className="text-sm text-emerald-600 hover:underline">
+                    <Button variant="ghost" size="sm" onClick={() => toggleRule(rule.id)} className="text-sm text-emerald-600 hover:underline">
                       {rule.isActive ? '停用' : '启用'}
-                    </button>
-                    <button onClick={() => editRule(rule)} className="p-1.5 hover:bg-gray-100 rounded">
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => editRule(rule)} className="p-1.5 hover:bg-gray-100 rounded">
                       <Edit2 className="w-4 h-4 text-gray-600" />
-                    </button>
-                    <button onClick={() => deleteRule(rule.id)} className="p-1.5 hover:bg-red-50 rounded">
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteRule(rule.id)} className="p-1.5 hover:bg-red-50 rounded">
                       <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -522,8 +525,8 @@ export default function NotificationSettings() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => setShowRuleModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
-              <button onClick={handleSaveRule} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+              <Button variant="secondary" onClick={() => setShowRuleModal(false)}>取消</Button>
+              <Button onClick={handleSaveRule}>保存</Button>
             </div>
           </div>
         </div>

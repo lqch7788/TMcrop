@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Megaphone, Plus, Edit, Eye, Trash2, Target, DollarSign, TrendingUp, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface Announcement {
   id: number;
@@ -150,7 +151,7 @@ export function AnnouncementPage() {
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center"><Megaphone className="w-5 h-5 text-white" /></div>
                 <h2 className="text-lg font-semibold text-gray-900">新增公告</h2>
               </div>
-              <button onClick={handleCloseModal} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={handleCloseModal}><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -195,8 +196,8 @@ export function AnnouncementPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <button onClick={handleCloseModal} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-              <button onClick={handleSubmit} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">发布</button>
+              <Button variant="secondary" onClick={handleCloseModal}>取消</Button>
+              <Button onClick={handleSubmit}>发布</Button>
             </div>
           </div>
         </div>
@@ -208,7 +209,7 @@ export function AnnouncementPage() {
           <div className="fixed bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center"><Eye className="w-5 h-5 text-white" /></div><h2 className="text-lg font-semibold text-gray-900">查看公告</h2></div>
-              <button onClick={() => setShowViewModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowViewModal(false)}><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -221,7 +222,7 @@ export function AnnouncementPage() {
               </div>
               <div><label className="text-xs text-gray-500 uppercase">阅读量</label><p className="text-sm font-medium text-gray-900 mt-1">{viewingItem.views}</p></div>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-100"><button onClick={() => setShowViewModal(false)} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">关闭</button></div>
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100"><Button variant="secondary" onClick={() => setShowViewModal(false)}>关闭</Button></div>
           </div>
         </div>
       )}
@@ -232,7 +233,7 @@ export function AnnouncementPage() {
           <div className="fixed bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center"><Megaphone className="w-5 h-5 text-white" /></div><h2 className="text-lg font-semibold text-gray-900">公告详情</h2></div>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)}><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-8 space-y-6">
               <div className="text-center pb-6 border-b border-gray-100"><h3 className="text-2xl font-bold text-gray-900">{detailItem.title}</h3></div>
@@ -248,7 +249,7 @@ export function AnnouncementPage() {
               </div>
               <div className="bg-gray-50 rounded-lg p-6"><label className="text-xs text-gray-500 uppercase mb-3 block">公告内容</label><div className="text-gray-700 text-base leading-relaxed">暂无内容</div></div>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-100"><button onClick={() => setShowDetailModal(false)} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">关闭</button></div>
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100"><Button variant="secondary" onClick={() => setShowDetailModal(false)}>关闭</Button></div>
           </div>
         </div>
       )}
@@ -259,7 +260,7 @@ export function AnnouncementPage() {
           <div className="fixed bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center"><Edit className="w-5 h-5 text-white" /></div><h2 className="text-lg font-semibold text-gray-900">编辑公告</h2></div>
-              <button onClick={() => setShowEditModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-6 space-y-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">公告标题</label><input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" /></div>
@@ -275,8 +276,8 @@ export function AnnouncementPage() {
               <div><label className="block text-sm font-medium text-gray-700 mb-1">状态</label><select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"><option value="草稿">草稿</option><option value="已发布">已发布</option></select></div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <button onClick={() => setShowEditModal(false)} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-              <button onClick={handleEditSubmit} className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">保存</button>
+              <Button variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
+              <Button variant="blue" onClick={handleEditSubmit}>保存</Button>
             </div>
           </div>
         </div>
@@ -288,15 +289,15 @@ export function AnnouncementPage() {
           <div className="fixed bg-white rounded-2xl shadow-xl w-full max-w-md" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center"><Trash2 className="w-5 h-5 text-white" /></div><h2 className="text-lg font-semibold text-gray-900">删除公告</h2></div>
-              <button onClick={() => setShowDeleteModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowDeleteModal(false)}><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-6">
               <p className="text-gray-700">确定要删除公告 <span className="font-medium text-gray-900">"{deletingItem.title}"</span> 吗？</p>
               <p className="text-sm text-gray-500 mt-2">此操作无法撤销，请谨慎操作。</p>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <button onClick={() => setShowDeleteModal(false)} className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-              <button onClick={handleDeleteConfirm} className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">删除</button>
+              <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>取消</Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>删除</Button>
             </div>
           </div>
         </div>
@@ -316,9 +317,9 @@ export function AnnouncementPage() {
           <div className="flex-1 min-w-[150px]"><label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" /></div>
           <div className="flex-1 min-w-[150px]"><label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" /></div>
           <div className="flex gap-2">
-            <button onClick={resetFilters} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">重置</button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"><Search className="w-4 h-4" />搜索</button>
-            <button onClick={handleOpenModal} className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"><Plus className="w-4 h-4" />新增公告</button>
+            <Button size="sm" onClick={resetFilters}>重置</Button>
+            <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
+            <Button size="sm" onClick={handleOpenModal}><Plus className="w-4 h-4" />新增公告</Button>
           </div>
         </div>
       </div>
@@ -349,9 +350,9 @@ export function AnnouncementPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.views}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleViewClick(item)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                      <button onClick={() => handleEditClick(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => handleDeleteClick(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded" title="删除"><Trash2 className="w-4 h-4" /></button>
+                      <Button variant="ghost" size="icon" onClick={() => handleViewClick(item)} title="查看"><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} title="编辑"><Edit className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item)} title="删除"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -367,9 +368,9 @@ export function AnnouncementPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {filteredAnnouncements.length} 条</span>
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
             <span className="text-sm">{currentPage} / {Math.ceil(filteredAnnouncements.length / pageSize)}</span>
-            <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAnnouncements.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredAnnouncements.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAnnouncements.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredAnnouncements.length / pageSize)}><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       </div>

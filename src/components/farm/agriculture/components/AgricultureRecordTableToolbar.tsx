@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Trash2, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface AgricultureRecordTableToolbarProps {
   batchDeleteMode: boolean;
@@ -31,39 +32,42 @@ export function AgricultureRecordTableToolbar({
       <div className="flex gap-2">
         {batchDeleteMode ? (
           <>
-            <button
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={onBatchDelete}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
             >
               <Trash2 className="w-4 h-4" />
               确认删除 ({selectedRowsCount})
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelBatchDelete}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </>
         ) : (
           <>
             {canDelete && (
-              <button
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={onBatchDelete}
-                className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
               >
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
+              </Button>
             )}
             {canExport && (
-              <button
+              <Button
+                size="sm"
                 onClick={onExport}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
           </>
         )}

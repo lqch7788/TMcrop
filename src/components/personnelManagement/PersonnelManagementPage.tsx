@@ -5,6 +5,7 @@
 import { Users, Search, Plus, Edit, Trash2, ChevronLeft, UserPlus, Briefcase, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { Button } from '../ui/button';
 
 const personnelData = [
   { id: 1, employeeId: 'EMP001', name: '张伟民', gender: '男', age: 35, phone: '138****1234', dept: '生产部', position: '生产主管', status: '在职', statusClass: 'normal' },
@@ -145,14 +146,14 @@ export function PersonnelManagementPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <Button variant="default">
               <Search className="w-4 h-4" />
               搜索
-            </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            </Button>
+            <Button variant="default">
               <UserPlus className="w-4 h-4" />
               新增员工
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -196,12 +197,12 @@ export function PersonnelManagementPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                      <Button variant="ghost" size="icon" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                      </Button>
+                      <Button variant="ghost" size="icon" title="删除">
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

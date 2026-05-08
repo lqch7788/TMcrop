@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react';
 import { FileText, Search, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApproval, useMyApprovals } from '../hooks/useApproval';
 import { ApprovalStatus } from '../types/approval';
+import { Button } from '../components/ui/button';
 
 export default function MyApproval() {
   const { cancel } = useApproval();
@@ -125,10 +126,7 @@ export default function MyApproval() {
               <option>已拒绝</option>
             </select>
           </div>
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            搜索
-          </button>
+          <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
       </div>
 
@@ -185,17 +183,13 @@ export default function MyApproval() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         {item.status === ApprovalStatus.PENDING && (
-                          <button
-                            onClick={() => cancel(item.id, '主动撤回')}
-                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                            title="撤回"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => cancel(item.id, '主动撤回')} title="撤回">
                             <XCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
-                        <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                        <Button variant="ghost" size="icon" title="查看">
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

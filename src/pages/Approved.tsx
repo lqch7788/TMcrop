@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react';
 import { CheckCircle, Search, FileCheck, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApproval, useApprovedApprovals } from '../hooks/useApproval';
 import { ApprovalStatus } from '../types/approval';
+import { Button } from '../components/ui/button';
 
 export default function Approved() {
   const { getApprovalById } = useApproval();
@@ -118,10 +119,7 @@ export default function Approved() {
               <option>已拒绝</option>
             </select>
           </div>
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            搜索
-          </button>
+          <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
       </div>
 
@@ -182,13 +180,14 @@ export default function Approved() {
             共 {filteredList.length} 条记录，第 {currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages || 1)].map((_, i) => (
               <button
                 key={i + 1}
@@ -202,13 +201,14 @@ export default function Approved() {
                 {i + 1}
               </button>
             ))}
-            <button
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
               disabled={currentPage === (totalPages || 1)}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Plus, Download, Edit, Trash2 } from 'lucide-react';
 import { useMaterialReturn } from './hooks/useMaterialReturn';
+import { Button } from '@/components/ui/button';
 import { MaterialReturnHeader } from './MaterialReturnHeader';
 import { MaterialReturnSearch } from './MaterialReturnSearch';
 import { MaterialReturnTable } from './MaterialReturnTable';
@@ -60,96 +61,101 @@ export function MaterialReturnPage() {
           <h3 className="text-lg font-semibold text-gray-900">生产退料单列表</h3>
           {hook.exportMode ? (
             <div className="flex gap-2">
-              <button
+              <Button
+                size="sm"
                 onClick={hook.handleExportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={hook.handleCancelExport}
-                className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
               >
                 取消
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
               {/* 新增按钮 - 不在编辑或删除模式下显示 */}
               {!hook.batchEditMode && !hook.deleteMode && (
-                <button
+                <Button
+                  size="sm"
                   onClick={() => hook.setShowAddModal(true)}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {/* 编辑删除按钮 - 默认显示（不在编辑或删除模式下） */}
               {!hook.batchEditMode && !hook.deleteMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
                     onClick={() => { hook.setBatchEditMode(true); hook.setShowEditWarning(true); }}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                   >
                     <Edit className="w-4 h-4" />
                     编辑
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={() => { hook.setShowDeleteWarning(true); }}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                   >
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
+                  </Button>
                 </>
               )}
 
               {/* 删除模式下显示确认删除和取消按钮 */}
               {hook.deleteMode && (
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={() => hook.setShowBatchDeleteConfirm(true)}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                   >
                     确认删除
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={() => { hook.setDeleteMode(false); hook.setSelectedRows([]); }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
                   >
                     取消
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {/* 编辑模式下显示确认编辑和取消按钮 */}
               {hook.batchEditMode && (
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    size="sm"
                     onClick={hook.handleBatchEditWarning}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                   >
                     确认编辑
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={() => { hook.setBatchEditMode(false); hook.setSelectedRows([]); }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
                   >
                     取消
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {!hook.batchEditMode && !hook.deleteMode && (
-                <button
+                <Button
+                  size="sm"
                   onClick={() => hook.setExportMode(true)}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </div>
           )}

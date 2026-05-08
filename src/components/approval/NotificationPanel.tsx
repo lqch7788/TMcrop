@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Bell, Check, CheckCheck, X, Clock, UserPlus, AlertTriangle, Info } from 'lucide-react';
+import { Button } from '../ui/button';
 import { useNotification, useDelegation } from '../../hooks/useApprovalNotification';
 import {
   NotificationType,
@@ -77,12 +78,9 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-blue-800 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* Tab切换 */}
@@ -124,13 +122,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   <span className="text-sm text-gray-500">
                     有 {unreadCount} 条未读消息
                   </span>
-                  <button
-                    onClick={markAllAsRead}
-                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-                  >
+                  <Button variant="ghost" size="sm" onClick={markAllAsRead}>
                     <CheckCheck className="w-4 h-4" />
                     全部已读
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -183,13 +178,9 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
 
                         {/* 操作按钮 */}
                         {!notification.isRead && (
-                          <button
-                            onClick={() => markAsRead(notification.id)}
-                            className="flex-shrink-0 p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
-                            title="标记为已读"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => markAsRead(notification.id)} title="标记为已读">
                             <Check className="w-4 h-4 text-gray-400" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -240,9 +231,9 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               )}
 
               {/* 创建委托按钮 */}
-              <button className="w-full mt-4 py-2 px-4 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+              <Button variant="blue" className="w-full mt-4">
                 创建新委托
-              </button>
+              </Button>
             </div>
           )}
         </div>

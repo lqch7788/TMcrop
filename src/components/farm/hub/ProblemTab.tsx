@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select';
+import { Button } from '@/components/ui/button';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
@@ -574,7 +575,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
       showFooter={true}
       footer={
         <div className="flex items-center justify-end gap-3 w-full">
-          <button
+          <Button
+            variant="secondary"
             onClick={() => {
               setDispatchModal({ isOpen: false, problem: null, batchMode: false });
               setSelectedWorker(null);
@@ -583,21 +585,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
               setSelectedPriority('medium');
               setDispatchMode('ai_assisted');
             }}
-            className="px-5 py-2.5 text-base font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={selectedWorker ? 'blue' : 'secondary'}
             onClick={dispatchModal.batchMode ? handleBatchDispatch : handleDispatch}
             disabled={!selectedWorker}
-            className={`px-6 py-2.5 text-base font-medium rounded-lg transition-colors ${
-              selectedWorker
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-md'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
           >
             确认分派
-          </button>
+          </Button>
         </div>
       }
     >
@@ -1019,12 +1016,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
 
           {/* 弹窗底部 */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setDetailModal({ isOpen: false, problem: null })}
-              className="px-6 py-2 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors font-medium"
             >
               关闭
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1165,12 +1162,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
                   系统检测到 <span className="font-medium text-purple-600">{problems.filter(p => p.status === '待处理').length}</span> 个待分派问题，AI已自动分析最优执行人匹配方案
                 </p>
                 <div className="flex gap-2">
-                  <button className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600">
+                  <Button variant="default" size="sm">
                     查看AI推荐
-                  </button>
-                  <button className="px-3 py-1 text-sm text-purple-600 hover:text-purple-800">
+                  </Button>
+                  <Button variant="ghost" size="sm">
                     手动选择执行人
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

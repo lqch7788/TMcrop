@@ -10,6 +10,7 @@ import {
   Truck, Archive, BookMarked, Wifi, Thermometer, Search, AlertTriangle as AlertIcon,
   Send, CheckCircle2, XCircle, ArrowUpDown, Gauge as GaugeIcon
 } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 // ============================================================
 // 角色用户映射 - 6种角色的用户信息
@@ -291,10 +292,10 @@ export default function Profile() {
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">基本信息</h2>
             {permission.profileAccess === 'full' && (
-              <button className="flex items-center gap-1 px-3 py-1.5 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1">
                 <Edit className="w-4 h-4" />
                 编辑
-              </button>
+              </Button>
             )}
           </div>
           <div className="p-6">
@@ -557,13 +558,13 @@ export default function Profile() {
                 部分操作类功能已限制，如需体验完整功能或了解更多产品信息，请联系我们的工作人员。
               </p>
               <div className="flex gap-3 mt-4">
-                <button className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm">
+                <Button variant="default" className="flex items-center gap-2">
                   <ExternalLink className="w-4 h-4" />
                   联系我们
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-sm">
+                </Button>
+                <Button variant="secondary" className="flex items-center gap-2">
                   功能咨询
-                </button>
+                </Button>
               </div>
             </div>
           </div>

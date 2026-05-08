@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 interface Device {
   id: string;
@@ -206,13 +207,13 @@ export default function DeviceManagement() {
           </Link>
           <h2 className="text-xl font-bold text-gray-900">设备管理</h2>
         </div>
-        <button
+        <Button
+          variant="default"
           onClick={() => { setEditingDevice(null); setNewDevice({ status: 'online' }); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
           新增设备
-        </button>
+        </Button>
       </div>
 
       {/* 统计卡片 */}
@@ -305,12 +306,12 @@ export default function DeviceManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-              <button onClick={() => editDevice(device)} className="p-1.5 hover:bg-gray-100 rounded">
+              <Button size="icon" variant="ghost" onClick={() => editDevice(device)}>
                 <Edit2 className="w-4 h-4 text-gray-600" />
-              </button>
-              <button onClick={() => deleteDevice(device.id)} className="p-1.5 hover:bg-red-50 rounded">
+              </Button>
+              <Button size="icon" variant="destructive" onClick={() => deleteDevice(device.id)}>
                 <Trash2 className="w-4 h-4 text-red-600" />
-              </button>
+              </Button>
             </div>
           </div>
         ))}
@@ -396,8 +397,8 @@ export default function DeviceManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => { setShowModal(false); setEditingDevice(null); setNewDevice({ status: 'online' }); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
-              <button onClick={handleSaveDevice} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+              <Button variant="secondary" onClick={() => { setShowModal(false); setEditingDevice(null); setNewDevice({ status: 'online' }); }}>取消</Button>
+              <Button variant="default" onClick={handleSaveDevice}>保存</Button>
             </div>
           </div>
         </div>

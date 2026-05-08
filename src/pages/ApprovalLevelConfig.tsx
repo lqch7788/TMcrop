@@ -30,6 +30,7 @@ import {
 } from '../config/approvalHierarchy';
 import { getApprovalLevelName } from '../utils/approvalLevelResolver';
 import { ApprovalType, getApprovalTypeName } from '../types/approval';
+import { Button } from '../components/ui/button';
 
 // ============================================================
 // 类型定义
@@ -148,10 +149,10 @@ export default function ApprovalLevelConfig() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="h-10 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+            <Button variant="secondary" size="sm">
               <RefreshCw className="w-4 h-4" />
               刷新
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -159,7 +160,8 @@ export default function ApprovalLevelConfig() {
       {/* Tab切换 */}
       <div className="bg-white rounded-xl shadow-sm">
         <div className="flex border-b border-gray-200">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('thresholds')}
             className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${
               activeTab === 'thresholds'
@@ -168,8 +170,9 @@ export default function ApprovalLevelConfig() {
             }`}
           >
             金额阈值配置
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('levels')}
             className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${
               activeTab === 'levels'
@@ -178,8 +181,9 @@ export default function ApprovalLevelConfig() {
             }`}
           >
             审批级别说明
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('rules')}
             className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${
               activeTab === 'rules'
@@ -188,7 +192,7 @@ export default function ApprovalLevelConfig() {
             }`}
           >
             类型规则配置
-          </button>
+          </Button>
         </div>
 
         {/* Tab内容 */}

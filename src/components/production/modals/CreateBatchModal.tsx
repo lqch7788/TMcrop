@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { CropBatch, Greenhouse, CropType, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState, useRef, useEffect } from 'react';
@@ -131,20 +132,12 @@ export function CreateBatchModal({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onSaveDraft}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
-          >
+          <Button variant="secondary" onClick={onSaveDraft}>
             存为草稿
-          </button>
-          <button
-            type="button"
-            onClick={onSubmitForApproval}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
-          >
+          </Button>
+          <Button onClick={onSubmitForApproval}>
             提交审批
-          </button>
+          </Button>
         </div>
       }
     >
@@ -184,13 +177,9 @@ export function CreateBatchModal({
                 placeholder="例如：FQ2024-001"
                 error={!!errors.batchCode}
               />
-              <button
-                type="button"
-                onClick={onGenerateCode}
-                className="px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-sm whitespace-nowrap"
-              >
+              <Button size="sm" onClick={onGenerateCode}>
                 生成
-              </button>
+              </Button>
             </div>
           </FormField>
         </div>
@@ -355,8 +344,9 @@ export function CreateBatchModal({
 
           <FormField label="计划详细说明">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="blue"
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
@@ -376,11 +366,10 @@ export function CreateBatchModal({
                   };
                   input.click();
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
               >
                 <Upload className="w-3 h-3" />
                 导入文件
-              </button>
+              </Button>
               <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式文件</span>
             </div>
           </FormField>

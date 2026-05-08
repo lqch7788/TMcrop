@@ -9,6 +9,7 @@ import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye, ChevronLeft, 
 import { useApproval, usePendingApprovals } from '../hooks/useApproval';
 import { useAuthPermission } from '../hooks/usePermission';
 import { ApprovalStatus } from '../types/approval';
+import { Button } from '../components/ui/button';
 
 export default function PendingApproval() {
   const { approve, reject } = useApproval();
@@ -106,10 +107,7 @@ export default function PendingApproval() {
               <option>退料单</option>
             </select>
           </div>
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            搜索
-          </button>
+          <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
       </div>
 
@@ -151,25 +149,17 @@ export default function PendingApproval() {
                     <div className="flex items-center gap-1">
                       {canApprove && (
                         <>
-                          <button
-                            onClick={() => approve(approval.id)}
-                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                            title="通过"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => approve(approval.id)} title="通过">
                             <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => reject(approval.id, '审批拒绝')}
-                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                            title="拒绝"
-                          >
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => reject(approval.id, '审批拒绝')} title="拒绝">
                             <XCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="查看">
+                      <Button variant="ghost" size="icon" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -186,13 +176,14 @@ export default function PendingApproval() {
             共 {filteredApprovals.length} 条记录，第 {currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages || 1)].map((_, i) => (
               <button
                 key={i + 1}
@@ -206,13 +197,14 @@ export default function PendingApproval() {
                 {i + 1}
               </button>
             ))}
-            <button
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
               disabled={currentPage === (totalPages || 1)}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
