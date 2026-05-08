@@ -6,25 +6,22 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  CalendarOutlined,
-  FileTextOutlined,
-  ShoppingOutlined,
-  TeamOutlined,
-  DollarOutlined,
-  ReloadOutlined,
-  ExportOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  ThunderboltOutlined,
-  ArrowLeftOutlined,
-} from '@ant-design/icons';
+  Calendar,
+  FileText,
+  ShoppingCart,
+  Users,
+  DollarSign,
+  RotateCw,
+  Download,
+  CheckCircle,
+  AlertTriangle,
+  Zap,
+  ArrowLeft,
+} from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Space } from '@/components/ui';
-// Table 使用 antd 的，因为 shadcn/ui 的 Table 不支持 dataSource columns 模式
-import { Table } from 'antd';
-// Typography 和 Progress 不再使用，Typography 使用 Tailwind CSS 替代
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
-import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
@@ -40,147 +37,119 @@ interface TaskTypeSummary {
 }
 
 // ============================================
-// 周汇总表格列定义
+// 周汇总表格组件
 // ============================================
-const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
-  {
-    title: '周次',
-    dataIndex: 'weekNumber',
-    key: 'weekNumber',
-    width: 80,
-    render: (week: number) => <span className="font-semibold">第 {week} 周</span>,
-  },
-  {
-    title: '开始日期',
-    dataIndex: 'startDate',
-    key: 'startDate',
-    width: 120,
-  },
-  {
-    title: '结束日期',
-    dataIndex: 'endDate',
-    key: 'endDate',
-    width: 120,
-  },
-  {
-    title: '任务数',
-    dataIndex: 'taskCount',
-    key: 'taskCount',
-    width: 80,
-    render: (count: number) => <Badge variant="info">{count}</Badge>,
-  },
-  {
-    title: '总工时',
-    dataIndex: 'totalHours',
-    key: 'totalHours',
-    width: 100,
-    render: (hours: number) => `${hours}h`,
-  },
-  {
-    title: '所需人数',
-    dataIndex: 'requiredWorkers',
-    key: 'requiredWorkers',
-    width: 100,
-    render: (count: number) => <span>{count} 人</span>,
-  },
-  {
-    title: '重点作物',
-    dataIndex: 'keyCrops',
-    key: 'keyCrops',
-    render: (crops: string[]) => (
-      <Space wrap>
-        {crops.map(crop => (
-          <Badge key={crop} variant="success">{crop}</Badge>
+function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[80px]">周次</TableHead>
+          <TableHead className="w-[120px]">开始日期</TableHead>
+          <TableHead className="w-[120px]">结束日期</TableHead>
+          <TableHead className="w-[80px]">任务数</TableHead>
+          <TableHead className="w-[100px]">总工时</TableHead>
+          <TableHead className="w-[100px]">所需人数</TableHead>
+          <TableHead>重点作物</TableHead>
+          <TableHead>重点任务</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((item) => (
+          <TableRow key={item.weekNumber}>
+            <TableCell className="font-semibold">第 {item.weekNumber} 周</TableCell>
+            <TableCell>{item.startDate}</TableCell>
+            <TableCell>{item.endDate}</TableCell>
+            <TableCell><Badge variant="info">{item.taskCount}</Badge></TableCell>
+            <TableCell>{item.totalHours}h</TableCell>
+            <TableCell>{item.requiredWorkers} 人</TableCell>
+            <TableCell>
+              <Space wrap>
+                {item.keyCrops.map(crop => (
+                  <Badge key={crop} variant="success">{crop}</Badge>
+                ))}
+              </Space>
+            </TableCell>
+            <TableCell>
+              <Space wrap>
+                {item.keyTasks.map(task => (
+                  <Badge key={task} variant="secondary">{task}</Badge>
+                ))}
+              </Space>
+            </TableCell>
+          </TableRow>
         ))}
-      </Space>
-    ),
-  },
-  {
-    title: '重点任务',
-    dataIndex: 'keyTasks',
-    key: 'keyTasks',
-    render: (tasks: string[]) => (
-      <Space wrap>
-        {tasks.map(task => (
-          <Badge key={task} variant="secondary">{task}</Badge>
-        ))}
-      </Space>
-    ),
-  },
-];
+      </TableBody>
+    </Table>
+  );
+}
 
 // ============================================
-// 物资需求表格列定义
+// 物资需求表格组件（带合计行）
 // ============================================
-const getMaterialColumns = (): ColumnsType<MaterialRequirement> => [
-  {
-    title: '物资名称',
-    dataIndex: 'materialName',
-    key: 'materialName',
-    width: 120,
-  },
-  {
-    title: '规格',
-    dataIndex: 'specification',
-    key: 'specification',
-    width: 120,
-  },
-  {
-    title: '数量',
-    dataIndex: 'quantity',
-    key: 'quantity',
-    width: 100,
-    render: (qty: number, record: MaterialRequirement) => (
-      <span className="font-semibold">{qty} {record.unit}</span>
-    ),
-  },
-  {
-    title: '预估单价',
-    dataIndex: 'estimatedUnitPrice',
-    key: 'estimatedUnitPrice',
-    width: 120,
-    render: (price: number) => `¥${price.toFixed(2)}`,
-  },
-  {
-    title: '预估总价',
-    dataIndex: 'estimatedTotalPrice',
-    key: 'estimatedTotalPrice',
-    width: 120,
-    render: (price: number) => <span className="font-semibold text-red-500">¥{price.toFixed(2)}</span>,
-  },
-];
+function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
+  const totalPrice = useMemo(() => {
+    return data.reduce((sum, m) => sum + m.estimatedTotalPrice, 0);
+  }, [data]);
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[120px]">物资名称</TableHead>
+          <TableHead className="w-[120px]">规格</TableHead>
+          <TableHead className="w-[100px]">数量</TableHead>
+          <TableHead className="w-[120px]">预估单价</TableHead>
+          <TableHead className="w-[120px]">预估总价</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((item, index) => (
+          <TableRow key={index}>
+            <TableCell>{item.materialName}</TableCell>
+            <TableCell>{item.specification}</TableCell>
+            <TableCell className="font-semibold">{item.quantity} {item.unit}</TableCell>
+            <TableCell>¥{item.estimatedUnitPrice.toFixed(2)}</TableCell>
+            <TableCell className="font-semibold text-red-500">¥{item.estimatedTotalPrice.toFixed(2)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+      {/* 合计行 */}
+      <div className="flex justify-between items-center p-3 bg-gray-50 border-t border-gray-100">
+        <span className="font-semibold">合计</span>
+        <span className="font-semibold text-red-500">¥{totalPrice.toFixed(2)}</span>
+      </div>
+    </Table>
+  );
+}
 
 // ============================================
-// 人员需求表格列定义
+// 人员需求表格组件
 // ============================================
-const getWorkerColumns = (): ColumnsType<WorkerRequirement> => [
-  {
-    title: '角色',
-    dataIndex: 'role',
-    key: 'role',
-    width: 100,
-  },
-  {
-    title: '技能要求',
-    dataIndex: 'skill',
-    key: 'skill',
-    width: 120,
-  },
-  {
-    title: '需求人数',
-    dataIndex: 'requiredCount',
-    key: 'requiredCount',
-    width: 100,
-    render: (count: number) => <Badge variant="info">{count} 人</Badge>,
-  },
-  {
-    title: '预估工时',
-    dataIndex: 'estimatedHours',
-    key: 'estimatedHours',
-    width: 100,
-    render: (hours: number) => `${hours}h`,
-  },
-];
+function WorkerTable({ data }: { data: WorkerRequirement[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[100px]">角色</TableHead>
+          <TableHead className="w-[120px]">技能要求</TableHead>
+          <TableHead className="w-[100px]">需求人数</TableHead>
+          <TableHead className="w-[100px]">预估工时</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((item, index) => (
+          <TableRow key={index}>
+            <TableCell>{item.role}</TableCell>
+            <TableCell>{item.skill}</TableCell>
+            <TableCell><Badge variant="info">{item.requiredCount} 人</Badge></TableCell>
+            <TableCell>{item.estimatedHours}h</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 // ============================================
 // 主组件
@@ -290,13 +259,13 @@ export default function MonthlyPlanningPage() {
             onClick={() => window.location.href = '/farm-hub'}
             className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ArrowLeftOutlined />
+            <ArrowLeft />
             <span>返回</span>
           </button>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <CalendarOutlined className="w-5 h-5 text-white" />
+            <Calendar className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">月度任务规划</h1>
@@ -341,14 +310,14 @@ export default function MonthlyPlanningPage() {
               onClick={handleRefresh}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
             >
-              <ReloadOutlined />
+              <RotateCw />
               刷新数据
             </button>
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
             >
-              <ExportOutlined />
+              <Download />
               导出规划
             </button>
           </div>
@@ -385,7 +354,7 @@ export default function MonthlyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <FileTextOutlined className="mr-1" />
+              <FileText className="mr-1" />
               规划概览
             </button>
             <button
@@ -396,7 +365,7 @@ export default function MonthlyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <CalendarOutlined className="mr-1" />
+              <Calendar className="mr-1" />
               按周汇总
             </button>
             <button
@@ -407,7 +376,7 @@ export default function MonthlyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <ShoppingOutlined className="mr-1" />
+              <ShoppingCart className="mr-1" />
               物资需求
             </button>
             <button
@@ -418,7 +387,7 @@ export default function MonthlyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <TeamOutlined className="mr-1" />
+              <Users className="mr-1" />
               人员需求
             </button>
             <button
@@ -429,7 +398,7 @@ export default function MonthlyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <DollarOutlined className="mr-1" />
+              <DollarSign className="mr-1" />
               成本预估
             </button>
           </nav>
@@ -489,13 +458,7 @@ export default function MonthlyPlanningPage() {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">按周汇总</h3>
               <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getWeeklySummaryColumns()}
-                  dataSource={monthlyPlan.weeklySummaries}
-                  rowKey="weekNumber"
-                  size="small"
-                  pagination={false}
-                />
+                <WeeklySummaryTable data={monthlyPlan.weeklySummaries} />
               </div>
             </div>
           )}
@@ -506,27 +469,7 @@ export default function MonthlyPlanningPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">物资需求计划</h3>
               <p className="text-sm text-gray-500 mb-4">基于月度任务规划，预测所需的物资消耗</p>
               <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getMaterialColumns()}
-                  dataSource={monthlyPlan.materialRequirements}
-                  rowKey="materialName"
-                  size="small"
-                  pagination={false}
-                  summary={() => (
-                    <Table.Summary fixed>
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={4}>
-                          <span className="font-semibold">合计</span>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1}>
-                          <span className="font-semibold text-red-500">
-                            ¥{monthlyPlan.materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0).toFixed(2)}
-                          </span>
-                        </Table.Summary.Cell>
-                      </Table.Summary.Row>
-                    </Table.Summary>
-                  )}
-                />
+                <MaterialTableWithSummary data={monthlyPlan.materialRequirements} />
               </div>
             </div>
           )}
@@ -537,13 +480,7 @@ export default function MonthlyPlanningPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">人员需求计划</h3>
               <p className="text-sm text-gray-500 mb-4">基于月度任务规划，预测所需的人员配置</p>
               <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getWorkerColumns()}
-                  dataSource={monthlyPlan.workerRequirements}
-                  rowKey="skill"
-                  size="small"
-                  pagination={false}
-                />
+                <WorkerTable data={monthlyPlan.workerRequirements} />
               </div>
             </div>
           )}

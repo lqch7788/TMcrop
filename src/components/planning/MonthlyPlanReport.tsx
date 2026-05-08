@@ -3,21 +3,21 @@
  * 展示月度任务规划、资源需求和成本预估
  */
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Statistic, Alert, Progress, Divider } from '@/components/ui';
 import { Space } from '@/components/ui';
-import { Badge } from '@/components/ui'; // 替代 Tag
-import { Table as AntTable, List as AntList, Row as AntRow, Col as AntCol } from 'antd'; // 复杂组件保留 antd
-import Typography from 'antd'; // 保留 Typography 用法
+import { Badge } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import {
-  CalendarOutlined,
-  FileTextOutlined,
-  ShoppingOutlined,
-  TeamOutlined,
-  DollarOutlined,
-  ThunderboltOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+  Calendar,
+  FileText,
+  ShoppingCart,
+  Users,
+  DollarSign,
+  Zap,
+  AlertTriangle,
+} from 'lucide-react';
 import type {
   MonthlyPlan,
   WeeklySummary,
@@ -25,9 +25,7 @@ import type {
   WorkerRequirement,
   CostBreakdown,
 } from '../../types/planning';
-import type { ColumnsType } from 'antd/es/table';
 
-const { Text, Title, Paragraph } = Typography;
 
 // ============================================
 // 类型定义
@@ -39,179 +37,6 @@ interface MonthlyPlanReportProps {
   onMaterialClick?: (material: MaterialRequirement) => void;
   onWorkerClick?: (worker: WorkerRequirement) => void;
 }
-
-// ============================================
-// 周汇总表格列定义
-// ============================================
-const getWeeklySummaryColumns = (
-  onWeekClick?: (week: WeeklySummary) => void
-): ColumnsType<WeeklySummary> => [
-  {
-    title: '周次',
-    dataIndex: 'weekNumber',
-    key: 'weekNumber',
-    width: 80,
-    render: (week: number) => <Text strong>第 {week} 周</Text>,
-  },
-  {
-    title: '开始日期',
-    dataIndex: 'startDate',
-    key: 'startDate',
-    width: 120,
-  },
-  {
-    title: '结束日期',
-    dataIndex: 'endDate',
-    key: 'endDate',
-    width: 120,
-  },
-  {
-    title: '任务数',
-    dataIndex: 'taskCount',
-    key: 'taskCount',
-    width: 80,
-    render: (count: number, record: WeeklySummary) => (
-      <Badge
-        variant="info"
-        style={{ cursor: onWeekClick ? 'pointer' : 'default' }}
-        onClick={() => onWeekClick?.(record)}
-      >
-        {count}
-      </Badge>
-    ),
-  },
-  {
-    title: '总工时',
-    dataIndex: 'totalHours',
-    key: 'totalHours',
-    width: 100,
-    render: (hours: number) => `${hours}h`,
-  },
-  {
-    title: '所需人数',
-    dataIndex: 'requiredWorkers',
-    key: 'requiredWorkers',
-    width: 100,
-    render: (count: number) => <Text>{count} 人</Text>,
-  },
-  {
-    title: '重点作物',
-    dataIndex: 'keyCrops',
-    key: 'keyCrops',
-    render: (crops: string[]) => (
-      <Space wrap>
-        {crops.map(crop => (
-          <Badge key={crop} variant="success">{crop}</Badge>
-        ))}
-      </Space>
-    ),
-  },
-  {
-    title: '重点任务',
-    dataIndex: 'keyTasks',
-    key: 'keyTasks',
-    render: (tasks: string[]) => (
-      <Space wrap>
-        {tasks.map(task => (
-          <Badge key={task}>{task}</Badge>
-        ))}
-      </Space>
-    ),
-  },
-];
-
-// ============================================
-// 物资需求表格列定义
-// ============================================
-const getMaterialColumns = (
-  onMaterialClick?: (material: MaterialRequirement) => void
-): ColumnsType<MaterialRequirement> => [
-  {
-    title: '物资名称',
-    dataIndex: 'materialName',
-    key: 'materialName',
-    width: 120,
-    render: (name: string, record: MaterialRequirement) => (
-      <Text
-        style={{ cursor: onMaterialClick ? 'pointer' : 'default' }}
-        onClick={() => onMaterialClick?.(record)}
-      >
-        {name}
-      </Text>
-    ),
-  },
-  {
-    title: '规格',
-    dataIndex: 'specification',
-    key: 'specification',
-    width: 120,
-  },
-  {
-    title: '数量',
-    dataIndex: 'quantity',
-    key: 'quantity',
-    width: 100,
-    render: (qty: number, record: MaterialRequirement) => (
-      <Text strong>{qty} {record.unit}</Text>
-    ),
-  },
-  {
-    title: '预估单价',
-    dataIndex: 'estimatedUnitPrice',
-    key: 'estimatedUnitPrice',
-    width: 120,
-    render: (price: number) => `¥${price.toFixed(2)}`,
-  },
-  {
-    title: '预估总价',
-    dataIndex: 'estimatedTotalPrice',
-    key: 'estimatedTotalPrice',
-    width: 120,
-    render: (price: number) => <Text strong type="danger">¥{price.toFixed(2)}</Text>,
-  },
-];
-
-// ============================================
-// 人员需求表格列定义
-// ============================================
-const getWorkerColumns = (
-  onWorkerClick?: (worker: WorkerRequirement) => void
-): ColumnsType<WorkerRequirement> => [
-  {
-    title: '角色',
-    dataIndex: 'role',
-    key: 'role',
-    width: 100,
-    render: (role: string, record: WorkerRequirement) => (
-      <Text
-        style={{ cursor: onWorkerClick ? 'pointer' : 'default' }}
-        onClick={() => onWorkerClick?.(record)}
-      >
-        {role}
-      </Text>
-    ),
-  },
-  {
-    title: '技能要求',
-    dataIndex: 'skill',
-    key: 'skill',
-    width: 120,
-  },
-  {
-    title: '需求人数',
-    dataIndex: 'requiredCount',
-    key: 'requiredCount',
-    width: 100,
-    render: (count: number) => <Badge variant="info">{count} 人</Badge>,
-  },
-  {
-    title: '预估工时',
-    dataIndex: 'estimatedHours',
-    key: 'estimatedHours',
-    width: 100,
-    render: (hours: number) => `${hours}h`,
-  },
-];
 
 // ============================================
 // 辅助函数
@@ -241,6 +66,197 @@ function getProgressColor(index: number): string {
 }
 
 // ============================================
+// 周汇总表格组件
+// ============================================
+interface WeeklySummaryTableProps {
+  data: WeeklySummary[];
+  onWeekClick?: (week: WeeklySummary) => void;
+}
+
+function WeeklySummaryTable({ data, onWeekClick }: WeeklySummaryTableProps) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[80px]">周次</TableHead>
+          <TableHead className="w-[120px]">开始日期</TableHead>
+          <TableHead className="w-[120px]">结束日期</TableHead>
+          <TableHead className="w-[80px]">任务数</TableHead>
+          <TableHead className="w-[100px]">总工时</TableHead>
+          <TableHead className="w-[100px]">所需人数</TableHead>
+          <TableHead>重点作物</TableHead>
+          <TableHead>重点任务</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((item) => (
+          <TableRow key={item.weekNumber}>
+            <TableCell className="font-semibold">第 {item.weekNumber} 周</TableCell>
+            <TableCell>{item.startDate}</TableCell>
+            <TableCell>{item.endDate}</TableCell>
+            <TableCell>
+              <Badge
+                variant="info"
+                className={onWeekClick ? 'cursor-pointer hover:opacity-80' : ''}
+                onClick={() => onWeekClick?.(item)}
+              >
+                {item.taskCount}
+              </Badge>
+            </TableCell>
+            <TableCell>{item.totalHours}h</TableCell>
+            <TableCell>{item.requiredWorkers} 人</TableCell>
+            <TableCell>
+              <Space wrap>
+                {item.keyCrops.map(crop => (
+                  <Badge key={crop} variant="success">{crop}</Badge>
+                ))}
+              </Space>
+            </TableCell>
+            <TableCell>
+              <Space wrap>
+                {item.keyTasks.map(task => (
+                  <Badge key={task}>{task}</Badge>
+                ))}
+              </Space>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+// ============================================
+// 物资需求表格组件
+// ============================================
+interface MaterialRequirementTableProps {
+  data: MaterialRequirement[];
+  onMaterialClick?: (material: MaterialRequirement) => void;
+}
+
+function MaterialRequirementTable({ data, onMaterialClick }: MaterialRequirementTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
+  // 计算合计
+  const totalPrice = useMemo(() => {
+    return data.reduce((sum, m) => sum + m.estimatedTotalPrice, 0);
+  }, [data]);
+
+  return (
+    <div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[120px]">物资名称</TableHead>
+            <TableHead className="w-[120px]">规格</TableHead>
+            <TableHead className="w-[100px]">数量</TableHead>
+            <TableHead className="w-[120px]">预估单价</TableHead>
+            <TableHead className="w-[120px]">预估总价</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedData.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell
+                className={onMaterialClick ? 'cursor-pointer hover:text-emerald-600' : ''}
+                onClick={() => onMaterialClick?.(item)}
+              >
+                {item.materialName}
+              </TableCell>
+              <TableCell>{item.specification}</TableCell>
+              <TableCell className="font-semibold">{item.quantity} {item.unit}</TableCell>
+              <TableCell>¥{item.estimatedUnitPrice.toFixed(2)}</TableCell>
+              <TableCell className="font-semibold text-red-500">¥{item.estimatedTotalPrice.toFixed(2)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {/* 合计行 */}
+      <div className="flex justify-between items-center p-3 bg-gray-50 border-t border-gray-100">
+        <span className="font-semibold">合计</span>
+        <span className="font-semibold text-red-500">¥{totalPrice.toFixed(2)}</span>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex justify-end mt-2">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// 人员需求表格组件
+// ============================================
+interface WorkerRequirementTableProps {
+  data: WorkerRequirement[];
+  onWorkerClick?: (worker: WorkerRequirement) => void;
+}
+
+function WorkerRequirementTable({ data, onWorkerClick }: WorkerRequirementTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
+  return (
+    <div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[100px]">角色</TableHead>
+            <TableHead className="w-[120px]">技能要求</TableHead>
+            <TableHead className="w-[100px]">需求人数</TableHead>
+            <TableHead className="w-[100px]">预估工时</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedData.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell
+                className={onWorkerClick ? 'cursor-pointer hover:text-emerald-600' : ''}
+                onClick={() => onWorkerClick?.(item)}
+              >
+                {item.role}
+              </TableCell>
+              <TableCell>{item.skill}</TableCell>
+              <TableCell>
+                <Badge variant="info">{item.requiredCount} 人</Badge>
+              </TableCell>
+              <TableCell>{item.estimatedHours}h</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {totalPages > 1 && (
+        <div className="flex justify-end mt-2">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // 主组件
 // ============================================
 
@@ -265,67 +281,59 @@ export default function MonthlyPlanReportComponent({
     <div className="monthly-plan-report">
       {/* 报告标题 */}
       <div style={{ marginBottom: 16 }}>
-        <Title level={4}>
-          <CalendarOutlined /> 月度任务规划报告 - {plan.month}
-        </Title>
-        <Paragraph type="secondary">
+        <h4 className="text-lg font-semibold">
+          <Calendar /> 月度任务规划报告 - {plan.month}
+        </h4>
+        <p className="text-gray-500">
           生成时间：{new Date(plan.generatedAt).toLocaleString()} | 生成方式：{plan.generatedBy}
-        </Paragraph>
+        </p>
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="总任务数"
-              value={plan.totalTasks}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="预估工时"
-              value={plan.totalHours}
-              suffix="h"
-              prefix={<ThunderboltOutlined />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="所需人员"
-              value={Math.round(plan.totalHours / 8)}
-              suffix="人"
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#13c2c2' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="预估成本"
-              value={plan.totalCost}
-              prefix="¥"
-              precision={0}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-4 gap-4" style={{ marginBottom: 16 }}>
+        <Card size="small">
+          <Statistic
+            title="总任务数"
+            value={plan.totalTasks}
+            prefix={<FileText />}
+            valueStyle={{ color: '#1890ff' }}
+          />
+        </Card>
+        <Card size="small">
+          <Statistic
+            title="预估工时"
+            value={plan.totalHours}
+            suffix="h"
+            prefix={<Zap />}
+            valueStyle={{ color: '#722ed1' }}
+          />
+        </Card>
+        <Card size="small">
+          <Statistic
+            title="所需人员"
+            value={Math.round(plan.totalHours / 8)}
+            suffix="人"
+            prefix={<Users />}
+            valueStyle={{ color: '#13c2c2' }}
+          />
+        </Card>
+        <Card size="small">
+          <Statistic
+            title="预估成本"
+            value={plan.totalCost}
+            prefix="¥"
+            precision={0}
+            prefix={<DollarSign />}
+            valueStyle={{ color: '#fa8c16' }}
+          />
+        </Card>
+      </div>
 
       {/* 任务类型分布 */}
       <Card size="small" title="任务类型分布" style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
+        <div className="grid grid-cols-4 gap-4">
           {taskTypeSummary.slice(0, 4).map((item, index) => (
-            <Col span={6} key={index}>
+            <div key={index}>
               <Statistic
                 title={item.taskTypeName}
                 value={item.count}
@@ -336,9 +344,9 @@ export default function MonthlyPlanReportComponent({
                 showInfo={false}
                 strokeColor={getProgressColor(index)}
               />
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
       </Card>
 
       {/* 按周汇总 */}
@@ -348,16 +356,13 @@ export default function MonthlyPlanReportComponent({
         style={{ marginBottom: 16 }}
         extra={
           showActions && (
-            <Text type="secondary">共 {plan.weeklySummaries.length} 周</Text>
+            <span className="text-gray-500">共 {plan.weeklySummaries.length} 周</span>
           )
         }
       >
-        <Table
-          columns={getWeeklySummaryColumns(onWeekClick)}
-          dataSource={plan.weeklySummaries}
-          rowKey="weekNumber"
-          size="small"
-          pagination={false}
+        <WeeklySummaryTable
+          data={plan.weeklySummaries}
+          onWeekClick={onWeekClick}
         />
       </Card>
 
@@ -368,32 +373,15 @@ export default function MonthlyPlanReportComponent({
         style={{ marginBottom: 16 }}
         extra={
           showActions && (
-            <Text type="secondary">
+            <span className="text-gray-500">
               共 {plan.materialRequirements.length} 项 | 预估 ¥{plan.materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0).toFixed(2)}
-            </Text>
+            </span>
           )
         }
       >
-        <Table
-          columns={getMaterialColumns(onMaterialClick)}
-          dataSource={plan.materialRequirements}
-          rowKey="materialName"
-          size="small"
-          pagination={{ pageSize: 5 }}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={4}>
-                  <Text strong>合计</Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={1}>
-                  <Text strong type="danger">
-                    ¥{plan.materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0).toFixed(2)}
-                  </Text>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
+        <MaterialRequirementTable
+          data={plan.materialRequirements}
+          onMaterialClick={onMaterialClick}
         />
       </Card>
 
@@ -404,56 +392,47 @@ export default function MonthlyPlanReportComponent({
         style={{ marginBottom: 16 }}
         extra={
           showActions && (
-            <Text type="secondary">共 {plan.workerRequirements.length} 项</Text>
+            <span className="text-gray-500">共 {plan.workerRequirements.length} 项</span>
           )
         }
       >
-        <Table
-          columns={getWorkerColumns(onWorkerClick)}
-          dataSource={plan.workerRequirements}
-          rowKey="skill"
-          size="small"
-          pagination={{ pageSize: 5 }}
+        <WorkerRequirementTable
+          data={plan.workerRequirements}
+          onWorkerClick={onWorkerClick}
         />
       </Card>
 
       {/* 成本预估 */}
       <Card size="small" title="成本预估">
-        <Row gutter={16}>
-          <Col span={8}>
-            <Card size="small" type="inner">
-              <Statistic
-                title="物资成本"
-                value={plan.costBreakdown.materialCost}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: '#fa8c16' }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card size="small" type="inner">
-              <Statistic
-                title="工具成本"
-                value={plan.costBreakdown.toolCost}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: '#722ed1' }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card size="small" type="inner">
-              <Statistic
-                title="人工成本"
-                value={plan.costBreakdown.laborCost}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: '#13c2c2' }}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <div className="grid grid-cols-3 gap-4">
+          <Card size="small" type="inner">
+            <Statistic
+              title="物资成本"
+              value={plan.costBreakdown.materialCost}
+              prefix="¥"
+              precision={2}
+              valueStyle={{ color: '#fa8c16' }}
+            />
+          </Card>
+          <Card size="small" type="inner">
+            <Statistic
+              title="工具成本"
+              value={plan.costBreakdown.toolCost}
+              prefix="¥"
+              precision={2}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+          <Card size="small" type="inner">
+            <Statistic
+              title="人工成本"
+              value={plan.costBreakdown.laborCost}
+              prefix="¥"
+              precision={2}
+              valueStyle={{ color: '#13c2c2' }}
+            />
+          </Card>
+        </div>
 
         <Divider />
 
@@ -469,7 +448,7 @@ export default function MonthlyPlanReportComponent({
 
         <Divider />
 
-        <Title level={5}>成本构成</Title>
+        <h5 className="text-sm font-semibold">成本构成</h5>
         <Progress
           percent={plan.costBreakdown.total > 0 ? Math.round((plan.costBreakdown.materialCost / plan.costBreakdown.total) * 100) : 0}
           strokeColor="#fa8c16"
