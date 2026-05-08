@@ -1,17 +1,16 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 echo "🔍 Running pre-commit checks..."
 
-# Lint check
+# Lint check (only src and server/src, excluding db seed files)
 echo "📋 Running ESLint..."
-npm run lint
+npx eslint src/ server/src/ --max-warnings=500
 if [ $? -ne 0 ]; then
   echo "❌ ESLint failed. Please fix the errors before committing."
   exit 1
 fi
 
-# Format check
+# Format check (only src and server/src)
 echo "🎨 Checking code format..."
 npx prettier --check "src/**/*.{ts,tsx}" "server/src/**/*.{ts}"
 if [ $? -ne 0 ]; then

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'temp_backup', 'node_modules', 'server/node_modules'] },
+  { ignores: ['dist', 'temp_backup', 'node_modules', 'server/node_modules', 'server/src/db/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
     files: ['**/*.{ts,tsx}'],

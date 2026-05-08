@@ -108,3 +108,10 @@ import { DatePicker, Table } from 'antd'
 ## 数据库规范
 
 SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这是项目的一部分，包含完整业务数据。
+
+## 文件删除规则
+
+- **禁止删除本地项目文件**（如 node_modules、src/、server/ 等）
+- **临时文件清理**：仅删除任务执行过程中创建的临时脚本/临时文件
+- **删除前需征得用户同意**
+- 删除后需确认是否需要恢复（如 node_modules 需重新安装）
