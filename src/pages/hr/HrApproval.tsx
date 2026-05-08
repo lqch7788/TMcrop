@@ -6,8 +6,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Eye, Download, Search, RefreshCw, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Button, message, Dropdown, Tag } from 'antd';
-import type { MenuProps } from 'antd';
+import { Button } from '@/components/ui';
+import { useToast } from '@/contexts/ToastContext';
+import { Badge } from '@/components/ui/badge';
 import ProTable from '../../components/common/table/ProTable';
 import StatusBadge from '../../components/common/badge/StatusBadge';
 import ProModal from '../../components/common/modal/ProModal';
@@ -157,6 +158,9 @@ export default function HrApproval() {
 
   const { approvals, approve, reject, getFilteredApprovals } = useApprovalContext();
 
+  // Toast hook
+  const { toast } = useToast();
+
   // ============================================================
   // 数据处理
   // ============================================================
@@ -231,7 +235,7 @@ export default function HrApproval() {
   /** 审批通过 */
   const handleApprove = (approvalId: string) => {
     approve(approvalId, '同意');
-    message.success('审批已通过');
+    toast({ title: '审批已通过', variant: 'success' });
   };
 
   /** 审批拒绝 */
@@ -251,7 +255,7 @@ export default function HrApproval() {
     confirmModalConfig.approvalIds.forEach(id => {
       approve(id, '批量同意');
     });
-    message.success(`已通过 ${confirmModalConfig.approvalIds.length} 项审批`);
+    toast({ title: `已通过 ${confirmModalConfig.approvalIds.length} 项审批`, variant: 'success' });
     setSelectedRowKeys([]);
     setBatchMode('none');
     setConfirmModalOpen(false);
@@ -275,7 +279,7 @@ export default function HrApproval() {
       confirmModalConfig.approvalIds.forEach(id => {
         reject(id, approvalComment || '不符合条件');
       });
-      message.success(`已拒绝 ${confirmModalConfig.approvalIds.length} 项审批`);
+      toast({ title: `已拒绝 ${confirmModalConfig.approvalIds.length} 项审批`, variant: 'destructive' });
     } else {
       handleBatchApprove();
       return;
@@ -305,7 +309,7 @@ export default function HrApproval() {
       key: 'type',
       width: 100,
       render: (type: ApprovalType) => (
-        <Tag color="blue">{getApprovalTypeName(type)}</Tag>
+        <Badge variant="info">{getApprovalTypeName(type)}</Badge>
       ),
     },
     {
@@ -351,11 +355,11 @@ export default function HrApproval() {
       key: 'priority',
       width: 80,
       render: (priority: string) => {
-        const colors: Record<string, string> = {
-          low: 'gray',
+        const variants: Record<string, string> = {
+          low: 'secondary',
           normal: 'default',
-          high: 'orange',
-          urgent: 'red',
+          high: 'warning',
+          urgent: 'destructive',
         };
         const labels: Record<string, string> = {
           low: '低',
@@ -363,7 +367,7 @@ export default function HrApproval() {
           high: '高',
           urgent: '紧急',
         };
-        return <Tag color={colors[priority] || 'default'}>{labels[priority] || priority}</Tag>;
+        return <Badge variant={variants[priority] || 'default'}>{labels[priority] || priority}</Badge>;
       },
     },
     {

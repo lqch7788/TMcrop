@@ -4,20 +4,11 @@
  */
 
 import React from 'react';
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Table,
-  Tag,
-  List,
-  Typography,
-  Space,
-  Progress,
-  Divider,
-  Alert,
-} from 'antd';
+import { Card, Statistic, Alert, Progress, Divider } from '@/components/ui';
+import { Space } from '@/components/ui';
+import { Badge } from '@/components/ui'; // 替代 Tag
+import { Table as AntTable, List as AntList, Row as AntRow, Col as AntCol } from 'antd'; // 复杂组件保留 antd
+import Typography from 'antd'; // 保留 Typography 用法
 import {
   CalendarOutlined,
   FileTextOutlined,
@@ -80,13 +71,13 @@ const getWeeklySummaryColumns = (
     key: 'taskCount',
     width: 80,
     render: (count: number, record: WeeklySummary) => (
-      <Tag
-        color="blue"
+      <Badge
+        variant="info"
         style={{ cursor: onWeekClick ? 'pointer' : 'default' }}
         onClick={() => onWeekClick?.(record)}
       >
         {count}
-      </Tag>
+      </Badge>
     ),
   },
   {
@@ -110,7 +101,7 @@ const getWeeklySummaryColumns = (
     render: (crops: string[]) => (
       <Space wrap>
         {crops.map(crop => (
-          <Tag key={crop} color="green">{crop}</Tag>
+          <Badge key={crop} variant="success">{crop}</Badge>
         ))}
       </Space>
     ),
@@ -122,7 +113,7 @@ const getWeeklySummaryColumns = (
     render: (tasks: string[]) => (
       <Space wrap>
         {tasks.map(task => (
-          <Tag key={task}>{task}</Tag>
+          <Badge key={task}>{task}</Badge>
         ))}
       </Space>
     ),
@@ -211,7 +202,7 @@ const getWorkerColumns = (
     dataIndex: 'requiredCount',
     key: 'requiredCount',
     width: 100,
-    render: (count: number) => <Tag color="blue">{count} 人</Tag>,
+    render: (count: number) => <Badge variant="info">{count} 人</Badge>,
   },
   {
     title: '预估工时',

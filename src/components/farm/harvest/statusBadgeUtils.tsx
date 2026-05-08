@@ -3,8 +3,6 @@
  * 提供状态和等级的徽章渲染逻辑
  */
 
-import { Tag } from 'antd';
-
 // 等级颜色映射
 const gradeColors: Record<string, string> = {
   'A': '#52C41A', // 绿色
@@ -34,39 +32,35 @@ const statusNames: Record<string, string> = {
 
 /**
  * 获取等级徽章
+ * 使用 span 元素和 Tailwind 类保持样式一致
  */
 export function getGradeBadge(grade: string) {
   const color = gradeColors[grade] || '#D9D9D9';
   return (
-    <Tag
-      color={color}
-      style={{
-        fontWeight: 500,
-        borderRadius: '4px',
-      }}
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold text-white"
+      style={{ backgroundColor: color }}
     >
       {grade}级
-    </Tag>
+    </span>
   );
 }
 
 /**
  * 获取状态徽章
+ * 使用 span 元素和 Tailwind 类保持样式一致
  */
 export function getStatusBadge(status: string) {
   const color = statusColors[status] || '#D9D9D9';
   const text = statusNames[status] || status;
 
   return (
-    <Tag
-      color={color}
-      style={{
-        fontWeight: 500,
-        borderRadius: '4px',
-      }}
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold text-white"
+      style={{ backgroundColor: color }}
     >
       {text}
-    </Tag>
+    </span>
   );
 }
 
