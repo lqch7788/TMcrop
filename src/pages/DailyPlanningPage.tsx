@@ -5,149 +5,193 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
-  RobotOutlined, ExclamationCircleOutlined, ReloadOutlined, SendOutlined, ArrowLeftOutlined,
-  ChevronDown } from '@ant-design/icons';
+import { Calendar, CheckCircle, Clock, AlertTriangle,
+  Bot, AlertCircle, RotateCw, Send, ArrowLeft,
+  ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
-// Table 使用 antd 的，因为 shadcn/ui 的 Table 不支持 dataSource columns 模式
-import { Table } from 'antd';
-// List 和 Typography 不再使用
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
-import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
 
+// ============================================
+// 任务进度表格组件
+// ============================================
+interface TaskProgressTableProps {
+  title: string;
+  description: string;
+  data: TaskProgressAnalysis[];
+}
+
+function TaskProgressTable({ title, description, data }: TaskProgressTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  // 计算当前页数据
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
+  // 状态映射
+  const getStatusConfig = (status: string) => {
+    const statusMap: Record<string, { variant: 'success' | 'info' | 'warning' | 'secondary'; text: string }> = {
+      ahead: { variant: 'success', text: '提前完成' },
+      on_track: { variant: 'info', text: '正常' },
+      delayed: { variant: 'warning', text: '已推迟' },
+      cancelled: { variant: 'secondary', text: '已取消' },
+    };
+    return statusMap[status] || { variant: 'secondary' as const, text: status };
+  };
+
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+      <p className="text-sm text-gray-500 mb-4">{description}</p>
+      <div className="rounded-lg overflow-hidden border border-gray-100">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">任务名称</TableHead>
+              <TableHead className="w-[120px]">计划日期</TableHead>
+              <TableHead className="w-[120px]">实际完成</TableHead>
+              <TableHead className="w-[100px]">状态</TableHead>
+              <TableHead className="w-[100px]">延迟天数</TableHead>
+              <TableHead className="w-[100px]">执行人</TableHead>
+              <TableHead>延迟原因</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item) => {
+              const statusConfig = getStatusConfig(item.progressStatus);
+              return (
+                <TableRow key={item.taskId}>
+                  <TableCell className="font-medium truncate">{item.taskName}</TableCell>
+                  <TableCell>{item.plannedDate}</TableCell>
+                  <TableCell>{item.actualCompletionDate || '-'}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusConfig.variant}>{statusConfig.text}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {item.delayDays ? (
+                      <span className="text-red-500 font-medium">{item.delayDays}天</span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell>{item.actualAssignee}</TableCell>
+                  <TableCell className="truncate">{item.delayReason || '-'}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ============================================
-// 任务进度分析表格列定义
+// 人员负荷表格组件
 // ============================================
-const getTaskProgressColumns = (): ColumnsType<TaskProgressAnalysis> => [
-  {
-    title: '任务名称',
-    dataIndex: 'taskName',
-    key: 'taskName',
-    width: 200,
-    ellipsis: true,
-  },
-  {
-    title: '计划日期',
-    dataIndex: 'plannedDate',
-    key: 'plannedDate',
-    width: 120,
-  },
-  {
-    title: '实际完成',
-    dataIndex: 'actualCompletionDate',
-    key: 'actualCompletionDate',
-    width: 120,
-    render: (date: string) => date || '-',
-  },
-  {
-    title: '状态',
-    dataIndex: 'progressStatus',
-    key: 'progressStatus',
-    width: 100,
-    render: (status: string) => {
-      // Badge variant 映射：antd color -> shadcn variant
-      const statusMap: Record<string, { variant: string; text: string }> = {
-        ahead: { variant: 'success', text: '提前完成' },
-        on_track: { variant: 'info', text: '正常' },
-        delayed: { variant: 'warning', text: '已推迟' },
-        cancelled: { variant: 'secondary', text: '已取消' },
-      };
-      const config = statusMap[status] || { variant: 'secondary', text: status };
-      return <Badge variant={config.variant as any}>{config.text}</Badge>;
-    },
-  },
-  {
-    title: '延迟天数',
-    dataIndex: 'delayDays',
-    key: 'delayDays',
-    width: 100,
-    render: (days: number) => (days ? <span className="text-red-500 font-medium">{days}天</span> : '-'),
-  },
-  {
-    title: '执行人',
-    dataIndex: 'actualAssignee',
-    key: 'actualAssignee',
-    width: 100,
-  },
-  {
-    title: '延迟原因',
-    dataIndex: 'delayReason',
-    key: 'delayReason',
-    ellipsis: true,
-  },
-];
+interface WorkerLoadTableProps {
+  data: WorkerLoadAnalysis[];
+}
 
-// ============================================
-// 人员负荷分析表格列定义
-// ============================================
-const getWorkerLoadColumns = (): ColumnsType<WorkerLoadAnalysis> => [
-  {
-    title: '员工姓名',
-    dataIndex: 'workerName',
-    key: 'workerName',
-    width: 120,
-  },
-  {
-    title: '今日任务数',
-    dataIndex: 'todayTasks',
-    key: 'todayTasks',
-    width: 100,
-    render: (count: number) => <span className="font-semibold">{count}</span>,
-  },
-  {
-    title: '已完成',
-    dataIndex: 'completedTasks',
-    key: 'completedTasks',
-    width: 80,
-    render: (count: number, record: WorkerLoadAnalysis) => (
-      <span>{count} / {record.todayTasks}</span>
-    ),
-  },
-  {
-    title: '完成率',
-    dataIndex: 'completionRate',
-    key: 'completionRate',
-    width: 120,
-    render: (rate: number) => <Progress value={rate} size="sm" />,
-  },
-  {
-    title: '负荷状态',
-    dataIndex: 'loadStatus',
-    key: 'loadStatus',
-    width: 100,
-    render: (status: string) => {
-      // Badge variant 映射
-      const statusMap: Record<string, { variant: string; text: string }> = {
-        normal: { variant: 'success', text: '正常' },
-        busy: { variant: 'warning', text: '较忙' },
-        overloaded: { variant: 'destructive', text: '过载' },
-      };
-      const config = statusMap[status] || { variant: 'secondary', text: status };
-      return <Badge variant={config.variant as any}>{config.text}</Badge>;
-    },
-  },
-  {
-    title: '可用性',
-    dataIndex: 'availability',
-    key: 'availability',
-    width: 100,
-    render: (avail: string) => {
-      // Badge variant 映射
-      const availMap: Record<string, { variant: string; text: string }> = {
-        available: { variant: 'success', text: '空闲' },
-        busy: { variant: 'warning', text: '工作中' },
-      };
-      const config = availMap[avail] || { variant: 'secondary', text: avail };
-      return <Badge variant={config.variant as any}>{config.text}</Badge>;
-    },
-  },
-];
+function WorkerLoadTable({ data }: WorkerLoadTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
+  // 状态映射
+  const getLoadStatusConfig = (status: string) => {
+    const statusMap: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'secondary'; text: string }> = {
+      normal: { variant: 'success', text: '正常' },
+      busy: { variant: 'warning', text: '较忙' },
+      overloaded: { variant: 'destructive', text: '过载' },
+    };
+    return statusMap[status] || { variant: 'secondary' as const, text: status };
+  };
+
+  const getAvailabilityConfig = (avail: string) => {
+    const availMap: Record<string, { variant: 'success' | 'warning' | 'secondary'; text: string }> = {
+      available: { variant: 'success', text: '空闲' },
+      busy: { variant: 'warning', text: '工作中' },
+    };
+    return availMap[avail] || { variant: 'secondary' as const, text: avail };
+  };
+
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">人员负荷分析</h3>
+      <p className="text-sm text-gray-500 mb-4">各执行人员当前的工作负荷情况</p>
+      <div className="rounded-lg overflow-hidden border border-gray-100">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[120px]">员工姓名</TableHead>
+              <TableHead className="w-[100px]">今日任务数</TableHead>
+              <TableHead className="w-[80px]">已完成</TableHead>
+              <TableHead className="w-[120px]">完成率</TableHead>
+              <TableHead className="w-[100px]">负荷状态</TableHead>
+              <TableHead className="w-[100px]">可用性</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item) => {
+              const loadStatusConfig = getLoadStatusConfig(item.loadStatus);
+              const availConfig = getAvailabilityConfig(item.availability);
+              return (
+                <TableRow key={item.workerId}>
+                  <TableCell className="font-medium">{item.workerName}</TableCell>
+                  <TableCell className="font-semibold">{item.todayTasks}</TableCell>
+                  <TableCell>{item.completedTasks} / {item.todayTasks}</TableCell>
+                  <TableCell>
+                    <Progress value={item.completionRate} size="sm" />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={loadStatusConfig.variant}>{loadStatusConfig.text}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={availConfig.variant}>{availConfig.text}</Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ============================================
 // 主组件
@@ -204,13 +248,13 @@ export default function DailyPlanningPage() {
             onClick={() => window.location.href = '/farm-hub'}
             className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ArrowLeftOutlined />
+            <ArrowLeft />
             <span>返回</span>
           </button>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-            <CalendarOutlined className="w-5 h-5 text-white" />
+            <Calendar className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">每日工单汇总与规划</h1>
@@ -236,7 +280,7 @@ export default function DailyPlanningPage() {
               onClick={handleRefresh}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
             >
-              <ReloadOutlined />
+              <RotateCw />
               刷新数据
             </button>
           </div>
@@ -245,7 +289,7 @@ export default function DailyPlanningPage() {
             disabled={!todayPlan.tasks.length}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <SendOutlined />
+            <Send />
             一键确认派发 ({todayPlan.totalTasks} 项)
           </button>
         </div>
@@ -272,7 +316,7 @@ export default function DailyPlanningPage() {
       {report && report.aiRecommendations.length > 0 && (
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
           <div className="flex items-center gap-2 mb-3">
-            <RobotOutlined className="w-5 h-5 text-purple-600" />
+            <Bot className="w-5 h-5 text-purple-600" />
             <span className="font-semibold text-gray-900">AI 智能分析建议</span>
           </div>
           <div className="space-y-2">
@@ -309,7 +353,7 @@ export default function DailyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <CheckCircleOutlined className="mr-1" />
+              <CheckCircle className="mr-1" />
               提前完成 ({report?.aheadTasks.length || 0})
             </button>
             <button
@@ -320,7 +364,7 @@ export default function DailyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <WarningOutlined className="mr-1" />
+              <AlertTriangle className="mr-1" />
               已推迟 ({report?.delayedTasks.length || 0})
             </button>
             <button
@@ -331,7 +375,7 @@ export default function DailyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <ExclamationCircleOutlined className="mr-1" />
+              <AlertCircle className="mr-1" />
               未完成 ({report?.unfinishedTasks.length || 0})
             </button>
             <button
@@ -342,7 +386,7 @@ export default function DailyPlanningPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <ClockCircleOutlined className="mr-1" />
+              <Clock className="mr-1" />
               人员负荷 ({report?.workerLoadAnalysis.length || 0})
             </button>
           </nav>
@@ -407,70 +451,34 @@ export default function DailyPlanningPage() {
 
           {/* 提前完成 Tab */}
           {activeTab === 'ahead' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">提前完成任务</h3>
-              <p className="text-sm text-gray-500 mb-4">以下任务在实际完成时间之前完成</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getTaskProgressColumns()}
-                  dataSource={report?.aheadTasks || []}
-                  rowKey="taskId"
-                  size="small"
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-            </div>
+            <TaskProgressTable
+              title="提前完成任务"
+              description="以下任务在实际完成时间之前完成"
+              data={report?.aheadTasks || []}
+            />
           )}
 
           {/* 已推迟 Tab */}
           {activeTab === 'delayed' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">已推迟任务</h3>
-              <p className="text-sm text-gray-500 mb-4">以下任务未能按计划时间完成</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getTaskProgressColumns()}
-                  dataSource={report?.delayedTasks || []}
-                  rowKey="taskId"
-                  size="small"
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-            </div>
+            <TaskProgressTable
+              title="已推迟任务"
+              description="以下任务未能按计划时间完成"
+              data={report?.delayedTasks || []}
+            />
           )}
 
           {/* 未完成 Tab */}
           {activeTab === 'unfinished' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">未完成任务</h3>
-              <p className="text-sm text-gray-500 mb-4">截止日期已到但尚未完成的任务</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getTaskProgressColumns()}
-                  dataSource={report?.unfinishedTasks || []}
-                  rowKey="taskId"
-                  size="small"
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-            </div>
+            <TaskProgressTable
+              title="未完成任务"
+              description="截止日期已到但尚未完成的任务"
+              data={report?.unfinishedTasks || []}
+            />
           )}
 
           {/* 人员负荷 Tab */}
           {activeTab === 'workers' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">人员负荷分析</h3>
-              <p className="text-sm text-gray-500 mb-4">各执行人员当前的工作负荷情况</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <Table
-                  columns={getWorkerLoadColumns()}
-                  dataSource={report?.workerLoadAnalysis || []}
-                  rowKey="workerId"
-                  size="small"
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-            </div>
+            <WorkerLoadTable data={report?.workerLoadAnalysis || []} />
           )}
         </div>
       </div>
