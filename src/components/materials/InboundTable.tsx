@@ -1,5 +1,6 @@
 // 物料入库记录表格组件
 import { Eye, Edit, ChevronLeft, ChevronsLeft, ChevronRight, ChevronsRight, Plus } from 'lucide-react';
+import { Button } from '../ui/button';
 
 // 入库记录类型
 interface InboundRecord {
@@ -46,12 +47,9 @@ export default function InboundTable({
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
         {canCreate && (
-          <button
-            onClick={onAddClick}
-            className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          <Button size="sm" onClick={onAddClick}>
             <Plus className="w-4 h-4" /> 新增入库
-          </button>
+          </Button>
         )}
       </div>
 
@@ -98,20 +96,14 @@ export default function InboundTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
                     {can('PROC_MATERIALS', 'view') && (
-                      <button
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="查看"
-                      >
+                      <Button variant="ghost" size="icon" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                     {canEdit && (
-                      <button
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                        title="编辑"
-                      >
+                      <Button variant="ghost" size="icon" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </td>
@@ -145,39 +137,21 @@ export default function InboundTable({
           </span>
           <div className="flex items-center gap-1">
             {/* 首页 */}
-            <button
-              onClick={() => onPageChange(1)}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-              title="首页"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(1)} disabled={currentPage === 1} title="首页">
               <ChevronsLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {/* 上一页 */}
-            <button
-              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {/* 下一页 */}
-            <button
-              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
             {/* 末页 */}
-            <button
-              onClick={() => onPageChange(totalPages)}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-              title="末页"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(totalPages)} disabled={currentPage >= totalPages} title="末页">
               <ChevronsRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

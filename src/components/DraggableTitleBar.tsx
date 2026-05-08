@@ -1,5 +1,7 @@
 import { useDraggableModal } from '../hooks/useDraggableModal';
 import { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface DraggableTitleBarProps {
   title: string;
@@ -20,9 +22,9 @@ export function DraggableTitleBar({ title, onClose, className = '', icon }: Drag
         {icon}
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
       </div>
-      <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
-        <span className="text-2xl text-gray-400">&times;</span>
-      </button>
+      <Button variant="ghost" size="icon" onClick={onClose}>
+        <X className="w-5 h-5 text-gray-400" />
+      </Button>
     </div>
   );
 }

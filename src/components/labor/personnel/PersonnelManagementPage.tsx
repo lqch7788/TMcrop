@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { Button } from '@/components/ui/button';
 
 interface Position {
   id: number;
@@ -305,96 +306,89 @@ export function PersonnelManagementPage() {
               <>
                 {batchEditMode && (
                   <>
-                    <button
+                    <Button
+                      variant="blue"
+                      size="sm"
                       onClick={handleBatchEditClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Pencil className="w-4 h-4" />
                       批量编辑
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {batchDeleteMode && (
                   <>
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={handleBatchDeleteClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="w-4 h-4" />
                       确认删除
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {exportMode && (
                   <>
-                    <button
+                    <Button
+                      size="sm"
                       onClick={handleBatchExportClick}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="w-4 h-4" />
                       确认导出
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
               </>
             ) : (
               <>
                 {canCreate && (
-                  <button
-                    onClick={handleAdd}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button size="sm" onClick={handleAdd}>
                     <Plus className="w-4 h-4" />
                     新增
-                  </button>
+                  </Button>
                 )}
                 {canEdit && (
-                  <button
-                    onClick={handleBatchEditClick}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                  >
+                  <Button variant="blue" size="sm" onClick={handleBatchEditClick}>
                     <Pencil className="w-4 h-4" />
                     编辑
-                  </button>
+                  </Button>
                 )}
                 {canDelete && (
-                  <button
-                    onClick={handleBatchDeleteClick}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                  >
+                  <Button variant="destructive" size="sm" onClick={handleBatchDeleteClick}>
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
+                  </Button>
                 )}
                 {canExport && (
-                  <button
-                    onClick={handleBatchExportClick}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                  >
+                  <Button size="sm" onClick={handleBatchExportClick}>
                     <Download className="w-4 h-4" />
                     导出
-                  </button>
+                  </Button>
                 )}
               </>
             )}
@@ -402,12 +396,9 @@ export function PersonnelManagementPage() {
         </div>
         {(batchEditMode || batchDeleteMode || exportMode) && (
           <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-4">
-            <button
-              onClick={handleSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-            >
+            <Button variant="ghost" size="sm" onClick={handleSelectAll}>
               {selectedRows.length === paginatedPositions.length ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
@@ -468,16 +459,17 @@ export function PersonnelManagementPage() {
                   {!(batchEditMode || batchDeleteMode || exportMode) && (
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleEdit(pos)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
                           title="编辑"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                        </Button>
+                        <Button variant="ghost" size="icon" title="查看">
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   )}
@@ -504,33 +496,32 @@ export function PersonnelManagementPage() {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages)].map((_, i) => (
-              <button
+              <Button
                 key={i + 1}
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                size="sm"
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

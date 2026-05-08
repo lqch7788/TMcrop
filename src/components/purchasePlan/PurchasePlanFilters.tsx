@@ -3,6 +3,7 @@
  */
 import { Search } from 'lucide-react';
 import type { PurchasePlan } from '../../types/purchase';
+import { Button } from '../ui/button';
 
 interface PurchasePlanFiltersProps {
   // 筛选状态
@@ -149,13 +150,13 @@ export function PurchasePlanFilters({
           />
         </div>
         <div className="flex gap-2 items-end ml-auto">
-          <button onClick={onReset} className="h-9 px-4 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600">
+          <Button size="sm" variant="secondary" onClick={onReset}>
             重置
-          </button>
-          <button onClick={onSearch} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+          </Button>
+          <Button size="sm" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

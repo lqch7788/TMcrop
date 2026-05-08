@@ -1,5 +1,6 @@
 import { Search, Filter, X } from 'lucide-react';
 import { RecruitmentStatus, RecruitmentSource } from './types';
+import { Button } from '@/components/ui/button';
 
 interface RecruitmentFiltersProps {
   searchTerm: string;
@@ -87,19 +88,16 @@ export function RecruitmentFilters({
 
         {/* Reset Button */}
         {hasActiveFilters && (
-          <button
-            onClick={onReset}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors bg-white text-gray-600"
-          >
+          <Button variant="secondary" onClick={onReset}>
             <X className="w-4 h-4" />
             重置
-          </button>
+          </Button>
         )}
 
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors bg-white">
+        <Button variant="secondary">
           <Filter className="w-4 h-4" />
           更多筛选
-        </button>
+        </Button>
       </div>
     </div>
   );

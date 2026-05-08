@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import { X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
+import { Button } from '../ui/button';
 
 export interface InboundMaterial {
   id: number;
@@ -405,23 +406,20 @@ export function MaterialInboundTab({
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => {
+            <Button size="sm" variant="secondary" onClick={() => {
                 setInboundSearchCode('');
                 setInboundSearchSupplier('');
                 setInboundSearchStatus('');
                 setInboundSearchMaterialName('');
                 setInboundSearchMaterialCode('');
-              }}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
-            >
+              }}>
               <RotateCw className="w-4 h-4" />
               重置
-            </button>
-            <button className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            </Button>
+            <Button size="sm">
               <Search className="w-4 h-4" />
               搜索
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -433,12 +431,9 @@ export function MaterialInboundTab({
             <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
             {(editMode || deleteMode || exportMode) && (
               <div className="flex items-center gap-2 ml-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                >
+                <Button variant="ghost" size="sm" onClick={handleSelectAll} className="text-emerald-600 hover:text-emerald-700 p-0 h-auto">
                   {isAllSelected ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             )}
@@ -447,41 +442,29 @@ export function MaterialInboundTab({
             {!editMode && !deleteMode && !exportMode ? (
               <>
                 {canEdit && (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-                  >
+                  <Button size="sm" variant="blue" onClick={() => setEditMode(true)}>
                     <Edit className="w-4 h-4" />
                     编辑
-                  </button>
+                  </Button>
                 )}
                 {canDelete && (
-                  <button
-                    onClick={() => setDeleteMode(true)}
-                    className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
-                  >
+                  <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
+                  </Button>
                 )}
                 {canExport && (
-                  <button
-                    onClick={() => setExportMode(true)}
-                    className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                  >
+                  <Button size="sm" onClick={() => setExportMode(true)}>
                     <Download className="w-4 h-4" />
                     导出
-                  </button>
+                  </Button>
                 )}
                 {(canEdit || canDelete || canExport) && <div className="w-px h-6 bg-gray-300 mx-1"></div>}
                 {canCreate && (
-                  <button
-                    onClick={onAddRecord}
-                    className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                  >
+                  <Button size="sm" onClick={onAddRecord}>
                     <Plus className="w-4 h-4" />
                     新增入库
-                  </button>
+                  </Button>
                 )}
               </>
             ) : (
@@ -489,53 +472,35 @@ export function MaterialInboundTab({
                 {/* 编辑模式 */}
                 {editMode && (
                   <>
-                    <button
-                      onClick={handleConfirmEdit}
-                      className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                    >
+                    <Button size="sm" variant="blue" onClick={handleConfirmEdit}>
                       确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </button>
-                    <button
-                      onClick={handleCancelSelection}
-                      className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {/* 删除模式 */}
                 {deleteMode && (
                   <>
-                    <button
-                      onClick={handleConfirmDelete}
-                      className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-                    >
+                    <Button size="sm" variant="destructive" onClick={handleConfirmDelete}>
                       确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </button>
-                    <button
-                      onClick={handleCancelSelection}
-                      className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {/* 导出模式 */}
                 {exportMode && (
                   <>
-                    <button
-                      onClick={handleConfirmExport}
-                      className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-                    >
+                    <Button size="sm" onClick={handleConfirmExport}>
                       <Download className="w-4 h-4" />
                       确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </button>
-                    <button
-                      onClick={handleCancelSelection}
-                      className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
                       取消选择
-                    </button>
+                    </Button>
                   </>
                 )}
               </>
@@ -584,16 +549,13 @@ export function MaterialInboundTab({
                       </td>
                     )}
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleExpandRow(record.id)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => toggleExpandRow(record.id)}>
                         {expandedRows.has(record.id) ? (
                           <ChevronDown className="w-4 h-4 text-gray-500" />
                         ) : (
                           <ChevronRight className="w-4 h-4 text-gray-500" />
                         )}
-                      </button>
+                      </Button>
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => onViewRecord(record)}>
                       {record.code}
@@ -686,21 +648,13 @@ export function MaterialInboundTab({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {records.length} 条</span>
-            <button
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}>
               <ChevronRight className="w-4 h-4 rotate-180" />
-            </button>
+            </Button>
             <span className="text-sm">{page} / {totalPages}</span>
-            <button
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -739,18 +693,12 @@ export function MaterialInboundTab({
               <p className="font-medium text-gray-700">请谨慎操作，确认要进行批量编辑吗？</p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowEditWarning(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={() => setShowEditWarning(false)} className="flex-1">
                 取消
-              </button>
-              <button
-                onClick={handleProceedToEdit}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
+              </Button>
+              <Button variant="blue" onClick={handleProceedToEdit} className="flex-1">
                 已知晓
-              </button>
+              </Button>
             </div>
           </div>
         </div>

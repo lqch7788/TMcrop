@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { Contract, ContractStatus, ContractType } from './types';
+import { Button } from '@/components/ui/button';
 
 interface ContractBatchEditModalProps {
   isOpen: boolean;
@@ -76,9 +77,9 @@ export function ContractBatchEditModal({
               已选择 {selectedRows.length} 条
             </span>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Info Banner */}
@@ -217,18 +218,12 @@ export function ContractBatchEditModal({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
-            <button
-              onClick={onConfirmNext}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            <Button onClick={onConfirmNext}>
               确认（下一个）
-            </button>
-            <button
-              onClick={onConfirm}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            </Button>
+            <Button variant="blue" onClick={onConfirm}>
               确认保存
-            </button>
+            </Button>
           </div>
         </div>
       </div>

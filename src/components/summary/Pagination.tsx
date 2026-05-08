@@ -3,6 +3,7 @@
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface PaginationProps {
   currentPage: number;
@@ -34,13 +35,13 @@ export function Pagination({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">共 {totalCount} 条</span>
-        <button onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+        <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
           <ChevronLeft className="w-4 h-4" />
-        </button>
+        </Button>
         <span className="text-sm font-medium text-emerald-600">{currentPage} / {totalPages}</span>
-        <button onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+        <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

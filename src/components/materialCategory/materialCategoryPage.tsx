@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Tags, Plus, Search, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/button';
 
 export interface MaterialCategory {
   id: number;
@@ -66,17 +67,15 @@ export function MaterialCategoryPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-              重置
-            </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            <Button variant="secondary">重置</Button>
+            <Button>
               <Search className="w-4 h-4" />
               搜索
-            </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            </Button>
+            <Button>
               <Plus className="w-4 h-4" />
               新增分类
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -119,12 +118,12 @@ export function MaterialCategoryPage() {
                   <td className="px-4 py-3 text-sm text-gray-600">{category.description}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                      <Button variant="ghost" size="icon" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                      </Button>
+                      <Button variant="ghost" size="icon" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -148,13 +147,13 @@ export function MaterialCategoryPage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">共 {materialCategories.length} 条</span>
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
                 <ChevronLeft className="w-4 h-4" />
-              </button>
+              </Button>
               <span className="text-sm">{currentPage} / {Math.ceil(materialCategories.length / pageSize) || 1}</span>
-              <button onClick={() => setCurrentPage(Math.min(Math.ceil(materialCategories.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(materialCategories.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(Math.ceil(materialCategories.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(materialCategories.length / pageSize)}>
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>

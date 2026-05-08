@@ -17,6 +17,7 @@ import {
 import { ApprovalType } from '../../types/approval';
 import { ApprovalLevel, getApprovalLevelName } from '../../config/approvalHierarchy';
 import { useApprovalLevel } from '../../hooks/useApprovalLevel';
+import { Button } from '../ui/button';
 
 interface ApprovalSubmitPanelProps {
   /** 审批类型 */
@@ -225,10 +226,10 @@ export function ApprovalSubmitPanel({
 
         {/* 提交按钮 */}
         <div className="pt-2">
-          <button
+          <Button
             onClick={() => setShowConfirm(true)}
             disabled={isSubmitting}
-            className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
           >
             {isSubmitting ? (
               <>
@@ -241,7 +242,7 @@ export function ApprovalSubmitPanel({
                 {submitText}
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -251,12 +252,9 @@ export function ApprovalSubmitPanel({
           <div className="bg-white rounded-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
               <span className="font-medium text-gray-900">确认提交审批</span>
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="p-1 hover:bg-gray-200 rounded"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setShowConfirm(false)}>
                 <X className="w-4 h-4 text-gray-500" />
-              </button>
+              </Button>
             </div>
 
             <div className="p-4 space-y-4">
@@ -295,19 +293,16 @@ export function ApprovalSubmitPanel({
               )}
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="flex-1 h-10 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
+                <Button variant="secondary" onClick={() => setShowConfirm(false)} className="flex-1">
                   取消
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg font-medium transition-colors"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
                 >
                   {isSubmitting ? '提交中...' : '确认提交'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

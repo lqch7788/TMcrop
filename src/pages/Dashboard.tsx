@@ -31,6 +31,7 @@ import {
   energyConsumption, productionProgress, inventoryAlerts,
   todayTasksBreakdown, alertsBreakdown
 } from '../data/mockData';
+import { Button } from '../components/ui/button';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -240,12 +241,14 @@ export default function Dashboard() {
                     </div>
                     <p className="text-base font-bold text-emerald-700">基地总览图</p>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setOverviewExpanded(!overviewExpanded)}
                     className="btn-expand"
                   >
                     <ChevronRight className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${overviewExpanded ? 'rotate-90' : ''}`} />
-                  </button>
+                  </Button>
                 </div>
                 {overviewExpanded && (
                 <div
@@ -385,12 +388,14 @@ export default function Dashboard() {
                     </div>
                     <span>温室区域</span>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setGreenhouseTableExpanded(!greenhouseTableExpanded)}
                     className="btn-expand"
                   >
                     <ChevronRight className={`w-4 h-4 text-white transition-transform duration-200 ${greenhouseTableExpanded ? 'rotate-90' : ''}`} />
-                  </button>
+                  </Button>
                 </div>
                 {greenhouseTableExpanded && (
                   <div className="max-h-60 overflow-y-auto scrollbar-natural">
@@ -407,18 +412,18 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-green-200">
-                        <tr><td className="px-3 py-2 font-medium">1号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '1号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">2号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '2号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">3号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '3号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">4号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '4号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-01', expectedHarvest: '2024-05-15', manager: '李明轩'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">5号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-seedling rounded text-sm">育苗中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '5号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '育苗中', plantedDate: '2024-03-01', expectedHarvest: '2024-06-01', manager: '李明轩'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">6号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '6号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">7号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '7号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">8号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '8号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-15', expectedHarvest: '2024-06-30', manager: '赵俊杰'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">9号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-waiting rounded text-sm">待种植</span></td><td className="px-3 py-2">-</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '9号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '待种植', plantedDate: '-', expectedHarvest: '-', manager: '赵俊杰'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">10号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '10号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">11号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '11号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">12号棚</td><td className="px-3 py-2">西瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-harvest rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-01-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '12号棚', crop: '西瓜', area: '7000', type: '玻璃温室', status: '采收中', plantedDate: '2024-01-20', expectedHarvest: '2024-03-18', manager: '孙晓峰'}})} className="btn-detail">详情&gt;</button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">1号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '1号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">2号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '2号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">3号棚</td><td className="px-3 py-2">番茄</td><td className="px-3 py-2">6500</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-01-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '3号棚', crop: '番茄', area: '6500', type: '薄膜温室', status: '生长中', plantedDate: '2024-01-15', expectedHarvest: '2024-04-20', manager: '张伟民'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">4号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '4号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-01', expectedHarvest: '2024-05-15', manager: '李明轩'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">5号棚</td><td className="px-3 py-2">黄瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-seedling rounded text-sm">育苗中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '5号棚', crop: '黄瓜', area: '7000', type: '玻璃温室', status: '育苗中', plantedDate: '2024-03-01', expectedHarvest: '2024-06-01', manager: '李明轩'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">6号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '6号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">7号棚</td><td className="px-3 py-2">草莓</td><td className="px-3 py-2">6000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '7号棚', crop: '草莓', area: '6000', type: '薄膜温室', status: '生长中', plantedDate: '2023-11-01', expectedHarvest: '2024-03-30', manager: '王建国'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">8号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-02-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '8号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '生长中', plantedDate: '2024-02-15', expectedHarvest: '2024-06-30', manager: '赵俊杰'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">9号棚</td><td className="px-3 py-2">辣椒</td><td className="px-3 py-2">5500</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-waiting rounded text-sm">待种植</span></td><td className="px-3 py-2">-</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '9号棚', crop: '辣椒', area: '5500', type: '玻璃温室', status: '待种植', plantedDate: '-', expectedHarvest: '-', manager: '赵俊杰'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">10号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '10号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">11号棚</td><td className="px-3 py-2">生菜</td><td className="px-3 py-2">5000</td><td className="px-3 py-2">薄膜温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '11号棚', crop: '生菜', area: '5000', type: '薄膜温室', status: '生长中', plantedDate: '2024-03-01', expectedHarvest: '2024-04-15', manager: '钱文涛'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">12号棚</td><td className="px-3 py-2">西瓜</td><td className="px-3 py-2">7000</td><td className="px-3 py-2">玻璃温室</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-harvest rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-01-20</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'greenhouse', data: {no: '12号棚', crop: '西瓜', area: '7000', type: '玻璃温室', status: '采收中', plantedDate: '2024-01-20', expectedHarvest: '2024-03-18', manager: '孙晓峰'}})} className="btn-detail">详情&gt;</Button></td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -433,12 +438,14 @@ export default function Dashboard() {
                     </div>
                     <span>大田区域</span>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setFieldTableExpanded(!fieldTableExpanded)}
                     className="btn-expand"
                   >
                     <ChevronRight className={`w-4 h-4 text-white transition-transform duration-200 ${fieldTableExpanded ? 'rotate-90' : ''}`} />
-                  </button>
+                  </Button>
                 </div>
                 {fieldTableExpanded && (
                   <div className="max-h-60 overflow-y-auto scrollbar-natural">
@@ -455,14 +462,14 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-amber-200">
-                        <tr><td className="px-3 py-2 font-medium">A1地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A1地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">A2地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A2地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">A3地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'A3地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">B1地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B1地块', crop: '小麦', area: '100', fieldType: '旱田', status: '生长中', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">B2地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-seedling rounded text-sm">返青期</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'B2地块', crop: '小麦', area: '100', fieldType: '旱田', status: '返青期', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">C1地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">80</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C1地块', crop: '油菜', area: '80', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">C2地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">70</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'C2地块', crop: '油菜', area: '70', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})} className="btn-detail">详情&gt;</button></td></tr>
-                        <tr><td className="px-3 py-2 font-medium">D1地块</td><td className="px-3 py-2">蔬菜</td><td className="px-3 py-2">50</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-harvest rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><button onClick={() => setSelectedDetail({type: 'field', data: {no: 'D1地块', crop: '蔬菜', area: '50', fieldType: '旱田', status: '采收中', plantedDate: '2024-02-01', expectedHarvest: '2024-03-18', manager: '郑十'}})} className="btn-detail">详情&gt;</button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">A1地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'A1地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">A2地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'A2地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">A3地块</td><td className="px-3 py-2">水稻</td><td className="px-3 py-2">100</td><td className="px-3 py-2">水田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2024-03-05</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'A3地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">B1地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'B1地块', crop: '小麦', area: '100', fieldType: '旱田', status: '生长中', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">B2地块</td><td className="px-3 py-2">小麦</td><td className="px-3 py-2">100</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-seedling rounded text-sm">返青期</span></td><td className="px-3 py-2">2023-11-20</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'B2地块', crop: '小麦', area: '100', fieldType: '旱田', status: '返青期', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">C1地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">80</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'C1地块', crop: '油菜', area: '80', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">C2地块</td><td className="px-3 py-2">油菜</td><td className="px-3 py-2">70</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-growing rounded text-sm">生长中</span></td><td className="px-3 py-2">2023-10-15</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'C2地块', crop: '油菜', area: '70', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一'}})} className="btn-detail">详情&gt;</Button></td></tr>
+                        <tr><td className="px-3 py-2 font-medium">D1地块</td><td className="px-3 py-2">蔬菜</td><td className="px-3 py-2">50</td><td className="px-3 py-2">旱田</td><td className="px-3 py-2"><span className="px-1.5 py-0.5 status-harvest rounded text-sm">采收中</span></td><td className="px-3 py-2">2024-02-01</td><td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => setSelectedDetail({type: 'field', data: {no: 'D1地块', crop: '蔬菜', area: '50', fieldType: '旱田', status: '采收中', plantedDate: '2024-02-01', expectedHarvest: '2024-03-18', manager: '郑十'}})} className="btn-detail">详情&gt;</Button></td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -562,9 +569,9 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button onClick={() => handleDetailClick(gh.id)} className="text-emerald-600 hover:text-emerald-700 font-medium text-sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDetailClick(gh.id)} className="text-emerald-600 hover:text-emerald-700 font-medium text-sm">
                           详情&gt;&gt;
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -588,13 +595,13 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条</span>
-                <button onClick={() => setGreenhousePage(Math.max(1, greenhousePage - 1))} disabled={greenhousePage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <Button variant="ghost" size="icon" onClick={() => setGreenhousePage(Math.max(1, greenhousePage - 1))} disabled={greenhousePage === 1} className="disabled:opacity-50">
                   <ChevronRight className="w-4 h-4 rotate-180" />
-                </button>
+                </Button>
                 <span className="text-sm">{greenhousePage} / {totalGreenhousePages || 1}</span>
-                <button onClick={() => setGreenhousePage(Math.min(totalGreenhousePages, greenhousePage + 1))} disabled={greenhousePage >= totalGreenhousePages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <Button variant="ghost" size="icon" onClick={() => setGreenhousePage(Math.min(totalGreenhousePages, greenhousePage + 1))} disabled={greenhousePage >= totalGreenhousePages} className="disabled:opacity-50">
                   <ChevronRight className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1070,12 +1077,9 @@ export default function Dashboard() {
         size="xl"
         headerAction={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/')}
-              className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            <Button variant="default" onClick={() => navigate('/')}>
               进入&gt;&gt;
-            </button>
+            </Button>
           </div>
         }
         showFooter={false}

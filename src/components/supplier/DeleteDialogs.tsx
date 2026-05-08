@@ -1,5 +1,6 @@
 // 删除确认对话框组件
 import { AlertTriangle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DeleteWarningDialogProps {
   isOpen: boolean;
@@ -19,9 +20,9 @@ export function DeleteWarningDialog({ isOpen, onClose, onConfirm, title = '确�
             <AlertTriangle className="w-5 h-5 text-red-500" />
             <h3 className="font-semibold text-gray-900">{title}</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500" />
-          </button>
+          </Button>
         </div>
         <div className="p-4">
           <p className="text-gray-600 mb-4">确定要删除选中的供应商吗？此操作不可撤销。</p>
@@ -30,12 +31,12 @@ export function DeleteWarningDialog({ isOpen, onClose, onConfirm, title = '确�
             <li>相关联的业务记录可能会受到影响</li>
           </ul>
           <div className="flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -61,21 +62,21 @@ export function BatchDeleteConfirmDialog({ isOpen, count, onClose, onConfirm }: 
             <AlertTriangle className="w-5 h-5 text-red-500" />
             <h3 className="font-semibold text-gray-900">批量删除确认</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500" />
-          </button>
+          </Button>
         </div>
         <div className="p-4">
           <p className="text-gray-600 mb-4">
             确定要删除选中的 <span className="font-bold text-red-600">{count}</span> 个供应商吗？此操作不可撤销。
           </p>
           <div className="flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

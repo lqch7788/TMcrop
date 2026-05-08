@@ -8,6 +8,7 @@ import React from 'react';
 import { CheckSquare, Square, CheckCircle, XCircle, Download } from 'lucide-react';
 import { ApprovalType } from '../../types/approval';
 import type { Approval } from '../../types/approval';
+import { Button } from '../ui/button';
 
 // HR敏感类型 - 不支持批量审批
 const HR_SENSITIVE_TYPES: ApprovalType[] = [
@@ -73,9 +74,10 @@ export function BatchActionBar({
       <div className="flex items-center justify-between gap-4">
         {/* 左侧：全选和统计 */}
         <div className="flex items-center gap-4">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => onSelectAll(!isAllSelected)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-1 h-auto"
           >
             {isAllSelected ? (
               <CheckSquare className="w-5 h-5 text-emerald-600" />
@@ -83,7 +85,7 @@ export function BatchActionBar({
               <Square className="w-5 h-5" />
             )}
             <span className="text-sm font-medium">全选</span>
-          </button>
+          </Button>
 
           <div className="h-6 w-px bg-gray-200" />
 
@@ -101,48 +103,38 @@ export function BatchActionBar({
         <div className="flex items-center gap-2">
           {canApprove && (
             <>
-              <button
+              <Button
                 onClick={onBatchApprove}
                 disabled={selectedBatchApprovals.length === 0}
-                className={`h-10 px-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  selectedBatchApprovals.length > 0
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                className={selectedBatchApprovals.length === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
               >
                 <CheckCircle className="w-4 h-4" />
                 批量通过
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={onBatchReject}
                 disabled={selectedBatchApprovals.length === 0}
-                className={`h-10 px-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  selectedBatchApprovals.length > 0
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                className={selectedBatchApprovals.length === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
               >
                 <XCircle className="w-4 h-4" />
                 批量拒绝
-              </button>
+              </Button>
             </>
           )}
 
           {canExport && (
             <>
               <div className="h-6 w-px bg-gray-200" />
-              <button
+              <Button
+                variant="blue"
                 onClick={onExport}
                 disabled={selectedIds.size === 0}
-                className={`h-10 px-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  selectedIds.size > 0
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                className={selectedIds.size === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
               >
                 <Download className="w-4 h-4" />
                 批量导出
-              </button>
+              </Button>
             </>
           )}
         </div>

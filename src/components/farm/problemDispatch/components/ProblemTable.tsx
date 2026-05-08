@@ -5,6 +5,7 @@
 import React from 'react';
 import { Send, Download, Trash2 } from 'lucide-react';
 import { SourceCell } from './SourceCell';
+import { Button } from '@/components/ui/button';
 
 interface ProblemEntry {
   id: number;
@@ -104,53 +105,58 @@ export function ProblemTable({
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
         {exportMode ? (
           <>
-            <button
+            <Button
+              size="sm"
               onClick={onShowExportModal}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <Download className="w-4 h-4" />
               确认导出
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelExport}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </>
         ) : batchDeleteMode ? (
           <>
-            <button
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={onBatchDelete}
               disabled={selectedRows.length === 0}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
               确认删除
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelBatchDelete}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </>
         ) : batchDispatchMode ? (
           <>
-            <button
+            <Button
+              size="sm"
+              variant="warning"
               onClick={onBatchDispatch}
               disabled={selectedProblems.length === 0}
-              className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
               确认分派
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelBatchDispatch}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </>
         ) : null}
       </div>
@@ -253,28 +259,31 @@ export function ProblemTable({
                   {/* 操作 */}
                   <td className="px-4 py-3">
                     {problem.status === '待处理' && !problem.sourceTaskId && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onSingleDispatch?.(problem)}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         分派
-                      </button>
+                      </Button>
                     )}
                     {problem.status === '处理中' && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onViewDetail(problem)}
-                        className="text-green-600 hover:text-green-800 text-sm mr-2"
                       >
                         详情
-                      </button>
+                      </Button>
                     )}
                     {problem.status === '待验收' && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onViewDetail(problem)}
-                        className="text-amber-600 hover:text-amber-800 text-sm"
                       >
                         验收
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>

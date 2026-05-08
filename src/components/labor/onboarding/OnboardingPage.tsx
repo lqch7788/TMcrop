@@ -5,6 +5,7 @@ import { OnboardingForm } from './OnboardingForm';
 import { Modal } from '../../ui/Modal';
 import { OnboardingBatchEditModal } from './OnboardingBatchEditModal';
 import type { OnboardingRecord, OnboardingFormData, OnboardingStatus } from './types';
+import { Button } from '@/components/ui/button';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -32,7 +33,7 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">×</button>
+            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
@@ -61,8 +62,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             </div>
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button onClick={onClose} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-            <button onClick={onConfirm} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">导出</button>
+            <Button variant="secondary" onClick={onClose}>取消</Button>
+            <Button onClick={onConfirm}>导出</Button>
           </div>
         </div>
       </div>
@@ -98,8 +99,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
             <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">确认删除</button>
+            <Button variant="secondary" onClick={onClose}>取消</Button>
+            <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
           </div>
         </div>
       </div>
@@ -356,13 +357,10 @@ export function OnboardingPage() {
               <p className="text-xs text-gray-500">招聘→入职闭环管理</p>
             </div>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
-          >
+          <Button onClick={openCreateModal}>
             <UserPlus className="w-4 h-4" />
             办理入职
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -439,87 +437,80 @@ export function OnboardingPage() {
               <>
                 {batchEditMode && (
                   <>
-                    <button
+                    <Button
+                      variant="blue"
+                      size="sm"
                       onClick={() => setShowBatchEditModal(true)}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Edit2 className="w-4 h-4" />
                       批量编辑
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {batchDeleteMode && (
                   <>
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={handleBatchDelete}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="w-4 h-4" />
                       确认删除
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelBatch}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
                 {exportMode && (
                   <>
-                    <button
+                    <Button
+                      size="sm"
                       onClick={handleConfirmExport}
                       disabled={selectedRows.length === 0}
-                      className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       确认导出
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={handleCancelExport}
-                      className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                     >
                       取消
-                    </button>
+                    </Button>
                   </>
                 )}
               </>
             ) : (
               <>
-                <button
-                  onClick={openCreateModal}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
+                <Button size="sm" onClick={openCreateModal}>
                   <UserPlus className="w-4 h-4" />
                   新增
-                </button>
-                <button
-                  onClick={() => setBatchEditMode(true)}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                >
+                </Button>
+                <Button variant="blue" size="sm" onClick={() => setBatchEditMode(true)}>
                   <Edit2 className="w-4 h-4" />
                   编辑
-                </button>
-                <button
-                  onClick={() => setBatchDeleteMode(true)}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                >
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setBatchDeleteMode(true)}>
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
-                <button
-                  onClick={handleExportClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
+                </Button>
+                <Button size="sm" onClick={handleExportClick}>
                   导出
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -589,27 +580,18 @@ export function OnboardingPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => openDetailModal(record)}
-                            className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded"
-                          >
+                          <Button size="sm" variant="secondary" onClick={() => openDetailModal(record)}>
                             详情
-                          </button>
+                          </Button>
                           {record.status === '待入职' && (
-                            <button
-                              onClick={() => handleProgress(record, '办理中')}
-                              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
-                            >
+                            <Button size="sm" variant="blue" onClick={() => handleProgress(record, '办理中')}>
                               开始办理
-                            </button>
+                            </Button>
                           )}
                           {record.status === '办理中' && (
-                            <button
-                              onClick={() => handleProgress(record, '已入职')}
-                              className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded"
-                            >
+                            <Button size="sm" onClick={() => handleProgress(record, '已入职')}>
                               完成入职
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -637,21 +619,23 @@ export function OnboardingPage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>共 {pagination.total} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setPage(Math.max(1, pagination.currentPage - 1))}
               disabled={pagination.currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}/{Math.ceil(pagination.total / pagination.pageSize)}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
               disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -680,9 +664,9 @@ export function OnboardingPage() {
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">入职详情</h2>
-              <button onClick={() => setIsDetailOpen(false)} className="p-1 hover:bg-gray-100 rounded">
+              <Button variant="ghost" size="icon" onClick={() => setIsDetailOpen(false)}>
                 ✕
-              </button>
+              </Button>
             </div>
             <div className="p-4 space-y-6">
               {/* 基本信息 */}

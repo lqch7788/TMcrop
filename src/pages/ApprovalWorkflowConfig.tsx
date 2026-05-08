@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Settings, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 // API基础路径
 const API_BASE = '/api/approval-workflows';
@@ -236,13 +237,13 @@ export default function ApprovalWorkflowConfig() {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
-          <button
+          <Button
             onClick={() => { setEditingWorkflow(null); setNewWorkflow({ status: 'active', nodes: [] }); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
+            className="flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             新增流程
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -270,15 +271,15 @@ export default function ApprovalWorkflowConfig() {
                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
                     {MODULE_OPTIONS.find(m => m.value === workflow.module)?.label || workflow.module}
                   </span>
-                  <button onClick={() => toggleWorkflowStatus(workflow.id)} className="text-sm text-emerald-600 hover:underline">
+                  <Button variant="ghost" size="sm" onClick={() => toggleWorkflowStatus(workflow.id)} className="text-sm text-emerald-600 hover:underline">
                     {workflow.status === 'active' ? '停用' : '启用'}
-                  </button>
-                  <button onClick={() => editWorkflow(workflow)} className="p-1.5 hover:bg-gray-100 rounded">
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => editWorkflow(workflow)} className="p-1.5 hover:bg-gray-100 rounded">
                     <Edit2 className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button onClick={() => deleteWorkflow(workflow.id)} className="p-1.5 hover:bg-red-50 rounded">
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteWorkflow(workflow.id)} className="p-1.5 hover:bg-red-50 rounded">
                     <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-4">{workflow.description}</p>
@@ -287,7 +288,9 @@ export default function ApprovalWorkflowConfig() {
               </div>
 
               {/* 展开/收起按钮 */}
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => toggleExpand(workflow.id)}
                 className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700"
               >
@@ -297,7 +300,7 @@ export default function ApprovalWorkflowConfig() {
                   <ChevronDown className="w-4 h-4" />
                 )}
                 {expandedWorkflows.includes(workflow.id) ? '收起节点' : '查看审批节点'} ({workflow.nodes?.length || 0})
-              </button>
+              </Button>
 
               {/* 审批节点 */}
               {expandedWorkflows.includes(workflow.id) && (
@@ -400,13 +403,15 @@ export default function ApprovalWorkflowConfig() {
               <div className="pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-semibold text-gray-900">审批节点</h4>
-                  <button
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={addNode}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 text-sm"
+                    className="flex items-center gap-1"
                   >
                     <Plus className="w-3 h-3" />
                     添加节点
-                  </button>
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {(newWorkflow.nodes || []).map((node, index) => (
@@ -418,9 +423,9 @@ export default function ApprovalWorkflowConfig() {
                           </span>
                           <span className="text-sm font-medium text-gray-900">节点 {index + 1}</span>
                         </div>
-                        <button onClick={() => removeNode(node.id)} className="text-red-600 hover:text-red-700">
+                        <Button variant="ghost" size="icon" onClick={() => removeNode(node.id)} className="text-red-600 hover:text-red-700">
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -477,8 +482,8 @@ export default function ApprovalWorkflowConfig() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
-              <button onClick={handleSaveWorkflow} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">保存</button>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+              <Button onClick={handleSaveWorkflow}>保存</Button>
             </div>
           </div>
         </div>

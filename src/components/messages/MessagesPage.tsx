@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Bell, CheckCircle, AlertTriangle, ClipboardList, Info, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/button';
 import { messages } from '../../data/mockData';
 
 export interface Message {
@@ -67,13 +68,14 @@ export function MessagesPage() {
           { value: 'alert', label: '告警' },
           { value: 'notice', label: '公告' },
         ].map(item => (
-          <button
+          <Button
             key={item.value}
             onClick={() => setFilter(item.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === item.value ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+            variant={filter === item.value ? 'default' : 'ghost'}
+            size="sm"
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -99,11 +101,11 @@ export function MessagesPage() {
                   <p className="text-xs text-gray-400">{message.sendTime}</p>
                   <div className="flex gap-2">
                     {!message.isRead && (
-                      <button className="text-xs text-emerald-600 hover:text-emerald-700">标为已读</button>
+                      <Button variant="ghost" size="sm" className="text-xs">标为已读</Button>
                     )}
-                    <button className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-500">
                       <Trash2 className="w-3 h-3" /> 删除
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -116,33 +118,32 @@ export function MessagesPage() {
             共 {filteredMessages.length} 条记录，第 {currentPage}/{totalPages} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages)].map((_, i) => (
-              <button
+              <Button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                size="sm"
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="ghost"
+              size="icon"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

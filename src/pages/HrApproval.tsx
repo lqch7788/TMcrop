@@ -15,6 +15,7 @@ import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprova
 import ProModal from '../components/common/modal/ProModal';
 import ProTable, { Column } from '../components/common/table/ProTable';
 import StatusBadge from '../components/common/badge/StatusBadge';
+import { Button } from '../components/ui/button';
 
 // ============================================================
 // 审批类型选项（10种类型）
@@ -282,29 +283,32 @@ export default function HrApproval() {
       width: 150,
       render: (_: any, record: Approval) => (
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => handleViewDetail(record)}
-            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
             title="查看"
           >
             <Eye className="w-4 h-4" />
-          </button>
+          </Button>
           {record.status === ApprovalStatus.PENDING && (
             <>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleApprove(record)}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
                 title="通过"
               >
                 <CheckCircle className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleReject(record)}
-                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                 title="拒绝"
               >
                 <XCircle className="w-4 h-4" />
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -574,10 +578,7 @@ export default function HrApproval() {
             />
           </div>
           {/* 搜索按钮 */}
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            搜索
-          </button>
+          <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
       </div>
 
@@ -609,13 +610,14 @@ export default function HrApproval() {
               共 {totalCount} 条记录，第 {currentPage}/{totalPages || 1} 页
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
+              </Button>
               {[...Array(totalPages || 1)].map((_, i) => (
                 <button
                   key={i + 1}
@@ -629,13 +631,14 @@ export default function HrApproval() {
                   {i + 1}
                 </button>
               ))}
-              <button
+              <Button
+                variant="secondary"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
                 disabled={currentPage === (totalPages || 1)}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         )}

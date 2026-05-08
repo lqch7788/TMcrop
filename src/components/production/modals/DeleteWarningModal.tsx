@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DeleteWarningModalProps {
   isOpen: boolean;
@@ -33,18 +34,12 @@ export function DeleteWarningModal({
             <p className="text-gray-500">只有草稿状态的生产计划可以被删除。</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

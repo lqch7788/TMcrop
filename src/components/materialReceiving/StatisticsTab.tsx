@@ -1,4 +1,5 @@
 import { BarChart3, ClipboardList, Package, TrendingDown, TrendingUp, Download, RefreshCw, ChevronDown, ChevronRight as ChevronRightIcon, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { MonthlyStatistics, MaterialStatistics, DepartmentStatistics, GreenhouseStatistics, FieldStatistics, BatchStatistics, MonthSummaryRow, MonthDetailRow, CategorySummary, CategoryTrend, TrendChartData, DepartmentPieData, CategoryPieData } from '../../types/materialReceiving';
 import { monthlyStatisticsData, materialStatisticsData, departmentStatisticsData, greenhouseStatisticsData, fieldStatisticsData, batchStatisticsData, categorySummaryData, categoryTrendData, trendChartData, departmentPieData, categoryPieData, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getMonthCategoryData, getSingleMonthTableData, getSingleMonthTotal, CATEGORY_COLORS } from '../../data/materialReceivingData';
@@ -154,46 +155,30 @@ export default function StatisticsTab({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
         <div className="border-b border-gray-100">
           <div className="flex items-center gap-1 p-2">
-            <button
+            <Button
+              variant={activeTab === 'monthly' ? 'default' : 'ghost'}
               onClick={() => { setActiveTab('monthly'); setCurrentPage(1); }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'monthly'
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
             >
               📅 月度汇总
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={activeTab === 'material' ? 'default' : 'ghost'}
               onClick={() => { setActiveTab('material'); setCurrentPage(1); }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'material'
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
             >
               📦 物料汇总
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={activeTab === 'department' ? 'default' : 'ghost'}
               onClick={() => { setActiveTab('department'); setCurrentPage(1); }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'department'
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
             >
               👤 部门汇总
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={activeTab === 'area' ? 'default' : 'ghost'}
               onClick={() => { setActiveTab('area'); setCurrentPage(1); }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'area'
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
             >
               🏠 区域统计
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -201,36 +186,24 @@ export default function StatisticsTab({
         {activeTab === 'area' && (
           <div className="border-b border-gray-100 bg-gray-50/50">
             <div className="flex items-center gap-1 p-2">
-              <button
+              <Button
+                variant={activeAreaTab === 'greenhouse' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('greenhouse'); setCurrentPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeAreaTab === 'greenhouse'
-                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 🏠 大棚统计
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={activeAreaTab === 'field' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('field'); setCurrentPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeAreaTab === 'field'
-                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 🌾 大田统计
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={activeAreaTab === 'batch' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('batch'); setCurrentPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeAreaTab === 'batch'
-                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 🌱 种植批次统计
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -634,17 +607,14 @@ export default function StatisticsTab({
                     <option value="12">12月</option>
                   </select>
                 </div>
-                <button
-                  onClick={() => {
+                <Button variant="secondary" onClick={() => {
                     setYearFilter('2025');
                     setMonthFilter('all');
                     setExpandedMonths(new Set());
                     setCurrentPage(1);
-                  }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-                >
+                  }}>
                   重置
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -690,20 +660,17 @@ export default function StatisticsTab({
 
                 {/* 快捷筛选按钮 */}
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                  <button onClick={() => onQuickFilter('currentWeek')} className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-white hover:shadow-sm transition-all">本周</button>
-                  <button onClick={() => onQuickFilter('currentMonth')} className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-500 text-white shadow-sm">本月</button>
-                  <button onClick={() => onQuickFilter('currentQuarter')} className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-white hover:shadow-sm transition-all">本季</button>
-                  <button onClick={() => onQuickFilter('currentYear')} className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-white hover:shadow-sm transition-all">本年</button>
+                  <Button variant="ghost" size="sm" onClick={() => onQuickFilter('currentWeek')}>本周</Button>
+                  <Button variant="default" size="sm" onClick={() => onQuickFilter('currentMonth')}>本月</Button>
+                  <Button variant="ghost" size="sm" onClick={() => onQuickFilter('currentQuarter')}>本季</Button>
+                  <Button variant="ghost" size="sm" onClick={() => onQuickFilter('currentYear')}>本年</Button>
                 </div>
 
                 {/* 重置按钮 */}
-                <button
-                  onClick={onReset}
-                  className="h-9 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-1"
-                >
+                <Button variant="secondary" size="sm" onClick={onReset}>
                   <RefreshCw className="w-4 h-4" />
                   重置
-                </button>
+                </Button>
               </div>
 
               {/* 区域统计特有筛选 */}

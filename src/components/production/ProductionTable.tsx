@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/button';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
 
@@ -153,13 +154,9 @@ export function ProductionTable({
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                  <button
-                    onClick={() => onBatchCodeClick(batch)}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                    title="点击查看详情"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onBatchCodeClick(batch)} title="点击查看详情">
                     {batch.batchCode}
-                  </button>
+                  </Button>
                 </td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planType && (
@@ -198,29 +195,25 @@ export function ProductionTable({
                 <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">-</td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
-                    <button
-                      onClick={() => {
-                        // 下载生产计划文件
-                        const fileName = batch.planDetailFileName!;
-                        const isDocx = fileName.endsWith('.docx');
-                        const content = batch.planDetail || `# ${batch.batchCode}\n\n批次号：${batch.batchCode}\n作物名称：${batch.cropName}\n作物品种：${batch.variety}\n种植区域：${batch.greenhouseName}\n种植面积：${batch.plantingArea} m²\n种植模式：${batch.plantingMode}\n负责人：${batch.responsiblePerson}\n开始时间：${batch.startDate}\n预计结束时间：${batch.expectedHarvestDate}\n目标产量：${batch.targetYield} kg\n当前状态：${batchStatusLabels[batch.batchStatus || 'draft']}`;
-                        const blob = new Blob([content], {
-                          type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
-                        });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="text-blue-600 hover:text-blue-800 hover:underline text-left"
-                      title="点击下载生产计划文件"
-                    >
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载生产计划文件" onClick={() => {
+                      // 下载生产计划文件
+                      const fileName = batch.planDetailFileName!;
+                      const isDocx = fileName.endsWith('.docx');
+                      const content = batch.planDetail || `# ${batch.batchCode}\n\n批次号：${batch.batchCode}\n作物名称：${batch.cropName}\n作物品种：${batch.variety}\n种植区域：${batch.greenhouseName}\n种植面积：${batch.plantingArea} m²\n种植模式：${batch.plantingMode}\n负责人：${batch.responsiblePerson}\n开始时间：${batch.startDate}\n预计结束时间：${batch.expectedHarvestDate}\n目标产量：${batch.targetYield} kg\n当前状态：${batchStatusLabels[batch.batchStatus || 'draft']}`;
+                      const blob = new Blob([content], {
+                        type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = fileName;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}>
                       {batch.planDetailFileName}
-                    </button>
+                    </Button>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
@@ -234,9 +227,9 @@ export function ProductionTable({
         {exportMode && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Button variant="ghost" size="sm" onClick={onSelectAll}>
                 {allSelectedForExport ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -244,9 +237,9 @@ export function ProductionTable({
         {batchEditMode && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button onClick={onBatchSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Button variant="ghost" size="sm" onClick={onBatchSelectAll}>
                 {allSelectedForBatchEdit ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -254,9 +247,9 @@ export function ProductionTable({
         {batchDeleteMode && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button onClick={onBatchDeleteSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Button variant="ghost" size="sm" onClick={onBatchDeleteSelectAll}>
                 {allSelectedForBatchDelete ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（仅草稿状态可删除）</span>
             </div>
           </div>
@@ -280,21 +273,23 @@ export function ProductionTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {filteredBatches.length} 条</span>
-          <button
+          <Button
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            variant="ghost"
+            size="icon"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{currentPage} / {pageCount || 1}</span>
-          <button
+          <Button
             onClick={() => onPageChange(Math.min(pageCount || 1, currentPage + 1))}
             disabled={currentPage >= pageCount}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            variant="ghost"
+            size="icon"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

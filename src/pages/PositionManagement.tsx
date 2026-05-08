@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardCheck, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 const positions = [
   { id: 1, code: 'J001', name: '总经理', dept: '管理层', level: '高层', salary: 15000, staffCount: 1, description: '公司全面管理', status: '启用', statusClass: 'normal' },
@@ -60,10 +61,10 @@ export default function PositionManagement() {
 
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex justify-end">
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+          <Button variant="default">
             <Plus className="w-4 h-4" />
             新增职务
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -105,12 +106,12 @@ export default function PositionManagement() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                      <Button size="icon" variant="ghost" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                      </Button>
+                      <Button size="icon" variant="ghost" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -124,33 +125,32 @@ export default function PositionManagement() {
             共 {positions.length} 条记录，第 {currentPage}/{totalPages} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {[...Array(totalPages)].map((_, i) => (
-              <button
+              <Button
                 key={i + 1}
+                size="sm"
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ClipboardList, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon, Plus, AlertTriangle, X, ClipboardCheck, BarChart3, DollarSign, FileText, RefreshCw, TrendingUp, TrendingDown, Package, MapPin, Calendar, BarChart2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 // 从数据文件导入所有Mock数据
@@ -1145,17 +1146,17 @@ export default function StatisticsTab() {
                     <option value="12">12月</option>
                   </select>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     setStatYearFilter('2025');
                     setStatMonthFilter('all');
                     setExpandedMonths(new Set());
                     setStatCurrentPage(1);
                   }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
                 >
                   重置
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1207,28 +1208,29 @@ export default function StatisticsTab() {
                 <div className="flex gap-2">
                   {statExportMode ? (
                     <>
-                      <button
+                      <Button
+                        size="sm"
                         onClick={handleStatExportConfirm}
-                        className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                       >
                         <Download className="w-4 h-4" />
                         确认导出
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         onClick={handleStatCancelExport}
-                        className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                       >
                         取消
-                      </button>
+                      </Button>
                     </>
                   ) : (
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => setStatExportMode(true)}
-                      className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                     >
                       <Download className="w-4 h-4" />
                       导出
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1439,28 +1441,29 @@ export default function StatisticsTab() {
                 <div className="flex gap-2">
                   {statExportMode ? (
                     <>
-                      <button
+                      <Button
+                        size="sm"
                         onClick={handleMaterialStatExportConfirm}
-                        className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                       >
                         <Download className="w-4 h-4" />
                         确认导出
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         onClick={handleMaterialStatCancelExport}
-                        className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                       >
                         取消
-                      </button>
+                      </Button>
                     </>
                   ) : (
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => setStatExportMode(true)}
-                      className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                     >
                       <Download className="w-4 h-4" />
                       导出
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1546,12 +1549,13 @@ export default function StatisticsTab() {
                           <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.mainWarehouse}</td>
                           {!statExportMode && (
                             <td className="px-3 py-3 text-center whitespace-nowrap">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => { setStatSelectedRecord(item); setStatShowDetailModal(true); }}
-                                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                               >
                                 查看明细
-                              </button>
+                              </Button>
                             </td>
                           )}
                         </tr>
@@ -1581,21 +1585,23 @@ export default function StatisticsTab() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">共 {materialStatFilteredData.length} 条</span>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setStatCurrentPage(Math.max(1, statCurrentPage - 1))}
                   disabled={statCurrentPage === 1}
-                  className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                </button>
+                </Button>
                 <span className="text-sm">{statCurrentPage} / {Math.ceil(materialStatFilteredData.length / statPageSize) || 1}</span>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setStatCurrentPage(Math.min(Math.ceil(materialStatFilteredData.length / statPageSize), statCurrentPage + 1))}
                   disabled={statCurrentPage >= Math.ceil(materialStatFilteredData.length / statPageSize)}
-                  className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <ChevronRight className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
           )}

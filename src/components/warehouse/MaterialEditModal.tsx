@@ -1,6 +1,8 @@
 import { Barcode, Package } from 'lucide-react';
 import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { Button } from '../ui/button';
+import { X } from 'lucide-react';
 
 interface MaterialEditModalProps {
   material: Material | null;
@@ -94,9 +96,9 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             删除确认
           </h3>
-          <button onClick={onClose} className="text-white hover:bg-red-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <div className="p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -118,18 +120,12 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
             此操作不可撤销！请确认是否继续删除？
           </p>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
+            <Button variant="secondary" onClick={onClose} className="flex-1">
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 h-10 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm} className="flex-1">
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

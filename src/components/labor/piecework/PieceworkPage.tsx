@@ -7,6 +7,7 @@ import { PieceworkBatchEditModal } from './PieceworkBatchEditModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { mockTempWorkers } from '../tempWorker/mockData';
 import { taskOptions } from './hooks/usePiecework';
+import { Button } from '@/components/ui/button';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -34,9 +35,9 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={onClose}>
               ×
-            </button>
+            </Button>
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
@@ -65,8 +66,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             </div>
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button onClick={onClose} className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-            <button onClick={onConfirm} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">导出</button>
+            <Button variant="secondary" onClick={onClose}>取消</Button>
+            <Button onClick={onConfirm}>导出</Button>
           </div>
         </div>
       </div>
@@ -102,8 +103,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
             <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">取消</button>
-            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">确认删除</button>
+            <Button variant="secondary" onClick={onClose}>取消</Button>
+            <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
           </div>
         </div>
       </div>
@@ -521,15 +522,15 @@ export const PieceworkPage: React.FC = () => {
               )}
             </div>
             <div className="flex justify-end px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setShowDetailModal(false);
                   setSelectedRecord(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 关闭
-              </button>
+              </Button>
             </div>
           </div>
         </div>

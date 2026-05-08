@@ -1,5 +1,6 @@
 import { Search, Plus } from 'lucide-react';
 import type { LeaveFiltersProps, LeaveType, LeaveStatus } from './types';
+import { Button } from '@/components/ui/button';
 
 /**
  * 请假管理筛选栏组件
@@ -77,20 +78,14 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: Leav
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
-          >
+          <Button size="sm" variant="secondary" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
-          <button
-            onClick={onAdd}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          </Button>
+          <Button size="sm" onClick={onAdd}>
             <Plus className="w-4 h-4" />
             新建请假
-          </button>
+          </Button>
         </div>
       </div>
     </div>

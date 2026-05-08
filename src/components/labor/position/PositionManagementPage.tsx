@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ClipboardCheck } from 'lucide-react';
 import { PositionTable } from './PositionTable';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from './modals';
+import { Button } from '@/components/ui/button';
 
 export interface Position {
   id: number;
@@ -316,12 +317,9 @@ export function PositionManagementPage() {
             {batchEditMode && '（点击批量编辑进入编辑模式）'}
             {batchDeleteMode && '（确认删除选中的记录）'}
           </div>
-          <button
-            onClick={handleCancelBatch}
-            className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
-          >
+          <Button variant="ghost" onClick={handleCancelBatch}>
             取消
-          </button>
+          </Button>
         </div>
       )}
 

@@ -3,6 +3,7 @@
  */
 import { Search } from 'lucide-react';
 import { AttendanceFilters, DEPT_OPTIONS } from './types';
+import { Button } from '@/components/ui/button';
 
 interface WorkerAttendanceFiltersProps {
   filters: AttendanceFilters;
@@ -66,10 +67,10 @@ export function WorkerAttendanceFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2">
+          <Button size="sm" variant="secondary">
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

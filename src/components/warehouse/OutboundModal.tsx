@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { X, ArrowUpCircle, AlertTriangle } from 'lucide-react';
 import { outbound } from '../../services/inventoryService';
 import { InventoryStock, BusinessType } from '../../types/inventory';
+import { Button } from '../ui/button';
 
 interface OutboundModalProps {
   isOpen: boolean;
@@ -86,9 +87,9 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             <ArrowUpCircle className="w-5 h-5 text-white" />
             <h3 className="text-lg font-semibold text-white">出库操作</h3>
           </div>
-          <button onClick={handleClose} className="text-white hover:bg-red-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容区域 */}
@@ -207,17 +208,17 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <button
+          <Button
+            variant="secondary"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleSubmit}
             disabled={isSubmitting || !quantity || parseFloat(quantity) <= 0 || parseFloat(quantity) > availableQuantity}
-            className="h-10 px-6 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSubmitting ? (
               <>
@@ -227,7 +228,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             ) : (
               '确认出库'
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

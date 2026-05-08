@@ -4,6 +4,7 @@
 import { useRef } from 'react';
 import { Eye, ChevronLeft, ChevronRight, Edit, Trash2, Download, Plus, Upload } from 'lucide-react';
 import { AttendanceRecord, PAGE_SIZE_OPTIONS } from './types';
+import { Button } from '@/components/ui/button';
 
 interface WorkerAttendanceTableProps {
   data: AttendanceRecord[];
@@ -85,103 +86,110 @@ export function WorkerAttendanceTable({
             <>
               {batchEditMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="blue"
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Edit className="w-4 h-4" />
                     批量编辑
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onCancelBatchEdit}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {batchDeleteMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={onBatchDeleteClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" />
                     确认删除
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onCancelBatchDelete}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {exportMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
                     onClick={onExportClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4" />
                     确认导出
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onExportClick}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
             </>
           ) : (
             <>
               {onAddClick && (
-                <button
+                <Button
+                  size="sm"
                   onClick={onAddClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                size="sm"
                 onClick={handleImportClick}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Upload className="w-4 h-4" />
                 导入
-              </button>
+              </Button>
               {onBatchEditClick && (
-                <button
+                <Button
+                  size="sm"
+                  variant="blue"
                   onClick={onBatchEditClick}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
                 >
                   <Edit className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {onBatchDeleteClick && (
-                <button
+                <Button
+                  size="sm"
+                  variant="destructive"
                   onClick={onBatchDeleteClick}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {onExportClick && (
-                <button
+                <Button
+                  size="sm"
                   onClick={onExportClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -252,12 +260,13 @@ export function WorkerAttendanceTable({
               </td>
               {!showCheckbox && (
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     title="查看"
                   >
                     <Eye className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </td>
               )}
             </tr>
@@ -270,12 +279,13 @@ export function WorkerAttendanceTable({
       {showCheckbox && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
             >
               {allSelected ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         </div>
@@ -297,21 +307,23 @@ export function WorkerAttendanceTable({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {totalCount} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

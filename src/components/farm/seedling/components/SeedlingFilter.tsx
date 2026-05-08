@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { SeedlingFilters } from '../../../../types/crop';
+import { Button } from '@/components/ui/button';
 
 interface SeedlingFilterProps {
   filters: SeedlingFilters;
@@ -119,9 +120,9 @@ export function SeedlingFilter({
 
         {/* 按钮行 */}
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="blue"
             onClick={() => setShowMore(!showMore)}
-            className="h-10 px-4 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-2"
           >
             {showMore ? (
               <>
@@ -134,21 +135,15 @@ export function SeedlingFilter({
                 More
               </>
             )}
-          </button>
-          <button
-            onClick={onReset}
-            className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
-          >
+          </Button>
+          <Button variant="secondary" onClick={onReset}>
             <RotateCcw className="w-4 h-4" />
             重置
-          </button>
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
 

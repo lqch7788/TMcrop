@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, X } from 'lucide-react';
 import type { SalaryRecord } from './types';
+import { Button } from '@/components/ui/button';
 
 interface SalaryExportProps {
   record: SalaryRecord | null;
@@ -103,9 +104,9 @@ export function SalaryExport({ record, open, onClose }: SalaryExportProps) {
       <div className="bg-white rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">导出工资条</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-4 space-y-4">
@@ -168,53 +169,40 @@ export function SalaryExport({ record, open, onClose }: SalaryExportProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">选择导出格式</label>
             <div className="grid grid-cols-2 gap-3">
-              <button
+              <Button
+                variant={exportFormat === 'excel' ? 'default' : 'secondary'}
                 onClick={() => setExportFormat('excel')}
-                className={`p-4 border-2 rounded-lg transition-colors ${
-                  exportFormat === 'excel'
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="p-4 h-auto flex-col"
               >
-                <FileSpreadsheet className={`w-8 h-8 mx-auto mb-2 ${exportFormat === 'excel' ? 'text-emerald-600' : 'text-gray-400'}`} />
-                <p className={`text-sm font-medium ${exportFormat === 'excel' ? 'text-emerald-700' : 'text-gray-700'}`}>
+                <FileSpreadsheet className={`w-8 h-8 mb-2 ${exportFormat === 'excel' ? 'text-white' : 'text-gray-400'}`} />
+                <p className={`text-sm font-medium ${exportFormat === 'excel' ? 'text-white' : 'text-gray-700'}`}>
                   Excel
                 </p>
-                <p className="text-xs text-gray-500">.xlsx 格式</p>
-              </button>
-              <button
+                <p className={`text-xs ${exportFormat === 'excel' ? 'text-white/80' : 'text-gray-500'}`}>.xlsx 格式</p>
+              </Button>
+              <Button
+                variant={exportFormat === 'pdf' ? 'default' : 'secondary'}
                 onClick={() => setExportFormat('pdf')}
-                className={`p-4 border-2 rounded-lg transition-colors ${
-                  exportFormat === 'pdf'
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="p-4 h-auto flex-col"
               >
-                <FileText className={`w-8 h-8 mx-auto mb-2 ${exportFormat === 'pdf' ? 'text-emerald-600' : 'text-gray-400'}`} />
-                <p className={`text-sm font-medium ${exportFormat === 'pdf' ? 'text-emerald-700' : 'text-gray-700'}`}>
+                <FileText className={`w-8 h-8 mb-2 ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-400'}`} />
+                <p className={`text-sm font-medium ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-700'}`}>
                   PDF
                 </p>
-                <p className="text-xs text-gray-500">.pdf 格式</p>
-              </button>
+                <p className={`text-xs ${exportFormat === 'pdf' ? 'text-white/80' : 'text-gray-500'}`}>.pdf 格式</p>
+              </Button>
             </div>
           </div>
         </div>
 
         <div className="p-4 border-t flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={handleExport} disabled={isExporting}>
             <Download className="w-4 h-4" />
             {isExporting ? '导出中...' : '导出'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

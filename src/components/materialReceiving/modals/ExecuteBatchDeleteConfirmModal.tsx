@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ExecuteBatchDeleteConfirmModalProps {
   show: boolean;
@@ -24,9 +25,9 @@ export const ExecuteBatchDeleteConfirmModal: React.FC<ExecuteBatchDeleteConfirmM
             <AlertTriangle className="w-5 h-5" />
             批量删除确认
           </h3>
-          <button onClick={onCancel} className="text-white hover:bg-red-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={onCancel} className="text-white hover:bg-red-700">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <div className="p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -50,18 +51,12 @@ export const ExecuteBatchDeleteConfirmModal: React.FC<ExecuteBatchDeleteConfirmM
           </p>
 
           <div className="flex gap-3">
-            <button
-              onClick={onCancel}
-              className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
+            <Button variant="secondary" onClick={onCancel}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 h-10 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

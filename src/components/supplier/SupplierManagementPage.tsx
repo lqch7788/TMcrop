@@ -14,6 +14,7 @@ import SupplierCodeGenerator from './SupplierCodeGenerator';
 import { DeleteWarningDialog, BatchDeleteConfirmDialog } from './DeleteDialogs';
 import { Supplier, SupplierFiltersState } from './types';
 import { suppliers as initialSuppliers, getSupplierTypeName } from './data';
+import { Button } from '../../components/ui/button';
 
 export default function SupplierManagementPage() {
   const navigate = useNavigate();
@@ -333,9 +334,9 @@ export default function SupplierManagementPage() {
         <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 p-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">供应商编码生成</h3>
-            <button onClick={() => setShowCodeGen(false)} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={() => setShowCodeGen(false)}>
               ✕
-            </button>
+            </Button>
           </div>
           <SupplierCodeGenerator onCodeGenerated={handleCodeGenerated} />
         </div>

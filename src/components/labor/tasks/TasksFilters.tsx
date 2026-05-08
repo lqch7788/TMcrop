@@ -1,5 +1,6 @@
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { TaskModeFilter } from './hooks/useTasksFilters';
+import { Button } from '@/components/ui/button';
 
 interface TasksFiltersProps {
   searchTerm: string;
@@ -105,10 +106,10 @@ export function TasksFilters({
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
 
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors bg-white">
+        <Button variant="outline" size="sm">
           <Filter className="w-4 h-4" />
           更多筛选
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { Task } from '../../../types';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { TaskModeBadge } from './TaskModeBadge';
+import { Button } from '@/components/ui/button';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -212,20 +213,22 @@ export function TasksTable({
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onEditTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="编辑"
                     >
                       <Edit className="w-4 h-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onDeleteTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                       title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -245,9 +248,9 @@ export function TasksTable({
       {showCheckbox && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
           <div className="flex items-center gap-4">
-            <button onClick={onSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            <Button variant="ghost" size="sm" onClick={onSelectAll}>
               {getAllSelectedForMode() ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">
               已选择 {selectedRows.length} 项
               {batchEditMode && '（进行中/已完成状态不可编辑）'}
@@ -273,21 +276,23 @@ export function TasksTable({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {tasks.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon } from 'lucide-react';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
+import { Button } from '../ui/button';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -194,9 +195,10 @@ export function PurchasePlanTable({
                   {/* 展开/折叠按钮 - 非导出模式时显示 */}
                   {!(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-2 py-3 w-10">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onToggleExpand(plan.id)}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
                         title={expandedRows.has(plan.id) ? '折叠' : '展开'}
                       >
                         {expandedRows.has(plan.id) ? (
@@ -204,7 +206,7 @@ export function PurchasePlanTable({
                         ) : (
                           <ChevronRightIcon className="w-4 h-4 text-gray-500" />
                         )}
-                      </button>
+                      </Button>
                     </td>
                   )}
                   {/* checkbox - 导出/批量模式时显示 */}
@@ -224,13 +226,15 @@ export function PurchasePlanTable({
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onViewDetail(plan)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer p-0 h-auto"
                       title="点击查看详情"
                     >
                       {plan.purchaseApplicationCode}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.relatedBatchCode || '不关联批次'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.purchaseTypeName}</td>
@@ -262,12 +266,14 @@ export function PurchasePlanTable({
         {(exportMode || batchEditMode || batchDeleteMode) && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-emerald-600 hover:text-emerald-700 p-0 h-auto"
               >
                 {selectedRows.length === filteredAndSortedData.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -291,13 +297,13 @@ export function PurchasePlanTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {filteredAndSortedData.length} 条</span>
-          <button onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{currentPage} / {totalPages}</span>
-          <button onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

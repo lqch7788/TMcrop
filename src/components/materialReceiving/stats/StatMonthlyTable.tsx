@@ -1,5 +1,6 @@
 import React from 'react';
 import { BarChart3, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface StatMonthlyTableProps {
   activeTab: 'monthly' | 'material';
@@ -117,28 +118,29 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
           <div className="flex gap-2">
             {exportMode ? (
               <>
-                <button
+                <Button
+                  size="sm"
                   onClick={onExportConfirm}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Download className="w-4 h-4" />
                   确认导出
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={onExportCancel}
-                  className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                 >
                   取消
-                </button>
+                </Button>
               </>
             ) : (
-              <button
+              <Button
+                size="sm"
                 onClick={onToggleExportMode}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
           </div>
         </div>

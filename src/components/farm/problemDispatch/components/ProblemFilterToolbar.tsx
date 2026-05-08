@@ -5,6 +5,7 @@
 import React from 'react';
 import { Send, Download, Trash2, Plus } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
+import { Button } from '@/components/ui/button';
 
 interface ProblemFilterToolbarProps {
   // 筛选状态
@@ -156,81 +157,87 @@ export function ProblemFilterToolbar({
         {/* 操作按钮 */}
         {exportMode ? (
           <div className="flex gap-2 ml-auto">
-            <button
+            <Button
+              size="sm"
               onClick={onShowDeleteWarning}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <Download className="w-4 h-4" />
               确认导出
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelExport}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : batchDeleteMode ? (
           <div className="flex gap-2 ml-auto">
-            <button
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={onShowDeleteWarning}
               disabled={selectedRowsLength === 0}
-              className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
               确认删除
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelBatchDelete}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : batchDispatchMode ? (
           <div className="flex gap-2 ml-auto">
-            <button
+            <Button
+              size="sm"
+              variant="warning"
               disabled={selectedProblemsLength === 0}
-              className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
               确认分派
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onCancelBatchDispatch}
-              className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="flex gap-2 ml-auto">
             {canCreate && onCreate && (
-              <button
+              <Button
+                size="sm"
                 onClick={onCreate}
-                className="h-8 px-3 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-1"
               >
                 <Plus className="w-4 h-4" />
                 新建
-              </button>
+              </Button>
             )}
             {canDispatch && (
-              <button
+              <Button
+                size="sm"
+                variant="warning"
                 onClick={onBatchDispatch}
-                className="h-8 px-3 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-1"
               >
                 <Send className="w-4 h-4" />
                 批量分派
-              </button>
+              </Button>
             )}
             {canExport && (
-              <button
+              <Button
+                size="sm"
                 onClick={onExport}
-                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
           </div>
         )}

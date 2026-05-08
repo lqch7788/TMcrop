@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteBatchEditModalProps {
@@ -47,9 +48,9 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
         {/* 头部 */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 sticky top-0">
           <h3 className="text-lg font-semibold text-white">批量编辑领料出库记录</h3>
-          <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-blue-700">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-6">
@@ -160,37 +161,31 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
 
           {/* 导航按钮 */}
           <div className="flex gap-3 mt-6">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => onRecordChange(Math.max(0, currentBatchEditIndex - 1))}
               disabled={currentBatchEditIndex === 0}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
             >
               上一条
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => onRecordChange(Math.min(selectedRows.length - 1, currentBatchEditIndex + 1))}
               disabled={currentBatchEditIndex >= selectedRows.length - 1}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
             >
               下一条
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button
-            onClick={onSaveAll}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
+          </Button>
+          <Button variant="blue" onClick={onSaveAll}>
             保存全部
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -234,13 +229,14 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                 <tr key={idx} className={`hover:bg-blue-50 ${isQuantityDifferent ? 'bg-amber-50' : ''}`}>
                   {/* 删除按钮 */}
                   <td className="px-2 py-2 text-center">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onMaterialDelete(idx)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded"
                       title="删除此物料"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
                   </td>
                   <td className="px-3 py-2">
                     <input

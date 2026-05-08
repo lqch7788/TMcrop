@@ -7,6 +7,7 @@ import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { HarvestRecord } from '../../../../types/crop';
 import { getStatusBadge, getGradeBadge } from '../statusBadgeUtils.tsx';
+import { Button } from '@/components/ui/button';
 
 // 产品明细行组件
 interface ProductRowProps {
@@ -104,13 +105,13 @@ export function HarvestTableRow({
           </td>
         )}
         <td className="px-4 py-3">
-          <button onClick={onToggleExpand} className="p-1 hover:bg-gray-100 rounded">
+          <Button variant="ghost" size="icon" onClick={onToggleExpand} className="p-1 hover:bg-gray-100 rounded">
             {isExpanded ? (
               <ChevronDown className="w-4 h-4 text-gray-500" />
             ) : (
               <ChevronRight className="w-4 h-4 text-gray-500" />
             )}
-          </button>
+          </Button>
         </td>
         <td
           className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
@@ -273,12 +274,14 @@ export function BatchActionBar({ selectedCount, totalCount, onSelectAll }: Batch
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
       <div className="flex items-center gap-4">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onSelectAll}
           className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
         >
           {selectedCount === totalCount ? '全不选' : '全选'}
-        </button>
+        </Button>
         <span className="text-sm text-gray-500">已选择 {selectedCount} 项</span>
       </div>
     </div>
@@ -323,7 +326,9 @@ export function HarvestPagination({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">共 {totalCount} 条</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
@@ -331,9 +336,11 @@ export function HarvestPagination({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-        </button>
+        </Button>
         <span className="text-sm">{currentPage} / {totalPages}</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
           className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
@@ -341,7 +348,7 @@ export function HarvestPagination({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </button>
+        </Button>
       </div>
     </div>
   );

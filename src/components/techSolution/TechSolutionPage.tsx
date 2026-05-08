@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload, X, Check } from 'lucide-react';
+import { Button } from '../ui/button';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
@@ -658,19 +659,13 @@ export function TechSolutionPage() {
             />
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleSearch}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
+            <Button variant="default" size="sm" onClick={handleSearch}>
               <Search className="w-4 h-4" />
               搜索
-            </button>
-            <button
-              onClick={handleReset}
-              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            </Button>
+            <Button variant="default" size="sm" onClick={handleReset}>
               重置
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -682,8 +677,7 @@ export function TechSolutionPage() {
             <div className="flex gap-2">
               {batchEditMode && (
                 <>
-                  <button
-                    onClick={() => {
+                  <Button variant="blue" size="sm" onClick={() => {
                       if (selectedRows.length === 0) {
                         alert('请先选择要编辑的数据');
                         return;
@@ -696,99 +690,81 @@ export function TechSolutionPage() {
                       setEditedTechCodes([]);
                       setEditedTechs({});
                       setShowBatchEditModal(true);
-                    }}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                  >
+                    }}>
                     <Edit className="w-4 h-4" />
                     编辑
-                  </button>
-                  <button
-                    onClick={() => {
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => {
                       setBatchEditMode(false);
                       setSelectedRows([]);
-                    }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                  >
+                    }}>
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {batchDeleteMode && (
                 <>
-                  <button
-                    onClick={() => {
+                  <Button variant="destructive" size="sm" onClick={() => {
                       if (selectedRows.length === 0) {
                         alert('请先选择要删除的数据');
                         return;
                       }
                       setShowDeleteModal(true);
-                    }}
-                    disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50"
-                  >
+                    }} disabled={selectedRows.length === 0}>
                     <Trash2 className="w-4 h-4" />
                     删除
-                  </button>
-                  <button
-                    onClick={() => {
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => {
                       setBatchDeleteMode(false);
                       setSelectedRows([]);
-                    }}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                  >
+                    }}>
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {exportMode && (
                 <>
-                  <button onClick={() => setShowExportModal(true)} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                  <Button variant="default" size="sm" onClick={() => setShowExportModal(true)}>
                     <Download className="w-4 h-4" />
                     确认导出
-                  </button>
-                  <button onClick={handleCancelExport} className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={handleCancelExport}>
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
           ) : (
             <div className="flex gap-2">
               {canCreate && (
-                <button onClick={handleOpenCreateModal} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Button variant="default" size="sm" onClick={handleOpenCreateModal}>
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {canEdit && (
-                <button
-                  onClick={() => {
+                <Button variant="blue" size="sm" onClick={() => {
                     setBatchEditMode(true);
                     setSelectedRows([]);
-                  }}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
-                >
+                  }}>
                   <Edit className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {canDelete && (
-                <button
-                  onClick={() => {
+                <Button variant="destructive" size="sm" onClick={() => {
                     setBatchDeleteMode(true);
                     setSelectedRows([]);
-                  }}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-                >
+                  }}>
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {canExport && (
-                <button onClick={handleExportClick} className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                <Button variant="default" size="sm" onClick={handleExportClick}>
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -833,9 +809,13 @@ export function TechSolutionPage() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" onClick={() => handleViewClick(tech)}>{tech.code}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">
+                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" onClick={() => handleViewClick(tech)}>{tech.code}</Button>
+                </td>
                   <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{tech.relatedBatchCode || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-green-700 hover:text-green-900 cursor-pointer whitespace-nowrap" onClick={() => handleTitleClick(tech)}>{tech.title}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap">
+                  <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-900" onClick={() => handleTitleClick(tech)}>{tech.title}</Button>
+                </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.crop}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.plantingMode}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.stage}</td>
@@ -861,29 +841,25 @@ export function TechSolutionPage() {
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {tech.planDetailFileName ? (
-                      <button
-                        onClick={() => {
-                          // 下载方案详情文件
-                          const fileName = tech.planDetailFileName!;
-                          const isDocx = fileName.endsWith('.docx');
-                          const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${tech.plantingMode}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
-                          const blob = new Blob([content], {
-                            type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = fileName;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          URL.revokeObjectURL(url);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 hover:underline text-left"
-                        title="点击下载方案详情"
-                      >
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载方案详情" onClick={() => {
+                        // 下载方案详情文件
+                        const fileName = tech.planDetailFileName!;
+                        const isDocx = fileName.endsWith('.docx');
+                        const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${tech.plantingMode}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
+                        const blob = new Blob([content], {
+                          type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
+                        });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}>
                         {tech.planDetailFileName}
-                      </button>
+                      </Button>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
@@ -895,12 +871,9 @@ export function TechSolutionPage() {
           {exportMode && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                >
+                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
                   {selectedRows.length === techSolutions.length ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             </div>
@@ -925,13 +898,13 @@ export function TechSolutionPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {filteredTechSolutions.length} 条</span>
-          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+          <Button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} variant="ghost" size="icon">
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{currentPage} / {Math.ceil(filteredTechSolutions.length / pageSize) || 1}</span>
-          <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTechSolutions.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredTechSolutions.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+          <Button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTechSolutions.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredTechSolutions.length / pageSize)} variant="ghost" size="icon">
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1113,20 +1086,20 @@ export function TechSolutionPage() {
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => handleCreateSubmit('draft')}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
             >
               存为草稿
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="default"
               onClick={() => handleCreateSubmit('submit')}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
             >
               提交审批
-            </button>
+            </Button>
           </div>
         }
       >
@@ -1139,13 +1112,9 @@ export function TechSolutionPage() {
                   onChange={(e) => setNewPlanForm({...newPlanForm, code: e.target.value})}
                   placeholder="请输入方案编号"
                 />
-                <button
-                  type="button"
-                  onClick={() => setNewPlanForm({...newPlanForm, code: generateCode()})}
-                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
-                >
+                <Button variant="default" size="sm" type="button" onClick={() => setNewPlanForm({...newPlanForm, code: generateCode()})}>
                   生成
-                </button>
+                </Button>
               </div>
             </FormField>
             <FormField label="版本">
@@ -1172,15 +1141,11 @@ export function TechSolutionPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-emerald-800">{newPlanForm.crop}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
+                      <Button variant="ghost" size="icon" type="button" onClick={() => {
                           setNewPlanForm(prev => ({ ...prev, crop: '', cropCode: '' }));
-                        }}
-                        className="p-1 hover:bg-emerald-100 rounded"
-                      >
+                        }}>
                         <X className="w-4 h-4 text-emerald-600" />
-                      </button>
+                      </Button>
                     </div>
                     <div className="mt-1 text-xs text-emerald-600 font-mono">编码: {newPlanForm.cropCode}</div>
                   </div>
@@ -1196,13 +1161,9 @@ export function TechSolutionPage() {
                         placeholder="搜索作物编码、名称或别名..."
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowCropSearch(!showCropSearch)}
-                        className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200"
-                      >
+                      <Button variant="secondary" size="sm" type="button" onClick={() => setShowCropSearch(!showCropSearch)}>
                         <Search className="w-4 h-4 text-gray-500" />
-                      </button>
+                      </Button>
                     </div>
 
                     {/* 搜索结果下拉 */}
@@ -1215,11 +1176,12 @@ export function TechSolutionPage() {
                               ? result.variety.varietyName
                               : (result.variety.subVariety1Name || result.variety.varietyName);
                             return (
-                              <button
+                              <Button
                                 key={result.variety.id}
                                 type="button"
+                                variant="ghost"
+                                className="w-full justify-start"
                                 onClick={() => handleSelectCrop(result.variety)}
-                                className="w-full px-3 py-2 text-left hover:bg-emerald-50 flex items-center justify-between border-b border-gray-100 last:border-b-0"
                               >
                                 <div>
                                   <p className="text-sm font-medium text-gray-800">{cropName}</p>
@@ -1230,7 +1192,7 @@ export function TechSolutionPage() {
                                   </p>
                                 </div>
                                 <Check className="w-4 h-4 text-emerald-600" />
-                              </button>
+                              </Button>
                             );
                           })
                         ) : searchKeyword.trim() ? (
@@ -1305,8 +1267,10 @@ export function TechSolutionPage() {
           </div>
           <FormField label="方案详细">
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="blue"
+                size="sm"
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
@@ -1326,11 +1290,10 @@ export function TechSolutionPage() {
                   };
                   input.click();
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
               >
                 <Upload className="w-3 h-3" />
                 导入文件
-              </button>
+              </Button>
               <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式文件</span>
             </div>
           </FormField>
@@ -1568,7 +1531,9 @@ export function TechSolutionPage() {
                         <span className="text-sm text-gray-700">
                           {editedData.planDetailFileName ?? currentTech.planDetailFileName}
                         </span>
-                        <button
+                        <Button
+                          variant="blue"
+                          size="sm"
                           onClick={() => {
                             const input = document.createElement('input');
                             input.type = 'file';
@@ -1606,15 +1571,16 @@ export function TechSolutionPage() {
                             };
                             input.click();
                           }}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1"
                         >
                           <Upload className="w-3 h-3" />
                           重新上传
-                        </button>
+                        </Button>
                         <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
                       </div>
                     ) : (
-                      <button
+                      <Button
+                        variant="default"
+                        size="sm"
                         onClick={() => {
                           const input = document.createElement('input');
                           input.type = 'file';
@@ -1650,11 +1616,10 @@ export function TechSolutionPage() {
                           };
                           input.click();
                         }}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 flex items-center gap-1"
                       >
                         <Upload className="w-3 h-3" />
                         上传方案文件
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -1664,7 +1629,8 @@ export function TechSolutionPage() {
 
           {/* Footer Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => {
                 setShowBatchEditModal(false);
                 setBatchEditMode(false);
@@ -1672,11 +1638,11 @@ export function TechSolutionPage() {
                 setEditedTechCodes([]);
                 setEditedTechs({});
               }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
               onClick={async () => {
                 try {
                   if (USE_API) {
@@ -1712,10 +1678,9 @@ export function TechSolutionPage() {
                   alert('保存失败，请重试');
                 }
               }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
             >
               保存
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

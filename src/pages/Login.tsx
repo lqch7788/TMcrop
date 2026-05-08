@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Cloud } from 'lucide-react';
 import { useUsers } from '../components/common/settings';
+import { Button } from '../components/ui/button';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -145,8 +146,10 @@ export default function Login() {
                 placeholder="请输入密码"
                 className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 pr-4 flex items-center"
               >
@@ -155,7 +158,7 @@ export default function Login() {
                 ) : (
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -181,12 +184,12 @@ export default function Login() {
           )}
 
           {/* 登录按钮 */}
-          <button
+          <Button
             onClick={handleLogin}
-            className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
           >
             登 录
-          </button>
+          </Button>
 
           {/* 底部版权信息 */}
           <div className="mt-8 text-center text-gray-400 text-xs leading-relaxed">

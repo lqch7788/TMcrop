@@ -15,6 +15,7 @@ import {
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import BatchActionBar from '../components/approval/BatchActionBar';
+import { Button } from '../components/ui/button';
 
 export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -305,10 +306,7 @@ export default function ProductionApproval() {
               <option value="已拒绝">已拒绝</option>
             </select>
           </div>
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            搜索
-          </button>
+          <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
       </div>
 
@@ -338,16 +336,17 @@ export default function ProductionApproval() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleSelectAll(selectedIds.size !== pendingApprovals.length)}
-                    className="p-1 hover:bg-gray-200 rounded"
                   >
                     {selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0 ? (
                       <CheckSquareIcon className="w-4 h-4 text-emerald-600" />
                     ) : (
                       <Square className="w-4 h-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请单号</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请人</th>
@@ -363,16 +362,17 @@ export default function ProductionApproval() {
                 <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(item.id) ? 'bg-emerald-50' : ''}`}>
                   <td className="px-4 py-3">
                     {item.status === ApprovalStatus.PENDING ? (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleToggleSelect(item.id)}
-                        className="p-1 hover:bg-gray-200 rounded"
                       >
                         {selectedIds.has(item.id) ? (
                           <CheckSquareIcon className="w-4 h-4 text-emerald-600" />
                         ) : (
                           <Square className="w-4 h-4 text-gray-400" />
                         )}
-                      </button>
+                      </Button>
                     ) : (
                       <span className="w-4 h-4 block" />
                     )}
@@ -387,29 +387,32 @@ export default function ProductionApproval() {
                     <div className="flex items-center gap-1">
                       {item.status === ApprovalStatus.PENDING && (
                         <>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleApprove(item)}
-                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                             title="通过"
                           >
                             <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleReject(item)}
-                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="拒绝"
                           >
                             <XCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleViewDetail(item)}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -432,13 +435,14 @@ export default function ProductionApproval() {
               共 {filteredData.length} 条记录，第 {currentPage}/{totalPages || 1} 页
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
+              </Button>
               {[...Array(totalPages || 1)].map((_, i) => (
                 <button
                   key={i + 1}
@@ -452,13 +456,14 @@ export default function ProductionApproval() {
                   {i + 1}
                 </button>
               ))}
-              <button
+              <Button
+                variant="secondary"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
                 disabled={currentPage === (totalPages || 1)}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -479,9 +484,9 @@ export default function ProductionApproval() {
                   <p className="text-sm text-white/80">{detailModal.approval.code}</p>
                 </div>
               </div>
-              <button onClick={closeDetailModal} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+              <Button variant="ghost" size="icon" onClick={closeDetailModal} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-white" />
-              </button>
+              </Button>
             </div>
 
             {/* 状态标签 */}
@@ -684,12 +689,12 @@ export default function ProductionApproval() {
 
             {/* 弹窗底部 */}
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <button
+              <Button
+                variant="default"
                 onClick={closeDetailModal}
-                className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
               >
                 关闭
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -716,9 +721,9 @@ export default function ProductionApproval() {
                   <p className="text-sm text-white/80">{approvalModal.approval.code}</p>
                 </div>
               </div>
-              <button onClick={cancelApproval} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+              <Button variant="ghost" size="icon" onClick={cancelApproval} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-white" />
-              </button>
+              </Button>
             </div>
 
             {/* 弹窗内容 */}
@@ -747,20 +752,18 @@ export default function ProductionApproval() {
 
             {/* 弹窗底部 */}
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-              <button
+              <Button
+                variant="secondary"
                 onClick={cancelApproval}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={approvalModal.action === 'approve' ? 'default' : 'destructive'}
                 onClick={confirmApproval}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 ${
-                  approvalModal.action === 'approve' ? 'bg-emerald-600' : 'bg-red-600'
-                }`}
               >
                 {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

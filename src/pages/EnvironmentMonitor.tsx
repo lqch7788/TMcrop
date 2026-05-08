@@ -6,6 +6,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { iotSensors, greenhouses, cropBatches } from '../data/mockData';
 import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/button';
 
 const sensorTrend = [
   { time: '06:00', temp: 18, humi: 75 },
@@ -176,9 +177,9 @@ export default function EnvironmentMonitor() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* 当地天气预报 - 左侧 */}
             <div className="bg-emerald-50 rounded-xl p-4 shadow-sm border border-emerald-100 relative">
-              <button className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-emerald-100 text-emerald-600">
+              <Button variant="ghost" size="icon" className="absolute top-3 right-3">
                 <RefreshCw className="w-4 h-4" />
-              </button>
+              </Button>
               <div className="flex items-center gap-2 mb-3">
                 <MapPin className="w-4 h-4 text-emerald-600" />
                 <span className="text-sm font-bold text-gray-900">{weatherForecast.location}</span>
@@ -363,13 +364,13 @@ export default function EnvironmentMonitor() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条</span>
-                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
                   <ChevronLeft className="w-4 h-4" />
-                </button>
+                </Button>
                 <span className="text-sm">{currentPage} / {totalGreenhousePages || 1}</span>
-                <button onClick={() => setCurrentPage(Math.min(totalGreenhousePages, currentPage + 1))} disabled={currentPage >= totalGreenhousePages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+                <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(totalGreenhousePages, currentPage + 1))} disabled={currentPage >= totalGreenhousePages}>
                   <ChevronRight className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>

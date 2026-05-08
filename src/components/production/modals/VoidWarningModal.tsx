@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VoidWarningModalProps {
   isOpen: boolean;
@@ -36,18 +37,12 @@ export function VoidWarningModal({
             <p className="font-medium text-gray-700">请谨慎操作，确认要申请作废吗？</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
-            >
+            </Button>
+            <Button variant="warning" onClick={onConfirm}>
               确认作废
-            </button>
+            </Button>
           </div>
         </div>
       </div>

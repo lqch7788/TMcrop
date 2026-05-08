@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle, AlertCircle, AlertOctagon, Clock, CheckCircle, CheckSquare, Square, X, Trash2, Plus, Edit2, Download } from 'lucide-react';
 import type { RiskAlert, AlertLevel } from './types';
 import { AlertLevelNames } from './types';
@@ -93,81 +94,54 @@ export function RiskAlertList({
           {showCheckbox ? (
             <>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <button
-                onClick={onCancelBatch}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={onCancelBatch} className="flex items-center gap-1">
                 <X className="w-4 h-4" />
                 取消
-              </button>
+              </Button>
               {batchEditMode && (
-                <button
-                  onClick={onBatchEditClick}
-                  disabled={selectedRows.length === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="blue" onClick={onBatchEditClick} disabled={selectedRows.length === 0} className="flex items-center gap-1">
                   <Edit2 className="w-4 h-4" />
                   批量编辑
-                </button>
+                </Button>
               )}
               {batchDeleteMode && (
-                <button
-                  onClick={onBatchDeleteClick}
-                  disabled={selectedRows.length === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="destructive" onClick={onBatchDeleteClick} disabled={selectedRows.length === 0} className="flex items-center gap-1">
                   <Trash2 className="w-4 h-4" />
                   批量删除
-                </button>
+                </Button>
               )}
               {exportMode && (
-                <button
-                  onClick={onBatchExportClick}
-                  disabled={selectedRows.length === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="default" onClick={onBatchExportClick} disabled={selectedRows.length === 0} className="flex items-center gap-1">
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </>
           ) : (
             <>
               {onAddClick && (
-                <button
-                  onClick={onAddClick}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-                >
+                <Button variant="default" onClick={onAddClick} className="flex items-center gap-1">
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {onBatchEditClick && (
-                <button
-                  onClick={onBatchEditClick}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
+                <Button variant="blue" onClick={onBatchEditClick} className="flex items-center gap-1">
                   <Edit2 className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {onBatchDeleteClick && (
-                <button
-                  onClick={onBatchDeleteClick}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
-                >
+                <Button variant="destructive" onClick={onBatchDeleteClick} className="flex items-center gap-1">
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {onBatchExportClick && (
-                <button
-                  onClick={onBatchExportClick}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-                >
+                <Button variant="default" onClick={onBatchExportClick} className="flex items-center gap-1">
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -180,9 +154,9 @@ export function RiskAlertList({
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <button onClick={onSelectAll} className="text-white hover:text-blue-200">
+                  <Button variant="ghost" size="icon" onClick={onSelectAll} className="text-white hover:text-blue-200">
                     {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预警编号</th>
@@ -216,9 +190,9 @@ export function RiskAlertList({
                   >
                     {showCheckbox && (
                       <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => onSelectRow?.(alert.id)} className="text-gray-500 hover:text-emerald-600">
+                        <Button variant="ghost" size="icon" onClick={() => onSelectRow?.(alert.id)}>
                           {selectedRows.includes(alert.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
-                        </button>
+                        </Button>
                       </td>
                     )}
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{alertNumber}</td>
@@ -260,30 +234,24 @@ export function RiskAlertList({
                     {!showCheckbox && (
                       <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => onSelectAlert(alert)}
-                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                            title="查看详情"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => onSelectAlert(alert)} title="查看详情">
                             <CheckCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                           {onEdit && (
-                            <button
-                              onClick={() => onEdit(alert)}
-                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                              title="编辑"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => onEdit(alert)} title="编辑">
                               <X className="w-4 h-4" />
-                            </button>
+                            </Button>
                           )}
                           {onDelete && (
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => onDelete(alert)}
                               className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                               title="删除"
                             >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -315,21 +283,13 @@ export function RiskAlertList({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {alerts.length} 条</span>
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { Eye, Edit, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Edit2, Pencil, Download } from 'lucide-react';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
+import { Button } from '@/components/ui/button';
 
 interface RecruitmentTableProps {
   recruitments: RecruitmentRequest[];
@@ -88,96 +89,103 @@ export function RecruitmentTable({
             <>
               {batchEditMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="blue"
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Pencil className="w-4 h-4" />
                     批量编辑
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onCancelBatchEdit}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {batchDeleteMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={onBatchDeleteClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" />
                     确认删除
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onCancelBatchDelete}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
               {exportMode && (
                 <>
-                  <button
+                  <Button
+                    size="sm"
                     onClick={onBatchExportClick}
                     disabled={selectedRows.length === 0}
-                    className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4" />
                     确认导出
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={onCancelExport}
-                    className="h-8 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
                   >
                     取消
-                  </button>
+                  </Button>
                 </>
               )}
             </>
           ) : (
             <>
               {onAddClick && (
-                <button
+                <Button
+                  size="sm"
                   onClick={onAddClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {onBatchEditClick && (
-                <button
+                <Button
+                  size="sm"
+                  variant="blue"
                   onClick={onBatchEditClick}
-                  className="h-8 px-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
                 >
                   <Edit2 className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {onBatchDeleteClick && (
-                <button
+                <Button
+                  size="sm"
+                  variant="destructive"
                   onClick={onBatchDeleteClick}
-                  className="h-8 px-3 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {onBatchExportClick && (
-                <button
+                <Button
+                  size="sm"
                   onClick={onBatchExportClick}
-                  className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -264,56 +272,62 @@ export function RecruitmentTable({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onView(rec)}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                       {rec.status === '待审批' && (
                         <>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onApprove(rec)}
-                            className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                             title="审批通过"
                           >
                             <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onCancel(rec)}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                             title="取消"
                           >
                             <XCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                       {rec.status === '招聘中' && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onComplete(rec)}
-                          className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                           title="完成招聘"
                         >
                           <CheckCircle className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                       {rec.status === '待审批' && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onEdit(rec)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="编辑"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onDelete(rec)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                         title="删除"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -339,21 +353,23 @@ export function RecruitmentTable({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {recruitments.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

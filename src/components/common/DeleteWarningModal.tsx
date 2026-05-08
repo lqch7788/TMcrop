@@ -1,6 +1,7 @@
 // 统一删除警告弹窗组件
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import React from 'react';
+import { Button } from '../ui/button';
 
 // 新的统一接口
 interface DeleteWarningModalProps {
@@ -60,18 +61,12 @@ export function DeleteWarningModal({
           )}
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose} className="flex-1">
             取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-          >
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} className="flex-1">
             确认
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -106,18 +101,12 @@ export function DeleteWarningModalLegacy1({
           </ul>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onCancel} className="flex-1">
             取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-          >
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} className="flex-1">
             确认
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -151,18 +140,12 @@ export function DeleteWarningModalLegacy2({
             <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onClose} className="flex-1">
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm} className="flex-1">
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

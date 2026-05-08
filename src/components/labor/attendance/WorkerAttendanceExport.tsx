@@ -3,6 +3,7 @@
  */
 import { X } from 'lucide-react';
 import { ExportFormat, EXPORT_FORMAT_OPTIONS } from './types';
+import { Button } from '@/components/ui/button';
 
 interface WorkerAttendanceExportProps {
   show: boolean;
@@ -37,9 +38,9 @@ export function WorkerAttendanceExport({
           {/* 头部 */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onCancel} className="p-1 hover:bg-gray-100 rounded">
+            <Button variant="ghost" size="icon" onClick={onCancel}>
               <X className="w-5 h-5 text-gray-500" />
-            </button>
+            </Button>
           </div>
 
           {/* 内容 */}
@@ -74,19 +75,13 @@ export function WorkerAttendanceExport({
 
           {/* 底部按钮 */}
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button
-              onClick={onCancel}
-              className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onCancel}>
               取消
-            </button>
+            </Button>
             {canExport && (
-              <button
-                onClick={onConfirm}
-                className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
+              <Button onClick={onConfirm}>
                 导出
-              </button>
+              </Button>
             )}
           </div>
         </div>

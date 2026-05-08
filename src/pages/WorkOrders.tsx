@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ClipboardCheck, Plus, Search, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 const workOrders = [
   { id: 1, code: 'WO20240301', name: '张伟民', workerId: 'W001', area: '1号棚', process: '授粉', workload: '500株', date: '2024-03-01', status: '已完成', statusClass: 'normal' },
@@ -92,14 +93,14 @@ export default function WorkOrders() {
             />
           </div>
           <div className="flex gap-2">
-            <button className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2">
+            <Button variant="secondary">
               <Search className="w-4 h-4" />
               搜索
-            </button>
-            <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+            </Button>
+            <Button variant="default">
               <Plus className="w-4 h-4" />
               新建工单
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -144,12 +145,12 @@ export default function WorkOrders() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
+                      <Button size="icon" variant="ghost" title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                      </Button>
+                      <Button size="icon" variant="ghost" title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -173,13 +174,13 @@ export default function WorkOrders() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">共 {workOrders.length} 条</span>
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <Button size="icon" variant="ghost" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
                 <ChevronLeft className="w-4 h-4" />
-              </button>
+              </Button>
               <span className="text-sm">{currentPage} / {Math.ceil(workOrders.length / pageSize) || 1}</span>
-              <button onClick={() => setCurrentPage(Math.min(Math.ceil(workOrders.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(workOrders.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50">
+              <Button size="icon" variant="ghost" onClick={() => setCurrentPage(Math.min(Math.ceil(workOrders.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(workOrders.length / pageSize)}>
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>

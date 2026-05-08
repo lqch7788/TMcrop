@@ -4,6 +4,7 @@ import { Users, Plus, Search, Trash2, UserPlus, Settings, ChevronLeft } from 'lu
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import type { Team } from './types';
+import { Button } from '@/components/ui/button';
 
 interface TeamTableProps {
   onBack?: () => void;
@@ -110,9 +111,9 @@ export function TeamTable({
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button onClick={onBack || (() => navigate(-1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <Button variant="ghost" size="icon" onClick={onBack || (() => navigate(-1))}>
               <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
+            </Button>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
               <Users className="w-5 h-5 text-white" />
             </div>
@@ -122,13 +123,10 @@ export function TeamTable({
             </div>
           </div>
           {canCreate && (
-            <button
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
-            >
+            <Button size="sm" onClick={openCreateModal}>
               <Plus className="w-4 h-4" />
               新建班组
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -180,30 +178,33 @@ export function TeamTable({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => openAssignModal(team)}
-                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded"
                     title="分配工人"
                   >
                     <UserPlus className="w-5 h-5" />
-                  </button>
+                  </Button>
                   {canEdit && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => openEditModal(team)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                       title="编辑"
                     >
                       <Settings className="w-5 h-5" />
-                    </button>
+                    </Button>
                   )}
                   {canDelete && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDelete(team)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
                       title="删除"
                     >
                       <Trash2 className="w-5 h-5" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -250,20 +251,22 @@ export function TeamTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
             disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setPage(Math.ceil(pagination.total / pagination.pageSize))}
             disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             &gt;&gt;
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -282,9 +285,9 @@ export function TeamTable({
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">{editingTeam ? '编辑班组' : '新建班组'}</h2>
-              <button onClick={() => setIsFormOpen(false)} className="p-1 hover:bg-gray-100 rounded">
+              <Button variant="ghost" size="icon" onClick={() => setIsFormOpen(false)}>
                 ✕
-              </button>
+              </Button>
             </div>
             <div className="p-4 space-y-4">
               <div>
@@ -328,18 +331,12 @@ export function TeamTable({
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
+                <Button variant="secondary" onClick={() => setIsFormOpen(false)}>
                   取消
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
+                </Button>
+                <Button onClick={handleSubmit}>
                   保存
-                </button>
+                </Button>
               </div>
             </div>
           </div>
