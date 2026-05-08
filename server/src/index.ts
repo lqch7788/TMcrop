@@ -5,6 +5,8 @@
 
 import express from 'express';
 import cors from './middleware/cors';
+import { requestLogger } from './middleware/logger';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
 import { initDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
@@ -48,11 +50,18 @@ async function start() {
 
     // 中间件
     app.use(cors);
+    app.use(requestLogger);
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
     // API 路由
     app.use('/api', routes);
+
+    // 404 处理（必须在路由之后）
+    app.use(notFoundHandler);
+
+    // 全局错误处理（必须在所有中间件和路由之后）
+    app.use(errorHandler);
 
     // 根路径
     app.get('/', (req, res) => {

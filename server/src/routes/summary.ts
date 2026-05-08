@@ -50,11 +50,12 @@ function validateGroupBy(groupBy: string, allowedValues: string[]): string {
 }
 
 /**
- * 构造分页 SQL 片段
+ * 构造分页 SQL 片段（参数化版本，防止SQL注入）
  */
-function addPagination(sql: string, page: number, limit: number): string {
+function addPagination(sql: string, page: number, limit: number, params: any[]): string {
   const offset = (page - 1) * limit;
-  return `${sql} LIMIT ${limit} OFFSET ${offset}`;
+  params.push(limit, offset);
+  return `${sql} LIMIT ? OFFSET ?`;
 }
 
 /**
@@ -147,7 +148,7 @@ router.get('/batch-stats', (req: Request, res: Response) => {
     `;
 
     // 完整 SQL（包含 GROUP BY 和分页）
-    const sql = addPagination(`${baseSql} GROUP BY pp.id ORDER BY pp.create_time DESC`, pagination.page, pagination.limit);
+    const sql = addPagination(`${baseSql} GROUP BY pp.id ORDER BY pp.create_time DESC`, pagination.page, pagination.limit, params);
 
     // 获取总数
     const countSql = `SELECT COUNT(DISTINCT pp.id) as total FROM production_plans pp LEFT JOIN plantings pl ON pl.production_plan_code = pp.plan_code ${whereClause}`;
@@ -155,6 +156,7 @@ router.get('/batch-stats', (req: Request, res: Response) => {
     const total = countResult[0]?.total || 0;
 
     const items = queryToObjects(db, sql, params);
+
     res.json({
       success: true,
       data: items,
@@ -270,7 +272,7 @@ router.get('/yield-stats', (req: Request, res: Response) => {
     }
 
     // 添加分页
-    const paginatedSql = addPagination(sql, pagination.page, pagination.limit);
+    const paginatedSql = addPagination(sql, pagination.page, pagination.limit, params);
 
     const items = queryToObjects(db, paginatedSql, params);
 
@@ -563,7 +565,7 @@ router.get('/labor-stats', (req: Request, res: Response) => {
     }
 
     // 添加分页
-    const paginatedSql = addPagination(sql, pagination.page, pagination.limit);
+    const paginatedSql = addPagination(sql, pagination.page, pagination.limit, params);
 
     const items = queryToObjects(db, paginatedSql, params);
 

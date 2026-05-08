@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
@@ -7,6 +9,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { AuthSettingsProvider } from './contexts/AuthSettingsContext';
 import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -41,9 +44,6 @@ import BranchManagement from './pages/BranchManagement';
 import BlockManagement from './pages/BlockManagement';
 import FarmActivityManagement from './pages/FarmActivityManagement';
 import BaseSettings from './pages/BaseSettings';
-import IoTMonitor from './pages/IoTMonitor';
-import EnvControl from './pages/EnvControl';
-import AgricultureRecord from './pages/AgricultureRecord';
 import Traceability from './pages/Traceability';
 import DeviceMonitor from './pages/DeviceMonitor';
 import AlertInfo from './pages/AlertInfo';
@@ -94,29 +94,42 @@ import Skill from './pages/Skill';
 import Performance from './pages/Performance';
 import Efficiency from './pages/Efficiency';
 import Risk from './pages/Risk';
-import SmartDispatch from './pages/SmartDispatch';
-import DailyPlanningPage from './pages/DailyPlanningPage';
-import MonthlyPlanningPage from './pages/MonthlyPlanningPage';
-import Piecework from './pages/Piecework';
-import SalaryBudget from './pages/SalaryBudget';
-import Onboarding from './pages/Onboarding';
-import Contract from './pages/Contract';
-import Team from './pages/Team';
-import TempTask from './pages/TempTask';
-import TaskCenterPage from './pages/farm/TaskCenterPage';
-import FarmTaskHub from './pages/farm/FarmTaskHub';
-import AttendancePage from './pages/labor/AttendancePage';
-import PersonnelPage from './pages/labor/PersonnelPage';
-import CompensationPage from './pages/labor/CompensationPage';
-import AnalyticsPage from './pages/labor/AnalyticsPage';
-import HrApprovalDetail from './pages/hr/HrApprovalDetail';
-import { DispatchPage } from './components/dispatch';
-import SeedSource from './pages/crop/SeedSource';
-import Seedling from './pages/crop/Seedling';
-import Planting from './pages/crop/Planting';
-import Order from './pages/crop/Order';
-import Instance from './pages/crop/Instance';
-import CropHarvest from './pages/crop/Harvest';
+// 懒加载组件 - 优化 bundle 分割，按需加载非常用页面
+const IoTMonitor = lazy(() => import('./pages/IoTMonitor'));
+const EnvControl = lazy(() => import('./pages/EnvControl'));
+const AgricultureRecord = lazy(() => import('./pages/AgricultureRecord'));
+const SmartDispatch = lazy(() => import('./pages/SmartDispatch'));
+const DailyPlanningPage = lazy(() => import('./pages/DailyPlanningPage'));
+const MonthlyPlanningPage = lazy(() => import('./pages/MonthlyPlanningPage'));
+const Piecework = lazy(() => import('./pages/Piecework'));
+const SalaryBudget = lazy(() => import('./pages/SalaryBudget'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Contract = lazy(() => import('./pages/Contract'));
+const Team = lazy(() => import('./pages/Team'));
+const TempTask = lazy(() => import('./pages/TempTask'));
+const TaskCenterPage = lazy(() => import('./pages/farm/TaskCenterPage'));
+const FarmTaskHub = lazy(() => import('./pages/farm/FarmTaskHub'));
+const AttendancePage = lazy(() => import('./pages/labor/AttendancePage'));
+const PersonnelPage = lazy(() => import('./pages/labor/PersonnelPage'));
+const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
+const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
+const HrApprovalDetail = lazy(() => import('./pages/hr/HrApprovalDetail'));
+const DispatchPage = lazy(() => import('./components/dispatch').then(module => ({ default: module.DispatchPage })));
+const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
+const Seedling = lazy(() => import('./pages/crop/Seedling'));
+const Planting = lazy(() => import('./pages/crop/Planting'));
+const Order = lazy(() => import('./pages/crop/Order'));
+const Instance = lazy(() => import('./pages/crop/Instance'));
+const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
+
+// 加载中占位组件
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+  );
+}
 
 // 带侧边栏的布局组件（种植管理系统）
 function MainLayout({ children }: { children: React.ReactNode }) {
@@ -224,98 +237,100 @@ function AppContent() {
   // 其他页面使用带侧边栏的布局
   return (
     <MainLayout>
-      <Routes>
-        <Route path="/park-archive" element={<ParkArchive />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/park-archive" element={<ParkArchive />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* 作物管理 */}
-        <Route path="/crop/seed-source" element={<SeedSource />} />
-        <Route path="/crop/seedling" element={<Seedling />} />
-        <Route path="/crop/planting" element={<Planting />} />
-        <Route path="/crop/harvest" element={<CropHarvest />} />
-        <Route path="/crop-inventory" element={<ProduceInventory />} />
-        <Route path="/crop/order" element={<Order />} />
-        <Route path="/crop/instance" element={<Instance />} />
-        <Route path="/production" element={<Production />} />
-        <Route path="/tech-solution" element={<TechSolution />} />
-        <Route path="/purchase-plan" element={<PurchasePlan />} />
+          {/* 作物管理 */}
+          <Route path="/crop/seed-source" element={<SeedSource />} />
+          <Route path="/crop/seedling" element={<Seedling />} />
+          <Route path="/crop/planting" element={<Planting />} />
+          <Route path="/crop/harvest" element={<CropHarvest />} />
+          <Route path="/crop-inventory" element={<ProduceInventory />} />
+          <Route path="/crop/order" element={<Order />} />
+          <Route path="/crop/instance" element={<Instance />} />
+          <Route path="/production" element={<Production />} />
+          <Route path="/tech-solution" element={<TechSolution />} />
+          <Route path="/purchase-plan" element={<PurchasePlan />} />
 
-        {/* 人工管理聚合页面 */}
-        <Route path="/labor/attendance" element={<AttendancePage />} />
-        <Route path="/labor/personnel" element={<PersonnelPage />} />
-        <Route path="/labor/compensation" element={<CompensationPage />} />
-        <Route path="/labor/analytics" element={<AnalyticsPage />} />
-        <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
+          {/* 人工管理聚合页面 */}
+          <Route path="/labor/attendance" element={<AttendancePage />} />
+          <Route path="/labor/personnel" element={<PersonnelPage />} />
+          <Route path="/labor/compensation" element={<CompensationPage />} />
+          <Route path="/labor/analytics" element={<AnalyticsPage />} />
+          <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
 
-        {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
-        <Route path="/task-center" element={<TaskCenterPage />} />
-        <Route path="/farm-hub" element={<FarmTaskHub />} />
-        <Route path="/problem-dispatch" element={<FarmTaskHub />} />
-        <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
-        <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
-        <Route path="/plan-summary" element={<PlanSummary />} />
-        <Route path="/worker-attendance" element={<WorkerAttendance />} />
-        <Route path="/work-log" element={<WorkLog />} />
-        <Route path="/monthly-report" element={<MonthlyReport />} />
-        <Route path="/supplier-management" element={<SupplierManagement />} />
-        <Route path="/material-category" element={<MaterialCategory />} />
-        <Route path="/material-receiving" element={<MaterialReceiving />} />
-        <Route path="/material-return" element={<MaterialReturn />} />
-        <Route path="/warehouse-materials" element={<WarehouseMaterials />} />
-        <Route path="/warehouse-overview" element={<WarehouseOverviewPage />} />
-        <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/temp-task" element={<TempTask />} />
-        <Route path="/personnel/staff" element={<StaffManagementPage />} />
-        <Route path="/leave" element={<Leave />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/temp-worker" element={<TempWorker />} />
-        <Route path="/team" element={<Team />} />
-        <Route path="/salary" element={<Salary />} />
-        <Route path="/recruitment" element={<Recruitment />} />
-        <Route path="/overtime" element={<Overtime />} />
-        <Route path="/skill" element={<Skill />} />
-        <Route path="/performance" element={<Performance />} />
-        <Route path="/efficiency" element={<Efficiency />} />
-        <Route path="/risk" element={<Risk />} />
-        <Route path="/smart-dispatch" element={<SmartDispatch />} />
-        <Route path="/daily-planning" element={<DailyPlanningPage />} />
-        <Route path="/monthly-planning" element={<MonthlyPlanningPage />} />
-        <Route path="/piecework" element={<Piecework />} />
-        <Route path="/salary-budget" element={<SalaryBudget />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/contract" element={<Contract />} />
-        <Route path="/materials" element={<Materials />} />
-        <Route path="/inspection" element={<FarmTaskHub />} />
-        <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
-        <Route path="/harvest" element={<Harvest />} />
-        <Route path="/produce-inventory" element={<ProduceInventory />} />
-        <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
-        <Route path="/iot-monitor" element={<IoTMonitor />} />
-        <Route path="/env-control" element={<EnvControl />} />
-        <Route path="/agriculture-record" element={<AgricultureRecord />} />
-        <Route path="/dispatch" element={<DispatchPage />} />
-        <Route path="/task-dispatch" element={<FarmTaskHub />} />
-        <Route path="/traceability" element={<Traceability />} />
-        <Route path="/device-monitor" element={<DeviceMonitor />} />
-        <Route path="/alert-info" element={<AlertInfo />} />
-        <Route path="/indicators" element={<Indicators />} />
-        <Route path="/announcement" element={<Announcement />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/approvals" element={<Approvals />} />
-        <Route path="/material-approval" element={<MaterialApproval />} />
-        <Route path="/production-approval" element={<ProductionApproval />} />
-        <Route path="/farm-approval" element={<FarmApproval />} />
-        <Route path="/indicator-budget-approval" element={<IndicatorBudgetApproval />} />
-        <Route path="/my-applications" element={<MyApplications />} />
-        <Route path="/pending-approval" element={<PendingApproval />} />
-        <Route path="/approved" element={<Approved />} />
-        <Route path="/my-approval" element={<MyApproval />} />
-        <Route path="/hr-approval" element={<HrApproval />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/code-rule" element={<CodeRule />} />
-        <Route path="/supplier-code-rule" element={<SupplierCodeRule />} />
-      </Routes>
+          {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
+          <Route path="/task-center" element={<TaskCenterPage />} />
+          <Route path="/farm-hub" element={<FarmTaskHub />} />
+          <Route path="/problem-dispatch" element={<FarmTaskHub />} />
+          <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
+          <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
+          <Route path="/plan-summary" element={<PlanSummary />} />
+          <Route path="/worker-attendance" element={<WorkerAttendance />} />
+          <Route path="/work-log" element={<WorkLog />} />
+          <Route path="/monthly-report" element={<MonthlyReport />} />
+          <Route path="/supplier-management" element={<SupplierManagement />} />
+          <Route path="/material-category" element={<MaterialCategory />} />
+          <Route path="/material-receiving" element={<MaterialReceiving />} />
+          <Route path="/material-return" element={<MaterialReturn />} />
+          <Route path="/warehouse-materials" element={<WarehouseMaterials />} />
+          <Route path="/warehouse-overview" element={<WarehouseOverviewPage />} />
+          <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/temp-task" element={<TempTask />} />
+          <Route path="/personnel/staff" element={<StaffManagementPage />} />
+          <Route path="/leave" element={<Leave />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/temp-worker" element={<TempWorker />} />
+          <Route path="/team" element={<Team />} />
+          <Route path="/salary" element={<Salary />} />
+          <Route path="/recruitment" element={<Recruitment />} />
+          <Route path="/overtime" element={<Overtime />} />
+          <Route path="/skill" element={<Skill />} />
+          <Route path="/performance" element={<Performance />} />
+          <Route path="/efficiency" element={<Efficiency />} />
+          <Route path="/risk" element={<Risk />} />
+          <Route path="/smart-dispatch" element={<SmartDispatch />} />
+          <Route path="/daily-planning" element={<DailyPlanningPage />} />
+          <Route path="/monthly-planning" element={<MonthlyPlanningPage />} />
+          <Route path="/piecework" element={<Piecework />} />
+          <Route path="/salary-budget" element={<SalaryBudget />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/contract" element={<Contract />} />
+          <Route path="/materials" element={<Materials />} />
+          <Route path="/inspection" element={<FarmTaskHub />} />
+          <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
+          <Route path="/harvest" element={<Harvest />} />
+          <Route path="/produce-inventory" element={<ProduceInventory />} />
+          <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
+          <Route path="/iot-monitor" element={<IoTMonitor />} />
+          <Route path="/env-control" element={<EnvControl />} />
+          <Route path="/agriculture-record" element={<AgricultureRecord />} />
+          <Route path="/dispatch" element={<DispatchPage />} />
+          <Route path="/task-dispatch" element={<FarmTaskHub />} />
+          <Route path="/traceability" element={<Traceability />} />
+          <Route path="/device-monitor" element={<DeviceMonitor />} />
+          <Route path="/alert-info" element={<AlertInfo />} />
+          <Route path="/indicators" element={<Indicators />} />
+          <Route path="/announcement" element={<Announcement />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/approvals" element={<Approvals />} />
+          <Route path="/material-approval" element={<MaterialApproval />} />
+          <Route path="/production-approval" element={<ProductionApproval />} />
+          <Route path="/farm-approval" element={<FarmApproval />} />
+          <Route path="/indicator-budget-approval" element={<IndicatorBudgetApproval />} />
+          <Route path="/my-applications" element={<MyApplications />} />
+          <Route path="/pending-approval" element={<PendingApproval />} />
+          <Route path="/approved" element={<Approved />} />
+          <Route path="/my-approval" element={<MyApproval />} />
+          <Route path="/hr-approval" element={<HrApproval />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/code-rule" element={<CodeRule />} />
+          <Route path="/supplier-code-rule" element={<SupplierCodeRule />} />
+        </Routes>
+      </Suspense>
     </MainLayout>
   );
 }
@@ -328,15 +343,19 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AuthSettingsProvider>
-        <SettingsDataProvider>
-          <ToastProvider>
-            <ApprovalProvider>
-              <AppContent />
-            </ApprovalProvider>
-          </ToastProvider>
-        </SettingsDataProvider>
-      </AuthSettingsProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthSettingsProvider>
+            <SettingsDataProvider>
+              <ToastProvider>
+                <ApprovalProvider>
+                  <AppContent />
+                </ApprovalProvider>
+              </ToastProvider>
+            </SettingsDataProvider>
+          </AuthSettingsProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

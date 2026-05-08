@@ -113,7 +113,8 @@ router.get('/', (req: Request, res: Response) => {
 
     // 添加分页
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(Number(limit), offset);
 
     const stmt = db.prepare(sql);
     if (params.length > 0) {

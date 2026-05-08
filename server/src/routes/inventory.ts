@@ -45,21 +45,16 @@ router.get('/', (req: Request, res: Response) => {
     // 分页 - 使用参数化查询防止SQL注入
     const offset = (Number(page) - 1) * Number(limit);
     const limitValue = Number(limit);
-    sql += ` LIMIT ${limitValue} OFFSET ${offset}`;
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(limitValue, offset);
 
-    const results = db.exec(sql, params);
-    let items: any[] = [];
-
-    if (results.length > 0) {
-      const { columns, values } = results[0];
-      items = values.map((row: any[]) => {
-        const obj: any = {};
-        columns.forEach((col: string, i: number) => {
-          obj[col] = row[i];
-        });
-        return obj;
-      });
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const items: any[] = [];
+    while (stmt.step()) {
+      items.push(stmt.getAsObject());
     }
+    stmt.free();
 
     res.json({
       success: true,

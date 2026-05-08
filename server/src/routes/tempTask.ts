@@ -64,7 +64,8 @@ router.get('/', (req: Request, res: Response) => {
     const total = execCount(db, countSql, params);
 
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(Number(limit), offset);
 
     const items = queryToObjects(db, sql, params);
 

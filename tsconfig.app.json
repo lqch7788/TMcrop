@@ -24,14 +24,16 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    /* Linting */
+    /* Linting - 逐步启用严格检查 */
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
     "noUncheckedIndexedAccess": false,
-    "noImplicitReturns": false,
     "noImplicitThis": false,
     "noPropertyAccessFromIndexSignature": false,
     "noUncheckedSideEffectImports": false

@@ -86,12 +86,13 @@ router.get('/', (req: Request, res: Response) => {
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 50;
     const offset = (pageNum - 1) * limitNum;
-    sql += ` LIMIT ${limitNum} OFFSET ${offset}`;
+    sql += ` LIMIT ? OFFSET ?`;
 
     const logs: Record<string, unknown>[] = [];
     const stmt = db.prepare(sql);
-    if (bindings.length > 0) {
-      stmt.bind(bindings);
+    const allBindings = [...bindings, limitNum, offset];
+    if (allBindings.length > 0) {
+      stmt.bind(allBindings);
     }
     while (stmt.step()) {
       logs.push(stmt.getAsObject());

@@ -36,6 +36,7 @@ import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 import { authenticate } from '../middleware/auth';
+import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
 // JWT 认证中间件 - 要求已登录才能访问
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -43,6 +44,14 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 };
 
 const router = Router();
+
+// 登录路由限流（更严格：5次/15分钟）
+// 注意：由于 router 挂载在 /api 下，这里路径是相对于 /api 的
+router.use('/authority/auth/login', loginLimiter);
+
+// 其他 API 通用限流（100次/15分钟）
+// 挂载在 / 下，匹配所有路由（因为 routes 在 index.ts 中挂载于 /api）
+router.use('/', apiLimiter);
 
 // 作物品种路由 - 公开访问
 router.use('/crop-varieties', cropVarietyRouter);
@@ -143,9 +152,25 @@ router.use('/monitoring', monitoringRouter);
 // 数据同步路由 - 公开访问
 router.use('/sync', syncRouter);
 
-// 健康检查
+// 健康检查 - 增强版
 router.get('/health', (req, res) => {
-  res.json({ success: true, message: 'API 服务正常运行' });
+  const memUsage = process.memoryUsage();
+  const healthData = {
+    success: true,
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0',
+    memory: {
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      unit: 'MB',
+    },
+    nodeVersion: process.version,
+    platform: process.platform,
+  };
+  res.json(healthData);
 });
 
 export default router;
