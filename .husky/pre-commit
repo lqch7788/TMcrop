@@ -1,0 +1,22 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Lint check
+echo "📋 Running ESLint..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ ESLint failed. Please fix the errors before committing."
+  exit 1
+fi
+
+# Format check
+echo "🎨 Checking code format..."
+npx prettier --check "src/**/*.{ts,tsx}" "server/src/**/*.{ts}"
+if [ $? -ne 0 ]; then
+  echo "❌ Code format issues found. Run 'npx prettier --write' to fix."
+  exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
