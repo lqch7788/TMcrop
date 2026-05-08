@@ -12,8 +12,9 @@ hongzhiyun/
 .vite/
 node_modules/.vite/
 
-# Git hooks (不提交)
-.husky/
+# Git hooks (保留配置但排除工作文件)
+.husky/_
+.husky/*.sh
 
 # Playwright MCP 测试产物
 .playwright-mcp/

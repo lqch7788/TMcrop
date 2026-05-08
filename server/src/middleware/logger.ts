@@ -21,14 +21,13 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
       userAgent: req.get('user-agent') || 'unknown',
     };
 
-    // 根据状态码选择日志级别
+    // 根据状态码选择日志级别 - 仅记录警告和错误
     if (res.statusCode >= 500) {
       logger.error('请求处理错误', logData);
     } else if (res.statusCode >= 400) {
       logger.warn('请求处理警告', logData);
-    } else {
-      logger.info('请求处理完成', logData);
     }
+    // 2xx/3xx 请求不再记录日志
   });
 
   next();
