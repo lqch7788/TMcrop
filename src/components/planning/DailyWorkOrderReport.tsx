@@ -4,19 +4,12 @@
  */
 
 import React from 'react';
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Table,
-  Tag,
-  List,
-  Typography,
-  Space,
-  Progress,
-  Alert,
-} from 'antd';
+import { Card, Statistic, Alert, Progress } from '@/components/ui';
+import { Space } from '@/components/ui';
+import { Badge } from '@/components/ui'; // 替代 Tag
+import type { BadgeProps } from '@/components/ui';
+import { Table as AntTable, List as AntList, Row as AntRow, Col as AntCol } from 'antd'; // 复杂组件保留 antd
+import Typography from 'antd'; // 保留 Typography 用法
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -84,14 +77,14 @@ const getTaskProgressColumns = (
     key: 'progressStatus',
     width: 100,
     render: (status: string) => {
-      const statusMap: Record<string, { color: string; text: string }> = {
-        ahead: { color: 'success', text: '提前完成' },
-        on_track: { color: 'processing', text: '正常' },
-        delayed: { color: 'warning', text: '已推迟' },
-        cancelled: { color: 'default', text: '已取消' },
+      const statusMap: Record<string, { variant: string; text: string }> = {
+        ahead: { variant: 'success', text: '提前完成' },
+        on_track: { variant: 'info', text: '正常' },
+        delayed: { variant: 'warning', text: '已推迟' },
+        cancelled: { variant: 'secondary', text: '已取消' },
       };
-      const config = statusMap[status] || { color: 'default', text: status };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = statusMap[status] || { variant: 'default' as const, text: status };
+      return <Badge variant={config.variant}>{config.text}</Badge>;
     },
   },
   {
@@ -160,13 +153,13 @@ const getWorkerLoadColumns = (
     key: 'loadStatus',
     width: 100,
     render: (status: string) => {
-      const statusMap: Record<string, { color: string; text: string }> = {
-        normal: { color: 'success', text: '正常' },
-        busy: { color: 'warning', text: '较忙' },
-        overloaded: { color: 'danger', text: '过载' },
+      const statusMap: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'secondary'; text: string }> = {
+        normal: { variant: 'success', text: '正常' },
+        busy: { variant: 'warning', text: '较忙' },
+        overloaded: { variant: 'destructive', text: '过载' },
       };
-      const config = statusMap[status] || { color: 'default', text: status };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = statusMap[status] || { variant: 'secondary' as const, text: status };
+      return <Badge variant={config.variant}>{config.text}</Badge>;
     },
   },
   {
@@ -175,12 +168,12 @@ const getWorkerLoadColumns = (
     key: 'availability',
     width: 100,
     render: (avail: string) => {
-      const availMap: Record<string, { color: string; text: string }> = {
-        available: { color: 'success', text: '空闲' },
-        busy: { color: 'warning', text: '工作中' },
+      const availMap: Record<string, { variant: 'success' | 'warning' | 'secondary'; text: string }> = {
+        available: { variant: 'success', text: '空闲' },
+        busy: { variant: 'warning', text: '工作中' },
       };
-      const config = availMap[avail] || { color: 'default', text: avail };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = availMap[avail] || { variant: 'secondary' as const, text: avail };
+      return <Badge variant={config.variant}>{config.text}</Badge>;
     },
   },
 ];

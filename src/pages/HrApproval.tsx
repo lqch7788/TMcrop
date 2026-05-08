@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, Calendar, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { message } from 'antd';
+import { useToast } from '../contexts/ToastContext';
 import { useHrApprovals } from '../hooks/useApproval';
 import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprovalStatusName } from '../types/approval';
 import ProModal from '../components/common/modal/ProModal';
@@ -92,6 +92,7 @@ function BatchActionBar({ selectedCount, onBatchApprove, onBatchReject, onCancel
 // ============================================================
 export default function HrApproval() {
   const { hrApprovals, getApprovalById, approve, reject } = useHrApprovals();
+  const { toast } = useToast();
 
   // 筛选状态
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -183,7 +184,7 @@ export default function HrApproval() {
   const handleConfirmApprove = useCallback(() => {
     if (currentRecord) {
       approve(currentRecord.id, approveComment || '审批通过');
-      message.success('审批已通过');
+      toast({ title: '审批已通过', variant: 'success' });
       setApproveModalOpen(false);
       setCurrentRecord(null);
       setApproveComment('');
@@ -194,7 +195,7 @@ export default function HrApproval() {
   const handleConfirmReject = useCallback(() => {
     if (currentRecord) {
       reject(currentRecord.id, '审批拒绝');
-      message.success('已驳回');
+      toast({ title: '已驳回', variant: 'destructive' });
       setRejectModalOpen(false);
       setCurrentRecord(null);
     }
@@ -218,7 +219,7 @@ export default function HrApproval() {
     selectedRowKeys.forEach(key => {
       approve(key as string, comment);
     });
-    message.success(`已通过 ${selectedRowKeys.length} 项审批`);
+    toast({ title: `已通过 ${selectedRowKeys.length} 项审批`, variant: 'success' });
     setSelectedRowKeys([]);
     setBatchApproveModalOpen(false);
     setBatchApproveComment('');
@@ -229,7 +230,7 @@ export default function HrApproval() {
     selectedRowKeys.forEach(key => {
       reject(key as string, '批量驳回');
     });
-    message.success(`已驳回 ${selectedRowKeys.length} 项审批`);
+    toast({ title: `已驳回 ${selectedRowKeys.length} 项审批`, variant: 'destructive' });
     setSelectedRowKeys([]);
     setBatchRejectModalOpen(false);
   }, [selectedRowKeys, reject]);

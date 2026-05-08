@@ -8,7 +8,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
   RobotOutlined, ExclamationCircleOutlined, ReloadOutlined, SendOutlined, ArrowLeftOutlined,
   ChevronDown } from '@ant-design/icons';
-import { Table, Tag, Progress, List, Typography } from 'antd';
+import { Badge } from '@/components/ui';
+import { Progress } from '@/components/ui';
+// Table 使用 antd 的，因为 shadcn/ui 的 Table 不支持 dataSource columns 模式
+import { Table } from 'antd';
+// List 和 Typography 不再使用
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
 import type { ColumnsType } from 'antd/es/table';
@@ -16,7 +20,6 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
 
-const { Text, Title } = Typography;
 
 // ============================================
 // 任务进度分析表格列定义
@@ -48,14 +51,15 @@ const getTaskProgressColumns = (): ColumnsType<TaskProgressAnalysis> => [
     key: 'progressStatus',
     width: 100,
     render: (status: string) => {
-      const statusMap: Record<string, { color: string; text: string }> = {
-        ahead: { color: 'success', text: '提前完成' },
-        on_track: { color: 'processing', text: '正常' },
-        delayed: { color: 'warning', text: '已推迟' },
-        cancelled: { color: 'default', text: '已取消' },
+      // Badge variant 映射：antd color -> shadcn variant
+      const statusMap: Record<string, { variant: string; text: string }> = {
+        ahead: { variant: 'success', text: '提前完成' },
+        on_track: { variant: 'info', text: '正常' },
+        delayed: { variant: 'warning', text: '已推迟' },
+        cancelled: { variant: 'secondary', text: '已取消' },
       };
-      const config = statusMap[status] || { color: 'default', text: status };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = statusMap[status] || { variant: 'secondary', text: status };
+      return <Badge variant={config.variant as any}>{config.text}</Badge>;
     },
   },
   {
@@ -63,7 +67,7 @@ const getTaskProgressColumns = (): ColumnsType<TaskProgressAnalysis> => [
     dataIndex: 'delayDays',
     key: 'delayDays',
     width: 100,
-    render: (days: number) => (days ? <Text type="danger">{days}天</Text> : '-'),
+    render: (days: number) => (days ? <span className="text-red-500 font-medium">{days}天</span> : '-'),
   },
   {
     title: '执行人',
@@ -94,7 +98,7 @@ const getWorkerLoadColumns = (): ColumnsType<WorkerLoadAnalysis> => [
     dataIndex: 'todayTasks',
     key: 'todayTasks',
     width: 100,
-    render: (count: number) => <Text strong>{count}</Text>,
+    render: (count: number) => <span className="font-semibold">{count}</span>,
   },
   {
     title: '已完成',
@@ -110,7 +114,7 @@ const getWorkerLoadColumns = (): ColumnsType<WorkerLoadAnalysis> => [
     dataIndex: 'completionRate',
     key: 'completionRate',
     width: 120,
-    render: (rate: number) => <Progress percent={rate} size="small" />,
+    render: (rate: number) => <Progress value={rate} size="sm" />,
   },
   {
     title: '负荷状态',
@@ -118,13 +122,14 @@ const getWorkerLoadColumns = (): ColumnsType<WorkerLoadAnalysis> => [
     key: 'loadStatus',
     width: 100,
     render: (status: string) => {
-      const statusMap: Record<string, { color: string; text: string }> = {
-        normal: { color: 'success', text: '正常' },
-        busy: { color: 'warning', text: '较忙' },
-        overloaded: { color: 'danger', text: '过载' },
+      // Badge variant 映射
+      const statusMap: Record<string, { variant: string; text: string }> = {
+        normal: { variant: 'success', text: '正常' },
+        busy: { variant: 'warning', text: '较忙' },
+        overloaded: { variant: 'destructive', text: '过载' },
       };
-      const config = statusMap[status] || { color: 'default', text: status };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = statusMap[status] || { variant: 'secondary', text: status };
+      return <Badge variant={config.variant as any}>{config.text}</Badge>;
     },
   },
   {
@@ -133,12 +138,13 @@ const getWorkerLoadColumns = (): ColumnsType<WorkerLoadAnalysis> => [
     key: 'availability',
     width: 100,
     render: (avail: string) => {
-      const availMap: Record<string, { color: string; text: string }> = {
-        available: { color: 'success', text: '空闲' },
-        busy: { color: 'warning', text: '工作中' },
+      // Badge variant 映射
+      const availMap: Record<string, { variant: string; text: string }> = {
+        available: { variant: 'success', text: '空闲' },
+        busy: { variant: 'warning', text: '工作中' },
       };
-      const config = availMap[avail] || { color: 'default', text: avail };
-      return <Tag color={config.color}>{config.text}</Tag>;
+      const config = availMap[avail] || { variant: 'secondary', text: avail };
+      return <Badge variant={config.variant as any}>{config.text}</Badge>;
     },
   },
 ];
@@ -355,8 +361,7 @@ export default function DailyPlanningPage() {
                     <span className="text-2xl font-bold text-emerald-600">{report.completedTasks}</span>
                   </div>
                   <Progress
-                    percent={report.totalTasks > 0 ? Math.round((report.completedTasks / report.totalTasks) * 100) : 0}
-                    showInfo={false}
+                    value={report.totalTasks > 0 ? Math.round((report.completedTasks / report.totalTasks) * 100) : 0}
                     strokeColor="#10b981"
                   />
                   <div className="text-xs text-emerald-600 mt-1">共 {report.totalTasks} 个任务</div>
@@ -379,14 +384,14 @@ export default function DailyPlanningPage() {
                     const suggestion = todayPlan.workerSuggestions?.find(s => s.taskId === task.id);
                     return (
                       <div key={index} className="flex items-center gap-3 p-3 border-b border-gray-100 last:border-b-0">
-                        <Tag color={task.priority === 'high' ? 'red' : task.priority === 'medium' ? 'orange' : 'green'}>
+                        <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'warning' : 'success'}>
                           {task.priority === 'high' ? '紧急' : task.priority === 'medium' ? '重要' : '普通'}
-                        </Tag>
+                        </Badge>
                         <span className="font-medium text-gray-900">{task.taskTypeName}</span>
                         <span className="text-sm text-gray-500">- {task.greenhouseName}</span>
                         {suggestion && (
                           <>
-                            <Tag icon={<RobotOutlined />}>推荐: {suggestion.workerName}</Tag>
+                            <Badge variant="info">推荐: {suggestion.workerName}</Badge>
                             <span className="text-xs text-gray-400">置信度 {suggestion.confidenceScore}%</span>
                           </>
                         )}

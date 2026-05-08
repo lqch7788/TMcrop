@@ -18,14 +18,16 @@ import {
   ThunderboltOutlined,
   ArrowLeftOutlined,
 } from '@ant-design/icons';
-import { Table, Tag, Space, Typography, Progress } from 'antd';
+import { Badge } from '@/components/ui';
+import { Space } from '@/components/ui';
+// Table 使用 antd 的，因为 shadcn/ui 的 Table 不支持 dataSource columns 模式
+import { Table } from 'antd';
+// Typography 和 Progress 不再使用，Typography 使用 Tailwind CSS 替代
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
-
-const { Text } = Typography;
 
 // ============================================
 // 类型定义
@@ -46,7 +48,7 @@ const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
     dataIndex: 'weekNumber',
     key: 'weekNumber',
     width: 80,
-    render: (week: number) => <Text strong>第 {week} 周</Text>,
+    render: (week: number) => <span className="font-semibold">第 {week} 周</span>,
   },
   {
     title: '开始日期',
@@ -65,7 +67,7 @@ const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
     dataIndex: 'taskCount',
     key: 'taskCount',
     width: 80,
-    render: (count: number) => <Tag color="blue">{count}</Tag>,
+    render: (count: number) => <Badge variant="info">{count}</Badge>,
   },
   {
     title: '总工时',
@@ -79,7 +81,7 @@ const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
     dataIndex: 'requiredWorkers',
     key: 'requiredWorkers',
     width: 100,
-    render: (count: number) => <Text>{count} 人</Text>,
+    render: (count: number) => <span>{count} 人</span>,
   },
   {
     title: '重点作物',
@@ -88,7 +90,7 @@ const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
     render: (crops: string[]) => (
       <Space wrap>
         {crops.map(crop => (
-          <Tag key={crop} color="green">{crop}</Tag>
+          <Badge key={crop} variant="success">{crop}</Badge>
         ))}
       </Space>
     ),
@@ -100,7 +102,7 @@ const getWeeklySummaryColumns = (): ColumnsType<WeeklySummary> => [
     render: (tasks: string[]) => (
       <Space wrap>
         {tasks.map(task => (
-          <Tag key={task}>{task}</Tag>
+          <Badge key={task} variant="secondary">{task}</Badge>
         ))}
       </Space>
     ),
@@ -129,7 +131,7 @@ const getMaterialColumns = (): ColumnsType<MaterialRequirement> => [
     key: 'quantity',
     width: 100,
     render: (qty: number, record: MaterialRequirement) => (
-      <Text strong>{qty} {record.unit}</Text>
+      <span className="font-semibold">{qty} {record.unit}</span>
     ),
   },
   {
@@ -144,7 +146,7 @@ const getMaterialColumns = (): ColumnsType<MaterialRequirement> => [
     dataIndex: 'estimatedTotalPrice',
     key: 'estimatedTotalPrice',
     width: 120,
-    render: (price: number) => <Text strong type="danger">¥{price.toFixed(2)}</Text>,
+    render: (price: number) => <span className="font-semibold text-red-500">¥{price.toFixed(2)}</span>,
   },
 ];
 
@@ -169,7 +171,7 @@ const getWorkerColumns = (): ColumnsType<WorkerRequirement> => [
     dataIndex: 'requiredCount',
     key: 'requiredCount',
     width: 100,
-    render: (count: number) => <Tag color="blue">{count} 人</Tag>,
+    render: (count: number) => <Badge variant="info">{count} 人</Badge>,
   },
   {
     title: '预估工时',
@@ -465,7 +467,7 @@ export default function MonthlyPlanningPage() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {monthlyPlan.weeklySummaries[0].keyTasks.map((task, index) => (
-                      <Tag key={index} color="blue">{task}</Tag>
+                      <Badge key={index} variant="info">{task}</Badge>
                     ))}
                   </div>
                 </div>
@@ -514,12 +516,12 @@ export default function MonthlyPlanningPage() {
                     <Table.Summary fixed>
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={4}>
-                          <Text strong>合计</Text>
+                          <span className="font-semibold">合计</span>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1}>
-                          <Text strong type="danger">
+                          <span className="font-semibold text-red-500">
                             ¥{monthlyPlan.materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0).toFixed(2)}
-                          </Text>
+                          </span>
                         </Table.Summary.Cell>
                       </Table.Summary.Row>
                     </Table.Summary>

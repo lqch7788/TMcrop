@@ -7,7 +7,11 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, Download, ArrowLeft, Clock, User, Calendar, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { Timeline, List, Card, Tag, Button } from 'antd';
+import { Timeline } from '@/components/ui/Timeline';
+import { List } from '@/components/ui/List';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui';
 import { useHrApprovals } from '../../hooks/useApproval';
 import {
   Approval,
@@ -127,7 +131,11 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
     if (!approval) return null;
 
     return (
-      <Card title="审批信息" className="mb-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>审批信息</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="grid grid-cols-2 gap-4">
           <div className="info-item">
             <label className="text-sm text-gray-500">审批编号</label>
@@ -164,9 +172,9 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
           <div className="info-item">
             <label className="text-sm text-gray-500">优先级</label>
             <p className="font-medium">
-              <Tag color={approval.priority === 'urgent' ? 'red' : approval.priority === 'high' ? 'orange' : 'default'}>
+              <Badge variant={approval.priority === 'urgent' ? 'destructive' : approval.priority === 'high' ? 'warning' : 'default'}>
                 {PRIORITY_NAMES[approval.priority] || approval.priority}
-              </Tag>
+              </Badge>
             </p>
           </div>
         </div>
@@ -182,6 +190,7 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             <p className="text-gray-700">{approval.description}</p>
           </div>
         )}
+      </CardContent>
       </Card>
     );
   };
@@ -192,7 +201,11 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
     const bl = approval.businessLink;
 
     return (
-      <Card title="业务信息" className="mb-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>业务信息</CardTitle>
+        </CardHeader>
+        <CardContent>
         {/* 请假申请 */}
         {approval.type === ApprovalType.LEAVE && (
           <div className="space-y-3">
@@ -415,9 +428,9 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
                 <div>
                   <label className="text-sm text-gray-500">优先级</label>
                   <p className="font-medium">
-                    <Tag color={bl.priority === 'urgent' ? 'red' : bl.priority === 'high' ? 'orange' : 'default'}>
+                    <Badge variant={bl.priority === 'urgent' ? 'destructive' : bl.priority === 'high' ? 'warning' : 'default'}>
                       {PRIORITY_NAMES[bl.priority]}
-                    </Tag>
+                    </Badge>
                   </p>
                 </div>
               )}
@@ -430,6 +443,7 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             )}
           </div>
         )}
+      </CardContent>
       </Card>
     );
   };
@@ -439,7 +453,11 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
     if (!approval?.approvers || approval.approvers.length === 0) return null;
 
     return (
-      <Card title="审批流程" className="mb-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>审批流程</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="space-y-2">
           {approval.approvers.map((approver, index) => (
             <div
@@ -475,6 +493,7 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             </div>
           ))}
         </div>
+        </CardContent>
       </Card>
     );
   };
@@ -483,19 +502,17 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
   const renderApprovalHistory = () => {
     if (!approval?.records || approval.records.length === 0) return null;
 
-    // 获取动作图标和颜色
-    const getActionConfig = (action: ApprovalAction) => {
+    // 获取动作状态
+    const getActionStatus = (action: ApprovalAction): 'completed' | 'processing' | 'pending' => {
       switch (action) {
         case ApprovalAction.APPROVE:
-          return { icon: <CheckCircle className="w-4 h-4" />, color: 'green' };
-        case ApprovalAction.REJECT:
-          return { icon: <XCircle className="w-4 h-4" />, color: 'red' };
         case ApprovalAction.PARTIALLY_APPROVE:
-          return { icon: <CheckCircle className="w-4 h-4" />, color: 'blue' };
+          return 'completed';
+        case ApprovalAction.REJECT:
         case ApprovalAction.CANCEL:
-          return { icon: <XCircle className="w-4 h-4" />, color: 'gray' };
+          return 'pending';
         default:
-          return { icon: <Clock className="w-4 h-4" />, color: 'gray' };
+          return 'pending';
       }
     };
 
@@ -516,30 +533,24 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
     };
 
     return (
-      <Card title="审批历史" className="mb-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>审批历史</CardTitle>
+        </CardHeader>
+        <CardContent>
         <Timeline
-          mode="left"
           items={approval.records.map((record, index) => {
-            const config = getActionConfig(record.action);
             return {
-              key: record.id || index,
-              color: config.color,
-              icon: config.icon,
-              children: (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium">{record.approverName}</span>
-                    <span className="text-sm text-gray-500">{record.actionTime}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className={`font-medium ${
-                      record.action === ApprovalAction.APPROVE ? 'text-green-600' :
-                      record.action === ApprovalAction.REJECT ? 'text-red-600' :
-                      'text-gray-600'
-                    }`}>
-                      {getActionName(record.action)}
-                    </span>
-                  </div>
+              title: record.approverName,
+              description: (
+                <div>
+                  <span className={`font-medium ${
+                    record.action === ApprovalAction.APPROVE ? 'text-green-600' :
+                    record.action === ApprovalAction.REJECT ? 'text-red-600' :
+                    'text-gray-600'
+                  }`}>
+                    {getActionName(record.action)}
+                  </span>
                   {record.comment && (
                     <div className="mt-2 text-sm text-gray-600 bg-white p-2 rounded">
                       意见：{record.comment}
@@ -547,9 +558,12 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
                   )}
                 </div>
               ),
+              status: getActionStatus(record.action),
+              time: record.actionTime,
             };
           })}
         />
+        </CardContent>
       </Card>
     );
   };
@@ -559,31 +573,33 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
     if (!approval?.attachments || approval.attachments.length === 0) return null;
 
     return (
-      <Card title="附件列表" className="mb-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>附件列表</CardTitle>
+        </CardHeader>
+        <CardContent>
         <List
-          size="small"
           dataSource={approval.attachments}
           renderItem={(item, index) => (
-            <List.Item
-              actions={[
-                <Button
-                  key="download"
-                  type="link"
-                  icon={<Download className="w-4 h-4" />}
-                  onClick={() => handleDownload(item, `附件${index + 1}`)}
-                >
-                  下载
-                </Button>
-              ]}
-            >
-              <List.Item.Meta
-                avatar={<FileText className="w-5 h-5 text-blue-500" />}
-                title={`附件 ${index + 1}`}
-                description={item}
-              />
-            </List.Item>
+            <li key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-500" />
+                <div>
+                  <p className="font-medium">附件 {index + 1}</p>
+                  <p className="text-sm text-gray-500">{item}</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDownload(item, `附件${index + 1}`)}
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            </li>
           )}
         />
+        </CardContent>
       </Card>
     );
   };

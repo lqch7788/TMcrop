@@ -16,11 +16,11 @@ export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 export { Checkbox } from './checkbox'
 export { Label } from './label'
 export { Popover, PopoverContent, PopoverTrigger } from './popover'
-export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './dropdown-menu'
+export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './dropdown-menu'
 
 // Toast / Modal
-export { Toast, Toaster, useToast } from './Toast'
-export { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter, ModalClose } from './Modal'
+export { ToastContainer, useToast } from './Toast'
+export { Modal, FormField } from './Modal'
 export { UnifiedModal } from './UnifiedModal'
 
 // 高级组件 - 第一批
@@ -57,6 +57,10 @@ export { QRCode } from './QRCode'
 export { FilterBar, FilterItem } from './FilterBar'
 export { KanbanBoard } from './KanbanBoard'
 export { GanttChart } from './GanttChart'
+
+// 通用组件
+export { Timeline } from './Timeline'
+export { List } from './List'
 
 // 数字输入框
 export { NumberInput } from './NumberInput'
