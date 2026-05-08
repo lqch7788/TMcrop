@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Package, Search, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
+import { Package, Download, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Plus } from 'lucide-react';
 import AddInboundModal from '../components/materials/AddInboundModal';
 import { ExportFormatModal } from '../components/materials/ExportFormatModal';
-import { useAuthPermission } from '../hooks/usePermission';
+import MaterialsCodeGenerator from '../components/materials/MaterialsCodeGenerator';
+import InboundTable from '../components/materials/InboundTable';
+import MaterialsFilters from '../components/materials/MaterialsFilters';
 
 const warehouseMaterials = [
   { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, price: '30元', supplier: '金种子业公司', location: 'A区-01' },
@@ -746,426 +748,85 @@ export default function Materials() {
 
       {activeTab === 'overview' && (
         <>
-          <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-            <div className="grid grid-cols-8 gap-4">
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">物料编号</label>
-                <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="请输入" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="请输入" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-                <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                  <option value="">全部</option>
-                  {warehouseMaterials.map(m => m.supplier).filter((v, i, a) => a.indexOf(v) === i).map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
-                <select value={location} onChange={(e) => setLocation(e.target.value)} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                  <option value="">全部</option>
-                  {warehouseMaterials.map(m => m.location).filter((v, i, a) => a.indexOf(v) === i).map(l => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-                <select value={searchBigCategory} onChange={(e) => { setSearchBigCategory(e.target.value); setSearchMidCategory(''); setSearchSubCategory(''); }} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                  <option value="">全部</option>
-                  {getSearchBigCategories().map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
-                <select value={searchMidCategory} onChange={(e) => { setSearchMidCategory(e.target.value); setSearchSubCategory(''); }} disabled={!searchBigCategory} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
-                  <option value="">全部</option>
-                  {getSearchMidCategories().map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
-                <select value={searchSubCategory} onChange={(e) => setSearchSubCategory(e.target.value)} disabled={!searchMidCategory} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
-                  <option value="">全部</option>
-                  {getSearchSubCategories().map(cat => (
-                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1 flex items-end">
-                <button onClick={() => { setCode(''); setName(''); setCategory('全部'); setSupplier(''); setLocation(''); setSearchBigCategory(''); setSearchMidCategory(''); setSearchSubCategory(''); setShowLowStock(false); setCurrentPage(1); }} className="w-full h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-2">
-                  重置
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* 筛选器 */}
+          <MaterialsFilters
+            code={code}
+            name={name}
+            category={category}
+            supplier={supplier}
+            location={location}
+            searchBigCategory={searchBigCategory}
+            searchMidCategory={searchMidCategory}
+            searchSubCategory={searchSubCategory}
+            showLowStock={showLowStock}
+            warehouseMaterials={warehouseMaterials}
+            categoryConfig={categoryConfig}
+            exportMode={exportMode}
+            selectedRows={selectedRows}
+            filteredMaterials={filteredMaterials}
+            canExport={canExport}
+            onCodeChange={setCode}
+            onNameChange={setName}
+            onCategoryChange={setCategory}
+            onSupplierChange={setSupplier}
+            onLocationChange={setLocation}
+            onSearchBigCategoryChange={setSearchBigCategory}
+            onSearchMidCategoryChange={setSearchMidCategory}
+            onSearchSubCategoryChange={setSearchSubCategory}
+            onShowLowStockChange={setShowLowStock}
+            onReset={handleReset}
+            onExportClick={handleExportClick}
+            onConfirmExport={handleConfirmExport}
+            onCancelExport={handleCancelExport}
+            onSelectAll={handleSelectAll}
+            onLowStockClick={handleLowStockClick}
+          />
 
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">物料库存列表</h3>
-              <div className="flex items-center gap-2">
-                {showLowStock && (
-                  <button onClick={handleLowStockClick} className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1">
-                    <span>显示全部</span>
-                  </button>
-                )}
-                {exportMode ? (
-                  <div className="flex gap-2">
-                    <button onClick={handleConfirmExport} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                      <Download className="w-4 h-4" />
-                      确认导出
-                    </button>
-                    <button onClick={handleCancelExport} className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                      取消
-                    </button>
-                  </div>
-                ) : (
-                  canExport && (
-                  <button onClick={handleExportClick} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-                    <Download className="w-4 h-4" />
-                    导出
-                  </button>
-                )
-                )}
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.length === filteredMaterials.length && filteredMaterials.length > 0}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                    </th>}
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料编号</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料名称</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">分类</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单位</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">库存数量</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">最低库存</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单价</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">存放位置</th>
-                    {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredMaterials.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      {exportMode && (
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.includes(item.id)}
-                            onChange={() => handleSelectRow(item.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                          />
-                        </td>
-                      )}
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
-                      <td className="px-4 py-3 text-sm"><span className={`font-medium ${item.quantity < item.minStock ? 'text-red-600' : 'text-gray-900'}`}>{item.quantity}</span></td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.minStock}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.price}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.supplier}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.location}</td>
-                      {!exportMode && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            {can('PROC_MATERIALS', 'view') && (
-                              <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                            )}
-                            {canEdit && (
-                              <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {exportMode && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-                  <div className="flex items-center gap-4">
-                    <button onClick={handleSelectAll} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                      {selectedRows.length === filteredMaterials.length ? '全不选' : '全选'}
-                    </button>
-                    <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">每页</span>
-                  <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="px-2 py-1 border border-gray-200 rounded text-sm">
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                  <span className="text-sm text-gray-500">条</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">共 {filteredMaterials.length} 条</span>
-                  <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
-                  <span className="text-sm">{currentPage} / {Math.ceil(filteredMaterials.length / pageSize) || 1}</span>
-                  <button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredMaterials.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredMaterials.length / pageSize)} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* 库存表格 */}
+          <MaterialsTable
+            filteredMaterials={filteredMaterials}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            exportMode={exportMode}
+            selectedRows={selectedRows}
+            onSelectAll={handleSelectAll}
+            onSelectRow={handleSelectRow}
+          />
         </>
       )}
 
       {activeTab === 'inbound' && (
         <>
           {/* 供应商编码生成器 */}
-          {codeGenCollapsed ? (
-            <div className="bg-white rounded-xl shadow-sm p-3 inline-flex items-center gap-2">
-              <button
-                onClick={() => setCodeGenCollapsed(!codeGenCollapsed)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
-                title={codeGenCollapsed ? '展开' : '收起'}
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
-              </button>
-              <h3 className="text-sm font-semibold text-gray-900">物料编码生成</h3>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => setCodeGenCollapsed(!codeGenCollapsed)}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  title={codeGenCollapsed ? '展开' : '收起'}
-                >
-                  <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
-                </button>
-                <h3 className="text-lg font-semibold text-gray-900">物料编码生成</h3>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">资材编码规则：大类(2位) + 中类(2位) + 小类(2位) + 序号(3位)</span>
-              </div>
+          <MaterialsCodeGenerator
+            codeGen={codeGen}
+            codeGenCollapsed={codeGenCollapsed}
+            codeGenError={codeGenError}
+            codeGenSuccess={codeGenSuccess}
+            copySuccess={copySuccess}
+            warehouseMaterials={warehouseMaterials}
+            categoryConfig={categoryConfig}
+            onCodeGenChange={handleCodeGenCategoryChange}
+            onGenerate={handleCodeGen}
+            onVerify={handleVerifyCode}
+            onCopy={handleCopyCode}
+            onToggleCollapse={() => setCodeGenCollapsed(!codeGenCollapsed)}
+          />
 
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-                  <select
-                    value={codeGen.bigCategory}
-                    onChange={(e) => handleCodeGenCategoryChange('bigCategory', e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="">请选择大类</option>
-                    {bigCategories.map(cat => (
-                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
-                  <select
-                    value={codeGen.midCategory}
-                    onChange={(e) => handleCodeGenCategoryChange('midCategory', e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    disabled={!codeGen.bigCategory}
-                  >
-                    <option value="">请选择中类</option>
-                    {getCodeGenMidCategories().map(cat => (
-                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
-                  <select
-                    value={codeGen.subCategory}
-                    onChange={(e) => handleCodeGenCategoryChange('subCategory', e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    disabled={!codeGen.midCategory}
-                  >
-                    <option value="">请选择小类</option>
-                    {getCodeGenSubCategories().map(cat => (
-                      <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">生成编码</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={codeGen.generatedCode}
-                      placeholder="点击生成"
-                      className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
-                      readOnly
-                    />
-                    <button
-                      onClick={handleCodeGen}
-                      disabled={!codeGen.subCategory}
-                      className="px-3 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      生成
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 操作按钮 */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleVerifyCode}
-                  disabled={!codeGen.generatedCode}
-                  className="px-4 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <Search className="w-4 h-4" />
-                  验证重码
-                </button>
-                <button
-                  onClick={handleCopyCode}
-                  disabled={!codeGen.generatedCode}
-                  className="px-4 h-9 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  {copySuccess ? '已复制!' : '复制编码'}
-                </button>
-                <span className="text-xs text-gray-500">生成的编码可复制后用于新增物料</span>
-              </div>
-
-              {/* 提示信息 */}
-              {codeGenError && (
-                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{codeGenError}</p>
-                </div>
-              )}
-              {codeGenSuccess && !codeGenError && (
-                <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-600">{codeGenSuccess}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
-              {canCreate && (
-              <button onClick={() => setShowAddModal(true)} className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
-                <Plus className="w-4 h-4" /> 新增入库
-              </button>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">入库单号</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料编号</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料名称</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">入库数量</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">供应商</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">入库日期</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作员</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {inboundRecords.slice((inboundPage - 1) * inboundPageSize, inboundPage * inboundPageSize).map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.code}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.materialCode}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.materialName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{record.quantity}{record.unit}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.supplier}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.inboundDate}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.operator}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {record.status === 'completed' ? '已完成' : '待审核'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          {can('PROC_MATERIALS', 'view') && (
-                            <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看"><Eye className="w-4 h-4" /></button>
-                          )}
-                          {canEdit && (
-                            <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* 入库记录分页 */}
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">每页</span>
-                <select
-                  value={inboundPageSize}
-                  onChange={(e) => { setInboundPageSize(Number(e.target.value)); setInboundPage(1); }}
-                  className="px-2 py-1 border border-gray-200 rounded text-sm"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="text-sm text-gray-500">条</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  共 {inboundRecords.length} 条，第 {inboundPage} / {Math.ceil(inboundRecords.length / inboundPageSize) || 1} 页
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setInboundPage(1)}
-                    disabled={inboundPage === 1}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                    title="首页"
-                  >
-                    <ChevronsLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setInboundPage(Math.max(1, inboundPage - 1))}
-                    disabled={inboundPage === 1}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setInboundPage(Math.min(Math.ceil(inboundRecords.length / inboundPageSize), inboundPage + 1))}
-                    disabled={inboundPage >= Math.ceil(inboundRecords.length / inboundPageSize)}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setInboundPage(Math.ceil(inboundRecords.length / inboundPageSize) || 1)}
-                    disabled={inboundPage >= Math.ceil(inboundRecords.length / inboundPageSize)}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                    title="末页"
-                  >
-                    <ChevronsRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* 入库记录表格 */}
+          <InboundTable
+            records={inboundRecords}
+            currentPage={inboundPage}
+            pageSize={inboundPageSize}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            can={can}
+            onPageChange={setInboundPage}
+            onPageSizeChange={setInboundPageSize}
+            onAddClick={() => setShowAddModal(true)}
+          />
         </>
       )}
 
