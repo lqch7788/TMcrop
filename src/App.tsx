@@ -71,7 +71,6 @@ import PendingApproval from './pages/PendingApproval';
 import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
-import PlantingModeManagement from './pages/PlantingModeManagement';
 import PlantAreaManagement from './pages/PlantAreaManagement';
 import CropManagement from './pages/CropManagement';
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
@@ -212,7 +211,6 @@ function AppContent() {
             <Route path="team" element={<TeamManagement />} />
             <Route path="cost-accounting" element={<CostAccounting />} />
             <Route path="audit-log" element={<AuditLog />} />
-            <Route path="modes" element={<PlantingModeManagement />} />
             <Route path="regions" element={<PlantAreaManagement />} />
             <Route path="crops" element={<CropManagement />} />
             <Route path="crop-variety" element={<CropVarietyManagement />} />

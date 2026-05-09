@@ -6,6 +6,15 @@ import { Button } from '../components/ui/button';
 // API基础路径
 const API_BASE = '/api/approval-workflows';
 
+// 获取认证头
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 interface ApprovalNode {
   id: string;
   name: string;
@@ -56,7 +65,7 @@ export default function ApprovalWorkflowConfig() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
+      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         setWorkflows(result.data || []);
@@ -100,7 +109,7 @@ export default function ApprovalWorkflowConfig() {
       if (editingWorkflow) {
         const response = await fetch(`${API_BASE}/${editingWorkflow.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(payload),
         });
         const result = await response.json();
@@ -111,7 +120,7 @@ export default function ApprovalWorkflowConfig() {
       } else {
         const response = await fetch(API_BASE, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(payload),
         });
         const result = await response.json();
@@ -134,7 +143,7 @@ export default function ApprovalWorkflowConfig() {
   const deleteWorkflow = async (id: string) => {
     if (!confirm('确定删除该审批流程吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         await loadWorkflows();
@@ -186,7 +195,7 @@ export default function ApprovalWorkflowConfig() {
 
   const toggleWorkflowStatus = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}/toggle`, { method: 'PATCH' });
+      const response = await fetch(`${API_BASE}/${id}/toggle`, { method: 'PATCH', headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         await loadWorkflows();

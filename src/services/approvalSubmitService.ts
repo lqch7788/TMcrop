@@ -91,9 +91,13 @@ class ApprovalSubmitService {
       };
 
       // 4. 调用API保存审批数据
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch('/api/approvals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(fullApproval),
       });
 

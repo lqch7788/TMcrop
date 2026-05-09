@@ -1951,11 +1951,22 @@ function seedDictionaries() {
     { id: 'DICT003', category: 'crop_category', code: 'grain', name: '粮食类', sort_number: 3 },
     { id: 'DICT004', category: 'crop_category', code: 'other', name: '其他', sort_number: 4 },
 
-    // 种植模式
-    { id: 'DICT010', category: 'planting_mode', code: 'greenhouse', name: '温室种植', sort_number: 1 },
-    { id: 'DICT011', category: 'planting_mode', code: 'open', name: '露天种植', sort_number: 2 },
-    { id: 'DICT012', category: 'planting_mode', code: 'hydroponic', name: '水培', sort_number: 3 },
-    { id: 'DICT013', category: 'planting_mode', code: 'substrate', name: '基质栽培', sort_number: 4 },
+    // 种植模式 - 与seedBasicData.ts保持一致
+    { id: 'PM001', category: 'planting_mode', code: 'direct_seeding', name: '直播', sort_number: 1 },
+    { id: 'PM002', category: 'planting_mode', code: 'transplanting', name: '移栽', sort_number: 2 },
+    { id: 'PM003', category: 'planting_mode', code: 'grafting', name: '嫁接', sort_number: 3 },
+    { id: 'PM004', category: 'planting_mode', code: 'tissue_culture', name: '组培', sort_number: 4 },
+    { id: 'PM005', category: 'planting_mode', code: 'greenhouse', name: '温室种植', sort_number: 5 },
+    { id: 'PM006', category: 'planting_mode', code: 'open_field', name: '露天种植', sort_number: 6 },
+    { id: 'PM007', category: 'planting_mode', code: 'hydroponic', name: '水培', sort_number: 7 },
+    { id: 'PM008', category: 'planting_mode', code: 'substrate', name: '基质栽培', sort_number: 8 },
+    { id: 'PM009', category: 'planting_mode', code: 'greenhouse_planting', name: '大棚种植', sort_number: 9 },
+    { id: 'PM010', category: 'planting_mode', code: 'open_field_planting', name: '露地种植', sort_number: 10 },
+    { id: 'PM011', category: 'planting_mode', code: 'coconut_coir', name: '椰糠种植', sort_number: 11 },
+    { id: 'PM012', category: 'planting_mode', code: 'hydroponic_seedling', name: '水培育苗', sort_number: 12 },
+    { id: 'PM013', category: 'planting_mode', code: 'soil_seedling', name: '土壤育苗', sort_number: 13 },
+    { id: 'PM014', category: 'planting_mode', code: 'soil_planting', name: '土壤种植', sort_number: 14 },
+    { id: 'PM015', category: 'planting_mode', code: 'other', name: '其他', sort_number: 15 },
 
     // 温室类型
     { id: 'DICT020', category: 'greenhouse_type', code: 'glass', name: '玻璃温室', sort_number: 1 },

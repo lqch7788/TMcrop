@@ -232,9 +232,18 @@ const SettingsDataContext = createContext<SettingsDataContextType | null>(null);
 // API基础URL
 const API_BASE = '/api/basic-data';
 
+// 获取认证头
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 // 获取数据的辅助函数
 async function fetchData<T>(url: string): Promise<T[]> {
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: getAuthHeaders() });
   const result = await response.json();
   if (result.success) {
     return result.data || [];
@@ -271,7 +280,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
   const refreshUsers = useCallback(async () => {
     try {
       // 从权限系统获取用户列表
-      const response = await fetch('/api/authority/users');
+      const response = await fetch('/api/authority/users', { headers: getAuthHeaders() });
       const data = await response.json();
       if (Array.isArray(data)) {
         // 标准化用户数据，兼容realName和name字段
@@ -346,7 +355,7 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
   const refreshDictionaries = useCallback(async () => {
     try {
       // 字典 API 路径是 /api/dictionary/dictionaries
-      const response = await fetch('/api/dictionary/dictionaries');
+      const response = await fetch('/api/dictionary/dictionaries', { headers: getAuthHeaders() });
 
       if (!response.ok) {
         throw new Error(`API响应错误: ${response.status}`);

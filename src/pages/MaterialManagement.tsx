@@ -1,8 +1,21 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
 import { Button } from '../components/ui/button';
+
+// 备用物料数据
+const defaultMaterials = [
+  { id: 1, code: 'MAT001', name: '复合肥', category: '肥料', unit: '公斤', price: 8.5, stock: 500, status: '充足', statusClass: 'normal' },
+  { id: 2, code: 'MAT002', name: '尿素', category: '肥料', unit: '公斤', price: 3.2, stock: 800, status: '充足', statusClass: 'normal' },
+  { id: 3, code: 'MAT003', name: '有机肥', category: '肥料', unit: '吨', price: 1200, stock: 50, status: '充足', statusClass: 'normal' },
+  { id: 4, code: 'MAT004', name: '除草剂', category: '农药', unit: '升', price: 45, stock: 120, status: '充足', statusClass: 'normal' },
+  { id: 5, code: 'MAT005', name: '杀虫剂', category: '农药', unit: '升', price: 68, stock: 80, status: '充足', statusClass: 'normal' },
+  { id: 6, code: 'MAT006', name: '杀菌剂', category: '农药', unit: '升', price: 55, stock: 60, status: '不足', statusClass: 'warning' },
+  { id: 7, code: 'MAT007', name: '地膜', category: '农膜', unit: '公斤', price: 15, stock: 200, status: '充足', statusClass: 'normal' },
+  { id: 8, code: 'MAT008', name: '棚膜', category: '农膜', unit: '公斤', price: 22, stock: 150, status: '充足', statusClass: 'normal' },
+  { id: 9, code: 'MAT009', name: '铁锹', category: '工具', unit: '把', price: 35, stock: 50, status: '充足', statusClass: 'normal' },
+  { id: 10, code: 'MAT010', name: '剪刀', category: '工具', unit: '把', price: 18, stock: 40, status: '不足', statusClass: 'warning' },
+];
 
 export default function MaterialManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,35 +23,10 @@ export default function MaterialManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // 从 SettingsDataProvider 获取物料类型字典数据
-  const { getDictItems } = useDictionaries();
   const materialData = useMemo(() => {
-    const materials = getDictItems('material_type');
-    // 转换为页面所需的格式
-    return materials.map((item, index) => ({
-      id: index + 1,
-      code: item.code,
-      name: item.name,
-      category: getDictItemCategoryName(item.category),
-      unit: '-',
-      price: 0,
-      stock: 0,
-      status: '充足',
-      statusClass: 'normal',
-    }));
-  }, [getDictItems]);
-
-  // 获取物料类别名称的辅助函数
-  const getDictItemCategoryName = (category: string): string => {
-    const categoryMap: Record<string, string> = {
-      'fertilizer': '肥料',
-      'pesticide': '农药',
-      'film': '农膜',
-      'tool': '工具',
-      'other': '其他',
-    };
-    return categoryMap[category] || category;
-  };
+    // 使用备用数据
+    return defaultMaterials;
+  }, []);
 
   const filteredMaterials = useMemo(() => {
     return materialData.filter(item => {
