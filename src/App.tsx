@@ -6,7 +6,8 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { AuthSettingsProvider } from './contexts/AuthSettingsContext';
+import { OrganizationProvider } from './contexts/OrganizationContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -345,15 +346,17 @@ function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <AuthSettingsProvider>
-            <SettingsDataProvider>
-              <ToastProvider>
-                <ApprovalProvider>
-                  <AppContent />
-                </ApprovalProvider>
-              </ToastProvider>
-            </SettingsDataProvider>
-          </AuthSettingsProvider>
+          <OrganizationProvider>
+            <SettingsProvider>
+              <SettingsDataProvider>
+                <ToastProvider>
+                  <ApprovalProvider>
+                    <AppContent />
+                  </ApprovalProvider>
+                </ToastProvider>
+              </SettingsDataProvider>
+            </SettingsProvider>
+          </OrganizationProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </BrowserRouter>

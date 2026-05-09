@@ -157,7 +157,7 @@ export class SeedSourceRepository {
       data.total_amount || 0,
       data.used_quantity || 0,
       data.remaining_quantity || data.quantity || 0,
-      data.status || 'active',
+      data.status || 'active', // TODO: 使用 CommonStatus.ACTIVE 枚举
       data.remarks || '',
       data.create_by || '',
       data.create_by_id || '',

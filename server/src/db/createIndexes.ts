@@ -226,7 +226,67 @@ export function createIndexes() {
     ON production_plans(greenhouse_name, status, expected_harvest_date)
   `);
 
-  console.log('索引创建完成！共创建 36 个索引');
+  // ========== 21. 临时任务表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_temp_tasks_executor
+    ON temp_tasks(executor_id, status, create_time)
+  `);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_temp_tasks_status
+    ON temp_tasks(status, deadline, priority)
+  `);
+
+  // ========== 22. 加班记录表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_overtime_worker
+    ON overtime_records(worker_id, work_date, status)
+  `);
+
+  // ========== 23. 请假记录表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_leave_worker
+    ON leave_records(worker_id, start_date, end_date, status)
+  `);
+
+  // ========== 24. 物料申请表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_material_requests_applicant
+    ON material_requests(applicant_id, status, apply_date)
+  `);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_material_requests_warehouse
+    ON material_requests(warehouse_id, status)
+  `);
+
+  // ========== 25. 采购计划表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_purchase_plans_applicant
+    ON purchase_plans(applicant_id, status, plan_date)
+  `);
+
+  // ========== 26. 供应商表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_suppliers_type
+    ON suppliers(supplier_type, status)
+  `);
+
+  // ========== 27. 操作日志表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_operation_logs_user
+    ON operation_logs(user_id, operate_time)
+  `);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_operation_logs_module
+    ON operation_logs(module, operate_time)
+  `);
+
+  // ========== 28. 通知表索引 ==========
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_notifications_receiver
+    ON notifications(receiver_id, is_read, create_time)
+  `);
+
+  console.log('索引创建完成！共创建 44 个索引');
 }
 
 // 导出索引信息查询函数

@@ -89,7 +89,9 @@
       "Bash(findstr :3001)",
       "Bash(taskkill //F //IM node.exe)",
       "Bash(sqlite3 *)",
-      "mcp__plugin_playwright_playwright__browser_select_option"
+      "mcp__plugin_playwright_playwright__browser_select_option",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(npx prettier *)"
     ]
   }
 }
