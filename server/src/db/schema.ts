@@ -1216,6 +1216,13 @@ export function initializeDatabase() {
     )
   `);
 
+  // 迁移：给 crop_orders 表添加缺失的字段
+  db.run(`ALTER TABLE crop_orders ADD COLUMN order_name TEXT`);
+  db.run(`ALTER TABLE crop_orders ADD COLUMN crop_category TEXT`);
+  db.run(`ALTER TABLE crop_orders ADD COLUMN planned_quantity INTEGER DEFAULT 0`);
+  db.run(`ALTER TABLE crop_orders ADD COLUMN actual_quantity INTEGER DEFAULT 0`);
+  db.run(`ALTER TABLE crop_orders ADD COLUMN expected_harvest_date TEXT`);
+
   // 生产计划表
   db.run(`
     CREATE TABLE IF NOT EXISTS production_plans (

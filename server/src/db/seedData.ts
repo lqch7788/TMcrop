@@ -1622,6 +1622,167 @@ function seedProblems() {
 }
 
 /**
+ * 导入作物订单
+ */
+function seedCropOrders() {
+  const db = getDatabase();
+
+  // 先清空现有数据，确保使用完整的字段
+  db.run('DELETE FROM crop_orders');
+
+  const orders = [
+    {
+      id: 'ORD001',
+      order_code: 'DD20260501100001',
+      order_name: '番茄订单',
+      order_type: 'production',
+      crop_category: '蔬菜类',
+      crop_name: '番茄',
+      crop_variety: '红果番茄',
+      planned_quantity: 1000,
+      actual_quantity: 0,
+      unit: 'kg',
+      unit_price: 4.0,
+      total_amount: 4000,
+      customer_name: '永辉超市',
+      customer_contact: '13800138000',
+      delivery_address: '福州市鼓楼区',
+      order_date: '2026-05-01',
+      expected_harvest_date: '2026-05-15',
+      actual_delivery_date: null,
+      status: 'planned',
+      remarks: '第一批番茄订单',
+      create_by: '陆启闯',
+      create_time: '2026-05-01T10:00:00.000Z',
+      update_time: '2026-05-01T10:00:00.000Z'
+    },
+    {
+      id: 'ORD002',
+      order_code: 'DD20260502100002',
+      order_name: '黄瓜订单',
+      order_type: 'production',
+      crop_category: '蔬菜类',
+      crop_name: '黄瓜',
+      crop_variety: '水果黄瓜',
+      planned_quantity: 800,
+      actual_quantity: 500,
+      unit: 'kg',
+      unit_price: 3.5,
+      total_amount: 2800,
+      customer_name: '沃尔玛',
+      customer_contact: '13900139000',
+      delivery_address: '厦门市思明区',
+      order_date: '2026-05-02',
+      expected_harvest_date: '2026-05-16',
+      actual_delivery_date: null,
+      status: 'in_progress',
+      remarks: '黄瓜订单',
+      create_by: '陆启闯',
+      create_time: '2026-05-02T10:00:00.000Z',
+      update_time: '2026-05-02T10:00:00.000Z'
+    },
+    {
+      id: 'ORD003',
+      order_code: 'DD20260503100003',
+      order_name: '生菜订单',
+      order_type: 'production',
+      crop_category: '蔬菜类',
+      crop_name: '生菜',
+      crop_variety: '大叶生菜',
+      planned_quantity: 500,
+      actual_quantity: 0,
+      unit: 'kg',
+      unit_price: 5.0,
+      total_amount: 2500,
+      customer_name: '盒马鲜生',
+      customer_contact: '13700137000',
+      delivery_address: '上海市浦东新区',
+      order_date: '2026-05-03',
+      expected_harvest_date: '2026-05-17',
+      actual_delivery_date: null,
+      status: 'planned',
+      remarks: '生菜订单',
+      create_by: '王建国',
+      create_time: '2026-05-03T10:00:00.000Z',
+      update_time: '2026-05-03T10:00:00.000Z'
+    },
+    {
+      id: 'ORD004',
+      order_code: 'DD20260504100004',
+      order_name: '草莓种苗订单',
+      order_type: 'seed',
+      crop_category: '水果类',
+      crop_name: '草莓',
+      crop_variety: '红颜草莓',
+      planned_quantity: 200,
+      actual_quantity: 150,
+      unit: 'kg',
+      unit_price: 25.0,
+      total_amount: 5000,
+      customer_name: '水果专营店',
+      customer_contact: '13600136000',
+      delivery_address: '杭州市西湖区',
+      order_date: '2026-05-04',
+      expected_harvest_date: '2026-05-20',
+      actual_delivery_date: null,
+      status: 'in_progress',
+      remarks: '草莓种苗订单',
+      create_by: '王建国',
+      create_time: '2026-05-04T10:00:00.000Z',
+      update_time: '2026-05-04T10:00:00.000Z'
+    },
+    {
+      id: 'ORD005',
+      order_code: 'DD20260505100005',
+      order_name: '辣椒订单',
+      order_type: 'production',
+      crop_category: '蔬菜类',
+      crop_name: '辣椒',
+      crop_variety: '朝天椒',
+      planned_quantity: 300,
+      actual_quantity: 300,
+      unit: 'kg',
+      unit_price: 8.0,
+      total_amount: 2400,
+      customer_name: '火锅连锁店',
+      customer_contact: '13500135000',
+      delivery_address: '成都市锦江区',
+      order_date: '2026-05-05',
+      expected_harvest_date: '2026-05-18',
+      actual_delivery_date: '2026-05-18',
+      status: 'completed',
+      remarks: '辣椒订单已完成',
+      create_by: '李明辉',
+      create_time: '2026-05-05T10:00:00.000Z',
+      update_time: '2026-05-08T10:00:00.000Z'
+    }
+  ];
+
+  for (const order of orders) {
+    db.run(`
+      INSERT INTO crop_orders
+      (id, order_code, order_name, order_type, crop_category, crop_name, crop_variety,
+       planned_quantity, actual_quantity, unit, unit_price, total_amount,
+       customer_name, customer_contact, delivery_address, order_date,
+       expected_harvest_date, actual_delivery_date, status, remarks,
+       create_by, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      order.id, order.order_code, order.order_name, order.order_type,
+      order.crop_category, order.crop_name, order.crop_variety,
+      order.planned_quantity, order.actual_quantity, order.unit,
+      order.unit_price, order.total_amount, order.customer_name,
+      order.customer_contact, order.delivery_address, order.order_date,
+      order.expected_harvest_date, order.actual_delivery_date,
+      order.status, order.remarks, order.create_by,
+      order.create_time, order.update_time
+    ]);
+  }
+
+  console.log(`已导入 ${orders.length} 条作物订单记录`);
+}
+
+/**
  * 导入作物实例
  */
 function seedCropInstances() {
@@ -3644,6 +3805,7 @@ export function exportDatabase() {
   seedLaborRecords();
   seedInspections();
   seedProblems();
+  seedCropOrders();
   seedCropInstances();
   seedInventory();
   seedDictionaries();
