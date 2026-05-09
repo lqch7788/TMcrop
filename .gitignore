@@ -1,6 +1,9 @@
 # 临时文件和缓存
 hongzhiyun/
 
+# 公共资源文件夹（不提交到Git）
+public/
+
 # Claude Code 工作目录
 .omc/
 .claude/
