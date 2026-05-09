@@ -30,6 +30,15 @@ interface Device {
 
 const API_BASE = '/api/basic-data/devices';
 
+// 获取认证头
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const DEVICE_TYPES = ['传感器', '摄像头', '控制器', '气象站', '灌溉设备', '施肥设备', '其他'];
 
 export default function DeviceManagement() {
@@ -48,7 +57,7 @@ export default function DeviceManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
+      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         setDevices(result.data || []);
@@ -83,7 +92,7 @@ export default function DeviceManagement() {
       if (editingDevice) {
         const response = await fetch(`${API_BASE}/${editingDevice.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             deviceName: newDevice.deviceName,
             deviceCode: newDevice.deviceCode,
@@ -109,7 +118,7 @@ export default function DeviceManagement() {
       } else {
         const response = await fetch(API_BASE, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             deviceName: newDevice.deviceName,
             deviceCode: newDevice.deviceCode,
@@ -140,7 +149,7 @@ export default function DeviceManagement() {
   const deleteDevice = async (id: string) => {
     if (!confirm('确定删除该设备吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         await loadDevices();

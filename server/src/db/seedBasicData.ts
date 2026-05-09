@@ -697,12 +697,22 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'BS002', categoryCode: 'batch_status', dictCode: 'in_progress', dictLabel: '执行中', dictValue: 'in_progress', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'BS003', categoryCode: 'batch_status', dictCode: 'completed', dictLabel: '已完成', dictValue: 'completed', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
   { id: 'BS004', categoryCode: 'batch_status', dictCode: 'cancelled', dictLabel: '已取消', dictValue: 'cancelled', color: 'red', sortOrder: 4, isDefault: 0, status: 'active' },
-  // 种植模式
-  { id: 'PM001', categoryCode: 'planting_mode', dictCode: 'direct_seeding', dictLabel: '直播', dictValue: 'direct_seeding', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'PM002', categoryCode: 'planting_mode', dictCode: 'transplanting', dictLabel: '移栽', dictValue: 'transplanting', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'PM003', categoryCode: 'planting_mode', dictCode: 'grafting', dictLabel: '嫁接', dictValue: 'grafting', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'PM004', categoryCode: 'planting_mode', dictCode: 'tissue_culture', dictLabel: '组培', dictValue: 'tissue_culture', color: 'pink', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'PM005', categoryCode: 'planting_mode', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 种植模式 - 包含所有实际使用的种植模式
+  { id: 'PM001', categoryCode: 'planting_mode', dictCode: 'direct_seeding', dictLabel: '直播', dictValue: '直播', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PM002', categoryCode: 'planting_mode', dictCode: 'transplanting', dictLabel: '移栽', dictValue: '移栽', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PM003', categoryCode: 'planting_mode', dictCode: 'grafting', dictLabel: '嫁接', dictValue: '嫁接', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PM004', categoryCode: 'planting_mode', dictCode: 'tissue_culture', dictLabel: '组培', dictValue: '组培', color: 'pink', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PM005', categoryCode: 'planting_mode', dictCode: 'greenhouse', dictLabel: '温室种植', dictValue: '温室种植', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PM006', categoryCode: 'planting_mode', dictCode: 'open_field', dictLabel: '露天种植', dictValue: '露天种植', color: 'lime', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'PM007', categoryCode: 'planting_mode', dictCode: 'hydroponic', dictLabel: '水培', dictValue: '水培', color: 'sky', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'PM008', categoryCode: 'planting_mode', dictCode: 'substrate', dictLabel: '基质栽培', dictValue: '基质栽培', color: 'amber', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'PM009', categoryCode: 'planting_mode', dictCode: 'greenhouse_planting', dictLabel: '大棚种植', dictValue: '大棚种植', color: 'teal', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'PM010', categoryCode: 'planting_mode', dictCode: 'open_field_planting', dictLabel: '露地种植', dictValue: '露地种植', color: 'emerald', sortOrder: 10, isDefault: 0, status: 'active' },
+  { id: 'PM011', categoryCode: 'planting_mode', dictCode: 'coconut_coir', dictLabel: '椰糠种植', dictValue: '椰糠种植', color: 'yellow', sortOrder: 11, isDefault: 0, status: 'active' },
+  { id: 'PM012', categoryCode: 'planting_mode', dictCode: 'hydroponic_seedling', dictLabel: '水培育苗', dictValue: '水培育苗', color: 'indigo', sortOrder: 12, isDefault: 0, status: 'active' },
+  { id: 'PM013', categoryCode: 'planting_mode', dictCode: 'soil_seedling', dictLabel: '土壤育苗', dictValue: '土壤育苗', color: 'brown', sortOrder: 13, isDefault: 0, status: 'active' },
+  { id: 'PM014', categoryCode: 'planting_mode', dictCode: 'soil_planting', dictLabel: '土壤种植', dictValue: '土壤种植', color: 'orange', sortOrder: 14, isDefault: 0, status: 'active' },
+  { id: 'PM015', categoryCode: 'planting_mode', dictCode: 'other', dictLabel: '其他', dictValue: '其他', color: 'gray', sortOrder: 15, isDefault: 0, status: 'active' },
   // 负责人
   { id: 'RP001', categoryCode: 'responsible_person', dictCode: 'lu_qichuang', dictLabel: '陆启闯', dictValue: '陆启闯', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'RP002', categoryCode: 'responsible_person', dictCode: 'wang_jianguo', dictLabel: '王建国', dictValue: '王建国', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -1181,6 +1191,9 @@ export function seedDictionaryCategories() {
  */
 export function seedDictionaries() {
   const db = getDatabase();
+
+  // 先清理种植模式字典，避免旧数据(DICT010-DICT013等)与新数据(PM001-PM015等)重复
+  db.run(`DELETE FROM dictionaries WHERE category_code = 'planting_mode'`);
 
   for (const dict of defaultDictionaries) {
     db.run(`

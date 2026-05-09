@@ -67,11 +67,28 @@ export function verifyToken(token: string): JwtPayload | null {
  * 认证中间件
  * 验证请求头中的 Bearer token
  * 验证失败返回 401 Unauthorized
+ * 演示模式：陆启闯等演示账号跳过认证
  */
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
+  // 演示模式白名单 - 跳过认证的用户
+  const DEMO_USERS = ['陆启闯', 'admin', '演示用户'];
+
+  // 检查是否有 Authorization 头
   if (!authHeader) {
+    // 演示模式下，白名单用户可以不带 token 访问
+    if (DEMO_MODE) {
+      // 为演示用户设置默认信息
+      req.user = {
+        userId: 'demo_user',
+        aid: 'demo_aid',
+        name: '陆启闯',
+        role: 'admin'
+      };
+      next();
+      return;
+    }
     res.status(401).json({ error: '未提供认证令牌' });
     return;
   }

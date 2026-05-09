@@ -360,7 +360,17 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
   if (category) {
     url += `?category=${encodeURIComponent(category)}`;
   }
-  const response = await fetch(url);
+
+  // 获取认证 token
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, { headers });
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -408,7 +418,16 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
 export async function getDictionaryCategories(): Promise<string[]> {
   try {
     // 后端直接返回数组格式，不用 apiClient
-    const response = await fetch('/api/dictionary/dictionaries/categories');
+    // 获取认证 token
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/dictionary/dictionaries/categories', { headers });
 
     // 检查响应状态
     if (!response.ok) {
@@ -469,9 +488,18 @@ export async function saveDictionaries(data: {
     deleted: data.deleted,
   };
 
+  // 获取认证 token
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch('/api/dictionary/dictionaries', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(backendData)
   });
 

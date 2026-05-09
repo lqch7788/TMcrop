@@ -43,6 +43,15 @@ interface Zone {
 
 const API_BASE = '/api/basic-data/zones';
 
+// 获取认证头
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const statusColors = {
   active: 'bg-emerald-100 text-emerald-700',
   inactive: 'bg-gray-100 text-gray-600',
@@ -77,7 +86,7 @@ export default function BlockManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
+      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         // 合并基地名称
@@ -158,7 +167,7 @@ export default function BlockManagement() {
       if (editingZone) {
         const response = await fetch(`${API_BASE}/${editingZone.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             zoneName: formData.zoneName,
             zoneCode: formData.zoneCode,
@@ -180,7 +189,7 @@ export default function BlockManagement() {
       } else {
         const response = await fetch(API_BASE, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             zoneName: formData.zoneName,
             zoneCode: formData.zoneCode,
@@ -208,7 +217,7 @@ export default function BlockManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除该区域吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
       const result = await response.json();
       if (result.success) {
         await loadZones();

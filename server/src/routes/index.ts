@@ -35,12 +35,17 @@ import summaryRouter from './summary';
 import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
 // JWT 认证中间件 - 要求已登录才能访问
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   authenticate(req, res, next);
+};
+
+// 可选认证中间件 - 有token就验证，没有也能访问
+const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+  optionalAuthenticate(req, res, next);
 };
 
 const router = Router();
@@ -104,8 +109,8 @@ router.use('/purchase-plans', requireAuth, purchasePlanRouter);
 // 物料申请路由 - 需要认证
 router.use('/material-requests', requireAuth, materialRequestRouter);
 
-// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 需要认证
-router.use('/basic-data', requireAuth, basicDataRouter);
+// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 可选认证（公开数据）
+router.use('/basic-data', optionalAuth, basicDataRouter);
 
 // 数据字典路由 - 需要认证
 router.use('/dictionary', requireAuth, dictionaryRouter);
@@ -113,8 +118,8 @@ router.use('/dictionary', requireAuth, dictionaryRouter);
 // 组织与权限路由 - 公开（登录/验证接口）
 router.use('/authority', authorityRouter);
 
-// 通知设置路由 - 需要认证
-router.use('/notifications', requireAuth, notificationRouter);
+// 通知设置路由 - 可选认证（公开数据）
+router.use('/notifications', optionalAuth, notificationRouter);
 
 // 审批工作流路由 - 需要认证
 router.use('/approval-workflows', requireAuth, approvalWorkflowRouter);

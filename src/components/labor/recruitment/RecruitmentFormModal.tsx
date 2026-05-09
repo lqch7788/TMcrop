@@ -67,7 +67,11 @@ export function RecruitmentFormModal({
     const fetchPositions = async () => {
       setLoadingPositions(true);
       try {
-        const response = await fetch('/api/basic-data/positions');
+        const token = localStorage.getItem('token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch('/api/basic-data/positions', { headers });
         const result = await response.json();
         if (result.success && Array.isArray(result.data)) {
           console.log('[DEBUG] 获取到岗位数据:', result.data.length, '条');

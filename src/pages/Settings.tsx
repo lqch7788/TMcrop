@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings as SettingsIcon, Leaf, MapPin, Sprout, Package, ScrollText, Users, Target, ChevronRight, ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor, Warehouse, Calculator, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database } from 'lucide-react';
+import { Settings as SettingsIcon, MapPin, Sprout, ScrollText, Users, Target, ChevronRight, ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor, Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
 const settingsSections = [
@@ -11,18 +11,12 @@ const settingsSections = [
   { icon: Bell, label: '通知设置', path: '/settings/notification', desc: '消息通知渠道和规则' },
   { icon: Monitor, label: '设备管理', path: '/settings/device', desc: 'IoT设备配置' },
   { icon: Warehouse, label: '仓库管理', path: '/settings/warehouse', desc: '仓库信息配置' },
-  { icon: Users, label: '班组管理', path: '/settings/team', desc: '班组和班次管理' },
-  { icon: Building, label: '基地管理', path: '/settings/branch', desc: '管理种植基地信息' },
   { icon: Layers, label: '区块管理', path: '/settings/block', desc: '管理基地下的区块' },
   { icon: Building2, label: '基地设置', path: '/settings/bases', desc: '管理基地信息配置' },
-  { icon: MapPin, label: '区域管理', path: '/settings/regions', desc: '管理种植区域和地块' },
-  { icon: Leaf, label: '种植模式', path: '/settings/modes', desc: '管理种植模式配置' },
   { icon: Database, label: '作物品种库', path: '/settings/crop-variety', desc: '统一管理系统作物品种编码' },
-  { icon: Package, label: '物料管理', path: '/settings/materials', desc: '管理物资分类和物料' },
   { icon: ScrollText, label: '工序管理', path: '/settings/processes', desc: '定义标准农事工序' },
   { icon: Users, label: '人事管理', path: '/settings/personnel', desc: '管理员工和职务' },
   { icon: Target, label: '部门设置', path: '/settings/departments', desc: '设置组织架构' },
-  { icon: Calculator, label: '成本核算', path: '/settings/cost-accounting', desc: '成本类别和预算' },
   { icon: FileText, label: '操作日志', path: '/settings/audit-log', desc: '系统操作审计日志' },
 ];
 

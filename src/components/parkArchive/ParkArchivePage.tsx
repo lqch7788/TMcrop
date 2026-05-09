@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/button';
 
+// localStorage key - 与 BaseSettings 保持一致
+const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
+
 // 园区/地块数据 - 真实百度地图坐标
 const initialCompanyGroups = [
   {
@@ -66,8 +69,21 @@ declare global {
   }
 }
 
+// 从 localStorage 读取数据（与 BaseSettings 同步）
+const loadCompanyGroupsFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(COMPANY_GROUPS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('读取基地数据失败:', e);
+  }
+  return initialCompanyGroups;
+};
+
 export function ParkArchivePage() {
-  const [companyGroups, setCompanyGroups] = useState(initialCompanyGroups);
+  const [companyGroups, setCompanyGroups] = useState(loadCompanyGroupsFromStorage);
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -82,6 +98,15 @@ export function ParkArchivePage() {
   const [pendingDetailBase, setPendingDetailBase] = useState<BaseData | null>(null);
 
   const parkData = useMemo(() => companyGroups.flatMap(group => group.bases.map(base => ({ ...base, company: group.name, companyId: group.id }))), [companyGroups]);
+
+  // 监听基地设置更新事件
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCompanyGroups(loadCompanyGroupsFromStorage());
+    };
+    window.addEventListener('companyGroupsUpdated', handleUpdate);
+    return () => window.removeEventListener('companyGroupsUpdated', handleUpdate);
+  }, []);
 
   // 处理详情弹窗显示
   useEffect(() => {

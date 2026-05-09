@@ -2,8 +2,35 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-import { useGreenhouses, useWarehouses, useSettingsData } from '../components/common/settings/SettingsDataProvider';
 import { Button } from '../components/ui/button';
+
+// localStorage key
+const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
+
+// 初始数据 - 与园区基地总览表一致
+const defaultCompanyGroups = [
+  {
+    id: 1,
+    name: '宁波帮帮忙公司',
+    bases: [
+      { id: 2, name: '上海松江基地', area: 300, unit: '亩', crop: '水稻', growthDay: 30, status: 'planting', statusText: '种植中', manager: '郭靖', phone: '13800138002', soilType: '沙壤土', ph: 6.8, coords: '121.2234,31.0342', city: '上海', province: '上海', lng: 121.2234, lat: 31.0342, intro: '总种植面积300亩，包含玻璃温室2个，连栋薄膜温室5个，日光拱棚10个，大田200亩。', greenhouseCount: 17, fieldArea: 200 },
+      { id: 3, name: '上海崇明基地', area: 800, unit: '亩', crop: '小麦', growthDay: 0, status: 'fallow', statusText: '休耕中', manager: '萧峰', phone: '13800138003', soilType: '黏土', ph: 6.2, coords: '121.24416,31.73610', city: '上海', province: '上海', lng: 121.24416, lat: 31.73610, intro: '总种植面积800亩，包含玻璃温室3个，连栋薄膜温室8个，日光拱棚15个，大田650亩。', greenhouseCount: 26, fieldArea: 650 },
+      { id: 7, name: '上海嘉定基地', area: 350, unit: '亩', crop: '蔬菜', growthDay: 25, status: 'planting', statusText: '种植中', manager: '杨过', phone: '13800138007', soilType: '沙土', ph: 7.0, coords: '121.2654,31.3754', city: '上海', province: '上海', lng: 121.2654, lat: 31.3754, intro: '总种植面积350亩，包含玻璃温室4个，连栋薄膜温室6个，日光拱棚8个，大田200亩。', greenhouseCount: 18, fieldArea: 200 },
+      { id: 12, name: '上海奉贤基地', area: 550, unit: '亩', crop: '玉米', growthDay: 50, status: 'planting', statusText: '种植中', manager: '张无忌', phone: '13800138012', soilType: '黏土', ph: 6.8, coords: '121.4745,30.9123', city: '上海', province: '上海', lng: 121.4745, lat: 30.9123, intro: '总种植面积550亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚12个，大田450亩。', greenhouseCount: 18, fieldArea: 450 },
+    ]
+  },
+  {
+    id: 2,
+    name: '成都帮帮您公司',
+    bases: [
+      { id: 1, name: '西安雁塔基地', area: 500, unit: '亩', crop: '番茄', growthDay: 45, status: 'planting', statusText: '种植中', manager: '令狐冲', phone: '13800138001', soilType: '壤土', ph: 6.5, coords: '108.9470,34.2194', city: '西安', province: '陕西', lng: 108.9470, lat: 34.2194, intro: '总种植面积500亩，包含玻璃温室3个，连栋薄膜温室7个，日光拱棚12个，大田380亩。', greenhouseCount: 22, fieldArea: 380 },
+      { id: 6, name: '西安高新基地', area: 200, unit: '亩', crop: '草莓', growthDay: 55, status: 'planting', statusText: '种植中', manager: '狄云', phone: '13800138006', soilType: '营养土', ph: 6.4, coords: '108.8789,34.2181', city: '西安', province: '陕西', lng: 108.8789, lat: 34.2181, intro: '总种植面积200亩，包含玻璃温室5个，连栋薄膜温室3个，日光拱棚5个，大田100亩。', greenhouseCount: 13, fieldArea: 100 },
+      { id: 4, name: '宁波北仑基地', area: 600, unit: '亩', crop: '茶叶', growthDay: 60, status: 'planting', statusText: '种植中', manager: '石破天', phone: '13800138004', soilType: '壤土', ph: 6.6, coords: '121.9701,29.8947', city: '宁波', province: '浙江', lng: 121.9701, lat: 29.8947, intro: '总种植面积600亩，包含玻璃温室1个，连栋薄膜温室4个，日光拱棚8个，大田550亩。', greenhouseCount: 13, fieldArea: 550 },
+      { id: 8, name: '宁波镇海基地', area: 280, unit: '亩', crop: '水稻', growthDay: 40, status: 'planting', statusText: '种植中', manager: '陈家洛', phone: '13800138008', soilType: '壤土', ph: 6.7, coords: '121.7532,29.9543', city: '宁波', province: '浙江', lng: 121.7532, lat: 29.9543, intro: '总种植面积280亩，包含玻璃温室2个，连栋薄膜温室3个，日光拱棚6个，大田220亩。', greenhouseCount: 11, fieldArea: 220 },
+      { id: 10, name: '宁波慈溪基地', area: 420, unit: '亩', crop: '葡萄', growthDay: 75, status: 'planting', statusText: '种植中', manager: '袁承志', phone: '13800138010', soilType: '壤土', ph: 6.5, coords: '121.2678,30.1543', city: '宁波', province: '浙江', lng: 121.2678, lat: 30.1543, intro: '总种植面积420亩，包含玻璃温室3个，连栋薄膜温室5个，日光拱棚10个，大田320亩。', greenhouseCount: 18, fieldArea: 320 },
+    ]
+  },
+];
 
 type BaseData = {
   id: number;
@@ -34,57 +61,35 @@ type CompanyGroup = {
   bases: BaseData[];
 };
 
+// 从 localStorage 读取数据
+const loadCompanyGroups = (): CompanyGroup[] => {
+  try {
+    const stored = localStorage.getItem(COMPANY_GROUPS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('读取基地数据失败:', e);
+  }
+  return defaultCompanyGroups;
+};
+
+// 保存数据到 localStorage 并通知园区总览更新
+const saveCompanyGroups = (data: CompanyGroup[]) => {
+  localStorage.setItem(COMPANY_GROUPS_KEY, JSON.stringify(data));
+  // 触发园区总览页面刷新
+  window.dispatchEvent(new CustomEvent('companyGroupsUpdated'));
+};
+
+// 获取共享数据（供园区总览使用）
+export const getCompanyGroups = (): CompanyGroup[] => {
+  return loadCompanyGroups();
+};
+
 export default function BaseSettings() {
   const { toast } = useToast();
-  // 从 SettingsDataProvider 获取数据
-  const { greenhouses, warehouses, refreshGreenhouses, refreshWarehouses } = useSettingsData();
-  const [companyGroups, setCompanyGroups] = useState<CompanyGroup[]>([]);
+  const [companyGroups, setCompanyGroupsState] = useState<CompanyGroup[]>(loadCompanyGroups);
   const navigate = useNavigate();
-
-  // 当 greenhouses 数据加载后，构建 companyGroups 结构
-  useEffect(() => {
-    if (greenhouses && greenhouses.length > 0) {
-      // 按公司/区域分组 greenhouses 数据
-      const grouped = greenhouses.reduce((acc, greenhouse) => {
-        // 使用 company_name 字段，如果没有则用 location
-        const companyName = greenhouse.companyName || greenhouse.company_name || greenhouse.location || '默认公司';
-        if (!acc[companyName]) {
-          acc[companyName] = {
-            id: companyName.charCodeAt(0),
-            name: companyName,
-            bases: []
-          };
-        }
-        // 将 greenhouse 转换为 base 格式，使用 API 返回的完整字段
-        const base: BaseData = {
-          id: parseInt(greenhouse.id) || 0,
-          name: greenhouse.name,
-          area: greenhouse.area || 0,
-          unit: '亩',
-          crop: greenhouse.crop || '',
-          growthDay: greenhouse.growthDay || greenhouse.growth_day || 0,
-          status: greenhouse.status === 'using' ? 'planting' : greenhouse.status,
-          statusText: greenhouse.status === 'using' ? '使用中' : (greenhouse.status === 'active' ? '种植中' : greenhouse.status || '种植中'),
-          manager: greenhouse.manager || '',
-          phone: greenhouse.phone || '',
-          soilType: greenhouse.soilType || greenhouse.soil_type || '',
-          ph: greenhouse.ph || 0,
-          coords: greenhouse.lng && greenhouse.lat ? `${greenhouse.lng},${greenhouse.lat}` : '',
-          city: greenhouse.location || '',
-          province: '',
-          lng: greenhouse.lng || 0,
-          lat: greenhouse.lat || 0,
-          intro: greenhouse.intro || `${greenhouse.name}，类型：${greenhouse.greenhouseType || '温室'}，面积：${greenhouse.area || 0}亩`,
-          greenhouseCount: greenhouse.greenhouseCount || greenhouse.greenhouse_count || 0,
-          fieldArea: greenhouse.fieldArea || greenhouse.field_area || 0
-        };
-        acc[companyName].bases.push(base);
-        return acc;
-      }, {} as Record<string, CompanyGroup>);
-
-      setCompanyGroups(Object.values(grouped));
-    }
-  }, [greenhouses]);
 
   // 当 companyGroups 更新时，同步更新 expandedCompanies
   useEffect(() => {
@@ -113,6 +118,12 @@ export default function BaseSettings() {
   const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+
+  // 更新状态并保存到 localStorage
+  const setCompanyGroups = (newData: CompanyGroup[]) => {
+    setCompanyGroupsState(newData);
+    saveCompanyGroups(newData);
+  };
 
   const parkData = useMemo(() => companyGroups.flatMap(group => group.bases.map(base => ({ ...base, company: group.name, companyId: group.id }))), [companyGroups]);
 
@@ -648,46 +659,44 @@ export default function BaseSettings() {
                   if (!name) { toast.error('请输入名称'); return; }
 
                   if (editingItem) {
-                    // 编辑模式
-                    setConfirmModalConfig({
-                      title: '修改确认',
-                      message: '修改公司或基地信息可能会影响相关数据的关联！请确认是否继续？',
-                      type: 'warning',
-                      onConfirm: () => {
-                        if (editingItem.type === 'company') {
-                          setCompanyGroups(companyGroups.map(c =>
-                            c.id === editingItem.data.id ? { ...c, name } : c
-                          ));
-                        } else {
-                          const areaInput = document.getElementById('editArea') as HTMLInputElement;
-                          const cropInput = document.getElementById('editCrop') as HTMLInputElement;
-                          const managerInput = document.getElementById('editManager') as HTMLInputElement;
-                          const phoneInput = document.getElementById('editPhone') as HTMLInputElement;
-                          const introInput = document.getElementById('editIntro') as HTMLTextAreaElement;
-                          setCompanyGroups(companyGroups.map(c => {
-                            if (c.id === editingItem.companyId) {
-                              return {
-                                ...c,
-                                bases: c.bases.map(b =>
-                                  b.id === editingItem.data.id ? {
-                                    ...b,
-                                    name,
-                                    area: Number(areaInput?.value) || b.area,
-                                    crop: cropInput?.value || b.crop,
-                                    manager: managerInput?.value || b.manager,
-                                    phone: phoneInput?.value || b.phone,
-                                    intro: introInput?.value || b.intro
-                                  } : b
-                                )
-                              };
-                            }
-                            return c;
-                          }));
+                    // 编辑模式 - 直接更新，不弹确认框
+                    if (editingItem.type === 'company') {
+                      const targetId = (editingItem.data as CompanyGroup).id;
+                      const newData = companyGroups.map(c =>
+                        c.id === targetId ? { ...c, name } : c
+                      );
+                      setCompanyGroups(newData);
+                      toast.success('公司名称已更新');
+                    } else {
+                      const areaInput = document.getElementById('editArea') as HTMLInputElement;
+                      const cropInput = document.getElementById('editCrop') as HTMLInputElement;
+                      const managerInput = document.getElementById('editManager') as HTMLInputElement;
+                      const phoneInput = document.getElementById('editPhone') as HTMLInputElement;
+                      const introInput = document.getElementById('editIntro') as HTMLTextAreaElement;
+                      const targetId = (editingItem.data as BaseData).id;
+                      const newData = companyGroups.map(c => {
+                        if (c.id === editingItem.companyId) {
+                          return {
+                            ...c,
+                            bases: c.bases.map(b =>
+                              b.id === targetId ? {
+                                ...b,
+                                name,
+                                area: Number(areaInput?.value) || b.area,
+                                crop: cropInput?.value || b.crop,
+                                manager: managerInput?.value || b.manager,
+                                phone: phoneInput?.value || b.phone,
+                                intro: introInput?.value || b.intro
+                              } : b
+                            )
+                          };
                         }
-                        setEditingItem(null);
-                      }
-                    });
-                    setShowConfirmModal(true);
+                        return c;
+                      });
+                      setCompanyGroups(newData);
+                      toast.success('基地信息已更新');
+                    }
+                    setEditingItem(null);
                   } else {
                     // 新增模式
                     if (addType === 'company') {
