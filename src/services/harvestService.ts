@@ -83,11 +83,18 @@ function getStoredData(): HarvestRecord[] {
  * 初始化数据 - 从localStorage读取或使用默认数据
  */
 export function initHarvestRecords(): HarvestRecord[] {
-  const data = getStoredData();
-  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === null) {
+    // localStorage 为空时，初始化默认数据
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+    return defaultData;
   }
-  return data.length > 0 ? data : defaultData;
+  try {
+    const data = JSON.parse(stored);
+    return data.length > 0 ? data : defaultData;
+  } catch {
+    return defaultData;
+  }
 }
 
 /**
