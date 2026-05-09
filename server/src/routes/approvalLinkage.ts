@@ -1158,8 +1158,8 @@ router.get('/status/:businessType/:requestId', (req, res) => {
     const { businessType, requestId } = req.params;
 
     let tableName = '';
-    let idColumn = 'id';
-    let statusColumn = 'status';
+    const idColumn = 'id';
+    const statusColumn = 'status';
 
     switch (businessType) {
       case 'material':

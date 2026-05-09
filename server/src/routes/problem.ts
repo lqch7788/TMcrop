@@ -198,7 +198,7 @@ router.get('/daily-summary', (req: Request, res: Response) => {
     const db = getDatabase();
 
     let sql: string;
-    let params: any[] = [];
+    const params: any[] = [];
 
     if (group_by === 'greenhouse') {
       // 按温室分组

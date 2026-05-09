@@ -49,7 +49,7 @@ export const defaultRollbackConfig: RollbackConfig = {
 };
 
 // 回滚事件记录
-let rollbackEvents: RollbackEvent[] = [];
+const rollbackEvents: RollbackEvent[] = [];
 
 // 错误率监控
 const errorRateMap: Map<string, { timestamp: number; errors: number; total: number }[]> = new Map();

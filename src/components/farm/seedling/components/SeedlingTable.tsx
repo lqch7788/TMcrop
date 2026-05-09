@@ -118,7 +118,7 @@ export function SeedlingTable({
     // 如果有 cropCode，先尝试用编码查找
     if (cropCode) {
       // 尝试直接用编码查找
-      let variety = varietyCache.get(cropCode);
+      const variety = varietyCache.get(cropCode);
       if (variety) return variety;
 
       // 尝试用前9位匹配
@@ -135,7 +135,7 @@ export function SeedlingTable({
     // 如果有 cropName，尝试用名称查找
     if (cropName) {
       // 尝试用 subVariety1Name 查找
-      let variety = varietyCache.get(cropName);
+      const variety = varietyCache.get(cropName);
       if (variety) return variety;
 
       // 尝试用 varietyName 查找

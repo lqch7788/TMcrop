@@ -58,6 +58,9 @@ export { FilterBar, FilterItem } from './FilterBar'
 export { KanbanBoard } from './KanbanBoard'
 export { GanttChart } from './GanttChart'
 
+// 性能优化组件
+export { VirtualTable, type VirtualTableColumn, type VirtualTableProps } from './VirtualTable'
+
 // 通用组件
 export { Timeline } from './Timeline'
 export { List } from './List'

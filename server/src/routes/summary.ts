@@ -194,7 +194,7 @@ router.get('/yield-stats', (req: Request, res: Response) => {
     const validGroupBy = validateGroupBy(group_by as string, ['month', 'crop', 'greenhouse', 'quality']);
 
     let sql: string;
-    let params: any[] = [];
+    const params: any[] = [];
 
     if (group_by === 'crop') {
       // 按作物分组
@@ -485,7 +485,7 @@ router.get('/labor-stats', (req: Request, res: Response) => {
     const db = getDatabase();
 
     let sql: string;
-    let params: any[] = [];
+    const params: any[] = [];
 
     if (validGroupBy === 'worker') {
       // 按工人分组

@@ -404,7 +404,7 @@ router.get('/:id/daily-records', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 获取该育苗的所有每日记录
-    let countSql = 'SELECT COUNT(*) FROM daily_records WHERE related_id = ? AND related_type = ?';
+    const countSql = 'SELECT COUNT(*) FROM daily_records WHERE related_id = ? AND related_type = ?';
     const countParams = [id, 'seedling'];
     const total = execCount(db, countSql, countParams);
 
@@ -567,7 +567,7 @@ router.get('/:id/transplant-records', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 获取该育苗的定植记录
-    let countSql = 'SELECT COUNT(*) FROM transplant_records WHERE source_id = ? AND source_type = ?';
+    const countSql = 'SELECT COUNT(*) FROM transplant_records WHERE source_id = ? AND source_type = ?';
     const countParams = [id, 'seedling'];
     const total = execCount(db, countSql, countParams);
 
@@ -671,7 +671,7 @@ router.get('/:id/print-records', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 获取该育苗的打印记录
-    let countSql = 'SELECT COUNT(*) FROM print_records WHERE related_id = ? AND related_type = ?';
+    const countSql = 'SELECT COUNT(*) FROM print_records WHERE related_id = ? AND related_type = ?';
     const countParams = [id, 'seedling'];
     const total = execCount(db, countSql, countParams);
 

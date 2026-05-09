@@ -685,7 +685,7 @@ export function findOrCreateVarietyByName(varietyName: string): CropVariety | nu
   const varieties = getAllVarieties();
 
   // 第一步：精确匹配 varietyName 或 subVariety1Name
-  let exactMatch = varieties.find(v =>
+  const exactMatch = varieties.find(v =>
     v.varietyName === trimmedName ||
     v.subVariety1Name === trimmedName ||
     v.varietyName.includes(trimmedName) ||
