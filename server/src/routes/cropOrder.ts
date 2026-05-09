@@ -144,7 +144,13 @@ router.post('/', (req: Request, res: Response) => {
       actual_delivery_date,
       status,
       remarks,
-      create_by
+      create_by,
+      // 新增字段
+      order_name,
+      crop_category,
+      planned_quantity,
+      actual_quantity,
+      expected_harvest_date
     } = req.body;
 
     if (!id) {
@@ -204,8 +210,9 @@ router.post('/', (req: Request, res: Response) => {
         quantity, unit, unit_price, total_amount,
         customer_name, customer_contact, delivery_address,
         order_date, expected_delivery_date, actual_delivery_date,
-        status, remarks, create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, remarks, create_by, create_time, update_time,
+        order_name, crop_category, planned_quantity, actual_quantity, expected_harvest_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -226,7 +233,12 @@ router.post('/', (req: Request, res: Response) => {
       remarks || '',
       create_by || '',
       now,
-      now
+      now,
+      order_name || '',
+      crop_category || '',
+      planned_quantity || 0,
+      actual_quantity || 0,
+      expected_harvest_date || ''
     ]);
 
     saveDatabase();
@@ -280,6 +292,12 @@ router.put('/:id', (req: Request, res: Response) => {
       actualDeliveryDate: 'actual_delivery_date',
       status: 'status',
       remarks: 'remarks',
+      // 新增字段映射
+      orderName: 'order_name',
+      cropCategory: 'crop_category',
+      plannedQuantity: 'planned_quantity',
+      actualQuantity: 'actual_quantity',
+      expectedHarvestDate: 'expected_harvest_date',
       createBy: 'create_by'
     };
 

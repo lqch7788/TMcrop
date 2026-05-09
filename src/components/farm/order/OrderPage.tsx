@@ -3,13 +3,14 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Download, Eye, X, ShoppingCart } from 'lucide-react';
+import { Plus, Download, Eye, X, ShoppingCart, Trash2 } from 'lucide-react';
 import { OrderStats } from './components/OrderStats';
 import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
 import { AddModal } from './modals/AddModal';
 import { DetailModal } from './modals/DetailModal';
-import { ExportFormatModal } from './modals/ExportFormatModal';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import ActionToolbar from '@/components/warehouse/ActionToolbar';
 import {
   cropCategories,
 } from '@/data/cropData';
@@ -95,7 +96,9 @@ export default function OrderPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<CropOrder | null>(null);
 
-  // 导出状态
+  // 工具栏模式状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
@@ -317,6 +320,30 @@ export default function OrderPage() {
         onReset={handleReset}
         orderStatusOptions={orderStatusOptions}
         cropNames={cropNames}
+      />
+
+      {/* 操作按钮 */}
+      <ActionToolbar
+        title="订单管理"
+        batchEditMode={batchEditMode}
+        deleteMode={deleteMode}
+        exportMode={exportMode}
+        selectedRows={selectedRows}
+        lowStockCount={0}
+        filters={{ showLowStock: false }}
+        onLowStockToggle={() => {}}
+        onBatchEdit={() => setBatchEditMode(true)}
+        onDelete={() => setDeleteMode(true)}
+        onExport={handleExportClick}
+        onConfirmBatchEdit={() => {}}
+        onCancelBatchEdit={() => setBatchEditMode(false)}
+        onConfirmDelete={() => {}}
+        onCancelDelete={() => setDeleteMode(false)}
+        onConfirmExport={handleExportClickConfirm}
+        onCancelExport={handleExportCancel}
+        canEdit={true}
+        canDelete={true}
+        canExport={true}
       />
 
       {/* 数据表格 */}

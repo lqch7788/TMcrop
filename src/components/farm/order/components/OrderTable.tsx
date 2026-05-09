@@ -85,67 +85,6 @@ export function OrderTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 表格工具栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          {exportMode ? (
-            <>
-              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <button
-                onClick={onExportSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-              >
-                {selectedRows.length === data.length ? '全不选' : '全选'}
-              </button>
-              <button
-                onClick={onConfirmExport}
-                disabled={selectedRows.length === 0}
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                确认导出
-              </button>
-              <button
-                onClick={onExportCancel}
-                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </>
-          ) : (
-            <>
-              {canCreate && (
-                <button
-                  onClick={onAdd}
-                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  新增
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  onClick={onDelete.bind(null, selectedRows)}
-                  disabled={selectedRows.length === 0}
-                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  批量删除
-                </button>
-              )}
-              {canExport && (
-                <button
-                  onClick={() => onSelectionChange([])}
-                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
       {/* 数据表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
