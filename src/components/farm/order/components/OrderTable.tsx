@@ -92,7 +92,7 @@ export function OrderTable({
       {/* 数据表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {exportMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-12">
@@ -135,8 +135,14 @@ export function OrderTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-emerald-600">
-                    {record.orderCode}
+                  <td className="px-4 py-3 text-sm">
+                    <button
+                      onClick={() => onDetail(record)}
+                      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                      title="点击查看详情"
+                    >
+                      {record.orderCode}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {record.orderName}
@@ -162,13 +168,6 @@ export function OrderTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onDetail(record)}
-                        className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-emerald-600"
-                        title="查看详情"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => {
                           if (confirm(`确定要删除订单 ${record.orderCode} 吗？`)) {

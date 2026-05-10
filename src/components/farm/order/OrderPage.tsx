@@ -298,17 +298,9 @@ export default function OrderPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 标题卡片 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <ShoppingCart className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
-            <p className="text-gray-500">管理订单、交付安排和客户追溯</p>
-          </div>
-        </div>
+      {/* 页面标题 */}
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
       </div>
 
       {/* 统计卡片 */}
@@ -326,7 +318,7 @@ export default function OrderPage() {
 
       {/* 操作按钮 */}
       <ActionToolbar
-        title="订单管理"
+        title="订单列表"
         batchEditMode={batchEditMode}
         deleteMode={deleteMode}
         exportMode={exportMode}
@@ -348,6 +340,8 @@ export default function OrderPage() {
         canEdit={true}
         canDelete={true}
         canExport={true}
+        showLowStockButton={false}
+        noCard={true}
       />
 
       {/* 数据表格 */}

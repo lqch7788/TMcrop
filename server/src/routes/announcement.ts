@@ -470,4 +470,58 @@ router.post('/reset', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 从前端 localStorage 导入数据
+ * POST /api/announcements/import
+ * Body: { notices: Notice[] }
+ */
+router.post('/import', (req: Request, res: Response) => {
+  try {
+    const { notices } = req.body;
+
+    if (!Array.isArray(notices) || notices.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供有效的公告数据' });
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 清空现有数据
+    db.run('DELETE FROM announcements');
+
+    // 批量插入前端数据
+    for (const item of notices) {
+      db.run(`
+        INSERT INTO announcements (
+          id, code, title, type, category, priority, status,
+          sender, date, deadline, read_count, recipients, content,
+          create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        item.id,
+        item.code || '',
+        item.title || '',
+        item.type || '生产公告',
+        item.category || '',
+        item.priority || '中',
+        item.status || '草稿',
+        item.sender || '',
+        item.date || now.substring(0, 10),
+        item.deadline || '',
+        item.readCount || 0,
+        item.recipients || '',
+        item.content || '',
+        now,
+        now
+      ]);
+    }
+
+    saveDatabase();
+    res.json({ success: true, message: `成功导入 ${notices.length} 条公告数据` });
+  } catch (error) {
+    console.error('导入公告数据失败:', error);
+    res.status(500).json({ success: false, error: '导入公告数据失败' });
+  }
+});
+
 export default router;

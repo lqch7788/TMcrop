@@ -15,7 +15,16 @@ import * as localService from './indicatorsService';
 export async function getIndicators(): Promise<Indicator[]> {
   try {
     const response = await apiClient.get<{ data: Indicator[] }>('/indicators');
-    return response.data || [];
+    const data = response.data || [];
+    // 如果 API 返回空数据，检查 localStorage 是否有数据
+    if (data.length === 0) {
+      const localData = localService.getIndicators();
+      if (localData.length > 0) {
+        console.warn('API 返回空数据，降级到 localStorage:', localData.length, '条');
+        return localData;
+      }
+    }
+    return data;
   } catch (error) {
     console.warn('API 调用失败，降级到 localStorage:', error);
     return localService.getIndicators();

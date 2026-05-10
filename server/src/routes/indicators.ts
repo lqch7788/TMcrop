@@ -381,4 +381,56 @@ router.post('/reset', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 从前端 localStorage 导入数据
+ * POST /api/indicators/import
+ * Body: { indicators: Indicator[] }
+ */
+router.post('/import', (req: Request, res: Response) => {
+  try {
+    const { indicators } = req.body;
+
+    if (!Array.isArray(indicators) || indicators.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供有效的指标数据' });
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 清空现有数据
+    db.run('DELETE FROM indicators');
+
+    // 批量插入前端数据
+    for (const item of indicators) {
+      db.run(`
+        INSERT INTO indicators (
+          id, code, name, category, unit, target, actual, trend,
+          frequency, source, warning, weight, create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        item.id,
+        item.code || '',
+        item.name || '',
+        item.category || '生产指标',
+        item.unit || '',
+        item.target || 0,
+        item.actual || 0,
+        item.trend || 'stable',
+        item.frequency || '月度',
+        item.source || '人工录入',
+        item.warning || 0,
+        item.weight || 0,
+        now,
+        now
+      ]);
+    }
+
+    saveDatabase();
+    res.json({ success: true, message: `成功导入 ${indicators.length} 条指标数据` });
+  } catch (error) {
+    console.error('导入指标数据失败:', error);
+    res.status(500).json({ success: false, error: '导入指标数据失败' });
+  }
+});
+
 export default router;

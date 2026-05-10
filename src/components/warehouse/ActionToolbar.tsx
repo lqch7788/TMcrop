@@ -26,6 +26,10 @@ interface ActionToolbarProps {
   canEdit?: boolean;
   canDelete?: boolean;
   canExport?: boolean;
+  // 是否显示库存不足按钮
+  showLowStockButton?: boolean;
+  // 是否使用卡片样式
+  noCard?: boolean;
 }
 
 export default function ActionToolbar({
@@ -52,10 +56,12 @@ export default function ActionToolbar({
   canEdit = true,
   canDelete = true,
   canExport = true,
+  showLowStockButton = true,
+  noCard = false,
 }: ActionToolbarProps) {
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    <div className={`flex items-center justify-between ${noCard ? '' : 'bg-white rounded-xl p-4 shadow-sm'}`}>
+      <h2 className={`font-semibold text-gray-900 ${noCard ? 'text-base' : 'text-lg'}`}>{title}</h2>
       <div className="flex gap-2">
         {/* 默认模式：新增、库存不足、编辑、删除、导出 */}
         {!batchEditMode && !deleteMode && !exportMode && (
@@ -66,16 +72,18 @@ export default function ActionToolbar({
                 新增
               </Button>
             )}
-            <Button
-              size="sm"
-              variant={filters.showLowStock ? 'destructive' : 'secondary'}
-              onClick={onLowStockToggle}
-            >
-              {lowStockCount > 0 && (
-                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{lowStockCount}</span>
-              )}
-              库存不足
-            </Button>
+            {showLowStockButton && (
+              <Button
+                size="sm"
+                variant={filters.showLowStock ? 'destructive' : 'secondary'}
+                onClick={onLowStockToggle}
+              >
+                {lowStockCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{lowStockCount}</span>
+                )}
+                库存不足
+              </Button>
+            )}
             {canEdit && (
               <Button size="sm" variant="blue" onClick={onBatchEdit}>
                 编辑
