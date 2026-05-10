@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface ActionToolbarProps {
@@ -19,6 +19,9 @@ interface ActionToolbarProps {
   onCancelDelete: () => void;
   onConfirmExport: () => void;
   onCancelExport: () => void;
+  // 新增功能
+  onAdd?: () => void;
+  canCreate?: boolean;
   // 权限控制 props
   canEdit?: boolean;
   canDelete?: boolean;
@@ -43,6 +46,8 @@ export default function ActionToolbar({
   onCancelDelete,
   onConfirmExport,
   onCancelExport,
+  onAdd,
+  canCreate = true,
   // 权限控制 props - 默认为 true 以兼容无权限配置的情况
   canEdit = true,
   canDelete = true,
@@ -52,9 +57,15 @@ export default function ActionToolbar({
     <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
       <div className="flex gap-2">
-        {/* 默认模式：库存不足、编辑、删除、导出 */}
+        {/* 默认模式：新增、库存不足、编辑、删除、导出 */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
+            {canCreate && onAdd && (
+              <Button size="sm" onClick={onAdd}>
+                <Plus className="w-4 h-4" />
+                新增
+              </Button>
+            )}
             <Button
               size="sm"
               variant={filters.showLowStock ? 'destructive' : 'secondary'}

@@ -96,12 +96,14 @@ export default function OrderPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<CropOrder | null>(null);
 
-  // 工具栏模式状态
-  const [batchEditMode, setBatchEditMode] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
+  // 导出状态
   const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // 工具栏模式状态
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
@@ -203,15 +205,14 @@ export default function OrderPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['订单编号', '订单名称', '订单类型', '作物类别', '作物名称', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
       '订单编号': record.orderCode,
       '订单名称': record.orderName,
-      '订单类型': record.orderType === 'production' ? '生产订单' : record.orderType === 'seed' ? '种子订单' : '研发订单',
-      '作物类别': record.cropCategory,
-      '作物名称': record.cropName,
+      '订单类型': record.orderType === 'breeding' ? '育种订单' : record.orderType === 'seedling' ? '育苗订单' : record.orderType === 'production' ? '生产订单' : record.orderType === 'research' ? '研发订单' : '其他',
+      '品种路径': record.cropCategory,
       '作物品种': record.cropVariety,
       '计划数量': record.plannedQuantity,
       '实际数量': record.actualQuantity,
@@ -289,9 +290,11 @@ export default function OrderPage() {
   ];
 
   const orderTypeOptions = [
+    { value: 'breeding', label: '育种订单' },
+    { value: 'seedling', label: '育苗订单' },
     { value: 'production', label: '生产订单' },
-    { value: 'seed', label: '种子订单' },
     { value: 'research', label: '研发订单' },
+    { value: 'other', label: '其他' },
   ];
 
   return (
@@ -341,6 +344,8 @@ export default function OrderPage() {
         onCancelDelete={() => setDeleteMode(false)}
         onConfirmExport={handleExportClickConfirm}
         onCancelExport={handleExportCancel}
+        onAdd={() => setAddModalOpen(true)}
+        canCreate={canCreate}
         canEdit={true}
         canDelete={true}
         canExport={true}

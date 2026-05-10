@@ -32,12 +32,16 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
 
   const getOrderTypeBadge = (type: string) => {
     switch (type) {
+      case 'breeding':
+        return <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">育种订单</span>;
+      case 'seedling':
+        return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">育苗订单</span>;
       case 'production':
         return <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">生产订单</span>;
-      case 'seed':
-        return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">种子订单</span>;
       case 'research':
         return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">研发订单</span>;
+      case 'other':
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">其他</span>;
       default:
         return null;
     }
@@ -108,16 +112,12 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">作物类别</p>
+                  <p className="text-xs text-gray-500 mb-1">品种路径</p>
                   <p className="text-sm font-medium text-gray-900">{record.cropCategory || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">作物品种</p>
-                  <p className="text-sm font-medium text-gray-900">{record.cropName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">作物品种</p>
-                  <p className="text-sm text-gray-900">{record.cropVariety}</p>
+                  <p className="text-sm font-medium text-gray-900">{record.cropVariety}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">供应商</p>

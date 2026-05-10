@@ -491,7 +491,7 @@ export interface CropOrder {
   orderCode: string;              // 订单编号 = 订单前缀 + 年月日 + 流水号
                                   // 示例: DD20240426001 (订单2024年4月26日第1单)
   orderName: string;              // 订单名称
-  orderType: 'production' | 'seed' | 'research';  // 订单类型
+  orderType: 'breeding' | 'seedling' | 'production' | 'research' | 'other';  // 订单类型
 
   // 关联的作物实例
   instanceIds: string[];           // 关联的作物实例ID列表
