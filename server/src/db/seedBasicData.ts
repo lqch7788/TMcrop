@@ -441,6 +441,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC006', code: 'greenhouse_type', name: '温室类型', module: 'base', description: '温室大棚类型', sortOrder: 6, status: 'active' },
   { id: 'DC007', code: 'greenhouse_status', name: '温室状态', module: 'base', description: '温室状态', sortOrder: 7, status: 'active' },
   { id: 'DC008', code: 'task_status', name: '任务状态', module: 'task', description: '任务状态', sortOrder: 8, status: 'active' },
+  { id: 'DC008A', code: 'announcement_category', name: '公告分类', module: 'task', description: '公告分类', sortOrder: 8.1, status: 'active' },
   { id: 'DC009', code: 'attendance_status', name: '考勤状态', module: 'hr', description: '考勤记录状态', sortOrder: 9, status: 'active' },
   { id: 'DC010', code: 'overtime_type', name: '加班类型', module: 'hr', description: '加班类型分类', sortOrder: 10, status: 'active' },
   { id: 'DC011', code: 'leave_type', name: '请假类型', module: 'hr', description: '请假类型分类', sortOrder: 11, status: 'active' },
@@ -806,6 +807,13 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'PD063', categoryCode: 'report_display_config', dictCode: 'report_auto_refresh', dictLabel: '自动刷新间隔(分钟)', dictValue: '30', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'PD064', categoryCode: 'report_display_config', dictCode: 'report_page_size', dictLabel: '默认分页大小', dictValue: '20', color: 'blue', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'PD065', categoryCode: 'report_display_config', dictCode: 'report_decimal_places', dictLabel: '小数位数', dictValue: '2', color: 'blue', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 公告分类
+  { id: 'AN001', categoryCode: 'announcement_category', dictCode: 'admin_notice', dictLabel: '行政通知', dictValue: '行政通知', color: 'blue', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'AN002', categoryCode: 'announcement_category', dictCode: 'training_notice', dictLabel: '培训通知', dictValue: '培训通知', color: 'green', sortOrder: 2, isDefault: 1, status: 'active' },
+  { id: 'AN003', categoryCode: 'announcement_category', dictCode: 'purchase_notice', dictLabel: '采购通知', dictValue: '采购通知', color: 'orange', sortOrder: 3, isDefault: 1, status: 'active' },
+  { id: 'AN004', categoryCode: 'announcement_category', dictCode: 'activity_notice', dictLabel: '活动通知', dictValue: '活动通知', color: 'purple', sortOrder: 4, isDefault: 1, status: 'active' },
+  { id: 'AN005', categoryCode: 'announcement_category', dictCode: 'policy_revision', dictLabel: '制度修订', dictValue: '制度修订', color: 'red', sortOrder: 5, isDefault: 1, status: 'active' },
+  { id: 'AN006', categoryCode: 'announcement_category', dictCode: 'production_notice', dictLabel: '生产公告', dictValue: '生产公告', color: 'cyan', sortOrder: 6, isDefault: 1, status: 'active' },
 ];
 
 // ============================================

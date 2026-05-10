@@ -102,7 +102,7 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
     code: 'task',
     name: '任务通用',
     icon: 'ClipboardList',
-    categories: ['cost_category', 'performance_status', 'task_priority', 'task_status', 'unit']
+    categories: ['announcement_category', 'cost_category', 'performance_status', 'task_priority', 'task_status', 'unit']
   },
   {
     code: 'approval',
@@ -221,6 +221,7 @@ export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   // 任务相关
   task_status: '任务状态',
   task_priority: '任务优先级',
+  announcement_category: '公告分类',
   // 仓库相关
   warehouse_location: '仓库位置',
   warehouse: '仓库',

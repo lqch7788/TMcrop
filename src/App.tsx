@@ -121,6 +121,7 @@ const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
 const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
+const SyncDataPage = lazy(() => import('./pages/sync/SyncDataPage'));
 
 // 加载中占位组件
 function PageLoader() {
@@ -249,6 +250,7 @@ function AppContent() {
           <Route path="/crop-inventory" element={<ProduceInventory />} />
           <Route path="/crop/order" element={<Order />} />
           <Route path="/crop/instance" element={<Instance />} />
+          <Route path="/sync-data" element={<SyncDataPage />} />
           <Route path="/production" element={<Production />} />
           <Route path="/tech-solution" element={<TechSolution />} />
           <Route path="/purchase-plan" element={<PurchasePlan />} />
