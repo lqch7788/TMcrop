@@ -10,10 +10,10 @@ interface ProductionTableProps {
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
-  selectedRows: number[];
+  selectedRows: string[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string) => void;
   onSelectAll: () => void;
   onBatchSelectAll: () => void;
   onBatchDeleteSelectAll: () => void;

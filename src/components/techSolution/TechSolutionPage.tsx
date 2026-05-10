@@ -6,6 +6,7 @@ import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
+import { getTechSolutions, addTechSolution as apiAddTechSolution, updateTechSolution as apiUpdateTechSolution, deleteTechSolutions as apiDeleteTechSolutions } from '../../services/apiTechSolutionService';
 import { getAllVarieties, getVarietyByCode } from '../../services/apiCropVarietyService';
 import { searchVarieties, initVarieties } from '../../services/cropVarietyService';
 import { CropVariety } from '../../types/crop';
@@ -153,17 +154,14 @@ export function TechSolutionPage() {
     }
   }, []);
 
-  // 从 API 加载技术方案数据
+  // 从 API 加载技术方案数据（带有localStorage降级）
   const loadTechSolutions = useCallback(async () => {
     setIsLoading(true);
     try {
       if (USE_API) {
-        const response = await apiClient.get<TechSolution[]>('/tech-solutions');
-        if (response && response.length > 0) {
-          setTechSolutions(response);
-        } else {
-          setTechSolutions([]);
-        }
+        // 使用 apiTechSolutionService，它会在API失败时自动降级到localStorage
+        const response = await getTechSolutions();
+        setTechSolutions(response || []);
       } else {
         setTechSolutions([]);
       }
@@ -328,7 +326,7 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        await apiClient.put(`/tech-solutions/${selectedTech.id}`, updateData);
+        await apiUpdateTechSolution(selectedTech.id, updateData);
       }
       // 刷新技术方案列表
       await loadTechSolutions();
@@ -361,8 +359,8 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        // 调用后端 API 创建技术方案
-        const result = await apiClient.post<{ id: string; code: string }>('/tech-solutions', techSolutionData);
+        // 调用后端 API 创建技术方案（带有localStorage降级）
+        const result = await apiAddTechSolution(techSolutionData);
 
         // 只有提交审批模式才创建审批单
         if (submitMode === 'submit') {
@@ -546,8 +544,8 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        // 调用API批量删除
-        await apiClient.post('/tech-solutions/batch-delete', { ids: selectedIds });
+        // 调用API批量删除（带有localStorage降级）
+        await apiDeleteTechSolutions(selectedIds);
       }
       // 刷新技术方案列表
       await loadTechSolutions();
@@ -1646,11 +1644,11 @@ export function TechSolutionPage() {
               onClick={async () => {
                 try {
                   if (USE_API) {
-                    // 逐条调用API更新
+                    // 逐条调用API更新（带有localStorage降级）
                     for (const tech of techSolutions) {
                       const edited = editedTechs[tech.code];
                       if (edited) {
-                        await apiClient.put(`/tech-solutions/${tech.id}`, {
+                        await apiUpdateTechSolution(tech.id, {
                           solutionTitle: edited.title ?? tech.title,
                           cropName: edited.crop ?? tech.crop,
                           plantingMode: edited.plantingMode ?? tech.plantingMode,

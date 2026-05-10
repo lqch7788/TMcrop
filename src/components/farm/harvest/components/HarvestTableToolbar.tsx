@@ -11,6 +11,7 @@ interface HarvestTableToolbarProps {
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
+  selectedRows: number[];
   // 回调
   onCreate: () => void;
   onBatchEdit: () => void;
@@ -33,6 +34,7 @@ export function HarvestTableToolbar({
   exportMode,
   batchEditMode,
   batchDeleteMode,
+  selectedRows,
   onCreate,
   onBatchEdit,
   onBatchDelete,
@@ -58,16 +60,17 @@ export function HarvestTableToolbar({
               <Button
                 size="sm"
                 onClick={onConfirmExport}
+                disabled={selectedRows.length === 0}
               >
                 <Download className="w-4 h-4" />
-                确认导出
+                确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={onCancelExport}
               >
-                取消
+                取消选择
               </Button>
             </>
           )}

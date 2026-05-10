@@ -10,6 +10,7 @@ import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
+import { syncManager } from './services/syncManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -64,7 +65,6 @@ import SupplierCodeRule from './pages/SupplierCodeRule';
 import MaterialCategory from './pages/MaterialCategory';
 import MaterialReceiving from './pages/MaterialReceiving';
 import MaterialReturn from './pages/MaterialReturn';
-import WarehouseMaterials from './pages/WarehouseMaterials';
 import WarehouseOverviewPage from './pages/warehouse/WarehouseOverviewPage';
 import WarehouseInboundPage from './pages/warehouse/WarehouseInboundPage';
 import PendingApproval from './pages/PendingApproval';
@@ -274,7 +274,6 @@ function AppContent() {
           <Route path="/material-category" element={<MaterialCategory />} />
           <Route path="/material-receiving" element={<MaterialReceiving />} />
           <Route path="/material-return" element={<MaterialReturn />} />
-          <Route path="/warehouse-materials" element={<WarehouseMaterials />} />
           <Route path="/warehouse-overview" element={<WarehouseOverviewPage />} />
           <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
           <Route path="/tasks" element={<Tasks />} />
@@ -338,6 +337,12 @@ function App() {
   // 应用启动时自动初始化作物管理模拟数据
   useEffect(() => {
     autoInitializeData().catch(console.error);
+  }, []);
+
+  // 启动同步管理器（SYNC模式）
+  useEffect(() => {
+    syncManager.start();
+    return () => syncManager.stop();
   }, []);
 
   return (

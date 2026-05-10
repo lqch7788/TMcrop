@@ -1,11 +1,12 @@
 /**
  * 育苗数据 API 服务
  * 对接后端 /api/seedlings
- * 原型阶段：只使用API，不降级到localStorage
+ * API失败时降级到 localStorage (seedlingService)
  */
 
 import { apiClient } from './apiClient';
 import { Seedling, DailyRecord, PrintRecord, TransplantRecord, TransplantHistory, SeedlingStatus } from '../types/crop';
+import * as seedlingService from './seedlingService';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendSeedling {
@@ -144,26 +145,46 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
   };
 }
 
-// ==================== API 函数（不降级到localStorage）====================
+// ==================== API 函数（降级到localStorage）====================
 
 export async function getSeedlings(): Promise<Seedling[]> {
-  const data = await apiClient.get<BackendSeedling[]>('/seedlings');
-  return transformSeedlingFromBackend(data) as Seedling[];
+  try {
+    const data = await apiClient.get<BackendSeedling[]>('/seedlings');
+    return transformSeedlingFromBackend(data) as Seedling[];
+  } catch (error) {
+    console.warn('[育苗API] 获取失败，降级到localStorage:', error);
+    return seedlingService.getSeedlings();
+  }
 }
 
 export async function getSeedlingById(id: string): Promise<Seedling | undefined> {
-  const data = await apiClient.get<BackendSeedling>(`/seedlings/${id}`);
-  return transformSeedlingFromBackend(data) as Seedling;
+  try {
+    const data = await apiClient.get<BackendSeedling>(`/seedlings/${id}`);
+    return transformSeedlingFromBackend(data) as Seedling;
+  } catch (error) {
+    console.warn('[育苗API] 获取单个失败，降级到localStorage:', error);
+    return seedlingService.getSeedlingById(id);
+  }
 }
 
 export async function getSeedlingsByIds(ids: string[]): Promise<Seedling[]> {
-  const data = await apiClient.get<BackendSeedling[]>(`/seedlings/batch?ids=${ids.join(',')}`);
-  return transformSeedlingFromBackend(data) as Seedling[];
+  try {
+    const data = await apiClient.get<BackendSeedling[]>(`/seedlings/batch?ids=${ids.join(',')}`);
+    return transformSeedlingFromBackend(data) as Seedling[];
+  } catch (error) {
+    console.warn('[育苗API] 批量获取失败，降级到localStorage:', error);
+    return seedlingService.getSeedlingsByIds(ids);
+  }
 }
 
 export async function getSeedlingsBySourceId(sourceId: string): Promise<Seedling[]> {
-  const data = await apiClient.get<BackendSeedling[]>(`/seedlings/source/${sourceId}`);
-  return transformSeedlingFromBackend(data) as Seedling[];
+  try {
+    const data = await apiClient.get<BackendSeedling[]>(`/seedlings/source/${sourceId}`);
+    return transformSeedlingFromBackend(data) as Seedling[];
+  } catch (error) {
+    console.warn('[育苗API] 按种源获取失败，降级到localStorage:', error);
+    return seedlingService.getSeedlingsBySourceId(sourceId);
+  }
 }
 
 export async function generateSeedlingCode(): Promise<string> {
@@ -175,42 +196,82 @@ export async function generateSeedlingCodeByDate(date: Date | string): Promise<s
 }
 
 export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>): Promise<Seedling> {
-  const result = await apiClient.post<{ id: string }>('/seedlings', seedling);
-  return { ...seedling, id: result.id } as Seedling;
+  try {
+    const result = await apiClient.post<{ id: string }>('/seedlings', seedling);
+    return { ...seedling, id: result.id } as Seedling;
+  } catch (error) {
+    console.warn('[育苗API] 创建失败，降级到localStorage:', error);
+    return seedlingService.addSeedling(seedling);
+  }
 }
 
 export async function updateSeedling(id: string, updates: Partial<Seedling>): Promise<Seedling | null> {
-  const result = await apiClient.put<{ id: string }>(`/seedlings/${id}`, updates);
-  return result ? { ...updates, id } as Seedling : null;
+  try {
+    const result = await apiClient.put<{ id: string }>(`/seedlings/${id}`, updates);
+    return result ? { ...updates, id } as Seedling : null;
+  } catch (error) {
+    console.warn('[育苗API] 更新失败，降级到localStorage:', error);
+    return seedlingService.updateSeedling(id, updates);
+  }
 }
 
 export async function deleteSeedling(id: string): Promise<boolean> {
-  await apiClient.delete(`/seedlings/${id}`);
-  return true;
+  try {
+    await apiClient.delete(`/seedlings/${id}`);
+    return true;
+  } catch (error) {
+    console.warn('[育苗API] 删除失败，降级到localStorage:', error);
+    return seedlingService.deleteSeedling(id);
+  }
 }
 
 export async function deleteSeedlings(ids: string[]): Promise<boolean> {
-  await apiClient.delete(`/seedlings/batch?ids=${ids.join(',')}`);
-  return true;
+  try {
+    await apiClient.delete(`/seedlings/batch?ids=${ids.join(',')}`);
+    return true;
+  } catch (error) {
+    console.warn('[育苗API] 批量删除失败，降级到localStorage:', error);
+    return seedlingService.deleteSeedlings(ids);
+  }
 }
 
 export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>): Promise<DailyRecord | null> {
-  return await apiClient.post<DailyRecord>(`/seedlings/${seedlingId}/daily-records`, record);
+  try {
+    return await apiClient.post<DailyRecord>(`/seedlings/${seedlingId}/daily-records`, record);
+  } catch (error) {
+    console.warn('[育苗API] 添加每日记录失败，降级到localStorage:', error);
+    return seedlingService.addDailyRecord(seedlingId, record);
+  }
 }
 
 export async function deleteDailyRecord(seedlingId: string, recordId: string): Promise<boolean> {
-  await apiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
-  return true;
+  try {
+    await apiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
+    return true;
+  } catch (error) {
+    console.warn('[育苗API] 删除每日记录失败，降级到localStorage:', error);
+    return seedlingService.deleteDailyRecord(seedlingId, recordId);
+  }
 }
 
 export async function updateDailyRecord(seedlingId: string, recordId: string, updates: Partial<DailyRecord>): Promise<boolean> {
-  await apiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
-  return true;
+  try {
+    await apiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
+    return true;
+  } catch (error) {
+    console.warn('[育苗API] 更新每日记录失败，降级到localStorage:', error);
+    return seedlingService.updateDailyRecord(seedlingId, recordId, updates);
+  }
 }
 
 export async function increasePlantedCount(id: string, count: number): Promise<boolean> {
-  await apiClient.post(`/seedlings/${id}/increase-planted`, { count });
-  return true;
+  try {
+    await apiClient.post(`/seedlings/${id}/increase-planted`, { count });
+    return true;
+  } catch (error) {
+    console.warn('[育苗API] 增加定植数量失败，降级到localStorage:', error);
+    return seedlingService.increasePlantedCount(id, count);
+  }
 }
 
 export async function getTransplantReadySeedlings(): Promise<Seedling[]> {

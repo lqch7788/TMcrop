@@ -14,6 +14,7 @@
  */
 import { BarChart3, Download, Plus, Award, PieChart, Target } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useIndicators } from './hooks/useIndicators';
 import IndicatorsFilters from './components/Indicators/IndicatorsFilters';
 import IndicatorsTable from './components/Indicators/IndicatorsTable';
@@ -82,7 +83,7 @@ export default function Indicators() {
       <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -117,42 +118,23 @@ export default function Indicators() {
       </div>
 
       {/* 标签页导航 */}
-      <div className="bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
-        <div className="flex border-b border-gray-200">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('list')}
-            className={`flex items-center gap-2 ${activeTab === 'list' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
-          >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 mb-6 shadow-sm">
+        <TabsList className="grid w-full grid-cols-4 gap-1 p-1 bg-gray-100/80 rounded-xl">
+          <TabsTrigger value="list" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />指标列表
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('category')}
-            className={`flex items-center gap-2 ${activeTab === 'category' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
-          >
+          </TabsTrigger>
+          <TabsTrigger value="category" className="flex items-center gap-2">
             <PieChart className="w-4 h-4" />分类管理
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('analyze')}
-            className={`flex items-center gap-2 ${activeTab === 'analyze' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
-          >
+          </TabsTrigger>
+          <TabsTrigger value="analyze" className="flex items-center gap-2">
             <Target className="w-4 h-4" />达成分析
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('evaluate')}
-            className={`flex items-center gap-2 ${activeTab === 'evaluate' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
-          >
+          </TabsTrigger>
+          <TabsTrigger value="evaluate" className="flex items-center gap-2">
             <Award className="w-4 h-4" />考核评价
-          </Button>
-        </div>
-      </div>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* 指标列表 */}
-      {activeTab === 'list' && (
-        <div>
+        <TabsContent value="list" className="mt-4">
           <IndicatorsFilters
             searchKeyword={searchKeyword}
             categoryFilter={categoryFilter}
@@ -176,26 +158,23 @@ export default function Indicators() {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-        </div>
-      )}
+        </TabsContent>
 
-      {/* 分类管理 */}
-      {activeTab === 'category' && (
-        <CategoryPanel
-          categorySummary={categorySummary}
-          indicators={paginatedIndicators}
-        />
-      )}
+        <TabsContent value="category" className="mt-4">
+          <CategoryPanel
+            categorySummary={categorySummary}
+            indicators={paginatedIndicators}
+          />
+        </TabsContent>
 
-      {/* 达成分析 */}
-      {activeTab === 'analyze' && (
-        <AnalyzePanel analyzeData={analyzeData} />
-      )}
+        <TabsContent value="analyze" className="mt-4">
+          <AnalyzePanel analyzeData={analyzeData} />
+        </TabsContent>
 
-      {/* 考核评价 */}
-      {activeTab === 'evaluate' && (
-        <EvaluatePanel evaluationData={evaluationData} />
-      )}
+        <TabsContent value="evaluate" className="mt-4">
+          <EvaluatePanel evaluationData={evaluationData} />
+        </TabsContent>
+      </Tabs>
 
       {/* 创建/编辑弹窗 */}
       <CreateModal

@@ -5,7 +5,7 @@
 
 import type { PurchasePlan } from '../types/purchase';
 import { purchasePlans as initialPurchasePlans } from '../data/mockData';
-import { apiClient, USE_API } from '../services/apiClient';
+import { getPurchasePlans } from '../services/apiPurchasePlanService';
 
 const STORAGE_KEY = 'purchase_plan_status_updates';
 
@@ -63,10 +63,10 @@ export function getPurchasePlansWithStatus(): PurchasePlan[] {
   }) as PurchasePlan[];
 }
 
-// 异步获取采购计划数据（强制使用 API，不回退到 mock）
+// 异步获取采购计划数据（使用 apiPurchasePlanService，带localStorage降级）
 export async function getPurchasePlansWithStatusAsync(): Promise<PurchasePlan[]> {
-  // 强制使用 API 获取数据，不再回退到 mock
-  const apiData = await apiClient.get<PurchasePlan[]>('/purchase-plans');
+  // 使用 apiPurchasePlanService，它会在API失败时自动降级到localStorage
+  const apiData = await getPurchasePlans();
   const updates = getStatusUpdates();
 
   // 应用本地状态更新

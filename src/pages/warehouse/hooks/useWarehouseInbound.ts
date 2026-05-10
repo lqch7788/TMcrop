@@ -510,7 +510,7 @@ export function useWarehouseInbound() {
     filteredRecords,
 
     // 行展开
-    toggleExpandRow,
+    onToggleExpand: toggleExpandRow,
 
     // 操作方法
     onSelectAll,

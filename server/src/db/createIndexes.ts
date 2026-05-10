@@ -229,11 +229,11 @@ export function createIndexes() {
   // ========== 21. 临时任务表索引 ==========
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_temp_tasks_executor
-    ON temp_tasks(executor_id, status, create_time)
+    ON temp_tasks(assignee_id, status, create_time)
   `);
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_temp_tasks_status
-    ON temp_tasks(status, deadline, priority)
+    ON temp_tasks(status, due_date, priority)
   `);
 
   // ========== 22. 加班记录表索引 ==========
@@ -261,7 +261,7 @@ export function createIndexes() {
   // ========== 25. 采购计划表索引 ==========
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_purchase_plans_applicant
-    ON purchase_plans(applicant_id, status, plan_date)
+    ON purchase_plans(applicant_id, status, apply_date)
   `);
 
   // ========== 26. 供应商表索引 ==========
@@ -273,20 +273,18 @@ export function createIndexes() {
   // ========== 27. 操作日志表索引 ==========
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_operation_logs_user
-    ON operation_logs(user_id, operate_time)
+    ON operation_logs(user_id, created_at)
   `);
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_operation_logs_module
-    ON operation_logs(module, operate_time)
+    ON operation_logs(module, created_at)
   `);
 
   // ========== 28. 通知表索引 ==========
-  db.run(`
-    CREATE INDEX IF NOT EXISTS idx_notifications_receiver
-    ON notifications(receiver_id, is_read, create_time)
-  `);
+  // notifications 表不存在，跳过该索引
+  // db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_receiver ON notifications(receiver_id, is_read, create_time)`);
 
-  console.log('索引创建完成！共创建 44 个索引');
+  console.log('索引创建完成！共创建 43 个索引');
 }
 
 // 导出索引信息查询函数
