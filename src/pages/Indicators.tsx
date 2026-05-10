@@ -25,10 +25,8 @@ import CreateModal from './components/Indicators/IndicatorsModals/CreateModal';
 import DetailModal from './components/Indicators/IndicatorsModals/DetailModal';
 import DeleteModal from './components/Indicators/IndicatorsModals/DeleteModal';
 import ExportModal from './components/Indicators/IndicatorsModals/ExportModal';
-import { useToast } from '../contexts/ToastContext';
 
 export default function Indicators() {
-  const { toast } = useToast();
   const {
     evaluationData,
     analyzeData,
@@ -45,15 +43,19 @@ export default function Indicators() {
     handleAdd,
     handleEvaluate,
     handleCloseModal,
+    handleSave,
     showDeleteModal,
     deleteItem,
     handleDeleteConfirm,
     handleCloseDeleteModal,
+    exportMode,
     showExportModal,
     exportFormat,
     setExportFormat,
     handleExport,
     handleExportConfirm,
+    handleDoExport,
+    handleCancelExport,
     handleCloseExportModal,
     selectedIds,
     currentPage,
@@ -70,12 +72,6 @@ export default function Indicators() {
     handleEdit,
     handleDelete,
   } = useIndicators();
-
-  // 保存操作
-  const handleSave = () => {
-    handleCloseModal();
-    toast.success('保存成功');
-  };
 
   return (
     <div className="p-6 bg-[#F2F6FA] min-h-screen">
@@ -99,13 +95,32 @@ export default function Indicators() {
             >
               <Award className="w-4 h-4" />考核评价
             </Button>
-            <Button
-              variant="default"
-              onClick={handleExport}
-              className="flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-            </Button>
+            {!exportMode ? (
+              <Button
+                variant="default"
+                onClick={handleExport}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />导出
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="default"
+                  onClick={handleExportConfirm}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelExport}
+                  className="flex items-center gap-2"
+                >
+                  取消
+                </Button>
+              </>
+            )}
             <Button
               variant="blue"
               onClick={handleAdd}
@@ -145,6 +160,7 @@ export default function Indicators() {
           <IndicatorsTable
             indicators={paginatedIndicators}
             selectedIds={selectedIds}
+            exportMode={exportMode}
             currentPage={currentPage}
             pageSize={pageSize}
             totalPages={totalPages}
@@ -208,7 +224,7 @@ export default function Indicators() {
         totalCount={filteredIndicators.length}
         onClose={handleCloseExportModal}
         onFormatChange={setExportFormat}
-        onConfirm={handleExportConfirm}
+        onConfirm={handleDoExport}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 /**
  * 指标数据管理 Hook
  * 封装 Indicators.tsx 的状态管理和业务逻辑
+ * 支持 API 调用和 localStorage 降级
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import type {
   Indicator,
@@ -13,6 +14,7 @@ import type {
   ModalType,
   ActiveTab
 } from '../types/indicators.types';
+import * as apiService from '../../services/apiIndicatorsService';
 
 // 指标类别选项
 export const CATEGORIES: IndicatorCategory[] = [
@@ -20,36 +22,16 @@ export const CATEGORIES: IndicatorCategory[] = [
   '效率指标', '效益指标', '服务指标', '设备指标', '安全指标'
 ];
 
-// 初始指标数据
-const INITIAL_INDICATORS: Indicator[] = [
-  { id: '1', code: 'KPI001', name: '月产量完成率', category: '生产指标', unit: '%', target: 95, actual: 92.5, trend: 'up', frequency: '月度', source: '自动采集', warning: 90, weight: 15 },
-  { id: '2', code: 'KPI002', name: '温室利用率', category: '资源指标', unit: '%', target: 90, actual: 88.3, trend: 'down', frequency: '月度', source: '自动采集', warning: 85, weight: 10 },
-  { id: '3', code: 'KPI003', name: '种苗成活率', category: '质量指标', unit: '%', target: 98, actual: 97.2, trend: 'up', frequency: '季度', source: '自动采集', warning: 95, weight: 12 },
-  { id: '4', code: 'KPI004', name: '病虫害发生率', category: '质量指标', unit: '%', target: 5, actual: 3.8, trend: 'down', frequency: '月度', source: '自动采集', warning: 8, weight: 10 },
-  { id: '5', code: 'KPI005', name: '采收损耗率', category: '质量指标', unit: '%', target: 3, actual: 2.5, trend: 'down', frequency: '月度', source: '人工录入', warning: 5, weight: 8 },
-  { id: '6', code: 'KPI006', name: '人工成本占比', category: '成本指标', unit: '%', target: 25, actual: 26.2, trend: 'up', frequency: '月度', source: '自动采集', warning: 28, weight: 10 },
-  { id: '7', code: 'KPI007', name: '肥料利用率', category: '效率指标', unit: '%', target: 85, actual: 82.1, trend: 'up', frequency: '季度', source: '人工录入', warning: 80, weight: 8 },
-  { id: '8', code: 'KPI008', name: '亩均产值', category: '效益指标', unit: '万元/亩', target: 3.5, actual: 3.2, trend: 'up', frequency: '年度', source: '人工录入', warning: 3.0, weight: 15 },
-  { id: '9', code: 'KPI009', name: '客户满意度', category: '服务指标', unit: '分', target: 90, actual: 92, trend: 'up', frequency: '季度', source: '人工录入', warning: 85, weight: 10 },
-  { id: '10', code: 'KPI010', name: '设备完好率', category: '设备指标', unit: '%', target: 95, actual: 94.5, trend: 'down', frequency: '月度', source: '自动采集', warning: 90, weight: 8 },
-  { id: '11', code: 'KPI011', name: '水资源利用率', category: '效率指标', unit: '%', target: 80, actual: 78.5, trend: 'up', frequency: '月度', source: '自动采集', warning: 75, weight: 8 },
-  { id: '12', code: 'KPI012', name: '农残检测合格率', category: '质量指标', unit: '%', target: 100, actual: 99.8, trend: 'stable', frequency: '批次', source: '人工录入', warning: 98, weight: 12 },
-  { id: '13', code: 'KPI013', name: '新品研发周期', category: '效率指标', unit: '天', target: 60, actual: 55, trend: 'down', frequency: '年度', source: '人工录入', warning: 70, weight: 6 },
-  { id: '14', code: 'KPI014', name: '能源消耗强度', category: '成本指标', unit: 'kWh/亩', target: 800, actual: 850, trend: 'up', frequency: '月度', source: '自动采集', warning: 900, weight: 8 },
-  { id: '15', code: 'KPI015', name: '员工培训完成率', category: '服务指标', unit: '%', target: 95, actual: 93, trend: 'up', frequency: '季度', source: '人工录入', warning: 90, weight: 5 },
-  { id: '16', code: 'KPI016', name: '安全事故发生率', category: '安全指标', unit: '次', target: 0, actual: 1, trend: 'up', frequency: '月度', source: '人工录入', warning: 2, weight: 15 },
-];
-
 // 初始评估数据
 const INITIAL_EVALUATION_DATA: EvaluationItem[] = [
-  { id: '1', name: '基地一', productionScore: 92, qualityScore: 95, costScore: 88, efficiencyScore: 90, totalScore: 91.25, rank: 1 },
-  { id: '2', name: '基地二', productionScore: 88, qualityScore: 92, costScore: 85, efficiencyScore: 87, totalScore: 88.0, rank: 2 },
-  { id: '3', name: '基地三', productionScore: 85, qualityScore: 90, costScore: 90, efficiencyScore: 85, totalScore: 87.5, rank: 3 },
-  { id: '4', name: '基地四', productionScore: 90, qualityScore: 88, costScore: 82, efficiencyScore: 88, totalScore: 87.0, rank: 4 },
-  { id: '5', name: '基地五', productionScore: 82, qualityScore: 85, costScore: 88, efficiencyScore: 86, totalScore: 85.25, rank: 5 },
-  { id: '6', name: '基地六', productionScore: 80, qualityScore: 88, costScore: 85, efficiencyScore: 84, totalScore: 84.25, rank: 6 },
-  { id: '7', name: '基地七', productionScore: 78, qualityScore: 82, costScore: 86, efficiencyScore: 82, totalScore: 82.0, rank: 7 },
-  { id: '8', name: '基地八', productionScore: 75, qualityScore: 80, costScore: 84, efficiencyScore: 80, totalScore: 79.75, rank: 8 },
+  { id: '1', name: '上海松江基地', productionScore: 92, qualityScore: 95, costScore: 88, efficiencyScore: 90, totalScore: 91.25, rank: 1 },
+  { id: '2', name: '上海崇明基地', productionScore: 88, qualityScore: 92, costScore: 85, efficiencyScore: 87, totalScore: 88.0, rank: 2 },
+  { id: '3', name: '上海嘉定基地', productionScore: 85, qualityScore: 90, costScore: 90, efficiencyScore: 85, totalScore: 87.5, rank: 3 },
+  { id: '4', name: '上海奉贤基地', productionScore: 90, qualityScore: 88, costScore: 82, efficiencyScore: 88, totalScore: 87.0, rank: 4 },
+  { id: '5', name: '西安雁塔基地', productionScore: 82, qualityScore: 85, costScore: 88, efficiencyScore: 86, totalScore: 85.25, rank: 5 },
+  { id: '6', name: '西安高新基地', productionScore: 80, qualityScore: 88, costScore: 85, efficiencyScore: 84, totalScore: 84.25, rank: 6 },
+  { id: '7', name: '宁波北仑基地', productionScore: 78, qualityScore: 82, costScore: 86, efficiencyScore: 82, totalScore: 82.0, rank: 7 },
+  { id: '8', name: '宁波镇海基地', productionScore: 75, qualityScore: 80, costScore: 84, efficiencyScore: 80, totalScore: 79.75, rank: 8 },
 ];
 
 // 初始分析数据
@@ -104,6 +86,10 @@ export const calcAchievementRate = (actual: number, target: number): string => {
 export function useIndicators() {
   const { toast } = useToast();
 
+  // 指标数据状态
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [loading, setLoading] = useState(true);
+
   // 筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<IndicatorCategory>('全部');
@@ -123,6 +109,7 @@ export function useIndicators() {
   // 导出弹窗状态
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+  const [exportMode, setExportMode] = useState(false);
 
   // 选择状态
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -132,10 +119,26 @@ export function useIndicators() {
   const [pageSize, setPageSize] = useState(10);
 
   // 静态数据（保持不变）
-  const indicators = INITIAL_INDICATORS;
   const evaluationData = INITIAL_EVALUATION_DATA;
   const analyzeData = INITIAL_ANALYZE_DATA;
   const categorySummary = CATEGORY_SUMMARY;
+
+  // 初始化加载数据
+  useEffect(() => {
+    const loadIndicators = async () => {
+      try {
+        setLoading(true);
+        const data = await apiService.getIndicators();
+        setIndicators(data);
+      } catch (error) {
+        console.error('加载指标数据失败:', error);
+        toast.error('加载指标数据失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadIndicators();
+  }, [toast]);
 
   // 筛选后的指标数据
   const filteredIndicators = useMemo(() => {
@@ -159,6 +162,16 @@ export function useIndicators() {
   // 重置分页
   const resetPagination = useCallback(() => {
     setCurrentPage(1);
+  }, []);
+
+  // 刷新数据
+  const refreshIndicators = useCallback(async () => {
+    try {
+      const data = await apiService.getIndicators();
+      setIndicators(data);
+    } catch (error) {
+      console.error('刷新指标数据失败:', error);
+    }
   }, []);
 
   // 弹窗操作
@@ -196,17 +209,47 @@ export function useIndicators() {
     setSelectedIndicator(null);
   }, []);
 
+  // 保存操作（新增/编辑）
+  const handleSave = useCallback(async (indicatorData: Partial<Indicator>) => {
+    try {
+      if (modalType === 'add') {
+        const newIndicator = await apiService.createIndicator(indicatorData as Omit<Indicator, 'id' | 'code'>);
+        setIndicators(prev => [newIndicator, ...prev]);
+        toast.success('创建成功');
+      } else if (modalType === 'edit' && selectedIndicator) {
+        const updated = await apiService.updateIndicator(selectedIndicator.id, indicatorData);
+        if (updated) {
+          setIndicators(prev => prev.map(ind => ind.id === selectedIndicator.id ? { ...ind, ...indicatorData } : ind));
+          toast.success('保存成功');
+        }
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error('保存指标失败:', error);
+      toast.error('保存失败');
+    }
+  }, [modalType, selectedIndicator, handleCloseModal, toast]);
+
   // 删除操作
   const handleDelete = useCallback((item: Indicator) => {
     setDeleteItem(item);
     setShowDeleteModal(true);
   }, []);
 
-  const handleDeleteConfirm = useCallback(() => {
-    setShowDeleteModal(false);
-    setDeleteItem(null);
-    toast.success('删除成功');
-  }, [toast]);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteItem) return;
+    try {
+      await apiService.deleteIndicator(deleteItem.id);
+      setIndicators(prev => prev.filter(ind => ind.id !== deleteItem.id));
+      toast.success('删除成功');
+    } catch (error) {
+      console.error('删除指标失败:', error);
+      toast.error('删除失败');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+    }
+  }, [deleteItem, toast]);
 
   const handleCloseDeleteModal = useCallback(() => {
     setShowDeleteModal(false);
@@ -215,14 +258,83 @@ export function useIndicators() {
 
   // 导出操作
   const handleExport = useCallback(() => {
-    setShowExportModal(true);
+    setExportMode(true);
+    setSelectedIds([]);
   }, []);
 
   const handleExportConfirm = useCallback(() => {
+    setShowExportModal(true);
+  }, []);
+
+  const handleDoExport = useCallback(async () => {
+    const dataToExport = selectedIds.length > 0
+      ? indicators.filter(ind => selectedIds.includes(ind.id))
+      : indicators;
+
+    // 生成Excel HTML内容
+    const headers = ['指标编码', '指标名称', '类别', '单位', '目标值', '实际值', '达成率', '趋势', '采集方式', '权重'];
+    const rows = dataToExport.map(ind => [
+      ind.code,
+      ind.name,
+      ind.category,
+      ind.unit,
+      ind.target,
+      ind.actual,
+      ((ind.actual / ind.target) * 100).toFixed(1) + '%',
+      ind.trend === 'up' ? '上升' : ind.trend === 'down' ? '下降' : '持平',
+      ind.source,
+      ind.weight
+    ]);
+
+    let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    rows.forEach(row => {
+      content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`;
+    });
+    content += '</table></body></html>';
+
+    const mimeType = 'application/vnd.ms-excel;charset=utf-8';
+    const extension = exportFormat === 'csv' ? 'csv' : exportFormat === 'word' ? 'doc' : 'xls';
+    const fileName = `指标数据汇总_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+    try {
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Excel Files',
+              accept: { [mimeType]: ['.' + extension] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      } else {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Export failed:', err);
+      }
+    }
+
     setShowExportModal(false);
+    setExportMode(false);
     setSelectedIds([]);
     toast.success('导出成功');
-  }, [toast]);
+  }, [selectedIds, indicators, exportFormat, toast]);
+
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setSelectedIds([]);
+  }, []);
 
   const handleCloseExportModal = useCallback(() => {
     setShowExportModal(false);
@@ -257,6 +369,7 @@ export function useIndicators() {
     evaluationData,
     analyzeData,
     categorySummary,
+    loading,
 
     // 筛选状态
     searchKeyword,
@@ -278,6 +391,7 @@ export function useIndicators() {
     handleAdd,
     handleEvaluate,
     handleCloseModal,
+    handleSave,
 
     // 删除弹窗状态
     showDeleteModal,
@@ -287,11 +401,14 @@ export function useIndicators() {
     handleCloseDeleteModal,
 
     // 导出弹窗状态
+    exportMode,
     showExportModal,
     exportFormat,
     setExportFormat,
     handleExport,
     handleExportConfirm,
+    handleDoExport,
+    handleCancelExport,
     handleCloseExportModal,
 
     // 选择状态
@@ -308,5 +425,8 @@ export function useIndicators() {
     handlePageChange,
     handlePageSizeChange,
     resetPagination,
+
+    // 刷新数据
+    refreshIndicators,
   };
 }

@@ -10,6 +10,7 @@ import { getProgressColor, getAchievementColor, calcAchievementRate } from '../.
 interface IndicatorsTableProps {
   indicators: Indicator[];
   selectedIds: string[];
+  exportMode: boolean;
   currentPage: number;
   pageSize: number;
   totalPages: number;
@@ -68,6 +69,7 @@ function renderPagination(currentPage: number, totalPages: number, onPageChange:
 export default function IndicatorsTable({
   indicators,
   selectedIds,
+  exportMode,
   currentPage,
   pageSize,
   totalPages,
@@ -87,14 +89,16 @@ export default function IndicatorsTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-3 py-3 text-left text-sm font-semibold w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length === indicators.length && indicators.length > 0}
-                  onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-              </th>
+              {exportMode && (
+                <th className="px-3 py-3 text-left text-sm font-semibold w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === indicators.length && indicators.length > 0}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+              )}
               <th className="px-3 py-3 text-left text-sm font-semibold">指标编码</th>
               <th className="px-3 py-3 text-left text-sm font-semibold">指标名称</th>
               <th className="px-3 py-3 text-left text-sm font-semibold">类别</th>
@@ -112,14 +116,16 @@ export default function IndicatorsTable({
                 key={ind.id}
                 className={`hover:bg-blue-50 transition-all duration-300 ${selectedIds.includes(ind.id) ? 'bg-blue-50' : ''}`}
               >
-                <td className="px-3 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(ind.id)}
-                    onChange={() => onToggleSelect(ind.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </td>
+                {exportMode && (
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(ind.id)}
+                      onChange={() => onToggleSelect(ind.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                )}
                 <td className="px-3 py-3 text-sm text-gray-600 font-mono">{ind.code}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2">

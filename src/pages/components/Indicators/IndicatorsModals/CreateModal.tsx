@@ -2,6 +2,7 @@
  * 指标创建/编辑弹窗组件
  * 用于新增指标或编辑已有指标
  */
+import { useState, useEffect } from 'react';
 import { Plus, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import type { Indicator } from '../../../types/indicators.types';
@@ -11,12 +12,70 @@ interface CreateModalProps {
   isOpen: boolean;
   indicator: Indicator | null;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (data: Partial<Indicator>) => void;
 }
 
 export default function CreateModal({ isOpen, indicator, onClose, onSave }: CreateModalProps) {
   const isEdit = !!indicator;
   const categories = CATEGORIES.filter(c => c !== '全部');
+
+  // 表单状态
+  const [formData, setFormData] = useState({
+    code: '',
+    name: '',
+    category: '生产指标',
+    unit: '',
+    target: 0,
+    actual: 0,
+    source: '自动采集',
+    warning: 0,
+    weight: 0,
+    frequency: '月度',
+  });
+
+  // 初始化表单数据
+  useEffect(() => {
+    if (isOpen) {
+      if (indicator) {
+        setFormData({
+          code: indicator.code || '',
+          name: indicator.name || '',
+          category: indicator.category || '生产指标',
+          unit: indicator.unit || '',
+          target: indicator.target || 0,
+          actual: indicator.actual || 0,
+          source: indicator.source || '自动采集',
+          warning: indicator.warning || 0,
+          weight: indicator.weight || 0,
+          frequency: indicator.frequency || '月度',
+        });
+      } else {
+        setFormData({
+          code: '',
+          name: '',
+          category: '生产指标',
+          unit: '',
+          target: 0,
+          actual: 0,
+          source: '自动采集',
+          warning: 0,
+          weight: 0,
+          frequency: '月度',
+        });
+      }
+    }
+  }, [isOpen, indicator]);
+
+  const handleChange = (field: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!formData.name.trim()) {
+      return;
+    }
+    onSave(formData);
+  };
 
   if (!isOpen) return null;
 
@@ -24,7 +83,7 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* 头部 */}
-        <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-between">
+        <div className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white flex items-center justify-between">
           <h3 className="font-semibold flex items-center gap-2">
             {isEdit ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             {isEdit ? '编辑指标' : '新增指标'}
@@ -43,8 +102,10 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
               </label>
               <input
                 type="text"
-                defaultValue={indicator?.code || 'KPI017'}
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                value={formData.code}
+                onChange={e => handleChange('code', e.target.value)}
+                placeholder="系统自动生成"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
@@ -53,17 +114,19 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
               </label>
               <input
                 type="text"
-                defaultValue={indicator?.name || ''}
+                value={formData.name}
+                onChange={e => handleChange('name', e.target.value)}
                 placeholder="请输入指标名称"
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
                 <select
-                  defaultValue={indicator?.category || '生产指标'}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                  value={formData.category}
+                  onChange={e => handleChange('category', e.target.value)}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 >
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -71,14 +134,56 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
+                <input
+                  type="text"
+                  value={formData.unit}
+                  onChange={e => handleChange('unit', e.target.value)}
+                  placeholder="如: %, 元, kg"
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">目标值</label>
+                <input
+                  type="number"
+                  value={formData.target}
+                  onChange={e => handleChange('target', parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">实际值</label>
+                <input
+                  type="number"
+                  value={formData.actual}
+                  onChange={e => handleChange('actual', parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">数据采集方式</label>
                 <select
-                  defaultValue={indicator?.source || '自动采集'}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                  value={formData.source}
+                  onChange={e => handleChange('source', e.target.value)}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 >
                   <option value="自动采集">自动采集</option>
                   <option value="人工录入">人工录入</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">权重</label>
+                <input
+                  type="number"
+                  value={formData.weight}
+                  onChange={e => handleChange('weight', parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                />
               </div>
             </div>
           </div>
@@ -87,7 +192,7 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="blue" onClick={onSave}>保存</Button>
+          <Button variant="default" onClick={handleSubmit}>保存</Button>
         </div>
       </div>
     </div>

@@ -204,7 +204,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
               </Link>
             </li>
 
-            {/* 公告发布 */}
+            {/* 公告管理 */}
             <li>
               <Link
                 to="/announcement"
@@ -220,7 +220,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
               >
                 <Megaphone className="flex-shrink-0 w-5 h-5" />
                 {!collapsed && (
-                  <span className="text-sm font-medium">公告发布</span>
+                  <span className="text-sm font-medium">公告管理</span>
                 )}
               </Link>
             </li>

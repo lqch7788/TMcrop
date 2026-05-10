@@ -1,8 +1,7 @@
 /**
  * 指标导出弹窗组件
  */
-import { Download } from 'lucide-react';
-import { Button } from '../../../../components/ui/button';
+import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -23,56 +22,56 @@ export default function ExportModal({
   onFormatChange,
   onConfirm,
 }: ExportModalProps) {
-  if (!isOpen) return null;
-
   const exportCount = selectedCount > 0 ? selectedCount : totalCount;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-lg w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-        {/* 头部 */}
-        <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Download className="w-5 h-5" />
-            导出数据
-          </h3>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white">
-            &times;
-          </Button>
-        </div>
+  const formats = [
+    { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
+    { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
+    { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+  ];
 
-        {/* 内容 */}
-        <div className="p-6">
-          <p className="text-gray-700 mb-2">
-            确认导出 <span className="text-blue-600 font-medium">{exportCount}</span> 条数据
-          </p>
-          <p className="text-gray-500 text-sm mb-4">选择导出格式：</p>
-          <div className="flex justify-center gap-3 mb-6">
-            <Button
-              variant={exportFormat === 'excel' ? 'blue' : 'ghost'}
-              onClick={() => onFormatChange('excel')}
-            >
-              Excel (.xlsx)
-            </Button>
-            <Button
-              variant={exportFormat === 'csv' ? 'blue' : 'ghost'}
-              onClick={() => onFormatChange('csv')}
-            >
-              CSV (.csv)
-            </Button>
-            <Button
-              variant={exportFormat === 'word' ? 'blue' : 'ghost'}
-              onClick={() => onFormatChange('word')}
-            >
-              Word (.docx)
-            </Button>
-          </div>
-          <div className="flex justify-center gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button variant="blue" onClick={onConfirm}>确认导出</Button>
-          </div>
-        </div>
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="选择导出格式"
+      size="md"
+      showFooter={true}
+      onSubmit={onConfirm}
+      submitText="导出"
+      cancelText="取消"
+      showMaximize={false}
+      enableDrag={false}
+      enableResize={false}
+    >
+      <div className="space-y-3">
+        <p className="text-gray-600 text-sm mb-2">
+          确认导出 <span className="text-blue-600 font-medium">{exportCount}</span> 条数据
+        </p>
+        {formats.map((format) => (
+          <label
+            key={format.value}
+            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+              exportFormat === format.value
+                ? 'border-emerald-500 bg-emerald-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            <input
+              type="radio"
+              name="exportFormat"
+              value={format.value}
+              checked={exportFormat === format.value}
+              onChange={(e) => onFormatChange(e.target.value)}
+              className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+            />
+            <div className="ml-3">
+              <span className="block text-sm font-medium text-gray-900">{format.label}</span>
+              <span className="block text-xs text-gray-500">{format.desc}</span>
+            </div>
+          </label>
+        ))}
       </div>
-    </div>
+    </UnifiedModal>
   );
 }

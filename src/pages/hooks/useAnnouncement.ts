@@ -1,8 +1,9 @@
 /**
  * 公告数据管理 Hook
  * 封装 Announcement.tsx 的状态管理和业务逻辑
+ * 支持 API 调用和 localStorage 降级
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import type {
   Notice,
@@ -12,20 +13,7 @@ import type {
   AnnouncementModalType,
   AnnouncementTab
 } from '../types/announcement.types';
-
-// 初始公告数据
-const INITIAL_NOTICES: Notice[] = [
-  { id: '1', code: 'N20260401', title: '关于2026年春季种植计划的通知', type: '生产公告', category: '生产计划', priority: '高', status: '已发布', sender: '生产管理部', date: '2026-04-15', deadline: '2026-05-15', readCount: 156, recipients: '全体基地', content: '为确保2026年春季种植工作顺利开展，现将种植计划通知如下...' },
-  { id: '2', code: 'N20260402', title: '温室环境控制标准更新', type: '生产公告', category: '技术标准', priority: '高', status: '已发布', sender: '技术部', date: '2026-04-18', deadline: '2026-05-01', readCount: 142, recipients: '温室管理人员', content: '根据最新研究成果，现对温室环境控制标准进行更新...' },
-  { id: '3', code: 'N20260403', title: '劳动节放假安排通知', type: '行政公告', category: '行政通知', priority: '中', status: '已发布', sender: '行政人事部', date: '2026-04-20', deadline: '2026-05-10', readCount: 234, recipients: '全体员工', content: '根据国家法定节假日安排，现将劳动节放假事宜通知如下...' },
-  { id: '4', code: 'N20260404', title: '新员工入职培训通知', type: '行政公告', category: '培训通知', priority: '中', status: '审批中', sender: '行政人事部', date: '2026-04-22', deadline: '2026-05-05', readCount: 0, recipients: '新入职员工', content: '欢迎新员工加入公司，现将入职培训安排通知如下...' },
-  { id: '5', code: 'N20260405', title: '农药使用安全规范', type: '生产公告', category: '安全规范', priority: '高', status: '已发布', sender: '安全生产部', date: '2026-04-25', deadline: '2026-06-01', readCount: 128, recipients: '生产人员', content: '为确保农药使用安全，特制定本规范...' },
-  { id: '6', code: 'N20260406', title: '办公设备采购通知', type: '行政公告', category: '采购通知', priority: '低', status: '草稿', sender: '行政部', date: '2026-04-28', deadline: '2026-05-15', readCount: 0, recipients: '各部门负责人', content: '根据公司需求，现计划采购一批办公设备...' },
-  { id: '7', code: 'N20260501', title: '采收标准更新通知', type: '生产公告', category: '技术标准', priority: '高', status: '已发布', sender: '质量管理部', date: '2026-05-01', deadline: '2026-05-15', readCount: 98, recipients: '采收人员', content: '为提高产品质量，现对采收标准进行更新...' },
-  { id: '8', code: 'N20260502', title: '安全生产月活动通知', type: '行政公告', category: '活动通知', priority: '中', status: '已发布', sender: '安全生产部', date: '2026-05-05', deadline: '2026-06-05', readCount: 187, recipients: '全体员工', content: '为提高全员安全意识，现将安全生产月活动安排通知如下...' },
-  { id: '9', code: 'N20260503', title: '灌溉系统维护通知', type: '生产公告', category: '设备维护', priority: '中', status: '审批中', sender: '设备管理部', date: '2026-05-08', deadline: '2026-05-20', readCount: 0, recipients: '设备维护人员', content: '为确保灌溉系统正常运行，现将维护计划通知如下...' },
-  { id: '10', code: 'N20260504', title: '考勤管理制度修订', type: '行政公告', category: '制度修订', priority: '高', status: '已发布', sender: '行政人事部', date: '2026-05-10', deadline: '2026-06-01', readCount: 210, recipients: '全体员工', content: '为规范考勤管理，现对考勤管理制度进行修订...' },
-];
+import * as apiService from '../../services/apiAnnouncementService';
 
 // 初始模板数据
 const INITIAL_TEMPLATES: Template[] = [
@@ -80,6 +68,10 @@ export const getPriorityColor = (priority: string): string => {
 export function useAnnouncement() {
   const { toast } = useToast();
 
+  // 公告数据状态
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
+
   // 筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
@@ -99,6 +91,7 @@ export function useAnnouncement() {
   // 导出弹窗状态
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+  const [exportMode, setExportMode] = useState(false);
 
   // 展开行状态
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -111,11 +104,27 @@ export function useAnnouncement() {
   const [pageSize, setPageSize] = useState(10);
 
   // 静态数据
-  const notices = INITIAL_NOTICES;
   const templates = INITIAL_TEMPLATES;
   const workflows = INITIAL_WORKFLOWS;
   const noticeTypes = NOTICE_TYPES;
   const categories = CATEGORIES;
+
+  // 初始化加载数据
+  useEffect(() => {
+    const loadNotices = async () => {
+      try {
+        setLoading(true);
+        const data = await apiService.getNotices();
+        setNotices(data);
+      } catch (error) {
+        console.error('加载公告数据失败:', error);
+        toast.error('加载公告数据失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadNotices();
+  }, [toast]);
 
   // 筛选后的公告数据
   const filteredNotices = useMemo(() => {
@@ -144,6 +153,16 @@ export function useAnnouncement() {
   // 重置分页
   const resetPagination = useCallback(() => {
     setCurrentPage(1);
+  }, []);
+
+  // 刷新数据
+  const refreshNotices = useCallback(async () => {
+    try {
+      const data = await apiService.getNotices();
+      setNotices(data);
+    } catch (error) {
+      console.error('刷新公告数据失败:', error);
+    }
   }, []);
 
   // 弹窗操作
@@ -176,17 +195,53 @@ export function useAnnouncement() {
     setSelectedNotice(null);
   }, []);
 
+  // 保存操作（新增/编辑）
+  const handleSave = useCallback(async (noticeData: Partial<Notice>) => {
+    try {
+      if (modalType === 'add') {
+        const newNotice = await apiService.createNotice(noticeData as Omit<Notice, 'id' | 'code'>);
+        setNotices(prev => [newNotice, ...prev]);
+        toast.success('创建成功');
+      } else if (modalType === 'edit' && selectedNotice) {
+        const updated = await apiService.updateNotice(selectedNotice.id, noticeData);
+        if (updated) {
+          setNotices(prev => prev.map(n => n.id === selectedNotice.id ? { ...n, ...noticeData } : n));
+          toast.success('保存成功');
+        }
+      } else if (modalType === 'send' && selectedNotice) {
+        const updated = await apiService.updateNotice(selectedNotice.id, { ...noticeData, status: '已发布' });
+        if (updated) {
+          setNotices(prev => prev.map(n => n.id === selectedNotice.id ? { ...n, ...noticeData, status: '已发布' } : n));
+          toast.success('发布成功');
+        }
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error('保存公告失败:', error);
+      toast.error('保存失败');
+    }
+  }, [modalType, selectedNotice, handleCloseModal, toast]);
+
   // 删除操作
   const handleDelete = useCallback((item: Notice) => {
     setDeleteItem(item);
     setShowDeleteModal(true);
   }, []);
 
-  const handleDeleteConfirm = useCallback(() => {
-    setShowDeleteModal(false);
-    setDeleteItem(null);
-    toast.success('删除成功');
-  }, [toast]);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteItem) return;
+    try {
+      await apiService.deleteNotice(deleteItem.id);
+      setNotices(prev => prev.filter(n => n.id !== deleteItem.id));
+      toast.success('删除成功');
+    } catch (error) {
+      console.error('删除公告失败:', error);
+      toast.error('删除失败');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+    }
+  }, [deleteItem, toast]);
 
   const handleCloseDeleteModal = useCallback(() => {
     setShowDeleteModal(false);
@@ -195,14 +250,75 @@ export function useAnnouncement() {
 
   // 导出操作
   const handleExport = useCallback(() => {
-    setShowExportModal(true);
+    setExportMode(true);
+    setSelectedIds([]);
   }, []);
 
   const handleExportConfirm = useCallback(() => {
+    setShowExportModal(true);
+  }, []);
+
+  const handleDoExport = useCallback(async () => {
+    const dataToExport = selectedIds.length > 0
+      ? notices.filter(n => selectedIds.includes(n.id))
+      : notices;
+
+    // 生成Excel HTML内容
+    const headers = ['公告编号', '公告标题', '类型', '分类', '优先级', '状态', '发布部门', '发布日期', '截止日期', '阅读数', '接收对象'];
+    const rows = dataToExport.map(n => [
+      n.code, n.title, n.type, n.category, n.priority, n.status,
+      n.sender, n.date, n.deadline, n.readCount, n.recipients
+    ]);
+
+    let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    rows.forEach(row => {
+      content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`;
+    });
+    content += '</table></body></html>';
+
+    const mimeType = 'application/vnd.ms-excel;charset=utf-8';
+    const extension = exportFormat === 'csv' ? 'csv' : exportFormat === 'word' ? 'doc' : 'xls';
+    const fileName = `公告汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+    try {
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Excel Files',
+              accept: { [mimeType]: ['.' + extension] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      } else {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Export failed:', err);
+      }
+    }
+
     setShowExportModal(false);
+    setExportMode(false);
     setSelectedIds([]);
     toast.success('导出成功');
-  }, [toast]);
+  }, [selectedIds, notices, exportFormat, toast]);
+
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setSelectedIds([]);
+  }, []);
 
   const handleCloseExportModal = useCallback(() => {
     setShowExportModal(false);
@@ -243,6 +359,7 @@ export function useAnnouncement() {
     workflows,
     noticeTypes,
     categories,
+    loading,
 
     // 筛选状态
     searchKeyword,
@@ -263,6 +380,7 @@ export function useAnnouncement() {
     handleSend,
     handleAdd,
     handleCloseModal,
+    handleSave,
 
     // 删除弹窗状态
     showDeleteModal,
@@ -272,11 +390,14 @@ export function useAnnouncement() {
     handleCloseDeleteModal,
 
     // 导出弹窗状态
+    exportMode,
     showExportModal,
     exportFormat,
     setExportFormat,
     handleExport,
     handleExportConfirm,
+    handleDoExport,
+    handleCancelExport,
     handleCloseExportModal,
 
     // 展开行状态
@@ -298,5 +419,8 @@ export function useAnnouncement() {
     handlePageChange,
     handlePageSizeChange,
     resetPagination,
+
+    // 刷新数据
+    refreshNotices,
   };
 }
