@@ -46,19 +46,37 @@ const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
 )
 Tabs.displayName = "Tabs"
 
-export interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {}
+export interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
+  selectedValue?: string
+  onValueChange?: (value: string) => void
+}
 
 const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "inline-flex h-10 items-center justify-center rounded-lg bg-gray-100 p-1",
-        className
-      )}
-      {...props}
-    />
-  )
+  ({ className, selectedValue, onValueChange, children, ...props }, ref) => {
+    // 将 selectedValue 和 onValueChange 传递给每个 TabsTrigger 子元素
+    const clonedChildren = React.Children.map(children, (child) => {
+      if (React.isValidElement(child)) {
+        return React.cloneElement(child as React.ReactElement<any>, {
+          selectedValue,
+          onValueChange
+        })
+      }
+      return child
+    })
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "inline-flex items-center gap-1 p-1 bg-gray-100/80 rounded-xl",
+          className
+        )}
+        {...props}
+      >
+        {clonedChildren}
+      </div>
+    )
+  }
 )
 TabsList.displayName = "TabsList"
 
@@ -80,10 +98,10 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
         disabled={disabled}
         onClick={() => onValueChange?.(value)}
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+          "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-base font-semibold transition-all duration-200",
           isSelected
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-gray-500 hover:text-gray-900",
+            ? "bg-white text-emerald-600 shadow-sm"
+            : "text-gray-500 hover:text-gray-700 hover:bg-white/50",
           disabled && "opacity-50 cursor-not-allowed",
           className
         )}

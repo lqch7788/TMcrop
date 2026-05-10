@@ -5,7 +5,8 @@ import {
 import { cropBatches } from '../../../data/mockData';
 import { useUsers, useGreenhouses } from '../../common/settings';
 import { warehouseOptions } from '../../../data/farmMockData';
-import { BatchEditModal, DeleteWarningModal, ExportFormatModal, HarvestDetailModal, AddModal } from './modals';
+import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
+import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import {
   produceCategories,
   getProduceTypesByCategory,
@@ -169,119 +170,101 @@ export default function HarvestPage() {
   };
 
   const handleConfirmExport = () => {
-    handleDoExport();
+    setShowExportTypeModal(true);
   };
 
   // 导出数据处理
   const handleDoExport = async () => {
-    // Get selected data - use index-based selection from filtered records
-    const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
-
-    // 导出表头
-    const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物品种', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
-
-    // 展开产品明细生成导出数据
-    const exportData: Record<string, string>[] = [];
-    selectedData.forEach((record, recordIdx) => {
-      // 如果有产品明细，展开显示
-      if (record.products && record.products.length > 0) {
-        record.products.forEach((product, productIdx) => {
-          exportData.push({
-            '采收单号': record.harvestCode,
-            '采收日期': record.harvestDate,
-            '采收区域': record.greenhouseName,
-            '入库仓库': record.warehouseName,
-            '采收人员': record.harvesterNames.join(', '),
-            '产品编码': product.productCode || generateProductCode(product.cropName, product.variety, recordIdx * 100 + productIdx),
-            '作物名称': product.cropName || record.cropName,
-            '作物品种': product.variety || record.variety,
-            '批次号': product.batchCode || record.batchCode,
-            '种植模式': record.plantingMode,
-            '采收量(kg)': `${product.harvestQuantity} ${record.unit}`,
-            '目标产量(kg)': `${product.targetYield} ${record.unit}`,
-            '完成率': `${product.targetYield > 0 ? Math.round(product.harvestQuantity / product.targetYield * 100) : 0}%`,
-            '品质等级': product.grade || record.grade,
-            '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
-            '审核人员': record.auditor,
-            '备注': product.remarks || record.remarks || ''
-          });
-        });
-      } else {
-        // 没有产品明细时，显示主行数据
-        exportData.push({
-          '采收单号': record.harvestCode,
-          '采收日期': record.harvestDate,
-          '采收区域': record.greenhouseName,
-          '入库仓库': record.warehouseName,
-          '采收人员': record.harvesterNames.join(', '),
-          '产品编码': generateProductCode(record.cropName, record.variety, recordIdx),
-          '作物名称': record.cropName,
-          '作物品种': record.variety,
-          '批次号': record.batchCode,
-          '种植模式': record.plantingMode,
-          '采收量(kg)': `${record.harvestQuantity} ${record.unit}`,
-          '目标产量(kg)': `${record.targetYield} ${record.unit}`,
-          '完成率': `${Math.round(record.harvestQuantity / record.targetYield * 100)}%`,
-          '品质等级': record.grade,
-          '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
-          '审核人员': record.auditor,
-          '备注': record.remarks || ''
-        });
-      }
-    });
-
-    // Create content based on format
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      // CSV format
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else if (exportFormat === 'xlsx') {
-      // Excel format (as HTML table)
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    } else if (exportFormat === 'word') {
-      // Word format (as HTML)
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-word;charset=utf-8';
-      extension = 'doc';
-    }
-
-    // Try to use showSaveFilePicker for Chrome/Edge (allows user to choose save location)
-    const fileName = `采收入库_${new Date().toISOString().slice(0, 10)}.${extension}`;
-
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-      } else {
-        // Fallback for browsers without showSaveFilePicker
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+      // Get selected data - use index-based selection from filtered records
+      const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
+
+      // 导出表头
+      const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
+
+      // 展开产品明细生成导出数据
+      const exportData: Record<string, string>[] = [];
+      selectedData.forEach((record, recordIdx) => {
+        // 安全获取数组字段
+        const harvesterNames = Array.isArray(record.harvesterNames) ? record.harvesterNames.join(', ') : (record.harvesterNames || '-');
+        const products = record.products || [];
+        const harvestQuantity = record.harvestQuantity || 0;
+        const targetYield = record.targetYield || 0;
+        const unit = record.unit || 'kg';
+
+        // 如果有产品明细，展开显示
+        if (products.length > 0) {
+          products.forEach((product, productIdx) => {
+            exportData.push({
+              '采收单号': record.harvestCode || '-',
+              '采收日期': record.harvestDate || '-',
+              '采收区域': record.greenhouseName || '-',
+              '入库仓库': record.warehouseName || '-',
+              '采收人员': harvesterNames,
+              '产品编码': product.productCode || generateProductCode(product.cropName || record.cropName || '', product.variety || record.variety || '', recordIdx * 100 + productIdx),
+              '作物品种': product.variety || record.variety || '-',
+              '批次号': product.batchCode || record.batchCode || '-',
+              '种植模式': record.plantingMode || '-',
+              '采收量(kg)': `${product.harvestQuantity || 0} ${unit}`,
+              '目标产量(kg)': `${product.targetYield || 0} ${unit}`,
+              '完成率': `${product.targetYield > 0 ? Math.round((product.harvestQuantity || 0) / product.targetYield * 100) : 0}%`,
+              '品质等级': product.grade || record.grade || '-',
+              '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
+              '审核人员': record.auditor || '-',
+              '备注': product.remarks || record.remarks || '-'
+            });
+          });
+        } else {
+          // 没有产品明细时，显示主行数据
+          exportData.push({
+            '采收单号': record.harvestCode || '-',
+            '采收日期': record.harvestDate || '-',
+            '采收区域': record.greenhouseName || '-',
+            '入库仓库': record.warehouseName || '-',
+            '采收人员': harvesterNames,
+            '产品编码': generateProductCode(record.cropName || '', record.variety || '', recordIdx),
+            '作物品种': record.variety || '-',
+            '批次号': record.batchCode || '-',
+            '种植模式': record.plantingMode || '-',
+            '采收量(kg)': `${harvestQuantity} ${unit}`,
+            '目标产量(kg)': `${targetYield} ${unit}`,
+            '完成率': `${targetYield > 0 ? Math.round(harvestQuantity / targetYield * 100) : 0}%`,
+            '品质等级': record.grade || '-',
+            '状态': record.status === 'harvested' ? '已采收' : record.status === 'graded' ? '已分级' : '已入库',
+            '审核人员': record.auditor || '-',
+            '备注': record.remarks || '-'
+          });
+        }
+      });
+
+      // Create content based on format
+      let content = '';
+      let mimeType = '';
+      let extension = '';
+
+      if (exportFormat === 'csv') {
+        // CSV format
+        content = headers.join(',') + '\n' + exportData.map(row =>
+          headers.map(h => `"${row[h] || ''}"`).join(',')
+        ).join('\n');
+        mimeType = 'text/csv;charset=utf-8';
+        extension = 'csv';
+      } else if (exportFormat === 'excel' || exportFormat === 'xlsx') {
+        // Excel format (as HTML table)
+        content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        mimeType = 'application/vnd.ms-excel;charset=utf-8';
+        extension = 'xls';
+      } else if (exportFormat === 'word') {
+        // Word format (as HTML)
+        content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        mimeType = 'application/vnd.ms-word;charset=utf-8';
+        extension = 'doc';
       }
-    } catch (err) {
-      console.error('Export failed:', err);
-      // Fallback
+
+      // 文件名
+      const fileName = `采收入库_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+      // 使用 Blob 下载（兼容所有浏览器）
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -289,12 +272,17 @@ export default function HarvestPage() {
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
-    }
 
-    // Reset states
-    setExportMode(false);
-    setSelectedRows([]);
-    setShowExportTypeModal(false);
+      setShowExportTypeModal(false);
+      setExportMode(false);
+      setSelectedRows([]);
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试');
+      setShowExportTypeModal(false);
+      setExportMode(false);
+      setSelectedRows([]);
+    }
   };
 
   const handleCancelExport = () => {
@@ -693,6 +681,7 @@ export default function HarvestPage() {
           exportMode={exportMode}
           batchEditMode={batchEditMode}
           batchDeleteMode={batchDeleteMode}
+          selectedRows={selectedRows}
           onCreate={() => setIsCreateModalOpen(true)}
           onBatchEdit={handleBatchEditClick}
           onBatchDelete={handleBatchDeleteClick}
@@ -773,13 +762,13 @@ export default function HarvestPage() {
       />
 
       {/* Export Format Modal */}
-      <ExportFormatModal
+      <MaterialExportModal
         isOpen={showExportTypeModal}
-        exportFileType={exportFormat}
-        onChange={setExportFormat}
-        onClose={() => setShowExportTypeModal(false)}
-        onConfirm={handleConfirmExport}
+        exportFormat={exportFormat}
         selectedCount={selectedRows.length}
+        onClose={() => setShowExportTypeModal(false)}
+        onFormatChange={setExportFormat}
+        onExport={handleDoExport}
       />
 
       {/* Batch Edit Modal */}

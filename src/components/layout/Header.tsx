@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell, ChevronDown, LogOut, User, Settings, Home
+  Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw
 } from 'lucide-react';
 import { messages } from '../../data/mockData';
 
@@ -175,6 +175,16 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <Settings className="w-4 h-4" />
                     系统设置
                   </Link>
+                  <a
+                    href="/sync.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    数据同步
+                  </a>
                   <hr className="my-1" />
                   <button
                     onClick={handleLogout}

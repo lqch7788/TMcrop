@@ -1,9 +1,14 @@
 /**
  * 成本管理 API 服务
  * 对接后端 /api/material-costs 和 /api/summary/cost-stats
+ * API失败时降级到 localStorage
  */
 
 import { apiClient } from './apiClient';
+
+// localStorage 配置
+const MATERIAL_COSTS_KEY = 'yuanxingtu_material_costs';
+const ENERGY_COSTS_KEY = 'yuanxingtu_energy_costs';
 
 // ========== 类型定义 ==========
 
@@ -98,10 +103,42 @@ export interface CostStatsSummary {
   avg_hourly_rate: number;
 }
 
+// 默认空数据
+const defaultMaterialCosts: MaterialCost[] = [];
+const defaultEnergyCosts: EnergyCost[] = [];
+
+// ========== localStorage 操作 ==========
+
+function getStoredMaterialCosts(): MaterialCost[] {
+  try {
+    const stored = localStorage.getItem(MATERIAL_COSTS_KEY);
+    return stored ? JSON.parse(stored) : defaultMaterialCosts;
+  } catch {
+    return defaultMaterialCosts;
+  }
+}
+
+function saveMaterialCosts(data: MaterialCost[]): void {
+  localStorage.setItem(MATERIAL_COSTS_KEY, JSON.stringify(data));
+}
+
+function getStoredEnergyCosts(): EnergyCost[] {
+  try {
+    const stored = localStorage.getItem(ENERGY_COSTS_KEY);
+    return stored ? JSON.parse(stored) : defaultEnergyCosts;
+  } catch {
+    return defaultEnergyCosts;
+  }
+}
+
+function saveEnergyCosts(data: EnergyCost[]): void {
+  localStorage.setItem(ENERGY_COSTS_KEY, JSON.stringify(data));
+}
+
 // ========== 物料成本 API ==========
 
 /**
- * 获取物料成本列表
+ * 获取物料成本列表（带localStorage降级）
  */
 export async function getMaterialCosts(params?: {
   cost_type?: string;
@@ -121,7 +158,15 @@ export async function getMaterialCosts(params?: {
       }
     });
   }
-  return apiClient.get('/material-costs', queryParams);
+  try {
+    const data = await apiClient.get<MaterialCost[]>('/material-costs', queryParams);
+    saveMaterialCosts(data);
+    return { data, meta: { total: data.length, page: 1, limit: data.length } };
+  } catch (error) {
+    console.warn('[成本API] 获取物料成本失败，降级到localStorage:', error);
+    const stored = getStoredMaterialCosts();
+    return { data: stored, meta: { total: stored.length, page: 1, limit: stored.length } };
+  }
 }
 
 /**
@@ -155,7 +200,7 @@ export async function deleteMaterialCost(id: string): Promise<{ id: string }> {
 // ========== 能源成本 API ==========
 
 /**
- * 获取能源成本列表
+ * 获取能源成本列表（带localStorage降级）
  */
 export async function getEnergyCosts(params?: {
   cost_type?: string;
@@ -166,7 +211,15 @@ export async function getEnergyCosts(params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: EnergyCost[]; meta: { total: number; page: number; limit: number } }> {
-  return apiClient.get('/material-costs/energy', params);
+  try {
+    const data = await apiClient.get<EnergyCost[]>('/material-costs/energy', params);
+    saveEnergyCosts(data);
+    return { data, meta: { total: data.length, page: 1, limit: data.length } };
+  } catch (error) {
+    console.warn('[成本API] 获取能源成本失败，降级到localStorage:', error);
+    const stored = getStoredEnergyCosts();
+    return { data: stored, meta: { total: stored.length, page: 1, limit: stored.length } };
+  }
 }
 
 /**

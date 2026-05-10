@@ -345,12 +345,22 @@ interface SaveResult<T> {
 }
 
 // ============================================
+// 数据字典 localStorage 配置
+// ============================================
+
+const DICTIONARY_STORAGE_KEY = 'yuanxingtu_dictionaries';
+const DICTIONARY_CATEGORIES_STORAGE_KEY = 'yuanxingtu_dictionary_categories';
+
+// 默认数据字典（API不可用时的回退）
+const DEFAULT_DICTIONARIES: Dictionary[] = [];
+
+// ============================================
 // 数据字典 API
 // ============================================
 
 /**
  * 获取字典列表
- * 完全从后端API获取，不使用本地存储
+ * 优先从后端API获取，失败时降级到 localStorage
  * 后端返回字段: category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at
  * 前端期望字段: category, code, name, sortNumber, status, createdAt, updatedAt
  */
@@ -370,50 +380,76 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, { headers });
+  try {
+    const response = await fetch(url, { headers });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const rawData = await response.json();
-
-  // 处理多种可能的响应格式
-  let data: Record<string, unknown>[] = [];
-
-  if (Array.isArray(rawData)) {
-    // 格式1: 直接返回数组
-    data = rawData;
-  } else if (rawData && typeof rawData === 'object') {
-    // 格式2: 包装格式 {success: true, data: [...]} 或 {data: [...]}
-    if (Array.isArray((rawData as any).data)) {
-      data = (rawData as any).data;
-    } else if (Array.isArray((rawData as any).result)) {
-      data = (rawData as any).result;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const rawData = await response.json();
+
+    // 处理多种可能的响应格式
+    let data: Record<string, unknown>[] = [];
+
+    if (Array.isArray(rawData)) {
+      // 格式1: 直接返回数组
+      data = rawData;
+    } else if (rawData && typeof rawData === 'object') {
+      // 格式2: 包装格式 {success: true, data: [...]} 或 {data: [...]}
+      if (Array.isArray((rawData as any).data)) {
+        data = (rawData as any).data;
+      } else if (Array.isArray((rawData as any).result)) {
+        data = (rawData as any).result;
+      }
+    }
+
+    if (data.length === 0) {
+      throw new Error('API 返回空数据');
+    }
+
+    // 字段映射：将后端字段转换为前端字段
+    const mappedData: Dictionary[] = data.map((item: Record<string, unknown>) => ({
+      id: item.id as string,
+      category: item.category_code as string,
+      code: item.dict_code as string,
+      name: item.dict_label as string,
+      sortNumber: item.sort_order as number,
+      status: item.status as string,
+      createdAt: item.created_at as string,
+      updatedAt: item.updated_at as string,
+    }));
+
+    // API成功时同步到 localStorage
+    localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(mappedData));
+    console.log('[DictionaryService] 从API获取并缓存字典数据:', mappedData.length, '条');
+
+    return mappedData;
+  } catch (error) {
+    console.warn('[DictionaryService] API获取失败，降级到localStorage:', error);
+
+    // API失败时尝试从 localStorage 读取
+    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Dictionary[];
+        // 如果有分类过滤
+        if (category) {
+          return parsed.filter(d => d.category === category);
+        }
+        console.log('[DictionaryService] 从localStorage恢复字典数据:', parsed.length, '条');
+        return parsed;
+      } catch {
+        return DEFAULT_DICTIONARIES;
+      }
+    }
+    return DEFAULT_DICTIONARIES;
   }
-
-  if (data.length === 0) {
-    throw new Error('API 返回空数据');
-  }
-
-  // 字段映射：将后端字段转换为前端字段
-  const mappedData: Dictionary[] = data.map((item: Record<string, unknown>) => ({
-    id: item.id as string,
-    category: item.category_code as string,
-    code: item.dict_code as string,
-    name: item.dict_label as string,
-    sortNumber: item.sort_order as number,
-    status: item.status as string,
-    createdAt: item.created_at as string,
-    updatedAt: item.updated_at as string,
-  }));
-
-  return mappedData;
 }
 
 /**
  * 获取字典分类列表
+ * 优先从后端API获取，失败时降级到 localStorage
  */
 export async function getDictionaryCategories(): Promise<string[]> {
   try {
@@ -453,12 +489,26 @@ export async function getDictionaryCategories(): Promise<string[]> {
 
     if (data.length > 0) {
       console.log('[DictionaryService] 从API获取到分类:', data.length);
+      // API成功时同步到 localStorage
+      localStorage.setItem(DICTIONARY_CATEGORIES_STORAGE_KEY, JSON.stringify(data));
       return data;
     }
     throw new Error('Invalid response format');
   } catch (error) {
-    console.error('[DictionaryService] 获取分类失败:', error);
-    throw error;
+    console.warn('[DictionaryService] 获取分类失败，降级到localStorage:', error);
+
+    // API失败时尝试从 localStorage 读取
+    const stored = localStorage.getItem(DICTIONARY_CATEGORIES_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as string[];
+        console.log('[DictionaryService] 从localStorage恢复分类数据:', parsed.length, '条');
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
   }
 }
 
@@ -497,17 +547,60 @@ export async function saveDictionaries(data: {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch('/api/dictionary/dictionaries', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(backendData)
-  });
+  try {
+    const response = await fetch('/api/dictionary/dictionaries', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(backendData)
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = response.json();
+
+    // 保存成功后，同步更新 localStorage
+    // 从 localStorage 读取当前数据
+    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
+    if (stored) {
+      try {
+        let currentData = JSON.parse(stored) as Dictionary[];
+
+        // 处理新增
+        if (data.inserted.length > 0) {
+          const insertedWithIds = data.inserted.map(dict => ({
+            ...dict,
+            id: dict.id || `DICT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          }));
+          currentData = [...currentData, ...insertedWithIds];
+        }
+
+        // 处理更新
+        if (data.updated.length > 0) {
+          currentData = currentData.map(dict => {
+            const updated = data.updated.find(u => u.id === dict.id);
+            return updated ? { ...dict, ...updated } : dict;
+          });
+        }
+
+        // 处理删除
+        if (data.deleted.length > 0) {
+          currentData = currentData.filter(dict => !data.deleted.includes(dict.id || ''));
+        }
+
+        localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(currentData));
+        console.log('[DictionaryService] 保存后同步localStorage，当前共', currentData.length, '条');
+      } catch (e) {
+        console.warn('[DictionaryService] 同步localStorage失败:', e);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('[DictionaryService] 保存字典失败:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 // ============================================

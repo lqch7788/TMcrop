@@ -316,12 +316,12 @@ export function ParkArchivePage() {
       <div className="relative z-10 p-6">
         <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/40">
               <Map className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">园区导览</h1>
-              <p className="text-sm text-blue-600/80">地块与园区全景档案管理</p>
+              <p className="text-sm text-gray-600">地块与园区全景档案管理</p>
             </div>
           </div>
         </div>
@@ -477,21 +477,21 @@ export function ParkArchivePage() {
                             return true;
                           })
                           .map((item) => (
-                            <div key={item.id} className="flex flex-wrap items-center gap-2 py-2 pl-8 pr-2 bg-blue-50/60 hover:bg-blue-100/80 rounded-lg mb-2">
-                              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); flyToBase(item); }} title="定位到地图">
-                                <MapPin className="w-4 h-4 text-green-600" />
+                            <div key={item.id} className="flex flex-nowrap items-center gap-1 py-1.5 pl-8 pr-2 bg-blue-50/60 hover:bg-blue-100/80 rounded-lg mb-1 overflow-hidden">
+                              <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={(e) => { e.stopPropagation(); flyToBase(item); }} title="定位到地图">
+                                <MapPin className="w-3.5 h-3.5 text-green-600" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/', { state: { baseId: item.id, baseName: item.name } }); }} className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate('/dashboard', { state: { baseId: item.id, baseName: item.name } }); }} className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer truncate max-w-[120px]">
                                 {item.name}
                               </Button>
-                              <span className="text-xs text-gray-600">{item.area}{item.unit}</span>
-                              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                              <span className="text-xs text-gray-500 whitespace-nowrap">{item.area}{item.unit}</span>
+                              <span className={`text-xs px-1 py-0.5 rounded-full whitespace-nowrap ${
                                 item.status === 'planting' ? 'bg-green-100 text-green-700' :
                                 item.status === 'fallow' ? 'bg-yellow-100 text-yellow-700' :
                                 'bg-gray-100 text-gray-600'
                               }`}>{item.statusText}</span>
-                              <span className="text-xs text-gray-600">{item.manager}</span>
-                              <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }}>
+                              <span className="text-xs text-gray-500 whitespace-nowrap truncate max-w-[60px]" title={item.manager}>{item.manager}</span>
+                              <Button variant="ghost" size="sm" className="flex-shrink-0 text-xs whitespace-nowrap ml-auto" onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }}>
                                 详情&gt;&gt;
                               </Button>
                             </div>
@@ -529,7 +529,7 @@ export function ParkArchivePage() {
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">{selectedField.name} - 地块档案</h3>
               <div className="flex items-center gap-3">
-                <Button variant="secondary" size="sm" onClick={() => navigate('/bases')}>进入{'>>>'}</Button>
+                <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard', { state: { baseId: selectedField.id, baseName: selectedField.name } })}>进入{'>>>'}</Button>
                 <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)}><X className="w-5 h-5 text-white" /></Button>
               </div>
             </div>

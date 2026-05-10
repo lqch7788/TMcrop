@@ -22,11 +22,11 @@ import * as cropVarietyService from '@/services/apiCropVarietyService';
 
 export default function OrderPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
-  // 订单模块权限 - 已取消，直接设置为 true
   const canCreate = true;
   const canDelete = true;
   const canExport = true;
+
+  // 筛选状态
   const [filters, setFilters] = useState<CropOrderFilters>({
     orderCode: '',
     orderName: '',
@@ -40,9 +40,8 @@ export default function OrderPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从API加载数据，初始为空数组
+  // 订单数据
   const [orders, setOrders] = useState<CropOrder[]>([]);
-  // Loading状态
   const [loading, setLoading] = useState(false);
 
   // API统计数据（感知后端stats路由）
@@ -58,12 +57,12 @@ export default function OrderPage() {
   const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
-  // 刷新数据（异步调用API）
+  // 刷新数据
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await cropOrderService.getOrders();
-      setOrders(data);
+      setOrders(data || []);
     } catch (error) {
       console.error('获取订单数据失败:', error);
     } finally {
@@ -76,7 +75,7 @@ export default function OrderPage() {
     refreshData();
   }, []);
 
-  // 获取API统计数据（感知后端stats路由）
+  // 获取API统计数据
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -382,7 +381,9 @@ export default function OrderPage() {
       <AddModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={refreshData}
+        onSuccess={() => {
+          refreshData();
+        }}
         orderTypeOptions={orderTypeOptions}
       />
 

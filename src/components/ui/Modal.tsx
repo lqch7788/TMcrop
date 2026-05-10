@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl' | 'full';
   onSubmit?: () => void;
   submitText?: string;
   cancelText?: string;
@@ -18,6 +18,9 @@ interface ModalProps {
   enableDrag?: boolean;
   enableResize?: boolean;
   bottomContent?: React.ReactNode;
+  // 自定义尺寸（优先于size）
+  width?: number;
+  height?: number;
 }
 
 const sizeClasses = {
@@ -35,7 +38,8 @@ const sizeDefaults = {
   lg: { width: 700, height: 500 },
   xl: { width: 900, height: 600 },
   xxl: { width: 1080, height: 650 },
-  xxxl: { width: 1350, height: 700 }
+  xxxl: { width: 1350, height: 700 },
+  full: { width: window.innerWidth - 60, height: window.innerHeight - 60 }
 };
 
 export function Modal({
@@ -54,7 +58,9 @@ export function Modal({
   showMaximize = true,
   enableDrag = true,
   enableResize = true,
-  bottomContent
+  bottomContent,
+  width,
+  height
 }: ModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -62,8 +68,9 @@ export function Modal({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Resize state
-  const [modalSize, setModalSize] = useState(sizeDefaults[size]);
+  // Resize state - 使用自定义尺寸或预设尺寸
+  const defaultSize = width && height ? { width, height } : sizeDefaults[size];
+  const [modalSize, setModalSize] = useState(defaultSize);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState('');
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
@@ -88,13 +95,14 @@ export function Modal({
   // Initialize position when modal opens
   useEffect(() => {
     if (isOpen && !isMaximized) {
-      setModalSize(sizeDefaults[size]);
+      const defaultSize = width && height ? { width, height } : sizeDefaults[size];
+      setModalSize(defaultSize);
       // Center the modal
-      const centerX = (window.innerWidth - sizeDefaults[size].width) / 2;
-      const centerY = (window.innerHeight - sizeDefaults[size].height) / 2;
+      const centerX = (window.innerWidth - defaultSize.width) / 2;
+      const centerY = (window.innerHeight - defaultSize.height) / 2;
       setPosition({ x: centerX, y: centerY });
     }
-  }, [isOpen, size, isMaximized]);
+  }, [isOpen, size, isMaximized, width, height]);
 
   // Handle dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

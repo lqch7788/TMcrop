@@ -30,6 +30,7 @@ const menuItems = [
 ];
 
 const productionSubItems = [
+  { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
   { icon: FileText, label: '生产计划', path: '/production' },
   { icon: FileCode, label: '技术方案', path: '/tech-solution' },
   { icon: ShoppingCart, label: '采购计划', path: '/purchase-plan' },
@@ -42,7 +43,6 @@ const cropSubItems = [
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
   { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
-  { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
 
@@ -89,10 +89,6 @@ const farmSubItems = [
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
 ];
 
-const indicatorsSubItems = [
-  { icon: Target, label: '指标列表', path: '/indicators' },
-  { icon: Megaphone, label: '公告发布', path: '/announcement' },
-];
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
@@ -103,7 +99,6 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [approvalExpanded, setApprovalExpanded] = useState(true);
   const [farmExpanded, setFarmExpanded] = useState(true);
-  const [indicatorsExpanded, setIndicatorsExpanded] = useState(true);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -188,51 +183,46 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
               </Link>
             </li>
 
-            {/* 管理指标 - 可展开菜单 */}
+            {/* 指标数据 */}
             <li>
-              <>
-                <button
-                  onClick={() => setIndicatorsExpanded(!indicatorsExpanded)}
-                  className={`
-                    flex items-center rounded-lg transition-all duration-200 w-full
-                    ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                    ${isActive('/indicators') || isActive('/announcement')
-                      ? 'bg-blue-100 text-blue-700 font-semibold'
-                      : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                    }
-                  `}
-                >
-                  <Target className="flex-shrink-0 w-5 h-5" />
-                  {!collapsed && (
-                    <>
-                      <span className="text-sm font-medium">管理指标</span>
-                      <ChevronRight className={`w-4 h-4 ml-auto transition-transform text-gray-400 ${indicatorsExpanded ? 'rotate-90' : ''}`} />
-                    </>
-                  )}
-                </button>
-                {indicatorsExpanded && !collapsed && (
-                  <ul className="mt-1 ml-4 space-y-1">
-                    {indicatorsSubItems.map((subItem) => (
-                      <li key={subItem.path}>
-                        <Link
-                          to={subItem.path}
-                          onClick={onClose}
-                          className={`
-                            flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
-                            ${isActive(subItem.path)
-                              ? 'bg-blue-100 text-blue-700 font-semibold'
-                              : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                            }
-                          `}
-                        >
-                          <subItem.icon className="flex-shrink-0 w-4 h-4" />
-                          <span className="text-sm">{subItem.label}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+              <Link
+                to="/indicators"
+                onClick={onClose}
+                className={`
+                  flex items-center rounded-lg transition-all duration-200
+                  ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
+                  ${isActive('/indicators')
+                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
+                  }
+                `}
+              >
+                <Target className="flex-shrink-0 w-5 h-5" />
+                {!collapsed && (
+                  <span className="text-sm font-medium">指标数据</span>
                 )}
-              </>
+              </Link>
+            </li>
+
+            {/* 公告发布 */}
+            <li>
+              <Link
+                to="/announcement"
+                onClick={onClose}
+                className={`
+                  flex items-center rounded-lg transition-all duration-200
+                  ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
+                  ${isActive('/announcement')
+                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
+                  }
+                `}
+              >
+                <Megaphone className="flex-shrink-0 w-5 h-5" />
+                {!collapsed && (
+                  <span className="text-sm font-medium">公告发布</span>
+                )}
+              </Link>
             </li>
 
             {menuItems.map((item) => (

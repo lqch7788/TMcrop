@@ -13,14 +13,16 @@ import { apiClient, USE_API } from '../../services/apiClient';
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';
 import { ProductionTable } from './ProductionTable';
+import { batchStatusLabels } from './constants';
 import {
   CreateBatchModal,
   BatchDetailModal,
   BatchEditModal,
-  ExportFormatModal,
   VoidWarningModal,
   DeleteWarningModal,
 } from './modals';
+import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
+import { getProductionPlans, addProductionPlan, updateProductionPlan, deleteProductionPlan } from '../../services/apiProductionPlanLocalService';
 
 export default function ProductionPage() {
   const { greenhouses } = useGreenhouses();
@@ -42,31 +44,21 @@ export default function ProductionPage() {
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 从 API 加载生产计划数据
+  // 从 API 加载生产计划数据（带有localStorage降级）
   const loadProductionData = useCallback(async () => {
     setIsLoading(true);
     try {
       if (USE_API) {
-        // 尝试从 API 获取生产计划数据
-        const apiData = await apiClient.get<CropBatch[]>('/production/plans');
+        // 使用 apiProductionPlanLocalService，它会在API失败时自动降级到localStorage
+        const apiData = await getProductionPlans();
         if (apiData && apiData.length > 0) {
-          setBatches(apiData);
+          setBatches(apiData as unknown as CropBatch[]);
         } else {
           setBatches(cropBatches);
         }
       } else {
-        // 非 API 模式，检查是否后端已实现
-        try {
-          const apiData = await apiClient.get<CropBatch[]>('/production/plans');
-          if (apiData && apiData.length > 0) {
-            setBatches(apiData);
-          } else {
-            setBatches(cropBatches);
-          }
-        } catch {
-          // API 不可用，使用 mock 数据
-          setBatches(cropBatches);
-        }
+        // 非 API 模式，使用 mock 数据
+        setBatches(cropBatches);
       }
     } catch (error) {
       console.error('加载生产计划数据失败，使用 mock 数据:', error);
@@ -155,7 +147,7 @@ export default function ProductionPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -243,9 +235,9 @@ export default function ProductionPage() {
     };
 
     try {
-      // 调用后端 API 创建生产计划
+      // 调用后端 API 创建生产计划（带有localStorage降级）
       if (USE_API) {
-        await apiClient.post('/production/plans', apiData);
+        await addProductionPlan(apiData);
       }
 
       // 构造前端本地状态使用的 CropBatch 对象
@@ -334,9 +326,9 @@ export default function ProductionPage() {
     };
 
     try {
-      // 调用后端 API 创建生产计划
+      // 调用后端 API 创建生产计划（带有localStorage降级）
       if (USE_API) {
-        await apiClient.post('/production/plans', apiData);
+        await addProductionPlan(apiData);
 
         // 创建审批单
         const approvalData = {
@@ -449,7 +441,7 @@ export default function ProductionPage() {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -458,81 +450,56 @@ export default function ProductionPage() {
   };
 
   const handleConfirmExport = () => {
-    if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
-      return;
-    }
-    handleDoExport();
+    setShowExportModal(true);
   };
 
   // 导出数据处理
   const handleDoExport = async () => {
-    const selectedData = batches.filter(b => selectedRows.includes(b.id));
-    const headers = ['生产计划批次号', '种植模式', '作物名称', '作物品种', '种植区域', '种植面积', '开始时间', '预计结束时间', '负责人', '目标产量', '发布人', '初次发布时间', '最后修改时间', '当前状态', '版本号', '备注'];
-    const exportData = selectedData.map(row => ({
-      '生产计划批次号': row.batchCode,
-      '种植模式': row.plantingMode,
-      '作物名称': row.cropName,
-      '作物品种': row.variety,
-      '种植区域': row.greenhouseName,
-      '种植面积': row.plantingArea,
-      '开始时间': row.startDate,
-      '预计结束时间': row.expectedHarvestDate,
-      '负责人': row.responsiblePerson,
-      '目标产量': row.targetYield,
-      '发布人': row.publisher || '-',
-      '初次发布时间': row.publishDate || '-',
-      '最后修改时间': row.lastModifyDate || '-',
-      '当前状态': batchStatusLabels[row.batchStatus || 'draft'] || '-',
-      '版本号': 'V1.0',
-      '备注': row.description || '-',
-    }));
-
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else if (exportFormat === 'excel') {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    } else if (exportFormat === 'word') {
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-word;charset=utf-8';
-      extension = 'doc';
-    }
-
-    const fileName = `生产计划_${new Date().toISOString().slice(0, 10)}.${extension}`;
-
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-      } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+      const selectedData = batches.filter(b => selectedRows.includes(b.id));
+      const headers = ['生产计划批次号', '种植模式', '作物名称', '作物品种', '种植区域', '种植面积', '开始时间', '预计结束时间', '负责人', '目标产量', '发布人', '初次发布时间', '最后修改时间', '当前状态', '版本号', '备注'];
+      const exportData = selectedData.map(row => ({
+        '生产计划批次号': row.batchCode,
+        '种植模式': row.plantingMode,
+        '作物名称': row.cropName,
+        '作物品种': row.variety,
+        '种植区域': row.greenhouseName,
+        '种植面积': row.plantingArea,
+        '开始时间': row.startDate,
+        '预计结束时间': row.expectedHarvestDate,
+        '负责人': row.responsiblePerson,
+        '目标产量': row.targetYield,
+        '发布人': row.publisher || '-',
+        '初次发布时间': row.publishDate || '-',
+        '最后修改时间': row.lastModifyDate || '-',
+        '当前状态': batchStatusLabels[row.batchStatus || 'draft'] || '-',
+        '版本号': 'V1.0',
+        '备注': row.description || '-',
+      }));
+
+      let content = '';
+      let mimeType = '';
+      let extension = '';
+
+      if (exportFormat === 'csv') {
+        content = headers.join(',') + '\n' + exportData.map(row =>
+          headers.map(h => `"${row[h] || ''}"`).join(',')
+        ).join('\n');
+        mimeType = 'text/csv;charset=utf-8';
+        extension = 'csv';
+      } else if (exportFormat === 'excel') {
+        content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        mimeType = 'application/vnd.ms-excel;charset=utf-8';
+        extension = 'xls';
+      } else if (exportFormat === 'word') {
+        content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        mimeType = 'application/vnd.ms-word;charset=utf-8';
+        extension = 'doc';
       }
-    } catch (err) {
-      console.error('Export failed:', err);
+
+      const fileName = `生产计划_${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+      // 使用 Blob 下载（兼容所有浏览器）
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -540,11 +507,17 @@ export default function ProductionPage() {
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
-    }
 
-    setExportMode(false);
-    setSelectedRows([]);
-    setShowExportModal(false);
+      setShowExportModal(false);
+      setExportMode(false);
+      setSelectedRows([]);
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试');
+      setShowExportModal(false);
+      setExportMode(false);
+      setSelectedRows([]);
+    }
   };
 
   const handleCancelExport = () => {
@@ -613,7 +586,7 @@ export default function ProductionPage() {
     }
 
     // 记录已申请作废的批次ID，用于从选择列表中移除
-    const voidedBatchIds: number[] = [];
+    const voidedBatchIds: string[] = [];
 
     try {
       // 创建批次作废审批 - 只对当前选中的批次
@@ -647,8 +620,8 @@ export default function ProductionPage() {
       };
 
       if (USE_API) {
-        // 同时更新生产计划的 batchStatus 为 pending
-        await apiClient.put(`/production/plans/${currentBatch.id}`, { batchStatus: 'pending' });
+        // 同时更新生产计划的 batchStatus 为 pending（带有localStorage降级）
+        await updateProductionPlan(currentBatch.id, { batchStatus: 'pending' });
         await apiClient.post('/approvals', approvalData);
       }
 
@@ -704,7 +677,7 @@ export default function ProductionPage() {
     try {
       if (USE_API) {
         for (const id of toDelete) {
-          await apiClient.delete(`/production/plans/${id}`);
+          await deleteProductionPlan(id);
         }
       }
       setBatches(batches.filter(b => !toDelete.includes(b.id)));
@@ -720,7 +693,7 @@ export default function ProductionPage() {
     // Apply all edits and create approval for each edited batch
     if (Object.keys(editedBatches).length > 0) {
       // 记录已提交的批次ID
-      const submittedBatchIds: number[] = [];
+      const submittedBatchIds: string[] = [];
 
       try {
         // 获取当前用户信息
@@ -755,7 +728,7 @@ export default function ProductionPage() {
               apiData.batchStatus = 'pending';
 
               console.log('保存编辑:', batch.id, apiData);
-              await apiClient.put(`/production/plans/${batch.id}`, apiData);
+              await updateProductionPlan(batch.id, apiData);
             }
 
             // 2. 创建批次变更审批
@@ -1031,13 +1004,13 @@ export default function ProductionPage() {
       />
 
       {/* Export Format Modal */}
-      <ExportFormatModal
+      <MaterialExportModal
         isOpen={showExportModal}
         exportFormat={exportFormat}
         selectedCount={selectedRows.length}
         onFormatChange={setExportFormat}
         onClose={() => setShowExportModal(false)}
-        onConfirm={handleConfirmExport}
+        onExport={handleDoExport}
       />
 
       {/* Batch Edit Modal */}

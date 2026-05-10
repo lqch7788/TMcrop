@@ -1216,12 +1216,24 @@ export function initializeDatabase() {
     )
   `);
 
-  // 迁移：给 crop_orders 表添加缺失的字段
-  db.run(`ALTER TABLE crop_orders ADD COLUMN order_name TEXT`);
-  db.run(`ALTER TABLE crop_orders ADD COLUMN crop_category TEXT`);
-  db.run(`ALTER TABLE crop_orders ADD COLUMN planned_quantity INTEGER DEFAULT 0`);
-  db.run(`ALTER TABLE crop_orders ADD COLUMN actual_quantity INTEGER DEFAULT 0`);
-  db.run(`ALTER TABLE crop_orders ADD COLUMN expected_harvest_date TEXT`);
+  // 迁移：给 crop_orders 表添加缺失的字段（幂等操作，忽略已存在列）
+  const cropOrdersMigrations = [
+    `ALTER TABLE crop_orders ADD COLUMN order_name TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN crop_category TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN planned_quantity INTEGER DEFAULT 0`,
+    `ALTER TABLE crop_orders ADD COLUMN actual_quantity INTEGER DEFAULT 0`,
+    `ALTER TABLE crop_orders ADD COLUMN expected_harvest_date TEXT`,
+  ];
+  for (const sql of cropOrdersMigrations) {
+    try {
+      db.run(sql);
+    } catch (e: any) {
+      // 忽略 "duplicate column" 错误，确保幂等性
+      if (!e.message.includes('duplicate column')) {
+        console.log(`• crop_orders 迁移: ${e.message}`);
+      }
+    }
+  }
 
   // 生产计划表
   db.run(`

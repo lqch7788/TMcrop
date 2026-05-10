@@ -12,8 +12,9 @@
  * - components/Announcement/AnnouncementTemplatePanel.tsx - 模板面板
  * - components/Announcement/AnnouncementModals/*.tsx - 弹窗组件
  */
-import { Megaphone, Download, Plus } from 'lucide-react';
+import { Megaphone, Download, Plus, Settings, FileText, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAnnouncement } from './hooks/useAnnouncement';
 import AnnouncementFilters from './components/Announcement/AnnouncementFilters';
 import AnnouncementTable from './components/Announcement/AnnouncementTable';
@@ -77,7 +78,7 @@ export default function Announcement() {
       <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
               <Megaphone className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -97,46 +98,23 @@ export default function Announcement() {
       </div>
 
       {/* 标签页导航 */}
-      <div className="bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'list' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 mb-6 shadow-sm">
+        <TabsList className="grid w-full grid-cols-4 gap-1 p-1 bg-gray-100/80 rounded-xl">
+          <TabsTrigger value="list" className="flex items-center gap-2">
             <Megaphone className="w-4 h-4" />公告列表
-          </button>
-          <button
-            onClick={() => setActiveTab('type')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'type' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            类型管理
-          </button>
-          <button
-            onClick={() => setActiveTab('approval')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'approval' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            审批流程
-          </button>
-          <button
-            onClick={() => setActiveTab('template')}
-            className={`px-6 py-3 text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'template' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            公告模板
-          </button>
-        </div>
-      </div>
+          </TabsTrigger>
+          <TabsTrigger value="type" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />类型管理
+          </TabsTrigger>
+          <TabsTrigger value="approval" className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />审批流程
+          </TabsTrigger>
+          <TabsTrigger value="template" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />公告模板
+          </TabsTrigger>
+        </TabsList>
 
-      {/* 公告列表 */}
-      {activeTab === 'list' && (
-        <div>
+        <TabsContent value="list" className="mt-4">
           <AnnouncementFilters
             searchKeyword={searchKeyword}
             typeFilter={typeFilter}
@@ -162,30 +140,27 @@ export default function Announcement() {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-        </div>
-      )}
+        </TabsContent>
 
-      {/* 类型管理 */}
-      {activeTab === 'type' && (
-        <TypePanel
-          noticeTypes={noticeTypes}
-          notices={filteredNotices}
-          categories={categories}
-        />
-      )}
+        <TabsContent value="type" className="mt-4">
+          <TypePanel
+            noticeTypes={noticeTypes}
+            notices={filteredNotices}
+            categories={categories}
+          />
+        </TabsContent>
 
-      {/* 审批流程 */}
-      {activeTab === 'approval' && (
-        <ApprovalPanel
-          workflows={workflows}
-          pendingNotices={pendingNotices}
-        />
-      )}
+        <TabsContent value="approval" className="mt-4">
+          <ApprovalPanel
+            workflows={workflows}
+            pendingNotices={pendingNotices}
+          />
+        </TabsContent>
 
-      {/* 公告模板 */}
-      {activeTab === 'template' && (
-        <TemplatePanel templates={templates} />
-      )}
+        <TabsContent value="template" className="mt-4">
+          <TemplatePanel templates={templates} />
+        </TabsContent>
+      </Tabs>
 
       {/* 详情弹窗 */}
       <DetailModal

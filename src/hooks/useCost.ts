@@ -25,6 +25,7 @@ import {
   CostCategoryType,
   COST_CATEGORY_TYPE_MAP,
 } from '../types/cost';
+import { getDictionaries } from '../services/dictionaryService';
 
 /**
  * 成本类别 Hook
@@ -287,11 +288,8 @@ export function useEnergyCosts(params?: {
  */
 async function loadDictionaryItems(categoryCode: string): Promise<unknown[]> {
   try {
-    // 动态导入 apiClient
-    const { apiClient, USE_API } = await import('../services/apiClient');
-    if (!USE_API) return [];
-    const result = await apiClient.get(`/dictionary/items`, { category_code: categoryCode });
-    return result?.data || [];
+    const dictionaries = await getDictionaries(categoryCode);
+    return dictionaries.map(d => d.dict_label || d.dict_value || d.dict_code);
   } catch {
     return [];
   }
