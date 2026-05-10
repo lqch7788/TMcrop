@@ -31,7 +31,7 @@ export class SeedSourceRepository {
       COALESCE(ss.source_origin, 'external_purchase') AS sourceOrigin,
       COALESCE(cv.category_name, ss.crop_category, '') AS cropCategory,
       COALESCE(cv.type_name, ss.type_name, '') AS typeName,
-      COALESCE(cv.sub_variety1_name, cv.variety_name, ss.variety_name, '') AS varietyName,
+      COALESCE(cv.sub_variety1_name, cv.variety_name, ss.variety_name, ss.crop_variety, '') AS varietyName,
       ss.crop_name AS cropName,
       COALESCE(ss.crop_variety, '') AS cropVariety,
       COALESCE(cv.crop_code, ss.crop_code, '') AS cropCode,
