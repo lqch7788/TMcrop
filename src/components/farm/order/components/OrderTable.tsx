@@ -59,12 +59,16 @@ export function OrderTable({
 
   const getOrderTypeBadge = (type: string) => {
     switch (type) {
+      case 'breeding':
+        return <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">育种订单</span>;
+      case 'seedling':
+        return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">育苗订单</span>;
       case 'production':
         return <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">生产订单</span>;
-      case 'seed':
-        return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">种子订单</span>;
       case 'research':
         return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">研发订单</span>;
+      case 'other':
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">其他</span>;
       default:
         return null;
     }
@@ -141,8 +145,8 @@ export function OrderTable({
                     {getOrderTypeBadge(record.orderType)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-gray-900">{record.cropName}</div>
-                    <div className="text-xs text-gray-500">{record.cropVariety}</div>
+                    <div className="text-sm text-gray-900">{record.cropVariety}</div>
+                    <div className="text-xs text-gray-500 truncate" title={record.cropCategory}>{record.cropCategory}</div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {record.plannedQuantity} {record.unit}
