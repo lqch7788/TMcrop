@@ -1610,6 +1610,49 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ========== V8.0: 公告表 ==========
+  // 公告表 - 用于存储系统公告
+  db.run(`
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      title TEXT NOT NULL,
+      type TEXT,
+      category TEXT,
+      priority TEXT DEFAULT '中',
+      status TEXT DEFAULT '草稿',
+      sender TEXT,
+      date TEXT,
+      deadline TEXT,
+      read_count INTEGER DEFAULT 0,
+      recipients TEXT,
+      content TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V8.0: 指标表 ==========
+  // 指标表 - 用于存储生产管理指标
+  db.run(`
+    CREATE TABLE IF NOT EXISTS indicators (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      category TEXT,
+      unit TEXT,
+      target REAL DEFAULT 0,
+      actual REAL DEFAULT 0,
+      trend TEXT DEFAULT 'stable',
+      frequency TEXT,
+      source TEXT,
+      warning REAL DEFAULT 0,
+      weight REAL DEFAULT 0,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   console.log('数据库表初始化完成');
 
   // 创建索引

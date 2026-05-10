@@ -3,12 +3,14 @@
  * 显示公告列表，支持展开行、分页和操作
  */
 import { Megaphone, Eye, Edit, Trash2, Send, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
 import type { Notice } from '../../types/announcement.types';
 import { getStatusColor, getPriorityColor } from '../../hooks/useAnnouncement';
 
 interface AnnouncementTableProps {
   notices: Notice[];
   selectedIds: string[];
+  exportMode: boolean;
   expandedRow: string | null;
   currentPage: number;
   pageSize: number;
@@ -38,17 +40,14 @@ function renderPagination(currentPage: number, totalPages: number, onPageChange:
 
   for (let i = startPage; i <= endPage; i++) {
     pages.push(
-      <button
+      <Button
         key={i}
+        variant={i === currentPage ? 'default' : 'outline'}
+        size="sm"
         onClick={() => onPageChange(i)}
-        className={`px-3 py-1.5 text-sm rounded-lg transition-all duration-300 ${
-          i === currentPage
-            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium'
-            : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300'
-        }`}
       >
         {i}
-      </button>
+      </Button>
     );
   }
   return pages;
@@ -57,6 +56,7 @@ function renderPagination(currentPage: number, totalPages: number, onPageChange:
 export default function AnnouncementTable({
   notices,
   selectedIds,
+  exportMode,
   expandedRow,
   currentPage,
   pageSize,
@@ -78,14 +78,16 @@ export default function AnnouncementTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              <th className="px-3 py-3 text-left text-sm font-semibold w-10">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length === notices.length && notices.length > 0}
-                  onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-              </th>
+              {exportMode && (
+                <th className="px-3 py-3 text-left text-sm font-semibold w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === notices.length && notices.length > 0}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+              )}
               <th className="px-3 py-3 text-left text-sm font-semibold w-10"></th>
               <th className="px-3 py-3 text-left text-sm font-semibold">公告编号</th>
               <th className="px-3 py-3 text-left text-sm font-semibold">公告标题</th>
@@ -104,25 +106,28 @@ export default function AnnouncementTable({
                   key={notice.id}
                   className={`hover:bg-blue-50 transition-all duration-300 ${selectedIds.includes(notice.id) ? 'bg-blue-50' : ''}`}
                 >
+                  {exportMode && (
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(notice.id)}
+                        onChange={() => onToggleSelect(notice.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(notice.id)}
-                      onChange={() => onToggleSelect(notice.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onToggleExpand(notice.id)}
-                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
                     >
                       {expandedRow === notice.id ? (
                         <ChevronLeft className="w-4 h-4 rotate-90" />
                       ) : (
                         <ChevronRight className="w-4 h-4" />
                       )}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-3 py-3 text-sm text-gray-600 font-mono">{notice.code}</td>
                   <td className="px-3 py-3">
@@ -150,36 +155,20 @@ export default function AnnouncementTable({
                   <td className="px-3 py-3 text-sm text-gray-600 font-mono">{notice.readCount}</td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onView(notice)}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded transition-all duration-300"
-                        title="查看"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => onView(notice)} title="查看">
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                       {notice.status === '草稿' && (
-                        <button
-                          onClick={() => onSend(notice)}
-                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-100 rounded transition-all duration-300"
-                          title="发送"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => onSend(notice)} title="发送">
                           <Send className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
-                      <button
-                        onClick={() => onEdit(notice)}
-                        className="p-1.5 text-gray-500 hover:text-blue-700 hover:bg-blue-100 rounded transition-all duration-300"
-                        title="编辑"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(notice)} title="编辑">
                         <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(notice)}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded transition-all duration-300"
-                        title="删除"
-                      >
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(notice)} title="删除">
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -251,35 +240,39 @@ export default function AnnouncementTable({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onPageChange(1)}
               disabled={currentPage === 1}
-              className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <DoubleLeft className="w-4 h-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             {renderPagination(currentPage, totalPages, onPageChange)}
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onPageChange(totalPages)}
               disabled={currentPage === totalPages}
-              className="px-2 py-1.5 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <DoubleRight className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-sm text-gray-600 ml-2">
               第 <span className="text-blue-600 font-medium">{currentPage}</span> / {totalPages} 页
             </span>

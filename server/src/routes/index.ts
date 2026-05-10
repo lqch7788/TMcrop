@@ -35,6 +35,8 @@ import summaryRouter from './summary';
 import materialCostRouter from './materialCost';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
+import announcementRouter from './announcement';
+import indicatorsRouter from './indicators';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -156,6 +158,12 @@ router.use('/monitoring', requireAuth, monitoringRouter);
 
 // 数据同步路由 - 需要认证
 router.use('/sync', requireAuth, syncRouter);
+
+// 公告路由 - 需要认证
+router.use('/announcements', requireAuth, announcementRouter);
+
+// 指标路由 - 需要认证
+router.use('/indicators', requireAuth, indicatorsRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

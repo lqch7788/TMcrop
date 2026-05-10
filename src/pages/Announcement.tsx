@@ -52,7 +52,10 @@ export default function Announcement() {
     setExportFormat,
     handleExport,
     handleExportConfirm,
+    handleDoExport,
+    handleCancelExport,
     handleCloseExportModal,
+    exportMode,
     expandedRow,
     handleToggleExpand,
     selectedIds,
@@ -70,6 +73,7 @@ export default function Announcement() {
     handleSend,
     handleEdit,
     handleDelete,
+    handleSave,
   } = useAnnouncement();
 
   return (
@@ -87,10 +91,33 @@ export default function Announcement() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={handleExport} className="flex items-center gap-2">
-              <Download className="w-4 h-4" />导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-            </Button>
-            <Button variant="blue" onClick={handleAdd} className="flex items-center gap-2">
+            {!exportMode ? (
+              <Button
+                variant="default"
+                onClick={handleExport}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />导出
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="default"
+                  onClick={handleExportConfirm}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelExport}
+                  className="flex items-center gap-2"
+                >
+                  取消
+                </Button>
+              </>
+            )}
+            <Button variant="default" onClick={handleAdd} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />发布公告
             </Button>
           </div>
@@ -125,6 +152,7 @@ export default function Announcement() {
           <AnnouncementTable
             notices={paginatedNotices}
             selectedIds={selectedIds}
+            exportMode={exportMode}
             expandedRow={expandedRow}
             currentPage={currentPage}
             pageSize={pageSize}
@@ -175,6 +203,7 @@ export default function Announcement() {
         notice={selectedNotice}
         mode={modalType === 'add' ? 'add' : modalType === 'edit' ? 'edit' : 'send'}
         onClose={handleCloseModal}
+        onSave={handleSave}
       />
 
       {/* 删除确认弹窗 */}
@@ -193,7 +222,7 @@ export default function Announcement() {
         totalCount={filteredNotices.length}
         onClose={handleCloseExportModal}
         onFormatChange={setExportFormat}
-        onConfirm={handleExportConfirm}
+        onConfirm={handleDoExport}
       />
     </div>
   );

@@ -64,7 +64,7 @@ export default function EvaluatePanel({ evaluationData }: EvaluatePanelProps) {
             <BarChart data={evaluationData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis type="number" domain={[70, 100]} fontSize={12} stroke="#6b7280" />
-              <YAxis type="category" dataKey="name" fontSize={12} width={60} stroke="#6b7280" />
+              <YAxis type="category" dataKey="name" fontSize={12} width={100} stroke="#6b7280" />
               <Tooltip />
               <Bar dataKey="totalScore" name="总分" fill="#06b6d4" radius={[0, 4, 4, 0]} />
             </BarChart>
