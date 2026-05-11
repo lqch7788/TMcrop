@@ -1,5 +1,5 @@
 /**
- * 新增订单弹窗
+ * 编辑订单弹窗
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -10,61 +10,69 @@ import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropVarietyService from '@/services/cropVarietyService';
 import { Modal } from '@/components/ui/Modal';
 
-interface AddModalProps {
+interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  record: CropOrder | null;
   orderTypeOptions: { value: string; label: string }[];
 }
 
-// 生成订单编号：DD + 年月日(8位) + 4位流水号
-const generateOrderCode = (): string => {
-  const now = new Date();
-  const year = now.getFullYear().toString();
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const day = now.getDate().toString().padStart(2, '0');
-  const timestampStr = `${year}${month}${day}`;
-  // 流水号使用0001作为占位符，后端会根据实际最大值调整
-  return `DD${timestampStr}0001`;
-};
-
-export function AddModal({
+export function EditModal({
   isOpen,
   onClose,
   onSuccess,
+  record,
   orderTypeOptions,
-}: AddModalProps) {
+}: EditModalProps) {
   // 表单状态
   const [formData, setFormData] = useState({
     orderCode: '',
     orderName: '',
     orderType: 'production' as 'breeding' | 'seedling' | 'production' | 'research' | 'other',
-    cropCategory: '',       // 品种路径
-    cropVariety: '',       // 作物品种（搜索用）
+    cropCategory: '',
+    cropVariety: '',
     plannedQuantity: 0,
     actualQuantity: 0,
     unit: '株',
     supplierName: '',
-    orderDate: new Date().toISOString().split('T')[0],
+    orderDate: '',
     expectedHarvestDate: '',
     remarks: '',
+    isCompleted: false, // 是否完成
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // 弹窗打开时自动生成订单编号
+  // 当记录变化时更新表单
   useEffect(() => {
-    if (isOpen) {
-      setFormData(prev => ({
-        ...prev,
-        orderCode: generateOrderCode()
-      }));
-      setSearchKeyword('');
-      setShowDropdown(false);
+    if (record && isOpen) {
+      // 如果订单已完成，禁止编辑
+      if (record.status === CropOrderStatus.COMPLETED) {
+        alert('该订单已完成，无法编辑');
+        onClose();
+        return;
+      }
+      setFormData({
+        orderCode: record.orderCode || '',
+        orderName: record.orderName || '',
+        orderType: record.orderType || 'production',
+        cropCategory: record.cropCategory || '',
+        cropVariety: record.cropVariety || '',
+        plannedQuantity: record.plannedQuantity || 0,
+        actualQuantity: record.actualQuantity || 0,
+        unit: record.unit || '株',
+        supplierName: record.supplierName || '',
+        orderDate: record.orderDate || '',
+        expectedHarvestDate: record.expectedHarvestDate || '',
+        remarks: record.remarks || '',
+        isCompleted: record.status === CropOrderStatus.COMPLETED,
+      });
+      setSearchKeyword(record.cropVariety || '');
     }
-  }, [isOpen]);
+  }, [record, isOpen]);
 
   // 初始化品种数据
   cropVarietyService.initVarieties();
@@ -72,10 +80,9 @@ export function AddModal({
   // 所有品种选项
   const varietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
 
-  // 过滤品种选项（根据搜索关键词）
+  // 过滤品种选项
   const filteredVarieties = useMemo(() => {
     if (!searchKeyword.trim()) {
-      // 无搜索关键词时显示前20条
       return varietyOptions.slice(0, 20);
     }
     const keyword = searchKeyword.toLowerCase();
@@ -90,8 +97,8 @@ export function AddModal({
   const handleSelectVariety = (variety: CropVarietyOption) => {
     setFormData(prev => ({
       ...prev,
-      cropVariety: variety.label,        // 作物品种（品种名称，如"大叶红颜"）
-      cropCategory: variety.fullPath,   // 品种路径（完整路径，如"水果类 > 茄果类 > 番茄 > 红颜 > 大叶红颜"）
+      cropVariety: variety.label,
+      cropCategory: variety.fullPath,
     }));
     setSearchKeyword(variety.label);
     setShowDropdown(false);
@@ -122,6 +129,29 @@ export function AddModal({
   }, [showDropdown]);
 
   const handleSubmit = async () => {
+    // 如果订单已完成，禁止编辑
+    if (record && record.status === CropOrderStatus.COMPLETED) {
+      alert('该订单已完成，无法编辑');
+      onClose();
+      return;
+    }
+
+    // 如果选择"是"完成订单，弹出确认警告
+    if (formData.isCompleted) {
+      const confirmed = window.confirm(
+        '⚠️ 重要提示：\n\n' +
+        '确认将订单标记为完成吗？\n\n' +
+        '完成后该订单将进入保存档案状态：\n' +
+        '• 无法进行任何编辑操作\n' +
+        '• 无法删除订单\n' +
+        '• 无法关联新的作物实例\n\n' +
+        '此操作不可逆，请确认！'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     // 验证
     const newErrors: Record<string, string> = {};
     if (!formData.orderCode) newErrors.orderCode = '请输入订单编号';
@@ -134,56 +164,39 @@ export function AddModal({
       return;
     }
 
-    // 创建订单
-    const newOrder: Omit<CropOrder, 'id' | 'createTime' | 'updateTime'> = {
+    if (!record) return;
+
+    // 更新订单
+    const updates: Partial<CropOrder> = {
       orderCode: formData.orderCode,
       orderName: formData.orderName,
       orderType: formData.orderType,
       orderDate: formData.orderDate,
       expectedHarvestDate: formData.expectedHarvestDate || undefined,
-      cropCategory: formData.cropCategory,  // 品种路径（完整路径）
-      cropName: '',                          // 作物名称（已取消字段）
-      cropVariety: formData.cropVariety,     // 作物品种
+      cropCategory: formData.cropCategory,
+      cropName: '',
+      cropVariety: formData.cropVariety,
       plannedQuantity: formData.plannedQuantity,
       actualQuantity: formData.actualQuantity,
       unit: formData.unit,
       supplierName: formData.supplierName,
-      status: CropOrderStatus.PLANNED,
       remarks: formData.remarks,
-      instanceIds: [],
-      createBy: localStorage.getItem('username') || '',
+      // 如果选择完成，状态变为已完成
+      status: formData.isCompleted ? CropOrderStatus.COMPLETED : record.status,
     };
 
-    console.log('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
+    console.log('[EditModal] 准备更新的订单数据:', JSON.stringify(updates, null, 2));
 
     try {
-      const result = await cropOrderService.createOrder(newOrder);
-      console.log('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
+      const result = await cropOrderService.updateOrder(record.id, updates);
+      console.log('[EditModal] 更新订单成功:', result);
     } catch (error) {
-      console.error('创建订单失败:', error);
-      alert('创建订单失败，请重试');
+      console.error('更新订单失败:', error);
+      alert('更新订单失败，请重试');
       return;
     }
     onSuccess();
     onClose();
-
-    // 重置表单
-    setFormData({
-      orderCode: '',
-      orderName: '',
-      orderType: 'production',
-      cropCategory: '',
-      cropVariety: '',
-      plannedQuantity: 0,
-      actualQuantity: 0,
-      unit: '株',
-      supplierName: '',
-      orderDate: new Date().toISOString().split('T')[0],
-      expectedHarvestDate: '',
-      remarks: '',
-    });
-    setSearchKeyword('');
-    setErrors({});
   };
 
   // 表单内容
@@ -194,25 +207,12 @@ export function AddModal({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           订单编号
         </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={formData.orderCode}
-            onChange={(e) => setFormData({ ...formData, orderCode: e.target.value })}
-            placeholder="点击生成获取编号"
-            className={`flex-1 h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
-              errors.orderCode ? 'border-red-500' : 'border-gray-200'
-            }`}
-          />
-          <button
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, orderCode: generateOrderCode() }))}
-            className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
-          >
-            生成
-          </button>
-        </div>
-        {errors.orderCode && <p className="text-xs text-red-500 mt-1">{errors.orderCode}</p>}
+        <input
+          type="text"
+          value={formData.orderCode}
+          readOnly
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600"
+        />
       </div>
 
       {/* 订单名称 */}
@@ -404,6 +404,24 @@ export function AddModal({
         />
       </div>
 
+      {/* 是否完成 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          订单完成
+        </label>
+        <select
+          value={formData.isCompleted ? 'yes' : 'no'}
+          onChange={(e) => setFormData({ ...formData, isCompleted: e.target.value === 'yes' })}
+          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        >
+          <option value="no">否</option>
+          <option value="yes">是</option>
+        </select>
+        {formData.isCompleted && (
+          <p className="text-xs text-orange-500 mt-1">⚠️ 选择"是"后订单将无法编辑</p>
+        )}
+      </div>
+
       {/* 备注 */}
       <div className="col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -433,7 +451,7 @@ export function AddModal({
         onClick={handleSubmit}
         className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
       >
-        确认创建
+        保存修改
       </button>
     </div>
   );
@@ -442,7 +460,7 @@ export function AddModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="新增订单"
+      title="编辑订单"
       size="lg"
       width={700}
       height={600}

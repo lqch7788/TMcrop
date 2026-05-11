@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface OrderTableProps {
@@ -13,9 +13,11 @@ interface OrderTableProps {
   selectedRows: string[];
   onSelectionChange: (rows: string[]) => void;
   onDetail: (record: CropOrder) => void;
+  onEdit: (record: CropOrder) => void;
   onDelete: (ids: string[]) => void;
   onAdd: () => void;
   exportMode: boolean;
+  batchEditMode: boolean;
   onExportSelectAll: () => void;
   onExportCancel: () => void;
   onConfirmExport: () => void;
@@ -32,9 +34,11 @@ export function OrderTable({
   selectedRows,
   onSelectionChange,
   onDetail,
+  onEdit,
   onDelete,
   onAdd,
   exportMode,
+  batchEditMode,
   onExportSelectAll,
   onExportCancel,
   onConfirmExport,
@@ -94,7 +98,7 @@ export function OrderTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              {exportMode && (
+              {(exportMode || batchEditMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-12">
                   <input
                     type="checkbox"
@@ -118,14 +122,14 @@ export function OrderTable({
           <tbody className="divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={exportMode ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={(exportMode || batchEditMode) ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
             ) : (
               paginatedData.map((record) => (
                 <tr key={record.id} className="hover:bg-emerald-50 transition-colors">
-                  {exportMode && (
+                  {(exportMode || batchEditMode) && (
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
@@ -168,17 +172,31 @@ export function OrderTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          if (confirm(`确定要删除订单 ${record.orderCode} 吗？`)) {
-                            onDelete([record.id]);
-                          }
-                        }}
-                        className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {record.status !== CropOrderStatus.COMPLETED && (
+                        <>
+                          <button
+                            onClick={() => onEdit(record)}
+                            className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
+                            title="编辑"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`确定要删除订单 ${record.orderCode} 吗？`)) {
+                                onDelete([record.id]);
+                              }
+                            }}
+                            className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
+                            title="删除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      {record.status === CropOrderStatus.COMPLETED && (
+                        <span className="text-xs text-gray-400">已归档</span>
+                      )}
                     </div>
                   </td>
                 </tr>
