@@ -154,20 +154,19 @@ export function TaskFeedbackModal({
               min="0"
               max="100"
               step="5"
-              value={task.progress || 0}
+              value={feedbackForm.progress}
               onChange={(e) => {
-                // 注意：这里只更新本地状态，实际提交通过 handleSubmitFeedback 使用 unifiedTasks
-                // 父组件会处理状态更新
+                setFeedbackForm(prev => ({ ...prev, progress: parseInt(e.target.value, 10) }));
               }}
               className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
             <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
-              {task.progress || 0}%
+              {feedbackForm.progress}%
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            {task.progress === 100 ? '已完成，可提交反馈' :
-             task.progress === 0 ? '未开始' : '进行中'}
+            {feedbackForm.progress === 100 ? '已完成，可提交反馈' :
+             feedbackForm.progress === 0 ? '未开始' : '进行中'}
           </p>
         </div>
 

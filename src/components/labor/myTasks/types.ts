@@ -80,6 +80,7 @@ export interface FeedbackFormData {
   resultStatus: '' | '全部完成' | '部分完成' | '延迟完成' | '其他';
   resultText: string;
   progressText: string;
+  progress: number;  // 执行进度 0-100
   workloadDays: string;
   workloadHours: string;
   workloadConfirm: { days: number; hours: number; workers: number } | null;

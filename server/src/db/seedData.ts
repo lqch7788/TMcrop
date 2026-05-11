@@ -1351,64 +1351,13 @@ function seedHarvestRecords() {
 
 /**
  * 导入农事任务
+ * 注意：TK001, TK002 已从种子数据中移除，需要删除请直接操作数据库
  */
 function seedFarmTasks() {
   const db = getDatabase();
 
-  const tasks = [
-    {
-      id: 'TK001',
-      task_code: 'NS202604001',
-      task_title: '红生菜浇水',
-      task_type: '浇水',
-      task_content: '1号大棚红生菜区域浇水',
-      assignee_id: 'USR001',
-      assignee_name: '张三',
-      greenhouse_id: 'GH001',
-      greenhouse_name: '1号大棚',
-      area_name: '01区',
-      plan_date: '2026-04-29',
-      plan_time: '08:00',
-      priority: 'medium',
-      status: 'pending',
-      create_by: '管理员',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    },
-    {
-      id: 'TK002',
-      task_code: 'NS202604002',
-      task_title: '番茄施肥',
-      task_type: '施肥',
-      task_content: '2号大棚番茄区域施肥',
-      assignee_id: 'USR002',
-      assignee_name: '李四',
-      greenhouse_id: 'GH002',
-      greenhouse_name: '2号大棚',
-      area_name: '01区',
-      plan_date: '2026-04-29',
-      plan_time: '09:00',
-      priority: 'high',
-      status: 'pending',
-      create_by: '管理员',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    }
-  ];
-
-  for (const tk of tasks) {
-    db.run(`
-      INSERT OR REPLACE INTO farm_tasks
-      (id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-       greenhouse_id, greenhouse_name, area_name, plan_date, plan_time, priority, status, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      tk.id, tk.task_code, tk.task_title, tk.task_type, tk.task_content, tk.assignee_id, tk.assignee_name,
-      tk.greenhouse_id, tk.greenhouse_name, tk.area_name, tk.plan_date, tk.plan_time, tk.priority, tk.status, tk.create_by, tk.create_time, tk.update_time
-    ]);
-  }
-
-  console.log(`已导入 ${tasks.length} 条农事任务`);
+  // 已移除 TK001, TK002 种子数据
+  console.log('seedFarmTasks: 无需导入农事任务（已清空）');
 }
 
 /**
@@ -1633,7 +1582,7 @@ function seedCropOrders() {
   const orders = [
     {
       id: 'ORD001',
-      order_code: 'DD20260501100001',
+      order_code: 'DD202605010001',
       order_name: '番茄订单',
       order_type: 'production',
       crop_category: '蔬菜类',
@@ -1658,7 +1607,7 @@ function seedCropOrders() {
     },
     {
       id: 'ORD002',
-      order_code: 'DD20260502100002',
+      order_code: 'DD202605020001',
       order_name: '黄瓜订单',
       order_type: 'production',
       crop_category: '蔬菜类',
@@ -1683,7 +1632,7 @@ function seedCropOrders() {
     },
     {
       id: 'ORD003',
-      order_code: 'DD20260503100003',
+      order_code: 'DD202605030001',
       order_name: '生菜订单',
       order_type: 'production',
       crop_category: '蔬菜类',
@@ -1708,9 +1657,9 @@ function seedCropOrders() {
     },
     {
       id: 'ORD004',
-      order_code: 'DD20260504100004',
+      order_code: 'DD202605040001',
       order_name: '草莓种苗订单',
-      order_type: 'seed',
+      order_type: 'seedling',
       crop_category: '水果类',
       crop_name: '草莓',
       crop_variety: '红颜草莓',
@@ -1733,7 +1682,7 @@ function seedCropOrders() {
     },
     {
       id: 'ORD005',
-      order_code: 'DD20260505100005',
+      order_code: 'DD202605050001',
       order_name: '辣椒订单',
       order_type: 'production',
       crop_category: '蔬菜类',
@@ -2836,28 +2785,13 @@ function seedBusinessCropBatches() {
 
 /**
  * 导入农事任务数据（完整版）
+ * 注意：T001, T002 已从种子数据中移除，需要删除请直接操作数据库
  */
 function seedBusinessTasks() {
   const db = getDatabase();
 
-  const tasks = [
-    { id: 'T001', task_code: 'WD20240315-001', task_title: '番茄浇水', task_type: 'irrigation', task_content: '按照灌溉方案进行浇水，水量控制在每株2升', assignee_id: 'U006', assignee_name: '陈小芳', greenhouse_id: 'G001', greenhouse_name: '玻璃温室A区', area_name: '01区', plan_date: '2024-03-15', plan_time: '08:00', priority: 'high', status: 'pending', create_by: '王建国', create_time: new Date().toISOString(), update_time: new Date().toISOString() },
-    { id: 'T002', task_code: 'WD20240315-002', task_title: '黄瓜施肥', task_type: 'fertilization', task_content: '使用水溶肥20-20-20进行叶面喷施，每亩用量5公斤', assignee_id: 'U007', assignee_name: '周志强', greenhouse_id: 'G002', greenhouse_name: '玻璃温室B区', area_name: '01区', plan_date: '2024-03-15', plan_time: '08:30', priority: 'high', status: 'in_progress', create_by: '王建国', create_time: new Date().toISOString(), update_time: new Date().toISOString() },
-  ];
-
-  for (const task of tasks) {
-    db.run(`
-      INSERT OR REPLACE INTO farm_tasks
-      (id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-       greenhouse_id, greenhouse_name, area_name, plan_date, plan_time, priority, status, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      task.id, task.task_code, task.task_title, task.task_type, task.task_content, task.assignee_id, task.assignee_name,
-      task.greenhouse_id, task.greenhouse_name, task.area_name, task.plan_date, task.plan_time, task.priority, task.status, task.create_by, task.create_time, task.update_time
-    ]);
-  }
-
-  console.log(`已导入 ${tasks.length} 条农事任务`);
+  // 已移除 T001, T002 种子数据
+  console.log('seedBusinessTasks: 无需导入农事任务（已清空）');
 }
 
 /**
