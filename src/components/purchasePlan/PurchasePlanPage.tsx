@@ -553,15 +553,30 @@ export function PurchasePlanPage() {
 
   // 批量编辑保存
   const handleBatchEditSave = async () => {
-    if (!currentEditingPlan) return;
+    if (!currentEditingPlan) {
+      alert('请先选择一个采购计划');
+      return;
+    }
     try {
       if (USE_API) {
+        console.log('[保存采购计划] currentEditingPlan:', currentEditingPlan);
+        console.log('[保存采购计划] 发送数据:', {
+          relatedBatchCode: currentEditingPlan.relatedBatchCode,
+          purchaseType: batchEditData.purchaseType,
+          priority: batchEditData.priority,
+          requiredDate: batchEditData.requiredDate,
+          remark: batchEditData.remark,
+          applicantId: currentEditingPlan.applicantId,
+          applicantDepartment: currentEditingPlan.applicantDepartment,
+        });
         await apiClient.put(`/purchase-plans/${currentEditingPlan.id}`, {
           relatedBatchCode: currentEditingPlan.relatedBatchCode,
           purchaseType: batchEditData.purchaseType,
           priority: batchEditData.priority,
           requiredDate: batchEditData.requiredDate,
           remark: batchEditData.remark,
+          applicantId: currentEditingPlan.applicantId,
+          applicantDepartment: currentEditingPlan.applicantDepartment,
         });
       }
       const data = await getPurchasePlansWithStatusAsync();
@@ -573,7 +588,7 @@ export function PurchasePlanPage() {
       alert('保存成功');
     } catch (error) {
       console.error('保存失败:', error);
-      alert('保存失败，请重试');
+      alert(`保存失败: ${error instanceof Error ? error.message : '请重试'}`);
     }
   };
 
