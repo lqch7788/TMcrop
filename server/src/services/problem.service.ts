@@ -39,7 +39,7 @@ export class ProblemService {
     const db = getDatabase();
     const { assigneeId, greenhouseId, status, severity, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM problems WHERE 1=1';
+    const sql = 'SELECT * FROM problems WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

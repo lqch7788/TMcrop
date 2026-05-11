@@ -35,7 +35,7 @@ export class ProductionPlanService {
     const db = getDatabase();
     const { cropName, greenhouseId, status, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM production_plans WHERE 1=1';
+    const sql = 'SELECT * FROM production_plans WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

@@ -37,7 +37,7 @@ export class CropInstanceService {
     const db = getDatabase();
     const { cropName, orderId, greenhouseId, status, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM crop_instances WHERE 1=1';
+    const sql = 'SELECT * FROM crop_instances WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

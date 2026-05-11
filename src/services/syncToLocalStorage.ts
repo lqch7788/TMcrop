@@ -611,7 +611,6 @@ export function clearLocalStorage(module: string): void {
     '采购计划': STORAGE_KEYS.purchasePlans,
     '数据字典': STORAGE_KEYS.dictionaries,
   };
-  };
 
   const key = moduleMap[module];
   if (key) {

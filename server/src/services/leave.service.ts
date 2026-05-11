@@ -39,7 +39,7 @@ export class LeaveService {
     const db = getDatabase();
     const { workerId, department, status, leaveType, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM leave_records WHERE 1=1';
+    const sql = 'SELECT * FROM leave_records WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

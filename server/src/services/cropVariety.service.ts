@@ -33,7 +33,7 @@ export class CropVarietyService {
     const db = getDatabase();
     const { keyword, category, status, page = 1, limit = 50 } = params;
 
-    let sql = 'SELECT * FROM crop_varieties WHERE 1=1';
+    const sql = 'SELECT * FROM crop_varieties WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

@@ -37,7 +37,7 @@ export class TempTaskService {
     const db = getDatabase();
     const { executorId, status, priority, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM temp_tasks WHERE 1=1';
+    const sql = 'SELECT * FROM temp_tasks WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

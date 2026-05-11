@@ -31,7 +31,7 @@ export class InventoryService {
     const db = getDatabase();
     const { cropName, warehouseId, status, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM inventory WHERE 1=1';
+    const sql = 'SELECT * FROM inventory WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

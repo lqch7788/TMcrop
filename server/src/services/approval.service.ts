@@ -43,7 +43,7 @@ export class ApprovalService {
     const db = getDatabase();
     const { status, type, applicantId, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM approvals WHERE 1=1';
+    const sql = 'SELECT * FROM approvals WHERE 1=1';
     const countSql = 'SELECT COUNT(*) as total FROM approvals WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];

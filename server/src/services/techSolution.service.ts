@@ -33,7 +33,7 @@ export class TechSolutionService {
     const db = getDatabase();
     const { keyword, cropName, status, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM tech_solutions WHERE 1=1';
+    const sql = 'SELECT * FROM tech_solutions WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

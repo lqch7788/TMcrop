@@ -42,7 +42,7 @@ export class BasicDataService {
     const db = getDatabase();
     const { parentOid, status } = params;
 
-    let sql = 'SELECT * FROM departments WHERE 1=1';
+    const sql = 'SELECT * FROM departments WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 
@@ -77,7 +77,7 @@ export class BasicDataService {
     const db = getDatabase();
     const { type, status } = params;
 
-    let sql = 'SELECT * FROM warehouses WHERE 1=1';
+    const sql = 'SELECT * FROM warehouses WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 
@@ -113,7 +113,7 @@ export class BasicDataService {
     const db = getDatabase();
     const { baseOid, crop, status } = params;
 
-    let sql = 'SELECT * FROM greenhouses WHERE 1=1';
+    const sql = 'SELECT * FROM greenhouses WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 
