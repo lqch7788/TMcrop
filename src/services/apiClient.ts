@@ -83,7 +83,17 @@ class ApiClient {
       // }
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // 尝试解析错误响应体
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorResult: ApiResponse<T> = await response.json();
+          if (errorResult && errorResult.error) {
+            errorMessage = errorResult.error;
+          }
+        } catch {
+          // 如果无法解析错误响应体，使用默认消息
+        }
+        throw new Error(errorMessage);
       }
 
       const result: ApiResponse<T> = await response.json();

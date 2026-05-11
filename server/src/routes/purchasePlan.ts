@@ -323,12 +323,15 @@ const PURCHASE_PLAN_FIELD_MAP: Record<string, string> = {
   planCode: 'plan_code',
   planTitle: 'plan_title',
   planType: 'plan_type',
+  purchaseType: 'plan_type', // 前端purchaseType对应后端plan_type
   departmentId: 'department_id',
   departmentName: 'department_name',
   applicantId: 'applicant_id',
+  applicantDepartment: 'department_name', // 前端applicantDepartment对应后端department_name
   applicantName: 'applicant_name',
   applyDate: 'apply_date',
   expectedDate: 'expected_date',
+  requiredDate: 'expected_date', // 前端requiredDate对应后端expected_date
   supplierId: 'supplier_id',
   supplierName: 'supplier_name',
   totalAmount: 'total_amount',
@@ -336,6 +339,7 @@ const PURCHASE_PLAN_FIELD_MAP: Record<string, string> = {
   status: 'status',
   approvalStatus: 'approval_status',
   remarks: 'remarks',
+  remark: 'remarks', // 前端remark对应后端remarks
   relatedBatchCode: 'related_batch_code',
   approvalPerson: 'approval_person',
   createBy: 'create_by',
@@ -354,6 +358,8 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
+    console.log('[更新采购计划] 接收到的数据:', JSON.stringify(updates, null, 2));
+
     // 检查采购计划是否存在
     const stmt = db.prepare('SELECT status FROM purchase_plans WHERE id = ?');
     stmt.bind([id]);
@@ -366,6 +372,8 @@ router.put('/:id', (req: Request, res: Response) => {
     if (!plan) {
       return res.status(404).json({ success: false, error: '采购计划不存在' });
     }
+
+    console.log('[更新采购计划] 当前计划状态:', plan.status, plan.approval_status);
 
     // 不允许更新已审批通过的计划
     if (plan.status === 'approved' || plan.approval_status === 'approved') {
@@ -398,17 +406,38 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     if (updateFields.length === 0) {
+      console.log('[更新采购计划] 没有需要更新的字段');
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
+    console.log('[更新采购计划] 生成的更新字段:', updateFields);
+    console.log('[更新采购计划] 更新的值:', values);
+
     values.push(now, id);
 
-    db.run(`UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`, values);
-    saveDatabase();
+    console.log('[更新采购计划] 执行的SQL:', `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`);
+    console.log('[更新采购计划] SQL参数:', values);
+
+    // 执行更新前验证
+    if (updateFields.some(f => !f || f.includes('?'))) {
+      console.error('[更新采购计划] 错误：生成的SQL字段有问题', updateFields);
+      return res.status(500).json({ success: false, error: 'SQL生成错误' });
+    }
+
+    try {
+      db.run(`UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`, values);
+      saveDatabase();
+      console.log('[更新采购计划] 更新成功');
+    } catch (dbError) {
+      console.error('[更新采购计划] 数据库执行错误:', dbError);
+      return res.status(500).json({ success: false, error: `数据库错误: ${(dbError as Error).message}` });
+    }
     res.json({ success: true, data: { id } });
   } catch (error) {
-    console.error('更新采购计划失败:', error);
-    res.status(500).json({ success: false, error: '更新采购计划失败' });
+    console.error('更新采购计划失败, 错误详情:', error);
+    console.error('  错误消息:', (error as Error).message);
+    console.error('  错误堆栈:', (error as Error).stack);
+    res.status(500).json({ success: false, error: `更新采购计划失败: ${(error as Error).message}` });
   }
 });
 

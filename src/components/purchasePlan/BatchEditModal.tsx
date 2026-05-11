@@ -426,10 +426,10 @@ export function BatchEditModal({
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">申请人</label>
               <UserSelect
-                value={currentEditingPlan?.applicant || ''}
+                value={currentEditingPlan?.applicantId || ''}
                 onChange={(value) => {
                   if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicant: value });
+                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicantId: value });
                   }
                 }}
                 placeholder="请选择"
