@@ -33,6 +33,12 @@ type ViewMode = 'list' | 'calendar';
 
 interface TaskTabProps {
   tasks: Task[];
+  stats?: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    completed: number;
+  };
   selectedIds: string[];
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
@@ -70,6 +76,7 @@ interface TaskTabProps {
  */
 export function TaskTab({
   tasks,
+  stats,
   selectedIds,
   onToggleSelect,
   onSelectAll,
@@ -446,6 +453,7 @@ export function TaskTab({
       /* 使用迁移的 TaskTable 组件 */
       <TaskTable
         tasks={filteredTasks}
+        stats={stats}
         currentPage={currentPage}
         pageSize={pageSize}
         // 传递 selectedIds（选中任务ID列表），让 TaskTable 根据 currentPage 和 pageSize 自己计算选中状态

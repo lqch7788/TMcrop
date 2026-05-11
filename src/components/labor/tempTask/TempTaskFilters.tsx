@@ -7,15 +7,6 @@ interface TempTaskFiltersProps {
   urgencyFilter: 'all' | TempTaskUrgency;
   statusFilter: 'all' | TempTask['status'];
   overdueFilter: 'all' | 'overdue' | 'warning';
-  stats: {
-    total: number;
-    pending: number;
-    inProgress: number;
-    completed: number;
-    critical: number;
-    overdue: number;
-    warning: number;
-  };
   onSearchChange: (value: string) => void;
   onUrgencyChange: (value: 'all' | TempTaskUrgency) => void;
   onStatusChange: (value: 'all' | TempTask['status']) => void;
@@ -41,7 +32,6 @@ export function TempTaskFilters({
   urgencyFilter,
   statusFilter,
   overdueFilter,
-  stats,
   onSearchChange,
   onUrgencyChange,
   onStatusChange,

@@ -7,6 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
+import { useTempTasks } from '../../hooks/useTempTasks';
 import { FarmHubHeader } from '../../components/farm/hub/FarmHubHeader';
 import { TaskTab } from '../../components/farm/hub/TaskTab';
 import { ProblemTab } from '../../components/farm/hub/ProblemTab';
@@ -118,6 +119,7 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
 export function FarmTaskHub() {
   const hub = useFarmHub();
   const tasksHook = useTasks();
+  const { tempTasks } = useTempTasks();
   const { users } = useUsers();
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
@@ -396,7 +398,7 @@ export function FarmTaskHub() {
                     <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-medium ${
                       isActive ? 'bg-white/30' : 'bg-gray-200 text-gray-600'
                     }`}>
-                      {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : tab.key === 'inspection' ? hub.inspections.length : '-'}
+                      {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : tab.key === 'inspection' ? hub.inspections.length : tempTasks.length}
                     </span>
                   </button>
                 );
@@ -410,6 +412,12 @@ export function FarmTaskHub() {
               <TaskTab
                 key={taskRefresh}
                 tasks={hub.getFilteredTasks()}
+                stats={{
+                  total: hub.tasks.length,
+                  pending: hub.state.stats?.pendingTasks ?? 0,
+                  inProgress: hub.state.stats?.inProgressTasks ?? 0,
+                  completed: hub.tasks.filter(t => t.status === 'completed').length,
+                }}
                 selectedIds={hub.state.selectedIds}
                 onToggleSelect={hub.toggleSelect}
                 onSelectAll={hub.selectAll}
@@ -444,6 +452,12 @@ export function FarmTaskHub() {
             {hub.state.activeTab === 'inspection' && (
               <InspectionTab
                 inspections={hub.inspections}
+                stats={{
+                  total: hub.inspections.length,
+                  normal: hub.inspections.filter(i => i.status === 'normal').length,
+                  attention: hub.inspections.filter(i => i.status === 'attention').length,
+                  abnormal: hub.inspections.filter(i => i.status === 'critical' || i.status === 'abnormal').length,
+                }}
                 filters={hub.inspectionFilters}
                 onFilterChange={hub.setInspectionFilter}
                 onResetFilters={hub.resetInspectionFilters}
@@ -488,6 +502,12 @@ export function FarmTaskHub() {
               <ProblemTab
                 // 传递hooks获取实时数据
                 onProblemDispatched={handleProblemDispatched}
+                stats={{
+                  total: hub.problems.length,
+                  pending: hub.problems.filter(p => p.status === '待处理').length,
+                  processing: hub.problems.filter(p => p.status === '处理中').length,
+                  resolved: hub.problems.filter(p => p.status === '已处理').length,
+                }}
               />
             )}
             {hub.state.activeTab === 'tempTask' && (

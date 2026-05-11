@@ -11,6 +11,13 @@ interface InspectionToolbarProps {
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
+  // 统计信息
+  stats?: {
+    total: number;
+    normal: number;
+    attention: number;
+    abnormal: number;
+  };
   // 操作回调
   onCreate: () => void;
   onBatchEdit: () => void;
@@ -28,6 +35,7 @@ export function InspectionToolbar({
   exportMode,
   batchEditMode,
   batchDeleteMode,
+  stats,
   onCreate,
   onBatchEdit,
   onBatchDelete,
@@ -41,7 +49,19 @@ export function InspectionToolbar({
 }: InspectionToolbarProps) {
   return (
     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-      <h3 className="text-lg font-semibold text-gray-900">巡查记录列表</h3>
+      <div className="flex items-center gap-4">
+        <h3 className="text-lg font-semibold text-gray-900">巡查记录列表</h3>
+        {stats && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">共</span>
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded">{stats.total}</span>
+            <span className="text-gray-500">条</span>
+            <span className="text-green-600">| 正常 {stats.normal}</span>
+            <span className="text-yellow-600">| 需关注 {stats.attention}</span>
+            <span className="text-red-600">| 异常 {stats.abnormal}</span>
+          </div>
+        )}
+      </div>
       {(exportMode || batchEditMode || batchDeleteMode) ? (
         <div className="flex gap-2">
           {exportMode && (

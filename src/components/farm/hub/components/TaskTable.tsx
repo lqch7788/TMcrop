@@ -37,6 +37,13 @@ interface Task {
 interface TaskTableProps {
   // 数据
   tasks: Task[];
+  // 统计信息
+  stats?: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    completed: number;
+  };
   // 分页
   currentPage: number;
   pageSize: number;
@@ -92,6 +99,7 @@ interface TaskTableProps {
 
 export function TaskTable({
   tasks,
+  stats,
   currentPage,
   pageSize,
   selectedIds,
@@ -151,7 +159,19 @@ export function TaskTable({
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 表头 + 操作按钮 */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">农事任务表</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold text-gray-900">农事任务表</h3>
+          {stats && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">共</span>
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded">{stats.total}</span>
+              <span className="text-gray-500">条</span>
+              <span className="text-amber-600">| 待执行 {stats.pending}</span>
+              <span className="text-blue-600">| 进行中 {stats.inProgress}</span>
+              <span className="text-green-600">| 已完成 {stats.completed}</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {/* 导出模式 */}
           {exportMode ? (
@@ -265,24 +285,6 @@ export function TaskTable({
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
-              )}
-              {onBatchDispatch && (
-                <button
-                  onClick={onBatchDispatch}
-                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                  派发
-                </button>
-              )}
-              {onBatchVerify && (
-                <button
-                  onClick={onBatchVerify}
-                  className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  验收
                 </button>
               )}
               {onExport && (
