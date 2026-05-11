@@ -17,14 +17,15 @@ interface AddModalProps {
   orderTypeOptions: { value: string; label: string }[];
 }
 
-// 生成订单编号：DD + 年月日 + 4位流水号
+// 生成订单编号：DD + 年月日(8位) + 4位流水号
 const generateOrderCode = (): string => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 9000) + 1000); // 随机4位数
-  return `DD${year}${month}${day}${seq}`;
+  const year = now.getFullYear().toString();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const timestampStr = `${year}${month}${day}`;
+  // 流水号使用0001作为占位符，后端会根据实际最大值调整
+  return `DD${timestampStr}0001`;
 };
 
 export function AddModal({
@@ -153,8 +154,11 @@ export function AddModal({
       createBy: localStorage.getItem('username') || '',
     };
 
+    console.log('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
+
     try {
-      await cropOrderService.createOrder(newOrder);
+      const result = await cropOrderService.createOrder(newOrder);
+      console.log('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
     } catch (error) {
       console.error('创建订单失败:', error);
       alert('创建订单失败，请重试');

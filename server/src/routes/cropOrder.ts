@@ -126,7 +126,7 @@ router.get('/:id', (req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const {
+    let {
       id,
       order_code,
       order_type,
@@ -153,48 +153,46 @@ router.post('/', (req: Request, res: Response) => {
       expected_harvest_date
     } = req.body;
 
+    // 如果没有提供id，则自动生成一个
     if (!id) {
-      return res.status(400).json({ success: false, error: '订单ID不能为空' });
+      id = 'ORD' + Date.now();
     }
 
     const now = new Date().toISOString();
     const nowDate = new Date();
     let code = order_code;
 
-    // 如果没有提供订单编号，则在事务内生成（确保并发安全）
-    if (!code) {
+    // 优先使用前端传入的订单编号（如果格式正确以DD开头）
+    // 否则自动生成
+    if (!code || !code.startsWith('DD')) {
       const year = nowDate.getFullYear().toString();
       const month = (nowDate.getMonth() + 1).toString().padStart(2, '0');
       const day = nowDate.getDate().toString().padStart(2, '0');
-      const hours = nowDate.getHours().toString().padStart(2, '0');
-      const minutes = nowDate.getMinutes().toString().padStart(2, '0');
-      const seconds = nowDate.getSeconds().toString().padStart(2, '0');
-      // 新格式: DD + 年月日时分秒(14位) + 3位流水号
-      // 例如: DD20260505123045001
-      const timestampStr = `${year}${month}${day}${hours}${minutes}${seconds}`;
+      // 格式: DD + 年月日(8位) + 4位流水号
+      const dateStr = `${year}${month}${day}`;
 
       // 使用 BEGIN IMMEDIATE 获取写锁，确保并发安全
       db.exec("BEGIN IMMEDIATE");
 
       try {
-        // 查询当天最大的订单编号（基于时间戳前缀匹配）
+        // 查询当天最大的订单编号（基于日期前缀匹配）
         const stmt = db.prepare(`
           SELECT order_code FROM crop_orders
           WHERE order_code LIKE ?
           ORDER BY order_code DESC LIMIT 1
         `);
-        stmt.bind([`DD${timestampStr}%`]);
+        stmt.bind([`DD${dateStr}%`]);
 
         let maxSeq = 0;
         if (stmt.step()) {
           const lastCode = stmt.getAsObject().order_code as string;
-          const seqStr = lastCode.slice(-3);
+          const seqStr = lastCode.slice(-4);
           maxSeq = parseInt(seqStr, 10) || 0;
         }
         stmt.free();
 
         const seq = maxSeq + 1;
-        code = `DD${timestampStr}${String(seq).padStart(3, '0')}`;
+        code = `DD${dateStr}${String(seq).padStart(4, '0')}`;
 
         // 提交事务
         db.exec("COMMIT");
@@ -243,7 +241,45 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
 
-    res.status(201).json({ success: true, message: '订单创建成功', id, code });
+    // 查询刚创建的完整订单数据并返回
+    const newOrder = db.prepare('SELECT * FROM crop_orders WHERE id = ?');
+    newOrder.bind([id]);
+    let orderData: Record<string, unknown> = {};
+    if (newOrder.step()) {
+      orderData = newOrder.getAsObject();
+    }
+    newOrder.free();
+
+    // 转换为驼峰命名返回给前端
+    const response = {
+      id: orderData.id,
+      orderCode: orderData.order_code,
+      orderName: orderData.order_name,
+      orderType: orderData.order_type,
+      cropName: orderData.crop_name,
+      cropVariety: orderData.crop_variety,
+      quantity: orderData.quantity,
+      unit: orderData.unit,
+      unitPrice: orderData.unit_price,
+      totalAmount: orderData.total_amount,
+      customerName: orderData.customer_name,
+      customerContact: orderData.customer_contact,
+      deliveryAddress: orderData.delivery_address,
+      orderDate: orderData.order_date,
+      expectedDeliveryDate: orderData.expected_delivery_date,
+      actualDeliveryDate: orderData.actual_delivery_date,
+      status: orderData.status,
+      remarks: orderData.remarks,
+      createBy: orderData.create_by,
+      createTime: orderData.create_time,
+      updateTime: orderData.update_time,
+      cropCategory: orderData.crop_category,
+      plannedQuantity: orderData.planned_quantity,
+      actualQuantity: orderData.actual_quantity,
+      expectedHarvestDate: orderData.expected_harvest_date,
+    };
+
+    res.status(201).json({ success: true, data: response });
   } catch (error) {
     console.error('创建订单失败:', error);
     res.status(500).json({ success: false, error: '创建订单失败' });
@@ -352,9 +388,9 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    // 只允许删除草稿或已取消的订单
-    if (order.status !== 'draft' && order.status !== 'cancelled') {
-      return res.status(400).json({ success: false, error: '只允许删除草稿或已取消的订单' });
+    // 只禁止删除已完成的订单
+    if (order.status === 'completed') {
+      return res.status(400).json({ success: false, error: '无法删除已完成的订单' });
     }
 
     db.run('DELETE FROM crop_orders WHERE id = ?', [id]);
@@ -369,10 +405,10 @@ router.delete('/:id', (req: Request, res: Response) => {
 
 /**
  * 批量删除订单
- * DELETE /api/crop-orders/batch
+ * POST /api/crop-orders/batch/delete
  * Body: { ids: string[] }
  */
-router.delete('/batch', (req: Request, res: Response) => {
+router.post('/batch/delete', (req: Request, res: Response) => {
   try {
     const { ids } = req.body;
 
@@ -406,17 +442,17 @@ router.delete('/batch', (req: Request, res: Response) => {
         continue;
       }
 
-      // 只允许删除草稿或已取消的订单
-      if (order.status !== 'draft' && order.status !== 'cancelled') {
-        failedIds.push({ id, reason: '只允许删除草稿或已取消的订单' });
+      // 只禁止删除已完成的订单
+      if (order.status === 'completed') {
+        failedIds.push({ id, reason: '无法删除已完成的订单' });
         continue;
       }
     }
 
-    // 批量删除有效的订单
+    // 批量删除有效的订单（非已完成状态）
     const validIds = ids.filter(id => {
       const order = ordersMap.get(id);
-      return order && (order.status === 'draft' || order.status === 'cancelled');
+      return order && order.status !== 'completed';
     });
 
     if (validIds.length > 0) {

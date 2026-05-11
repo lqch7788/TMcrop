@@ -9,6 +9,7 @@ import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
 import { AddModal } from './modals/AddModal';
 import { DetailModal } from './modals/DetailModal';
+import { EditModal } from './modals/EditModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
 import {
@@ -93,6 +94,7 @@ export default function OrderPage() {
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<CropOrder | null>(null);
 
   // 导出状态
@@ -140,6 +142,11 @@ export default function OrderPage() {
   const handleDetail = (record: CropOrder) => {
     setCurrentRecord(record);
     setDetailModalOpen(true);
+  };
+
+  const handleEdit = (record: CropOrder) => {
+    setCurrentRecord(record);
+    setEditModalOpen(true);
   };
 
   const handleDelete = async (ids: string[]) => {
@@ -337,8 +344,8 @@ export default function OrderPage() {
         onCancelExport={handleExportCancel}
         onAdd={() => setAddModalOpen(true)}
         canCreate={canCreate}
-        canEdit={true}
-        canDelete={true}
+        canEdit={false}
+        canDelete={false}
         canExport={true}
         showLowStockButton={false}
         noCard={true}
@@ -360,9 +367,11 @@ export default function OrderPage() {
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         onDetail={handleDetail}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onAdd={() => setAddModalOpen(true)}
         exportMode={exportMode}
+        batchEditMode={batchEditMode}
         onExportSelectAll={handleExportSelectAll}
         onExportCancel={handleExportCancel}
         onConfirmExport={handleExportClickConfirm}
@@ -386,6 +395,18 @@ export default function OrderPage() {
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           record={currentRecord}
+        />
+      )}
+
+      {currentRecord && (
+        <EditModal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          onSuccess={() => {
+            refreshData();
+          }}
+          record={currentRecord}
+          orderTypeOptions={orderTypeOptions}
         />
       )}
 
