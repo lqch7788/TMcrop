@@ -381,12 +381,28 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     // 过滤掉 id 和自动生成的字段，构建字段映射
-    const excludeFields = ['id', 'plan_code', 'create_time', 'items'];
+    const excludeFields = ['id', 'plan_code', 'create_time'];
     const updateFields: string[] = [];
     const values: any[] = [];
 
+    // 单独处理 items 字段
+    let itemsValue: any = null;
+    let totalAmount = 0;
+    if (Array.isArray(updates.items)) {
+      itemsValue = JSON.stringify(updates.items);
+      // 计算总金额
+      for (const item of updates.items) {
+        totalAmount += (item.estimatedTotalPrice || 0);
+      }
+    }
+
     for (const [camelKey, value] of Object.entries(updates)) {
       if (excludeFields.includes(camelKey) || excludeFields.includes(PURCHASE_PLAN_FIELD_MAP[camelKey])) {
+        continue;
+      }
+
+      // 跳过 items，单独处理
+      if (camelKey === 'items') {
         continue;
       }
 
@@ -394,15 +410,21 @@ router.put('/:id', (req: Request, res: Response) => {
       if (camelKey === 'attachments') {
         updateFields.push(`${PURCHASE_PLAN_FIELD_MAP[camelKey] || camelKey} = ?`);
         values.push(JSON.stringify(value || []));
-      } else if (camelKey === 'items') {
-        // items 单独处理，不在这里更新
-        continue;
       } else {
         // 转换为 snake_case 字段名
         const dbField = PURCHASE_PLAN_FIELD_MAP[camelKey] || camelKey;
         updateFields.push(`${dbField} = ?`);
         values.push(value);
       }
+    }
+
+    // 添加 items 字段更新
+    if (itemsValue !== null) {
+      updateFields.push('items = ?');
+      values.push(itemsValue);
+      // 同时更新总金额
+      updateFields.push('total_amount = ?');
+      values.push(totalAmount);
     }
 
     if (updateFields.length === 0) {
@@ -417,12 +439,6 @@ router.put('/:id', (req: Request, res: Response) => {
 
     console.log('[更新采购计划] 执行的SQL:', `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`);
     console.log('[更新采购计划] SQL参数:', values);
-
-    // 执行更新前验证
-    if (updateFields.some(f => !f || f.includes('?'))) {
-      console.error('[更新采购计划] 错误：生成的SQL字段有问题', updateFields);
-      return res.status(500).json({ success: false, error: 'SQL生成错误' });
-    }
 
     try {
       db.run(`UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`, values);

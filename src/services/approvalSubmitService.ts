@@ -114,8 +114,29 @@ class ApprovalSubmitService {
 
       // 5. 如果是自动通过，执行业务联动
       if (levelResult.autoApprove) {
-        // 触发业务状态更新
+        // 触发业务状态更新 - 调用审批联动API
         console.log('【审批提交】自动通过审批，businessLink:', businessData.businessLink);
+        try {
+          const token = localStorage.getItem('token');
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          await fetch('/api/approval-linkage/update', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              approvalId: fullApproval.id,
+              approvalCode: fullApproval.code,
+              action: 'approved',
+              businessLink: businessData.businessLink,
+              operatorId: businessData.applicantId,
+              operatorName: businessData.applicantName,
+            }),
+          });
+          console.log('【审批提交】自动通过审批，业务联动更新成功');
+        } catch (linkError) {
+          console.error('【审批提交】自动通过审批，业务联动更新失败:', linkError);
+        }
       }
 
       return {

@@ -6,6 +6,7 @@ import { Modal, FormField, Select } from '../ui/Modal';
 import { Button } from '../ui/button';
 import { ChevronDown, Trash2, Plus } from 'lucide-react';
 import { UserSelect } from '../common/settings/UserSelect';
+import { useUsers } from '../common/settings';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 
 interface BatchEditModalProps {
@@ -320,6 +321,9 @@ export function BatchEditModal({
   onSubmit,
   onNext,
 }: BatchEditModalProps) {
+  // 用户列表（用于获取申请人姓名）
+  const { users } = useUsers();
+
   // 选择采购计划时的处理
   const handlePlanSelect = (plan: PurchasePlan) => {
     onSelectedPlanCodeChange(plan.purchaseApplicationCode);
@@ -429,7 +433,14 @@ export function BatchEditModal({
                 value={currentEditingPlan?.applicantId || ''}
                 onChange={(value) => {
                   if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicantId: value });
+                    // 根据选择的用户ID获取用户姓名
+                    const selectedUser = users.find(u => u.id === value);
+                    const applicantName = selectedUser?.realName || selectedUser?.name || '';
+                    onCurrentEditingPlanChange({
+                      ...currentEditingPlan,
+                      applicantId: value,
+                      applicant: applicantName,
+                    });
                   }
                 }}
                 placeholder="请选择"
