@@ -29,7 +29,7 @@ export class SupplierService {
     const db = getDatabase();
     const { keyword, supplierType, status, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM suppliers WHERE 1=1';
+    const sql = 'SELECT * FROM suppliers WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

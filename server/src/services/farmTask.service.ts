@@ -36,7 +36,7 @@ export class FarmTaskService {
     const db = getDatabase();
     const { status, assigneeId, greenhouseId, startDate, endDate, keyword, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM farm_tasks WHERE 1=1';
+    const sql = 'SELECT * FROM farm_tasks WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

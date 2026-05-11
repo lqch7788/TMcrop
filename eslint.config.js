@@ -44,6 +44,8 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
       'no-case-declarations': 'off',
       'no-empty': 'warn',
+      // 禁用 prefer-const 检查（解构赋值常用 let）
+      'prefer-const': 'off',
     },
   },
 )

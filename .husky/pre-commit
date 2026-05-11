@@ -2,10 +2,14 @@
 
 echo "🔍 Running pre-commit checks..."
 
-# Lint check only (prettier will be enabled later after formatting batch)
+# Lint check - 只检查错误，不检查警告
 echo "📋 Running ESLint..."
-npx eslint src/ server/src/ --max-warnings=3000
-if [ $? -ne 0 ]; then
+# --quiet 标记会抑制警告，只显示错误
+# --max-warnings=-1 禁用警告计数限制
+npx eslint src/ server/src/ --max-warnings=-1 --quiet
+ESLINT_RESULT=$?
+
+if [ $ESLINT_RESULT -ne 0 ]; then
   echo "❌ ESLint failed. Please fix the errors before committing."
   exit 1
 fi

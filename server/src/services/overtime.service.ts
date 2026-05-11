@@ -36,7 +36,7 @@ export class OvertimeService {
     const db = getDatabase();
     const { workerId, department, status, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM overtime_records WHERE 1=1';
+    const sql = 'SELECT * FROM overtime_records WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

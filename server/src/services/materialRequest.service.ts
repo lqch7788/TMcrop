@@ -35,7 +35,7 @@ export class MaterialRequestService {
     const db = getDatabase();
     const { applicantId, department, status, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM material_requests WHERE 1=1';
+    const sql = 'SELECT * FROM material_requests WHERE 1=1';
     const conditions: string[] = [];
     const queryParams: any[] = [];
 

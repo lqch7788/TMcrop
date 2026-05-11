@@ -28,7 +28,7 @@ export class NotificationService {
     const db = getDatabase();
     const { receiverId, isRead, type, page = 1, limit = 20 } = params;
 
-    let sql = 'SELECT * FROM notifications WHERE receiver_id = ?';
+    const sql = 'SELECT * FROM notifications WHERE receiver_id = ?';
     const conditions: string[] = ['receiver_id = ?'];
     const queryParams: any[] = [receiverId];
 
