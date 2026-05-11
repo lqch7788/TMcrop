@@ -242,7 +242,22 @@ export default function OrderPage() {
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
+    } else if (exportFormat === 'word') {
+      // Word 格式，使用带样式的 HTML
+      content = `<html><head><meta charset="utf-8"><style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4a90d9; color: white; }
+      </style></head><body>
+        <table border="1">
+          <tr>${headers.map(h => `<th style="background-color: #4a90d9; color: white;">${h}</th>`).join('')}</tr>
+          ${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}
+        </table>
+      </body></html>`;
+      mimeType = 'application/vnd.ms-word;charset=utf-8';
+      extension = 'docx';
     } else {
+      // Excel 格式，使用 HTML
       content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-excel;charset=utf-8';
       extension = 'xls';
