@@ -3,17 +3,18 @@
  * 农事任务中心的新建任务功能完整实现
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
 import { cropBatches } from '../../../../data/mockData';
-import { taskDispatchStaff, taskDispatchFields } from '../../../../data/farmMockData';
+import { taskDispatchFields } from '../../../../data/farmMockData';
 import { useUsers } from '../../../common/settings';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
+import { getDictionaries } from '../../../../services/dictionaryService';
 
 // 辅助函数：自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
 function autoGenerateTaskCode(tasks: Task[]): string {
@@ -221,7 +222,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
 
     const taskStatus: 'pending' | 'draft' = publish ? 'pending' : 'draft';
 
-    tasksHook.createTask({
+    console.log('[CreateTaskModal] handleCreateTask called, publish:', publish, 'taskStatus:', taskStatus);
+    console.log('[CreateTaskModal] assignee:', finalAssigneeName, 'id:', finalAssigneeId);
+
+    const createdTask = tasksHook.createTask({
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
       typeName: typeLabels,
@@ -259,6 +263,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
 
     // 重置状态
     handleClose();
+    console.log('[CreateTaskModal] calling onCreated, created task id:', createdTask?.id);
     onCreated();
   };
 
@@ -317,6 +322,29 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
   // 由于props不包含showCreateModal，需要用isOpen代替
   // 但是我们需要在内部维护这个状态来控制关闭时的重置
   const [showCreateModal, setShowCreateModal] = useState(isOpen);
+
+  // 执行人列表状态（从数据字典加载）
+  const [responsiblePersons, setResponsiblePersons] = useState<{ code: string; name: string }[]>([]);
+
+  // 加载执行人列表
+  useEffect(() => {
+    async function loadResponsiblePersons() {
+      try {
+        const data = await getDictionaries('responsible_person');
+        // 转换为下拉框需要的格式
+        const persons = data.map(item => ({
+          code: item.dictCode || item.code || '',
+          name: item.dictLabel || item.name || ''
+        })).filter(item => item.code || item.name);
+        setResponsiblePersons(persons);
+      } catch (error) {
+        console.error('加载执行人列表失败:', error);
+      }
+    }
+    if (showCreateModal) {
+      loadResponsiblePersons();
+    }
+  }, [showCreateModal]);
 
   // 当isOpen变化时同步状态
   React.useEffect(() => {
@@ -1040,6 +1068,20 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
                 <option value="normal">普通</option>
                 <option value="high">高</option>
                 <option value="urgent">紧急</option>
+              </select>
+            </div>
+            {/* 执行人选择 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">执行人</label>
+              <select
+                value={newTask.assignee || ''}
+                onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">请选择执行人</option>
+                {responsiblePersons.map(person => (
+                  <option key={person.code || person.name} value={person.name}>{person.name}</option>
+                ))}
               </select>
             </div>
             <div>

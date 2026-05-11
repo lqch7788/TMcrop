@@ -230,6 +230,7 @@ export function MyTasksPage() {
     resultStatus: '' as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
     resultText: '',
     progressText: '',
+    progress: 0,
     workloadDays: '',
     workloadHours: '',
     workloadConfirm: null,
@@ -334,6 +335,7 @@ export function MyTasksPage() {
     setFeedbackForm({
       resultText: '',
       progressText: '',
+      progress: task.progress || 0,
       workloadDays: '',
       workloadHours: '',
       photosBefore: [],
@@ -443,7 +445,7 @@ export function MyTasksPage() {
         photosAfter: feedbackForm.photosAfter.length > 0 ? feedbackForm.photosAfter : undefined,
         materialCode: feedbackForm.materialCode || undefined,
         voiceNote: feedbackForm.voiceNote || undefined,
-        progress: task.progress || 0,
+        progress: feedbackForm.progress,
       };
 
       if (task.sourceProblemId) {
@@ -452,12 +454,12 @@ export function MyTasksPage() {
           task.sourceProblemId,
           'U013',
           '陆启闯',
-          task.progress || 0,
+          feedbackForm.progress,
           feedbackForm.progressText || feedbackForm.resultText,
           feedbackData
         );
         // 进度100%时提交验收，否则只是进度反馈
-        if (task.progress === 100) {
+        if (feedbackForm.progress === 100) {
           submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
             resultText: feedbackForm.resultText,
             actualWorkload: feedbackForm.workloadConfirm
@@ -474,9 +476,9 @@ export function MyTasksPage() {
       // 查找 unifiedTasks 中对应的任务
       const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
       if (unifiedTask) {
-        const isFinal = task.progress === 100;
+        const isFinal = feedbackForm.progress === 100;
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
-        submitProgress(unifiedTask.id, task.progress || 0, {
+        submitProgress(unifiedTask.id, feedbackForm.progress, {
           remarks: feedbackForm.resultText || feedbackForm.progressText,
           workload: feedbackForm.workloadConfirm
             ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
@@ -505,7 +507,7 @@ export function MyTasksPage() {
           operationDate: new Date().toISOString().split('T')[0],
           sourceId: unifiedTask.id,
           sourceCode: unifiedTask.taskCode,
-          progress: task.progress,
+          progress: feedbackForm.progress,
           remarks: feedbackForm.resultText,
           workloadDays: feedbackForm.workloadConfirm?.days,
           workloadHours: feedbackForm.workloadConfirm?.hours,
