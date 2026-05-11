@@ -12,6 +12,7 @@ import { apiClient, USE_API } from '../../services/apiClient';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
+import { useUsers } from '../common/settings';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -27,6 +28,9 @@ export function PurchasePlanPage() {
   const canEdit = true;
   const canDelete = true;
   const canExport = true;
+
+  // 用户列表（用于编辑时获取申请人姓名）
+  const { users } = useUsers();
 
   // 采购计划数据状态（支持审批联动更新）
   const [purchasePlansData, setPurchasePlansData] = useState<PurchasePlan[]>([]);
@@ -243,7 +247,7 @@ export function PurchasePlanPage() {
         priority: createForm.priority === '紧急' ? 'urgent' :
                  createForm.priority === '高' ? 'high' :
                  createForm.priority === '中' ? 'normal' : 'low',
-        status: 'draft',
+        status: 'pending',
         approval_status: 'pending',
         remarks: createForm.remark,
         attachments: [],
@@ -256,7 +260,9 @@ export function PurchasePlanPage() {
       if (result && result.id) {
         const approvalAmount = totalAmount;
 
-        await submitPurchaseApproval({
+        console.log('【创建采购计划】提交审批，金额:', approvalAmount);
+
+        const approvalResult = await submitPurchaseApproval({
           purchaseId: result.id,
           purchaseCode: result.plan_code || createForm.purchaseApplicationCode,
           purchaseName: planData.plan_title,
@@ -266,10 +272,21 @@ export function PurchasePlanPage() {
           department: planData.department_name,
         });
 
+        console.log('【创建采购计划】审批提交结果:', approvalResult);
+
+        if (!approvalResult.success) {
+          alert('审批提交失败: ' + approvalResult.message);
+          return;
+        }
+
+        if (approvalResult.autoApprove) {
+          alert('采购计划已创建，金额在免审批阈值内，已自动通过');
+        } else {
+          alert('采购计划已创建并提交审批');
+        }
+
         const data = await getPurchasePlansWithStatusAsync();
         setPurchasePlansData(data);
-
-        alert('采购计划已创建并提交审批');
       }
     } catch (error) {
       console.error('创建采购计划失败:', error);
@@ -413,7 +430,17 @@ export function PurchasePlanPage() {
     setSelectedRows([]);
   };
 
-  // 删除点击
+  // 进入批量编辑模式（显示复选框）
+  const handleEnterBatchEditMode = () => {
+    setBatchEditMode(true);
+  };
+
+  // 进入批量删除模式（显示复选框）
+  const handleEnterBatchDeleteMode = () => {
+    setBatchDeleteMode(true);
+  };
+
+  // 删除点击（批量删除模式下确认删除）
   const handleDeleteClick = () => {
     if (selectedRows.length === 0) {
       alert('请先选择要删除的数据');
@@ -428,10 +455,10 @@ export function PurchasePlanPage() {
       // 只删除草稿和已作废状态的采购计划
       const deletablePlans = purchasePlansData
         .filter(p => selectedRows.includes(p.purchaseApplicationCode))
-        .filter(p => p.status === 'draft' || p.status === 'cancelled');
+        .filter(p => p.status === 'draft' || p.approvalStatus === 'rejected');
 
       if (deletablePlans.length === 0) {
-        alert('没有可删除的采购计划（只能删除草稿和已作废状态）');
+        alert('没有可删除的采购计划（只能删除草稿和审批被拒绝状态）');
         return;
       }
 
@@ -486,21 +513,23 @@ export function PurchasePlanPage() {
 
   // 单条删除处理
   const handleSingleDelete = async (plan: PurchasePlan) => {
-    // 只有草稿和已作废状态可以删除
-    if (plan.status !== 'draft' && plan.status !== 'cancelled') {
-      alert('只有草稿和已作废状态的采购计划才能删除');
+    console.log('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
+    // 只有草稿或审批被拒绝的计划可以删除
+    if (plan.status !== 'draft' && plan.approvalStatus !== 'rejected') {
+      alert('只有草稿和审批被拒绝的采购计划才能删除');
       return;
     }
     try {
       if (USE_API) {
-        await apiClient.delete(`/purchase-plans/${plan.id}`);
+        const result = await apiClient.delete<{ success: boolean; error?: string }>(`/purchase-plans/${plan.id}`);
+        console.log('【删除采购计划】API返回:', result);
       }
       const data = await getPurchasePlansWithStatusAsync();
       setPurchasePlansData(data);
       alert('删除成功');
     } catch (error) {
       console.error('删除采购计划失败:', error);
-      alert('删除失败，请重试');
+      alert('删除失败: ' + (error as Error).message);
     }
   };
 
@@ -559,7 +588,12 @@ export function PurchasePlanPage() {
     }
     try {
       if (USE_API) {
+        // 根据 applicantId 获取申请人姓名
+        const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
+        const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
+
         console.log('[保存采购计划] currentEditingPlan:', currentEditingPlan);
+        console.log('[保存采购计划] batchEditItems:', batchEditItems);
         console.log('[保存采购计划] 发送数据:', {
           relatedBatchCode: currentEditingPlan.relatedBatchCode,
           purchaseType: batchEditData.purchaseType,
@@ -567,7 +601,9 @@ export function PurchasePlanPage() {
           requiredDate: batchEditData.requiredDate,
           remark: batchEditData.remark,
           applicantId: currentEditingPlan.applicantId,
+          applicantName: applicantName,
           applicantDepartment: currentEditingPlan.applicantDepartment,
+          items: batchEditItems,
         });
         await apiClient.put(`/purchase-plans/${currentEditingPlan.id}`, {
           relatedBatchCode: currentEditingPlan.relatedBatchCode,
@@ -576,7 +612,9 @@ export function PurchasePlanPage() {
           requiredDate: batchEditData.requiredDate,
           remark: batchEditData.remark,
           applicantId: currentEditingPlan.applicantId,
+          applicantName: applicantName,
           applicantDepartment: currentEditingPlan.applicantDepartment,
+          items: batchEditItems,
         });
       }
       const data = await getPurchasePlansWithStatusAsync();
@@ -647,8 +685,8 @@ export function PurchasePlanPage() {
         canDelete={canDelete}
         canExport={canExport}
         onCreate={handleOpenCreateModal}
-        onBatchEdit={handleBatchEditConfirm}
-        onBatchDelete={handleDeleteClick}
+        onBatchEdit={handleEnterBatchEditMode}
+        onBatchDelete={handleEnterBatchDeleteMode}
         onExport={handleExportClick}
         onExportConfirm={handleConfirmExport}
         onExportCancel={handleCancelExport}

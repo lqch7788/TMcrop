@@ -299,6 +299,7 @@ export function CreatePlanModal({
               onChange={(e) => onFormChange('approvalPerson', e.target.value)}
               options={[
                 { value: '', label: '请选择' },
+                { value: '陆启闯', label: '陆启闯' },
                 { value: '周总', label: '周总' },
                 { value: 'Susan', label: 'Susan' },
               ]}

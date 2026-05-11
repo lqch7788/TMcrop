@@ -21,20 +21,33 @@ export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
 
   const [activeTab, setActiveTab] = useState<
-    'tech' | 'plan' | 'batch' | 'batch_change' | 'batch_void' | 'harvest'
+    'tech' | 'plan' | 'purchase' | 'batch' | 'batch_change' | 'batch_void' | 'harvest'
   >('tech');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [detailModal, setDetailModal] = useState<{ show: boolean; approval: Approval | null }>({ show: false, approval: null });
+  const [detailModal, setDetailModal] = useState<{ show: boolean; approval: Approval | null; purchasePlanDetail?: any }>({ show: false, approval: null, purchasePlanDetail: null });
   const [approvalModal, setApprovalModal] = useState<{ show: boolean; approval: Approval | null; action: 'approve' | 'reject' | null }>({ show: false, approval: null, action: null });
   const [approvalComment, setApprovalComment] = useState('');
 
   // 查看详情处理
-  const handleViewDetail = (approval: Approval) => {
-    setDetailModal({ show: true, approval });
+  const handleViewDetail = async (approval: Approval) => {
+    // 如果是采购申请，加载采购计划详情
+    if (approval.businessLink?.type === 'purchase') {
+      try {
+        const response = await fetch(`/api/purchase-plans/${approval.businessLink.requestId}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          setDetailModal({ show: true, approval, purchasePlanDetail: result.data });
+          return;
+        }
+      } catch (error) {
+        console.error('加载采购计划详情失败:', error);
+      }
+    }
+    setDetailModal({ show: true, approval, purchasePlanDetail: null });
   };
 
   // 审批操作处理
@@ -69,7 +82,7 @@ export default function ProductionApproval() {
 
   // 关闭详情弹窗
   const closeDetailModal = () => {
-    setDetailModal({ show: false, approval: null });
+    setDetailModal({ show: false, approval: null, purchasePlanDetail: null });
   };
 
   // Tab配置 - 生产类审批
@@ -528,8 +541,55 @@ export default function ProductionApproval() {
                     <label className="text-xs text-gray-400">申请时间</label>
                     <p className="text-sm font-medium text-gray-900">{detailModal.approval.applyDate} {detailModal.approval.applyTime}</p>
                   </div>
+                  {detailModal.approval.amount && (
+                    <div>
+                      <label className="text-xs text-gray-400">申请金额</label>
+                      <p className="text-sm font-medium text-emerald-600 text-lg">¥{Number(detailModal.approval.amount).toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* 采购物资明细卡片 */}
+              {detailModal.approval.businessLink?.type === 'purchase' && detailModal.purchasePlanDetail?.items?.length > 0 && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4" /> 采购物资明细
+                  </h4>
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-100 text-blue-700">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold">物料名称</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold">规格型号</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold">单位</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold">数量</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold">预估单价</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold">小计</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-blue-100">
+                      {detailModal.purchasePlanDetail.items.map((item: any, index: number) => (
+                        <tr key={index}>
+                          <td className="px-3 py-2 text-gray-900">{item.materialName || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600">{item.specification || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600 text-center">{item.unit || '-'}</td>
+                          <td className="px-3 py-2 text-gray-900 text-right font-medium">{item.quantity || 0}</td>
+                          <td className="px-3 py-2 text-gray-600 text-right">¥{(item.estimatedPrice || 0).toFixed(2)}</td>
+                          <td className="px-3 py-2 text-emerald-600 text-right font-medium">¥{(item.estimatedTotalPrice || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-blue-50">
+                      <tr>
+                        <td colSpan={5} className="px-3 py-2 text-right text-sm font-medium text-gray-700">总计金额：</td>
+                        <td className="px-3 py-2 text-right text-lg font-bold text-emerald-600">
+                          ¥{detailModal.purchasePlanDetail.items.reduce((sum: number, item: any) => sum + (item.estimatedTotalPrice || 0), 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
 
               {/* 业务关联信息卡片 */}
               {detailModal.approval.businessLink && (

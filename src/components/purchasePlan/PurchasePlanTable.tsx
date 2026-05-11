@@ -101,7 +101,7 @@ function StatusBadge({ status, statusText, plan }: { status: string; statusText:
 function MaterialItemsTable({ items }: { items: PurchasePlanItem[] }) {
   return (
     <table className="w-full bg-white rounded-lg overflow-hidden">
-      <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+      <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
         <tr>
           <th className="px-2 py-2 text-left text-xs font-semibold">物料编码</th>
           <th className="px-2 py-2 text-left text-xs font-semibold">物料名称</th>
