@@ -31,6 +31,8 @@ export interface TechSolution {
   planDetailFileName: string;
   priority: string;
   remarks: string;
+  lastSubmitTime: string;
+  isValid: string;
 }
 
 // 初始化默认数据

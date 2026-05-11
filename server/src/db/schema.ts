@@ -1307,6 +1307,20 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // 为技术方案表添加最后提交时间字段（如果不存在）
+  try {
+    db.run(`ALTER TABLE tech_solutions ADD COLUMN last_submit_time TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 为技术方案表添加方案是否有效字段（如果不存在）
+  try {
+    db.run(`ALTER TABLE tech_solutions ADD COLUMN is_valid TEXT DEFAULT '有效'`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
   // ========== 作物品种库扩展表（用户新增的类型/品种/子品种）==========
   db.run(`
     CREATE TABLE IF NOT EXISTS crop_variety_type_extensions (

@@ -20,7 +20,6 @@ import { CreatePlanModal } from './CreatePlanModal';
 import { PlanDetailModal } from './PlanDetailModal';
 import { BatchEditModal } from './BatchEditModal';
 import { AlertStats } from './AlertStats';
-import { ActionBar } from './ActionBar';
 
 export function PurchasePlanPage() {
   // 权限控制 - 已取消，所有人可使用所有功能
@@ -426,9 +425,17 @@ export function PurchasePlanPage() {
   // 删除确认
   const handleDeleteConfirm = async () => {
     try {
-      const selectedIds = purchasePlansData
+      // 只删除草稿和已作废状态的采购计划
+      const deletablePlans = purchasePlansData
         .filter(p => selectedRows.includes(p.purchaseApplicationCode))
-        .map(p => p.id);
+        .filter(p => p.status === 'draft' || p.status === 'cancelled');
+
+      if (deletablePlans.length === 0) {
+        alert('没有可删除的采购计划（只能删除草稿和已作废状态）');
+        return;
+      }
+
+      const selectedIds = deletablePlans.map(p => p.id);
 
       if (USE_API) {
         for (const id of selectedIds) {
@@ -452,6 +459,49 @@ export function PurchasePlanPage() {
   const handleViewDetail = (plan: PurchasePlan) => {
     setSelectedPlanDetail(plan);
     setShowDetailModal(true);
+  };
+
+  // 单条编辑处理
+  const handleSingleEdit = (plan: PurchasePlan) => {
+    // 已完成或采购中状态不可编辑
+    if (plan.status === 'completed' || plan.status === 'purchasing') {
+      alert('该采购计划已归档，无法编辑');
+      return;
+    }
+    // 设置选中的plan并打开批量编辑弹窗（复用它）
+    setSelectedPlanCode(plan.purchaseApplicationCode);
+    setCurrentEditingPlan(plan);
+    setBatchEditData({
+      purchaseType: plan.purchaseType,
+      priority: plan.priority,
+      requiredDate: plan.requiredDate || '',
+      remark: plan.remark || '',
+    });
+    setBatchEditItems(plan.items || []);
+    setEditedPlanCodes([]);
+    setEditedPlans({});
+    setSelectedRows([plan.purchaseApplicationCode]);
+    setShowBatchEditModal(true);
+  };
+
+  // 单条删除处理
+  const handleSingleDelete = async (plan: PurchasePlan) => {
+    // 只有草稿和已作废状态可以删除
+    if (plan.status !== 'draft' && plan.status !== 'cancelled') {
+      alert('只有草稿和已作废状态的采购计划才能删除');
+      return;
+    }
+    try {
+      if (USE_API) {
+        await apiClient.delete(`/purchase-plans/${plan.id}`);
+      }
+      const data = await getPurchasePlansWithStatusAsync();
+      setPurchasePlansData(data);
+      alert('删除成功');
+    } catch (error) {
+      console.error('删除采购计划失败:', error);
+      alert('删除失败，请重试');
+    }
   };
 
   // 批量编辑确认
@@ -574,7 +624,23 @@ export function PurchasePlanPage() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
         onViewDetail={handleViewDetail}
+        onEdit={handleSingleEdit}
+        onDelete={handleSingleDelete}
         filteredAndSortedData={filteredAndSortedData}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canExport={canExport}
+        onCreate={handleOpenCreateModal}
+        onBatchEdit={handleBatchEditConfirm}
+        onBatchDelete={handleDeleteClick}
+        onExport={handleExportClick}
+        onExportConfirm={handleConfirmExport}
+        onExportCancel={handleCancelExport}
+        onBatchEditConfirm={handleBatchEditConfirm}
+        onBatchEditCancel={handleBatchEditCancel}
+        onBatchDeleteConfirm={handleDeleteConfirm}
+        onBatchDeleteCancel={handleBatchDeleteCancel}
       />
 
       {/* 创建弹窗 */}

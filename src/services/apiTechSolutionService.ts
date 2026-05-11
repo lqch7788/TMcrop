@@ -34,6 +34,8 @@ interface BackendTechSolution {
   planDetailFileName: string;
   priority: string;
   remarks: string;
+  lastSubmitTime: string;
+  isValid: string;
   [key: string]: unknown;
 }
 
@@ -73,6 +75,8 @@ function transformSingle(item: BackendTechSolution): TechSolution {
     planDetailFileName: item.planDetailFileName || '',
     priority: item.priority || 'normal',
     remarks: item.remarks || '',
+    lastSubmitTime: item.lastSubmitTime || '',
+    isValid: item.isValid || '有效',
   };
 }
 

@@ -69,6 +69,8 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     planDetailFileName: item.plan_detail_file_name,
     priority: item.priority || 'normal',
     remarks: item.remarks,
+    lastSubmitTime: item.last_submit_time || '',
+    isValid: item.is_valid || '有效',
   };
   return result;
 }
@@ -123,12 +125,15 @@ router.get('/', (req: Request, res: Response) => {
 
     const items: Record<string, unknown>[] = [];
     while (stmt.step()) {
-      items.push(stmt.getAsObject());
+      const item = stmt.getAsObject();
+      console.log('[获取技术方案列表] 原始数据 related_batch_code:', item.related_batch_code);
+      items.push(item);
     }
     stmt.free();
 
     // 转换字段格式为camelCase
     const camelItems = mapArrayToFrontend(items);
+    console.log('[获取技术方案列表] 转换后数据 relatedBatchCode:', camelItems.map((i: any) => i.relatedBatchCode));
 
     // 获取总数
     let countSql = 'SELECT COUNT(*) as total FROM tech_solutions WHERE 1=1';
@@ -217,8 +222,13 @@ router.post('/', (req: Request, res: Response) => {
       planDetailFileName,
       priority,
       remarks,
-      batchStatus = 'draft', // 默认草稿状态
     } = req.body;
+
+    // 默认草稿状态
+    const batchStatus = req.body.batchStatus || 'draft';
+
+    console.log('[技术方案创建] relatedBatchCode:', relatedBatchCode);
+    console.log('[技术方案创建] req.body:', JSON.stringify(req.body, null, 2));
 
     const id = generateId('TS');
     // 优先使用前端传入的编号，否则按规则生成
@@ -230,8 +240,8 @@ router.post('/', (req: Request, res: Response) => {
         id, solution_code, solution_title, crop_name, crop_code, planting_mode, stage,
         version, content, author, author_id, create_time, update_time,
         status, batch_status, related_batch_code, plan_detail_file_name,
-        priority, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        priority, remarks, last_submit_time, is_valid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       solutionCode,
@@ -252,9 +262,12 @@ router.post('/', (req: Request, res: Response) => {
       planDetailFileName || '',
       priority || 'normal',
       remarks || '',
+      now, // last_submit_time
+      req.body.isValid || '有效', // is_valid
     ]);
 
     saveDatabase();
+    console.log('[技术方案创建] 插入数据 - related_batch_code:', relatedBatchCode || '');
 
     res.json({
       success: true,
@@ -290,9 +303,13 @@ router.put('/:id', (req: Request, res: Response) => {
       planDetailFileName = '',
       priority = 'normal',
       remarks = '',
+      isValid = '有效',
+      lastSubmitTime = '',
     } = req.body;
 
     const now = new Date().toISOString();
+    // 如果方案被标记为作废，更新 batch_status
+    const batchStatus = isValid === '作废' ? 'cancelled' : 'pending';
 
     db.run(`
       UPDATE tech_solutions SET
@@ -306,7 +323,10 @@ router.put('/:id', (req: Request, res: Response) => {
         plan_detail_file_name = ?,
         priority = ?,
         remarks = ?,
-        update_time = ?
+        update_time = ?,
+        batch_status = ?,
+        is_valid = ?,
+        last_submit_time = ?
       WHERE id = ?
     `, [
       solutionTitle,
@@ -320,6 +340,9 @@ router.put('/:id', (req: Request, res: Response) => {
       priority,
       remarks,
       now,
+      batchStatus,
+      isValid,
+      lastSubmitTime || now,
       id,
     ]);
 

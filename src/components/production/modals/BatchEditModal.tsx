@@ -278,6 +278,24 @@ export function BatchEditModal({
                     {batchStatusLabels[currentBatch.batchStatus || 'draft']}
                   </span>
                 </div>
+
+                {/* 计划是否完成 - 可编辑 */}
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">计划是否完成</div>
+                  <select
+                    value={editedData.isCompleted === undefined ? 'no' : editedData.isCompleted ? 'yes' : 'no'}
+                    onChange={(e) => handleFieldChange('isCompleted', e.target.value === 'yes')}
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="no">否</option>
+                    <option value="yes">是</option>
+                  </select>
+                  {editedData.isCompleted === true && (
+                    <p className="text-xs text-red-600 mt-1 font-medium">
+                      ⚠️ 选择"是"后计划将归档，无法编辑和删除
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* 第二行：计划详情文件上传 */}

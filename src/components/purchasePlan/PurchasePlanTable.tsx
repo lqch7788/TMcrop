@@ -2,7 +2,7 @@
  * 采购计划数据表格组件
  */
 import React from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon, Plus, Edit, Trash2, Download, Pencil } from 'lucide-react';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
 import { Button } from '../ui/button';
@@ -31,8 +31,26 @@ interface PurchasePlanTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onViewDetail: (plan: PurchasePlan) => void;
+  onEdit: (plan: PurchasePlan) => void;
+  onDelete: (plan: PurchasePlan) => void;
   // 全选数据
   filteredAndSortedData: PurchasePlan[];
+  // 工具栏权限
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
+  // 工具栏操作
+  onCreate?: () => void;
+  onBatchEdit?: () => void;
+  onBatchDelete?: () => void;
+  onExport?: () => void;
+  onExportConfirm?: () => void;
+  onExportCancel?: () => void;
+  onBatchEditConfirm?: () => void;
+  onBatchEditCancel?: () => void;
+  onBatchDeleteConfirm?: () => void;
+  onBatchDeleteCancel?: () => void;
 }
 
 /**
@@ -139,7 +157,23 @@ export function PurchasePlanTable({
   onPageChange,
   onPageSizeChange,
   onViewDetail,
+  onEdit,
+  onDelete,
   filteredAndSortedData,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canExport = true,
+  onCreate,
+  onBatchEdit,
+  onBatchDelete,
+  onExport,
+  onExportConfirm,
+  onExportCancel,
+  onBatchEditConfirm,
+  onBatchEditCancel,
+  onBatchDeleteConfirm,
+  onBatchDeleteCancel,
 }: PurchasePlanTableProps) {
   // 计算总页数
   const totalPages = Math.ceil(filteredAndSortedData.length / pageSize) || 1;
@@ -152,6 +186,95 @@ export function PurchasePlanTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {/* 工具栏 - 与技术方案页面保持一致 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">采购计划列表</h3>
+        {exportMode || batchEditMode || batchDeleteMode ? (
+          <div className="flex gap-2">
+            {batchEditMode && (
+              <>
+                <Button
+                  size="sm"
+                  variant="blue"
+                  onClick={() => {
+                    if (selectedRows.length === 0) {
+                      alert('请先选择要编辑的数据');
+                      return;
+                    }
+                    onBatchEditConfirm?.();
+                  }}
+                >
+                  <Edit className="w-4 h-4" />
+                  编辑
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
+                  取消
+                </Button>
+              </>
+            )}
+            {batchDeleteMode && (
+              <>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    if (selectedRows.length === 0) {
+                      alert('请先选择要删除的数据');
+                      return;
+                    }
+                    onBatchDeleteConfirm?.();
+                  }}
+                  disabled={selectedRows.length === 0}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onBatchDeleteCancel}>
+                  取消
+                </Button>
+              </>
+            )}
+            {exportMode && (
+              <>
+                <Button size="sm" onClick={onExportConfirm}>
+                  <Download className="w-4 h-4" />
+                  确认导出
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onExportCancel}>
+                  取消
+                </Button>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            {canCreate && onCreate && (
+              <Button size="sm" onClick={onCreate}>
+                <Plus className="w-4 h-4" />
+                新增
+              </Button>
+            )}
+            {canEdit && onBatchEdit && (
+              <Button size="sm" variant="blue" onClick={onBatchEdit}>
+                <Edit className="w-4 h-4" />
+                编辑
+              </Button>
+            )}
+            {canDelete && onBatchDelete && (
+              <Button size="sm" variant="destructive" onClick={onBatchDelete}>
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+            )}
+            {canExport && onExport && (
+              <Button size="sm" onClick={onExport}>
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -182,6 +305,7 @@ export function PurchasePlanTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('priority')}>优先级{sortConfig?.field === 'priority' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('status')}>状态{sortConfig?.field === 'status' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -249,11 +373,40 @@ export function PurchasePlanTable({
                     <StatusBadge status={plan.status} statusText={plan.statusText} plan={plan} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.approvalPerson || '-'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {plan.status !== 'completed' && plan.status !== 'purchasing' && (
+                        <>
+                          <button
+                            onClick={() => onEdit(plan)}
+                            className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
+                            title="编辑"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`)) {
+                                onDelete(plan);
+                              }
+                            }}
+                            className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
+                            title="删除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      {(plan.status === 'completed' || plan.status === 'purchasing') && (
+                        <span className="text-xs text-gray-400">已归档</span>
+                      )}
+                    </div>
+                  </td>
                 </tr>
                 {/* 展开的物料明细行 */}
                 {expandedRows.has(plan.id) && (
                   <tr key={`${plan.id}-expanded`} className="bg-blue-50/50">
-                    <td colSpan={11} className="px-4 py-4">
+                    <td colSpan={12} className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-700 mb-3">物料明细（共 {plan.items?.length || 0} 项）</div>
                       <MaterialItemsTable items={plan.items || []} />
                     </td>

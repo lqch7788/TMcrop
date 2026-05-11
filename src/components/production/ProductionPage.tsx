@@ -659,6 +659,39 @@ export default function ProductionPage() {
     setShowVoidWarning(false);
   };
 
+  // 单条编辑处理
+  const handleSingleEdit = (batch: CropBatch) => {
+    // 已完成或已取消状态不可编辑
+    if (batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled') {
+      alert('该生产计划已归档，无法编辑');
+      return;
+    }
+    // 设置选中的batchCode并打开批量编辑弹窗（复用它）
+    // 注意：不要设置 selectedBatch，否则会触发详情弹窗
+    setSelectedBatchCode(batch.batchCode);
+    setSelectedRows([batch.id]);
+    setShowBatchEditModal(true);
+  };
+
+  // 单条删除处理
+  const handleSingleDelete = async (batch: CropBatch) => {
+    // 草稿和已作废状态可以删除
+    if (batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled') {
+      alert('只有草稿或已作废状态的生产计划才能删除');
+      return;
+    }
+    try {
+      if (USE_API) {
+        await deleteProductionPlan(batch.id);
+      }
+      setBatches(batches.filter(b => b.id !== batch.id));
+      alert('删除成功');
+    } catch (error) {
+      console.error('删除生产计划失败:', error);
+      alert('删除失败，请重试');
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
@@ -690,6 +723,25 @@ export default function ProductionPage() {
 
   // 提交编辑审批
   const handlePublish = async () => {
+    // 检查是否有计划选择"完成"
+    const hasCompleteRequest = Object.values(editedBatches).some(
+      edited => edited.isCompleted === true
+    );
+
+    if (hasCompleteRequest) {
+      const confirmed = window.confirm(
+        '⚠️ 重要提示：\n\n' +
+        '您选择将计划标记为完成状态。\n\n' +
+        '完成后将进行归档：\n' +
+        '• 无法进行任何编辑操作\n' +
+        '• 无法删除计划\n\n' +
+        '此操作不可逆，请确认！'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     // Apply all edits and create approval for each edited batch
     if (Object.keys(editedBatches).length > 0) {
       // 记录已提交的批次ID
@@ -724,8 +776,8 @@ export default function ProductionPage() {
               if (edited.planDetail !== undefined) apiData.planDetail = edited.planDetail;
               if (edited.planDetailFileName !== undefined) apiData.planDetailFileName = edited.planDetailFileName;
 
-              // 重要：同时更新 batchStatus 为 pending，表示已提交审批
-              apiData.batchStatus = 'pending';
+              // 如果选择了"完成计划"，状态设置为pending_complete（待审批-完成）；否则为pending
+              apiData.batchStatus = edited.isCompleted === true ? 'pending_complete' : 'pending';
 
               console.log('保存编辑:', batch.id, apiData);
               await updateProductionPlan(batch.id, apiData);
@@ -745,12 +797,15 @@ export default function ProductionPage() {
             if (edited.expectedHarvestDate) changes.push(`预计结束: ${batch.expectedHarvestDate} → ${edited.expectedHarvestDate}`);
             if (edited.responsiblePerson) changes.push(`负责人: ${batch.responsiblePerson} → ${edited.responsiblePerson}`);
             if (edited.targetYield) changes.push(`目标产量: ${batch.targetYield} → ${edited.targetYield}`);
+            if (edited.isCompleted === true) changes.push(`计划完成: 标记为已完成（归档）`);
 
             const approvalData = {
               id: changeId,
               type: 'production_plan',
               typeName: '生产计划',
-              title: `生产计划编辑审批：${batch.batchCode}`,
+              title: edited.isCompleted === true
+                ? `生产计划完成归档审批：${batch.batchCode}`
+                : `生产计划编辑审批：${batch.batchCode}`,
               description: changes.join('\n'),
               applicantId: currentUserId,
               applicantName: currentUserName,
@@ -760,6 +815,7 @@ export default function ProductionPage() {
               priority: 'normal',
               businessLink: {
                 type: 'production',
+                approvalAction: edited.isCompleted === true ? 'complete' : 'edit', // 标记审批类型：完成归档或普通编辑
                 requestId: batch.id,
                 requestCode: batch.batchCode,
                 cropName: edited.cropName || batch.cropName,
@@ -791,12 +847,13 @@ export default function ProductionPage() {
         return;
       }
 
-      // Update local state - 设置为待审批状态
+      // Update local state - 根据是否完成来决定状态
       setBatches(batches.map(batch => {
         const edited = editedBatches[batch.batchCode];
         if (edited) {
-          // 只有编辑了数据的批次才进入待审批状态
-          return { ...batch, ...edited, lastModifyDate: new Date().toISOString().slice(0, 10), batchStatus: 'pending' as const };
+          // 选择"完成计划"则状态为 pending_complete；否则为 pending
+          const newStatus = edited.isCompleted === true ? 'pending_complete' : 'pending';
+          return { ...batch, ...edited, lastModifyDate: new Date().toISOString().slice(0, 10), batchStatus: newStatus as const };
         }
         return batch;
       }));
@@ -978,6 +1035,8 @@ export default function ProductionPage() {
           onBatchSelectAll={handleBatchSelectAll}
           onBatchDeleteSelectAll={handleBatchDeleteSelectAll}
           onBatchCodeClick={setSelectedBatch}
+          onEdit={handleSingleEdit}
+          onDelete={handleSingleDelete}
           totalCount={filteredBatches.length}
         />
       </div>

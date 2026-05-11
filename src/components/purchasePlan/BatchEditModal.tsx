@@ -3,7 +3,8 @@
  */
 import React, { useRef, useEffect } from 'react';
 import { Modal, FormField, Select } from '../ui/Modal';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { ChevronDown, Trash2, Plus } from 'lucide-react';
 import { UserSelect } from '../common/settings/UserSelect';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 
@@ -342,11 +343,20 @@ export function BatchEditModal({
       onClose={onClose}
       title="编辑采购申请单"
       size="xxl"
-      showFooter={false}
+      showFooter={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button variant="default" size="sm" onClick={onNext}>
+            确认（下一个）
+          </Button>
+          <Button variant="default" size="sm" onClick={onSubmit}>
+            保存
+          </Button>
+        </div>
+      }
     >
-      {/* 使用 relative 容器包裹内容，按钮使用 absolute 固定在右下角 */}
-      <div className="relative pb-20">
-        <div className="space-y-4">
+      {/* 内容区域全宽显示 */}
+      <div className="space-y-4">
           {/* 提示信息 */}
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm text-blue-800">已选择 <strong>{selectedRows.length}</strong> 个采购计划进行编辑</p>
@@ -497,14 +507,47 @@ export function BatchEditModal({
 
             {/* 第4行：物料明细（展开显示） */}
             <div className="md:col-span-3 border-t border-gray-200 pt-3 mt-2">
-              <button
-                type="button"
-                onClick={() => onShowEditItemsExpandedChange(!showEditItemsExpanded)}
-                className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                <ChevronDown className={`w-4 h-4 transition-transform ${showEditItemsExpanded ? 'rotate-180' : ''}`} />
-                物料明细（{batchEditItems.length || 0}种物料）
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => onShowEditItemsExpandedChange(!showEditItemsExpanded)}
+                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showEditItemsExpanded ? 'rotate-180' : ''}`} />
+                  物料明细（{batchEditItems.length || 0}种物料）
+                </button>
+                {showEditItemsExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newItem: PurchasePlanItem = {
+                        id: `new_${Date.now()}`,
+                        materialId: '',
+                        materialCode: '',
+                        materialName: '',
+                        category: '',
+                        specification: '',
+                        unit: '',
+                        quantity: 0,
+                        estimatedPrice: 0,
+                        estimatedTotalPrice: 0,
+                        supplier: '',
+                        location: '',
+                        batchNo: '',
+                        productionDate: '',
+                        expiryDate: '',
+                        purpose: '',
+                        remark: '',
+                      };
+                      onBatchEditItemsChange([...batchEditItems, newItem]);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md"
+                  >
+                    <Plus className="w-3 h-3" />
+                    新增物料
+                  </button>
+                )}
+              </div>
 
               {showEditItemsExpanded && batchEditItems.length > 0 && (
                 <div className="mt-3">
@@ -514,31 +557,12 @@ export function BatchEditModal({
 
               {showEditItemsExpanded && batchEditItems.length === 0 && (
                 <div className="mt-3 text-center py-4 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
-                  暂无物料明细
+                  暂无物料明细，请点击"新增物料"按钮添加
                 </div>
               )}
             </div>
           </div>
         </div>
-
-        {/* 底部按钮 - 固定在弹窗右下角，不随弹窗缩放变化 */}
-        <div className="absolute bottom-0 right-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onNext}
-            className="px-6 h-10 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-50 whitespace-nowrap"
-          >
-            确认（下一个）
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="px-6 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
-          >
-            保存
-          </button>
-        </div>
-      </div>
     </Modal>
   );
 }
