@@ -20,7 +20,7 @@ import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../
 import * as seedlingService from '../../../services/apiSeedlingService';
 import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
-import * as cropBatchService from '../../../services/cropBatchService';
+import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function SeedlingPage() {
@@ -261,7 +261,7 @@ export default function SeedlingPage() {
   };
 
   // 处理结束计划
-  const handleEnd = (record: Seedling, endType: 'normal' | 'abnormal') => {
+  const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
     // 检查是否有关联的生产计划
     const planCode = record.productionPlanCode;
     if (!planCode || planCode.trim() === '') {
@@ -269,7 +269,7 @@ export default function SeedlingPage() {
       return;
     }
 
-    const batch = cropBatchService.getCropBatchByCode(planCode);
+    const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
       alert('未找到关联的生产计划 [' + planCode + ']，请检查生产计划是否存在');
       return;
@@ -290,7 +290,7 @@ export default function SeedlingPage() {
       return;
     }
 
-    const result = cropBatchService.endCropBatch(batch.id, endType);
+    const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       refreshData();

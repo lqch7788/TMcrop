@@ -19,7 +19,7 @@ import { useDictionaries } from '../../common/settings';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/apiPlantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
-import * as cropBatchService from '../../../services/cropBatchService';
+import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function PlantingPage() {
@@ -193,13 +193,13 @@ export default function PlantingPage() {
   };
 
   // 处理结束计划
-  const handleEnd = (record: Planting, endType: 'normal' | 'abnormal') => {
+  const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
     if (!record.productionPlanCode) {
       alert('该种植没有关联的生产计划，无法结束');
       return;
     }
 
-    const batch = cropBatchService.getCropBatchByCode(record.productionPlanCode);
+    const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
     if (!batch) {
       alert('未找到关联的生产计划');
       return;
@@ -220,7 +220,7 @@ export default function PlantingPage() {
       return;
     }
 
-    const result = cropBatchService.endCropBatch(batch.id, endType);
+    const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       window.location.reload();

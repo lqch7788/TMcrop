@@ -23,7 +23,7 @@ import {
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
 import * as seedSourceService from '../../../services/apiSeedSourceService';
-import * as cropBatchService from '../../../services/cropBatchService';
+import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 
 export default function SeedSourcePage() {
@@ -195,7 +195,7 @@ export default function SeedSourcePage() {
   };
 
   // 处理结束计划
-  const handleEnd = (record: SeedSource, endType: 'normal' | 'abnormal') => {
+  const handleEnd = async (record: SeedSource, endType: 'normal' | 'abnormal') => {
     // 获取关联的生产计划批次号
     if (!record.productionPlanCode) {
       alert('该种源没有关联的生产计划，无法结束');
@@ -203,7 +203,7 @@ export default function SeedSourcePage() {
     }
 
     // 查找对应的生产计划
-    const batch = cropBatchService.getCropBatchByCode(record.productionPlanCode);
+    const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
     if (!batch) {
       alert('未找到关联的生产计划');
       return;
@@ -229,7 +229,7 @@ export default function SeedSourcePage() {
     }
 
     // 执行结束
-    const result = cropBatchService.endCropBatch(batch.id, endType);
+    const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       // 刷新页面数据

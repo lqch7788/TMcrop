@@ -132,8 +132,9 @@ export function EditModal({
       return;
     }
 
-    onClose();
+    // 先刷新数据，再关闭弹窗
     onSuccess?.();
+    onClose();
   };
 
   return (

@@ -244,6 +244,7 @@ export function useFarmHub(): UseFarmHubReturn {
       if (stored) {
         const parsed = JSON.parse(stored);
         const allTasks: Task[] = parsed.data || parsed || [];
+        console.log('[useFarmHub] tasks from localStorage, total:', allTasks.length);
 
         // 过滤农事任务
         const farmTasks = allTasks.filter(t => {
@@ -251,21 +252,27 @@ export function useFarmHub(): UseFarmHubReturn {
           return dispatchMode === 'farm';
         });
 
+        console.log('[useFarmHub] farmTasks count:', farmTasks.length);
+
         // 排序
         const sortedTasks = [...farmTasks].sort(sortByCreatedAt);
 
         return sortedTasks;
+      } else {
+        console.log('[useFarmHub] no tasks in localStorage');
       }
     } catch (e) {
-      // 读取任务数据失败
+      console.error('[useFarmHub] error reading tasks:', e);
     }
     // 备用：从 useTasksData 获取
-    return useTasksData
+    const fallbackTasks = useTasksData
       .filter(t => {
         const dispatchMode = t.dispatchMode || 'farm';
         return dispatchMode === 'farm';
       })
       .sort(sortByCreatedAt);
+    console.log('[useFarmHub] fallback tasks from useTasksData:', fallbackTasks.length);
+    return fallbackTasks;
   }, [refreshKey, useTasksData]);
 
   // 统计数据

@@ -179,7 +179,7 @@ export function AddModal({
     setSeedCode(newCode);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 验证必填项
     if (!seedCode) {
       alert('请先生成种源批号');
@@ -222,8 +222,10 @@ export function AddModal({
     // 生成溯源码
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
 
-    // 创建种源记录
-    const newSeedSource = addSeedSource({
+    // 创建种源记录（添加 await 确保数据保存完成）
+    let newSeedSource;
+    try {
+      newSeedSource = await addSeedSource({
       seedCode: seedCode,
       sourceType: formData.sourceType,
       sourceOrigin: formData.sourceOrigin,
@@ -255,6 +257,11 @@ export function AddModal({
       baseId: formData.baseId,
       baseName: formData.baseName,
     });
+    } catch (error) {
+      console.error('创建种源失败:', error);
+      alert('创建失败，请重试');
+      return;
+    }
 
     // 同时创建作物实例记录
     try {
