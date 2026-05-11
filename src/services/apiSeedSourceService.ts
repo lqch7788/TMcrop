@@ -108,6 +108,9 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     createBy: item.createBy || '',
     createTime: item.createTime ? item.createTime.split('T')[0] : '',
     updateTime: item.updateTime || '',
+    // 关联生产计划字段
+    productionPlanId: (item as any).productionPlanId || '',
+    productionPlanCode: item.productionPlanCode || '',
   };
 }
 

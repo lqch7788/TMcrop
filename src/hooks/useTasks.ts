@@ -718,7 +718,6 @@ export function useTasks(): UseTasksReturn {
       title: taskData.title || '',
       type: taskData.type || '',
       typeName: taskData.typeName || '',
-      status: initialStatus || 'draft',
       priority: taskData.priority || 'normal',
       progress: 0,
       sourceType: taskData.sourceType || 'dispatch',
@@ -732,7 +731,8 @@ export function useTasks(): UseTasksReturn {
       version: 1,
       createdAt: now,
       updatedAt: now,
-      ...taskData,  // 先展开 taskData
+      // 先展开 taskData，这样 taskData 中的 status 会覆盖默认值
+      ...taskData,
       // 在展开 taskData 之后再强制覆盖关键字段，确保 dispatchMode 不被覆盖
       dispatchMode: dispatchMode || taskData.dispatchMode || 'farm',
       assigneeId: finalAssigneeId,
