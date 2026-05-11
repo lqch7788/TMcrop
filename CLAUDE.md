@@ -103,6 +103,12 @@ import { DatePicker, Table } from 'antd'
 ✅ git add, git commit, git push, git pull
 ```
 
+### 禁止提交
+```
+🚫 禁止提交 public/ 文件夹及其所有内容
+🚫 禁止提交 public 文件夹内的任何文件
+```
+
 **重要**: 修复问题的正确方式是直接修改代码，而非通过 Git 历史"回滚"。
 
 ## 数据库规范
