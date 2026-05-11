@@ -54,12 +54,19 @@ interface ProblemTabProps {
   onProblemDispatched?: () => void;
   // 可选的外部任务数据（如果传入则使用，否则使用内部hooks）
   externalTasks?: import('../../../hooks/useTasks').Task[];
+  // 统计信息
+  stats?: {
+    total: number;
+    pending: number;
+    processing: number;
+    resolved: number;
+  };
 }
 
 /**
  * 问题管理Tab组件 - 完整功能版
  */
-export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabProps) {
+export function ProblemTab({ onProblemDispatched, externalTasks, stats }: ProblemTabProps) {
   // ========== 数据Hooks ==========
   // 使用 usePersistentProblems 获取实时问题数据
   const { problems, addProblem, deleteProblem } = usePersistentProblems();
@@ -101,6 +108,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+
+  // ========== 内部统计数据（使用与表格相同的数据源：pending + dispatched + handled）==========
+  const internalStats = useMemo(() => ({
+    total: pendingProblems.length + dispatchedProblems.length + handledProblems.length,
+    pending: pendingProblems.length,
+    processing: dispatchedProblems.length,
+    resolved: handledProblems.length,
+  }), [pendingProblems, dispatchedProblems, handledProblems]);
+
+  // 使用内部计算的统计（优先）或外部传入的统计
+  const displayStats = internalStats;
 
   // ========== 分派弹窗状态 ==========
   const [dispatchModal, setDispatchModal] = useState<{
@@ -1039,17 +1057,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
     <div className="space-y-6">
       {/* 标签页切换 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-gray-200 px-4">
           <button
             onClick={() => setActiveTab('problems')}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium flex items-center gap-3 border-b-2 transition-colors ${
               activeTab === 'problems'
                 ? 'border-orange-500 text-orange-600 bg-orange-50'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
-            问题列表
+            <span>问题列表</span>
             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
               {totalCount}
             </span>
@@ -1117,6 +1135,24 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
           onCreate={() => setShowCreateModal(true)}
         />
 
+        {/* 问题管理列表标题 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold text-gray-900">问题管理列表</h3>
+              {displayStats && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">共</span>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded">{displayStats.total}</span>
+                  <span className="text-gray-500">条</span>
+                  <span className="text-red-600">| 待处理 {displayStats.pending}</span>
+                  <span className="text-blue-600">| 处理中 {displayStats.processing}</span>
+                  <span className="text-green-600">| 已处理 {displayStats.resolved}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
         {/* 问题表格 */}
         <ProblemTable
           problems={filteredProblems}
@@ -1148,6 +1184,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks }: ProblemTabPro
           }}
           onShowExportModal={() => setShowExportModal(true)}
         />
+        </div>
 
         {/* AI推荐面板 - 当有待分派问题时显示 */}
         {problems.some(p => p.status === '待处理') && (

@@ -52,6 +52,13 @@ const INITIAL_FILTERS: InspectionSearchFilters = {
 interface InspectionTabProps {
   // 来自 hub 的数据
   inspections: InspectionRecord[];
+  // 统计信息
+  stats?: {
+    total: number;
+    normal: number;
+    attention: number;
+    abnormal: number;
+  };
   // 筛选状态
   filters: InspectionSearchFilters;
   onFilterChange: (key: keyof InspectionSearchFilters, value: string) => void;
@@ -94,6 +101,7 @@ interface InspectionTabProps {
  */
 export function InspectionTab({
   inspections,
+  stats,
   filters,
   onFilterChange,
   onResetFilters,
@@ -760,6 +768,7 @@ export function InspectionTab({
           exportMode={exportMode}
           batchEditMode={batchEditMode}
           batchDeleteMode={batchDeleteMode}
+          stats={stats}
           onCreate={handleOpenCreateModal}
           onBatchEdit={onToggleBatchEditMode}
           onBatchDelete={onToggleBatchDeleteMode}

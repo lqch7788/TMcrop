@@ -740,6 +740,7 @@ export const TempTaskTab: React.FC = () => {
   const {
     filters,
     filteredTasks,
+    stats,
     setSearchTerm,
     setUrgencyFilter,
     setStatusFilter,
@@ -1244,8 +1245,18 @@ export const TempTaskTab: React.FC = () => {
       {/* 任务列表表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-gray-900">临时任务派发列表</h3>
+            {stats && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">共</span>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded">{stats.total}</span>
+                <span className="text-gray-500">条</span>
+                <span className="text-amber-600">| 待执行 {stats.pending}</span>
+                <span className="text-blue-600">| 进行中 {stats.inProgress}</span>
+                <span className="text-green-600">| 已完成 {stats.completed}</span>
+              </div>
+            )}
           </div>
           {exportMode ? (
             <div className="flex gap-2">
