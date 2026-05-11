@@ -55,7 +55,7 @@ export function UserSelect({
       <option value="">{placeholder}</option>
       {filteredUsers.map((user) => (
         <option key={user.id} value={user.id}>
-          {user.realName || user.name} ({user.departmentName || user.orgName || '未分配部门'})
+          {user.realName || user.name}
         </option>
       ))}
     </select>
@@ -116,7 +116,7 @@ export function UserMultiSelect({
     >
       {filteredUsers.map((user) => (
         <option key={user.id} value={user.id}>
-          {user.realName || user.name} ({user.departmentName || user.orgName || '未分配部门'})
+          {user.realName || user.name}
         </option>
       ))}
     </select>

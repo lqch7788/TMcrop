@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
@@ -18,6 +18,8 @@ interface ProductionTableProps {
   onBatchSelectAll: () => void;
   onBatchDeleteSelectAll: () => void;
   onBatchCodeClick: (batch: CropBatch) => void;
+  onEdit: (batch: CropBatch) => void;
+  onDelete: (batch: CropBatch) => void;
   totalCount: number;
 }
 
@@ -36,6 +38,8 @@ export function ProductionTable({
   onBatchSelectAll,
   onBatchDeleteSelectAll,
   onBatchCodeClick,
+  onEdit,
+  onDelete,
   totalCount,
 }: ProductionTableProps) {
   const pageCount = Math.ceil(filteredBatches.length / pageSize);
@@ -44,14 +48,17 @@ export function ProductionTable({
   // Check states for select all
   const allSelectedForExport = selectedRows.length === filteredBatches.length && filteredBatches.length > 0;
   const allSelectedForBatchEdit = selectedRows.length === filteredBatches.filter(b => b.batchStatus !== 'completed' && b.batchStatus !== 'cancelled').length;
-  const allSelectedForBatchDelete = selectedRows.length === filteredBatches.filter(b => b.batchStatus === 'draft').length;
+  // 可删除的状态：草稿和已作废
+  const deletableBatches = filteredBatches.filter(b => b.batchStatus === 'draft' || b.batchStatus === 'cancelled');
+  const allSelectedForBatchDelete = selectedRows.length === deletableBatches.length;
 
   const getRowClassName = (batch: CropBatch) => {
     let className = 'hover:bg-blue-100 transition-colors ';
     if (batchEditMode && (batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled')) {
       className += 'bg-gray-50 ';
     }
-    if (batchDeleteMode && batch.batchStatus !== 'draft') {
+    // 草稿和已作废状态可以删除，非这两种状态显示灰色背景
+    if (batchDeleteMode && batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled') {
       className += 'bg-gray-100 ';
     }
     return className;
@@ -108,6 +115,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划文件</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -144,17 +152,17 @@ export function ProductionTable({
                       type="checkbox"
                       checked={selectedRows.includes(batch.id)}
                       onChange={() => {
-                        if (batch.batchStatus === 'draft') {
+                        if (batch.batchStatus === 'draft' || batch.batchStatus === 'cancelled') {
                           onSelectRow(batch.id);
                         }
                       }}
-                      disabled={batch.batchStatus !== 'draft'}
+                      disabled={batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled'}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
                     />
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                  <Button variant="ghost" size="sm" onClick={() => onBatchCodeClick(batch)} title="点击查看详情">
+                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={() => onBatchCodeClick(batch)} title="点击查看详情">
                     {batch.batchCode}
                   </Button>
                 </td>
@@ -218,6 +226,35 @@ export function ProductionTable({
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1">
+                    {batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled' && (
+                      <>
+                        <button
+                          onClick={() => onEdit(batch)}
+                          className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
+                          title="编辑"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
+                              onDelete(batch);
+                            }
+                          }}
+                          className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
+                          title="删除"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    {(batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled') && (
+                      <span className="text-xs text-gray-400">已归档</span>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -250,7 +287,7 @@ export function ProductionTable({
               <Button variant="ghost" size="sm" onClick={onBatchDeleteSelectAll}>
                 {allSelectedForBatchDelete ? '全不选' : '全选'}
               </Button>
-              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（仅草稿状态可删除）</span>
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（草稿/已作废可删除）</span>
             </div>
           </div>
         )}

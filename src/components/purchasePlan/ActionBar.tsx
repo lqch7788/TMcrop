@@ -57,7 +57,7 @@ export function ActionBar({
   onBatchDeleteCancel,
 }: ActionBarProps) {
   return (
-    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white">
       <h3 className="text-lg font-semibold text-gray-900">采购计划列表</h3>
       {exportMode || batchEditMode || batchDeleteMode ? (
         <div className="flex gap-2">

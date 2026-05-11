@@ -9,6 +9,7 @@ import { apiClient, USE_API } from '../../services/apiClient';
 import { getTechSolutions, addTechSolution as apiAddTechSolution, updateTechSolution as apiUpdateTechSolution, deleteTechSolutions as apiDeleteTechSolutions } from '../../services/apiTechSolutionService';
 import { getAllVarieties, getVarietyByCode } from '../../services/apiCropVarietyService';
 import { searchVarieties, initVarieties } from '../../services/cropVarietyService';
+import { getDictionaries } from '../../services/dictionaryService';
 import { CropVariety } from '../../types/crop';
 
 // 技术方案类型定义
@@ -33,6 +34,8 @@ export interface TechSolution {
   approver?: string;
   relatedBatchCode?: string;
   planDetailFileName?: string;
+  lastSubmitTime?: string;
+  isValid?: string;
 }
 
 // 种植模式选项
@@ -64,6 +67,9 @@ export function TechSolutionPage() {
 
   // 作物品种选项
   const [cropVarietyOptions, setCropVarietyOptions] = useState<{ value: string; label: string; cropCode?: string }[]>([]);
+
+  // 操作人员选项（从数据字典获取）
+  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([]);
 
   // 作物搜索相关状态（复制自种源管理）
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -127,6 +133,39 @@ export function TechSolutionPage() {
       }
     }
     loadCropVarieties();
+  }, []);
+
+  // 加载操作人员数据（从数据字典获取）
+  useEffect(() => {
+    async function loadOperators() {
+      try {
+        const dictionaries = await getDictionaries('operator');
+        const options = dictionaries.map(d => ({
+          value: d.name,
+          label: d.name,
+        }));
+        // 如果数据字典为空，使用默认选项
+        if (options.length === 0) {
+          options.push(
+            { value: '陆启闯', label: '陆启闯' },
+            { value: '郭靖', label: '郭靖' },
+            { value: '黄蓉', label: '黄蓉' },
+            { value: '张无忌', label: '张无忌' }
+          );
+        }
+        setOperatorOptions(options);
+      } catch (error) {
+        console.error('加载操作人员失败:', error);
+        // 使用默认选项
+        setOperatorOptions([
+          { value: '陆启闯', label: '陆启闯' },
+          { value: '郭靖', label: '郭靖' },
+          { value: '黄蓉', label: '黄蓉' },
+          { value: '张无忌', label: '张无忌' }
+        ]);
+      }
+    }
+    loadOperators();
   }, []);
 
   // 搜索作物品种（使用本地服务搜索完整列表）
@@ -254,6 +293,8 @@ export function TechSolutionPage() {
     stage: '',
     version: '',
     content: '',
+    isValid: '有效',
+    lastSubmitTime: '',
   });
   // 批量编辑相关状态
   const [editedTechCodes, setEditedTechCodes] = useState<string[]>([]);
@@ -266,6 +307,7 @@ export function TechSolutionPage() {
     cropCode: '',
     plantingMode: '水培',
     stage: '',
+    author: localStorage.getItem('username') || '陆启闯',
     version: 'V1.0',
     content: '',
     planDetailFileName: '',
@@ -296,6 +338,11 @@ export function TechSolutionPage() {
   };
 
   const handleEditClick = (tech: TechSolution) => {
+    // 作废的方案不能编辑
+    if (tech.isValid === '作废') {
+      alert('该方案已作废，无法编辑');
+      return;
+    }
     setSelectedTech(tech);
     setEditForm({
       title: tech.title,
@@ -304,6 +351,8 @@ export function TechSolutionPage() {
       stage: tech.stage,
       version: tech.version,
       content: tech.content,
+      isValid: tech.isValid || '有效',
+      lastSubmitTime: new Date().toISOString().split('T')[0],
     });
     setEditModalOpen(true);
   };
@@ -322,6 +371,8 @@ export function TechSolutionPage() {
       planDetailFileName: selectedTech.planDetailFileName || '',
       priority: selectedTech.priority || 'normal',
       remarks: '',
+      isValid: editForm.isValid,
+      lastSubmitTime: editForm.lastSubmitTime || new Date().toISOString().split('T')[0],
     };
 
     try {
@@ -349,7 +400,7 @@ export function TechSolutionPage() {
       stage: newPlanForm.stage,
       version: newPlanForm.version || 'V1.0',
       content: newPlanForm.content,
-      author: localStorage.getItem('username') || '陆启闯',
+      author: newPlanForm.author || localStorage.getItem('username') || '陆启闯',
       authorId: localStorage.getItem('userId') || '',
       relatedBatchCode: newPlanForm.relatedBatchCode || '',
       planDetailFileName: newPlanForm.planDetailFileName || '',
@@ -449,7 +500,7 @@ export function TechSolutionPage() {
   // 导出数据处理
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
-    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '审核人', '审批状态', '状态'];
+    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '最后提交时间', '审核人', '审批状态', '状态', '方案是否有效'];
     const exportData = selectedData.map(row => ({
       '方案编号': row.code,
       '关联生产计划批次': row.relatedBatchCode || '-',
@@ -460,9 +511,11 @@ export function TechSolutionPage() {
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
+      '最后提交时间': row.lastSubmitTime || '-',
       '审核人': row.approver,
       '审批状态': row.approveStatus,
-      '状态': row.status
+      '状态': row.status,
+      '方案是否有效': row.isValid || '有效'
     }));
 
     let content = '';
@@ -788,10 +841,13 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">最后提交时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案是否有效</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案详情文件</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
@@ -820,6 +876,7 @@ export function TechSolutionPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.lastSubmitTime || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.approver}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -835,6 +892,13 @@ export function TechSolutionPage() {
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {tech.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      tech.isValid === '作废' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {tech.isValid || '有效'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -861,6 +925,31 @@ export function TechSolutionPage() {
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      {tech.isValid !== '作废' && (
+                        <>
+                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 p-1" title="编辑" onClick={() => handleEditClick(tech)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 p-1" title="删除" onClick={() => {
+                            setSelectedRows([tech.id]);
+                            setShowDeleteModal(true);
+                          }}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      {tech.isValid === '作废' && (
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 p-1" title="删除" onClick={() => {
+                          setSelectedRows([tech.id]);
+                          setShowDeleteModal(true);
+                        }}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1064,6 +1153,26 @@ export function TechSolutionPage() {
                 <Input value={selectedTech.createDate} disabled className="bg-gray-50" />
               </FormField>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="最后提交时间">
+                <Input value={editForm.lastSubmitTime || new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
+              </FormField>
+              <FormField label="方案是否有效">
+                <select
+                  value={editForm.isValid}
+                  onChange={(e) => setEditForm({...editForm, isValid: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="有效">有效</option>
+                  <option value="作废">作废</option>
+                </select>
+                {editForm.isValid === '作废' && (
+                  <p className="text-xs text-red-600 mt-1 font-medium">
+                    ⚠️ 选择"作废"后方案将无法使用，提交后将进入审核流程
+                  </p>
+                )}
+              </FormField>
+            </div>
             <FormField label="方案内容">
               <Textarea
                 value={editForm.content}
@@ -1252,7 +1361,15 @@ export function TechSolutionPage() {
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="编制人">
-              <Input placeholder="请输入编制人" />
+              <select
+                value={newPlanForm.author}
+                onChange={(e) => setNewPlanForm({...newPlanForm, author: e.target.value})}
+                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              >
+                {operatorOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </FormField>
             <FormField label="创建日期">
               <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
