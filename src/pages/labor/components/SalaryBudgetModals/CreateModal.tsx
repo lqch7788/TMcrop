@@ -1,6 +1,7 @@
 /**
  * 工资预算创建/编辑弹窗组件
  */
+import { Button } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryBudgetFormData } from '../../types/salaryBudget.types';
 import { getMonthOptions } from '../../hooks/useSalaryBudget';
@@ -154,19 +155,16 @@ export function CreateModal({
 
       {/* 弹窗底部按钮 */}
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
+        <Button variant="secondary" onClick={onClose}>
           取消
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="default"
           onClick={onSubmit}
           disabled={!formData.deptId || !formData.budgetMonth || formData.totalBaseSalary <= 0}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           提交审批
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

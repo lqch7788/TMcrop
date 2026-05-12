@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Check } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { Team, UnassignedWorker } from './types';
 import { Button } from '../../../components/ui/button';
 

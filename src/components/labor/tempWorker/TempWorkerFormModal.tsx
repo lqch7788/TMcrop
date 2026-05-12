@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import {
   TempWorkerFormModalProps,
   TempWorker,
@@ -321,18 +322,14 @@ export function TempWorkerFormModal({
         </label>
         <div className="flex flex-wrap gap-2">
           {workZoneOptions.map((zone) => (
-            <button
+            <Button
               key={zone}
               type="button"
+              variant={(formData.workZones || []).includes(zone) ? 'default' : 'outline'}
               onClick={() => toggleWorkZone(zone)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                (formData.workZones || []).includes(zone)
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
             >
               {zone}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -348,18 +345,15 @@ export function TempWorkerFormModal({
               <span className="text-xs text-gray-500 mb-1 block">{groupName}</span>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
-                  <button
+                  <Button
                     key={tag}
                     type="button"
+                    size="sm"
+                    variant={(formData.skillTags || []).includes(tag) ? 'default' : 'outline'}
                     onClick={() => toggleSkillTag(tag)}
-                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                      (formData.skillTags || []).includes(tag)
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
                   >
                     {tag}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -371,18 +365,10 @@ export function TempWorkerFormModal({
 
   const footer = (
     <div className="flex justify-end gap-2">
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-      >
+      <Button variant="outline" onClick={onClose}>
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-      >
-        保存
-      </button>
+      </Button>
+      <Button onClick={handleSubmit}>保存</Button>
     </div>
   );
 

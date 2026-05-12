@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
 
 interface ScheduleCalendarProps {
@@ -324,24 +325,28 @@ export function ScheduleCalendar({
       {/* 工具栏 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handlePrev}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleToday}
-            className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="text-blue-600 hover:bg-blue-50"
           >
             今天
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleNext}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-gray-600" />
-          </button>
+          </Button>
           <div className="ml-4 text-lg font-medium text-gray-800">
             {new Date(selectedDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })}
           </div>
@@ -349,33 +354,27 @@ export function ScheduleCalendar({
 
         {/* 视图切换 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          <button
+          <Button
+            variant={viewMode === 'month' ? 'secondary' : 'ghost'}
+            size="sm"
             onClick={() => onViewModeChange('month')}
-            className={`
-              px-3 py-1.5 text-sm font-medium rounded-md transition-colors
-              ${viewMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}
-            `}
           >
             月
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={viewMode === 'week' ? 'secondary' : 'ghost'}
+            size="sm"
             onClick={() => onViewModeChange('week')}
-            className={`
-              px-3 py-1.5 text-sm font-medium rounded-md transition-colors
-              ${viewMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}
-            `}
           >
             周
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={viewMode === 'day' ? 'secondary' : 'ghost'}
+            size="sm"
             onClick={() => onViewModeChange('day')}
-            className={`
-              px-3 py-1.5 text-sm font-medium rounded-md transition-colors
-              ${viewMode === 'day' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}
-            `}
           >
             日
-          </button>
+          </Button>
         </div>
       </div>
 

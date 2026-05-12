@@ -3,6 +3,7 @@
  */
 
 import { Search, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MONTH_OPTIONS, DEPT_OPTIONS } from './types';
 
 interface MonthlyReportFiltersProps {
@@ -63,20 +64,14 @@ export function MonthlyReportFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
-          >
+          <Button variant="secondary" onClick={onSearch} className="gap-2">
             <Search className="w-4 h-4" />
             搜索
-          </button>
-          <button
-            onClick={onGenerate}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-          >
+          </Button>
+          <Button variant="default" onClick={onGenerate} className="gap-2">
             <Plus className="w-4 h-4" />
             生成月报
-          </button>
+          </Button>
         </div>
       </div>
     </div>

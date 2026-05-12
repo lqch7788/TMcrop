@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ChevronDown,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useSchedule } from './hooks/useSchedule';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
@@ -305,51 +306,51 @@ export function SchedulePage() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           {/* 左侧操作 */}
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant={displayMode === 'calendar' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setDisplayMode('calendar')}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                ${displayMode === 'calendar' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
-              `}
             >
               <CalendarDays className="w-4 h-4" />
               日历视图
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={displayMode === 'table' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setDisplayMode('table')}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                ${displayMode === 'table' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
-              `}
             >
               <List className="w-4 h-4" />
               表格视图
-            </button>
+            </Button>
           </div>
 
           {/* 右侧操作 */}
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowSwapModal(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              className="text-purple-600 border-purple-200 hover:bg-purple-50"
             >
               <Users className="w-4 h-4" />
               调班申请
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowShiftEditor(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4" />
               班次设置
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
             >
               <Plus className="w-4 h-4" />
               新增排班
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -479,12 +480,13 @@ export function SchedulePage() {
                     {batchEditMode && '（点击批量编辑进入编辑模式）'}
                     {batchDeleteMode && '（确认删除选中的记录）'}
                   </div>
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleCancelBatch}
-                    className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
                   >
                     取消
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
@@ -540,12 +542,14 @@ export function SchedulePage() {
               </div>
               {selectedSchedule.status === '已排班' && (
                 <div className="mt-4 flex gap-2">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => cancelSchedule(selectedSchedule.id)}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                    className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                   >
                     取消排班
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

@@ -1,6 +1,7 @@
 import { Search, AlertTriangle, Clock } from 'lucide-react';
 import { TempTask, TempTaskUrgency } from '../../../types';
 import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+import { Button } from '@/components/ui/button';
 
 interface TempTaskFiltersProps {
   searchTerm: string;
@@ -43,23 +44,25 @@ export function TempTaskFilters({
         {/* 紧急程度筛选（放在搜索框前面） */}
         <div className="bg-white rounded-xl p-1 inline-flex shadow-sm flex-shrink-0">
           {(['all', 'normal', 'urgent', 'critical'] as const).map((urgency) => (
-            <button
+            <Button
               key={urgency}
               onClick={() => onUrgencyChange(urgency)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              variant={urgencyFilter === urgency ? 'default' : 'ghost'}
+              size="sm"
+              className={`transition-all ${
                 urgencyFilter === urgency
                   ? urgency === 'critical'
-                    ? 'bg-red-500 text-white'
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
                     : urgency === 'urgent'
-                      ? 'bg-amber-500 text-white'
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white'
                       : urgency === 'normal'
-                        ? 'bg-gray-500 text-white'
-                        : 'bg-emerald-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-gray-500 hover:bg-gray-600 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'text-gray-600'
               }`}
             >
               {urgency === 'all' ? '全部' : TEMP_TASK_URGENCY_CONFIG[urgency].label}
-            </button>
+            </Button>
           ))}
         </div>
 

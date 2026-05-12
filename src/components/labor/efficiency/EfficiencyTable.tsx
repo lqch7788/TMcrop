@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Eye, Download, Plus, Edit2, Trash2, CheckSquare, Square, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { EfficiencyMetrics } from './types';
 
 interface EfficiencyTableProps {
@@ -79,85 +80,85 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
         <div className="flex items-center gap-2">
           {/* 取消按钮 */}
           {showCheckbox && (
-            <button
+            <Button
+              variant="secondary"
               onClick={onCancelBatch}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 mr-1" />
               取消
-            </button>
+            </Button>
           )}
           {/* 新增按钮 - 正常模式显示 */}
           {!showCheckbox && (
-            <button
+            <Button
+              variant="default"
               onClick={onAddClick}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 mr-1" />
               新增
-            </button>
+            </Button>
           )}
           {/* 编辑/批量编辑按钮 - 同一位置 */}
           {batchEditMode ? (
-            <button
+            <Button
+              variant="default"
               onClick={onBatchEditClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Edit2 className="w-4 h-4" />
+              <Edit2 className="w-4 h-4 mr-1" />
               批量编辑
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
+                variant="default"
                 onClick={onBatchEditClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-4 h-4 mr-1" />
                 编辑
-              </button>
+              </Button>
             )
           )}
           {/* 删除/批量删除按钮 - 同一位置 */}
           {batchDeleteMode ? (
-            <button
+            <Button
+              variant="default"
               onClick={onBatchDeleteClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4 mr-1" />
               批量删除
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
+                variant="default"
                 onClick={onBatchDeleteClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 mr-1" />
                 删除
-              </button>
+              </Button>
             )
           )}
           {/* 导出按钮 - 同一位置 */}
           {exportMode ? (
-            <button
+            <Button
+              variant="default"
               onClick={onBatchExportClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 mr-1" />
               导出
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
+                variant="default"
                 onClick={onBatchExportClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4 mr-1" />
                 导出
-              </button>
+              </Button>
             )
           )}
         </div>
@@ -170,12 +171,14 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
-                  <button
-                    onClick={onSelectAll}
-                    className="text-white hover:text-blue-200"
-                  >
-                    {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  </button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onSelectAll}
+                      className="text-white hover:text-blue-200"
+                    >
+                      {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </Button>
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
@@ -197,12 +200,14 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
               <tr key={row.id} className={`hover:bg-blue-50 transition-colors ${selectedRows.includes(row.id) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onSelectRow?.(row.id)}
                       className="text-gray-500 hover:text-emerald-600"
                     >
                       {selectedRows.includes(row.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </td>
                 )}
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{row.date}</td>
@@ -232,29 +237,35 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.skillCoverage, 'percent')}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onViewDetail?.(row)}
-                      className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                      className="text-gray-500 hover:text-emerald-600"
                       title="查看详情"
                     >
                       <Eye className="w-4 h-4" />
-                    </button>
+                    </Button>
                     {!batchEditMode && !batchDeleteMode && !exportMode && (
                       <>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onEdit?.(row)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="text-gray-500 hover:text-blue-600"
                           title="编辑"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onDelete?.(row)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                          className="text-gray-500 hover:text-red-600"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -283,21 +294,25 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>共 {data.length} 条</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-gray-500 hover:text-gray-700"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-gray-500 hover:text-gray-700"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   Legend,
 } from 'recharts';
 import { BarChart3, LineChart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { EfficiencyTrend } from './types';
 
 interface EfficiencyChartProps {
@@ -42,28 +43,24 @@ export const EfficiencyChart: React.FC<EfficiencyChartProps> = ({ data }) => {
       <div className="flex items-center justify-between mb-4">
         <h5 className="font-semibold text-gray-700">人效趋势（12个月）</h5>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setChartType('bar')}
-            className={`p-1.5 rounded-md transition-colors ${
-              chartType === 'bar'
-                ? 'bg-emerald-100 text-emerald-600'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
+            className={chartType === 'bar' ? 'bg-emerald-100 text-emerald-600' : 'text-gray-400'}
             title="柱状图"
           >
             <BarChart3 className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setChartType('line')}
-            className={`p-1.5 rounded-md transition-colors ${
-              chartType === 'line'
-                ? 'bg-emerald-100 text-emerald-600'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
+            className={chartType === 'line' ? 'bg-emerald-100 text-emerald-600' : 'text-gray-400'}
             title="折线图"
           >
             <LineChart className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { SkillTag, SkillLevel, SKILL_TAGS, SKILL_LEVELS, SkillItem } from './types';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface SkillTagSelectorProps {
@@ -98,12 +99,13 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
                   placeholder="颁证日期"
                   className="text-xs w-28 border-none bg-transparent text-gray-500 focus:outline-none"
                 />
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => handleRemoveSkill(skill.tag)}
-                  className="p-0.5 hover:bg-red-100 rounded-full transition-colors"
+                  className="p-0.5 h-auto"
                 >
                   <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -111,11 +113,12 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
       )}
 
       {/* 选择器按钮 */}
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'w-full py-2.5 px-4 border-2 border-dashed rounded-lg transition-colors text-sm font-medium',
+          'w-full justify-center',
           selectedSkills.length >= maxSkills
             ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
             : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
@@ -123,7 +126,7 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
         disabled={selectedSkills.length >= maxSkills}
       >
         {isOpen ? '收起技能选择' : selectedSkills.length >= maxSkills ? '已达到最大数量' : '+ 选择技能标签'}
-      </button>
+      </Button>
 
       {/* 技能选择弹窗 */}
       {isOpen && (
@@ -140,14 +143,15 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
                     const isSelected = isTagSelected(tag);
                     const level = getSkillLevel(tag);
                     return (
-                      <button
+                      <Button
                         key={tag}
                         type="button"
+                        variant={isSelected ? 'default' : 'outline'}
                         onClick={() => handleTagClick(tag)}
                         onMouseEnter={() => setHoveredTag(tag)}
                         onMouseLeave={() => setHoveredTag(null)}
                         className={cn(
-                          'relative px-3 py-1.5 text-sm rounded-lg transition-all',
+                          'relative px-3 py-1.5 text-sm h-auto',
                           isSelected
                             ? 'bg-emerald-600 text-white shadow-sm'
                             : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'
@@ -160,7 +164,7 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
                         {isSelected && (
                           <Check className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-white text-emerald-600 rounded-full" />
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>

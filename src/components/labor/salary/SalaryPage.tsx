@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Download, Banknote, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { SalaryTable } from './SalaryTable';
 import { SalaryFilters } from './SalaryFilters';
 import { SalarySlipModal } from './SalarySlipModal';
@@ -254,22 +255,25 @@ export function SalaryPage() {
           </div>
           <div className="flex items-center gap-2">
             {canExport && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleExportClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
             {canCreate && (
-              <button
+              <Button
+                size="sm"
                 onClick={() => setAddModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700"
               >
                 <Plus className="w-4 h-4" />
                 新增
-              </button>
+              </Button>
             )}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { XCircle, CheckCircle, Clock, User, Calendar, Users, Briefcase } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
 
 interface RecruitmentDetailModalProps {
@@ -158,12 +159,12 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
   );
 
   const footer = (
-    <button
+    <Button
       onClick={onClose}
-      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+      variant="outline"
     >
       关闭
-    </button>
+    </Button>
   );
 
   return (
@@ -174,12 +175,13 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
       size="lg"
       showFooter={true}
       headerAction={
-        <button
+        <Button
           onClick={onClose}
-          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          variant="ghost"
+          size="smIcon"
         >
           <XCircle className="w-5 h-5 text-gray-400" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

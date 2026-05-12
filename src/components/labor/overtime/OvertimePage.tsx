@@ -6,6 +6,7 @@ import { OvertimeTable } from './OvertimeTable';
 import { OvertimeDetailModal } from './OvertimeDetailModal';
 import { OvertimeFormModal } from './OvertimeFormModal';
 import { OvertimeBatchEditModal, OvertimeDeleteWarningModal, OvertimeExportFormatModal } from './modals';
+import { Button } from '@/components/ui/button';
 import type { OvertimeRecord, OvertimeFormData } from './types';
 
 /**
@@ -337,12 +338,9 @@ export function OvertimePage() {
             {batchEditMode && '（点击批量编辑进入编辑模式）'}
             {batchDeleteMode && '（确认删除选中的记录）'}
           </div>
-          <button
-            onClick={handleCancelBatch}
-            className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
-          >
+          <Button variant="outline" size="sm" onClick={handleCancelBatch}>
             取消
-          </button>
+          </Button>
         </div>
       )}
 

@@ -3,6 +3,7 @@
  */
 import { useState } from 'react';
 import { Award, TrendingUp, Users, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { usePerformance } from './hooks/usePerformance';
 import { PerformanceTable } from './PerformanceTable';
 import { PerformanceDetailModal } from './PerformanceDetailModal';
@@ -243,47 +244,50 @@ export function PerformancePage() {
           {/* 右上角按钮 */}
           {!batchEditMode && !batchDeleteMode && !exportMode && (
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 onClick={handleExportClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                className="gap-2"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                className="gap-2"
               >
                 <Plus className="w-4 h-4" />
                 新增
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleBatchEditClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                variant="default"
+                className="gap-2 bg-blue-600 hover:bg-blue-700"
               >
                 <Edit2 className="w-4 h-4" />
                 编辑
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleBatchDeleteClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                variant="default"
+                className="gap-2 bg-red-600 hover:bg-red-700"
               >
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
+              </Button>
             </div>
           )}
           {/* 批量操作按钮 */}
           {(batchEditMode || batchDeleteMode || exportMode) && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <button
+              <Button
                 onClick={handleCancelBatch}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                variant="secondary"
+                className="gap-1"
               >
                 <X className="w-4 h-4" />
                 取消
-              </button>
+              </Button>
             </div>
           )}
         </div>

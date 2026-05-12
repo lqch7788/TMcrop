@@ -2,6 +2,7 @@
  * 工资预算表格组件
  */
 import { Eye, Check, X } from 'lucide-react';
+import { Button } from '@/components/ui';
 import ProTable from '../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../components/common/labor/LaborStatusBadge';
 import { SalaryBudgetRecord } from '../types/salaryBudget.types';
@@ -107,29 +108,17 @@ const getColumns = (
     width: 150,
     render: (_: any, record: SalaryBudgetRecord) => (
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => onViewDetail(record)}
-          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-          title="查看详情"
-        >
+        <Button variant="ghost" size="icon" onClick={() => onViewDetail(record)} title="查看详情">
           <Eye className="w-4 h-4" />
-        </button>
+        </Button>
         {record.status === ApprovalStatus.PENDING && (
           <>
-            <button
-              onClick={() => onApprove(record)}
-              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
-              title="批准"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onApprove(record)} title="批准">
               <Check className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onReject(record)}
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-              title="驳回"
-            >
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onReject(record)} title="驳回">
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </>
         )}
       </div>

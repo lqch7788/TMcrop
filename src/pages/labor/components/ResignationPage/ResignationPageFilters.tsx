@@ -2,6 +2,7 @@
  * 离职申请页面筛选器组件
  */
 import { Search, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ResignationFilters as ResignationFiltersType } from '../../types/resignationPage.types';
 import { RESIGNATION_TYPE_OPTIONS, RESIGNATION_STATUS_OPTIONS } from '../../types/resignationPage.types';
 
@@ -71,22 +72,16 @@ export function ResignationPageFilters({
       </div>
 
       {/* 搜索按钮 */}
-      <button
-        onClick={onSearch}
-        className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-      >
+      <Button onClick={onSearch} className="flex items-center gap-1">
         <Search className="w-4 h-4" />
         搜索
-      </button>
+      </Button>
 
       {/* 重置按钮 */}
-      <button
-        onClick={onResetFilters}
-        className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-      >
+      <Button onClick={onResetFilters} variant="secondary" className="flex items-center gap-1">
         <RefreshCw className="w-4 h-4" />
         重置
-      </button>
+      </Button>
     </div>
   );
 }

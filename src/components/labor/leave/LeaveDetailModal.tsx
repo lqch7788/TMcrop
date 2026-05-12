@@ -1,5 +1,6 @@
 import { X, CheckCircle, XCircle } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { LeaveDetailModalProps } from './types';
 
 /**
@@ -104,28 +105,19 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
 
   const footer = (
     <>
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-      >
+      <Button variant="secondary" onClick={onClose}>
         关闭
-      </button>
+      </Button>
       {record.status === '待审批' && (
         <>
-          <button
-            onClick={() => onReject(record)}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1"
-          >
+          <Button variant="destructive" onClick={() => onReject(record)} className="flex items-center gap-1">
             <XCircle className="w-4 h-4" />
             驳回
-          </button>
-          <button
-            onClick={() => onApprove(record)}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
+          </Button>
+          <Button variant="default" onClick={() => onApprove(record)} className="flex items-center gap-1">
             <CheckCircle className="w-4 h-4" />
             批准
-          </button>
+          </Button>
         </>
       )}
     </>
@@ -139,12 +131,9 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
       size="md"
       showFooter={true}
       headerAction={
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

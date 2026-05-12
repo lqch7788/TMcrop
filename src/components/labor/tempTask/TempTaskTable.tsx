@@ -193,13 +193,15 @@ export function TempTaskTable({
                   </td>
                 )}
                 <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                  <button
+                  <Button
                     onClick={() => onViewTask(task)}
-                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium p-0 h-auto"
                     title="点击查看详情"
                   >
                     {task.taskCode}
-                  </button>
+                  </Button>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">

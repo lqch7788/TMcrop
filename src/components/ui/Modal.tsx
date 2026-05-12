@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -259,30 +260,30 @@ export function Modal({
             {showMaximize && (
               <>
                 {/* Maximize/Restore Button */}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleMaximize}
-                  className="p-1.5 rounded-lg hover:bg-emerald-500 group relative"
                   title={isMaximized ? '还原窗口' : '最大化窗口'}
+                  className="text-white hover:bg-emerald-500"
                 >
                   {isMaximized ? (
-                    <Minimize2 className="w-4 h-4 text-white" />
+                    <Minimize2 className="w-4 h-4" />
                   ) : (
-                    <Maximize2 className="w-4 h-4 text-white" />
+                    <Maximize2 className="w-4 h-4" />
                   )}
-                  {/* Tooltip */}
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
-                    {isMaximized ? '还原窗口' : '最大化窗口'}
-                  </span>
-                </button>
+                </Button>
               </>
             )}
             {/* Close Button */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-emerald-500"
+              className="text-white hover:bg-emerald-500"
             >
-              <X className="w-5 h-5 text-white" />
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
@@ -343,20 +344,17 @@ export function Modal({
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
             {footer ? footer : (
               <>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium"
-                >
+                <Button variant="secondary" onClick={onClose}>
                   {cancelText}
-                </button>
+                </Button>
                 {onSubmit && (
-                  <button
+                  <Button
+                    variant="default"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? '保存中...' : submitText}
-                  </button>
+                  </Button>
                 )}
               </>
             )}

@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/button';
+
 interface Attachment {
   id: string;
   name: string;
@@ -52,31 +54,34 @@ export function TaskAttachmentList({ attachments, onView, onDownload, onDelete }
           </div>
           <div className="flex items-center gap-1">
             {onView && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onView(attachment)}
-                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                 title="查看"
               >
                 👁️
-              </button>
+              </Button>
             )}
             {onDownload && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onDownload(attachment)}
-                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                 title="下载"
               >
                 ⬇️
-              </button>
+              </Button>
             )}
             {onDelete && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onDelete(attachment)}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                 title="删除"
               >
                 🗑️
-              </button>
+              </Button>
             )}
           </div>
         </div>

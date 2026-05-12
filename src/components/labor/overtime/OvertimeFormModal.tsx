@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { OvertimeFormModalProps, OvertimeType, OvertimeFormData } from './types';
 import { getWorkerSelectList } from '../../../services/apiWorkerService';
 
@@ -115,18 +116,13 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
         </label>
         <div className="grid grid-cols-3 gap-2">
           {overtimeTypes.map((type) => (
-            <button
+            <Button
               key={type}
-              type="button"
+              variant={formData.type === type ? 'default' : 'outline'}
               onClick={() => setFormData({ ...formData, type })}
-              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                formData.type === type
-                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
             >
               {type}
-            </button>
+            </Button>
           ))}
         </div>
         <p className="mt-1 text-xs text-gray-400">
@@ -169,18 +165,12 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
 
   const footer = (
     <>
-      <button
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-      >
+      <Button variant="outline" onClick={onClose}>
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-      >
+      </Button>
+      <Button onClick={handleSubmit}>
         提交申请
-      </button>
+      </Button>
     </>
   );
 

@@ -4,6 +4,7 @@
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { RecruitmentRecord } from '../../types/recruitment.types';
+import { Button } from '@/components/ui/button';
 
 export interface DetailModalProps {
   isOpen: boolean;
@@ -111,18 +112,20 @@ export function DetailModal({
         {/* 审批操作 */}
         {record.status === '待审批' && (
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => { onReject(record); onClose(); }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
             >
               驳回
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
               onClick={() => { onApprove(record); onClose(); }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
             >
               通过
-            </button>
+            </Button>
           </div>
         )}
       </div>

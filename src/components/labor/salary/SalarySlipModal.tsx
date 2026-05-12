@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { SalarySlipModalProps } from './types';
 
 /**
@@ -144,12 +145,12 @@ export function SalarySlipModal({ record, open, onClose }: SalarySlipModalProps)
   );
 
   const footer = (
-    <button
+    <Button
       onClick={onClose}
-      className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+      className="w-full"
     >
       关闭
-    </button>
+    </Button>
   );
 
   return (
@@ -160,12 +161,14 @@ export function SalarySlipModal({ record, open, onClose }: SalarySlipModalProps)
       size="md"
       showFooter={true}
       headerAction={
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+          className="text-gray-400 hover:text-gray-600"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

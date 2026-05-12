@@ -138,13 +138,14 @@ export function TasksTable({
                   </td>
                 )}
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => onViewTask(task)}
                     className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                     title="点击查看详情"
                   >
                     {task.taskCode}
-                  </button>
+                  </Button>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-start gap-2">

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { EfficiencyFilters as FiltersType } from './types';
 
 interface EfficiencyFiltersProps {
@@ -84,13 +85,14 @@ export const EfficiencyFilters: React.FC<EfficiencyFiltersProps> = ({
         </div>
 
         {/* 重置按钮 */}
-        <button
+        <Button
+          variant="secondary"
           onClick={onReset}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-emerald-600 hover:bg-gray-50 rounded-lg transition-colors"
+          className="ml-auto"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4 mr-1.5" />
           重置
-        </button>
+        </Button>
       </div>
     </div>
   );

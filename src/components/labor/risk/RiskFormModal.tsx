@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { RiskAlert, AlertType, AlertLevel } from './types';
 import { AlertTypeNames, AlertLevelNames } from './types';
 

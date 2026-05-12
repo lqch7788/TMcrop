@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { Staff, SwapRequest } from './types';
 
 interface SwapRequestModalProps {
@@ -158,19 +159,21 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
 
   const footer = (
     <>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
       >
         取消
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="default"
+        size="sm"
         onClick={handleSubmit}
-        className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors flex items-center gap-2"
       >
         <Send className="w-4 h-4" />
         提交申请
-      </button>
+      </Button>
     </>
   );
 
@@ -182,12 +185,13 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
       size="md"
       showFooter={true}
       headerAction={
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-1 rounded hover:bg-gray-100 transition-colors"
         >
           <X className="w-5 h-5 text-gray-500" />
-        </button>
+        </Button>
       }
       footer={footer}
     >
@@ -251,20 +255,24 @@ export function SwapRequestList({ requests, onHandle }: SwapRequestListProps) {
 
             {request.status === '待审批' && (
               <div className="flex gap-2 ml-4">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => onHandle(request.id, '已同意')}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded transition-colors"
+                  className="text-green-600 hover:bg-green-50"
                   title="同意"
                 >
                   <Check className="w-5 h-5" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => onHandle(request.id, '已拒绝')}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="text-red-600 hover:bg-red-50"
                   title="拒绝"
                 >
                   <XCircle className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
             )}
           </div>

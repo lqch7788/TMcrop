@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { Task, useTasks } from '../../../hooks/useTasks';
 import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';

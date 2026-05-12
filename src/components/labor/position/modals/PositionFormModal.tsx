@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 
 interface Position {
   id: number;
@@ -162,18 +163,12 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
   const footer = (
     <>
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-      >
+      <Button variant="secondary" onClick={onClose}>
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-      >
+      </Button>
+      <Button variant="default" onClick={handleSubmit}>
         保存
-      </button>
+      </Button>
     </>
   );
 

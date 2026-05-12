@@ -1,4 +1,4 @@
-import { Modal, FormField } from '../../ui/Modal';
+import { Modal, FormField } from '@/components/ui/Modal';
 import { Task, Greenhouse, CropBatch, User } from '../../../types';
 
 interface TaskFormModalProps {

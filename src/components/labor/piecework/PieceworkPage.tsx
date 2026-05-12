@@ -325,27 +325,26 @@ export const PieceworkPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => {}}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <Upload className="w-4 h-4" />
               导入
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleExportClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
             >
               <Plus className="w-4 h-4" />
               新建
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -423,13 +422,13 @@ export const PieceworkPage: React.FC = () => {
             <option value="已确认">已确认</option>
             <option value="已发放">已发放</option>
           </select>
-          <button
+          <Button
+            variant="ghost"
             onClick={resetFilters}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
           >
             <RefreshCw className="w-3 h-3" />
             重置
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -470,20 +469,20 @@ export const PieceworkPage: React.FC = () => {
               <option value={20}>20条/页</option>
               <option value={50}>50条/页</option>
             </select>
-            <button
+            <Button
+              variant="secondary"
               onClick={() => handlePageChange(pagination.currentPage - 1)}
               disabled={pagination.currentPage === 1}
-              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               上一页
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => handlePageChange(pagination.currentPage + 1)}
               disabled={pagination.currentPage >= Math.ceil(total / pagination.pageSize)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               下一页
-            </button>
+            </Button>
           </div>
         </div>
       </div>

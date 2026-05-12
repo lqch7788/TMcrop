@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Calculator } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { SalaryCalculateModalProps, SalaryCalculateData } from './types';
@@ -181,12 +181,14 @@ export function SalaryCalculateModal({
       size="sm"
       showFooter={true}
       headerAction={
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+          className="text-gray-400 hover:text-gray-600"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

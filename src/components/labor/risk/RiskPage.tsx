@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useRisk } from './hooks/useRisk';
 import { RiskDashboard } from './RiskDashboard';
 import { RiskFilters } from './RiskFilters';
@@ -213,33 +214,24 @@ export function RiskPage() {
           {/* 右上角按钮 */}
           {!batchEditMode && !batchDeleteMode && !exportMode && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleExportClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={handleExportClick}>
                 <Download className="w-4 h-4" />
                 导出
-              </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-              >
+              </Button>
+              <Button variant="default" onClick={() => setShowAddModal(true)}>
                 <Plus className="w-4 h-4" />
                 新增
-              </button>
+              </Button>
             </div>
           )}
           {/* 批量操作按钮 */}
           {(batchEditMode || batchDeleteMode || exportMode) && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <button
-                onClick={handleCancelBatch}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={handleCancelBatch}>
                 <X className="w-4 h-4" />
                 取消
-              </button>
+              </Button>
             </div>
           )}
         </div>

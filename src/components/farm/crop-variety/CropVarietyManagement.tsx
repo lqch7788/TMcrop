@@ -13,7 +13,7 @@ import { VarietyTree } from './VarietyTree';
 import { CropVarietyDetail } from './CropVarietyDetail';
 import { AddCropVarietyModal } from './modals/AddCropVarietyModal';
 import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
   initVarieties,

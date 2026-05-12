@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { WorkLogFiltersProps } from './types';
 
 /**
@@ -51,13 +52,10 @@ export function WorkLogFilters({ filters, onFiltersChange, onSearch }: WorkLogFi
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button
-            onClick={onSearch}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
-          >
+          <Button variant="secondary" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * 任务反馈表单弹窗组件
  */
 
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { FeedbackFormData } from './types';
