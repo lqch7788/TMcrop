@@ -39,8 +39,8 @@ import { SeedlingStatus } from '../types/crop';
 // 导入临时任务数据和巡查反馈处理任务数据
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, InspectionFeedbackTaskData } from '../data/mockData';
 import { TempTask } from '../hooks/useTempTasks';
-// 导入农事任务API服务
-import { getAllTasks, createTask as apiCreateTask, completeTask as apiCompleteTask, archiveTask as apiArchiveTask } from '../services/apiFarmTaskService';
+// 导入农事任务 Store（统一数据层）
+import { useFarmTaskStore } from '../stores/farmTaskStore';
 
 // ============================================
 // 状态标签配置
@@ -573,13 +573,15 @@ export function useTasks(): UseTasksReturn {
     }
   }, [setTasks]);
 
-  // 尝试从API加载任务数据
+  // 尝试从API加载任务数据（通过 farmTaskStore）
   useEffect(() => {
     if (apiLoaded) return; // 只加载一次
 
     const loadFromAPI = async () => {
       try {
-        const apiTasks = await getAllTasks();
+        // 使用 farmTaskStore 的 fetchTasks（内置三级降级）
+        await useFarmTaskStore.getState().fetchTasks();
+        const apiTasks = useFarmTaskStore.getState().tasks;
         if (apiTasks && Array.isArray(apiTasks) && apiTasks.length > 0) {
           console.log('[useTasks] 从API获取到任务数据:', apiTasks.length, '条');
           // API数据有效，合并到现有数据中
@@ -786,7 +788,8 @@ export function useTasks(): UseTasksReturn {
             batchId: savedTask.batchId,
             batchCode: savedTask.batchCode,
           };
-          await apiCreateTask(apiTaskData);
+          // 使用 farmTaskStore 的 addTask（内置三级降级和离线队列）
+          await useFarmTaskStore.getState().addTask(apiTaskData);
           console.log('[createTask] 后端API创建任务成功:', savedTask.id);
         } catch (error) {
           console.error('[createTask] 后端API创建任务失败:', error);
@@ -1249,10 +1252,11 @@ export function useTasks(): UseTasksReturn {
       });
     }
 
-    // 调用后端API完成任务验收（失败不影响本地操作）
+    // 调用后端API完成任务验收（使用 farmTaskStore）
     Promise.resolve().then(async () => {
       try {
-        await apiCompleteTask(id, comments);
+        // 使用 farmTaskStore 的 updateTaskStatus（内置三级降级）
+        await useFarmTaskStore.getState().updateTaskStatus(id, 'completed');
         console.log('[acceptCompletion] 后端API完成任务验收成功:', id);
       } catch (error) {
         console.error('[acceptCompletion] 后端API完成任务验收失败:', error);
