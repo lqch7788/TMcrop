@@ -1,12 +1,16 @@
 /**
  * 采购计划数据 API 服务
  * 对接后端 /api/purchase-plans
- * API失败时降级到 localStorage (purchasePlanService)
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { PurchasePlan, PurchasePlanItem } from './purchasePlanService';
-import * as purchasePlanService from './purchasePlanService';
 
 // 后端返回的数据字段类型
 interface BackendPurchasePlanItem {
@@ -137,73 +141,78 @@ function transformSingle(item: BackendPurchasePlan): PurchasePlan {
   };
 }
 
-// ==================== API 函数（降级到localStorage）====================
-
+/**
+ * 获取所有采购计划
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPurchasePlans(): Promise<PurchasePlan[]> {
-  try {
-    const data = await apiClient.get<BackendPurchasePlan[]>('/purchase-plans');
-    return transformPurchasePlan(data) as PurchasePlan[];
-  } catch (error) {
-    console.warn('[采购计划API] 获取失败，降级到localStorage:', error);
-    return purchasePlanService.getPurchasePlans();
-  }
+  const data = await enhancedApiClient.get<BackendPurchasePlan[]>('/purchase-plans', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPurchasePlan(data) as PurchasePlan[];
 }
 
+/**
+ * 根据ID获取单个采购计划
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPurchasePlanById(id: string): Promise<PurchasePlan | undefined> {
-  try {
-    const data = await apiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`);
-    return transformPurchasePlan(data) as PurchasePlan;
-  } catch (error) {
-    console.warn('[采购计划API] 获取单个失败，降级到localStorage:', error);
-    return purchasePlanService.getPurchasePlanById(id);
-  }
+  const data = await enhancedApiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPurchasePlan(data) as PurchasePlan;
 }
 
+/**
+ * 创建采购计划
+ * 降级策略：API → 离线队列
+ */
 export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<PurchasePlan> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/purchase-plans', plan);
-    return { ...plan, id: result.id } as PurchasePlan;
-  } catch (error) {
-    console.warn('[采购计划API] 创建失败，降级到localStorage:', error);
-    return purchasePlanService.addPurchasePlan(plan);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/purchase-plans', plan, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return { ...plan, id: result.id } as PurchasePlan;
 }
 
+/**
+ * 更新采购计划
+ * 降级策略：API → 离线队列
+ */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/purchase-plans/${id}`, updates);
-    return result ? { ...updates, id } as PurchasePlan : null;
-  } catch (error) {
-    console.warn('[采购计划API] 更新失败，降级到localStorage:', error);
-    return purchasePlanService.updatePurchasePlan(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/purchase-plans/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as PurchasePlan : null;
 }
 
+/**
+ * 删除采购计划
+ * 降级策略：API → 离线队列
+ */
 export async function deletePurchasePlan(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/purchase-plans/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('[采购计划API] 删除失败，降级到localStorage:', error);
-    return purchasePlanService.deletePurchasePlan(id);
-  }
+  await enhancedApiClient.delete(`/purchase-plans/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 批量删除采购计划
+ * 降级策略：API → 离线队列
+ */
 export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/purchase-plans/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch (error) {
-    console.warn('[采购计划API] 批量删除失败，降级到localStorage:', error);
-    return purchasePlanService.deletePurchasePlans(ids);
-  }
+  await enhancedApiClient.delete(`/purchase-plans/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 重置采购计划（仅调用后端，不做降级）
+ */
 export async function resetPurchasePlans(): Promise<void> {
-  try {
-    await apiClient.post('/purchase-plans/reset');
-  } catch (error) {
-    console.warn('[采购计划API] 重置失败，降级到localStorage:', error);
-  }
-  purchasePlanService.resetPurchasePlans();
+  await enhancedApiClient.post('/purchase-plans/reset');
 }

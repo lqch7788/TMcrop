@@ -1,128 +1,100 @@
 /**
  * 指标数据 API 服务
  * 对接后端 /api/indicators
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import type { Indicator } from '../pages/types/indicators.types';
 
-// 导入本地服务作为回退
-import * as localService from './indicatorsService';
-
 /**
  * 获取所有指标
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getIndicators(): Promise<Indicator[]> {
-  try {
-    const response = await apiClient.get<{ data: Indicator[] }>('/indicators');
-    const data = response.data || [];
-    // 如果 API 返回空数据，检查 localStorage 是否有数据
-    if (data.length === 0) {
-      const localData = localService.getIndicators();
-      if (localData.length > 0) {
-        console.warn('API 返回空数据，降级到 localStorage:', localData.length, '条');
-        return localData;
-      }
-    }
-    return data;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getIndicators();
-  }
+  return await enhancedApiClient.get<Indicator[]>('/indicators', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID获取单个指标
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getIndicatorById(id: string): Promise<Indicator | undefined> {
-  try {
-    const response = await apiClient.get<{ data: Indicator }>(`/indicators/${id}`);
-    return response.data;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getIndicatorById(id);
-  }
+  return await enhancedApiClient.get<Indicator>(`/indicators/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID数组获取多个指标
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getIndicatorsByIds(ids: string[]): Promise<Indicator[]> {
-  try {
-    // API 不支持批量查询，降级到 localStorage
-    return localService.getIndicatorsByIds(ids);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getIndicatorsByIds(ids);
-  }
+  const allIndicators = await getIndicators();
+  return allIndicators.filter(indicator => ids.includes(indicator.id));
 }
 
 /**
  * 创建指标
+ * 降级策略：API → 离线队列
  */
 export async function createIndicator(
   indicatorData: Omit<Indicator, 'id' | 'code'>
 ): Promise<Indicator> {
-  try {
-    const response = await apiClient.post<{ id: string; code: string }>('/indicators', indicatorData);
-    return {
-      ...indicatorData,
-      id: response.id,
-      code: response.code,
-    } as Indicator;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.createIndicator(indicatorData);
-  }
+  return await enhancedApiClient.post<Indicator>('/indicators', indicatorData, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
  * 更新指标
+ * 降级策略：API → 离线队列
  */
 export async function updateIndicator(id: string, updates: Partial<Indicator>): Promise<Indicator | null> {
-  try {
-    await apiClient.put(`/indicators/${id}`, updates);
-    return { ...updates, id } as Indicator;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateIndicator(id, updates);
-  }
+  const result = await enhancedApiClient.put<Indicator>(`/indicators/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result;
 }
 
 /**
  * 删除指标
+ * 降级策略：API → 离线队列
  */
 export async function deleteIndicator(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/indicators/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteIndicator(id);
-  }
+  await enhancedApiClient.delete(`/indicators/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 批量删除指标
+ * 降级策略：API → 离线队列
  */
 export async function deleteIndicators(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete('/indicators/batch', { ids });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteIndicators(ids);
-  }
+  await enhancedApiClient.delete(`/indicators/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 重置指标数据
+ * 降级策略：API → 离线队列
  */
 export async function resetIndicators(): Promise<void> {
-  try {
-    await apiClient.post('/indicators/reset');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    localService.resetIndicators();
-  }
+  await enhancedApiClient.post('/indicators/reset', undefined, {
+    offlineQueue: true,
+  });
 }

@@ -628,6 +628,126 @@ router.get('/positions', (req, res) => {
 });
 
 /**
+ * 创建职位
+ * POST /api/basic-data/positions
+ */
+router.post('/positions', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { code, name, departmentOid, departmentName, level, description, sortOrder } = req.body;
+
+    if (!code || !name) {
+      return res.status(400).json({ success: false, error: '职位编码和名称不能为空' });
+    }
+
+    const id = `POS${Date.now()}`;
+    const oid = `POS${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO positions (id, oid, code, name, department_oid, department_name, level, description, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [id, oid, code, name, departmentOid || '', departmentName || '', level || 1, description || '', sortOrder || 0, now, now]);
+
+    res.status(201).json({ success: true, message: '职位创建成功', data: { id, oid, code, name } });
+  } catch (error) {
+    console.error('创建职位失败:', error);
+    res.status(500).json({ success: false, error: '创建职位失败' });
+  }
+});
+
+/**
+ * 更新职位
+ * PUT /api/basic-data/positions/:id
+ */
+router.put('/positions/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { code, name, departmentOid, departmentName, level, description, sortOrder, status } = req.body;
+
+    // 检查职位是否存在
+    const checkResult = db.exec('SELECT id FROM positions WHERE id = ?', [id]);
+    if (checkResult.length === 0 || checkResult[0].values.length === 0) {
+      return res.status(404).json({ success: false, error: '职位不存在' });
+    }
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE positions
+      SET code = COALESCE(?, code),
+          name = COALESCE(?, name),
+          department_oid = COALESCE(?, department_oid),
+          department_name = COALESCE(?, department_name),
+          level = COALESCE(?, level),
+          description = COALESCE(?, description),
+          sort_order = COALESCE(?, sort_order),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [code, name, departmentOid, departmentName, level, description, sortOrder, status, now, id]);
+
+    res.json({ success: true, message: '职位更新成功' });
+  } catch (error) {
+    console.error('更新职位失败:', error);
+    res.status(500).json({ success: false, error: '更新职位失败' });
+  }
+});
+
+/**
+ * 删除职位（软删除）
+ * DELETE /api/basic-data/positions/:id
+ */
+router.delete('/positions/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    // 检查职位是否存在
+    const checkResult = db.exec('SELECT id FROM positions WHERE id = ?', [id]);
+    if (checkResult.length === 0 || checkResult[0].values.length === 0) {
+      return res.status(404).json({ success: false, error: '职位不存在' });
+    }
+
+    const now = new Date().toISOString();
+
+    // 软删除：设置状态为 inactive
+    db.run('UPDATE positions SET status = ?, updated_at = ? WHERE id = ?', ['inactive', now, id]);
+
+    res.json({ success: true, message: '职位删除成功' });
+  } catch (error) {
+    console.error('删除职位失败:', error);
+    res.status(500).json({ success: false, error: '删除职位失败' });
+  }
+});
+
+/**
+ * 批量删除职位（软删除）
+ * POST /api/basic-data/positions/batch-delete
+ */
+router.post('/positions/batch-delete', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是数组' });
+    }
+
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(',');
+
+    db.run(`UPDATE positions SET status = ?, updated_at = ? WHERE id IN (${placeholders})`, ['inactive', now, ...ids]);
+
+    res.json({ success: true, message: '批量删除职位成功', data: { deletedCount: ids.length } });
+  } catch (error) {
+    console.error('批量删除职位失败:', error);
+    res.status(500).json({ success: false, error: '批量删除职位失败' });
+  }
+});
+
+/**
  * 获取所有班组
  * GET /api/basic-data/teams
  */

@@ -1,158 +1,143 @@
 /**
  * 采收入库数据 API 服务
  * 对接后端 /api/harvest
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { HarvestRecord } from '../types/index';
 
-// 导入本地服务作为回退
-import * as localService from './harvestService';
-
 /**
- * 初始化数据 - 从localStorage读取或使用默认数据
+ * 初始化数据
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function initHarvestRecords(): Promise<HarvestRecord[]> {
-  try {
-    return await apiClient.get<HarvestRecord[]>('/harvest/init');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.initHarvestRecords();
-  }
+  return await enhancedApiClient.get<HarvestRecord[]>('/harvest/init', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 获取所有采收记录
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecords(): Promise<HarvestRecord[]> {
-  try {
-    return await apiClient.get<HarvestRecord[]>('/harvest');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getHarvestRecords();
-  }
+  return await enhancedApiClient.get<HarvestRecord[]>('/harvest', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID获取单条记录
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordById(id: string): Promise<HarvestRecord | undefined> {
-  try {
-    return await apiClient.get<HarvestRecord>(`/harvest/${id}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getHarvestRecordById(id);
-  }
+  return await enhancedApiClient.get<HarvestRecord>(`/harvest/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID数组获取多条记录
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordsByIds(ids: string[]): Promise<HarvestRecord[]> {
-  try {
-    return await apiClient.get<HarvestRecord[]>(`/harvest/batch?ids=${ids.join(',')}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getHarvestRecordsByIds(ids);
-  }
+  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch?ids=${ids.join(',')}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据批次号获取采收记录
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordsByBatchCode(batchCode: string): Promise<HarvestRecord[]> {
-  try {
-    return await apiClient.get<HarvestRecord[]>(`/harvest/batch-code/${batchCode}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getHarvestRecordsByBatchCode(batchCode);
-  }
+  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch-code/${batchCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 添加新记录
+ * 降级策略：API → 离线队列
  */
 export async function addHarvestRecord(record: Omit<HarvestRecord, 'id'>): Promise<HarvestRecord> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/harvest', record);
-    return { ...record, id: result.id } as HarvestRecord;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.addHarvestRecord(record);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/harvest', record, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return { ...record, id: result.id } as HarvestRecord;
 }
 
 /**
  * 批量添加记录
+ * 降级策略：API → 离线队列
  */
 export async function addHarvestRecords(newRecords: Omit<HarvestRecord, 'id'>[]): Promise<HarvestRecord[]> {
-  try {
-    return await apiClient.post<HarvestRecord[]>('/harvest/batch', newRecords);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.addHarvestRecords(newRecords);
-  }
+  return await enhancedApiClient.post<HarvestRecord[]>('/harvest/batch', newRecords, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
  * 更新记录
+ * 降级策略：API → 离线队列
  */
 export async function updateHarvestRecord(id: string, updates: Partial<HarvestRecord>): Promise<HarvestRecord | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/harvest/${id}`, updates);
-    return result ? { ...updates, id } as HarvestRecord : null;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateHarvestRecord(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/harvest/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as HarvestRecord : null;
 }
 
 /**
  * 删除记录
+ * 降级策略：API → 离线队列
  */
 export async function deleteHarvestRecord(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/harvest/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteHarvestRecord(id);
-  }
+  await enhancedApiClient.delete(`/harvest/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 批量删除记录
+ * 降级策略：API → 离线队列
  */
 export async function deleteHarvestRecords(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/harvest/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteHarvestRecords(ids);
-  }
+  await enhancedApiClient.delete(`/harvest/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 生成采收单号
+ * 降级策略：API 失败返回空字符串
  */
 export async function generateHarvestCode(): Promise<string> {
   try {
-    return await apiClient.get<string>('/harvest/generate-code');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.generateHarvestCode();
+    return await enhancedApiClient.get<string>('/harvest/generate-code');
+  } catch {
+    return '';
   }
 }
 
 /**
- * 重置数据到默认状态
+ * 重置数据到默认状态（仅调用后端）
  */
 export async function resetHarvestRecords(): Promise<void> {
-  try {
-    await apiClient.post('/harvest/reset');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-  }
-  return localService.resetHarvestRecords();
+  await enhancedApiClient.post('/harvest/reset');
 }

@@ -1,14 +1,15 @@
 /**
  * 仓库物料 API 服务
  * 对接后端 /api/materials
- * API失败时降级到 localStorage
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-
-// localStorage 配置
-const STORAGE_KEY = 'yuanxingtu_warehouse_materials';
-const INBOUND_STORAGE_KEY = 'yuanxingtu_warehouse_inbound';
 
 // 物料类型
 export interface Material {
@@ -32,151 +33,102 @@ export interface Material {
   dataStatus: string;
 }
 
+// 入库物料明细类型
+export interface InboundMaterial {
+  id: number;
+  materialCode: string;
+  materialName: string;
+  category: string;
+  bigCategory: string;
+  midCategory: string;
+  subCategory: string;
+  specification: string;
+  barcode: string;
+  unit: string;
+  quantity: number;
+  price: string;
+  supplier: string;
+  location: string;
+  batchNo: string;
+  productionDate: string;
+  expiryDate: string;
+  remarks: string;
+}
+
 // 入库记录类型
 export interface InboundRecord {
   id: number;
   code: string;
-  materialCode: string;
-  materialName: string;
-  quantity: number;
-  unit: string;
   inboundDate: string;
   supplier: string;
-  batchNo: string;
-  productionDate: string;
-  expiryDate: string;
-  warehouse: string;
-  location: string;
   operator: string;
-  remarks: string;
-  createTime: string;
-}
-
-// 默认空数据
-const defaultMaterials: Material[] = [];
-const defaultInboundRecords: InboundRecord[] = [];
-
-// 从 localStorage 读取数据
-function getStoredMaterials(): Material[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultMaterials;
-  } catch {
-    return defaultMaterials;
-  }
-}
-
-function getStoredInboundRecords(): InboundRecord[] {
-  try {
-    const stored = localStorage.getItem(INBOUND_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultInboundRecords;
-  } catch {
-    return defaultInboundRecords;
-  }
-}
-
-// 保存数据到 localStorage
-function saveMaterials(data: Material[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function saveInboundRecords(data: InboundRecord[]): void {
-  localStorage.setItem(INBOUND_STORAGE_KEY, JSON.stringify(data));
+  status: 'completed' | 'pending' | 'voided';
+  materials: InboundMaterial[];
+  voidedDate?: string;
 }
 
 /**
- * 获取物料列表（带localStorage降级）
+ * 获取物料列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getMaterials(): Promise<Material[]> {
-  try {
-    const data = await apiClient.get<Material[]>('/materials');
-    saveMaterials(data);
-    return data;
-  } catch (error) {
-    console.warn('[物料API] 获取物料列表失败，降级到localStorage:', error);
-    return getStoredMaterials();
-  }
+  return await enhancedApiClient.get<Material[]>('/materials', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取入库记录列表（带localStorage降级）
+ * 获取入库记录列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getInboundRecords(): Promise<InboundRecord[]> {
-  try {
-    const data = await apiClient.get<InboundRecord[]>('/materials/inbound');
-    saveInboundRecords(data);
-    return data;
-  } catch (error) {
-    console.warn('[物料API] 获取入库记录失败，降级到localStorage:', error);
-    return getStoredInboundRecords();
-  }
+  return await enhancedApiClient.get<InboundRecord[]>('/materials/inbound', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 创建入库记录（带localStorage降级）
+ * 创建入库记录
+ * 降级策略：API → 离线队列
  */
 export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Promise<InboundRecord> {
-  try {
-    const id = await apiClient.post<number>('/materials/inbound', record);
-    const newRecord: InboundRecord = { ...record, id };
-    // 同步到 localStorage
-    const stored = getStoredInboundRecords();
-    stored.unshift(newRecord);
-    saveInboundRecords(stored);
-    return newRecord;
-  } catch (error) {
-    console.warn('[物料API] 创建入库记录失败，降级到localStorage:', error);
-    const localRecord: InboundRecord = { ...record, id: Date.now() };
-    const stored = getStoredInboundRecords();
-    stored.unshift(localRecord);
-    saveInboundRecords(stored);
-    return localRecord;
-  }
+  return await enhancedApiClient.post<InboundRecord>('/materials/inbound', record, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
- * 更新物料（带localStorage降级）
+ * 更新物料
+ * 降级策略：API → 离线队列
  */
 export async function updateMaterial(id: number, updates: Partial<Material>): Promise<Material | null> {
-  try {
-    await apiClient.put(`/materials/${id}`, updates);
-    // 同步到 localStorage
-    const stored = getStoredMaterials();
-    const index = stored.findIndex(m => m.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveMaterials(stored);
-    }
-    return stored[index] || null;
-  } catch (error) {
-    console.warn('[物料API] 更新物料失败，降级到localStorage:', error);
-    const stored = getStoredMaterials();
-    const index = stored.findIndex(m => m.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveMaterials(stored);
-      return stored[index];
-    }
-    return null;
-  }
+  const result = await enhancedApiClient.put<Material>(`/materials/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result;
 }
 
 /**
- * 删除物料（带localStorage降级）
+ * 删除物料
+ * 降级策略：API → 离线队列
  */
 export async function deleteMaterial(id: number): Promise<boolean> {
-  try {
-    await apiClient.delete(`/materials/${id}`);
-    // 从 localStorage 移除
-    const stored = getStoredMaterials();
-    const filtered = stored.filter(m => m.id !== id);
-    saveMaterials(filtered);
-    return true;
-  } catch (error) {
-    console.warn('[物料API] 删除物料失败，降级到localStorage:', error);
-    const stored = getStoredMaterials();
-    const filtered = stored.filter(m => m.id !== id);
-    saveMaterials(filtered);
-    return true;
-  }
+  await enhancedApiClient.delete(`/materials/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
+}
+
+/**
+ * 删除入库记录
+ * 降级策略：API → 离线队列
+ */
+export async function deleteInboundRecord(id: number): Promise<boolean> {
+  await enhancedApiClient.delete(`/materials/inbound/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }

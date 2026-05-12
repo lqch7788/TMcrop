@@ -1,7 +1,12 @@
 /**
  * 问题管理 API 服务
  * 对接后端 /api/problems
- * API失败时降级到 localStorage
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -48,69 +53,42 @@ export interface Problem {
   updateTime: string;
 }
 
-// localStorage 配置
-const STORAGE_KEY = 'yuanxingtu_problems';
-
-// 默认空数据
-const defaultProblems: Problem[] = [];
-
-// 从 localStorage 读取数据
-function getStoredProblems(): Problem[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultProblems;
-  } catch {
-    return defaultProblems;
-  }
-}
-
-// 保存数据到 localStorage
-function saveToStorage(data: Problem[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 /**
- * 获取所有问题记录（带localStorage降级）
+ * 获取所有问题记录
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllProblems(): Promise<Problem[]> {
-  try {
-    const data = await enhancedApiClient.get<Problem[]>('/problems');
-    saveToStorage(data);
-    return data;
-  } catch (error) {
-    console.warn('[问题API] 获取列表失败，降级到localStorage:', error);
-    return getStoredProblems();
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 根据ID获取问题（带localStorage降级）
+ * 根据ID获取问题
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemById(id: number): Promise<Problem | undefined> {
-  try {
-    return await enhancedApiClient.get<Problem>(`/problems/${id}`);
-  } catch (error) {
-    console.warn('[问题API] 获取单个失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.find(p => p.id === id);
-  }
+  return await enhancedApiClient.get<Problem>(`/problems/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 根据问题编码获取问题（带localStorage降级）
+ * 根据问题编码获取问题
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemByCode(problemCode: string): Promise<Problem | undefined> {
-  try {
-    return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`);
-  } catch (error) {
-    console.warn('[问题API] 获取单个失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.find(p => p.problemCode === problemCode);
-  }
+  return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取问题列表（支持筛选）（带localStorage降级）
+ * 获取问题列表（支持筛选）
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblems(filters?: {
   status?: string;
@@ -135,227 +113,169 @@ export async function getProblems(filters?: {
     if (filters.endDate) params.endDate = filters.endDate;
     if (filters.keyword) params.keyword = filters.keyword;
   }
-  try {
-    const data = await enhancedApiClient.get<Problem[]>('/problems', params);
-    saveToStorage(data);
-    return data;
-  } catch (error) {
-    console.warn('[问题API] 获取列表失败，降级到localStorage:', error);
-    return getStoredProblems();
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems', {
+    params,
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 创建问题（带localStorage降级）
+ * 创建问题
+ * 降级策略：API → 离线队列
  */
 export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' | 'createTime' | 'updateTime'>): Promise<Problem> {
-  try {
-    const result = await enhancedApiClient.post<Problem>('/problems', problem);
-    // 同步到 localStorage
-    const stored = getStoredProblems();
-    stored.unshift(result);
-    saveToStorage(stored);
-    return result;
-  } catch (error) {
-    console.warn('[问题API] 创建失败，降级到localStorage:', error);
-    const localProblem: Problem = {
-      ...problem,
-      id: Date.now(),
-      problemCode: `P${Date.now()}`,
-      createTime: new Date().toISOString(),
-      updateTime: new Date().toISOString(),
-    };
-    const stored = getStoredProblems();
-    stored.unshift(localProblem);
-    saveToStorage(stored);
-    return localProblem;
-  }
+  return await enhancedApiClient.post<Problem>('/problems', problem, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
- * 更新问题（带localStorage降级）
+ * 更新问题
+ * 降级策略：API → 离线队列
  */
 export async function updateProblem(id: number, updates: Partial<Problem>): Promise<Problem | null> {
-  try {
-    const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates);
-    // 同步到 localStorage
-    const stored = getStoredProblems();
-    const index = stored.findIndex(p => p.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveToStorage(stored);
-    }
-    return result;
-  } catch (error) {
-    console.warn('[问题API] 更新失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    const index = stored.findIndex(p => p.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveToStorage(stored);
-      return stored[index];
-    }
-    return null;
-  }
+  const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result;
 }
 
 /**
- * 删除问题（带localStorage降级）
+ * 删除问题
+ * 降级策略：API → 离线队列
  */
 export async function deleteProblem(id: number): Promise<boolean> {
-  try {
-    await enhancedApiClient.delete(`/problems/${id}`);
-    // 从 localStorage 移除
-    const stored = getStoredProblems();
-    const filtered = stored.filter(p => p.id !== id);
-    saveToStorage(filtered);
-    return true;
-  } catch (error) {
-    console.warn('[问题API] 删除失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    const filtered = stored.filter(p => p.id !== id);
-    saveToStorage(filtered);
-    return true;
-  }
+  await enhancedApiClient.delete(`/problems/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
- * 批量删除问题（带localStorage降级）
+ * 批量删除问题
+ * 降级策略：API → 离线队列
  */
 export async function deleteProblems(ids: number[]): Promise<boolean> {
-  try {
-    await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
-    // 从 localStorage 移除
-    const stored = getStoredProblems();
-    const filtered = stored.filter(p => !ids.includes(p.id));
-    saveToStorage(filtered);
-    return true;
-  } catch (error) {
-    console.warn('[问题API] 批量删除失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    const filtered = stored.filter(p => !ids.includes(p.id));
-    saveToStorage(filtered);
-    return true;
-  }
+  await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 分派问题
+ * 降级策略：API → 离线队列
  */
 export async function assignProblem(id: number, handlerId: string, handlerName: string): Promise<Problem | null> {
-  return enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName }, {
+    offlineQueue: true,
+  });
 }
 
 /**
  * 开始处理问题
+ * 降级策略：API → 离线队列
  */
 export async function startProcessing(id: number): Promise<Problem | null> {
-  return enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`);
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`, undefined, {
+    offlineQueue: true,
+  });
 }
 
 /**
  * 标记问题为已处理
+ * 降级策略：API → 离线队列
  */
 export async function resolveProblem(id: number, handleResult?: string): Promise<Problem | null> {
-  return enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult }, {
+    offlineQueue: true,
+  });
 }
 
 /**
- * 根据大棚获取问题列表（带localStorage降级）
+ * 根据大棚获取问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
-  } catch (error) {
-    console.warn('[问题API] 按大棚获取失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.greenhouseId === greenhouseId);
-  }
+  return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 根据批次获取问题列表（带localStorage降级）
+ * 根据批次获取问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`);
-  } catch (error) {
-    console.warn('[问题API] 按批次获取失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.batchId === batchId);
-  }
+  return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 根据来源获取问题列表（带localStorage降级）
+ * 根据来源获取问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsBySource(sourceType: string, sourceId: string): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
-  } catch (error) {
-    console.warn('[问题API] 按来源获取失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.sourceType === sourceType && p.sourceId === sourceId);
-  }
+  return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取待处理的问题列表（带localStorage降级）
+ * 获取待处理的问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getPendingProblems(): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>('/problems/pending');
-  } catch (error) {
-    console.warn('[问题API] 获取待处理问题失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.status === '待处理');
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems/pending', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取处理中的问题列表（带localStorage降级）
+ * 获取处理中的问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getProcessingProblems(): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>('/problems/processing');
-  } catch (error) {
-    console.warn('[问题API] 获取处理中问题失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.status === '处理中');
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems/processing', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取已处理的问题列表（带localStorage降级）
+ * 获取已处理的问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getResolvedProblems(): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>('/problems/resolved');
-  } catch (error) {
-    console.warn('[问题API] 获取已处理问题失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.status === '已处理');
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems/resolved', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
- * 获取严重问题列表（带localStorage降级）
+ * 获取严重问题列表
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeriousProblems(): Promise<Problem[]> {
-  try {
-    return await enhancedApiClient.get<Problem[]>('/problems/serious');
-  } catch (error) {
-    console.warn('[问题API] 获取严重问题失败，降级到localStorage:', error);
-    const stored = getStoredProblems();
-    return stored.filter(p => p.severity === '严重');
-  }
+  return await enhancedApiClient.get<Problem[]>('/problems/serious', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 生成问题编码
  */
 export async function generateProblemCode(): Promise<string> {
-  return enhancedApiClient.get<string>('/problems/generate-code');
+  return await enhancedApiClient.get<string>('/problems/generate-code');
 }
 
 /**
@@ -373,19 +293,27 @@ export async function getProblemStats(filters?: {
   byCategory: Record<string, number>;
   bySeverity: Record<string, number>;
 }> {
-  return enhancedApiClient.get('/problems/stats');
+  const params: Record<string, string> = {};
+  if (filters?.startDate) params.startDate = filters.startDate;
+  if (filters?.endDate) params.endDate = filters.endDate;
+  if (filters?.greenhouseId) params.greenhouseId = filters.greenhouseId;
+  return await enhancedApiClient.get('/problems/stats', { params });
 }
 
 /**
  * 关联任务
+ * 降级策略：API → 离线队列
  */
 export async function linkTask(problemId: number, taskId: string, taskCode: string): Promise<boolean> {
-  await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
+  await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode }, {
+    offlineQueue: true,
+  });
   return true;
 }
 
 /**
  * 添加问题处理记录
+ * 降级策略：API → 离线队列
  */
 export async function addProblemHandleRecord(problemId: number, record: {
   handlerId: string;
@@ -393,6 +321,8 @@ export async function addProblemHandleRecord(problemId: number, record: {
   action: string;
   description?: string;
 }): Promise<boolean> {
-  await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record);
+  await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record, {
+    offlineQueue: true,
+  });
   return true;
 }

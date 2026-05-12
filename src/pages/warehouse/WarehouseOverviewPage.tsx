@@ -1,9 +1,10 @@
 /**
  * 库存总览页面
  * 从 WarehouseMaterialsPage 拆分出来，专注物料库存总览
+ * 数据来源：API → enhancedApiClient → React Query
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from '../../components/warehouse/MaterialFilters';
 import { MaterialsTable } from '../../components/warehouse/MaterialsTable';
 import { MaterialDetailModal } from '../../components/warehouse/MaterialDetailModal';
@@ -15,6 +16,7 @@ import { BatchDeleteConfirmDialog } from '../../components/warehouse/BatchDelete
 import { MaterialExportModal } from '../../components/warehouse/MaterialExportModal';
 import PageHeader from '../../components/warehouse/PageHeader';
 import ActionToolbar from '../../components/warehouse/ActionToolbar';
+import { useWarehouseOverview } from './hooks/useWarehouseOverview';
 
 const categoryConfig: Record<string, { name: string; categories: Record<string, { name: string; subCategories: Record<string, { name: string; prefix: string }> }> }> = {
   'SP': { name: '生产投入类', categories: {
@@ -169,42 +171,36 @@ const categoryConfig: Record<string, { name: string; categories: Record<string, 
   }},
 };
 
-const warehouseMaterials: Material[] = [
-  { id: 1, code: 'SP0101001', name: '水稻种子', category: '种质资源-粮食作物种子', unit: '袋', quantity: 200, minStock: 50, maxStock: 500, price: '30元', supplier: '金种子业公司', location: 'A区-01', specification: '25kg/袋', barcode: '6932456789012', batchNo: 'PC20260301', productionDate: '2026-01-15', expiryDate: '2027-01-15', lastUpdateTime: '2026-03-20 10:30:00', dataStatus: '启用' },
-  { id: 2, code: 'SP0102001', name: '棉花种子', category: '种质资源-经济作物种子', unit: '袋', quantity: 80, minStock: 30, maxStock: 200, price: '25元', supplier: '丰收种业', location: 'A区-02', specification: '20kg/袋', barcode: '6932456789013', batchNo: 'PC20260220', productionDate: '2026-02-01', expiryDate: '2027-02-01', lastUpdateTime: '2026-03-19 14:20:00', dataStatus: '启用' },
-  { id: 3, code: 'SP0103001', name: '番茄种子', category: '种质资源-蔬菜种子', unit: '袋', quantity: 100, minStock: 50, maxStock: 300, price: '25元', supplier: '鑫源农资公司', location: 'A区-03', specification: '10g/袋', barcode: '6932456789014', batchNo: 'PC20260305', productionDate: '2026-02-20', expiryDate: '2026-08-20', lastUpdateTime: '2026-03-18 09:15:00', dataStatus: '启用' },
-  { id: 4, code: 'SP0201001', name: '商品有机肥', category: '肥料与土壤改良剂-有机肥', unit: '袋', quantity: 50, minStock: 100, maxStock: 400, price: '45元', supplier: '丰达化肥厂', location: 'B区-01', specification: '40kg/袋', barcode: '6932456789015', batchNo: 'PC20260110', productionDate: '2026-01-10', expiryDate: '2026-07-10', lastUpdateTime: '2026-03-20 08:00:00', dataStatus: '启用' },
-  { id: 5, code: 'SP0202001', name: '尿素', category: '肥料与土壤改良剂-化学肥料', unit: '袋', quantity: 150, minStock: 50, maxStock: 500, price: '80元', supplier: '丰达化肥厂', location: 'B区-02', specification: '50kg/袋', barcode: '6932456789016', batchNo: 'PC20260228', productionDate: '2026-02-28', expiryDate: '2028-02-28', lastUpdateTime: '2026-03-17 16:45:00', dataStatus: '启用' },
-  { id: 6, code: 'SP0301001', name: '吡虫啉', category: '农药与植保产品-杀虫剂', unit: '箱', quantity: 30, minStock: 20, maxStock: 100, price: '120元', supplier: '绿叶农业用品店', location: 'C区-01', specification: '100g/瓶', barcode: '6932456789017', batchNo: 'PC20251215', productionDate: '2025-12-15', expiryDate: '2027-12-15', lastUpdateTime: '2026-03-16 11:30:00', dataStatus: '启用' },
-  { id: 7, code: 'SP0302001', name: '多菌灵', category: '农药与植保产品-杀菌剂', unit: '箱', quantity: 20, minStock: 20, maxStock: 80, price: '150元', supplier: '绿叶农业用品店', location: 'C区-02', specification: '200g/瓶', barcode: '6932456789018', batchNo: 'PC20251120', productionDate: '2025-11-20', expiryDate: '2027-11-20', lastUpdateTime: '2026-03-15 13:20:00', dataStatus: '停用' },
-  { id: 8, code: 'EQ0103001', name: '电动喷雾机', category: '农业机械-植保机械', unit: '台', quantity: 10, minStock: 5, maxStock: 30, price: '280元', supplier: '农机设备公司', location: 'D区-01', specification: '3W-16L', barcode: '6932456789019', batchNo: 'EQ20260301', productionDate: '2026-02-15', expiryDate: '2031-02-15', lastUpdateTime: '2026-03-14 10:00:00', dataStatus: '启用' },
-  { id: 9, code: 'EQ0306001', name: '滴灌带', category: '灌溉与水肥系统-灌溉终端', unit: '卷', quantity: 500, minStock: 200, maxStock: 1000, price: '25元', supplier: '节水灌溉设备厂', location: 'E区-01', specification: 'D16-2.0L/h', barcode: '6932456789020', batchNo: 'EQ20260125', productionDate: '2026-01-25', expiryDate: '2031-01-25', lastUpdateTime: '2026-03-13 15:30:00', dataStatus: '启用' },
-  { id: 10, code: 'OP0102001', name: '劳保胶靴', category: '劳保与防护用品-足部防护', unit: '双', quantity: 40, minStock: 20, maxStock: 100, price: '35元', supplier: '劳保用品商店', location: 'F区-01', specification: '39-43码', barcode: '6932456789021', batchNo: 'OP20260201', productionDate: '2026-02-01', expiryDate: '2028-02-01', lastUpdateTime: '2026-03-12 09:45:00', dataStatus: '启用' },
-  { id: 11, code: 'OP0201001', name: '锄头', category: '日常劳动工具-手动农具', unit: '把', quantity: 25, minStock: 10, maxStock: 80, price: '18元', supplier: '五金工具店', location: 'F区-02', specification: '1.2kg', barcode: '6932456789022', batchNo: 'OP20260115', productionDate: '2026-01-15', expiryDate: '2031-01-15', lastUpdateTime: '2026-03-11 14:00:00', dataStatus: '启用' },
-  { id: 12, code: 'PH0104001', name: '塑料袋', category: '采收容器-包装材料', unit: '卷', quantity: 200, minStock: 100, maxStock: 500, price: '15元', supplier: '包装材料公司', location: 'G区-01', specification: '50cm*80cm', barcode: '6932456789023', batchNo: 'PH20260210', productionDate: '2026-02-10', expiryDate: '2027-02-10', lastUpdateTime: '2026-03-10 16:20:00', dataStatus: '启用' },
-  { id: 13, code: 'IT0101001', name: '土壤温湿度传感器', category: '监测设备-传感器', unit: '个', quantity: 20, minStock: 10, maxStock: 50, price: '150元', supplier: '智慧农业设备商', location: 'H区-01', specification: 'RS485 Modbus', barcode: '6932456789024', batchNo: 'IT20260308', productionDate: '2026-03-08', expiryDate: '2031-03-08', lastUpdateTime: '2026-03-20 17:00:00', dataStatus: '启用' },
-];
-
-const initialFilters: MaterialFiltersState = {
-  code: '',
-  name: '',
-  category: '全部',
-  supplier: '',
-  location: '',
-  searchBigCategory: '',
-  searchMidCategory: '',
-  searchSubCategory: '',
-  showLowStock: false,
-};
-
 export default function WarehouseOverviewPage() {
-  const [filters, setFilters] = useState<MaterialFiltersState>(initialFilters);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [batchEditMode, setBatchEditMode] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [exportMode, setExportMode] = useState(false);
+  // 使用 Hook 获取数据（从 API）
+  const {
+    materials: filteredMaterials,
+    allMaterials: warehouseData,
+    isLoading,
+    refreshData,
+    filters,
+    handleFiltersChange,
+    lowStockCount,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    selectedRows,
+    setSelectedRows,
+    batchEditMode,
+    setBatchEditMode,
+    deleteMode,
+    setDeleteMode,
+    exportMode,
+    setExportMode,
+    handleSelectAll,
+    handleSelectRow,
+    handleCancelSelection,
+    handleConfirmDelete,
+    handleBatchDelete,
+  } = useWarehouseOverview();
+
+  // UI 状态
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -217,48 +213,8 @@ export default function WarehouseOverviewPage() {
   const [batchEditedMaterials, setBatchEditedMaterials] = useState<Record<number, any>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
-  const [warehouseData, setWarehouseData] = useState<Material[]>(warehouseMaterials);
 
-  const lowStockCount = warehouseData.filter(m => m.quantity < m.minStock).length;
-  const filteredMaterials = filterMaterials(warehouseData, filters);
-
-  const handleFiltersChange = (newFilters: MaterialFiltersState) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedRows.length === filteredMaterials.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(filteredMaterials.map(m => m.id));
-    }
-  };
-
-  const handleSelectRow = (id: number) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-    } else {
-      setSelectedRows([...selectedRows, id]);
-    }
-  };
-
-  const handleExportClick = () => {
-    setExportMode(true);
-    setSelectedRows([]);
-  };
-
-  const handleCancelSelection = () => {
-    setExportMode(false);
-    setBatchEditMode(false);
-    setDeleteMode(false);
-    setSelectedRows([]);
-  };
-
-  const handleConfirmExport = () => {
-    setShowExportModal(true);
-  };
-
+  // 导出处理
   const handleDoExport = async () => {
     const selectedData = filteredMaterials.filter(m => selectedRows.includes(m.id));
 
@@ -281,21 +237,14 @@ export default function WarehouseOverviewPage() {
 
     try {
       if (window.showSaveFilePicker) {
-        // 使用文件系统API直接保存到用户选择的文件夹
         const handle = await window.showSaveFilePicker({
           suggestedName: fileName,
-          types: [
-            {
-              description: 'Excel Files',
-              accept: { [mimeType]: ['.' + extension] },
-            },
-          ],
+          types: [{ accept: { [mimeType]: ['.' + extension] } }],
         });
         const writable = await handle.createWritable();
         await writable.write(content);
         await writable.close();
       } else {
-        // 降级方案：使用Blob下载
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -307,7 +256,6 @@ export default function WarehouseOverviewPage() {
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         console.error('Export failed:', err);
-        // 降级方案
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -323,6 +271,7 @@ export default function WarehouseOverviewPage() {
     setSelectedRows([]);
   };
 
+  // 查看/编辑/删除操作
   const handleView = (material: Material) => {
     setSelectedMaterial(material);
     setShowDetailModal(true);
@@ -338,7 +287,10 @@ export default function WarehouseOverviewPage() {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDeleteAction = () => {
+    if (selectedMaterial) {
+      handleConfirmDelete(selectedMaterial.id);
+    }
     setShowDeleteModal(false);
     setSelectedMaterial(null);
   };
@@ -349,10 +301,10 @@ export default function WarehouseOverviewPage() {
   };
 
   // ActionToolbar callbacks
-  const handleLowStockToggle = () => setFilters(prev => ({ ...prev, showLowStock: !prev.showLowStock }));
+  const handleLowStockToggle = () => handleFiltersChange({ ...filters, showLowStock: !filters.showLowStock });
   const handleBatchEditClick = () => setShowBatchEditWarning(true);
   const handleDeleteWarning = () => setShowDeleteWarning(true);
-  const handleExport = () => handleExportClick();
+  const handleExport = () => { setExportMode(true); setSelectedRows([]); };
   const handleConfirmBatchEdit = () => {
     if (selectedRows.length === 1) {
       const material = filteredMaterials.find(m => m.id === selectedRows[0]);
@@ -367,12 +319,20 @@ export default function WarehouseOverviewPage() {
     }
   };
   const handleCancelBatchEdit = () => { setBatchEditMode(false); setSelectedRows([]); };
-  const handleConfirmBatchDelete = () => {
+  const handleConfirmBatchDeleteAction = () => {
     setShowBatchDeleteConfirm(true);
   };
-  const handleCancelDelete = () => { setDeleteMode(false); setSelectedRows([]); };
-  const handleConfirmExportClick = () => handleConfirmExport();
-  const handleCancelExport = () => { setExportMode(false); setSelectedRows([]); };
+  const handleCancelDeleteAction = () => { setDeleteMode(false); setSelectedRows([]); };
+  const handleConfirmExportClick = () => setShowExportModal(true);
+  const handleCancelExportAction = () => { setExportMode(false); setSelectedRows([]); };
+
+  // 批量删除确认
+  const handleBatchDeleteConfirm = () => {
+    handleBatchDelete(selectedRows);
+    setShowBatchDeleteConfirm(false);
+    setDeleteMode(false);
+    setSelectedRows([]);
+  };
 
   return (
     <div className="space-y-6">
@@ -382,11 +342,10 @@ export default function WarehouseOverviewPage() {
         filters={filters}
         onFiltersChange={handleFiltersChange}
         lowStockCount={lowStockCount}
-        onLowStockClick={() => setFilters(prev => ({ ...prev, showLowStock: !prev.showLowStock }))}
+        onLowStockClick={handleLowStockToggle}
         categoryConfig={categoryConfig}
       />
 
-      {/* 表头行：标题 + 操作按钮 */}
       <ActionToolbar
         title="物料汇总表"
         batchEditMode={batchEditMode}
@@ -401,10 +360,10 @@ export default function WarehouseOverviewPage() {
         onExport={handleExport}
         onConfirmBatchEdit={handleConfirmBatchEdit}
         onCancelBatchEdit={handleCancelBatchEdit}
-        onConfirmDelete={handleConfirmBatchDelete}
-        onCancelDelete={handleCancelDelete}
+        onConfirmDelete={handleConfirmBatchDeleteAction}
+        onCancelDelete={handleCancelDeleteAction}
         onConfirmExport={handleConfirmExportClick}
-        onCancelExport={handleCancelExport}
+        onCancelExport={handleCancelExportAction}
       />
 
       <MaterialsTable
@@ -423,7 +382,7 @@ export default function WarehouseOverviewPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onCancelSelection={handleCancelSelection}
-        onConfirmExport={handleConfirmExport}
+        onConfirmExport={handleConfirmExportClick}
       />
 
       <MaterialDetailModal
@@ -443,7 +402,7 @@ export default function WarehouseOverviewPage() {
         material={selectedMaterial}
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleConfirmDeleteAction}
       />
 
       <DeleteWarningDialog
@@ -459,12 +418,7 @@ export default function WarehouseOverviewPage() {
         isOpen={showBatchDeleteConfirm}
         selectedMaterials={filteredMaterials.filter(m => selectedRows.includes(m.id))}
         onClose={() => { setShowBatchDeleteConfirm(false); setDeleteMode(false); setSelectedRows([]); }}
-        onConfirm={() => {
-          setWarehouseData(prev => prev.filter(m => !selectedRows.includes(m.id)));
-          setShowBatchDeleteConfirm(false);
-          setDeleteMode(false);
-          setSelectedRows([]);
-        }}
+        onConfirm={handleBatchDeleteConfirm}
       />
 
       <MaterialBatchEditModal

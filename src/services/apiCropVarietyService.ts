@@ -1,31 +1,21 @@
 /**
  * 作物品种 API 服务
  * 对接后端 /api/crop-varieties
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { CropVariety } from '../types/crop';
 import { CropVarietyOption } from '../types/crop';
-
-// 导入本地服务作为回退
-import * as localService from './cropVarietyService';
+import * as cropVarietyService from './cropVarietyService';
 
 /**
- * 初始化品种数据（本地缓存）
- */
-export function initVarieties(): CropVariety[] {
-  return localService.initVarieties();
-}
-
-/**
- * 获取品种选项列表（用于下拉选择）
- */
-export function getVarietyOptions(): CropVarietyOption[] {
-  return localService.getVarietyOptions();
-}
-
-/**
- * 将 snake_case 转换为 camelCase（用于处理后端返回的原始数据）
+ * 将 snake_case 转换为 camelCase
  */
 function snakeToCamel(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
@@ -41,101 +31,98 @@ function snakeToCamel(obj: unknown): unknown {
 }
 
 /**
+ * 初始化品种数据（优先从 API 获取，失败时用本地缓存）
+ */
+export function initVarieties(): CropVariety[] {
+  return cropVarietyService.initVarieties();
+}
+
+/**
+ * 获取品种选项列表（用于下拉选择，本地缓存）
+ */
+export function getVarietyOptions(): CropVarietyOption[] {
+  return cropVarietyService.getVarietyOptions();
+}
+
+/**
  * 获取所有作物品种
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllVarieties(): Promise<CropVariety[]> {
-  try {
-    const data = await apiClient.get<Record<string, unknown>[]>('/crop-varieties');
-    return data.map(item => snakeToCamel(item) as CropVariety);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getAllVarieties();
-  }
+  const data = await enhancedApiClient.get<Record<string, unknown>[]>('/crop-varieties', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data.map(item => snakeToCamel(item) as CropVariety);
 }
 
 /**
  * 根据ID获取单个品种
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getVarietyById(id: string): Promise<CropVariety | undefined> {
-  try {
-    const data = await apiClient.get<any>(`/crop-varieties/${id}`);
-    return snakeToCamel(data);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getVarietyById(id);
-  }
+  const data = await enhancedApiClient.get<any>(`/crop-varieties/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return snakeToCamel(data) as CropVariety;
 }
 
 /**
  * 创建品种
+ * 降级策略：API → 离线队列
  */
 export async function createVariety(data: Partial<CropVariety>): Promise<string> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/crop-varieties', data);
-    return result.id;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.createVariety(data);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/crop-varieties', data, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return result.id;
 }
 
 /**
  * 更新品种
+ * 降级策略：API → 离线队列
  */
 export async function updateVariety(id: string, data: Partial<CropVariety>): Promise<string | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/crop-varieties/${id}`, data);
-    return result.id;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateVariety(id, data);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-varieties/${id}`, data, {
+    offlineQueue: true,
+  });
+  return result?.id || null;
 }
 
 /**
  * 删除品种
+ * 降级策略：API → 离线队列
  */
 export async function deleteVariety(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/crop-varieties/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteVariety(id);
-  }
+  await enhancedApiClient.delete(`/crop-varieties/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 根据作物名称查找品种
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function findByCropName(cropName: string): Promise<CropVariety[]> {
-  try {
-    const all = await getAllVarieties();
-    return all.filter(v => v.varietyName?.includes(cropName) || v.typeName?.includes(cropName));
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.findByCropName(cropName);
-  }
+  const all = await getAllVarieties();
+  return all.filter(v => v.varietyName?.includes(cropName) || v.typeName?.includes(cropName));
 }
 
 /**
  * 根据作物编码获取品种信息
- * 所有作物必须有编码！品种库中必须存在该编码
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getVarietyByCode(cropCode: string): Promise<CropVariety | undefined> {
-  try {
-    const all = await getAllVarieties();
-    return all.find(v => v.cropCode === cropCode);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getVarietyByCode(cropCode);
-  }
+  const all = await getAllVarieties();
+  return all.find(v => v.cropCode === cropCode);
 }
 
 /**
  * 获取品种的完整路径字符串
  * 格式：类别名称-类型名称-品种名称-子品种名称
- * 所有作物必须有编码！找不到时应返回空字符串
  */
 export async function getVarietyPathString(cropCode: string): Promise<string> {
   const variety = await getVarietyByCode(cropCode);
@@ -147,8 +134,6 @@ export async function getVarietyPathString(cropCode: string): Promise<string> {
 
 /**
  * 根据品种名称查找品种并获取品种路径字符串
- * @param varietyName 品种名称（最细分品种）
- * 所有作物必须有编码！找不到时应返回原始品种名称
  */
 export async function getVarietyPathByName(varietyName: string): Promise<string> {
   const all = await getAllVarieties();
@@ -173,7 +158,6 @@ export async function getVarietyPathByName(varietyName: string): Promise<string>
 
 /**
  * 根据品种名称获取标准作物编码
- * 所有作物必须有编码！找不到时应返回空字符串，由调用方处理
  */
 export async function getStandardCropCode(varietyName: string): Promise<string> {
   const all = await getAllVarieties();
@@ -192,7 +176,6 @@ export async function getStandardCropCode(varietyName: string): Promise<string> 
 
 /**
  * 获取作物品种（最细分品种名称）
- * 所有作物必须有编码！找不到时应返回原始品种名称
  */
 export async function getCropVarietyName(varietyName: string): Promise<string> {
   const all = await getAllVarieties();

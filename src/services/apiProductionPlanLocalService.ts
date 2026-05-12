@@ -1,12 +1,16 @@
 /**
  * 生产计划数据 API 服务
  * 对接后端 /api/production-plans
- * API失败时降级到 localStorage (productionPlanLocalService)
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { ProductionPlan } from './productionPlanLocalService';
-import * as productionPlanLocalService from './productionPlanLocalService';
 
 // 后端返回的数据字段类型
 interface BackendProductionPlan {
@@ -90,83 +94,90 @@ function transformSingle(item: BackendProductionPlan): ProductionPlan {
   };
 }
 
-// ==================== API 函数（降级到localStorage）====================
-
+/**
+ * 获取所有生产计划
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getProductionPlans(): Promise<ProductionPlan[]> {
-  try {
-    const data = await apiClient.get<BackendProductionPlan[]>('/production-plans');
-    return transformProductionPlan(data) as ProductionPlan[];
-  } catch (error) {
-    console.warn('[生产计划API] 获取失败，降级到localStorage:', error);
-    return productionPlanLocalService.getProductionPlans();
-  }
+  const data = await enhancedApiClient.get<BackendProductionPlan[]>('/production-plans', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformProductionPlan(data) as ProductionPlan[];
 }
 
+/**
+ * 根据ID获取单个生产计划
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getProductionPlanById(id: string): Promise<ProductionPlan | undefined> {
-  try {
-    const data = await apiClient.get<BackendProductionPlan>(`/production-plans/${id}`);
-    return transformProductionPlan(data) as ProductionPlan;
-  } catch (error) {
-    console.warn('[生产计划API] 获取单个失败，降级到localStorage:', error);
-    return productionPlanLocalService.getProductionPlanById(id);
-  }
+  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformProductionPlan(data) as ProductionPlan;
 }
 
+/**
+ * 根据批次编号获取生产计划
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getProductionPlanByCode(batchCode: string): Promise<ProductionPlan | undefined> {
-  try {
-    const data = await apiClient.get<BackendProductionPlan>(`/production-plans/code/${batchCode}`);
-    return transformProductionPlan(data) as ProductionPlan;
-  } catch (error) {
-    console.warn('[生产计划API] 获取单个失败，降级到localStorage:', error);
-    return productionPlanLocalService.getProductionPlanByCode(batchCode);
-  }
+  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/code/${batchCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformProductionPlan(data) as ProductionPlan;
 }
 
+/**
+ * 创建生产计划
+ * 降级策略：API → 离线队列
+ */
 export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promise<ProductionPlan> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/production-plans', plan);
-    return { ...plan, id: result.id } as ProductionPlan;
-  } catch (error) {
-    console.warn('[生产计划API] 创建失败，降级到localStorage:', error);
-    return productionPlanLocalService.addProductionPlan(plan);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/production-plans', plan, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return { ...plan, id: result.id } as ProductionPlan;
 }
 
+/**
+ * 更新生产计划
+ * 降级策略：API → 离线队列
+ */
 export async function updateProductionPlan(id: string, updates: Partial<ProductionPlan>): Promise<ProductionPlan | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/production-plans/${id}`, updates);
-    return result ? { ...updates, id } as ProductionPlan : null;
-  } catch (error) {
-    console.warn('[生产计划API] 更新失败，降级到localStorage:', error);
-    return productionPlanLocalService.updateProductionPlan(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/production-plans/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as ProductionPlan : null;
 }
 
+/**
+ * 删除生产计划
+ * 降级策略：API → 离线队列
+ */
 export async function deleteProductionPlan(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/production-plans/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('[生产计划API] 删除失败，降级到localStorage:', error);
-    return productionPlanLocalService.deleteProductionPlan(id);
-  }
+  await enhancedApiClient.delete(`/production-plans/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 批量删除生产计划
+ * 降级策略：API → 离线队列
+ */
 export async function deleteProductionPlans(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch (error) {
-    console.warn('[生产计划API] 批量删除失败，降级到localStorage:', error);
-    return productionPlanLocalService.deleteProductionPlans(ids);
-  }
+  await enhancedApiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 重置生产计划（仅调用后端，不做降级）
+ */
 export async function resetProductionPlans(): Promise<void> {
-  try {
-    await apiClient.post('/production-plans/reset');
-  } catch (error) {
-    console.warn('[生产计划API] 重置失败，降级到localStorage:', error);
-  }
-  productionPlanLocalService.resetProductionPlans();
+  await enhancedApiClient.post('/production-plans/reset');
 }
