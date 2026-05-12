@@ -306,12 +306,17 @@ export function useLeave(
 
       await createLeaveMutation.mutateAsync(createParams);
 
-      // 冻结请假余额
-      await freezeQuotaMutation.mutateAsync({
-        workerId: formData.staffId,
-        leaveType: formData.leaveType,
-        days: formData.days,
-      });
+      // 尝试冻结请假余额（如果额度不存在则跳过）
+      try {
+        await freezeQuotaMutation.mutateAsync({
+          workerId: formData.staffId,
+          leaveType: formData.leaveType,
+          days: formData.days,
+        });
+      } catch (quotaError) {
+        // 额度不存在时只警告，不阻止请假记录创建
+        console.warn('冻结请假额度失败（可能额度不存在）:', quotaError);
+      }
 
       setIsFormModalOpen(false);
       refetch();
