@@ -1,4 +1,8 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+/**
+ * 拖拽 Context
+ * 已迁移到 Zustand Store (src/stores/useDragStore.ts)
+ */
+import { createContext, useContext, type ReactNode } from 'react';
 
 interface DragState {
   isDragging: boolean;
@@ -15,15 +19,13 @@ interface DragContextType {
 const DragContext = createContext<DragContextType | null>(null);
 
 export function DragProvider({ children }: { children: ReactNode }) {
-  const dragStates = useState<Record<string, DragState>>({});
-  
-  const getDragHandlers = useCallback((id: string) => {
-    // 这个实现会比较复杂，需要为每个弹窗创建独立的状态
+  // 占位实现，实际拖拽功能在具体组件中实现
+  const getDragHandlers = () => {
     return {
       onMouseDown: () => {},
       style: {},
     };
-  }, []);
+  };
 
   return (
     <DragContext.Provider value={{ getDragHandlers }}>

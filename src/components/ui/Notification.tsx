@@ -1,20 +1,14 @@
 /**
  * Notification 通知提醒
  * 页面右上角弹出通知
+ * 已迁移到 Zustand Store (src/stores/useNotificationStore.ts)
  */
 import * as React from "react"
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useNotificationStore, type Notification, type NotificationVariant } from '../../stores/useNotificationStore';
 
-export type NotificationVariant = 'success' | 'warning' | 'error' | 'info'
-
-export interface Notification {
-  id: string
-  title: string
-  description?: string
-  variant?: NotificationVariant
-  duration?: number
-}
+export type { NotificationVariant, Notification } from '../../stores/useNotificationStore';
 
 export interface NotificationContextValue {
   notifications: Notification[]
@@ -28,40 +22,16 @@ const NotificationContext = React.createContext<NotificationContextValue | undef
 export interface NotificationProviderProps {
   children: React.ReactNode
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
-  maxNotifications?: number
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
-  position = 'top-right',
-  maxNotifications = 5
+  position = 'top-right'
 }) => {
-  const [notifications, setNotifications] = React.useState<Notification[]>([])
-
-  const addNotification = React.useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Math.random().toString(36).substring(2, 9)
-    const newNotification: Notification = { ...notification, id }
-
-    setNotifications(prev => {
-      const updated = [newNotification, ...prev]
-      return updated.slice(0, maxNotifications)
-    })
-
-    // 自动消失
-    if (notification.duration !== 0) {
-      setTimeout(() => {
-        removeNotification(id)
-      }, notification.duration || 3000)
-    }
-  }, [maxNotifications])
-
-  const removeNotification = React.useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-  }, [])
-
-  const clearAll = React.useCallback(() => {
-    setNotifications([])
-  }, [])
+  const notifications = useNotificationStore((state) => state.notifications);
+  const addNotification = useNotificationStore((state) => state.addNotification);
+  const removeNotification = useNotificationStore((state) => state.removeNotification);
+  const clearAll = useNotificationStore((state) => state.clearAll);
 
   const positionClasses = {
     'top-right': 'top-4 right-4',
