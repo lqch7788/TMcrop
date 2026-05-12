@@ -121,3 +121,34 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 - **临时文件清理**：仅删除任务执行过程中创建的临时脚本/临时文件
 - **删除前需征得用户同意**
 - 删除后需确认是否需要恢复（如 node_modules 需重新安装）
+
+## 会话历史 (SESSION_HISTORY)
+
+> 每次会话结束时更新，记录本次完成的工作。下次进入项目时先阅读此部分了解上下文。
+
+### 2026-05-12 会话
+
+**完成的工作：**
+1. **修复农事任务中心批量删除功能**
+   - 问题：`DeleteWarningAdapter` 内部创建了新的 `useTasks()` 实例，导致删除操作没有作用在正确的任务列表上
+   - 修复：`DeleteWarningAdapter` 改为接收外部传入的 `tasksHook`；`useFarmHub` 支持传入外部 `tasksHook` 参数
+   - 修改文件：`DeleteWarningAdapter.tsx`, `useFarmHub.ts`, `FarmTaskHub.tsx`, `TaskTable.tsx`
+
+2. **恢复 NS 原始种子数据**
+   - 问题：测试过程中误删除了 2 条 NS 开头的原始任务数据
+   - 恢复：从备份的 `farmMockData.ts` 中提取缺失的 2 条任务，通过 API 添加回后端数据库
+   - 恢复的任务：NS20260318-001（8号棚辣椒采收）、NS20260319-001（A2地块水稻采收）
+
+3. **数据架构相关修复**
+   - 修复 API 路径导入错误：`apiInspectionService.ts`, `apiProblemService.ts`
+   - `useLocalStorage` 添加 `storage` 事件监听支持多实例同步
+   - TaskTable 添加 `onConfirmBatchDelete` 回调支持实际删除
+
+**提交记录：**
+- `de432cf` - fix: 修复农事任务中心批量删除功能
+- `5959656` - chore: 恢复后端数据库 NS 原始种子数据
+
+**重要教训：**
+- 测试删除功能时，务必确认只删除测试数据（TK/TEST 开头），不要删除原始种子数据（NS 开头）
+- 批量删除前先确认 `selectedIds` 是否正确传递
+- React Hook 在不同组件实例间不共享状态，需要通过 props 或 context 传递共享实例
