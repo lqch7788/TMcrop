@@ -2,41 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Settings, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-// API基础路径
-const API_BASE = '/api/approval-workflows';
-
-// 获取认证头
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
-
-interface ApprovalNode {
-  id: string;
-  name: string;
-  approverRole: string;
-  approverName?: string;
-  timeoutHours: number;
-  autoApproveOnTimeout: boolean;
-  requireComment: boolean;
-}
-
-interface ApprovalWorkflow {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  module: string;
-  triggerCondition: string;
-  nodes: ApprovalNode[];
-  status: 'active' | 'inactive';
-  createdAt: string;
-  updatedAt?: string;
-}
+import {
+  getWorkflows,
+  createWorkflow,
+  updateWorkflow as updateWorkflowApi,
+  deleteWorkflow as deleteWorkflowApi,
+  toggleWorkflow,
+  ApprovalNode,
+  ApprovalWorkflow,
+} from '../services/apiApprovalWorkflowService';
 
 const MODULE_OPTIONS = [
   { value: 'production', label: '生产管理' },
@@ -65,13 +39,8 @@ export default function ApprovalWorkflowConfig() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        setWorkflows(result.data || []);
-      } else {
-        setError(result.error || '加载失败');
-      }
+      const data = await getWorkflows();
+      setWorkflows(data);
     } catch (err) {
       console.error('加载审批工作流失败:', err);
       setError('加载审批工作流失败');
@@ -107,27 +76,9 @@ export default function ApprovalWorkflowConfig() {
       };
 
       if (editingWorkflow) {
-        const response = await fetch(`${API_BASE}/${editingWorkflow.id}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          alert(result.error || '更新失败');
-          return;
-        }
+        await updateWorkflowApi(editingWorkflow.id, payload);
       } else {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          alert(result.error || '创建失败');
-          return;
-        }
+        await createWorkflow(payload);
       }
 
       await loadWorkflows();
@@ -140,16 +91,11 @@ export default function ApprovalWorkflowConfig() {
     }
   };
 
-  const deleteWorkflow = async (id: string) => {
+  const handleDeleteWorkflow = async (id: string) => {
     if (!confirm('确定删除该审批流程吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        await loadWorkflows();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteWorkflowApi(id);
+      await loadWorkflows();
     } catch (err) {
       console.error('删除审批工作流失败:', err);
       alert('删除失败');
@@ -195,13 +141,8 @@ export default function ApprovalWorkflowConfig() {
 
   const toggleWorkflowStatus = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}/toggle`, { method: 'PATCH', headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        await loadWorkflows();
-      } else {
-        alert(result.error || '切换状态失败');
-      }
+      await toggleWorkflow(id);
+      await loadWorkflows();
     } catch (err) {
       console.error('切换审批工作流状态失败:', err);
       alert('切换状态失败');
@@ -286,7 +227,7 @@ export default function ApprovalWorkflowConfig() {
                   <Button variant="ghost" size="icon" onClick={() => editWorkflow(workflow)} className="p-1.5 hover:bg-gray-100 rounded">
                     <Edit2 className="w-4 h-4 text-gray-600" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteWorkflow(workflow.id)} className="p-1.5 hover:bg-red-50 rounded">
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(workflow.id)} className="p-1.5 hover:bg-red-50 rounded">
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
                 </div>

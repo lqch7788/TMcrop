@@ -1,42 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Search, Filter, Eye, Download, AlertTriangle, ChevronLeft } from 'lucide-react';
-
-interface AuditLog {
-  id: string;
-  user_id?: string;
-  username: string;
-  action: string;
-  module: string;
-  description: string;
-  ip_address?: string;
-  status?: 'success' | 'warning' | 'error' | 'info';
-  level?: 'info' | 'warning' | 'error';
-  created_at: string;
-  old_value?: string;
-  new_value?: string;
-  details?: Record<string, string>;
-}
-
-interface LogStats {
-  total: number;
-  today: number;
-  info: number;
-  warning: number;
-  error: number;
-}
-
-const API_BASE = '/api/operation-logs';
+import {
+  getOperationLogs,
+  getOperationLogStats,
+  OperationLog,
+  OperationLogStats,
+} from '../services/apiOperationLogService';
 
 export default function AuditLog() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [stats, setStats] = useState<LogStats>({ total: 0, today: 0, info: 0, warning: 0, error: 0 });
+  const [logs, setLogs] = useState<OperationLog[]>([]);
+  const [stats, setStats] = useState<OperationLogStats>({ total: 0, today: 0, info: 0, warning: 0, error: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterDate, setFilterDate] = useState('');
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -46,23 +26,17 @@ export default function AuditLog() {
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        page: String(currentPage),
-        limit: String(pageSize),
+      const result = await getOperationLogs({
+        page: currentPage,
+        limit: pageSize,
+        search: searchTerm || undefined,
+        module: filterModule !== 'all' ? filterModule : undefined,
+        level: filterLevel !== 'all' ? filterLevel : undefined,
+        startDate: filterDate || undefined,
       });
 
-      if (searchTerm) params.append('search', searchTerm);
-      if (filterModule !== 'all') params.append('module', filterModule);
-      if (filterLevel !== 'all') params.append('level', filterLevel);
-      if (filterDate) params.append('start_date', filterDate);
-
-      const response = await fetch(`${API_BASE}?${params}`);
-      const result = await response.json();
-
-      if (result.success) {
-        setLogs(result.data);
-        setTotalPages(result.meta?.totalPages || 1);
-      }
+      setLogs(result.data);
+      setTotalPages(result.meta?.totalPages || 1);
     } catch (error) {
       console.error('获取日志失败:', error);
     } finally {
@@ -73,12 +47,8 @@ export default function AuditLog() {
   // 获取统计数据
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/stats/summary`);
-      const result = await response.json();
-
-      if (result.success) {
-        setStats(result.data);
-      }
+      const data = await getOperationLogStats();
+      setStats(data);
     } catch (error) {
       console.error('获取统计数据失败:', error);
     }
@@ -98,7 +68,7 @@ export default function AuditLog() {
     return matchSearch;
   });
 
-  const viewLogDetails = (log: AuditLog) => {
+  const viewLogDetails = (log: OperationLog) => {
     setSelectedLog(log);
     setShowDetailModal(true);
   };

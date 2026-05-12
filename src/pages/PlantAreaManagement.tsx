@@ -8,20 +8,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-interface Greenhouse {
-  id: string;
-  oid: string;
-  code: string;
-  name: string;
-  greenhouseType: string;
-  area: number;
-  location: string;
-  status: string;
-  createdAt: string;
-}
-
-const API_BASE = '/api/basic-data/greenhouses';
+import {
+  getGreenhouses,
+  createGreenhouse,
+  updateGreenhouse as updateGreenhouseApi,
+  deleteGreenhouse as deleteGreenhouseApi,
+  Greenhouse as GreenhouseType,
+} from '../services/apiBasicDataService';
 
 const GREENHOUSE_TYPES = ['温室大棚', '春秋大棚', '日光温室', '智能温室', '其他'];
 
@@ -42,13 +35,8 @@ export default function PlantAreaManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
-      const result = await response.json();
-      if (result.success) {
-        setGreenhouses(result.data || []);
-      } else {
-        setError('获取温室数据失败');
-      }
+      const data = await getGreenhouses();
+      setGreenhouses(data);
     } catch (err) {
       console.error('加载温室数据失败:', err);
       setError('加载温室数据失败');
@@ -77,46 +65,28 @@ export default function PlantAreaManagement() {
     }
     try {
       if (editingGreenhouse) {
-        const response = await fetch(`${API_BASE}/${editingGreenhouse.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: newGreenhouse.name,
-            code: newGreenhouse.code,
-            greenhouseType: newGreenhouse.greenhouseType,
-            area: newGreenhouse.area,
-            location: newGreenhouse.location,
-          }),
+        await updateGreenhouseApi(editingGreenhouse.id, {
+          name: newGreenhouse.name,
+          code: newGreenhouse.code,
+          greenhouseType: newGreenhouse.greenhouseType,
+          area: newGreenhouse.area,
+          location: newGreenhouse.location,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadGreenhouses();
-          setShowModal(false);
-          setEditingGreenhouse(null);
-          setNewGreenhouse({ status: 'active' });
-        } else {
-          alert(result.error || '更新失败');
-        }
+        await loadGreenhouses();
+        setShowModal(false);
+        setEditingGreenhouse(null);
+        setNewGreenhouse({ status: 'active' });
       } else {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: newGreenhouse.name,
-            code: newGreenhouse.code,
-            greenhouseType: newGreenhouse.greenhouseType,
-            area: newGreenhouse.area,
-            location: newGreenhouse.location,
-          }),
+        await createGreenhouse({
+          name: newGreenhouse.name,
+          code: newGreenhouse.code,
+          greenhouseType: newGreenhouse.greenhouseType,
+          area: newGreenhouse.area,
+          location: newGreenhouse.location,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadGreenhouses();
-          setShowModal(false);
-          setNewGreenhouse({ status: 'active' });
-        } else {
-          alert(result.error || '创建失败');
-        }
+        await loadGreenhouses();
+        setShowModal(false);
+        setNewGreenhouse({ status: 'active' });
       }
     } catch (err) {
       console.error('保存温室失败:', err);
@@ -124,16 +94,11 @@ export default function PlantAreaManagement() {
     }
   };
 
-  const deleteGreenhouse = async (id: string) => {
+  const handleDeleteGreenhouse = async (id: string) => {
     if (!confirm('确定删除该温室吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        await loadGreenhouses();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteGreenhouseApi(id);
+      await loadGreenhouses();
     } catch (err) {
       console.error('删除温室失败:', err);
       alert('删除温室失败');
@@ -313,7 +278,7 @@ export default function PlantAreaManagement() {
                       <Button
                         size="icon"
                         variant="destructive"
-                        onClick={() => deleteGreenhouse(gh.id)}
+                        onClick={() => handleDeleteGreenhouse(gh.id)}
                         title="删除"
                       >
                         <Trash2 className="w-4 h-4" />

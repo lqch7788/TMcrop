@@ -912,20 +912,25 @@ export function useTasks(): UseTasksReturn {
 
         saveTaskRecords([record, ...taskRecords]);
 
-        // 创建考勤记录
-        addAttendance({
-          workerId: task.assigneeId,
-          name: task.assigneeName,
-          dept: '生产部',
-          date: nowStr,
-          checkIn: timeStr,
-          checkOut: '',
-          hours: 0,
-          status: '进行中',
-          statusClass: 'info',
-          taskId: task.id,
-          batchId: task.batchId,
-        });
+        // 创建考勤记录（从任务上下文获取部门信息）
+        try {
+          addAttendance({
+            workerId: task.assigneeId,
+            name: task.assigneeName,
+            dept: (task as { dept?: string }).dept || '生产部', // 从任务获取部门，默认生产部
+            date: nowStr,
+            checkIn: timeStr,
+            checkOut: '',
+            hours: 0,
+            status: '进行中',
+            statusClass: 'info',
+            taskId: task.id,
+            batchId: task.batchId,
+          });
+        } catch (error) {
+          console.error('创建考勤记录失败:', error);
+          // 考勤记录失败不影响任务接受流程
+        }
 
         return {
           ...task,

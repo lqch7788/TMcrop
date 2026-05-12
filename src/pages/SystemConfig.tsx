@@ -7,22 +7,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  getSystemConfigs,
+  createSystemConfig,
+  updateSystemConfig,
+  deleteSystemConfig,
+  SystemConfig as SystemConfigType,
+} from '../services/apiBasicDataService';
 
-interface SystemConfig {
-  id: string;
-  configKey: string;
-  configValue: string;
-  configType: string;
-  category: string;
-  description: string;
-  isActive: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const API_BASE = '/api/basic-data/system-configs';
-
-const DEFAULT_CONFIGS: SystemConfig[] = [
+const DEFAULT_CONFIGS: SystemConfigType[] = [
   { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', category: 'system', description: '系统显示名称', isActive: 1, createdAt: '', updatedAt: '' },
   { id: '2', configKey: 'system_version', configValue: 'V1.2.0', configType: 'string', category: 'system', description: '当前系统版本', isActive: 1, createdAt: '', updatedAt: '' },
   { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否启用演示模式', isActive: 1, createdAt: '', updatedAt: '' },
@@ -50,14 +43,9 @@ export default function SystemConfig() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
-      const result = await response.json();
-      if (result.success) {
-        // 如果API返回空数据，使用默认配置
-        setConfigs(result.data && result.data.length > 0 ? result.data : DEFAULT_CONFIGS);
-      } else {
-        setConfigs(DEFAULT_CONFIGS);
-      }
+      const data = await getSystemConfigs();
+      // 如果API返回空数据，使用默认配置
+      setConfigs(data && data.length > 0 ? data : DEFAULT_CONFIGS);
     } catch (err) {
       console.error('加载系统配置失败:', err);
       setConfigs(DEFAULT_CONFIGS);
@@ -81,21 +69,10 @@ export default function SystemConfig() {
 
   const handleSaveEdit = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          configValue: editValue,
-        }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        await loadConfigs();
-        setEditingId(null);
-        setEditValue('');
-      } else {
-        alert(result.error || '更新失败');
-      }
+      await updateSystemConfig(id, { configValue: editValue });
+      await loadConfigs();
+      setEditingId(null);
+      setEditValue('');
     } catch (err) {
       console.error('更新配置失败:', err);
       alert('更新配置失败');
@@ -108,30 +85,21 @@ export default function SystemConfig() {
   };
 
   const handleAddConfig = async () => {
-    if (!newConfig.configKey || !newConfig.configName) {
-      alert('请填写配置键和配置名称');
+    if (!newConfig.configKey) {
+      alert('请填写配置键');
       return;
     }
     try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          configKey: newConfig.configKey,
-          configValue: newConfig.configValue || '',
-          configType: newConfig.configType || 'string',
-          category: newConfig.category || 'system',
-          description: newConfig.description || '',
-        }),
+      await createSystemConfig({
+        configKey: newConfig.configKey,
+        configValue: newConfig.configValue || '',
+        configType: newConfig.configType || 'string',
+        category: newConfig.category || 'system',
+        description: newConfig.description || '',
       });
-      const result = await response.json();
-      if (result.success) {
-        await loadConfigs();
-        setNewConfig({});
-        setShowAddForm(false);
-      } else {
-        alert(result.error || '创建失败');
-      }
+      await loadConfigs();
+      setNewConfig({});
+      setShowAddForm(false);
     } catch (err) {
       console.error('创建配置失败:', err);
       alert('创建配置失败');
@@ -141,13 +109,8 @@ export default function SystemConfig() {
   const handleDeleteConfig = async (id: string) => {
     if (!confirm('确定要删除这个配置项吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        await loadConfigs();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteSystemConfig(id);
+      await loadConfigs();
     } catch (err) {
       console.error('删除配置失败:', err);
       alert('删除配置失败');

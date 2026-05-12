@@ -2,33 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Mail, MessageSquare, Phone, AlertTriangle, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-// API基础路径
-const API_BASE = '/api/notifications';
-
-interface NotificationChannel {
-  id: string;
-  oid: string;
-  channelCode: string;
-  channelName: string;
-  channelType: string;
-  isActive: number;
-  config: Record<string, string>;
-}
-
-interface NotificationRule {
-  id: string;
-  oid: string;
-  ruleCode: string;
-  ruleName: string;
-  eventType: string;
-  recipientType: string;
-  recipientIds: string[];
-  channelIds: string[];
-  frequency: string;
-  template: string;
-  isActive: number;
-}
+import {
+  getChannels,
+  getRules,
+  createRule,
+  updateRule,
+  deleteRule,
+  toggleChannel as toggleChannelApi,
+  toggleRule as toggleRuleApi,
+  NotificationChannel,
+  NotificationRule,
+} from '../services/apiNotificationService';
 
 const EVENT_OPTIONS = [
   { value: 'approval_pending', label: '审批待办' },
@@ -55,18 +39,15 @@ export default function NotificationSettings() {
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
-  const [newRule, setNewRule] = useState<Partial<NotificationRule>>({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' });
+  const [newRule, setNewRule] = useState<Partial<NotificationRule>>({ isActive: true, channelIds: [], recipientIds: [], frequency: 'immediate' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // 加载通知渠道数据
   const loadChannels = async () => {
     try {
-      const response = await fetch(`${API_BASE}/channels`);
-      const result = await response.json();
-      if (result.success) {
-        setChannels(result.data || []);
-      }
+      const data = await getChannels();
+      setChannels(data);
     } catch (err) {
       console.error('加载通知渠道失败:', err);
       setError('加载通知渠道失败');
@@ -76,11 +57,8 @@ export default function NotificationSettings() {
   // 加载通知规则数据
   const loadRules = async () => {
     try {
-      const response = await fetch(`${API_BASE}/rules`);
-      const result = await response.json();
-      if (result.success) {
-        setRules(result.data || []);
-      }
+      const data = await getRules();
+      setRules(data);
     } catch (err) {
       console.error('加载通知规则失败:', err);
       setError('加载通知规则失败');
@@ -107,7 +85,7 @@ export default function NotificationSettings() {
   const handleSaveRule = async () => {
     try {
       const payload = {
-        ruleCode: newRule.eventType || `rule_${Date.now()}`,
+        ruleCode: newRule.ruleCode || newRule.eventType || `rule_${Date.now()}`,
         ruleName: newRule.ruleName,
         eventType: newRule.eventType,
         recipientType: newRule.recipientType || 'custom',
@@ -115,37 +93,19 @@ export default function NotificationSettings() {
         channelIds: newRule.channelIds || [],
         frequency: newRule.frequency || 'immediate',
         template: newRule.template || '',
-        isActive: newRule.isActive ? 1 : 0,
+        isActive: Boolean(newRule.isActive),
       };
 
       if (editingRule) {
-        const response = await fetch(`${API_BASE}/rules/${editingRule.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          alert(result.error || '更新失败');
-          return;
-        }
+        await updateRule(editingRule.id, payload);
       } else {
-        const response = await fetch(`${API_BASE}/rules`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          alert(result.error || '创建失败');
-          return;
-        }
+        await createRule(payload);
       }
 
       await loadRules();
       setShowRuleModal(false);
       setEditingRule(null);
-      setNewRule({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' });
+      setNewRule({ isActive: true, channelIds: [], recipientIds: [], frequency: 'immediate' });
     } catch (err) {
       console.error('保存规则失败:', err);
       alert('保存规则失败');
@@ -153,16 +113,11 @@ export default function NotificationSettings() {
   };
 
   // 删除规则
-  const deleteRule = async (id: string) => {
+  const handleDeleteRule = async (id: string) => {
     if (!confirm('确定删除该通知规则吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/rules/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        await loadRules();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteRule(id);
+      await loadRules();
     } catch (err) {
       console.error('删除规则失败:', err);
       alert('删除规则失败');
@@ -174,7 +129,7 @@ export default function NotificationSettings() {
     setEditingRule(rule);
     setNewRule({
       ...rule,
-      isActive: rule.isActive ? 1 : 0,
+      isActive: Boolean(rule.isActive),
     });
     setShowRuleModal(true);
   };
@@ -182,13 +137,8 @@ export default function NotificationSettings() {
   // 切换渠道状态
   const toggleChannel = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/channels/${id}/toggle`, { method: 'PATCH' });
-      const result = await response.json();
-      if (result.success) {
-        await loadChannels();
-      } else {
-        alert(result.error || '切换状态失败');
-      }
+      await toggleChannelApi(id);
+      await loadChannels();
     } catch (err) {
       console.error('切换渠道状态失败:', err);
       alert('切换状态失败');
@@ -198,13 +148,8 @@ export default function NotificationSettings() {
   // 切换规则状态
   const toggleRule = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/rules/${id}/toggle`, { method: 'PATCH' });
-      const result = await response.json();
-      if (result.success) {
-        await loadRules();
-      } else {
-        alert(result.error || '切换状态失败');
-      }
+      await toggleRuleApi(id);
+      await loadRules();
     } catch (err) {
       console.error('切换规则状态失败:', err);
       alert('切换状态失败');
@@ -296,7 +241,7 @@ export default function NotificationSettings() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button
-              onClick={() => { setEditingRule(null); setNewRule({ isActive: 1, channelIds: [], recipientIds: [], frequency: 'immediate' }); setShowRuleModal(true); }}
+              onClick={() => { setEditingRule(null); setNewRule({ isActive: true, channelIds: [], recipientIds: [], frequency: 'immediate' }); setShowRuleModal(true); }}
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -330,7 +275,7 @@ export default function NotificationSettings() {
                     <Button variant="ghost" size="icon" onClick={() => editRule(rule)} className="p-1.5 hover:bg-gray-100 rounded">
                       <Edit2 className="w-4 h-4 text-gray-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteRule(rule.id)} className="p-1.5 hover:bg-red-50 rounded">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)} className="p-1.5 hover:bg-red-50 rounded">
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>

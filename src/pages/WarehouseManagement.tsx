@@ -8,28 +8,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Warehouse, Search, Plus, Edit2, Trash2, Layers, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-interface Warehouse {
-  id: string;
-  oid: string;
-  name: string;
-  code: string;
-  warehouseType: string;
-  location: string;
-  capacity: number;
-  currentStock: number;
-  status: 'active' | 'inactive';
-  description?: string;
-  managerId?: string;
-  managerName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import {
+  getWarehouses,
+  createWarehouse,
+  updateWarehouse,
+  deleteWarehouse as deleteWarehouseApi,
+  Warehouse as WarehouseType,
+} from '../services/apiBasicDataService';
 
 const WAREHOUSE_TYPES = ['原料仓库', '成品仓库', '耗材仓库', '农药仓库', '化肥仓库', '设备仓库', '其他'];
-
-// API基础路径
-const API_BASE = '/api/basic-data/warehouses';
 
 export default function WarehouseManagement() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -45,13 +32,8 @@ export default function WarehouseManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
-      const result = await response.json();
-      if (result.success) {
-        setWarehouses(result.data || []);
-      } else {
-        setError('获取仓库数据失败');
-      }
+      const data = await getWarehouses();
+      setWarehouses(data);
     } catch (err) {
       console.error('加载仓库数据失败:', err);
       setError('加载仓库数据失败');
@@ -75,27 +57,18 @@ export default function WarehouseManagement() {
       return;
     }
     try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newWarehouse.name,
-          code: newWarehouse.code,
-          warehouseType: newWarehouse.warehouseType,
-          location: newWarehouse.location,
-          capacity: newWarehouse.capacity,
-          managerId: newWarehouse.managerId,
-          managerName: newWarehouse.managerName,
-        }),
+      await createWarehouse({
+        name: newWarehouse.name,
+        code: newWarehouse.code,
+        warehouseType: newWarehouse.warehouseType,
+        location: newWarehouse.location,
+        capacity: newWarehouse.capacity,
+        managerId: newWarehouse.managerId,
+        managerName: newWarehouse.managerName,
       });
-      const result = await response.json();
-      if (result.success) {
-        await loadWarehouses();
-        setShowModal(false);
-        setNewWarehouse({ status: 'active' });
-      } else {
-        alert(result.error || '创建失败');
-      }
+      await loadWarehouses();
+      setShowModal(false);
+      setNewWarehouse({ status: 'active' });
     } catch (err) {
       console.error('创建仓库失败:', err);
       alert('创建仓库失败');
@@ -106,28 +79,19 @@ export default function WarehouseManagement() {
   const handleUpdate = async () => {
     if (!editingWarehouse) return;
     try {
-      const response = await fetch(`${API_BASE}/${editingWarehouse.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newWarehouse.name,
-          code: newWarehouse.code,
-          warehouseType: newWarehouse.warehouseType,
-          location: newWarehouse.location,
-          capacity: newWarehouse.capacity,
-          managerId: newWarehouse.managerId,
-          managerName: newWarehouse.managerName,
-        }),
+      await updateWarehouse(editingWarehouse.id, {
+        name: newWarehouse.name,
+        code: newWarehouse.code,
+        warehouseType: newWarehouse.warehouseType,
+        location: newWarehouse.location,
+        capacity: newWarehouse.capacity,
+        managerId: newWarehouse.managerId,
+        managerName: newWarehouse.managerName,
       });
-      const result = await response.json();
-      if (result.success) {
-        await loadWarehouses();
-        setShowModal(false);
-        setEditingWarehouse(null);
-        setNewWarehouse({ status: 'active' });
-      } else {
-        alert(result.error || '更新失败');
-      }
+      await loadWarehouses();
+      setShowModal(false);
+      setEditingWarehouse(null);
+      setNewWarehouse({ status: 'active' });
     } catch (err) {
       console.error('更新仓库失败:', err);
       alert('更新仓库失败');
@@ -135,16 +99,11 @@ export default function WarehouseManagement() {
   };
 
   // 删除仓库
-  const deleteWarehouse = async (id: string) => {
+  const handleDeleteWarehouse = async (id: string) => {
     if (!confirm('确定删除该仓库吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        await loadWarehouses();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteWarehouseApi(id);
+      await loadWarehouses();
     } catch (err) {
       console.error('删除仓库失败:', err);
       alert('删除仓库失败');
@@ -311,7 +270,7 @@ export default function WarehouseManagement() {
                 <Button size="icon" variant="ghost" onClick={() => editWarehouse(warehouse)}>
                   <Edit2 className="w-4 h-4 text-gray-600" />
                 </Button>
-                <Button size="icon" variant="destructive" onClick={() => deleteWarehouse(warehouse.id)}>
+                <Button size="icon" variant="destructive" onClick={() => handleDeleteWarehouse(warehouse.id)}>
                   <Trash2 className="w-4 h-4 text-red-600" />
                 </Button>
               </div>
