@@ -5,21 +5,24 @@
 
 import React from 'react';
 import { DeleteWarningModal } from './DeleteWarningModal';
-import { useTasks } from '../../../../hooks/useTasks';
+import type { useTasks as UseTasksType } from '../../../../hooks/useTasks';
 
 interface DeleteWarningAdapterProps {
   taskIds: string[];
   onClose: () => void;
   onConfirmed: () => void;
+  // 外部传入的 tasksHook，避免创建新的 useTasks 实例
+  tasksHook: ReturnType<typeof UseTasksType>;
 }
 
-export function DeleteWarningAdapter({ taskIds, onClose, onConfirmed }: DeleteWarningAdapterProps) {
-  const tasksHook = useTasks();
-
-  const handleConfirm = () => {
-    taskIds.forEach(id => {
-      tasksHook.deleteTask(id);
-    });
+export function DeleteWarningAdapter({ taskIds, onClose, onConfirmed, tasksHook }: DeleteWarningAdapterProps) {
+  const handleConfirm = async () => {
+    console.log('[DeleteWarningAdapter] 开始删除任务:', taskIds);
+    // 等待所有删除操作完成
+    for (const id of taskIds) {
+      await tasksHook.deleteTask(id);
+      console.log('[DeleteWarningAdapter] 删除任务完成:', id);
+    }
     onConfirmed();
   };
 

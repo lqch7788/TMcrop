@@ -1,9 +1,9 @@
 /**
  * localStorage 持久化 Hook
- * 提供数据持久化存储功能
+ * 提供数据持久化存储功能，支持多实例同步
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 // 数据版本控制 - 用于强制刷新过时的模拟数据
 const DATA_VERSION = 9; // 每次修改默认数据时递增（数字类型，与 useTasks 保持一致）
@@ -14,7 +14,7 @@ interface StoredData<T> {
 }
 
 /**
- * localStorage Hook
+ * localStorage Hook - 支持多实例同步
  */
 export function useLocalStorage<T>(key: string, initialValue: T) {
   // 从 localStorage 获取数据，或使用初始值
@@ -74,9 +74,29 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       window.localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.warn(`Error clearing localStorage key "${key}":`, error);
+      console.warn(`Error clearing ${key}:`, error);
     }
   }, [key, initialValue]);
+
+  // 监听其他标签页或组件对 localStorage 的修改
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === key && e.newValue !== null) {
+        try {
+          const parsed = JSON.parse(e.newValue) as StoredData<T>;
+          if (parsed.version == DATA_VERSION) {
+            console.log(`[useLocalStorage] 检测到 ${key} 在其他位置更新，重新加载数据`);
+            setStoredValue(parsed.data);
+          }
+        } catch {
+          // 忽略解析错误
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [key]);
 
   return [storedValue, setValue, removeValue, clearAll] as const;
 }

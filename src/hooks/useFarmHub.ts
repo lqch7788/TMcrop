@@ -168,9 +168,16 @@ function isToday(dateStr: string): boolean {
 // ============================================
 // useFarmHub Hook
 // ============================================
-export function useFarmHub(): UseFarmHubReturn {
-  // 使用 useTasks hook 的任务数据（与 TaskDispatchPage 共享同一数据源）
-  const { tasks: useTasksData } = useTasks();
+// useTasks 返回类型
+type UseTasksReturn = ReturnType<typeof useTasks>;
+
+// 可选的外部 tasksHook，用于与 FarmTaskHub 共享同一数据源
+export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn {
+  // 如果传入了外部的 tasksHook，则使用它；否则创建内部实例
+  // 这样可以确保 FarmTaskHub 和 useFarmHub 使用同一个数据源
+  const internalTasksHook = useTasks();
+  const tasksHook = externalTasksHook || internalTasksHook;
+  const { tasks: useTasksData } = tasksHook;
 
   // 其他数据使用独立状态
   const [problems, setProblems] = useState<ProblemEntry[]>([]);
@@ -237,43 +244,19 @@ export function useFarmHub(): UseFarmHubReturn {
     return bTime - aTime;
   };
 
+  // 使用 useTasks 作为统一数据源（通过 enhancedApiClient 三级降级）
+  // 添加 refreshKey 依赖，当 hub.refresh() 被调用时会重新计算
   const tasks = useMemo(() => {
-    try {
-      // 直接从 localStorage 读取最新任务数据
-      const stored = localStorage.getItem(STORAGE_KEYS.TASKS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const allTasks: Task[] = parsed.data || parsed || [];
-        console.log('[useFarmHub] tasks from localStorage, total:', allTasks.length);
-
-        // 过滤农事任务
-        const farmTasks = allTasks.filter(t => {
-          const dispatchMode = t.dispatchMode || 'farm';
-          return dispatchMode === 'farm';
-        });
-
-        console.log('[useFarmHub] farmTasks count:', farmTasks.length);
-
-        // 排序
-        const sortedTasks = [...farmTasks].sort(sortByCreatedAt);
-
-        return sortedTasks;
-      } else {
-        console.log('[useFarmHub] no tasks in localStorage');
-      }
-    } catch (e) {
-      console.error('[useFarmHub] error reading tasks:', e);
-    }
-    // 备用：从 useTasksData 获取
-    const fallbackTasks = useTasksData
+    // 从 useTasks 获取数据（useTasks 内部使用 farmTaskStore -> enhancedApiClient）
+    const farmTasks = useTasksData
       .filter(t => {
         const dispatchMode = t.dispatchMode || 'farm';
         return dispatchMode === 'farm';
       })
       .sort(sortByCreatedAt);
-    console.log('[useFarmHub] fallback tasks from useTasksData:', fallbackTasks.length);
-    return fallbackTasks;
-  }, [refreshKey, useTasksData]);
+    console.log('[useFarmHub] tasks from useTasks (三级降级), count:', farmTasks.length);
+    return farmTasks;
+  }, [useTasksData, refreshKey]);
 
   // 统计数据
   const stats = useMemo((): HubStats => {

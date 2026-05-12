@@ -522,6 +522,7 @@ export function TaskTab({
         onConfirmBatchDispatch={handleConfirmBatchDispatch}
         onBatchVerify={toggleBatchVerifyMode}
         onConfirmBatchVerify={handleConfirmBatchVerify}
+        onConfirmBatchDelete={handleConfirmBatchDelete}
         onExport={toggleExportMode}
         onImport={onImport}
         onCreate={onCreateTask}

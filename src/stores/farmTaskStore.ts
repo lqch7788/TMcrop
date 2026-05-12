@@ -154,18 +154,31 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
         try {
           // 尝试从API获取
-          const apiData = await enhancedApiClient.get<{ data: Task[]; meta?: { total: number } }>('/farm-tasks', {
-            useCache: true,
+          // API返回格式: { success: true, data: Task[], meta: {...} }
+          const apiData = await enhancedApiClient.get<{ success: boolean; data: Task[]; meta?: { total: number } }>('/farm-tasks', {
+            useCache: false,  // 禁用缓存，确保每次都从API获取
             cacheStrategy: 'network-first',
           });
 
-          if (apiData && Array.isArray(apiData) && apiData.length > 0) {
-            set({ tasks: apiData, isLoading: false });
+          // 调试日志
+          console.log('[FarmTaskStore] API返回原始数据:', JSON.stringify(apiData)?.slice(0, 200));
+          console.log('[FarmTaskStore] apiData类型:', typeof apiData);
+          console.log('[FarmTaskStore] apiData.success:', apiData?.success);
+          console.log('[FarmTaskStore] apiData.data:', apiData?.data);
+          console.log('[FarmTaskStore] Array.isArray(apiData?.data):', Array.isArray(apiData?.data));
+          console.log('[FarmTaskStore] apiData?.data?.length:', apiData?.data?.length);
+
+          // 正确处理 API 返回的 { success, data, meta } 结构
+          if (apiData && apiData.success && Array.isArray(apiData.data) && apiData.data.length > 0) {
+            console.log('[FarmTaskStore] 从API获取到任务数据:', apiData.data.length, '条');
+            set({ tasks: apiData.data, isLoading: false });
             return;
           }
 
           // API返回空或失败，使用本地数据
+          console.log('[FarmTaskStore] API数据无效，使用本地数据');
           const localTasks = get().tasks;
+          console.log('[FarmTaskStore] localTasks.length:', localTasks.length);
           if (localTasks.length === 0) {
             // 首次使用，初始化种子数据
             get()._initializeSeedData();
