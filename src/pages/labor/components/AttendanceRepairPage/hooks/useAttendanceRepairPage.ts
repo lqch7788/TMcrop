@@ -1,12 +1,16 @@
 /**
  * 考勤补录页面 Hook
  * 封装状态管理和业务逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../../../hooks/useApprovalLevel';
+import { useState, useMemo, useCallback } from 'react';
 import { useUsers } from '../../../../../components/common/settings';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../../../types/approval';
+import {
+  useAttendanceRepairRecords,
+  useCreateAttendanceRepair,
+  useUpdateAttendanceRepair,
+} from '@/hooks/useAttendanceRepairQueries';
+import type { AttendanceRepairRecord as ApiAttendanceRepairRecord, CreateAttendanceRepairParams } from '@/services/apiAttendanceRepairService';
 import type {
   AttendanceRepairRecord,
   AttendanceRepairFilters,
@@ -14,6 +18,24 @@ import type {
   BatchMode,
   PaginationState,
 } from '../types/attendanceRepairPage.types';
+
+// API 数据转换为组件内部格式
+function mapApiToComponent(apiRecord: ApiAttendanceRepairRecord): AttendanceRepairRecord {
+  return {
+    id: apiRecord.id,
+    employeeId: apiRecord.employeeId,
+    employeeName: apiRecord.employeeName,
+    department: apiRecord.department,
+    repairDate: apiRecord.repairDate,
+    checkInTime: apiRecord.checkInTime,
+    checkOutTime: apiRecord.checkOutTime,
+    reason: apiRecord.reason,
+    status: apiRecord.statusLabel as any,
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
 
 // 默认表单数据
 const DEFAULT_FORM_DATA: AttendanceRepairFormData = {
@@ -30,8 +52,6 @@ const DEFAULT_FORM_DATA: AttendanceRepairFormData = {
 
 export function useAttendanceRepairPage() {
   const { workers } = useUsers();
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 状态定义
@@ -67,70 +87,47 @@ export function useAttendanceRepairPage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // 数据处理
+  // React Query
   // ============================================================
 
-  /** 考勤补录记录数据 */
-  const [records, setRecords] = useState<AttendanceRepairRecord[]>([]);
+  const queryFilters = useMemo(() => ({
+    employeeName: filters.employeeName || undefined,
+    department: filters.department || undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
 
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选考勤补录类型的审批记录
-    const repairApprovals = approvals.filter(a => a.type === ApprovalType.ATTENDANCE_REPAIR);
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination.current, pagination.pageSize]);
 
-    // 转换为AttendanceRepairRecord格式
-    const repairRecords: AttendanceRepairRecord[] = repairApprovals.map(approval => {
-      const businessData = approval.businessLink as { employeeId?: string; employeeName?: string; department?: string; repairDate?: string; checkInTime?: string; checkOutTime?: string; reason?: string } | null;
-      return {
-        id: approval.id,
-        employeeId: businessData?.employeeId || approval.applicantId,
-        employeeName: businessData?.employeeName || approval.applicantName,
-        department: businessData?.department || approval.applicantDepartment,
-        repairDate: businessData?.repairDate || approval.applyDate,
-        checkInTime: businessData?.checkInTime || '09:00',
-        checkOutTime: businessData?.checkOutTime || '18:00',
-        reason: businessData?.reason || '',
-        status: mapApprovalStatus(approval.status),
-        approver: approval.approvers[0]?.userName,
-        approveTime: approval.approvers[0]?.actionTime,
-        remarks: approval.remark,
-      };
-    });
+  const { data: apiData, refetch } = useAttendanceRepairRecords(queryFilters, queryPagination);
 
-    // 添加一些模拟初始数据
-    const mockRecords: AttendanceRepairRecord[] = [
-      { id: 'AR001', employeeId: 'EMP20240001', employeeName: '张伟民', department: '生产部', repairDate: '2026-04-20', checkInTime: '08:55', checkOutTime: '18:30', reason: '忘记打卡', status: '已通过', approver: '王建国', approveTime: '2026-04-20 17:00:00' },
-      { id: 'AR002', employeeId: 'EMP20240002', employeeName: '李秀英', department: '生产部', repairDate: '2026-04-21', checkInTime: '09:10', checkOutTime: '18:00', reason: '外出办公', status: '待审批' },
-      { id: 'AR003', employeeId: 'EMP20240003', employeeName: '王建国', department: '生产部', repairDate: '2026-04-22', checkInTime: '08:50', checkOutTime: '19:00', reason: '出差', status: '已拒绝', remarks: '出差未提供证明' },
-    ];
+  // 转换 API 数据
+  const records: AttendanceRepairRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
 
-    setRecords([...mockRecords, ...repairRecords]);
-    setPagination(prev => ({ ...prev, total: mockRecords.length + repairRecords.length }));
-  }, [approvals]);
-
-  /** 状态映射 */
-  const mapApprovalStatus = useCallback((status: ApprovalStatus): AttendanceRepairRecord['status'] => {
-    switch (status) {
-      case ApprovalStatus.PENDING: return '待审批';
-      case ApprovalStatus.APPROVED: return '已通过';
-      case ApprovalStatus.REJECTED: return '已拒绝';
-      case ApprovalStatus.CANCELLED: return '已取消';
-      default: return '待审批';
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
     }
-  }, []);
+  }, [apiData?.pagination]);
 
-  /** 过滤后的数据 */
+  // Mutations
+  const createMutation = useCreateAttendanceRepair();
+  const updateMutation = useUpdateAttendanceRepair();
+
+  // 过滤后的数据
   const filteredData = useMemo(() => {
-    return records.filter(record => {
-      if (filters.employeeName && !record.employeeName.includes(filters.employeeName)) return false;
-      if (filters.department && record.department !== filters.department) return false;
-      if (filters.reason && record.reason !== filters.reason) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.startDate && record.repairDate < filters.startDate) return false;
-      if (filters.endDate && record.repairDate > filters.endDate) return false;
-      return true;
-    });
-  }, [records, filters]);
+    return records;
+  }, [records]);
 
   /** 部门选项 */
   const departmentOptions = useMemo(() => {
@@ -186,7 +183,7 @@ export function useAttendanceRepairPage() {
   }, []);
 
   /** 提交考勤补录申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.repairDate || !formData.checkInTime || !formData.checkOutTime) {
       alert('请填写完整信息');
       return;
@@ -201,100 +198,55 @@ export function useAttendanceRepairPage() {
     // 如果选择"其他"，使用自定义原因
     const finalReason = formData.reason === '其他' ? formData.customReason : formData.reason;
 
-    // 生成新记录
-    const newRecord: AttendanceRepairRecord = {
-      id: `AR${Date.now()}`,
-      employeeId: formData.employeeId,
-      employeeName: formData.employeeName,
-      department: formData.department,
-      repairDate: formData.repairDate,
-      checkInTime: formData.checkInTime,
-      checkOutTime: formData.checkOutTime,
-      reason: finalReason,
-      status: '待审批',
-      remarks: formData.remarks,
-    };
+    try {
+      const createParams: CreateAttendanceRepairParams = {
+        employeeId: formData.employeeId,
+        employeeName: formData.employeeName,
+        department: formData.department,
+        repairDate: formData.repairDate,
+        checkInTime: formData.checkInTime,
+        checkOutTime: formData.checkOutTime,
+        reason: finalReason,
+        remarks: formData.remarks,
+      };
 
-    // 创建审批记录 - 使用分级审批动态生成审批人配置
-    const approvalLevelResult = generateApprovers(ApprovalType.ATTENDANCE_REPAIR, 0);
-
-    const approval: Approval = {
-      id: `APR-AR-${Date.now()}`,
-      code: `SP-AR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.ATTENDANCE_REPAIR,
-      typeName: '考勤补录',
-      category: 'hr',
-      title: `${formData.employeeName}考勤补录申请`,
-      description: `${formData.repairDate} ${formData.checkInTime}-${formData.checkOutTime} (${finalReason})`,
-      applicantId: formData.employeeId,
-      applicantName: formData.employeeName,
-      applicantDepartment: formData.department,
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'attendance_repair',
-        requestId: newRecord.id,
-        employeeId: newRecord.employeeId,
-        employeeName: newRecord.employeeName,
-        department: newRecord.department,
-        repairDate: newRecord.repairDate,
-        checkInTime: newRecord.checkInTime,
-        checkOutTime: newRecord.checkOutTime,
-        reason: newRecord.reason,
-      },
-    };
-
-    // 添加到Context
-    addApproval(approval);
-
-    // 更新本地状态
-    setRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, addApproval, generateApprovers]);
+      await createMutation.mutateAsync(createParams);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交考勤补录失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: AttendanceRepairRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      approve(approval.id, '同意补录');
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
-      );
-    } else {
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
-      );
+  const handleApprove = useCallback(async (record: AttendanceRepairRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('审批失败，请重试');
     }
-  }, [approvals, approve]);
+  }, [updateMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: AttendanceRepairRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      reject(approval.id, '不符合补录条件');
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
-      );
-    } else {
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
-      );
+  const handleReject = useCallback(async (record: AttendanceRepairRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, reject]);
+  }, [updateMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

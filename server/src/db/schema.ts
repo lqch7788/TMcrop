@@ -1539,6 +1539,35 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== V9.0: 入职记录表 ==========
+  // 入职记录表 - 用于存储员工入职办理记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS onboarding_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      id_card TEXT,
+      phone TEXT,
+      position TEXT,
+      department TEXT,
+      department_oid TEXT,
+      contract_type TEXT,
+      daily_wage REAL,
+      hourly_wage REAL,
+      join_date TEXT,
+      status TEXT DEFAULT 'pending',
+      progress TEXT,
+      request_code TEXT,
+      recruitment_id TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      approved_at TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // ========== V8.0: 每日记录表 ==========
   // 每日记录表 - 用于存储各类业务的每日汇总或明细记录
   db.run(`
@@ -1737,6 +1766,151 @@ export function initializeDatabase() {
   } catch (e) {
     // 索引可能已存在
   }
+
+  // ========== 仓库物料管理表 ==========
+
+  // 物料表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS materials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      category TEXT,
+      specification TEXT,
+      unit TEXT,
+      quantity REAL DEFAULT 0,
+      minStock REAL DEFAULT 0,
+      maxStock REAL DEFAULT 0,
+      price TEXT,
+      supplier TEXT,
+      location TEXT,
+      barcode TEXT,
+      batchNo TEXT,
+      productionDate TEXT,
+      expiryDate TEXT,
+      lastUpdateTime TEXT,
+      dataStatus TEXT DEFAULT '启用'
+    )
+  `);
+
+  // 入库记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inbound_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      inboundDate TEXT,
+      supplier TEXT,
+      operator TEXT,
+      status TEXT DEFAULT 'pending',
+      materials TEXT,
+      voidedDate TEXT
+    )
+  `);
+
+  // ========== V9.0: 离职记录表 ==========
+  // 离职记录表 - 用于存储员工离职申请记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS resignation_records (
+      id TEXT PRIMARY KEY,
+      resignation_code TEXT NOT NULL,
+      worker_id TEXT,
+      worker_name TEXT,
+      department TEXT,
+      position TEXT,
+      resignation_type TEXT,
+      reason TEXT,
+      expected_last_day TEXT,
+      actual_last_day TEXT,
+      handover_user_id TEXT,
+      handover_user_name TEXT,
+      handover_note TEXT,
+      status TEXT DEFAULT 'pending',
+      status_label TEXT DEFAULT '待审批',
+      approver TEXT,
+      approve_time TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V9.0: 招聘记录表 ==========
+  // 招聘记录表 - 用于存储招聘申请记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS recruitment_records (
+      id TEXT PRIMARY KEY,
+      recruitment_code TEXT NOT NULL,
+      dept_id TEXT,
+      dept_name TEXT,
+      position_id TEXT,
+      position TEXT,
+      headcount INTEGER DEFAULT 1,
+      employment_type TEXT,
+      salary_min REAL DEFAULT 0,
+      salary_max REAL DEFAULT 0,
+      priority TEXT DEFAULT 'normal',
+      priority_label TEXT DEFAULT '普通',
+      status TEXT DEFAULT 'pending',
+      status_label TEXT DEFAULT '待审批',
+      reason TEXT,
+      remarks TEXT,
+      applicant_id TEXT,
+      applicant_name TEXT,
+      apply_date TEXT,
+      approve_time TEXT,
+      approver TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // ========== V9.0: 合同续签记录表 ==========
+  // 合同续签记录表 - 用于存储合同续签记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS contract_renewal_records (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT,
+      employee_name TEXT,
+      department TEXT,
+      position TEXT,
+      current_contract_end TEXT,
+      new_contract_start TEXT,
+      new_contract_end TEXT,
+      renewal_period INTEGER,
+      new_salary REAL,
+      terms_change TEXT,
+      status TEXT DEFAULT 'pending',
+      status_label TEXT DEFAULT '待审批',
+      approver TEXT,
+      approve_time TEXT,
+      remarks TEXT,
+      create_time TEXT
+    )
+  `);
+
+  // ========== V9.0: 工资预算记录表 ==========
+  // 工资预算记录表 - 用于存储工资预算记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS salary_budget_records (
+      id TEXT PRIMARY KEY,
+      budget_code TEXT NOT NULL,
+      dept_id TEXT,
+      dept_name TEXT,
+      budget_month TEXT,
+      total_base_salary REAL DEFAULT 0,
+      total_overtime_pay REAL DEFAULT 0,
+      total_bonus REAL DEFAULT 0,
+      grand_total REAL DEFAULT 0,
+      status TEXT DEFAULT 'pending',
+      status_label TEXT DEFAULT '待审批',
+      applicant_id TEXT,
+      applicant_name TEXT,
+      apply_date TEXT,
+      remark TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
 
   console.log('数据库表初始化完成');
 

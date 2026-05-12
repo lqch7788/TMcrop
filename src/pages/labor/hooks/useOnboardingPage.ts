@@ -1,20 +1,27 @@
 /**
  * 入职办理页面 Hook
  * 封装状态管理、API调用和数据处理逻辑
+ * 使用 React Query 和 API 服务，移除 useApprovalContext 依赖
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useUsers } from '../../../components/common/settings';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
 import {
+  useOnboardingRecords,
+  useCreateOnboarding,
+  useUpdateOnboarding,
+  useDeleteOnboarding,
+  useDeleteOnboardingBatch,
+  useUpdateOnboardingStatus,
+} from '@/hooks/useOnboardingQueries';
+import type { OnboardingRecord as ApiOnboardingRecord } from '@/services/apiOnboardingService';
+import type {
   OnboardingRecord,
   OnboardingFilters,
   OnboardingFormData,
   BatchMode,
   PaginationState,
-  mapOnboardingStatus,
 } from '../types/onboardingPage.types';
+import type { CreateOnboardingParams, UpdateStatusParams } from '@/services/apiOnboardingService';
 
 // 默认筛选条件
 const DEFAULT_FILTERS: OnboardingFilters = {
@@ -40,12 +47,33 @@ const DEFAULT_FORM_DATA: OnboardingFormData = {
 };
 
 /**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponent(apiRecord: ApiOnboardingRecord): OnboardingRecord {
+  return {
+    id: apiRecord.id,
+    employeeId: apiRecord.oid || apiRecord.id,
+    employeeName: apiRecord.name,
+    department: apiRecord.department,
+    position: apiRecord.position,
+    expectedStartDate: apiRecord.joinDate,
+    actualStartDate: undefined,
+    status: apiRecord.status as OnboardingRecord['status'],
+    education: '',
+    major: '',
+    contactPhone: apiRecord.phone,
+    emergencyContact: '',
+    idCard: apiRecord.idCard,
+    bankCard: '',
+    remarks: apiRecord.remarks,
+  };
+}
+
+/**
  * 入职办理页面 Hook
  */
 export function useOnboardingPage() {
   const { workers } = useUsers();
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 状态定义
@@ -73,63 +101,54 @@ export function useOnboardingPage() {
   /** 批量操作模式 */
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
-  /** 入职记录数据 */
-  const [records, setRecords] = useState<OnboardingRecord[]>([]);
+  // ============================================================
+  // 构建查询参数
+  // ============================================================
+
+  const queryFilters = useMemo(() => ({
+    keyword: filters.employeeName || undefined,
+    status: filters.status || undefined,
+  }), [filters]);
+
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
+
+  // ============================================================
+  // 使用 React Query 获取数据
+  // ============================================================
+
+  const { data: apiData, refetch } = useOnboardingRecords(queryFilters, queryPagination);
+
+  // 转换 API 数据
+  const records: OnboardingRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
+
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
+
+  // ============================================================
+  // Mutations
+  // ============================================================
+
+  const createOnboardingMutation = useCreateOnboarding();
+  const updateOnboardingMutation = useUpdateOnboarding();
+  const deleteOnboardingMutation = useDeleteOnboarding();
+  const deleteOnboardingBatchMutation = useDeleteOnboardingBatch();
+  const updateStatusMutation = useUpdateOnboardingStatus();
 
   // ============================================================
   // 数据处理
   // ============================================================
-
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选入职类型的审批记录
-    const onboardApprovals = approvals.filter(a => a.type === ApprovalType.ONBOARD);
-
-    // 转换为OnboardingRecord格式
-    const onboardRecords: OnboardingRecord[] = onboardApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        employeeId?: string;
-        employeeName?: string;
-        department?: string;
-        position?: string;
-        expectedStartDate?: string;
-        actualStartDate?: string;
-        education?: string;
-        major?: string;
-        contactPhone?: string;
-        emergencyContact?: string;
-        idCard?: string;
-        bankCard?: string;
-      } | null;
-      return {
-        id: approval.id,
-        employeeId: businessData?.employeeId || approval.applicantId,
-        employeeName: businessData?.employeeName || approval.applicantName,
-        department: businessData?.department || approval.applicantDepartment,
-        position: businessData?.position || '',
-        expectedStartDate: businessData?.expectedStartDate || approval.applyDate,
-        actualStartDate: businessData?.actualStartDate,
-        status: mapOnboardingStatus(approval.status),
-        education: businessData?.education,
-        major: businessData?.major,
-        contactPhone: businessData?.contactPhone,
-        emergencyContact: businessData?.emergencyContact,
-        idCard: businessData?.idCard,
-        bankCard: businessData?.bankCard,
-        remarks: approval.remark,
-      };
-    });
-
-    // 添加一些模拟初始数据（员工ID格式：EMP-YYYYMMDD-XXX）
-    const mockRecords: OnboardingRecord[] = [
-      { id: 'OB001', employeeId: 'EMP-20260501-001', employeeName: '赵敏', department: '生产部', position: '种植工', expectedStartDate: '2026-05-01', status: '待入职', education: '高中', major: '', contactPhone: '13800001111', emergencyContact: '赵刚', remarks: '' },
-      { id: 'OB002', employeeId: 'EMP-20260420-001', employeeName: '孙华', department: '生产部', position: '农机手', expectedStartDate: '2026-04-20', actualStartDate: '2026-04-20', status: '已完成', education: '中专', major: '农业机械', contactPhone: '13800002222', emergencyContact: '孙强', remarks: '已完成入职培训' },
-      { id: 'OB003', employeeId: 'EMP-20260510-001', employeeName: '周杰', department: '生产部', position: '农技员', expectedStartDate: '2026-05-10', status: '入职中', education: '本科', major: '农学', contactPhone: '13800003333', emergencyContact: '周明', remarks: '资料审核中' },
-    ];
-
-    setRecords([...mockRecords, ...onboardRecords]);
-    setPagination(prev => ({ ...prev, total: mockRecords.length + onboardRecords.length }));
-  }, [approvals]);
 
   /** 过滤后的数据 */
   const filteredData = useMemo(() => {
@@ -183,7 +202,7 @@ export function useOnboardingPage() {
   }, []);
 
   /** 提交入职申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.employeeName || !formData.expectedStartDate) {
       alert('请填写完整信息');
       return;
@@ -201,114 +220,55 @@ export function useOnboardingPage() {
       return;
     }
 
-    // 生成员工ID：EMP-YYYYMMDD-XXX（标准格式：前缀-年月日-3位序号）
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-    const sequence = String(records.length + 1).padStart(3, '0');
-    const generatedEmployeeId = `EMP-${dateStr}-${sequence}`;
-
-    // 生成新记录
-    const newRecord: OnboardingRecord = {
-      id: `OB${Date.now()}`,
-      employeeId: generatedEmployeeId,
-      employeeName: formData.employeeName,
-      department: formData.department,
-      position: formData.position,
-      expectedStartDate: formData.expectedStartDate,
-      status: '待入职',
-      education: formData.education,
-      major: formData.major,
-      contactPhone: formData.contactPhone,
-      emergencyContact: formData.emergencyContact,
-      idCard: formData.idCard,
-      bankCard: formData.bankCard,
-      remarks: formData.remarks,
-    };
-
-    // 创建审批记录 - 使用分级审批动态生成审批人配置
-    const approvalLevelResult = generateApprovers(ApprovalType.ONBOARDING, 0);
-
-    const approval: Approval = {
-      id: `APR-OB-${Date.now()}`,
-      code: `SP-OB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.ONBOARDING,
-      typeName: '入职申请',
-      category: 'hr',
-      title: `${formData.employeeName}入职申请`,
-      description: formData.remarks || `申请入职${formData.department}`,
-      applicantId: newRecord.employeeId,
-      applicantName: formData.employeeName,
-      applicantDepartment: formData.department,
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'onboarding',
-        requestId: newRecord.id,
-        employeeId: newRecord.employeeId,
-        employeeName: newRecord.employeeName,
-        department: newRecord.department,
-        position: newRecord.position,
-        expectedStartDate: newRecord.expectedStartDate,
-        education: newRecord.education,
-        major: newRecord.major,
-        contactPhone: newRecord.contactPhone,
-        emergencyContact: newRecord.emergencyContact,
+    try {
+      const createParams: CreateOnboardingParams = {
+        name: formData.employeeName,
         idCard: formData.idCard,
-        bankCard: formData.bankCard,
-      },
-    };
+        phone: formData.contactPhone,
+        position: formData.position,
+        department: formData.department,
+        joinDate: formData.expectedStartDate,
+        remarks: formData.remarks,
+      };
 
-    // 添加到Context
-    addApproval(approval);
-
-    // 更新本地状态
-    setRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, records, addApproval, generateApprovers]);
+      await createOnboardingMutation.mutateAsync(createParams);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交入职申请失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createOnboardingMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: OnboardingRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      approve(approval.id, '同意入职');
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已完成' as const } : r)
-      );
-    } else {
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已完成' as const } : r)
-      );
+  const handleApprove = useCallback(async (record: OnboardingRecord) => {
+    try {
+      const params: UpdateStatusParams = {
+        status: '已入职',
+      };
+      await updateStatusMutation.mutateAsync({ id: record.id, params });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, approve]);
+  }, [updateStatusMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: OnboardingRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      reject(approval.id, '不符合条件');
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已取消' as const } : r)
-      );
-    } else {
-      setRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已取消' as const } : r)
-      );
+  const handleReject = useCallback(async (record: OnboardingRecord) => {
+    try {
+      // 更新状态为已取消
+      await updateOnboardingMutation.mutateAsync({
+        id: record.id,
+        updates: { status: '已取消' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, reject]);
+  }, [updateOnboardingMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

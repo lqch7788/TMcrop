@@ -1,73 +1,81 @@
-import { useState, useCallback, useMemo } from 'react';
-import type { OnboardingRecord, OnboardingFormData, OnboardingFilters, OnboardingPagination, OnboardingStatus } from '../types';
+/**
+ * 入职办理页面 Hook
+ * 使用 API 数据架构：API → enhancedApiClient → React Query → 组件
+ */
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+  useOnboardingRecords,
+  useCreateOnboarding,
+  useUpdateOnboarding,
+  useDeleteOnboarding,
+  useUpdateOnboardingStatus,
+} from '../../../../hooks/useOnboardingQueries';
+import type { OnboardingRecord, CreateOnboardingParams, UpdateOnboardingParams } from '../../../../services/apiOnboardingService';
 
-// 模拟数据
-const mockOnboardingList: OnboardingRecord[] = [
-  {
-    id: 'ob001',
-    recruitmentId: 'zp001',
-    requestCode: 'ZP-20260315-001',
-    name: '李四',
-    idCard: '110101199001011234',
-    phone: '13800138001',
-    position: '农艺师',
-    department: '种植部',
-    contractType: '劳动合同',
-    joinDate: '2026-03-20',
-    status: '待入职',
-    createdAt: '2026-03-15',
-    updatedAt: '2026-03-15',
-    operatorId: 'u001',
-    operatorName: '张明',
-  },
-  {
-    id: 'ob002',
-    recruitmentId: 'zp002',
-    requestCode: 'ZP-20260316-001',
-    name: '王五',
-    idCard: '110101199002021234',
-    phone: '13800138002',
-    position: '临时工',
-    department: '收割组',
-    contractType: '劳务合同',
-    dailyWage: 200,
-    joinDate: '2026-03-22',
-    status: '办理中',
-    createdAt: '2026-03-16',
-    updatedAt: '2026-03-18',
-    operatorId: 'u001',
-    operatorName: '张明',
-    progress: [
-      { step: 1, name: '资料提交', status: 'completed', completedAt: '2026-03-16' },
-      { step: 2, name: '合同签订', status: 'processing' },
-      { step: 3, name: '入职培训', status: 'pending' },
-      { step: 4, name: '档案创建', status: 'pending' },
-    ],
-  },
-  {
-    id: 'ob003',
-    recruitmentId: 'zp003',
-    requestCode: 'ZP-20260310-001',
-    name: '赵六',
-    idCard: '110101199003031234',
-    phone: '13800138003',
-    position: '实习生',
-    department: '技术部',
-    contractType: '实习协议',
-    joinDate: '2026-03-12',
-    status: '已入职',
-    createdAt: '2026-03-10',
-    updatedAt: '2026-03-12',
-    operatorId: 'u001',
-    operatorName: '张明',
-    progress: [
-      { step: 1, name: '资料提交', status: 'completed', completedAt: '2026-03-10' },
-      { step: 2, name: '合同签订', status: 'completed', completedAt: '2026-03-11' },
-      { step: 3, name: '入职培训', status: 'completed', completedAt: '2026-03-12' },
-      { step: 4, name: '档案创建', status: 'completed', completedAt: '2026-03-12' },
-    ],
-  },
-];
+// 类型适配：后端API返回的记录格式转换为页面使用的格式
+function adaptApiRecord(apiRecord: any): OnboardingRecord {
+  // 解析进度（如果需要）
+  let progress = apiRecord.progress;
+  if (typeof progress === 'string') {
+    try {
+      progress = JSON.parse(progress);
+    } catch {
+      progress = [];
+    }
+  }
+
+  return {
+    id: apiRecord.id,
+    oid: apiRecord.oid || '',
+    name: apiRecord.name,
+    idCard: apiRecord.idCard || apiRecord.id_card || '',
+    phone: apiRecord.phone || '',
+    position: apiRecord.position || '',
+    department: apiRecord.department || '',
+    departmentOid: apiRecord.departmentOid || apiRecord.department_oid || '',
+    contractType: apiRecord.contractType || apiRecord.contract_type || '',
+    dailyWage: apiRecord.dailyWage || apiRecord.daily_wage,
+    hourlyWage: apiRecord.hourlyWage || apiRecord.hourly_wage,
+    joinDate: apiRecord.joinDate || apiRecord.join_date || '',
+    status: apiRecord.status === 'pending' ? '待入职' :
+            apiRecord.status === 'processing' ? '办理中' :
+            apiRecord.status === 'onboarded' ? '已入职' : '待入职',
+    progress: progress || [],
+    requestCode: apiRecord.requestCode || apiRecord.request_code || '',
+    recruitmentId: apiRecord.recruitmentId || apiRecord.recruitment_id || '',
+    operatorId: apiRecord.operatorId || apiRecord.operator_id || '',
+    operatorName: apiRecord.operatorName || apiRecord.operator_name || '',
+    approvedAt: apiRecord.approvedAt || apiRecord.approved_at || '',
+    remarks: apiRecord.remarks || '',
+    createTime: apiRecord.createTime || apiRecord.create_time || '',
+    updateTime: apiRecord.updateTime || apiRecord.update_time || '',
+  };
+}
+
+export interface OnboardingFilters {
+  status: string;
+  keyword: string;
+}
+
+export interface OnboardingPagination {
+  currentPage: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface OnboardingFormData {
+  name: string;
+  idCard: string;
+  phone: string;
+  position: string;
+  department: string;
+  contractType: string;
+  dailyWage?: number;
+  hourlyWage?: number;
+  joinDate: string;
+}
+
+export type OnboardingStatus = '待入职' | '办理中' | '已入职';
 
 export interface UseOnboardingReturn {
   data: OnboardingRecord[];
@@ -82,146 +90,153 @@ export interface UseOnboardingReturn {
   deleteOnboarding: (id: string) => void;
   getOnboardingById: (id: string) => OnboardingRecord | undefined;
   filteredData: OnboardingRecord[];
+  isLoading: boolean;
 }
 
 export function useOnboarding(): UseOnboardingReturn {
+  // 筛选条件
   const [filters, setFilters] = useState<OnboardingFilters>({
     status: '',
     keyword: '',
   });
 
-  const [pagination, setPagination] = useState<OnboardingPagination>({
+  // 分页状态
+  const [pagination, setPaginationState] = useState<OnboardingPagination>({
     currentPage: 1,
     pageSize: 10,
-    total: mockOnboardingList.length,
+    total: 0,
   });
 
-  const [onboardingList, setOnboardingList] = useState<OnboardingRecord[]>(mockOnboardingList);
+  // 将筛选条件转换为 API 参数
+  const apiFilters = useMemo(() => ({
+    status: filters.status || undefined,
+    keyword: filters.keyword || undefined,
+  }), [filters]);
 
-  // 根据筛选条件过滤数据
-  const filteredData = useMemo(() => {
-    return onboardingList.filter((item) => {
-      // 状态筛选
-      if (filters.status && item.status !== filters.status) {
-        return false;
-      }
-      // 关键词搜索
-      if (filters.keyword) {
-        const keyword = filters.keyword.toLowerCase();
-        return (
-          item.name.toLowerCase().includes(keyword) ||
-          item.idCard.includes(keyword) ||
-          item.phone.includes(keyword) ||
-          (item.requestCode && item.requestCode.toLowerCase().includes(keyword))
-        );
-      }
-      return true;
-    });
-  }, [onboardingList, filters]);
+  const apiPagination = useMemo(() => ({
+    page: pagination.currentPage,
+    limit: pagination.pageSize,
+  }), [pagination.currentPage, pagination.pageSize]);
 
-  // 分页数据
-  const paginatedData = useMemo(() => {
-    const start = (pagination.currentPage - 1) * pagination.pageSize;
-    const end = start + pagination.pageSize;
-    return filteredData.slice(start, end);
-  }, [filteredData, pagination]);
+  // 使用 React Query 获取数据
+  const { data: apiResponse, isLoading, refetch } = useOnboardingRecords(apiFilters, apiPagination);
+
+  // API mutations
+  const createMutation = useCreateOnboarding();
+  const updateMutation = useUpdateOnboarding();
+  const deleteMutation = useDeleteOnboarding();
+  const updateStatusMutation = useUpdateOnboardingStatus();
+
+  // 将 API 数据转换为页面格式
+  const records: OnboardingRecord[] = useMemo(() => {
+    if (!apiResponse?.records) return [];
+    return apiResponse.records.map(adaptApiRecord);
+  }, [apiResponse]);
+
+  // 更新分页总数
+  useEffect(() => {
+    if (apiResponse?.pagination) {
+      setPaginationState(prev => ({
+        ...prev,
+        total: apiResponse.pagination.total,
+      }));
+    }
+  }, [apiResponse?.pagination]);
 
   // 设置页码
   const setPage = useCallback((page: number) => {
-    setPagination((prev) => ({ ...prev, currentPage: page }));
+    setPaginationState(prev => ({ ...prev, currentPage: page }));
   }, []);
 
   // 设置每页数量
   const setPageSize = useCallback((size: number) => {
-    setPagination((prev) => ({ ...prev, pageSize: size, currentPage: 1 }));
+    setPaginationState(prev => ({ ...prev, pageSize: size, currentPage: 1 }));
   }, []);
 
   // 创建入职记录
-  const createOnboarding = useCallback(
-    (formData: OnboardingFormData, operatorId: string, operatorName: string) => {
-      const newRecord: OnboardingRecord = {
-        id: `ob${Date.now()}`,
-        name: formData.name,
-        idCard: formData.idCard,
-        phone: formData.phone,
-        position: formData.position,
-        department: formData.department,
-        contractType: formData.contractType,
-        dailyWage: formData.dailyWage,
-        hourlyWage: formData.hourlyWage,
-        joinDate: formData.joinDate,
-        status: '待入职',
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0],
-        operatorId,
-        operatorName,
-        progress: [
-          { step: 1, name: '资料提交', status: 'completed', completedAt: new Date().toISOString().split('T')[0] },
-          { step: 2, name: '合同签订', status: 'pending' },
-          { step: 3, name: '入职培训', status: 'pending' },
-          { step: 4, name: '档案创建', status: 'pending' },
-        ],
-      };
-      setOnboardingList((prev) => [newRecord, ...prev]);
-    },
-    []
-  );
+  const createOnboarding = useCallback((formData: OnboardingFormData, operatorId: string, operatorName: string) => {
+    const params: CreateOnboardingParams = {
+      name: formData.name,
+      idCard: formData.idCard,
+      phone: formData.phone,
+      position: formData.position,
+      department: formData.department,
+      contractType: formData.contractType,
+      dailyWage: formData.dailyWage,
+      hourlyWage: formData.hourlyWage,
+      joinDate: formData.joinDate,
+      operatorId,
+      operatorName,
+    };
+    createMutation.mutate(params, {
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  }, [createMutation, refetch]);
 
   // 更新入职记录
   const updateOnboarding = useCallback((id: string, data: Partial<OnboardingFormData>) => {
-    setOnboardingList((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, ...data, updatedAt: new Date().toISOString().split('T')[0] } : item
-      )
-    );
-  }, []);
+    const updates: UpdateOnboardingParams = {
+      name: data.name,
+      idCard: data.idCard,
+      phone: data.phone,
+      position: data.position,
+      department: data.department,
+      contractType: data.contractType,
+      dailyWage: data.dailyWage,
+      hourlyWage: data.hourlyWage,
+      joinDate: data.joinDate,
+    };
+    updateMutation.mutate({ id, updates }, {
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  }, [updateMutation, refetch]);
 
   // 更新入职状态
-  const updateStatus = useCallback(
-    (id: string, status: OnboardingStatus, operatorId: string, operatorName: string) => {
-      setOnboardingList((prev) =>
-        prev.map((item) => {
-          if (item.id !== id) return item;
-
-          const updatedItem = {
-            ...item,
-            status,
-            updatedAt: new Date().toISOString().split('T')[0],
-            operatorId,
-            operatorName,
-          };
-
-          // 如果是已入职状态，更新所有进度为完成
-          if (status === '已入职') {
-            updatedItem.progress = item.progress?.map((p) =>
-              p.status !== 'completed' ? { ...p, status: 'completed' as const, completedAt: new Date().toISOString().split('T')[0] } : p
-            );
-          }
-
-          return updatedItem;
-        })
-      );
-    },
-    []
-  );
+  const updateStatus = useCallback((id: string, status: OnboardingStatus, operatorId: string, operatorName: string) => {
+    const statusMap: Record<OnboardingStatus, string> = {
+      '待入职': 'pending',
+      '办理中': 'processing',
+      '已入职': 'onboarded',
+    };
+    updateStatusMutation.mutate({
+      id,
+      params: {
+        status: statusMap[status],
+        operatorId,
+        operatorName,
+      },
+    }, {
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  }, [updateStatusMutation, refetch]);
 
   // 删除入职记录
   const deleteOnboarding = useCallback((id: string) => {
-    setOnboardingList((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  }, [deleteMutation, refetch]);
 
   // 根据ID获取记录
-  const getOnboardingById = useCallback(
-    (id: string) => {
-      return onboardingList.find((item) => item.id === id);
-    },
-    [onboardingList]
-  );
+  const getOnboardingById = useCallback((id: string): OnboardingRecord | undefined => {
+    return records.find(r => r.id === id);
+  }, [records]);
+
+  // 过滤后的数据（用于前端筛选，这里因为API已经做了筛选，所以直接返回）
+  const filteredData = records;
 
   return {
-    data: paginatedData,
+    data: records,
     filters,
-    pagination: { ...pagination, total: filteredData.length },
+    pagination: pagination,
     setFilters,
     setPage,
     setPageSize,
@@ -231,5 +246,6 @@ export function useOnboarding(): UseOnboardingReturn {
     deleteOnboarding,
     getOnboardingById,
     filteredData,
+    isLoading,
   };
 }

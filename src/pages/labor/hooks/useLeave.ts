@@ -1,16 +1,50 @@
 /**
  * 请假申请数据管理 Hook
  * 封装状态管理、数据处理和业务逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
-import { LeaveType, LeaveStatus, LeaveRecord, LeaveFilters, LeaveQuota } from '../../../components/labor/leave/types';
-import { leaveQuotaService } from '../../../services/leaveQuotaService';
+import { useState, useMemo, useCallback } from 'react';
+import { useLeaveRecords, useCreateLeave, useUpdateLeave, useDeleteLeave, useDeleteLeaveBatch, useLeaveQuotas, useFreezeLeaveQuota, useReleaseLeaveQuota, useDeductLeaveQuota } from '@/hooks/useLeaveQueries';
+import type { LeaveRecord as ApiLeaveRecord, CreateLeaveParams, UpdateLeaveParams } from '@/services/apiLeaveService';
+import type { LeaveType, LeaveStatus, LeaveFilters } from '../../../components/labor/leave/types';
+
+// API 字段到组件字段的映射
+interface LeaveRecord {
+  id: string;
+  staffId: string;
+  staffName: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string;
+  status: LeaveStatus;
+  approver?: string;
+  approveTime?: string;
+  remarks?: string;
+}
+
+/**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponent(apiRecord: ApiLeaveRecord): LeaveRecord {
+  return {
+    id: apiRecord.id,
+    staffId: apiRecord.workerId,
+    staffName: apiRecord.workerName,
+    leaveType: apiRecord.leaveType as LeaveType,
+    startDate: apiRecord.startDate,
+    endDate: apiRecord.endDate,
+    days: apiRecord.days,
+    reason: apiRecord.reason,
+    status: apiRecord.statusLabel as LeaveStatus,
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
 
 export interface UseLeaveReturn {
-  // 状态
   filters: LeaveFilters;
   setFilters: React.Dispatch<React.SetStateAction<LeaveFilters>>;
   pagination: { current: number; pageSize: number; total: number };
@@ -36,8 +70,8 @@ export interface UseLeaveReturn {
     reason: string;
     remarks: string;
   }>>;
-  currentQuota: LeaveQuota | null;
-  setCurrentQuota: React.Dispatch<React.SetStateAction<LeaveQuota | null>>;
+  currentQuota: { staffId: string; staffName: string; year: number; annualLeaveTotal: number; annualLeaveUsed: number; annualLeaveRemaining: number; sickLeaveTotal: number; sickLeaveUsed: number; sickLeaveRemaining: number; otherLeaveTotal: number; otherLeaveUsed: number; otherLeaveRemaining: number } | null;
+  setCurrentQuota: React.Dispatch<React.SetStateAction<{ staffId: string; staffName: string; year: number; annualLeaveTotal: number; annualLeaveUsed: number; annualLeaveRemaining: number; sickLeaveTotal: number; sickLeaveUsed: number; sickLeaveRemaining: number; otherLeaveTotal: number; otherLeaveUsed: number; otherLeaveRemaining: number } | null>>;
   selectedRecord: LeaveRecord | null;
   setSelectedRecord: React.Dispatch<React.SetStateAction<LeaveRecord | null>>;
   selectedRowKeys: React.Key[];
@@ -45,17 +79,11 @@ export interface UseLeaveReturn {
   batchMode: 'none' | 'approve' | 'reject' | 'export';
   withdrawRecord: LeaveRecord | null;
   isWithdrawModalOpen: boolean;
-
-  // 弹窗状态
   isFormModalOpen: boolean;
   setIsFormModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isDetailModalOpen: boolean;
   setIsDetailModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-
-  // 过滤后的数据
   filteredData: LeaveRecord[];
-
-  // 事件处理
   handleFilterChange: (field: keyof LeaveFilters, value: string) => void;
   handleResetFilters: () => void;
   handleSearch: () => void;
@@ -98,28 +126,6 @@ export const STATUS_OPTIONS = [
   { value: '已取消', label: '已取消' },
 ] as const;
 
-/** 模拟请假余额数据 */
-function getLeaveQuota(staffId: string): LeaveQuota {
-  const quotaMap: Record<string, LeaveQuota> = {
-    'EMP20240001': { staffId: 'EMP20240001', staffName: '张伟民', year: 2026, annualLeaveTotal: 15, annualLeaveUsed: 3, annualLeaveRemaining: 12, sickLeaveTotal: 10, sickLeaveUsed: 1, sickLeaveRemaining: 9, otherLeaveTotal: 5, otherLeaveUsed: 0, otherLeaveRemaining: 5 },
-    'EMP20240002': { staffId: 'EMP20240002', staffName: '李秀英', year: 2026, annualLeaveTotal: 15, annualLeaveUsed: 5, annualLeaveRemaining: 10, sickLeaveTotal: 10, sickLeaveUsed: 2, sickLeaveRemaining: 8, otherLeaveTotal: 5, otherLeaveUsed: 1, otherLeaveRemaining: 4 },
-    'EMP20240003': { staffId: 'EMP20240003', staffName: '王建国', year: 2026, annualLeaveTotal: 20, annualLeaveUsed: 7, annualLeaveRemaining: 13, sickLeaveTotal: 10, sickLeaveUsed: 0, sickLeaveRemaining: 10, otherLeaveTotal: 5, otherLeaveUsed: 0, otherLeaveRemaining: 5 },
-  };
-  return quotaMap[staffId] || { staffId, staffName: '', year: 2026, annualLeaveTotal: 15, annualLeaveUsed: 0, annualLeaveRemaining: 15, sickLeaveTotal: 10, sickLeaveUsed: 0, sickLeaveRemaining: 10, otherLeaveTotal: 5, otherLeaveUsed: 0, otherLeaveRemaining: 5 };
-}
-
-/** 获取某类型的可用余额 */
-function getAvailableDays(quota: LeaveQuota, leaveType: LeaveType): number {
-  switch (leaveType) {
-    case '年假':
-      return quota.annualLeaveRemaining;
-    case '病假':
-      return quota.sickLeaveRemaining;
-    default:
-      return quota.otherLeaveRemaining;
-  }
-}
-
 /** 计算请假天数 */
 function calculateDays(start: string, end: string): number {
   if (!start || !end) return 0;
@@ -130,25 +136,10 @@ function calculateDays(start: string, end: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-/** 状态映射 */
-function mapApprovalStatus(status: ApprovalStatus): LeaveStatus {
-  switch (status) {
-    case ApprovalStatus.PENDING: return '待审批';
-    case ApprovalStatus.APPROVED: return '已通过';
-    case ApprovalStatus.REJECTED: return '已拒绝';
-    case ApprovalStatus.CANCELLED: return '已取消';
-    default: return '待审批';
-  }
-}
-
 export function useLeave(
   workers: { workerId: string; name: string; department: string }[]
 ): UseLeaveReturn {
-  // ============================================================
-  // 状态定义
-  // ============================================================
-
-  /** 筛选条件 */
+  // 筛选条件
   const [filters, setFilters] = useState<LeaveFilters>({
     staffName: '',
     leaveType: '',
@@ -157,22 +148,22 @@ export function useLeave(
     endDate: '',
   });
 
-  /** 分页状态 */
+  // 分页状态
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  /** 弹窗状态 */
+  // 弹窗状态
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
-  /** 选中记录 */
+  // 选中记录
   const [selectedRecord, setSelectedRecord] = useState<LeaveRecord | null>(null);
   const [withdrawRecord, setWithdrawRecord] = useState<LeaveRecord | null>(null);
 
-  /** 批量选择 */
+  // 批量选择
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  /** 表单数据 */
+  // 表单数据
   const [formData, setFormData] = useState({
     staffId: '',
     staffName: '',
@@ -184,95 +175,76 @@ export function useLeave(
     remarks: '',
   });
 
-  /** 当前余额信息 */
-  const [currentQuota, setCurrentQuota] = useState<LeaveQuota | null>(null);
+  // 当前余额信息
+  const [currentQuota, setCurrentQuota] = useState<UseLeaveReturn['currentQuota']>(null);
 
-  /** 批量操作模式 */
+  // 批量操作模式
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
-  // ============================================================
-  // Context & Hooks
-  // ============================================================
+  // 构建查询参数
+  const queryFilters = useMemo(() => ({
+    workerName: filters.staffName || undefined,
+    leaveType: filters.leaveType || undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
 
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
 
-  // ============================================================
-  // 数据处理
-  // ============================================================
+  // 使用 React Query 获取请假记录
+  const { data: apiData, refetch } = useLeaveRecords(queryFilters, queryPagination);
 
-  /** 请假记录数据 */
-  const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
+  // 转换 API 数据
+  const leaveRecords: LeaveRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
 
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选请假类型的审批记录
-    const leaveApprovals = approvals.filter(a => a.type === ApprovalType.LEAVE);
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
 
-    // 转换为LeaveRecord格式
-    const records: LeaveRecord[] = leaveApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        leaveId?: string;
-        leaveType?: string;
-        startDate?: string;
-        endDate?: string;
-        totalDays?: number;
-        reason?: string;
-      } | null;
-      return {
-        id: approval.id,
-        staffId: approval.applicantId,
-        staffName: approval.applicantName,
-        leaveType: (businessData?.leaveType || '事假') as LeaveType,
-        startDate: businessData?.startDate || approval.applyDate,
-        endDate: businessData?.endDate || approval.applyDate,
-        days: businessData?.totalDays || 0,
-        reason: businessData?.reason || '',
-        status: mapApprovalStatus(approval.status),
-        approver: approval.approvers[0]?.userName,
-        approveTime: approval.approvers[0]?.actionTime,
-        remarks: approval.remark,
-      };
-    });
+  // Mutations
+  const createLeaveMutation = useCreateLeave();
+  const updateLeaveMutation = useUpdateLeave();
+  const deleteLeaveMutation = useDeleteLeave();
+  const deleteLeaveBatchMutation = useDeleteLeaveBatch();
+  const freezeQuotaMutation = useFreezeLeaveQuota();
+  const releaseQuotaMutation = useReleaseLeaveQuota();
+  const deductQuotaMutation = useDeductLeaveQuota();
 
-    setLeaveRecords(records);
-    setPagination(prev => ({ ...prev, total: records.length }));
-  }, [approvals]);
-
-  /** 过滤后的数据 */
+  // 过滤后的数据
   const filteredData = useMemo(() => {
-    return leaveRecords.filter(record => {
-      if (filters.staffName && !record.staffName.includes(filters.staffName)) return false;
-      if (filters.leaveType && record.leaveType !== filters.leaveType) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.startDate && record.startDate < filters.startDate) return false;
-      if (filters.endDate && record.endDate > filters.endDate) return false;
-      return true;
-    });
-  }, [leaveRecords, filters]);
+    return leaveRecords;
+  }, [leaveRecords]);
 
-  // ============================================================
-  // 事件处理
-  // ============================================================
-
-  /** 筛选条件变化 */
+  // 筛选条件变化
   const handleFilterChange = useCallback((field: keyof LeaveFilters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 重置筛选 */
+  // 重置筛选
   const handleResetFilters = useCallback(() => {
     setFilters({ staffName: '', leaveType: '', status: '', startDate: '', endDate: '' });
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 搜索 */
+  // 搜索
   const handleSearch = useCallback(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 打开新增弹窗 */
+  // 打开新增弹窗
   const handleOpenFormModal = useCallback(() => {
     setSelectedRecord(null);
     setFormData({
@@ -289,188 +261,147 @@ export function useLeave(
     setIsFormModalOpen(true);
   }, []);
 
-  /** 打开详情弹窗 */
+  // 打开详情弹窗
   const handleOpenDetailModal = useCallback((record: LeaveRecord) => {
     setSelectedRecord(record);
     setIsDetailModalOpen(true);
   }, []);
 
-  /** 员工选择变化 */
+  // 员工选择变化
   const handleStaffChange = useCallback((staffId: string, staffName: string) => {
-    const quota = getLeaveQuota(staffId);
-    setCurrentQuota(quota);
     setFormData(prev => ({ ...prev, staffId, staffName }));
   }, []);
 
-  /** 日期变化 */
+  // 日期变化
   const handleDateChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
-    const newFormData = { ...formData, [field]: value };
+    setFormData(prev => {
+      const newFormData = { ...prev, [field]: value };
+      if (field === 'startDate') {
+        newFormData.days = calculateDays(value, prev.endDate);
+      } else {
+        newFormData.days = calculateDays(prev.startDate, value);
+      }
+      return newFormData;
+    });
+  }, []);
 
-    // 重新计算天数
-    if (field === 'startDate') {
-      newFormData.days = calculateDays(value, formData.endDate);
-    } else {
-      newFormData.days = calculateDays(formData.startDate, value);
-    }
-
-    setFormData(newFormData);
-  }, [formData]);
-
-  /** 提交请假申请 */
+  // 提交请假申请
   const handleSubmit = useCallback(async () => {
     if (!formData.staffId || !formData.startDate || !formData.endDate || !formData.reason) {
       alert('请填写完整信息');
       return;
     }
 
-    // 余额校验
-    if (currentQuota) {
-      const available = getAvailableDays(currentQuota, formData.leaveType);
-      if (formData.days > available) {
-        alert(`余额不足！当前可用天数: ${available}天，申请天数: ${formData.days}天`);
-        return;
-      }
-    }
-
-    // 生成新记录
-    const newRecord: LeaveRecord = {
-      id: `LV${Date.now()}`,
-      staffId: formData.staffId,
-      staffName: formData.staffName,
-      leaveType: formData.leaveType,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      days: formData.days,
-      reason: formData.reason,
-      status: '待审批',
-      remarks: formData.remarks,
-    };
-
-    // 创建审批记录
-    const approvalLevelResult = generateApprovers(ApprovalType.LEAVE, 0, { leaveDays: formData.days });
-
-    const approval: Approval = {
-      id: `APR-${Date.now()}`,
-      code: `SP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.LEAVE,
-      typeName: '请假申请',
-      category: 'hr',
-      title: `${formData.staffName}申请${formData.leaveType}${formData.days}天`,
-      description: formData.reason,
-      applicantId: formData.staffId,
-      applicantName: formData.staffName,
-      applicantDepartment: workers.find(w => w.workerId === formData.staffId)?.department || '生产部',
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'leave',
-        requestId: newRecord.id,
-        leaveId: newRecord.id,
+    try {
+      const createParams: CreateLeaveParams = {
+        workerId: formData.staffId,
+        workerName: formData.staffName,
         leaveType: formData.leaveType,
         startDate: formData.startDate,
         endDate: formData.endDate,
-        totalDays: formData.days,
+        days: formData.days,
         reason: formData.reason,
-      },
-    };
+        remarks: formData.remarks,
+      };
 
-    try {
-      await addApproval(approval);
+      await createLeaveMutation.mutateAsync(createParams);
+
+      // 冻结请假余额
+      await freezeQuotaMutation.mutateAsync({
+        workerId: formData.staffId,
+        leaveType: formData.leaveType,
+        days: formData.days,
+      });
+
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
     } catch (error) {
-      console.error('添加审批记录失败:', error);
+      console.error('提交请假申请失败:', error);
       alert('提交失败，请重试');
-      return;
     }
+  }, [formData, createLeaveMutation, freezeQuotaMutation, refetch]);
 
-    // 冻结请假余额
-    leaveQuotaService.freezeQuota(formData.staffId, formData.leaveType, formData.days);
-
-    // 更新本地状态
-    setLeaveRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, currentQuota, addApproval, generateApprovers, workers]);
-
-  /** 审批通过 */
+  // 审批通过
   const handleApprove = useCallback(async (record: LeaveRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      try {
-        await approve(approval.id, '同意');
-        leaveQuotaService.deductQuota(record.staffId, record.leaveType, record.days);
-        setLeaveRecords(prev =>
-          prev.map(r => r.id === record.id ? { ...r, status: '已通过' as LeaveStatus } : r)
-        );
-      } catch (error) {
-        console.error('审批通过失败:', error);
-        alert('审批失败，请重试');
-      }
-    }
-  }, [approve, approvals]);
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
 
-  /** 审批驳回 */
+      // 扣减请假额度
+      await deductQuotaMutation.mutateAsync({
+        workerId: record.staffId,
+        leaveType: record.leaveType,
+        days: record.days,
+      });
+
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('审批失败，请重试');
+    }
+  }, [updateLeaveMutation, deductQuotaMutation, refetch]);
+
+  // 审批驳回
   const handleReject = useCallback(async (record: LeaveRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      try {
-        await reject(approval.id, '不符合条件');
-        leaveQuotaService.releaseQuota(record.staffId, record.leaveType, record.days);
-        setLeaveRecords(prev =>
-          prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as LeaveStatus } : r)
-        );
-      } catch (error) {
-        console.error('审批驳回失败:', error);
-        alert('操作失败，请重试');
-      }
-    }
-  }, [reject, approvals]);
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
 
-  /** 打开撤回确认弹窗 */
+      // 释放请假额度
+      await releaseQuotaMutation.mutateAsync({
+        workerId: record.staffId,
+        leaveType: record.leaveType,
+        days: record.days,
+      });
+
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
+    }
+  }, [updateLeaveMutation, releaseQuotaMutation, refetch]);
+
+  // 打开撤回确认弹窗
   const handleOpenWithdrawModal = useCallback((record: LeaveRecord) => {
     setWithdrawRecord(record);
     setIsWithdrawModalOpen(true);
   }, []);
 
-  /** 撤回请假申请 */
+  // 撤回请假申请
   const handleWithdraw = useCallback(async () => {
     if (!withdrawRecord) return;
 
-    const approval = approvals.find(a => a.id === withdrawRecord.id);
-    if (approval) {
-      try {
-        await reject(approval.id, '用户撤回申请');
-        leaveQuotaService.releaseQuota(withdrawRecord.staffId, withdrawRecord.leaveType, withdrawRecord.days);
-        setLeaveRecords(prev =>
-          prev.map(r => r.id === withdrawRecord.id ? { ...r, status: '已撤回' as LeaveStatus } : r)
-        );
-      } catch (error) {
-        console.error('撤回申请失败:', error);
-        alert('撤回失败，请重试');
-        setIsWithdrawModalOpen(false);
-        setWithdrawRecord(null);
-        return;
-      }
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: withdrawRecord.id,
+        updates: { status: 'withdrawn' },
+      });
+
+      // 释放请假额度
+      await releaseQuotaMutation.mutateAsync({
+        workerId: withdrawRecord.staffId,
+        leaveType: withdrawRecord.leaveType,
+        days: withdrawRecord.days,
+      });
+
+      setIsWithdrawModalOpen(false);
+      setWithdrawRecord(null);
+      refetch();
+      alert('请假申请已撤回');
+    } catch (error) {
+      console.error('撤回申请失败:', error);
+      alert('撤回失败，请重试');
+      setIsWithdrawModalOpen(false);
+      setWithdrawRecord(null);
     }
+  }, [withdrawRecord, updateLeaveMutation, releaseQuotaMutation, refetch]);
 
-    setIsWithdrawModalOpen(false);
-    setWithdrawRecord(null);
-    alert('请假申请已撤回');
-  }, [withdrawRecord, reject, approvals]);
-
-  /** 批量审批通过 */
+  // 批量审批通过
   const handleBatchApprove = useCallback(() => {
     selectedRowKeys.forEach(key => {
       const record = leaveRecords.find(r => r.id === key);
@@ -480,7 +411,7 @@ export function useLeave(
     setBatchMode('none');
   }, [selectedRowKeys, leaveRecords, handleApprove]);
 
-  /** 批量审批驳回 */
+  // 批量审批驳回
   const handleBatchReject = useCallback(() => {
     selectedRowKeys.forEach(key => {
       const record = leaveRecords.find(r => r.id === key);
@@ -490,7 +421,7 @@ export function useLeave(
     setBatchMode('none');
   }, [selectedRowKeys, leaveRecords, handleReject]);
 
-  /** 导出功能 */
+  // 导出功能
   const handleExport = useCallback(() => {
     const dataToExport = selectedRowKeys.length > 0
       ? filteredData.filter(r => selectedRowKeys.includes(r.id))
@@ -525,7 +456,6 @@ export function useLeave(
   }, [selectedRowKeys, filteredData]);
 
   return {
-    // 状态
     filters,
     setFilters,
     pagination,
@@ -542,17 +472,11 @@ export function useLeave(
     batchMode,
     withdrawRecord,
     isWithdrawModalOpen,
-
-    // 弹窗状态
     isFormModalOpen,
     setIsFormModalOpen,
     isDetailModalOpen,
     setIsDetailModalOpen,
-
-    // 数据
     filteredData,
-
-    // 事件处理
     handleFilterChange,
     handleResetFilters,
     handleSearch,

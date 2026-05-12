@@ -1,21 +1,43 @@
 /**
  * 离职申请页面 Hook
  * 封装状态管理、API调用和数据处理逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useUsers } from '../../../components/common/settings';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
 import {
+  useResignationRecords,
+  useCreateResignation,
+  useUpdateResignation,
+  useDeleteResignation,
+} from '@/hooks/useResignationQueries';
+import type { ResignationRecord as ApiResignationRecord, CreateResignationParams, UpdateResignationParams } from '@/services/apiResignationService';
+import type {
   ResignationRecord,
   ResignationFilters,
   ResignationFormData,
   BatchMode,
   PaginationState,
-  mapResignationStatus,
   ResignationType,
 } from '../types/resignationPage.types';
+
+// API 数据转换为组件内部格式
+function mapApiToComponent(apiRecord: ApiResignationRecord): ResignationRecord {
+  return {
+    id: apiRecord.id,
+    resignationCode: apiRecord.resignationCode,
+    workerId: apiRecord.workerId,
+    workerName: apiRecord.workerName,
+    resignationType: apiRecord.resignationType as ResignationType,
+    reason: apiRecord.reason,
+    expectedLastDay: apiRecord.expectedLastDay,
+    handoverNote: apiRecord.handoverNote,
+    handoverUserId: apiRecord.handoverUserId,
+    handoverUserName: apiRecord.handoverUserName,
+    status: apiRecord.statusLabel as any,
+    createTime: apiRecord.createTime,
+  };
+}
 
 // 默认筛选条件
 const DEFAULT_FILTERS: ResignationFilters = {
@@ -43,8 +65,6 @@ const DEFAULT_FORM_DATA: ResignationFormData = {
  */
 export function useResignationPage() {
   const { workers } = useUsers();
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
 
   // ============================================================
   // 状态定义
@@ -72,64 +92,49 @@ export function useResignationPage() {
   /** 批量操作模式 */
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
-  /** 离职记录数据 */
-  const [resignationRecords, setResignationRecords] = useState<ResignationRecord[]>([]);
-
   // ============================================================
-  // 数据处理
+  // React Query
   // ============================================================
 
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选离职类型的审批记录
-    const resignationApprovals = approvals.filter(a => a.type === ApprovalType.RESIGNATION);
+  const queryFilters = useMemo(() => ({
+    workerName: filters.workerName || undefined,
+    resignationType: filters.resignationType || undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
 
-    // 转换为ResignationRecord格式
-    const records: ResignationRecord[] = resignationApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        resignationId?: string;
-        resignationType?: string;
-        expectedResignDate?: string;
-        reason?: string;
-        handoverNotes?: string;
-        handoverUserId?: string;
-        handoverUserName?: string;
-      } | null;
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination.current, pagination.pageSize]);
 
-      return {
-        id: approval.id,
-        resignationCode: approval.code,
-        workerId: approval.applicantId,
-        workerName: approval.applicantName,
-        resignationType: (businessData?.resignationType as ResignationType) || '主动离职',
-        reason: businessData?.reason || '',
-        expectedLastDay: businessData?.expectedResignDate || approval.applyDate,
-        handoverNote: businessData?.handoverNotes || '',
-        handoverUserId: businessData?.handoverUserId || '',
-        handoverUserName: businessData?.handoverUserName || '',
-        status: mapResignationStatus(approval.status),
-        createTime: approval.applyDate,
-      };
-    });
+  const { data: apiData, refetch } = useResignationRecords(queryFilters, queryPagination);
 
-    // 按创建时间倒序排列
-    records.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+  // 转换 API 数据
+  const resignationRecords: ResignationRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
 
-    setResignationRecords(records);
-    setPagination(prev => ({ ...prev, total: records.length }));
-  }, [approvals]);
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
 
-  /** 过滤后的数据 */
+  // Mutations
+  const createResignationMutation = useCreateResignation();
+  const updateResignationMutation = useUpdateResignation();
+  const deleteResignationMutation = useDeleteResignation();
+
+  // 过滤后的数据
   const filteredData = useMemo(() => {
-    return resignationRecords.filter(record => {
-      if (filters.workerName && !record.workerName.includes(filters.workerName)) return false;
-      if (filters.resignationType && record.resignationType !== filters.resignationType) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.startDate && record.createTime < filters.startDate) return false;
-      if (filters.endDate && record.createTime > filters.endDate) return false;
-      return true;
-    });
-  }, [resignationRecords, filters]);
+    return resignationRecords;
+  }, [resignationRecords]);
 
   // ============================================================
   // 事件处理
@@ -187,7 +192,7 @@ export function useResignationPage() {
   }, []);
 
   /** 提交离职申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.workerId || !formData.expectedLastDay || !formData.reason) {
       alert('请填写完整信息');
       return;
@@ -206,93 +211,55 @@ export function useResignationPage() {
       return;
     }
 
-    // 生成新记录
-    const newRecord: ResignationRecord = {
-      id: `RSG${Date.now()}`,
-      resignationCode: `LZ-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      workerId: formData.workerId,
-      workerName: formData.workerName,
-      resignationType: formData.resignationType,
-      reason: formData.reason,
-      expectedLastDay: formData.expectedLastDay,
-      handoverNote: formData.handoverNote,
-      handoverUserId: formData.handoverUserId,
-      handoverUserName: formData.handoverUserName,
-      status: '待审批',
-      createTime: new Date().toISOString().slice(0, 10),
-    };
-
-    // 创建审批记录 - 使用分级审批动态生成审批人配置（离职强制严格审批）
-    const approvalLevelResult = generateApprovers(ApprovalType.RESIGNATION, 0);
-
-    const approval: Approval = {
-      id: `APR-${Date.now()}`,
-      code: newRecord.resignationCode,
-      type: ApprovalType.RESIGNATION,
-      typeName: '离职申请',
-      category: 'hr',
-      title: `${formData.workerName}申请离职（${formData.resignationType}）`,
-      description: `${formData.resignationType}：${formData.reason}`,
-      applicantId: formData.workerId,
-      applicantName: formData.workerName,
-      applicantDepartment: workers.find(w => w.workerId === formData.workerId)?.department || '生产部',
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'resign',
-        requestId: newRecord.id,
-        requestCode: newRecord.resignationCode,
+    try {
+      const createParams: CreateResignationParams = {
+        workerId: formData.workerId,
+        workerName: formData.workerName,
         resignationType: formData.resignationType,
-        expectedResignDate: formData.expectedLastDay,
         reason: formData.reason,
-        handoverNotes: formData.handoverNote,
+        expectedLastDay: formData.expectedLastDay,
         handoverUserId: formData.handoverUserId,
         handoverUserName: formData.handoverUserName,
-      },
-    };
+        handoverNote: formData.handoverNote,
+      };
 
-    // 添加到Context
-    addApproval(approval);
-
-    // 更新本地状态
-    setResignationRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, workers, addApproval, generateApprovers]);
+      await createResignationMutation.mutateAsync(createParams);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交离职申请失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createResignationMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: ResignationRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      approve(approval.id, '同意');
-      setResignationRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
-      );
+  const handleApprove = useCallback(async (record: ResignationRecord) => {
+    try {
+      await updateResignationMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('审批失败，请重试');
     }
-  }, [approvals, approve]);
+  }, [updateResignationMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: ResignationRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      reject(approval.id, '不符合条件');
-      setResignationRecords(prev =>
-        prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
-      );
+  const handleReject = useCallback(async (record: ResignationRecord) => {
+    try {
+      await updateResignationMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, reject]);
+  }, [updateResignationMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

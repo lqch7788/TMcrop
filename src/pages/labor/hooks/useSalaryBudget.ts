@@ -1,77 +1,74 @@
 /**
  * 工资预算数据管理 Hook
  * 封装状态管理、数据处理和业务逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
-import { ApprovalType, ApprovalStatus, getApprovalTypeName, getApprovalStatusName } from '../../../types/approval';
+import { useState, useMemo, useCallback } from 'react';
 import {
-  SalaryBudgetRecord,
+  useSalaryBudgetRecords,
+  useCreateSalaryBudget,
+  useUpdateSalaryBudget,
+  useDeleteSalaryBudget,
+} from '@/hooks/useSalaryBudgetQueries';
+import type {
+  SalaryBudgetRecord as ApiSalaryBudgetRecord,
+  CreateSalaryBudgetParams,
+  UpdateSalaryBudgetParams,
+} from '@/services/apiSalaryBudgetService';
+import type {
   SalaryBudgetFilters,
   SalaryBudgetFormData,
-  SalaryBudgetPagination,
   BudgetSummary,
-  SALARY_BUDGET_STORAGE_KEY,
 } from '../types/salaryBudget.types';
 
-/**
- * 生成预算编号
- */
-function generateBudgetCode(): string {
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-  const randomStr = Math.random().toString(36).substr(2, 4).toUpperCase();
-  return `SB-${dateStr}-${randomStr}`;
+// API 字段到组件内部格式的映射
+interface SalaryBudgetRecord {
+  id: string;
+  budgetCode: string;
+  deptId: string;
+  deptName: string;
+  budgetMonth: string;
+  totalBaseSalary: number;
+  totalOvertimePay: number;
+  totalBonus: number;
+  grandTotal: number;
+  status: string;
+  statusLabel: string;
+  applicantId: string;
+  applicantName: string;
+  applyDate: string;
+  remark?: string;
 }
 
 /**
- * 获取月份选项（近12个月）
+ * API 数据转换为组件内部格式
  */
-export function getMonthOptions(): { value: string; label: string }[] {
-  const options: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const value = `${year}-${month}`;
-    const label = `${year}年${date.getMonth() + 1}月`;
-    options.push({ value, label });
-  }
-  return options;
-}
-
-/**
- * 从LocalStorage获取工资预算记录列表
- */
-function getStoredBudgetRecords(): SalaryBudgetRecord[] {
-  try {
-    const data = localStorage.getItem(SALARY_BUDGET_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    console.error('读取工资预算记录数据失败');
-    return [];
-  }
-}
-
-/**
- * 保存工资预算记录列表到LocalStorage
- */
-function saveBudgetRecords(records: SalaryBudgetRecord[]): void {
-  try {
-    localStorage.setItem(SALARY_BUDGET_STORAGE_KEY, JSON.stringify(records));
-  } catch (error) {
-    console.error('保存工资预算记录数据失败:', error);
-  }
+function mapApiToComponent(apiRecord: ApiSalaryBudgetRecord): SalaryBudgetRecord {
+  return {
+    id: apiRecord.id,
+    budgetCode: apiRecord.budgetCode,
+    deptId: apiRecord.deptId,
+    deptName: apiRecord.deptName,
+    budgetMonth: apiRecord.budgetMonth,
+    totalBaseSalary: apiRecord.totalBaseSalary,
+    totalOvertimePay: apiRecord.totalOvertimePay,
+    totalBonus: apiRecord.totalBonus,
+    grandTotal: apiRecord.grandTotal,
+    status: apiRecord.status,
+    statusLabel: apiRecord.statusLabel || apiRecord.status,
+    applicantId: apiRecord.applicantId,
+    applicantName: apiRecord.applicantName,
+    applyDate: apiRecord.applyDate,
+    remark: apiRecord.remark,
+  };
 }
 
 export interface UseSalaryBudgetReturn {
   // 状态
   filters: SalaryBudgetFilters;
   setFilters: React.Dispatch<React.SetStateAction<SalaryBudgetFilters>>;
-  pagination: SalaryBudgetPagination;
-  setPagination: React.Dispatch<React.SetStateAction<SalaryBudgetPagination>>;
+  pagination: { current: number; pageSize: number; total: number };
+  setPagination: React.Dispatch<React.SetStateAction<{ current: number; pageSize: number; total: number }>>;
   budgetRecords: SalaryBudgetRecord[];
   formData: SalaryBudgetFormData;
   setFormData: React.Dispatch<React.SetStateAction<SalaryBudgetFormData>>;
@@ -101,10 +98,27 @@ export interface UseSalaryBudgetReturn {
   handleOpenDetailModal: (record: SalaryBudgetRecord) => void;
   handleOpenSummaryModal: () => void;
   handleDeptChange: (deptId: string, deptName: string) => void;
-  handleSubmit: () => void;
-  handleApprove: (record: SalaryBudgetRecord) => void;
-  handleReject: (record: SalaryBudgetRecord) => void;
+  handleSubmit: () => Promise<void>;
+  handleApprove: (record: SalaryBudgetRecord) => Promise<void>;
+  handleReject: (record: SalaryBudgetRecord) => Promise<void>;
   handleExport: () => void;
+}
+
+/**
+ * 获取月份选项（近12个月）
+ */
+export function getMonthOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const value = `${year}-${month}`;
+    const label = `${year}年${date.getMonth() + 1}月`;
+    options.push({ value, label });
+  }
+  return options;
 }
 
 export function useSalaryBudget(departments: { id: string; name: string }[]): UseSalaryBudgetReturn {
@@ -120,7 +134,7 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
   });
 
   /** 分页状态 */
-  const [pagination, setPagination] = useState<SalaryBudgetPagination>({ current: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   /** 弹窗状态 */
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -144,88 +158,69 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
     remark: '',
   });
 
-  /** 预算记录列表 */
+  /** 预算记录列表（从 API 获取） */
   const [budgetRecords, setBudgetRecords] = useState<SalaryBudgetRecord[]>([]);
 
   // ============================================================
-  // Context & Hooks
+  // React Query 数据获取
   // ============================================================
 
-  const { addApproval, approvals, approve, reject } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
+  /** 构建查询参数 */
+  const queryFilters = useMemo(() => ({
+    deptId: filters.deptId || undefined,
+    budgetMonth: filters.budgetMonth || undefined,
+    status: filters.status || undefined,
+  }), [filters]);
+
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
+
+  /** 使用 React Query 获取工资预算记录 */
+  const { data: apiData, refetch } = useSalaryBudgetRecords(queryFilters, queryPagination);
+
+  /** 转换 API 数据为组件内部格式 */
+  const apiRecords: SalaryBudgetRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
+
+  /** 更新预算记录列表 */
+  useMemo(() => {
+    setBudgetRecords(apiRecords);
+  }, [apiRecords]);
+
+  /** 更新分页信息 */
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
+
+  // ============================================================
+  // Mutations
+  // ============================================================
+
+  const createMutation = useCreateSalaryBudget();
+  const updateMutation = useUpdateSalaryBudget();
+  const deleteMutation = useDeleteSalaryBudget();
 
   // ============================================================
   // 数据处理
   // ============================================================
-
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选工资预算类型的审批记录
-    const salaryBudgetApprovals = approvals.filter(a => a.type === ApprovalType.SALARY_BUDGET);
-
-    // 转换为SalaryBudgetRecord格式
-    const records: SalaryBudgetRecord[] = salaryBudgetApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        deptId?: string;
-        deptName?: string;
-        budgetMonth?: string;
-        totalBaseSalary?: number;
-        totalOvertimePay?: number;
-        totalBonus?: number;
-        grandTotal?: number;
-        remark?: string;
-      } | null;
-
-      return {
-        id: approval.id,
-        budgetCode: approval.code,
-        deptId: businessData?.deptId || '',
-        deptName: businessData?.deptName || '',
-        budgetMonth: businessData?.budgetMonth || approval.applyDate.slice(0, 7),
-        totalBaseSalary: businessData?.totalBaseSalary || 0,
-        totalOvertimePay: businessData?.totalOvertimePay || 0,
-        totalBonus: businessData?.totalBonus || 0,
-        grandTotal: businessData?.grandTotal || 0,
-        status: approval.status,
-        applicantId: approval.applicantId,
-        applicantName: approval.applicantName,
-        applyDate: approval.applyDate,
-        remark: businessData?.remark || approval.description,
-      };
-    });
-
-    // 同时加载本地存储的记录（兼容旧数据）
-    const storedRecords = getStoredBudgetRecords();
-
-    // 合并数据，避免重复
-    const mergedRecords = [...records];
-    storedRecords.forEach(stored => {
-      if (!mergedRecords.find(r => r.id === stored.id)) {
-        mergedRecords.push(stored);
-      }
-    });
-
-    // 按日期降序排列
-    mergedRecords.sort((a, b) => b.applyDate.localeCompare(a.applyDate));
-
-    setBudgetRecords(mergedRecords);
-    setPagination(prev => ({ ...prev, total: mergedRecords.length }));
-  }, [approvals]);
 
   /** 计算总计 */
   const grandTotal = useMemo(() => {
     return formData.totalBaseSalary + formData.totalOvertimePay + formData.totalBonus;
   }, [formData.totalBaseSalary, formData.totalOvertimePay, formData.totalBonus]);
 
-  /** 过滤后的数据 */
+  /** 过滤后的数据（API 已服务端过滤，此处直接返回） */
   const filteredData = useMemo(() => {
-    return budgetRecords.filter(record => {
-      if (filters.deptId && record.deptId !== filters.deptId) return false;
-      if (filters.budgetMonth && record.budgetMonth !== filters.budgetMonth) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      return true;
-    });
-  }, [budgetRecords, filters]);
+    return budgetRecords;
+  }, [budgetRecords]);
 
   /** 按月份汇总数据 */
   const summaryData = useMemo((): BudgetSummary[] => {
@@ -313,115 +308,63 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
   }, []);
 
   /** 提交工资预算申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.deptId || !formData.budgetMonth || formData.totalBaseSalary <= 0) {
       alert('请填写完整信息');
       return;
     }
 
-    // 计算总计
-    const calculatedGrandTotal = formData.totalBaseSalary + formData.totalOvertimePay + formData.totalBonus;
-
-    // 生成新记录
-    const newRecord: SalaryBudgetRecord = {
-      id: `SB-${Date.now()}`,
-      budgetCode: generateBudgetCode(),
-      deptId: formData.deptId,
-      deptName: formData.deptName,
-      budgetMonth: formData.budgetMonth,
-      totalBaseSalary: formData.totalBaseSalary,
-      totalOvertimePay: formData.totalOvertimePay,
-      totalBonus: formData.totalBonus,
-      grandTotal: calculatedGrandTotal,
-      status: ApprovalStatus.PENDING,
-      applicantId: 'U013', // 当前登录用户
-      applicantName: '陆启闯', // 当前登录用户
-      applyDate: new Date().toISOString().slice(0, 10),
-      remark: formData.remark,
-    };
-
-    // 保存到本地存储
-    const storedRecords = getStoredBudgetRecords();
-    storedRecords.push(newRecord);
-    saveBudgetRecords(storedRecords);
-
-    // 更新本地状态
-    setBudgetRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    // 创建审批记录 - 使用分级审批动态生成审批人配置（工资预算强制严格审批）
-    const approvalLevelResult = generateApprovers(ApprovalType.SALARY_BUDGET, 0);
-
-    const approval = {
-      id: newRecord.id,
-      code: newRecord.budgetCode,
-      type: ApprovalType.SALARY_BUDGET,
-      typeName: getApprovalTypeName(ApprovalType.SALARY_BUDGET),
-      category: 'hr' as const,
-      title: `${formData.deptName}${formData.budgetMonth}月工资预算`,
-      description: formData.remark,
-      applicantId: 'U013',
-      applicantName: '陆启闯',
-      applicantDepartment: '综合办',
-      applyDate: newRecord.applyDate,
-      applyTime: new Date().toISOString().slice(11, 19),
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      status: ApprovalStatus.PENDING,
-      priority: 'normal' as const,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'salary_budget' as const,
-        requestId: newRecord.id,
+    try {
+      const createParams: CreateSalaryBudgetParams = {
         deptId: formData.deptId,
         deptName: formData.deptName,
         budgetMonth: formData.budgetMonth,
         totalBaseSalary: formData.totalBaseSalary,
         totalOvertimePay: formData.totalOvertimePay,
         totalBonus: formData.totalBonus,
-        grandTotal: calculatedGrandTotal,
         remark: formData.remark,
-      },
-    };
+        applicantId: 'U013', // 当前登录用户
+        applicantName: '陆启闯', // 当前登录用户
+      };
 
-    addApproval(approval);
+      await createMutation.mutateAsync(createParams);
 
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, addApproval, generateApprovers]);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交工资预算申请失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: SalaryBudgetRecord) => {
-    approve(record.id, '同意');
-    setBudgetRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: ApprovalStatus.APPROVED } : r)
-    );
-    // 更新本地存储
-    const storedRecords = getStoredBudgetRecords();
-    const updatedRecords = storedRecords.map(r =>
-      r.id === record.id ? { ...r, status: ApprovalStatus.APPROVED } : r
-    );
-    saveBudgetRecords(updatedRecords);
-  }, [approve]);
+  const handleApprove = useCallback(async (record: SalaryBudgetRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('审批失败，请重试');
+    }
+  }, [updateMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: SalaryBudgetRecord) => {
-    reject(record.id, '不符合条件');
-    setBudgetRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: ApprovalStatus.REJECTED } : r)
-    );
-    // 更新本地存储
-    const storedRecords = getStoredBudgetRecords();
-    const updatedRecords = storedRecords.map(r =>
-      r.id === record.id ? { ...r, status: ApprovalStatus.REJECTED } : r
-    );
-    saveBudgetRecords(updatedRecords);
-  }, [reject]);
+  const handleReject = useCallback(async (record: SalaryBudgetRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
+    }
+  }, [updateMutation, refetch]);
 
   /** 导出Excel功能 */
   const handleExport = useCallback(() => {
@@ -441,7 +384,7 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
       '加班费总额': row.totalOvertimePay.toFixed(2),
       '奖金总额': row.totalBonus.toFixed(2),
       '总计': row.grandTotal.toFixed(2),
-      '状态': getApprovalStatusName(row.status),
+      '状态': row.statusLabel,
       '申请人': row.applicantName,
       '申请日期': row.applyDate,
     }));

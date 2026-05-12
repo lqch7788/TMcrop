@@ -1,13 +1,11 @@
 /**
  * 加班申请页面 Hook
  * 封装状态管理和业务逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../../../hooks/useApprovalLevel';
-import { useUsers } from '../../../../../components/common/settings';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../../../types/approval';
-import { overtimeCalculationService } from '../../../../../services/overtimeCalculationService';
+import { useState, useMemo, useCallback } from 'react';
+import { useOvertimeRecords, useCreateOvertime, useUpdateOvertime, useDeleteOvertime, useDeleteOvertimeBatch, useApproveOvertime } from '@/hooks/useOvertimeQueries';
+import type { OvertimeRecord as ApiOvertimeRecord, CreateOvertimeParams, UpdateOvertimeParams } from '@/services/apiOvertimeService';
 import type {
   OvertimeRecord,
   OvertimeFilters,
@@ -17,6 +15,26 @@ import type {
   OvertimeFeePreview,
 } from '../types/overtimePage.types';
 import { OVERTIME_TYPE_MAP, DEFAULT_BASE_SALARY } from '../types/overtimePage.types';
+
+/**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponent(apiRecord: ApiOvertimeRecord): OvertimeRecord {
+  return {
+    id: apiRecord.id,
+    staffId: apiRecord.workerId,
+    staffName: apiRecord.workerName,
+    overtimeType: apiRecord.overtimeTypeLabel || apiRecord.overtimeType,
+    startTime: apiRecord.startTime,
+    endTime: apiRecord.endTime,
+    hours: apiRecord.hours,
+    reason: apiRecord.reason,
+    status: apiRecord.statusLabel as OvertimeRecord['status'],
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
 
 // 默认表单数据
 const DEFAULT_FORM_DATA: OvertimeFormData = {
@@ -31,10 +49,6 @@ const DEFAULT_FORM_DATA: OvertimeFormData = {
 };
 
 export function useOvertimePage() {
-  const { workers } = useUsers();
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
-
   // ============================================================
   // 状态定义
   // ============================================================
@@ -60,67 +74,68 @@ export function useOvertimePage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // 数据处理
+  // 数据获取（使用 React Query）
   // ============================================================
 
-  const [overtimeRecords, setOvertimeRecords] = useState<OvertimeRecord[]>([]);
+  // 构建查询参数
+  const queryFilters = useMemo(() => ({
+    workerName: filters.staffName || undefined,
+    overtimeType: filters.overtimeType ? OVERTIME_TYPE_MAP[filters.overtimeType] : undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
 
-  /** 初始化加载数据 */
-  useEffect(() => {
-    const overtimeApprovals = approvals.filter(a => a.type === ApprovalType.OVERTIME);
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
 
-    const records: OvertimeRecord[] = overtimeApprovals.map(approval => {
-      const businessData = approval.businessLink as { overtimeType?: string; startTime?: string; endTime?: string; hours?: number; reason?: string } | null;
-      return {
-        id: approval.id,
-        staffId: approval.applicantId,
-        staffName: approval.applicantName,
-        overtimeType: businessData?.overtimeType || '工作日加班',
-        startTime: businessData?.startTime || approval.applyDate,
-        endTime: businessData?.endTime || approval.applyDate,
-        hours: businessData?.hours || 0,
-        reason: businessData?.reason || '',
-        status: mapApprovalStatus(approval.status),
-        approver: approval.approvers[0]?.userName,
-        approveTime: approval.approvers[0]?.actionTime,
-        remarks: approval.remark,
-      };
-    });
+  // 使用 React Query 获取加班记录
+  const { data: apiData, refetch } = useOvertimeRecords(queryFilters, queryPagination);
 
-    setOvertimeRecords(records);
-    setPagination(prev => ({ ...prev, total: records.length }));
-  }, [approvals]);
+  // 转换 API 数据
+  const overtimeRecords: OvertimeRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
 
-  /** 状态映射 */
-  const mapApprovalStatus = useCallback((status: ApprovalStatus): OvertimeRecord['status'] => {
-    switch (status) {
-      case ApprovalStatus.PENDING: return '待审批';
-      case ApprovalStatus.APPROVED: return '已通过';
-      case ApprovalStatus.REJECTED: return '已拒绝';
-      case ApprovalStatus.CANCELLED: return '已取消';
-      default: return '待审批';
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
     }
-  }, []);
+  }, [apiData?.pagination]);
 
-  /** 过滤后的数据 */
+  // Mutations
+  const createOvertimeMutation = useCreateOvertime();
+  const updateOvertimeMutation = useUpdateOvertime();
+  const deleteOvertimeMutation = useDeleteOvertime();
+  const deleteOvertimeBatchMutation = useDeleteOvertimeBatch();
+  const approveOvertimeMutation = useApproveOvertime();
+
+  // ============================================================
+  // 过滤后的数据
+  // ============================================================
+
   const filteredData = useMemo(() => {
-    return overtimeRecords.filter(record => {
-      if (filters.staffName && !record.staffName.includes(filters.staffName)) return false;
-      if (filters.overtimeType && record.overtimeType !== filters.overtimeType) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.startDate && record.startTime < filters.startDate) return false;
-      if (filters.endDate && record.endTime > filters.endDate) return false;
-      return true;
-    });
-  }, [overtimeRecords, filters]);
+    return overtimeRecords;
+  }, [overtimeRecords]);
 
-  /** 加班费预览计算 */
+  // ============================================================
+  // 加班费预览计算
+  // ============================================================
+
   const overtimeFeePreview = useMemo((): OvertimeFeePreview | null => {
     if (formData.hours <= 0) return null;
     const overtimeTypeEnum = OVERTIME_TYPE_MAP[formData.overtimeType];
-    const hourlyRate = overtimeCalculationService.calculateHourlyRate(DEFAULT_BASE_SALARY);
-    const rate = overtimeCalculationService.getOvertimeTypeRate(overtimeTypeEnum);
-    const totalFee = overtimeCalculationService.calculateOvertimePay(DEFAULT_BASE_SALARY, formData.hours, overtimeTypeEnum);
+    const hourlyRate = DEFAULT_BASE_SALARY / 22 / 8; // 简化的时薪计算
+    let rate = 1.5;
+    if (overtimeTypeEnum === 'weekend') rate = 2.0;
+    if (overtimeTypeEnum === 'holiday') rate = 3.0;
+    const totalFee = hourlyRate * formData.hours * rate;
     const rateText = rate === 1.5 ? '1.5倍' : rate === 2.0 ? '2倍' : '3倍';
     return {
       hourlyRate: Math.round(hourlyRate * 100) / 100,
@@ -170,12 +185,9 @@ export function useOvertimePage() {
   }, []);
 
   /** 员工选择变化 */
-  const handleStaffChange = useCallback((staffId: string) => {
-    const worker = workers.find(w => w.workerId === staffId);
-    if (worker) {
-      setFormData(prev => ({ ...prev, staffId, staffName: worker.name }));
-    }
-  }, [workers]);
+  const handleStaffChange = useCallback((staffId: string, staffName: string) => {
+    setFormData(prev => ({ ...prev, staffId, staffName }));
+  }, []);
 
   /** 时间变化 - 重新计算时长 */
   const handleTimeChange = useCallback((field: 'startTime' | 'endTime', value: string) => {
@@ -198,112 +210,59 @@ export function useOvertimePage() {
     }
 
     try {
-      const newRecord: OvertimeRecord = {
-        id: `OT${Date.now()}`,
-        staffId: formData.staffId,
-        staffName: formData.staffName,
-        overtimeType: formData.overtimeType,
+      const createParams: CreateOvertimeParams = {
+        workerId: formData.staffId,
+        workerName: formData.staffName,
+        overtimeType: OVERTIME_TYPE_MAP[formData.overtimeType],
+        workDate: formData.startTime.split('T')[0],
         startTime: formData.startTime,
         endTime: formData.endTime,
         hours: formData.hours,
+        baseSalary: DEFAULT_BASE_SALARY,
         reason: formData.reason,
-        status: '待审批',
         remarks: formData.remarks,
       };
 
-      // 创建审批记录 - 使用分级审批动态生成审批人配置（加班2小时内免审批）
-      const approvalLevelResult = generateApprovers(ApprovalType.OVERTIME, 0, { overtimeHours: formData.hours });
+      await createOvertimeMutation.mutateAsync(createParams);
 
-      const approval: Approval = {
-        id: `APR-${Date.now()}`,
-        code: `OT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-        type: ApprovalType.OVERTIME,
-        typeName: '加班申请',
-        category: 'hr',
-        title: `${formData.staffName}申请${formData.overtimeType}${formData.hours}小时`,
-        description: formData.reason,
-        applicantId: formData.staffId,
-        applicantName: formData.staffName,
-        applicantDepartment: workers.find(w => w.workerId === formData.staffId)?.department || '生产部',
-        applyDate: new Date().toISOString().slice(0, 10),
-        applyTime: new Date().toISOString().slice(11, 19),
-        priority: 'normal',
-        status: ApprovalStatus.PENDING,
-        currentStep: 1,
-        totalSteps: approvalLevelResult.totalSteps,
-        approvers: approvalLevelResult.approvers,
-        records: [],
-        remark: formData.remarks,
-        reminderCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        notificationSent: true,
-        businessLink: {
-          type: 'overtime',
-          requestId: newRecord.id,
-          overtimeType: formData.overtimeType,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
-          hours: formData.hours,
-          reason: formData.reason,
-        },
-      };
-
-      // 持久化加班记录到加班费计算服务
-      const overtimeTypeEnum = OVERTIME_TYPE_MAP[formData.overtimeType];
-      await overtimeCalculationService.addOvertimeRecord({
-        employeeId: formData.staffId,
-        date: formData.startTime.split('T')[0],
-        startTime: formData.startTime.split('T')[1] || formData.startTime,
-        endTime: formData.endTime.split('T')[1] || formData.endTime,
-        hours: formData.hours,
-        type: overtimeTypeEnum,
-        baseSalary: DEFAULT_BASE_SALARY,
-        status: 'pending',
-      });
-
-      await addApproval(approval);
-      setOvertimeRecords(prev => [newRecord, ...prev]);
-      setPagination(prev => ({ ...prev, total: prev.total + 1 }));
       setIsFormModalOpen(false);
+      refetch();
       alert('提交成功！');
     } catch (error) {
       console.error('提交加班申请失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, addApproval, generateApprovers, workers]);
+  }, [formData, createOvertimeMutation, refetch]);
 
   /** 审批通过 */
   const handleApprove = useCallback(async (record: OvertimeRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      try {
-        await approve(approval.id, '同意');
-        setOvertimeRecords(prev =>
-          prev.map(r => r.id === record.id ? { ...r, status: '已通过' as const } : r)
-        );
-      } catch (error) {
-        console.error('审批通过失败:', error);
-        alert('操作失败，请重试');
-      }
+    try {
+      await approveOvertimeMutation.mutateAsync({
+        id: record.id,
+        approved: true,
+        comment: '同意',
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, approve]);
+  }, [approveOvertimeMutation, refetch]);
 
   /** 审批驳回 */
   const handleReject = useCallback(async (record: OvertimeRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      try {
-        await reject(approval.id, '不符合条件');
-        setOvertimeRecords(prev =>
-          prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as const } : r)
-        );
-      } catch (error) {
-        console.error('审批驳回失败:', error);
-        alert('操作失败，请重试');
-      }
+    try {
+      await approveOvertimeMutation.mutateAsync({
+        id: record.id,
+        approved: false,
+        comment: '不符合条件',
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-  }, [approvals, reject]);
+  }, [approveOvertimeMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {
@@ -324,6 +283,32 @@ export function useOvertimePage() {
     setSelectedRowKeys([]);
     setBatchMode('none');
   }, [selectedRowKeys, overtimeRecords, handleReject]);
+
+  /** 删除单条记录 */
+  const handleDelete = useCallback(async (record: OvertimeRecord) => {
+    try {
+      await deleteOvertimeMutation.mutateAsync(record.id);
+      refetch();
+      alert('删除成功！');
+    } catch (error) {
+      console.error('删除失败:', error);
+      alert('删除失败，请重试');
+    }
+  }, [deleteOvertimeMutation, refetch]);
+
+  /** 批量删除 */
+  const handleBatchDelete = useCallback(async () => {
+    try {
+      await deleteOvertimeBatchMutation.mutateAsync(selectedRowKeys as string[]);
+      setSelectedRowKeys([]);
+      setBatchMode('none');
+      refetch();
+      alert('批量删除成功！');
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      alert('批量删除失败，请重试');
+    }
+  }, [selectedRowKeys, deleteOvertimeBatchMutation, refetch]);
 
   /** 导出功能 */
   const handleExport = useCallback(() => {
@@ -393,6 +378,8 @@ export function useOvertimePage() {
     handleReject,
     handleBatchApprove,
     handleBatchReject,
+    handleDelete,
+    handleBatchDelete,
     handleExport,
   };
 }
