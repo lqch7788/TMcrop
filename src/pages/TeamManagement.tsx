@@ -8,21 +8,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, Plus, Edit2, Trash2, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-interface Team {
-  id: string;
-  oid: string;
-  teamCode: string;
-  teamName: string;
-  departmentOid: string;
-  departmentName: string;
-  leaderName: string;
-  shiftType: string;
-  memberCount: number;
-  description: string;
-  status: 'active' | 'inactive';
-  createdAt: string;
-}
+import {
+  getTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam as deleteTeamApi,
+  Team as TeamType,
+} from '../services/apiBasicDataService';
 
 interface Shift {
   id: string;
@@ -33,8 +25,6 @@ interface Shift {
   teams: string[];
   status: 'active' | 'inactive';
 }
-
-const API_BASE = '/api/basic-data/teams';
 
 export default function TeamManagement() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -56,13 +46,8 @@ export default function TeamManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE);
-      const result = await response.json();
-      if (result.success) {
-        setTeams(result.data || []);
-      } else {
-        setError('获取班组数据失败');
-      }
+      const data = await getTeams();
+      setTeams(data);
     } catch (err) {
       console.error('加载班组数据失败:', err);
       setError('加载班组数据失败');
@@ -86,50 +71,32 @@ export default function TeamManagement() {
     }
     try {
       if (editingTeam) {
-        const response = await fetch(`${API_BASE}/${editingTeam.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            teamName: newTeam.teamName,
-            teamCode: newTeam.teamCode,
-            departmentOid: newTeam.departmentOid,
-            leaderName: newTeam.leaderName,
-            shiftType: newTeam.shiftType,
-            memberCount: newTeam.memberCount,
-            description: newTeam.description,
-          }),
+        await updateTeam(editingTeam.id, {
+          teamName: newTeam.teamName,
+          teamCode: newTeam.teamCode,
+          departmentOid: newTeam.departmentOid,
+          leaderName: newTeam.leaderName,
+          shiftType: newTeam.shiftType,
+          memberCount: newTeam.memberCount,
+          description: newTeam.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadTeams();
-          setShowTeamModal(false);
-          setEditingTeam(null);
-          setNewTeam({ status: 'active' });
-        } else {
-          alert(result.error || '更新失败');
-        }
+        await loadTeams();
+        setShowTeamModal(false);
+        setEditingTeam(null);
+        setNewTeam({ status: 'active' });
       } else {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            teamName: newTeam.teamName,
-            teamCode: newTeam.teamCode,
-            departmentOid: newTeam.departmentOid,
-            leaderName: newTeam.leaderName,
-            shiftType: newTeam.shiftType,
-            memberCount: newTeam.memberCount,
-            description: newTeam.description,
-          }),
+        await createTeam({
+          teamName: newTeam.teamName,
+          teamCode: newTeam.teamCode,
+          departmentOid: newTeam.departmentOid,
+          leaderName: newTeam.leaderName,
+          shiftType: newTeam.shiftType,
+          memberCount: newTeam.memberCount,
+          description: newTeam.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadTeams();
-          setShowTeamModal(false);
-          setNewTeam({ status: 'active' });
-        } else {
-          alert(result.error || '创建失败');
-        }
+        await loadTeams();
+        setShowTeamModal(false);
+        setNewTeam({ status: 'active' });
       }
     } catch (err) {
       console.error('保存班组失败:', err);
@@ -137,16 +104,11 @@ export default function TeamManagement() {
     }
   };
 
-  const deleteTeam = async (id: string) => {
+  const handleDeleteTeam = async (id: string) => {
     if (!confirm('确定删除该班组吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        await loadTeams();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteTeamApi(id);
+      await loadTeams();
     } catch (err) {
       console.error('删除班组失败:', err);
       alert('删除班组失败');
@@ -279,7 +241,7 @@ export default function TeamManagement() {
                   <Button size="icon" variant="ghost" onClick={() => editTeam(team)}>
                     <Edit2 className="w-4 h-4 text-gray-600" />
                   </Button>
-                  <Button size="icon" variant="destructive" onClick={() => deleteTeam(team.id)}>
+                  <Button size="icon" variant="destructive" onClick={() => handleDeleteTeam(team.id)}>
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
                 </div>

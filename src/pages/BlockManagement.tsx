@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { Grid3X3, Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, MapPin, Layers, Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useSettingsData } from '../components/common/settings/SettingsDataProvider';
+import { getZones, createZone, updateZone as updateZoneApi, deleteZone, Zone as ZoneType } from '../services/apiBasicDataService';
 
 // 区域类型选项
 const ZONE_TYPES = [
@@ -24,32 +25,6 @@ const ZONE_TYPES = [
 const getZoneTypeName = (type: string) => {
   const found = ZONE_TYPES.find(z => z.value === type);
   return found ? found.label : type || '-';
-};
-
-// 区域数据类型
-interface Zone {
-  id: string;
-  zoneCode: string;
-  zoneName: string;
-  baseOid: string;       // 所属基地
-  baseName?: string;      // 基地名称（用于显示）
-  zoneType: string;       // 区域类型
-  area: number;           // 面积
-  sortOrder: number;
-  status: string;
-  description: string;
-  createdAt: string;
-}
-
-const API_BASE = '/api/basic-data/zones';
-
-// 获取认证头
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
 };
 
 const statusColors = {
@@ -86,21 +61,16 @@ export default function BlockManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        // 合并基地名称
-        const zonesWithBaseName = (result.data || []).map((zone: Zone) => {
-          const base = greenhouses.find(gh => gh.oid === zone.baseOid || gh.id === zone.baseOid);
-          return {
-            ...zone,
-            baseName: base?.name || base?.greenhouseName || zone.baseOid || '-'
-          };
-        });
-        setZones(zonesWithBaseName);
-      } else {
-        setError('获取区域数据失败');
-      }
+      const data = await getZones();
+      // 合并基地名称
+      const zonesWithBaseName = (data || []).map((zone: ZoneType) => {
+        const base = greenhouses.find(gh => gh.oid === zone.baseOid || gh.id === zone.baseOid);
+        return {
+          ...zone,
+          baseName: base?.name || base?.greenhouseName || zone.baseOid || '-'
+        };
+      });
+      setZones(zonesWithBaseName);
     } catch (err) {
       console.error('加载区域数据失败:', err);
       setError('加载区域数据失败');
@@ -165,48 +135,30 @@ export default function BlockManagement() {
 
     try {
       if (editingZone) {
-        const response = await fetch(`${API_BASE}/${editingZone.id}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            zoneName: formData.zoneName,
-            zoneCode: formData.zoneCode,
-            baseOid: formData.baseOid,
-            zoneType: formData.zoneType,
-            area: formData.area,
-            sortOrder: formData.sortOrder,
-            status: formData.status,
-            description: formData.description,
-          }),
+        await updateZoneApi(editingZone.id, {
+          zoneName: formData.zoneName,
+          zoneCode: formData.zoneCode,
+          baseOid: formData.baseOid,
+          zoneType: formData.zoneType,
+          area: formData.area,
+          sortOrder: formData.sortOrder,
+          status: formData.status,
+          description: formData.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadZones();
-          handleCloseModal();
-        } else {
-          alert(result.error || '更新失败');
-        }
+        await loadZones();
+        handleCloseModal();
       } else {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            zoneName: formData.zoneName,
-            zoneCode: formData.zoneCode,
-            baseOid: formData.baseOid,
-            zoneType: formData.zoneType,
-            area: formData.area,
-            sortOrder: formData.sortOrder,
-            description: formData.description,
-          }),
+        await createZone({
+          zoneName: formData.zoneName,
+          zoneCode: formData.zoneCode,
+          baseOid: formData.baseOid,
+          zoneType: formData.zoneType,
+          area: formData.area,
+          sortOrder: formData.sortOrder,
+          description: formData.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadZones();
-          handleCloseModal();
-        } else {
-          alert(result.error || '创建失败');
-        }
+        await loadZones();
+        handleCloseModal();
       }
     } catch (err) {
       console.error('保存区域失败:', err);
@@ -217,13 +169,8 @@ export default function BlockManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除该区域吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        await loadZones();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteZone(id);
+      await loadZones();
     } catch (err) {
       console.error('删除区域失败:', err);
       alert('删除区域失败');

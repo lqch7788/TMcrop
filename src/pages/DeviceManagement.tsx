@@ -8,36 +8,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-
-interface Device {
-  id: string;
-  oid: string;
-  deviceCode: string;
-  deviceName: string;
-  deviceType: string;
-  manufacturer: string;
-  serialNumber: string;
-  greenhouseOid: string;
-  greenhouseName: string;
-  location: string;
-  installDate: string;
-  status: string;
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  description: string;
-  createdAt: string;
-}
-
-const API_BASE = '/api/basic-data/devices';
-
-// 获取认证头
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
+import {
+  getDevices,
+  createDevice,
+  updateDevice,
+  deleteDevice as deleteDeviceApi,
+  Device as DeviceType,
+} from '../services/apiBasicDataService';
 
 const DEVICE_TYPES = ['传感器', '摄像头', '控制器', '气象站', '灌溉设备', '施肥设备', '其他'];
 
@@ -57,13 +34,8 @@ export default function DeviceManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_BASE, { headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        setDevices(result.data || []);
-      } else {
-        setError('获取设备数据失败');
-      }
+      const data = await getDevices();
+      setDevices(data);
     } catch (err) {
       console.error('加载设备数据失败:', err);
       setError('加载设备数据失败');
@@ -90,55 +62,37 @@ export default function DeviceManagement() {
     }
     try {
       if (editingDevice) {
-        const response = await fetch(`${API_BASE}/${editingDevice.id}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            deviceName: newDevice.deviceName,
-            deviceCode: newDevice.deviceCode,
-            deviceType: newDevice.deviceType,
-            manufacturer: newDevice.manufacturer,
-            serialNumber: newDevice.serialNumber,
-            greenhouseOid: newDevice.greenhouseOid,
-            location: newDevice.location,
-            installDate: newDevice.installDate,
-            status: newDevice.status,
-            description: newDevice.description,
-          }),
+        await updateDevice(editingDevice.id, {
+          deviceName: newDevice.deviceName,
+          deviceCode: newDevice.deviceCode,
+          deviceType: newDevice.deviceType,
+          manufacturer: newDevice.manufacturer,
+          serialNumber: newDevice.serialNumber,
+          greenhouseOid: newDevice.greenhouseOid,
+          location: newDevice.location,
+          installDate: newDevice.installDate,
+          status: newDevice.status,
+          description: newDevice.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadDevices();
-          setShowModal(false);
-          setEditingDevice(null);
-          setNewDevice({ status: 'online' });
-        } else {
-          alert(result.error || '更新失败');
-        }
+        await loadDevices();
+        setShowModal(false);
+        setEditingDevice(null);
+        setNewDevice({ status: 'online' });
       } else {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            deviceName: newDevice.deviceName,
-            deviceCode: newDevice.deviceCode,
-            deviceType: newDevice.deviceType,
-            manufacturer: newDevice.manufacturer,
-            serialNumber: newDevice.serialNumber,
-            greenhouseOid: newDevice.greenhouseOid,
-            location: newDevice.location,
-            installDate: newDevice.installDate,
-            description: newDevice.description,
-          }),
+        await createDevice({
+          deviceName: newDevice.deviceName,
+          deviceCode: newDevice.deviceCode,
+          deviceType: newDevice.deviceType,
+          manufacturer: newDevice.manufacturer,
+          serialNumber: newDevice.serialNumber,
+          greenhouseOid: newDevice.greenhouseOid,
+          location: newDevice.location,
+          installDate: newDevice.installDate,
+          description: newDevice.description,
         });
-        const result = await response.json();
-        if (result.success) {
-          await loadDevices();
-          setShowModal(false);
-          setNewDevice({ status: 'online' });
-        } else {
-          alert(result.error || '创建失败');
-        }
+        await loadDevices();
+        setShowModal(false);
+        setNewDevice({ status: 'online' });
       }
     } catch (err) {
       console.error('保存设备失败:', err);
@@ -146,16 +100,11 @@ export default function DeviceManagement() {
     }
   };
 
-  const deleteDevice = async (id: string) => {
+  const handleDeleteDevice = async (id: string) => {
     if (!confirm('确定删除该设备吗？')) return;
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-      const result = await response.json();
-      if (result.success) {
-        await loadDevices();
-      } else {
-        alert(result.error || '删除失败');
-      }
+      await deleteDeviceApi(id);
+      await loadDevices();
     } catch (err) {
       console.error('删除设备失败:', err);
       alert('删除设备失败');
@@ -318,7 +267,7 @@ export default function DeviceManagement() {
               <Button size="icon" variant="ghost" onClick={() => editDevice(device)}>
                 <Edit2 className="w-4 h-4 text-gray-600" />
               </Button>
-              <Button size="icon" variant="destructive" onClick={() => deleteDevice(device.id)}>
+              <Button size="icon" variant="destructive" onClick={() => handleDeleteDevice(device.id)}>
                 <Trash2 className="w-4 h-4 text-red-600" />
               </Button>
             </div>
