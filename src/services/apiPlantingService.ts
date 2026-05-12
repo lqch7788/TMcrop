@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (plantingService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { Planting, PlantingStatus, SourceType } from '../types/crop';
 import * as plantingService from './plantingService';
 

@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 
 // localStorage 配置
 const STORAGE_KEY = 'yuanxingtu_warehouse_materials';

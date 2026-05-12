@@ -3,7 +3,7 @@
  * 提供温室的本地存储和API获取功能
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { greenhouses as defaultGreenhouses } from '../data/mockData';
 
 // 温室大棚数据结构

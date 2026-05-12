@@ -1,75 +1,36 @@
 /**
  * 农事任务 API 服务
  * 对接后端 /api/farm-tasks
- * API失败时降级到 localStorage
+ * 使用 enhancedApiClient 内置三级降级（API → IndexedDB → localStorage）
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { Task, TaskFilters, TaskStats, TaskStatus } from '../types/task';
 
-// localStorage 配置
-const STORAGE_KEY = 'yuanxingtu_farm_tasks';
-
-// 默认空数据
-const defaultTasks: Task[] = [];
-
-// 从 localStorage 读取数据
-function getStoredTasks(): Task[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultTasks;
-  } catch {
-    return defaultTasks;
-  }
-}
-
-// 保存数据到 localStorage
-function saveToStorage(data: Task[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 /**
- * 获取所有农事任务（带localStorage降级）
+ * 获取所有农事任务
  */
 export async function getAllTasks(): Promise<Task[]> {
-  try {
-    const data = await apiClient.get<Task[]>('/farm-tasks');
-    saveToStorage(data);
-    return data;
-  } catch (error) {
-    console.warn('[农事任务API] 获取失败，降级到localStorage:', error);
-    return getStoredTasks();
-  }
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks');
+  return data || [];
 }
 
 /**
- * 根据ID获取任务（带localStorage降级）
+ * 根据ID获取任务
  */
 export async function getTaskById(id: string): Promise<Task | undefined> {
-  try {
-    return await apiClient.get<Task>(`/farm-tasks/${id}`);
-  } catch (error) {
-    console.warn('[农事任务API] 获取单个失败，降级到localStorage:', error);
-    const stored = getStoredTasks();
-    return stored.find(t => t.id === id);
-  }
+  return await enhancedApiClient.get<Task>(`/farm-tasks/${id}`);
 }
 
 /**
- * 根据任务编码获取任务（带localStorage降级）
+ * 根据任务编码获取任务
  */
 export async function getTaskByCode(taskCode: string): Promise<Task | undefined> {
-  try {
-    return await apiClient.get<Task>(`/farm-tasks/code/${taskCode}`);
-  } catch (error) {
-    console.warn('[农事任务API] 获取单个失败，降级到localStorage:', error);
-    const stored = getStoredTasks();
-    return stored.find(t => t.taskCode === taskCode);
-  }
+  return await enhancedApiClient.get<Task>(`/farm-tasks/code/${taskCode}`);
 }
 
 /**
- * 获取任务列表（支持筛选）（带localStorage降级）
+ * 获取任务列表（支持筛选）
  */
 export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
   const params: Record<string, string> = {};
@@ -87,137 +48,68 @@ export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
       params.endDate = filters.dateRange.end;
     }
   }
-  try {
-    const data = await apiClient.get<Task[]>('/farm-tasks', params);
-    saveToStorage(data);
-    return data;
-  } catch (error) {
-    console.warn('[农事任务API] 获取列表失败，降级到localStorage:', error);
-    return getStoredTasks();
-  }
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks', params);
+  return data || [];
 }
 
 /**
- * 创建任务（带localStorage降级）
+ * 创建任务
  */
 export async function createTask(task: Omit<Task, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>): Promise<Task> {
-  try {
-    const result = await apiClient.post<Task>('/farm-tasks', task);
-    // 同步到 localStorage
-    const stored = getStoredTasks();
-    stored.unshift(result);
-    saveToStorage(stored);
-    return result;
-  } catch (error) {
-    console.warn('[农事任务API] 创建失败，降级到localStorage:', error);
-    // 生成一个本地ID的任务
-    const localTask: Task = {
-      ...task,
-      id: `TASK_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      taskCode: `T${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as Task;
-    const stored = getStoredTasks();
-    stored.unshift(localTask);
-    saveToStorage(stored);
-    return localTask;
-  }
+  const result = await enhancedApiClient.post<Task>('/farm-tasks', task);
+  return result;
 }
 
 /**
- * 更新任务（带localStorage降级）
+ * 更新任务
  */
 export async function updateTask(id: string, updates: Partial<Task>): Promise<Task | null> {
-  try {
-    const result = await apiClient.put<Task>(`/farm-tasks/${id}`, updates);
-    // 同步到 localStorage
-    const stored = getStoredTasks();
-    const index = stored.findIndex(t => t.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveToStorage(stored);
-    }
-    return result;
-  } catch (error) {
-    console.warn('[农事任务API] 更新失败，降级到localStorage:', error);
-    const stored = getStoredTasks();
-    const index = stored.findIndex(t => t.id === id);
-    if (index !== -1) {
-      stored[index] = { ...stored[index], ...updates };
-      saveToStorage(stored);
-      return stored[index];
-    }
-    return null;
-  }
+  const result = await enhancedApiClient.put<Task>(`/farm-tasks/${id}`, updates);
+  return result;
 }
 
 /**
- * 删除任务（带localStorage降级）
+ * 删除任务
  */
 export async function deleteTask(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/farm-tasks/${id}`);
-    // 从 localStorage 移除
-    const stored = getStoredTasks();
-    const filtered = stored.filter(t => t.id !== id);
-    saveToStorage(filtered);
-    return true;
-  } catch (error) {
-    console.warn('[农事任务API] 删除失败，降级到localStorage:', error);
-    const stored = getStoredTasks();
-    const filtered = stored.filter(t => t.id !== id);
-    saveToStorage(filtered);
-    return true;
-  }
+  await enhancedApiClient.delete(`/farm-tasks/${id}`);
+  return true;
 }
 
 /**
- * 批量删除任务（带localStorage降级）
+ * 批量删除任务
  */
 export async function deleteTasks(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/farm-tasks/batch?ids=${ids.join(',')}`);
-    // 从 localStorage 移除
-    const stored = getStoredTasks();
-    const filtered = stored.filter(t => !ids.includes(t.id));
-    saveToStorage(filtered);
-    return true;
-  } catch (error) {
-    console.warn('[农事任务API] 批量删除失败，降级到localStorage:', error);
-    const stored = getStoredTasks();
-    const filtered = stored.filter(t => !ids.includes(t.id));
-    saveToStorage(filtered);
-    return true;
-  }
+  await enhancedApiClient.delete(`/farm-tasks/batch?ids=${ids.join(',')}`);
+  return true;
 }
 
 /**
  * 发布任务
  */
 export async function publishTask(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/publish`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/publish`);
 }
 
 /**
  * 撤回任务
  */
 export async function withdrawTask(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/withdraw`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/withdraw`);
 }
 
 /**
  * 接受任务
  */
 export async function acceptTask(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/accept`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/accept`);
 }
 
 /**
  * 开始执行任务
  */
 export async function startTask(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/start`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/start`);
 }
 
 /**
@@ -227,77 +119,77 @@ export async function startTask(id: string): Promise<Task | null> {
  * @param feedback 反馈信息
  */
 export async function submitProgress(id: string, progress: number, feedback?: Record<string, unknown>): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/progress`, { progress, feedback });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/progress`, { progress, feedback });
 }
 
 /**
  * 申请验收
  */
 export async function submitForAcceptance(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/submit-acceptance`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/submit-acceptance`);
 }
 
 /**
  * 验收通过
  */
 export async function completeTask(id: string, comments?: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/complete`, { comments });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/complete`, { comments });
 }
 
 /**
  * 验收驳回（返工）
  */
 export async function rejectTask(id: string, reason: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/reject`, { reason });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/reject`, { reason });
 }
 
 /**
  * 取消任务
  */
 export async function cancelTask(id: string, reason: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/cancel`, { reason });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/cancel`, { reason });
 }
 
 /**
  * 放弃任务
  */
 export async function abandonTask(id: string, reason: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/abandon`, { reason });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/abandon`, { reason });
 }
 
 /**
  * 超时继续
  */
 export async function overtimeContinue(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/overtime-continue`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-continue`);
 }
 
 /**
  * 超时放弃
  */
 export async function overtimeAbandon(id: string, reason: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/overtime-abandon`, { reason });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-abandon`, { reason });
 }
 
 /**
  * 重新派发任务
  */
 export async function reassignTask(id: string, assigneeId: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/reassign`, { assigneeId });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/reassign`, { assigneeId });
 }
 
 /**
  * 延期任务
  */
 export async function extendDeadline(id: string, newDeadline: string, reason: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/extend-deadline`, { newDeadline, reason });
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/extend-deadline`, { newDeadline, reason });
 }
 
 /**
  * 催办任务
  */
 export async function remindTask(id: string): Promise<boolean> {
-  await apiClient.post(`/farm-tasks/${id}/remind`);
+  await enhancedApiClient.post(`/farm-tasks/${id}/remind`);
   return true;
 }
 
@@ -305,49 +197,53 @@ export async function remindTask(id: string): Promise<boolean> {
  * 获取任务统计
  */
 export async function getTaskStats(filters?: TaskFilters): Promise<TaskStats> {
-  return apiClient.get<TaskStats>('/farm-tasks/stats');
+  return enhancedApiClient.get<TaskStats>('/farm-tasks/stats');
 }
 
 /**
  * 根据状态获取任务数量
  */
 export async function getTaskCountByStatus(status: TaskStatus): Promise<number> {
-  return apiClient.get<number>(`/farm-tasks/count?status=${status}`);
+  return enhancedApiClient.get<number>(`/farm-tasks/count?status=${status}`);
 }
 
 /**
  * 获取任务操作记录
  */
 export async function getTaskRecords(taskId: string): Promise<any[]> {
-  return apiClient.get<any[]>(`/farm-tasks/${taskId}/records`);
+  return enhancedApiClient.get<any[]>(`/farm-tasks/${taskId}/records`);
 }
 
 /**
  * 获取逾期任务列表
  */
 export async function getOverdueTasks(): Promise<Task[]> {
-  return apiClient.get<Task[]>('/farm-tasks/overdue');
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/overdue');
+  return data || [];
 }
 
 /**
  * 获取待接受的任务列表
  */
 export async function getPendingTasks(): Promise<Task[]> {
-  return apiClient.get<Task[]>('/farm-tasks/pending');
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/pending');
+  return data || [];
 }
 
 /**
  * 获取进行中的任务列表
  */
 export async function getInProgressTasks(): Promise<Task[]> {
-  return apiClient.get<Task[]>('/farm-tasks/in-progress');
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/in-progress');
+  return data || [];
 }
 
 /**
  * 获取待验收的任务列表
  */
 export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
-  return apiClient.get<Task[]>('/farm-tasks/waiting-acceptance');
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/waiting-acceptance');
+  return data || [];
 }
 
 /**
@@ -355,7 +251,7 @@ export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
  * 将任务归档到历史记录中
  */
 export async function archiveTask(id: string): Promise<Task | null> {
-  return apiClient.post<Task>(`/farm-tasks/${id}/archive`);
+  return enhancedApiClient.post<Task>(`/farm-tasks/${id}/archive`);
 }
 
 /**
@@ -363,6 +259,6 @@ export async function archiveTask(id: string): Promise<Task | null> {
  * 将多个任务归档到历史记录中
  */
 export async function archiveTasks(ids: string[]): Promise<boolean> {
-  await apiClient.post(`/farm-tasks/batch-archive`, { ids });
+  await enhancedApiClient.post(`/farm-tasks/batch-archive`, { ids });
   return true;
 }

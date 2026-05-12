@@ -3,7 +3,7 @@
  * 提供部门的本地存储和API获取功能
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { departments as defaultDepartments } from '../data/mockData';
 
 // 部门数据结构

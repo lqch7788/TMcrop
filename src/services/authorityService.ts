@@ -4,7 +4,7 @@
  * 本地模式回退数据
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import {
   Organization,
   Role,

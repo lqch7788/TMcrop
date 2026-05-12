@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (seedlingService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { Seedling, DailyRecord, PrintRecord, TransplantRecord, TransplantHistory, SeedlingStatus } from '../types/crop';
 import * as seedlingService from './seedlingService';
 

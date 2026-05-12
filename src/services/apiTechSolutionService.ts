@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (techSolutionService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { TechSolution } from './techSolutionService';
 import * as techSolutionService from './techSolutionService';
 

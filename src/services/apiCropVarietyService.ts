@@ -3,7 +3,7 @@
  * 对接后端 /api/crop-varieties
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { CropVariety } from '../types/crop';
 import { CropVarietyOption } from '../types/crop';
 

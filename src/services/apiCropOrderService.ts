@@ -3,7 +3,7 @@
  * 对接后端 /api/crop-orders
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { CropOrder, CropOrderStatus } from '../types/crop';
 
 // 导入本地服务作为回退

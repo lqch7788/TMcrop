@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 
 // 问题类型定义（基于 farm/common.ts 中的定义）
 export interface Problem {

@@ -3,7 +3,7 @@
  * 对接后端 /api/suppliers
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { Supplier } from '../components/supplier/types';
 
 // 导入本地服务作为回退

@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (seedSourceService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../types/crop';
 import * as seedSourceService from './seedSourceService';
 

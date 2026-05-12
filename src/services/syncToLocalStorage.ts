@@ -11,7 +11,7 @@
  * await syncAllToLocalStorage();
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 
 // 各模块的 localStorage key
 const STORAGE_KEYS = {

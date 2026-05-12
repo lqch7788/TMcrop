@@ -4,7 +4,7 @@
  * 核心功能：管理作物实例的全生命周期
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '../types/crop';
 
 // 导入本地服务作为回退

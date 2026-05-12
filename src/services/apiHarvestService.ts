@@ -3,7 +3,7 @@
  * 对接后端 /api/harvest
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { HarvestRecord } from '../types/index';
 
 // 导入本地服务作为回退
