@@ -1,5 +1,10 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { ToastContainer, type Toast, type ToastType } from '../components/ui/Toast';
+/**
+ * ToastContext - 迁移到 Zustand useToastStore
+ * 保持 API 不变，内部委托给 store
+ */
+import { createContext, useContext, type ReactNode } from 'react';
+import { ToastContainer } from '../components/ui/Toast';
+import { useToastStore } from '../stores/useToastStore';
 
 interface ToastContextValue {
   toast: {
@@ -13,23 +18,10 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = useCallback((type: ToastType, message: string, duration?: number) => {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setToasts((prev) => [...prev, { id, type, message, duration }]);
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const toast = {
-    success: (message: string, duration?: number) => addToast('success', message, duration),
-    error: (message: string, duration?: number) => addToast('error', message, duration),
-    warning: (message: string, duration?: number) => addToast('warning', message, duration),
-    info: (message: string, duration?: number) => addToast('info', message, duration),
-  };
+  // 直接使用 store 的 toast 方法
+  const toast = useToastStore((state) => state.toast);
+  const toasts = useToastStore((state) => state.toasts);
+  const dismissToast = useToastStore((state) => state.dismissToast);
 
   return (
     <ToastContext.Provider value={{ toast }}>

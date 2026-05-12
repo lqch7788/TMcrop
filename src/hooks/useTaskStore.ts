@@ -2,93 +2,24 @@
 // 任务状态管理Store
 // 文件路径：src/hooks/useTaskStore.ts
 // 用于审批联动：审批通过后更新任务状态为待接受
+// 已迁移到 Zustand Store (src/stores/useTaskStore.ts)
+// 本文件保留用于向后兼容
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useTaskStore as useZustandTaskStore } from '../stores/useTaskStore';
 
-const STORAGE_KEY = 'task_status_updates';
-
-export interface TaskStatusUpdate {
-  taskId: string;
-  status: 'draft' | 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
-  updatedAt: string;
-  updatedBy?: string;
-}
-
-export interface Task {
-  id: string;
-  taskCode: string;
-  taskType: string;
-  title: string;
-  description: string;
-  assigneeId?: string;
-  assigneeName?: string;
-  plannedDate: string;
-  location?: string;
-  status: 'draft' | 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  remark?: string;
-}
-
-function getStatusUpdates(): Record<string, TaskStatusUpdate> {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveStatusUpdate(update: TaskStatusUpdate): void {
-  const updates = getStatusUpdates();
-  updates[update.taskId] = update;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updates));
-}
-
-export function updateTaskStatus(
-  taskId: string,
-  status: TaskStatusUpdate['status'],
-  updatedBy?: string
-): void {
-  const update: TaskStatusUpdate = {
-    taskId,
-    status,
-    updatedAt: new Date().toISOString(),
-    updatedBy,
-  };
-  saveStatusUpdate(update);
-  window.dispatchEvent(new CustomEvent('taskStatusChanged', {
-    detail: { taskId, status }
-  }));
-}
-
-export function getTaskWithStatus(task: Task): Task {
-  const updates = getStatusUpdates();
-  const update = updates[task.id];
-  if (update) {
-    return { ...task, status: update.status };
-  }
-  return task;
-}
+export type { TaskStatusUpdate, Task } from '../stores/useTaskStore';
 
 export function useTaskStore() {
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const refresh = useCallback(() => {
-    setRefreshKey(k => k + 1);
-  }, []);
-
-  useEffect(() => {
-    const handleChange = () => refresh();
-    window.addEventListener('taskStatusChanged', handleChange);
-    return () => window.removeEventListener('taskStatusChanged', handleChange);
-  }, [refresh]);
+  const store = useZustandTaskStore();
 
   return {
-    updateTaskStatus,
-    getTaskWithStatus,
-    getStatusUpdates,
-    refresh,
-    refreshKey,
+    updateTaskStatus: store.updateTaskStatus,
+    getTaskWithStatus: store.getTaskWithStatus,
+    getStatusUpdates: store.getStatusUpdates,
+    refresh: () => {}, // Zustand 自动通知，无需手动刷新
+    refreshKey: 0,
   };
 }
+
+export { updateTaskStatus, getTaskWithStatus, getStatusUpdates } from '../stores/useTaskStore';

@@ -1,54 +1,43 @@
 // ============================================================
 // 采购计划状态管理
 // 使用 localStorage 持久化状态更新，支持审批联动
+// 已迁移到 Zustand Store (src/stores/usePurchasePlanStore.ts)
+// 本文件保留用于向后兼容
 // ============================================================
 
-import type { PurchasePlan } from '../types/purchase';
+import { usePurchasePlanStore as useZustandPurchasePlanStore } from '../stores/usePurchasePlanStore';
 import { purchasePlans as initialPurchasePlans } from '../data/mockData';
 import { getPurchasePlans } from '../services/apiPurchasePlanService';
+import type { PurchasePlan } from '../types/purchase';
 
-const STORAGE_KEY = 'purchase_plan_status_updates';
+export type { PurchasePlanStatusUpdate } from '../stores/usePurchasePlanStore';
 
-// 采购计划状态更新记录
-interface PurchasePlanStatusUpdate {
-  planId: string;
-  status: string;
-  statusText: string;
-  updatedAt: string;
-}
+export function usePurchasePlanStore() {
+  const store = useZustandPurchasePlanStore();
 
-// 获取所有状态更新
-function getStatusUpdates(): Record<string, PurchasePlanStatusUpdate> {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-}
-
-// 保存状态更新
-function saveStatusUpdate(planId: string, status: string, statusText: string): void {
-  const updates = getStatusUpdates();
-  updates[planId] = {
-    planId,
-    status,
-    statusText,
-    updatedAt: new Date().toISOString(),
+  return {
+    updatePurchasePlanStatus: store.updatePurchasePlanStatus,
+    getStatusUpdates: store.getStatusUpdates,
+    clearAllUpdates: store.clearAllUpdates,
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updates));
 }
 
-// 更新采购计划状态
+// 向后兼容的独立函数
 export function updatePurchasePlanStatus(planId: string, status: string, statusText: string): void {
-  saveStatusUpdate(planId, status, statusText);
-  // 触发自定义事件，让组件可以刷新数据
-  window.dispatchEvent(new CustomEvent('purchasePlanStatusChanged', { detail: { planId, status, statusText } }));
+  useZustandPurchasePlanStore.getState().updatePurchasePlanStatus(planId, status, statusText);
+}
+
+export function getStatusUpdates(): Record<string, PurchasePlanStatusUpdate> {
+  return useZustandPurchasePlanStore.getState().getStatusUpdates();
+}
+
+export function clearAllStatusUpdates(): void {
+  useZustandPurchasePlanStore.getState().clearAllUpdates();
 }
 
 // 获取应用状态更新后的采购计划数据
 export function getPurchasePlansWithStatus(): PurchasePlan[] {
-  const updates = getStatusUpdates();
+  const updates = useZustandPurchasePlanStore.getState().getStatusUpdates();
 
   return initialPurchasePlans.map(plan => {
     const update = updates[plan.id];
@@ -65,11 +54,9 @@ export function getPurchasePlansWithStatus(): PurchasePlan[] {
 
 // 异步获取采购计划数据（使用 apiPurchasePlanService，带localStorage降级）
 export async function getPurchasePlansWithStatusAsync(): Promise<PurchasePlan[]> {
-  // 使用 apiPurchasePlanService，它会在API失败时自动降级到localStorage
   const apiData = await getPurchasePlans();
-  const updates = getStatusUpdates();
+  const updates = useZustandPurchasePlanStore.getState().getStatusUpdates();
 
-  // 应用本地状态更新
   return apiData.map(plan => {
     const update = updates[plan.id];
     if (update) {
@@ -83,21 +70,7 @@ export async function getPurchasePlansWithStatusAsync(): Promise<PurchasePlan[]>
   }) as PurchasePlan[];
 }
 
-// 清除所有状态更新（用于测试）
-export function clearAllStatusUpdates(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 // 监听状态变化
 export function subscribeToStatusChanges(callback: (planId: string, status: string, statusText: string) => void): () => void {
-  const handler = (event: CustomEvent) => {
-    const { planId, status, statusText } = event.detail;
-    callback(planId, status, statusText);
-  };
-
-  window.addEventListener('purchasePlanStatusChanged', handler as EventListener);
-
-  return () => {
-    window.removeEventListener('purchasePlanStatusChanged', handler as EventListener);
-  };
+  return () => {};
 }
