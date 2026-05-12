@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (purchasePlanService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { PurchasePlan, PurchasePlanItem } from './purchasePlanService';
 import * as purchasePlanService from './purchasePlanService';
 

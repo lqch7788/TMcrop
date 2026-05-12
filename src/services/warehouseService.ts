@@ -3,7 +3,7 @@
  * 提供仓库的本地存储和API获取功能
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { warehouses as defaultWarehouses } from '../data/mockData';
 
 // 仓库数据结构

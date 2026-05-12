@@ -4,7 +4,7 @@
  * 提供统一的数据字典、仓库、基地、温室管理接口
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 
 // ============================================
 // 类型定义

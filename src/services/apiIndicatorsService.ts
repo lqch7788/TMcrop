@@ -3,7 +3,7 @@
  * 对接后端 /api/indicators
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import type { Indicator } from '../pages/types/indicators.types';
 
 // 导入本地服务作为回退

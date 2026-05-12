@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage (productionPlanLocalService)
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import { ProductionPlan } from './productionPlanLocalService';
 import * as productionPlanLocalService from './productionPlanLocalService';
 

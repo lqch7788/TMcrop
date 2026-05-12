@@ -4,7 +4,7 @@
  * API失败时降级到 localStorage
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '../lib/apiClient';
 import type { ProduceInventory, InventoryStatus } from '../types/inventory';
 
 // localStorage 配置
