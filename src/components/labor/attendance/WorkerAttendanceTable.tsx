@@ -244,7 +244,7 @@ export function WorkerAttendanceTable({
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.date}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkIn}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkOut}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.hours} 小时</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{Math.round(att.hours)} 小时</td>
               <td className="px-4 py-3 whitespace-nowrap">
                 <span
                   className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
