@@ -1,14 +1,17 @@
 /**
  * 人事管理聚合页面组件
+ * 使用 API 数据架构：API → enhancedApiClient → React Query → 组件
  */
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
-import { useAuthPermission } from '../../../hooks/usePermission';
 import { Button } from '@/components/ui/button';
+import { usePositions, useCreatePosition, useUpdatePosition, useDeletePosition } from '../../../hooks/usePositionQueries';
+import type { Position, CreatePositionParams, UpdatePositionParams } from '../../../services/apiPositionService';
 
-interface Position {
-  id: number;
+// 页面内部使用的职位类型（适配后端 API）
+interface PositionItem {
+  id: string;
   code: string;
   name: string;
   dept: string;
@@ -20,24 +23,67 @@ interface Position {
   statusClass: string;
 }
 
-const initialPositions: Position[] = [
-  { id: 1, code: 'J001', name: '总经理', dept: '管理层', level: '高层', salary: 15000, staffCount: 1, description: '公司全面管理', status: '启用', statusClass: 'normal' },
-  { id: 2, code: 'J002', name: '技术总监', dept: '技术部', level: '高层', salary: 12000, staffCount: 1, description: '技术研发管理', status: '启用', statusClass: 'normal' },
-  { id: 3, code: 'J003', name: '技术员', dept: '技术部', level: '中层', salary: 8000, staffCount: 3, description: '农业生产技术指导', status: '启用', statusClass: 'normal' },
-  { id: 4, code: 'J004', name: '生产主管', dept: '生产部', level: '中层', salary: 7000, staffCount: 2, description: '生产作业管理', status: '启用', statusClass: 'normal' },
-  { id: 5, code: 'J005', name: '普工', dept: '生产部', level: '基层', salary: 4000, staffCount: 15, description: '日常农事操作', status: '启用', statusClass: 'normal' },
-  { id: 6, code: 'J006', name: '仓库管理员', dept: '后勤部', level: '基层', salary: 4500, staffCount: 2, description: '物资出入库管理', status: '启用', statusClass: 'normal' },
-];
+// 将后端 Position 转换为页面使用的格式
+function adaptPositionToPage(position: Position): PositionItem {
+  return {
+    id: position.id,
+    code: position.code,
+    name: position.name,
+    dept: position.departmentName || '',
+    level: position.level === 1 ? '高层' : position.level === 2 ? '中层' : '基层',
+    salary: 0, // 后端 positions 表无此字段
+    staffCount: 0, // 后端 positions 表无此字段
+    description: position.description || '',
+    status: position.status === 'active' ? '启用' : '停用',
+    statusClass: position.status === 'active' ? 'normal' : 'disabled',
+  };
+}
 
+// 将页面格式转换为后端 API 格式（创建）
+function adaptPageToCreateParams(item: Partial<PositionItem>, deptOid?: string): CreatePositionParams {
+  const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
+  return {
+    code: item.code || '',
+    name: item.name || '',
+    departmentOid: deptOid || '',
+    departmentName: item.dept || '',
+    level: levelMap[item.level || '基层'] || 3,
+    description: item.description || '',
+    sortOrder: 0,
+  };
+}
+
+// 将页面格式转换为后端 API 格式（更新）
+function adaptPageToUpdateParams(item: Partial<PositionItem>): UpdatePositionParams {
+  const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
+  return {
+    code: item.code,
+    name: item.name,
+    departmentName: item.dept,
+    level: levelMap[item.level || '基层'] || 3,
+    description: item.description,
+    status: item.status === '启用' ? 'active' : 'inactive',
+  };
+}
 
 export function PersonnelManagementPage() {
-  const [positions, setPositions] = useState<Position[]>(initialPositions);
+  // ========== 数据获取（从 API）==========
+  const { data: positions = [], isLoading, refetch } = usePositions();
+  const createPositionMutation = useCreatePosition();
+  const updatePositionMutation = useUpdatePosition();
+  const deletePositionMutation = useDeletePosition();
+
+  // 将 API 数据转换为页面格式
+  const pagePositions: PositionItem[] = useMemo(() => {
+    return positions.map(adaptPositionToPage);
+  }, [positions]);
+
+  // 页面状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const totalPages = Math.ceil(positions.length / pageSize);
+  const totalPages = Math.ceil(pagePositions.length / pageSize);
 
-  // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
+  // 权限检查
   const canCreate = true;
   const canEdit = true;
   const canDelete = true;
@@ -51,7 +97,7 @@ export function PersonnelManagementPage() {
 
   // 批量编辑状态
   const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
-  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<Position>>>({});
+  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<PositionItem>>>({});
   const [selectedRecordId, setSelectedRecordId] = useState('');
 
   // 弹窗状态
@@ -60,16 +106,21 @@ export function PersonnelManagementPage() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
-  const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+  const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
 
-  const paginatedPositions = positions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedPositions = pagePositions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 刷新数据
+  const refreshData = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   // 批量选择操作
   const handleSelectAll = () => {
     if (selectedRows.length === paginatedPositions.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(paginatedPositions.map(p => p.id.toString()));
+      setSelectedRows(paginatedPositions.map(p => p.id));
     }
   };
 
@@ -98,18 +149,26 @@ export function PersonnelManagementPage() {
     setShowFormModal(true);
   };
 
-  const handleEdit = (position: Position) => {
+  const handleEdit = (position: PositionItem) => {
     setEditingPosition(position);
     setShowFormModal(true);
   };
 
-  const handleSave = (data: Partial<Position>) => {
-    if (editingPosition) {
-      setPositions(prev => prev.map(p => p.id === editingPosition.id ? { ...p, ...data } : p));
-    } else {
-      const newId = Math.max(...positions.map(p => p.id)) + 1;
-      const code = 'J' + String(newId).padStart(3, '0');
-      setPositions(prev => [...prev, { ...data, id: newId, code, staffCount: 0, statusClass: data.status === '启用' ? 'normal' : 'disabled' } as Position]);
+  const handleSave = async (data: Partial<PositionItem>) => {
+    try {
+      if (editingPosition) {
+        // 更新
+        const updates = adaptPageToUpdateParams(data);
+        await updatePositionMutation.mutateAsync({ id: editingPosition.id, updates });
+      } else {
+        // 创建
+        const params = adaptPageToCreateParams(data);
+        await createPositionMutation.mutateAsync(params);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('保存职位失败:', error);
+      alert('保存失败，请重试');
     }
     setShowFormModal(false);
   };
@@ -128,13 +187,20 @@ export function PersonnelManagementPage() {
     }
   };
 
-  const handleConfirmBatchEdit = () => {
-    editedRecordIds.forEach(id => {
-      const editedData = editedRecords[id];
-      if (editedData) {
-        setPositions(prev => prev.map(p => p.id.toString() === id ? { ...p, ...editedData } : p));
+  const handleConfirmBatchEdit = async () => {
+    try {
+      for (const id of editedRecordIds) {
+        const editedData = editedRecords[id];
+        if (editedData) {
+          const updates = adaptPageToUpdateParams(editedData);
+          await updatePositionMutation.mutateAsync({ id, updates });
+        }
       }
-    });
+      refreshData();
+    } catch (error) {
+      console.error('批量更新职位失败:', error);
+      alert('批量更新失败，请重试');
+    }
     setShowBatchEditModal(false);
     handleCancelBatch();
   };
@@ -152,8 +218,16 @@ export function PersonnelManagementPage() {
     }
   };
 
-  const handleConfirmBatchDelete = () => {
-    setPositions(prev => prev.filter(p => !selectedRows.includes(p.id.toString())));
+  const handleConfirmBatchDelete = async () => {
+    try {
+      for (const id of selectedRows) {
+        await deletePositionMutation.mutateAsync(id);
+      }
+      refreshData();
+    } catch (error) {
+      console.error('批量删除职位失败:', error);
+      alert('批量删除失败，请重试');
+    }
     setShowDeleteWarning(false);
     handleCancelBatch();
   };
@@ -176,17 +250,14 @@ export function PersonnelManagementPage() {
   };
 
   const handleDoExport = async () => {
-    const selectedData = positions.filter(p => selectedRows.includes(p.id.toString()));
-    const headers = ['职务编号', '职务名称', '所属部门', '职务级别', '基本工资(元)', '岗位人数', '职责描述', '状态'];
+    const selectedData = pagePositions.filter(p => selectedRows.includes(p.id));
+    const headers = ['职务编号', '职务名称', '所属部门', '职务级别', '状态'];
 
     const exportData = selectedData.map(p => ({
       '职务编号': p.code,
       '职务名称': p.name,
       '所属部门': p.dept,
       '职务级别': p.level,
-      '基本工资(元)': p.salary,
-      '岗位人数': p.staffCount,
-      '职责描述': p.description,
       '状态': p.status,
     }));
 
@@ -245,6 +316,15 @@ export function PersonnelManagementPage() {
     handleCancelBatch();
   };
 
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 头部 */}
@@ -268,7 +348,7 @@ export function PersonnelManagementPage() {
               <ClipboardCheck className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{pagePositions.length}</p>
               <p className="text-xs text-gray-500">职务总数</p>
             </div>
           </div>
@@ -279,7 +359,7 @@ export function PersonnelManagementPage() {
               <span className="text-green-600 text-lg">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.filter(p => p.status === '启用').length}</p>
+              <p className="text-2xl font-bold text-gray-900">{pagePositions.filter(p => p.status === '启用').length}</p>
               <p className="text-xs text-gray-500">启用中</p>
             </div>
           </div>
@@ -290,7 +370,7 @@ export function PersonnelManagementPage() {
               <span className="text-amber-600 text-lg">!</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
+              <p className="text-2xl font-bold text-gray-900">{pagePositions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
               <p className="text-xs text-gray-500">在职人数</p>
             </div>
           </div>
@@ -430,51 +510,59 @@ export function PersonnelManagementPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-300">
-              {paginatedPositions.map((pos) => (
-                <tr key={pos.id} className="hover:bg-blue-100 transition-colors">
-                  {(batchEditMode || batchDeleteMode || exportMode) && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.includes(pos.id.toString())}
-                        onChange={() => handleSelectRow(pos.id.toString())}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{pos.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{pos.salary}</td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{pos.staffCount}人</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      pos.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {pos.status}
-                    </span>
+              {paginatedPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                    暂无数据
                   </td>
-                  {!(batchEditMode || batchDeleteMode || exportMode) && (
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(pos)}
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="查看">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  )}
                 </tr>
-              ))}
+              ) : (
+                paginatedPositions.map((pos) => (
+                  <tr key={pos.id} className="hover:bg-blue-100 transition-colors">
+                    {(batchEditMode || batchDeleteMode || exportMode) && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(pos.id)}
+                          onChange={() => handleSelectRow(pos.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{pos.code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</td>
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">-</td>
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">-</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        pos.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {pos.status}
+                      </span>
+                    </td>
+                    {!(batchEditMode || batchDeleteMode || exportMode) && (
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(pos)}
+                            title="编辑"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="查看">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -538,7 +626,7 @@ export function PersonnelManagementPage() {
       <PositionBatchEditModal
         isOpen={showBatchEditModal}
         selectedRows={selectedRows}
-        records={positions}
+        records={pagePositions}
         editedRecordIds={editedRecordIds}
         editedRecords={editedRecords}
         selectedRecordId={selectedRecordId}

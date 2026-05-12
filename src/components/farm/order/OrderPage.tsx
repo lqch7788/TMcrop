@@ -106,9 +106,9 @@ export default function OrderPage() {
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
 
-  // 筛选后的数据
+  // 筛选后的数据 - 按创建时间倒序排列，确保新建订单排在第一位
   const filteredData = useMemo(() => {
-    return orders.filter(item => {
+    const filtered = orders.filter(item => {
       if (filters.orderCode && !item.orderCode.includes(filters.orderCode)) return false;
       if (filters.orderName && !item.orderName.includes(filters.orderName)) return false;
       if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
@@ -117,6 +117,12 @@ export default function OrderPage() {
       if (filters.endDate && item.orderDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
       return true;
+    });
+    // 按创建时间倒序排列（新建的排在前面）
+    return filtered.sort((a, b) => {
+      const timeA = a.createTime || '';
+      const timeB = b.createTime || '';
+      return timeB.localeCompare(timeA);
     });
   }, [orders, filters]);
 

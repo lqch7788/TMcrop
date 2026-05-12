@@ -1,13 +1,16 @@
 /**
  * 作物订单数据 API 服务
  * 对接后端 /api/crop-orders
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { CropOrder, CropOrderStatus } from '../types/crop';
-
-// 导入本地服务作为回退
-import * as localService from './cropOrderService';
 
 /**
  * 将前端驼峰命名字段转换为后端蛇形命名字段（用于创建/更新订单）
@@ -48,149 +51,132 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
 
 /**
  * 获取所有订单
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getOrders(): Promise<CropOrder[]> {
-  try {
-    return await apiClient.get<CropOrder[]>('/crop-orders');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getOrders();
-  }
+  // 使用 network-first 策略：优先从 API 获取，失败时从缓存读取
+  return await enhancedApiClient.get<CropOrder[]>('/crop-orders', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID获取单个订单
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getOrderById(id: string): Promise<CropOrder | undefined> {
-  try {
-    return await apiClient.get<CropOrder>(`/crop-orders/${id}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getOrderById(id);
-  }
+  return await enhancedApiClient.get<CropOrder>(`/crop-orders/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID数组获取多个订单
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getOrdersByIds(ids: string[]): Promise<CropOrder[]> {
-  try {
-    return await apiClient.get<CropOrder[]>(`/crop-orders/batch?ids=${ids.join(',')}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getOrdersByIds(ids);
-  }
+  return await enhancedApiClient.get<CropOrder[]>(`/crop-orders/batch?ids=${ids.join(',')}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 创建订单
+ * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 export async function createOrder(
   orderData: Omit<CropOrder, 'id' | 'orderCode' | 'createTime' | 'updateTime'>
 ): Promise<CropOrder> {
-  try {
-    // 转换字段名为蛇形格式以匹配后端期望
-    const snakeData = toSnakeCase(orderData as Record<string, unknown>);
-    console.log('[createOrder] 发送的数据:', JSON.stringify(snakeData, null, 2));
-    const result = await apiClient.post<CropOrder>('/crop-orders', snakeData);
-    console.log('[createOrder] 返回的数据:', JSON.stringify(result, null, 2));
-    return result;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.createOrder(orderData);
-  }
+  // 转换字段名为蛇形格式以匹配后端期望
+  const snakeData = toSnakeCase(orderData as Record<string, unknown>);
+  console.log('[createOrder] 发送的数据:', JSON.stringify(snakeData, null, 2));
+
+  const result = await enhancedApiClient.post<CropOrder>('/crop-orders', snakeData, {
+    offlineQueue: true,
+    useCache: true,
+  });
+
+  console.log('[createOrder] 返回的数据:', JSON.stringify(result, null, 2));
+  return result;
 }
 
 /**
  * 更新订单
+ * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 export async function updateOrder(id: string, updates: Partial<CropOrder>): Promise<CropOrder | null> {
-  try {
-    // 转换字段名为蛇形格式以匹配后端期望
-    const snakeData = toSnakeCase(updates as Record<string, unknown>);
-    const result = await apiClient.put<{ id: string }>(`/crop-orders/${id}`, snakeData);
-    return result ? { ...updates, id } as CropOrder : null;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateOrder(id, updates);
-  }
+  // 转换字段名为蛇形格式以匹配后端期望
+  const snakeData = toSnakeCase(updates as Record<string, unknown>);
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-orders/${id}`, snakeData, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as CropOrder : null;
 }
 
 /**
  * 删除订单
+ * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 export async function deleteOrder(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/crop-orders/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteOrder(id);
-  }
+  await enhancedApiClient.delete(`/crop-orders/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 批量删除订单
+ * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 export async function deleteOrders(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.post('/crop-orders/batch/delete', { ids });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteOrders(ids);
-  }
+  await enhancedApiClient.post('/crop-orders/batch/delete', { ids }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 关联实例到订单
+ * 降级策略：API → 离线队列
  */
 export async function linkInstances(orderId: string, instanceIds: string[]): Promise<boolean> {
-  try {
-    await apiClient.post(`/crop-orders/${orderId}/link-instances`, { instanceIds });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.linkInstances(orderId, instanceIds);
-  }
+  await enhancedApiClient.post(`/crop-orders/${orderId}/link-instances`, { instanceIds }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 从订单取消关联实例
+ * 降级策略：API → 离线队列
  */
 export async function unlinkInstances(orderId: string, instanceIds: string[]): Promise<boolean> {
-  try {
-    await apiClient.post(`/crop-orders/${orderId}/unlink-instances`, { instanceIds });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.unlinkInstances(orderId, instanceIds);
-  }
+  await enhancedApiClient.post(`/crop-orders/${orderId}/unlink-instances`, { instanceIds }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 更新订单状态
+ * 降级策略：API → 离线队列
  */
 export async function updateOrderStatus(id: string, status: CropOrderStatus): Promise<boolean> {
-  try {
-    await apiClient.put(`/crop-orders/${id}/status`, { status });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateOrderStatus(id, status);
-  }
+  await enhancedApiClient.put(`/crop-orders/${id}/status`, { status }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 重置数据到默认状态
+ * 仅调用后端，不做降级处理
  */
 export async function resetOrders(): Promise<void> {
-  try {
-    await apiClient.post('/crop-orders/reset');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-  }
-  return localService.resetOrders();
+  await enhancedApiClient.post('/crop-orders/reset');
 }
 
 /**
@@ -205,13 +191,13 @@ export interface OrderStats {
 
 /**
  * 从后端获取订单统计数据（感知后端stats路由）
- * 如果API调用失败，则返回null，前端需要自行计算
+ * 降级策略：API 失败时返回 null，让前端自行计算
  */
 export async function getOrderStats(): Promise<OrderStats | null> {
   try {
     // 后端返回: { total, pending, confirmed, processing, shipped, delivered, cancelled, total_amount }
     // 前端期望: { total, inProgress, completed, thisMonth }
-    const backendStats = await apiClient.get<{
+    const backendStats = await enhancedApiClient.get<{
       total: number;
       pending: number;
       confirmed: number;
@@ -220,7 +206,10 @@ export async function getOrderStats(): Promise<OrderStats | null> {
       delivered: number;
       cancelled: number;
       total_amount: number;
-    }>('/crop-orders/stats/summary');
+    }>('/crop-orders/stats/summary', {
+      useCache: true,
+      cacheStrategy: 'stale-while-revalidate',
+    });
 
     return {
       total: backendStats.total,

@@ -2,76 +2,75 @@
  * 作物实例数据 API 服务
  * 对接后端 /api/crop-instances
  * 核心功能：管理作物实例的全生命周期
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '../types/crop';
 
-// 导入本地服务作为回退
-import * as localService from './cropInstanceService';
-
 /**
  * 初始化数据
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function initInstances(): Promise<CropInstance[]> {
-  try {
-    return await apiClient.get<CropInstance[]>('/crop-instances/init');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.initInstances();
-  }
+  return await enhancedApiClient.get<CropInstance[]>('/crop-instances/init', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 获取所有作物实例
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstances(): Promise<CropInstance[]> {
-  try {
-    return await apiClient.get<CropInstance[]>('/crop-instances');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getInstances();
-  }
+  return await enhancedApiClient.get<CropInstance[]>('/crop-instances', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID获取单个作物实例
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstanceById(id: string): Promise<CropInstance | undefined> {
-  try {
-    return await apiClient.get<CropInstance>(`/crop-instances/${id}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getInstanceById(id);
-  }
+  return await enhancedApiClient.get<CropInstance>(`/crop-instances/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID数组获取多个作物实例
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstancesByIds(ids: string[]): Promise<CropInstance[]> {
-  try {
-    return await apiClient.get<CropInstance[]>(`/crop-instances/batch?ids=${ids.join(',')}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getInstancesByIds(ids);
-  }
+  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/batch?ids=${ids.join(',')}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据订单ID获取关联的作物实例
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstancesByOrderId(orderId: string): Promise<CropInstance[]> {
-  try {
-    return await apiClient.get<CropInstance[]>(`/crop-instances/order/${orderId}`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getInstancesByOrderId(orderId);
-  }
+  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/order/${orderId}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 创建作物实例
+ * 降级策略：API → 离线队列
  */
 export async function createInstance(
   cropInfo: {
@@ -88,107 +87,90 @@ export async function createInstance(
     sourceInstanceId?: string;
   }
 ): Promise<CropInstance> {
-  try {
-    return await apiClient.post<CropInstance>('/crop-instances', {
-      cropInfo,
-      sourceOrigin,
-      initialQuantity,
-      options
-    });
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.createInstance(cropInfo, sourceOrigin, initialQuantity, options);
-  }
+  return await enhancedApiClient.post<CropInstance>('/crop-instances', {
+    cropInfo,
+    sourceOrigin,
+    initialQuantity,
+    options
+  }, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
  * 更新作物实例
+ * 降级策略：API → 离线队列
  */
 export async function updateInstance(id: string, updates: Partial<CropInstance>): Promise<CropInstance | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/crop-instances/${id}`, updates);
-    return result ? { ...updates, id } as CropInstance : null;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateInstance(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-instances/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as CropInstance : null;
 }
 
 /**
  * 删除作物实例
+ * 降级策略：API → 离线队列
  */
 export async function deleteInstance(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/crop-instances/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteInstance(id);
-  }
+  await enhancedApiClient.delete(`/crop-instances/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 批量删除作物实例
+ * 降级策略：API → 离线队列
  */
 export async function deleteInstances(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/crop-instances/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteInstances(ids);
-  }
+  await enhancedApiClient.delete(`/crop-instances/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 更新实例数量
- * @param id 实例ID
- * @param type 操作类型：seedling-育苗，plant-定植，harvest-采收
- * @param quantity 数量变化
+ * 降级策略：API → 离线队列
  */
 export async function updateQuantity(id: string, type: 'seedling' | 'plant' | 'harvest', quantity: number): Promise<boolean> {
-  try {
-    await apiClient.post(`/crop-instances/${id}/update-quantity`, { type, quantity });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateQuantity(id, type, quantity);
-  }
+  await enhancedApiClient.post(`/crop-instances/${id}/update-quantity`, { type, quantity }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 更新实例状态
+ * 降级策略：API → 离线队列
  */
 export async function updateStatus(id: string, status: CropInstanceStatus): Promise<boolean> {
-  try {
-    await apiClient.put(`/crop-instances/${id}/status`, { status });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateStatus(id, status);
-  }
+  await enhancedApiClient.put(`/crop-instances/${id}/status`, { status }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 获取实例的完整溯源链
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getTraceChain(id: string): Promise<CropTraceChain | null> {
   try {
-    return await apiClient.get<CropTraceChain>(`/crop-instances/${id}/trace-chain`);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getTraceChain(id);
+    return await enhancedApiClient.get<CropTraceChain>(`/crop-instances/${id}/trace-chain`, {
+      useCache: true,
+      cacheStrategy: 'network-first',
+    });
+  } catch {
+    return null;
   }
 }
 
 /**
- * 重置数据到默认状态
+ * 重置数据到默认状态（仅调用后端）
  */
 export async function resetInstances(): Promise<void> {
-  try {
-    await apiClient.post('/crop-instances/reset');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-  }
-  return localService.resetInstances();
+  await enhancedApiClient.post('/crop-instances/reset');
 }

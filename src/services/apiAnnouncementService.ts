@@ -1,154 +1,123 @@
 /**
  * 公告数据 API 服务
  * 对接后端 /api/announcements
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import type { Notice } from '../pages/types/announcement.types';
 
-// 导入本地服务作为回退
-import * as localService from './announcementService';
-
 /**
  * 获取所有公告
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getNotices(): Promise<Notice[]> {
-  try {
-    const response = await apiClient.get<{ data: Notice[] }>('/announcements');
-    const data = response.data || [];
-    // 如果 API 返回空数据，检查 localStorage 是否有数据
-    if (data.length === 0) {
-      const localData = localService.getNotices();
-      if (localData.length > 0) {
-        console.warn('API 返回空数据，降级到 localStorage:', localData.length, '条');
-        return localData;
-      }
-    }
-    return data;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getNotices();
-  }
+  return await enhancedApiClient.get<Notice[]>('/announcements', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID获取单个公告
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getNoticeById(id: string): Promise<Notice | undefined> {
-  try {
-    const response = await apiClient.get<{ data: Notice }>(`/announcements/${id}`);
-    return response.data;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getNoticeById(id);
-  }
+  return await enhancedApiClient.get<Notice>(`/announcements/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
 /**
  * 根据ID数组获取多个公告
+ * 降级策略：API → IndexedDB 缓存
  */
 export async function getNoticesByIds(ids: string[]): Promise<Notice[]> {
-  try {
-    // API 不支持批量查询，降级到 localStorage
-    return localService.getNoticesByIds(ids);
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.getNoticesByIds(ids);
-  }
+  // API 可能不支持批量查询，先获取所有再过滤
+  const allNotices = await getNotices();
+  return allNotices.filter(notice => ids.includes(notice.id));
 }
 
 /**
  * 创建公告
+ * 降级策略：API → 离线队列
  */
 export async function createNotice(
   noticeData: Omit<Notice, 'id' | 'code'>
 ): Promise<Notice> {
-  try {
-    const response = await apiClient.post<{ id: string; code: string }>('/announcements', noticeData);
-    return {
-      ...noticeData,
-      id: response.id,
-      code: response.code,
-    } as Notice;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.createNotice(noticeData);
-  }
+  return await enhancedApiClient.post<Notice>('/announcements', noticeData, {
+    offlineQueue: true,
+    useCache: true,
+  });
 }
 
 /**
  * 更新公告
+ * 降级策略：API → 离线队列
  */
 export async function updateNotice(id: string, updates: Partial<Notice>): Promise<Notice | null> {
-  try {
-    await apiClient.put(`/announcements/${id}`, updates);
-    return { ...updates, id } as Notice;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateNotice(id, updates);
-  }
+  const result = await enhancedApiClient.put<Notice>(`/announcements/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result;
 }
 
 /**
  * 删除公告
+ * 降级策略：API → 离线队列
  */
 export async function deleteNotice(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/announcements/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteNotice(id);
-  }
+  await enhancedApiClient.delete(`/announcements/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 批量删除公告
+ * 降级策略：API → 离线队列
  */
 export async function deleteNotices(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete('/announcements/batch', { ids });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.deleteNotices(ids);
-  }
+  await enhancedApiClient.delete(`/announcements/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 更新公告状态
+ * 降级策略：API → 离线队列
  */
 export async function updateNoticeStatus(id: string, status: string): Promise<boolean> {
-  try {
-    await apiClient.put(`/announcements/${id}/status`, { status });
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.updateNoticeStatus(id, status);
-  }
+  await enhancedApiClient.put(`/announcements/${id}/status`, { status }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 增加阅读数
+ * 降级策略：API → 离线队列
  */
 export async function incrementReadCount(id: string): Promise<boolean> {
-  try {
-    await apiClient.post(`/announcements/${id}/read`);
-    return true;
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    return localService.incrementReadCount(id);
-  }
+  await enhancedApiClient.post(`/announcements/${id}/read`, undefined, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 /**
  * 重置公告数据
+ * 降级策略：API → 离线队列
  */
 export async function resetNotices(): Promise<void> {
-  try {
-    await apiClient.post('/announcements/reset');
-  } catch (error) {
-    console.warn('API 调用失败，降级到 localStorage:', error);
-    localService.resetNotices();
-  }
+  await enhancedApiClient.post('/announcements/reset', undefined, {
+    offlineQueue: true,
+  });
 }

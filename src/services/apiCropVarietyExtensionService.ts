@@ -1,15 +1,17 @@
 /**
  * 作物品种库扩展 API 服务
- * 调用后端 API 存储用户新增的类型、品种、子品种
- * API失败时降级到 localStorage
+ * 对接后端 API 存储用户新增的类型、品种，子品种
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
-const API_BASE = '/api/crop-varieties/extensions';
+import { enhancedApiClient } from '../lib/apiClient';
 
-// localStorage 配置
-const TYPE_EXT_STORAGE_KEY = 'yuanxingtu_type_extensions';
-const VARIETY_EXT_STORAGE_KEY = 'yuanxingtu_variety_extensions';
-const SUB_VARIETY1_EXT_STORAGE_KEY = 'yuanxingtu_subvariety1_extensions';
+const API_BASE = '/api/crop-varieties/extensions';
 
 // 类型扩展
 export interface TypeExtension {
@@ -51,322 +53,236 @@ export interface SubVariety1Extension {
   updated_at?: string;
 }
 
-// 从 localStorage 读取数据
-function getStoredTypeExtensions(): TypeExtension[] {
-  try {
-    const stored = localStorage.getItem(TYPE_EXT_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
+// ==================== 类型扩展 ====================
 
-function getStoredVarietyExtensions(): VarietyExtension[] {
-  try {
-    const stored = localStorage.getItem(VARIETY_EXT_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function getStoredSubVariety1Extensions(): SubVariety1Extension[] {
-  try {
-    const stored = localStorage.getItem(SUB_VARIETY1_EXT_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-// 保存数据到 localStorage
-function saveTypeExtensions(data: TypeExtension[]): void {
-  localStorage.setItem(TYPE_EXT_STORAGE_KEY, JSON.stringify(data));
-}
-
-function saveVarietyExtensions(data: VarietyExtension[]): void {
-  localStorage.setItem(VARIETY_EXT_STORAGE_KEY, JSON.stringify(data));
-}
-
-function saveSubVariety1Extensions(data: SubVariety1Extension[]): void {
-  localStorage.setItem(SUB_VARIETY1_EXT_STORAGE_KEY, JSON.stringify(data));
-}
-
-// 获取所有类型扩展（带localStorage降级）
+/**
+ * 获取所有类型扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getAllTypeExtensions(): Promise<TypeExtension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/types`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取类型扩展失败');
-    saveTypeExtensions(data.data || []);
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取类型扩展失败，降级到localStorage:', error);
-    return getStoredTypeExtensions();
-  }
+  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 获取指定类别的类型扩展（带localStorage降级）
+/**
+ * 获取指定类别的类型扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getTypeExtensionsByCategory(categoryCode: string): Promise<TypeExtension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/types/${categoryCode}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取类型扩展失败');
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取类型扩展失败，降级到localStorage:', error);
-    const stored = getStoredTypeExtensions();
-    return stored.filter(t => t.category_code === categoryCode);
-  }
+  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types/${categoryCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 创建类型扩展
+/**
+ * 创建类型扩展
+ * 降级策略：API → 离线队列
+ */
 export async function addTypeExtension(
   categoryCode: string,
   categoryName: string,
   typeCode: string,
   typeName: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/types`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      category_code: categoryCode,
-      category_name: categoryName,
-      type_code: typeCode,
-      type_name: typeName
-    })
+): Promise<TypeExtension> {
+  return await enhancedApiClient.post<TypeExtension>(`${API_BASE}/types`, {
+    category_code: categoryCode,
+    category_name: categoryName,
+    type_code: typeCode,
+    type_name: typeName
+  }, {
+    offlineQueue: true,
+    useCache: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '创建类型扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredTypeExtensions();
-  stored.push(data.data);
-  saveTypeExtensions(stored);
 }
 
-// 删除类型扩展
-export async function deleteTypeExtension(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/types/${id}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '删除类型扩展失败');
-  // 从 localStorage 移除
-  const stored = getStoredTypeExtensions();
-  const filtered = stored.filter(t => t.id !== id);
-  saveTypeExtensions(filtered);
+/**
+ * 删除类型扩展
+ * 降级策略：API → 离线队列
+ */
+export async function deleteTypeExtension(id: string): Promise<boolean> {
+  await enhancedApiClient.delete(`${API_BASE}/types/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
-// 更新类型扩展
+/**
+ * 更新类型扩展
+ * 降级策略：API → 离线队列
+ */
 export async function updateTypeExtension(
   id: string,
   typeName: string,
   sortOrder?: number,
   status?: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/types/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type_name: typeName,
-      sort_order: sortOrder,
-      status
-    })
+): Promise<boolean> {
+  await enhancedApiClient.put(`${API_BASE}/types/${id}`, {
+    type_name: typeName,
+    sort_order: sortOrder,
+    status
+  }, {
+    offlineQueue: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '更新类型扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredTypeExtensions();
-  const index = stored.findIndex(t => t.id === id);
-  if (index !== -1) {
-    stored[index] = { ...stored[index], type_name: typeName, sort_order: sortOrder, status };
-    saveTypeExtensions(stored);
-  }
+  return true;
 }
 
-// 获取所有品种扩展（带localStorage降级）
+// ==================== 品种扩展 ====================
+
+/**
+ * 获取所有品种扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/varieties`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取品种扩展失败');
-    saveVarietyExtensions(data.data || []);
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取品种扩展失败，降级到localStorage:', error);
-    return getStoredVarietyExtensions();
-  }
+  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 获取指定类型的品种扩展（带localStorage降级）
+/**
+ * 获取指定类型的品种扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getVarietyExtensionsByType(categoryCode: string, typeCode: string): Promise<VarietyExtension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/varieties/${categoryCode}/${typeCode}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取品种扩展失败');
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取品种扩展失败，降级到localStorage:', error);
-    const stored = getStoredVarietyExtensions();
-    return stored.filter(v => v.category_code === categoryCode && v.type_code === typeCode);
-  }
+  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties/${categoryCode}/${typeCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 创建品种扩展
+/**
+ * 创建品种扩展
+ * 降级策略：API → 离线队列
+ */
 export async function addVarietyExtension(
   categoryCode: string,
   typeCode: string,
   varietyCode: string,
   varietyName: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/varieties`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      category_code: categoryCode,
-      type_code: typeCode,
-      variety_code: varietyCode,
-      variety_name: varietyName
-    })
+): Promise<VarietyExtension> {
+  return await enhancedApiClient.post<VarietyExtension>(`${API_BASE}/varieties`, {
+    category_code: categoryCode,
+    type_code: typeCode,
+    variety_code: varietyCode,
+    variety_name: varietyName
+  }, {
+    offlineQueue: true,
+    useCache: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '创建品种扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredVarietyExtensions();
-  stored.push(data.data);
-  saveVarietyExtensions(stored);
 }
 
-// 删除品种扩展
-export async function deleteVarietyExtension(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/varieties/${id}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '删除品种扩展失败');
-  // 从 localStorage 移除
-  const stored = getStoredVarietyExtensions();
-  const filtered = stored.filter(v => v.id !== id);
-  saveVarietyExtensions(filtered);
+/**
+ * 删除品种扩展
+ * 降级策略：API → 离线队列
+ */
+export async function deleteVarietyExtension(id: string): Promise<boolean> {
+  await enhancedApiClient.delete(`${API_BASE}/varieties/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
-// 更新品种扩展
+/**
+ * 更新品种扩展
+ * 降级策略：API → 离线队列
+ */
 export async function updateVarietyExtension(
   id: string,
   varietyName: string,
   sortOrder?: number,
   status?: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/varieties/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      variety_name: varietyName,
-      sort_order: sortOrder,
-      status
-    })
+): Promise<boolean> {
+  await enhancedApiClient.put(`${API_BASE}/varieties/${id}`, {
+    variety_name: varietyName,
+    sort_order: sortOrder,
+    status
+  }, {
+    offlineQueue: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '更新品种扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredVarietyExtensions();
-  const index = stored.findIndex(v => v.id === id);
-  if (index !== -1) {
-    stored[index] = { ...stored[index], variety_name: varietyName, sort_order: sortOrder, status };
-    saveVarietyExtensions(stored);
-  }
+  return true;
 }
 
-// 获取所有子品种1扩展（带localStorage降级）
+// ==================== 子品种1扩展 ====================
+
+/**
+ * 获取所有子品种1扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getAllSubVariety1Extensions(): Promise<SubVariety1Extension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/subvariety1`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取子品种1扩展失败');
-    saveSubVariety1Extensions(data.data || []);
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取子品种1扩展失败，降级到localStorage:', error);
-    return getStoredSubVariety1Extensions();
-  }
+  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 获取指定品种的子品种1扩展（带localStorage降级）
+/**
+ * 获取指定品种的子品种1扩展
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getSubVariety1ExtensionsByVariety(
   categoryCode: string,
   typeCode: string,
   varietyCode: string
 ): Promise<SubVariety1Extension[]> {
-  try {
-    const res = await fetch(`${API_BASE}/subvariety1/${categoryCode}/${typeCode}/${varietyCode}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || '获取子品种1扩展失败');
-    return data.data || [];
-  } catch (error) {
-    console.warn('[品种扩展API] 获取子品种1扩展失败，降级到localStorage:', error);
-    const stored = getStoredSubVariety1Extensions();
-    return stored.filter(s => s.category_code === categoryCode && s.type_code === typeCode && s.variety_code === varietyCode);
-  }
+  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1/${categoryCode}/${typeCode}/${varietyCode}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
 }
 
-// 创建子品种1扩展
+/**
+ * 创建子品种1扩展
+ * 降级策略：API → 离线队列
+ */
 export async function addSubVariety1Extension(
   categoryCode: string,
   typeCode: string,
   varietyCode: string,
   subVariety1Code: string,
   subVariety1Name: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/subvariety1`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      category_code: categoryCode,
-      type_code: typeCode,
-      variety_code: varietyCode,
-      sub_variety1_code: subVariety1Code,
-      sub_variety1_name: subVariety1Name
-    })
+): Promise<SubVariety1Extension> {
+  return await enhancedApiClient.post<SubVariety1Extension>(`${API_BASE}/subvariety1`, {
+    category_code: categoryCode,
+    type_code: typeCode,
+    variety_code: varietyCode,
+    sub_variety1_code: subVariety1Code,
+    sub_variety1_name: subVariety1Name
+  }, {
+    offlineQueue: true,
+    useCache: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '创建子品种1扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredSubVariety1Extensions();
-  stored.push(data.data);
-  saveSubVariety1Extensions(stored);
 }
 
-// 删除子品种1扩展
-export async function deleteSubVariety1Extension(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/subvariety1/${id}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '删除子品种1扩展失败');
-  // 从 localStorage 移除
-  const stored = getStoredSubVariety1Extensions();
-  const filtered = stored.filter(s => s.id !== id);
-  saveSubVariety1Extensions(filtered);
+/**
+ * 删除子品种1扩展
+ * 降级策略：API → 离线队列
+ */
+export async function deleteSubVariety1Extension(id: string): Promise<boolean> {
+  await enhancedApiClient.delete(`${API_BASE}/subvariety1/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
-// 更新子品种1扩展
+/**
+ * 更新子品种1扩展
+ * 降级策略：API → 离线队列
+ */
 export async function updateSubVariety1Extension(
   id: string,
   subVariety1Name: string,
   sortOrder?: number,
   status?: string
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/subvariety1/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sub_variety1_name: subVariety1Name,
-      sort_order: sortOrder,
-      status
-    })
+): Promise<boolean> {
+  await enhancedApiClient.put(`${API_BASE}/subvariety1/${id}`, {
+    sub_variety1_name: subVariety1Name,
+    sort_order: sortOrder,
+    status
+  }, {
+    offlineQueue: true,
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '更新子品种1扩展失败');
-  // 同步到 localStorage
-  const stored = getStoredSubVariety1Extensions();
-  const index = stored.findIndex(s => s.id === id);
-  if (index !== -1) {
-    stored[index] = { ...stored[index], sub_variety1_name: subVariety1Name, sort_order: sortOrder, status };
-    saveSubVariety1Extensions(stored);
-  }
+  return true;
 }

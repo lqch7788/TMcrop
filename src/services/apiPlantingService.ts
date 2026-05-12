@@ -1,12 +1,16 @@
 /**
  * 种植数据 API 服务
  * 对接后端 /api/plantings
- * API失败时降级到 localStorage (plantingService)
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { Planting, PlantingStatus, SourceType } from '../types/crop';
-import * as plantingService from './plantingService';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendPlanting {
@@ -123,122 +127,149 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
   };
 }
 
-// ==================== API 函数（降级到localStorage）====================
-
+/**
+ * 获取所有种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPlantings(): Promise<Planting[]> {
-  try {
-    const data = await apiClient.get<BackendPlanting[]>('/plantings');
-    return transformPlantingFromBackend(data) as Planting[];
-  } catch (error) {
-    console.warn('[种植API] 获取失败，降级到localStorage:', error);
-    return plantingService.getPlantings();
-  }
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting[];
 }
 
+/**
+ * 根据ID获取单个种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPlantingById(id: string): Promise<Planting | undefined> {
-  try {
-    const data = await apiClient.get<BackendPlanting>(`/plantings/${id}`);
-    return transformPlantingFromBackend(data) as Planting;
-  } catch (error) {
-    console.warn('[种植API] 获取单个失败，降级到localStorage:', error);
-    return plantingService.getPlantingById(id);
-  }
+  const data = await enhancedApiClient.get<BackendPlanting>(`/plantings/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting;
 }
 
+/**
+ * 根据ID数组获取多个种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPlantingsByIds(ids: string[]): Promise<Planting[]> {
-  try {
-    const data = await apiClient.get<BackendPlanting[]>(`/plantings/batch?ids=${ids.join(',')}`);
-    return transformPlantingFromBackend(data) as Planting[];
-  } catch (error) {
-    console.warn('[种植API] 批量获取失败，降级到localStorage:', error);
-    return plantingService.getPlantingsByIds(ids);
-  }
+  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/batch?ids=${ids.join(',')}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting[];
 }
 
+/**
+ * 根据来源获取种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getPlantingsBySourceId(sourceId: string): Promise<Planting[]> {
-  try {
-    const data = await apiClient.get<BackendPlanting[]>(`/plantings/source/${sourceId}`);
-    return transformPlantingFromBackend(data) as Planting[];
-  } catch (error) {
-    console.warn('[种植API] 按来源获取失败，降级到localStorage:', error);
-    return plantingService.getPlantingsBySourceId(sourceId);
-  }
+  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/source/${sourceId}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting[];
 }
 
+/**
+ * 创建种植记录
+ * 降级策略：API → 离线队列
+ */
 export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' | 'updateTime'>): Promise<Planting> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/plantings', planting);
-    return { ...planting, id: result.id } as Planting;
-  } catch (error) {
-    console.warn('[种植API] 创建失败，降级到localStorage:', error);
-    return plantingService.addPlanting(planting);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/plantings', planting, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return { ...planting, id: result.id } as Planting;
 }
 
+/**
+ * 更新种植记录
+ * 降级策略：API → 离线队列
+ */
 export async function updatePlanting(id: string, updates: Partial<Planting>): Promise<Planting | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/plantings/${id}`, updates);
-    return result ? { ...updates, id } as Planting : null;
-  } catch (error) {
-    console.warn('[种植API] 更新失败，降级到localStorage:', error);
-    return plantingService.updatePlanting(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as Planting : null;
 }
 
+/**
+ * 删除种植记录
+ * 降级策略：API → 离线队列
+ */
 export async function deletePlanting(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/plantings/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('[种植API] 删除失败，降级到localStorage:', error);
-    return plantingService.deletePlanting(id);
-  }
+  await enhancedApiClient.delete(`/plantings/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 批量删除种植记录
+ * 降级策略：API → 离线队列
+ */
 export async function deletePlantings(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.delete(`/plantings/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch (error) {
-    console.warn('[种植API] 批量删除失败，降级到localStorage:', error);
-    return plantingService.deletePlantings(ids);
-  }
+  await enhancedApiClient.delete(`/plantings/batch?ids=${ids.join(',')}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 采收种植记录
+ * 降级策略：API → 离线队列
+ */
 export async function harvestPlanting(id: string, harvestDate: string, harvestCount?: number): Promise<boolean> {
-  try {
-    await apiClient.post(`/plantings/${id}/harvest`, { harvestDate, harvestCount });
-    return true;
-  } catch (error) {
-    console.warn('[种植API] 采收失败，降级到localStorage:', error);
-    return plantingService.harvestPlanting(id, harvestDate, harvestCount);
-  }
+  await enhancedApiClient.post(`/plantings/${id}/harvest`, { harvestDate, harvestCount }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 获取未采收的种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getUnharvestedPlantings(): Promise<Planting[]> {
-  try {
-    const data = await apiClient.get<BackendPlanting[]>('/plantings/unharvested');
-    return transformPlantingFromBackend(data) as Planting[];
-  } catch (error) {
-    console.warn('[种植API] 获取未采收失败，降级到localStorage:', error);
-    return plantingService.getUnharvestedPlantings();
-  }
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/unharvested', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting[];
 }
 
+/**
+ * 获取已采收的种植记录
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getHarvestedPlantings(): Promise<Planting[]> {
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/harvested', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformPlantingFromBackend(data) as Planting[];
+}
+
+/**
+ * 生成种植单号
+ * 降级策略：API 失败返回空字符串
+ */
+export async function generatePlantCode(sourceCode: string): Promise<string> {
   try {
-    const data = await apiClient.get<BackendPlanting[]>('/plantings/harvested');
-    return transformPlantingFromBackend(data) as Planting[];
-  } catch (error) {
-    console.warn('[种植API] 获取已采收失败，降级到localStorage:', error);
-    return plantingService.getHarvestedPlantings();
+    return await enhancedApiClient.get<string>(`/plantings/generate-code?sourceCode=${sourceCode}`);
+  } catch {
+    return '';
   }
 }
 
-export async function generatePlantCode(sourceCode: string): Promise<string> {
-  return await apiClient.get<string>(`/plantings/generate-code?sourceCode=${sourceCode}`);
-}
-
+/**
+ * 重置种植数据（仅调用后端）
+ */
 export async function resetPlantings(): Promise<void> {
-  await apiClient.post('/plantings/reset');
+  await enhancedApiClient.post('/plantings/reset');
 }

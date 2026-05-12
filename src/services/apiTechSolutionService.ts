@@ -1,12 +1,16 @@
 /**
  * 技术方案数据 API 服务
  * 对接后端 /api/tech-solutions
- * API失败时降级到 localStorage (techSolutionService)
+ *
+ * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ *
+ * 降级策略：
+ * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { TechSolution } from './techSolutionService';
-import * as techSolutionService from './techSolutionService';
 
 // 后端返回的数据字段类型
 interface BackendTechSolution {
@@ -80,73 +84,78 @@ function transformSingle(item: BackendTechSolution): TechSolution {
   };
 }
 
-// ==================== API 函数（降级到localStorage）====================
-
+/**
+ * 获取所有技术方案
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getTechSolutions(): Promise<TechSolution[]> {
-  try {
-    const data = await apiClient.get<BackendTechSolution[]>('/tech-solutions');
-    return transformTechSolution(data) as TechSolution[];
-  } catch (error) {
-    console.warn('[技术方案API] 获取失败，降级到localStorage:', error);
-    return techSolutionService.getTechSolutions();
-  }
+  const data = await enhancedApiClient.get<BackendTechSolution[]>('/tech-solutions', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformTechSolution(data) as TechSolution[];
 }
 
+/**
+ * 根据ID获取单个技术方案
+ * 降级策略：API → IndexedDB 缓存
+ */
 export async function getTechSolutionById(id: string): Promise<TechSolution | undefined> {
-  try {
-    const data = await apiClient.get<BackendTechSolution>(`/tech-solutions/${id}`);
-    return transformTechSolution(data) as TechSolution;
-  } catch (error) {
-    console.warn('[技术方案API] 获取单个失败，降级到localStorage:', error);
-    return techSolutionService.getTechSolutionById(id);
-  }
+  const data = await enhancedApiClient.get<BackendTechSolution>(`/tech-solutions/${id}`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return transformTechSolution(data) as TechSolution;
 }
 
+/**
+ * 创建技术方案
+ * 降级策略：API → 离线队列
+ */
 export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
-  try {
-    const result = await apiClient.post<{ id: string }>('/tech-solutions', solution);
-    return { ...solution, id: result.id } as TechSolution;
-  } catch (error) {
-    console.warn('[技术方案API] 创建失败，降级到localStorage:', error);
-    return techSolutionService.addTechSolution(solution);
-  }
+  const result = await enhancedApiClient.post<{ id: string }>('/tech-solutions', solution, {
+    offlineQueue: true,
+    useCache: true,
+  });
+  return { ...solution, id: result.id } as TechSolution;
 }
 
+/**
+ * 更新技术方案
+ * 降级策略：API → 离线队列
+ */
 export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
-  try {
-    const result = await apiClient.put<{ id: string }>(`/tech-solutions/${id}`, updates);
-    return result ? { ...updates, id } as TechSolution : null;
-  } catch (error) {
-    console.warn('[技术方案API] 更新失败，降级到localStorage:', error);
-    return techSolutionService.updateTechSolution(id, updates);
-  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/tech-solutions/${id}`, updates, {
+    offlineQueue: true,
+  });
+  return result ? { ...updates, id } as TechSolution : null;
 }
 
+/**
+ * 删除技术方案
+ * 降级策略：API → 离线队列
+ */
 export async function deleteTechSolution(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/tech-solutions/${id}`);
-    return true;
-  } catch (error) {
-    console.warn('[技术方案API] 删除失败，降级到localStorage:', error);
-    return techSolutionService.deleteTechSolution(id);
-  }
+  await enhancedApiClient.delete(`/tech-solutions/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 批量删除技术方案
+ * 降级策略：API → 离线队列
+ */
 export async function deleteTechSolutions(ids: string[]): Promise<boolean> {
-  try {
-    await apiClient.post('/tech-solutions/batch-delete', { ids });
-    return true;
-  } catch (error) {
-    console.warn('[技术方案API] 批量删除失败，降级到localStorage:', error);
-    return techSolutionService.deleteTechSolutions(ids);
-  }
+  await enhancedApiClient.post('/tech-solutions/batch-delete', { ids }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
+/**
+ * 重置技术方案（仅调用后端，不做降级）
+ */
 export async function resetTechSolutions(): Promise<void> {
-  try {
-    await apiClient.post('/tech-solutions/reset');
-  } catch (error) {
-    console.warn('[技术方案API] 重置失败，降级到localStorage:', error);
-  }
-  techSolutionService.resetTechSolutions();
+  await enhancedApiClient.post('/tech-solutions/reset');
 }
