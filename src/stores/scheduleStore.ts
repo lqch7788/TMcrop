@@ -69,16 +69,16 @@ const DEFAULT_SHIFT_CONFIGS: ShiftConfig[] = [
   { name: '弹性', startTime: '09:00', endTime: '18:00', color: 'bg-purple-500' },
 ];
 
-// 保留原有的MOCK_STAFF作为种子数据
+// 保留原有的MOCK_STAFF作为种子数据（金庸武侠人物）
 const MOCK_STAFF: Staff[] = [
-  { id: 'S001', name: '张三', workZone: 'A区' },
-  { id: 'S002', name: '李四', workZone: 'B区' },
-  { id: 'S003', name: '王五', workZone: 'A区' },
-  { id: 'S004', name: '赵六', workZone: 'C区' },
-  { id: 'S005', name: '钱七', workZone: 'B区' },
-  { id: 'S006', name: '孙八', workZone: 'A区' },
-  { id: 'S007', name: '周九', workZone: 'C区' },
-  { id: 'S008', name: '吴十', workZone: 'B区' },
+  { id: 'S001', name: '郭靖', workZone: 'A区' },
+  { id: 'S002', name: '黄蓉', workZone: 'B区' },
+  { id: 'S003', name: '杨过', workZone: 'A区' },
+  { id: 'S004', name: '小龙女', workZone: 'C区' },
+  { id: 'S005', name: '萧峰', workZone: 'B区' },
+  { id: 'S006', name: '段誉', workZone: 'A区' },
+  { id: 'S007', name: '虚竹', workZone: 'C区' },
+  { id: 'S008', name: '任盈盈', workZone: 'B区' },
 ];
 
 // 生成模拟排班数据（保留原有逻辑作为种子数据）
@@ -119,15 +119,15 @@ function generateMockSchedule(): ScheduleRecord[] {
   return records;
 }
 
-// 生成模拟调班申请
+// 生成模拟调班申请（金庸武侠人物）
 function generateMockSwapRequests(): SwapRequest[] {
   return [
     {
       id: 'SWAP001',
       requesterId: 'S001',
-      requesterName: '张三',
+      requesterName: '郭靖',
       targetId: 'S002',
-      targetName: '李四',
+      targetName: '黄蓉',
       originalDate: '2026-04-05',
       targetDate: '2026-04-07',
       reason: '家中有事，需要调班',
@@ -137,9 +137,9 @@ function generateMockSwapRequests(): SwapRequest[] {
     {
       id: 'SWAP002',
       requesterId: 'S003',
-      requesterName: '王五',
+      requesterName: '杨过',
       targetId: 'S004',
-      targetName: '赵六',
+      targetName: '小龙女',
       originalDate: '2026-04-06',
       targetDate: '2026-04-08',
       reason: '临时会议冲突',
