@@ -33,7 +33,7 @@ function saveToStorage(data: InspectionRecord[]): void {
  */
 export async function getAllInspections(): Promise<InspectionRecord[]> {
   try {
-    const data = await apiClient.get<InspectionRecord[]>('/inspections');
+    const data = await enhancedApiClient.get<InspectionRecord[]>('/inspections');
     saveToStorage(data);
     return data;
   } catch (error) {
@@ -47,7 +47,7 @@ export async function getAllInspections(): Promise<InspectionRecord[]> {
  */
 export async function getInspectionById(id: string): Promise<InspectionRecord | undefined> {
   try {
-    return await apiClient.get<InspectionRecord>(`/inspections/${id}`);
+    return await enhancedApiClient.get<InspectionRecord>(`/inspections/${id}`);
   } catch (error) {
     console.warn('[巡查API] 获取单个失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -60,7 +60,7 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
  */
 export async function getInspectionByCode(recordCode: string): Promise<InspectionRecord | undefined> {
   try {
-    return await apiClient.get<InspectionRecord>(`/inspections/code/${recordCode}`);
+    return await enhancedApiClient.get<InspectionRecord>(`/inspections/code/${recordCode}`);
   } catch (error) {
     console.warn('[巡查API] 获取单个失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -89,7 +89,7 @@ export async function getInspections(filters?: {
     if (filters.inspectionType) params.inspectionType = filters.inspectionType;
   }
   try {
-    const data = await apiClient.get<InspectionRecord[]>('/inspections', params);
+    const data = await enhancedApiClient.get<InspectionRecord[]>('/inspections', params);
     saveToStorage(data);
     return data;
   } catch (error) {
@@ -103,7 +103,7 @@ export async function getInspections(filters?: {
  */
 export async function createInspection(inspection: Omit<InspectionRecord, 'id' | 'recordCode'>): Promise<InspectionRecord> {
   try {
-    const result = await apiClient.post<InspectionRecord>('/inspections', inspection);
+    const result = await enhancedApiClient.post<InspectionRecord>('/inspections', inspection);
     // 同步到 localStorage
     const stored = getStoredInspections();
     stored.unshift(result);
@@ -128,7 +128,7 @@ export async function createInspection(inspection: Omit<InspectionRecord, 'id' |
  */
 export async function updateInspection(id: string, updates: Partial<InspectionRecord>): Promise<InspectionRecord | null> {
   try {
-    const result = await apiClient.put<InspectionRecord>(`/inspections/${id}`, updates);
+    const result = await enhancedApiClient.put<InspectionRecord>(`/inspections/${id}`, updates);
     // 同步到 localStorage
     const stored = getStoredInspections();
     const index = stored.findIndex(i => i.id === id);
@@ -155,7 +155,7 @@ export async function updateInspection(id: string, updates: Partial<InspectionRe
  */
 export async function deleteInspection(id: string): Promise<boolean> {
   try {
-    await apiClient.delete(`/inspections/${id}`);
+    await enhancedApiClient.delete(`/inspections/${id}`);
     // 从 localStorage 移除
     const stored = getStoredInspections();
     const filtered = stored.filter(i => i.id !== id);
@@ -175,7 +175,7 @@ export async function deleteInspection(id: string): Promise<boolean> {
  */
 export async function deleteInspections(ids: string[]): Promise<boolean> {
   try {
-    await apiClient.delete(`/inspections/batch?ids=${ids.join(',')}`);
+    await enhancedApiClient.delete(`/inspections/batch?ids=${ids.join(',')}`);
     // 从 localStorage 移除
     const stored = getStoredInspections();
     const filtered = stored.filter(i => !ids.includes(i.id));
@@ -195,7 +195,7 @@ export async function deleteInspections(ids: string[]): Promise<boolean> {
  */
 export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>(`/inspections/greenhouse/${greenhouseId}`);
+    return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/greenhouse/${greenhouseId}`);
   } catch (error) {
     console.warn('[巡查API] 按大棚获取失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -208,7 +208,7 @@ export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<
  */
 export async function getInspectionsByInspector(inspectorId: string): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>(`/inspections/inspector/${inspectorId}`);
+    return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/inspector/${inspectorId}`);
   } catch (error) {
     console.warn('[巡查API] 按巡查人员获取失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -221,7 +221,7 @@ export async function getInspectionsByInspector(inspectorId: string): Promise<In
  */
 export async function getInspectionsByDateRange(startDate: string, endDate: string): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>(`/inspections/date-range?start=${startDate}&end=${endDate}`);
+    return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/date-range?start=${startDate}&end=${endDate}`);
   } catch (error) {
     console.warn('[巡查API] 按日期范围获取失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -237,7 +237,7 @@ export async function getInspectionsByDateRange(startDate: string, endDate: stri
  */
 export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'critical'): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>(`/inspections/status/${status}`);
+    return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/status/${status}`);
   } catch (error) {
     console.warn('[巡查API] 按状态获取失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -250,7 +250,7 @@ export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'c
  */
 export async function getCriticalInspections(): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>('/inspections/critical');
+    return await enhancedApiClient.get<InspectionRecord[]>('/inspections/critical');
   } catch (error) {
     console.warn('[巡查API] 获取异常记录失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -262,14 +262,14 @@ export async function getCriticalInspections(): Promise<InspectionRecord[]> {
  * 生成巡查编码
  */
 export async function generateInspectionCode(): Promise<string> {
-  return apiClient.get<string>('/inspections/generate-code');
+  return enhancedApiClient.get<string>('/inspections/generate-code');
 }
 
 /**
  * 关联问题分派
  */
 export async function assignProblem(inspectionId: string, problemId: number): Promise<boolean> {
-  await apiClient.post(`/inspections/${inspectionId}/assign-problem`, { problemId });
+  await enhancedApiClient.post(`/inspections/${inspectionId}/assign-problem`, { problemId });
   return true;
 }
 
@@ -279,7 +279,7 @@ export async function assignProblem(inspectionId: string, problemId: number): Pr
  * @param problemData 问题数据（字段名与后端API匹配）
  */
 export async function createProblemFromInspection(inspectionId: string, problemData: Record<string, unknown>): Promise<number> {
-  const result = await apiClient.post<{ id: number }>(`/inspections/${inspectionId}/create-problem`, problemData);
+  const result = await enhancedApiClient.post<{ id: number }>(`/inspections/${inspectionId}/create-problem`, problemData);
   return result.id;
 }
 
@@ -300,7 +300,7 @@ export async function getInspectionStats(filters?: {
   if (filters?.startDate) params.startDate = filters.startDate;
   if (filters?.endDate) params.endDate = filters.endDate;
   if (filters?.greenhouseId) params.greenhouseId = filters.greenhouseId;
-  return apiClient.get('/inspections/stats', { params });
+  return enhancedApiClient.get('/inspections/stats', { params });
 }
 
 /**
@@ -308,7 +308,7 @@ export async function getInspectionStats(filters?: {
  */
 export async function getInspectionsByBatch(batchId: string): Promise<InspectionRecord[]> {
   try {
-    return await apiClient.get<InspectionRecord[]>(`/inspections/batch/${batchId}`);
+    return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/batch/${batchId}`);
   } catch (error) {
     console.warn('[巡查API] 按批次获取失败，降级到localStorage:', error);
     const stored = getStoredInspections();
@@ -320,6 +320,6 @@ export async function getInspectionsByBatch(batchId: string): Promise<Inspection
  * 关联任务
  */
 export async function linkTask(inspectionId: string, taskId: string, taskCode: string): Promise<boolean> {
-  await apiClient.post(`/inspections/${inspectionId}/link-task`, { taskId, taskCode });
+  await enhancedApiClient.post(`/inspections/${inspectionId}/link-task`, { taskId, taskCode });
   return true;
 }

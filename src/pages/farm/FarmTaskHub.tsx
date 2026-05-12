@@ -117,8 +117,8 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
  * 农事任务中心主组件
  */
 export function FarmTaskHub() {
-  const hub = useFarmHub();
   const tasksHook = useTasks();
+  const hub = useFarmHub(tasksHook);
   const { tempTasks } = useTempTasks();
   const { users } = useUsers();
   const [showRecordPanel, setShowRecordPanel] = useState(false);
@@ -663,6 +663,7 @@ export function FarmTaskHub() {
       {batchDeleteIds.length > 0 && (
         <DeleteWarningAdapter
           taskIds={batchDeleteIds}
+          tasksHook={tasksHook}
           onClose={() => setBatchDeleteIds([])}
           onConfirmed={() => {
             setBatchDeleteIds([]);

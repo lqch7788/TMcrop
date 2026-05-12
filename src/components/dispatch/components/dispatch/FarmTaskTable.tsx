@@ -67,8 +67,8 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
   // 可编辑状态列表
   const EDITABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
 
-  // 可删除状态列表
-  const DELETABLE_STATUSES = ['draft', 'cancelled'];
+  // 可删除状态列表（所有状态都可以删除）
+  const DELETABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected', 'failed', 'cancelled', 'abandoned'];
 
   // 可派发状态列表
   const PUBLISHABLE_STATUSES = ['draft'];

@@ -40,6 +40,26 @@ function getTaskStatusLabel(status: string): string {
   return TASK_STATUS_LABEL_MAP[status] || status;
 }
 
+/**
+ * 转换数据库字段名为前端期望的字段名
+ * 注意：queryToObjects 已经将下划线字段名转换为驼峰格式
+ */
+function transformTaskFields(item: any): any {
+  return {
+    ...item,
+    // 数据库字段 -> 前端字段映射（使用驼峰格式）
+    title: item.taskTitle || '',
+    typeName: item.taskType || '',
+    description: item.taskContent || '',
+    // 作物
+    crop: item.crop || '',
+    // 任务工时
+    estimatedHours: item.estimatedHours || 0,
+    // 添加状态标签
+    statusLabel: getTaskStatusLabel(item.status || 'pending'),
+  };
+}
+
 router.get('/', (req: Request, res: Response) => {
   try {
     const { task_type, status, assignee_name, greenhouse_name, page = 1, limit = 50 } = req.query;
@@ -85,11 +105,8 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
-    // 为每个item添加状态标签
-    const itemsWithLabels = items.map((item: any) => ({
-      ...item,
-      statusLabel: getTaskStatusLabel(item.status || 'pending'),
-    }));
+    // 转换数据库字段名为前端期望的字段名
+    const itemsWithLabels = items.map((item: any) => transformTaskFields(item));
 
     res.json({ success: true, data: itemsWithLabels, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
@@ -113,10 +130,10 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '农事任务不存在' });
     }
 
-    // 添加状态标签
-    item.statusLabel = getTaskStatusLabel(item.status || 'pending');
+    // 转换字段并添加状态标签
+    const transformedItem = transformTaskFields(item);
 
-    res.json({ success: true, data: item });
+    res.json({ success: true, data: transformedItem });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取农事任务详情失败' });
   }
@@ -124,19 +141,73 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-            greenhouse_id, greenhouse_name, area_name, plan_date, plan_time, priority, status, create_by } = req.body;
+    // 支持前端发送的驼峰命名和后端的下划线命名
+    const {
+      id,
+      task_code, taskCode,
+      task_title, taskTitle,
+      task_type, taskType,
+      task_content, taskContent,
+      assignee_id, assigneeId,
+      assignee_name, assigneeName,
+      greenhouse_id, greenhouseId,
+      greenhouse_name, greenhouseName,
+      area_name, areaName,
+      plan_date, planDate,
+      plan_time, planTime,
+      priority,
+      status,
+      create_by, createBy,
+      due_date, dueDate,
+      progress,
+      crop,
+      estimated_hours, estimatedHours,
+      remarks,
+      materials,
+      tools,
+      batch_id, batchId,
+      batch_code, batchCode,
+    } = req.body;
 
-    const newId = id || `TK${Date.now()}`;
+    const newId = id || task_code || taskCode || `TK${Date.now()}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO farm_tasks (id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-        greenhouse_id, greenhouse_name, area_name, plan_date, plan_time, priority, status, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-        greenhouse_id, greenhouse_name, area_name, plan_date, plan_time, priority || 'medium', normalizeTaskStatus(status), create_by, now, now]);
+      INSERT INTO farm_tasks (
+        id, task_code, task_title, task_type, task_content,
+        assignee_id, assignee_name,
+        greenhouse_id, greenhouse_name, area_name,
+        plan_date, plan_time, priority, status, create_by, create_time, update_time,
+        due_date, progress, crop, estimated_hours, remarks,
+        batch_id, batch_code
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newId,
+      task_code || taskCode || newId,
+      task_title || taskTitle || '',
+      task_type || taskType || '',
+      task_content || taskContent || '',
+      assignee_id || assigneeId || '',
+      assignee_name || assigneeName || '',
+      greenhouse_id || greenhouseId || '',
+      greenhouse_name || greenhouseName || '',
+      area_name || areaName || '',
+      plan_date || planDate || '',
+      plan_time || planTime || '',
+      priority || 'normal',
+      normalizeTaskStatus(status),
+      create_by || createBy || 'system',
+      now, now,
+      due_date || dueDate || null,
+      progress || 0,
+      crop || '',
+      estimated_hours || estimatedHours || 0,
+      remarks || '',
+      batch_id || batchId || newId,
+      batch_code || batchCode || `PC-${newId}`,
+    ]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });

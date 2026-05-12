@@ -74,7 +74,7 @@ function saveToStorage(data: Problem[]): void {
  */
 export async function getAllProblems(): Promise<Problem[]> {
   try {
-    const data = await apiClient.get<Problem[]>('/problems');
+    const data = await enhancedApiClient.get<Problem[]>('/problems');
     saveToStorage(data);
     return data;
   } catch (error) {
@@ -88,7 +88,7 @@ export async function getAllProblems(): Promise<Problem[]> {
  */
 export async function getProblemById(id: number): Promise<Problem | undefined> {
   try {
-    return await apiClient.get<Problem>(`/problems/${id}`);
+    return await enhancedApiClient.get<Problem>(`/problems/${id}`);
   } catch (error) {
     console.warn('[问题API] 获取单个失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -101,7 +101,7 @@ export async function getProblemById(id: number): Promise<Problem | undefined> {
  */
 export async function getProblemByCode(problemCode: string): Promise<Problem | undefined> {
   try {
-    return await apiClient.get<Problem>(`/problems/code/${problemCode}`);
+    return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`);
   } catch (error) {
     console.warn('[问题API] 获取单个失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -136,7 +136,7 @@ export async function getProblems(filters?: {
     if (filters.keyword) params.keyword = filters.keyword;
   }
   try {
-    const data = await apiClient.get<Problem[]>('/problems', params);
+    const data = await enhancedApiClient.get<Problem[]>('/problems', params);
     saveToStorage(data);
     return data;
   } catch (error) {
@@ -150,7 +150,7 @@ export async function getProblems(filters?: {
  */
 export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' | 'createTime' | 'updateTime'>): Promise<Problem> {
   try {
-    const result = await apiClient.post<Problem>('/problems', problem);
+    const result = await enhancedApiClient.post<Problem>('/problems', problem);
     // 同步到 localStorage
     const stored = getStoredProblems();
     stored.unshift(result);
@@ -177,7 +177,7 @@ export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' 
  */
 export async function updateProblem(id: number, updates: Partial<Problem>): Promise<Problem | null> {
   try {
-    const result = await apiClient.put<Problem>(`/problems/${id}`, updates);
+    const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates);
     // 同步到 localStorage
     const stored = getStoredProblems();
     const index = stored.findIndex(p => p.id === id);
@@ -204,7 +204,7 @@ export async function updateProblem(id: number, updates: Partial<Problem>): Prom
  */
 export async function deleteProblem(id: number): Promise<boolean> {
   try {
-    await apiClient.delete(`/problems/${id}`);
+    await enhancedApiClient.delete(`/problems/${id}`);
     // 从 localStorage 移除
     const stored = getStoredProblems();
     const filtered = stored.filter(p => p.id !== id);
@@ -224,7 +224,7 @@ export async function deleteProblem(id: number): Promise<boolean> {
  */
 export async function deleteProblems(ids: number[]): Promise<boolean> {
   try {
-    await apiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
+    await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
     // 从 localStorage 移除
     const stored = getStoredProblems();
     const filtered = stored.filter(p => !ids.includes(p.id));
@@ -243,21 +243,21 @@ export async function deleteProblems(ids: number[]): Promise<boolean> {
  * 分派问题
  */
 export async function assignProblem(id: number, handlerId: string, handlerName: string): Promise<Problem | null> {
-  return apiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
+  return enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
 }
 
 /**
  * 开始处理问题
  */
 export async function startProcessing(id: number): Promise<Problem | null> {
-  return apiClient.post<Problem>(`/problems/${id}/start-processing`);
+  return enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`);
 }
 
 /**
  * 标记问题为已处理
  */
 export async function resolveProblem(id: number, handleResult?: string): Promise<Problem | null> {
-  return apiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
+  return enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
 }
 
 /**
@@ -265,7 +265,7 @@ export async function resolveProblem(id: number, handleResult?: string): Promise
  */
 export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
+    return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
   } catch (error) {
     console.warn('[问题API] 按大棚获取失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -278,7 +278,7 @@ export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Pro
  */
 export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>(`/problems/batch/${batchId}`);
+    return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`);
   } catch (error) {
     console.warn('[问题API] 按批次获取失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -291,7 +291,7 @@ export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
  */
 export async function getProblemsBySource(sourceType: string, sourceId: string): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
+    return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
   } catch (error) {
     console.warn('[问题API] 按来源获取失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -304,7 +304,7 @@ export async function getProblemsBySource(sourceType: string, sourceId: string):
  */
 export async function getPendingProblems(): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>('/problems/pending');
+    return await enhancedApiClient.get<Problem[]>('/problems/pending');
   } catch (error) {
     console.warn('[问题API] 获取待处理问题失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -317,7 +317,7 @@ export async function getPendingProblems(): Promise<Problem[]> {
  */
 export async function getProcessingProblems(): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>('/problems/processing');
+    return await enhancedApiClient.get<Problem[]>('/problems/processing');
   } catch (error) {
     console.warn('[问题API] 获取处理中问题失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -330,7 +330,7 @@ export async function getProcessingProblems(): Promise<Problem[]> {
  */
 export async function getResolvedProblems(): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>('/problems/resolved');
+    return await enhancedApiClient.get<Problem[]>('/problems/resolved');
   } catch (error) {
     console.warn('[问题API] 获取已处理问题失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -343,7 +343,7 @@ export async function getResolvedProblems(): Promise<Problem[]> {
  */
 export async function getSeriousProblems(): Promise<Problem[]> {
   try {
-    return await apiClient.get<Problem[]>('/problems/serious');
+    return await enhancedApiClient.get<Problem[]>('/problems/serious');
   } catch (error) {
     console.warn('[问题API] 获取严重问题失败，降级到localStorage:', error);
     const stored = getStoredProblems();
@@ -355,7 +355,7 @@ export async function getSeriousProblems(): Promise<Problem[]> {
  * 生成问题编码
  */
 export async function generateProblemCode(): Promise<string> {
-  return apiClient.get<string>('/problems/generate-code');
+  return enhancedApiClient.get<string>('/problems/generate-code');
 }
 
 /**
@@ -373,14 +373,14 @@ export async function getProblemStats(filters?: {
   byCategory: Record<string, number>;
   bySeverity: Record<string, number>;
 }> {
-  return apiClient.get('/problems/stats');
+  return enhancedApiClient.get('/problems/stats');
 }
 
 /**
  * 关联任务
  */
 export async function linkTask(problemId: number, taskId: string, taskCode: string): Promise<boolean> {
-  await apiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
+  await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
   return true;
 }
 
@@ -393,6 +393,6 @@ export async function addProblemHandleRecord(problemId: number, record: {
   action: string;
   description?: string;
 }): Promise<boolean> {
-  await apiClient.post(`/problems/${problemId}/handle-records`, record);
+  await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record);
   return true;
 }

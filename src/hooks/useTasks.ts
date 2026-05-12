@@ -41,6 +41,8 @@ import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFe
 import { TempTask } from '../hooks/useTempTasks';
 // 导入农事任务 Store（统一数据层）
 import { useFarmTaskStore } from '../stores/farmTaskStore';
+// 导入增强版 API 客户端
+import { enhancedApiClient } from '../lib/apiClient';
 
 // ============================================
 // 状态标签配置
@@ -303,7 +305,7 @@ const INITIAL_TASKS_WITH_TEMP: Task[] = [
 ];
 
 // 数据版本控制（用于检测数据结构变化，自动重置数据）
-const DATA_VERSION = 9;
+const DATA_VERSION = 10; // 强制刷新，清除旧缓存
 const STORAGE_VERSION_KEY = 'yuanxingtu_tasks_version';
 
 // ============================================
@@ -573,43 +575,45 @@ export function useTasks(): UseTasksReturn {
     }
   }, [setTasks]);
 
-  // 尝试从API加载任务数据（通过 farmTaskStore）
+  // 尝试从API加载任务数据
+  // 注意：此函数只在初始化时调用一次，后续任务更新通过 createTask/updateTask 等函数处理
   useEffect(() => {
-    if (apiLoaded) return; // 只加载一次
+    let cancelled = false;
 
     const loadFromAPI = async () => {
       try {
-        // 使用 farmTaskStore 的 fetchTasks（内置三级降级）
-        await useFarmTaskStore.getState().fetchTasks();
-        const apiTasks = useFarmTaskStore.getState().tasks;
-        if (apiTasks && Array.isArray(apiTasks) && apiTasks.length > 0) {
+        const apiTasks = await enhancedApiClient.get<Task[]>('/farm-tasks', {
+          useCache: false,
+        });
+
+        if (cancelled) return;
+
+        console.log('[useTasks] API返回:', Array.isArray(apiTasks) ? `${apiTasks.length}条` : '非数组');
+
+        if (Array.isArray(apiTasks) && apiTasks.length > 0) {
           console.log('[useTasks] 从API获取到任务数据:', apiTasks.length, '条');
-          // API数据有效，合并到现有数据中
-          const existingData = localStorage.getItem(STORAGE_KEYS.TASKS);
-          let existingTasks: Task[] = [];
-          if (existingData) {
-            const parsed = JSON.parse(existingData);
-            existingTasks = parsed.data || parsed;
-          }
-          // 合并API数据和本地数据（去重）
-          const apiTaskIds = new Set(apiTasks.map(t => t.id || t.taskCode));
-          const localOnlyTasks = existingTasks.filter(t => !apiTaskIds.has(t.id || t.taskCode));
-          const mergedTasks = [...apiTasks, ...localOnlyTasks];
-          setTasks(mergedTasks);
+          setTasks(apiTasks);
           setApiLoaded(true);
-          console.log('[useTasks] API数据合并完成，总任务数:', mergedTasks.length);
         } else {
-          console.log('[useTasks] API返回空数据，使用本地数据');
+          console.log('[useTasks] API返回空，使用种子数据');
+          setTasks(INITIAL_TASKS_WITH_TEMP);
           setApiLoaded(true);
         }
       } catch (error) {
-        console.warn('[useTasks] API调用失败，使用本地mock数据:', error);
+        if (cancelled) return;
+        console.warn('[useTasks] API调用失败:', error);
+        // API失败时使用种子数据
+        setTasks(INITIAL_TASKS_WITH_TEMP);
         setApiLoaded(true);
       }
     };
 
     loadFromAPI();
-  }, [apiLoaded, setTasks]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []); // 空依赖数组，只在挂载时运行一次
 
   // 操作记录
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);
@@ -1538,13 +1542,22 @@ export function useTasks(): UseTasksReturn {
     });
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
-  // 删除任务
-  const deleteTask = useCallback((id: string) => {
+  // 删除任务（同时从本地和后端删除）
+  const deleteTask = useCallback(async (id: string) => {
+    // 先从本地删除
     setTasks(prev => {
       const updated = prev.filter(task => task.id !== id);
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // 同时调用后端API删除（失败不影响本地）
+    try {
+      await enhancedApiClient.delete(`/farm-tasks/${id}`);
+      console.log('[deleteTask] 后端删除成功:', id);
+    } catch (error) {
+      console.warn('[deleteTask] 后端删除失败:', id, error);
+    }
   }, [setTasks]);
 
   // 更新任务

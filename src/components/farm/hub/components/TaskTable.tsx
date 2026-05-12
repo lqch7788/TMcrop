@@ -88,6 +88,7 @@ interface TaskTableProps {
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
   onBatchDelete?: () => void;
+  onConfirmBatchDelete?: () => void;
   onBatchDispatch?: () => void;
   onConfirmBatchDispatch?: () => void;
   onBatchVerify?: () => void;
@@ -132,6 +133,7 @@ export function TaskTable({
   onCancelBatchEdit,
   onCancelBatchDelete,
   onBatchDelete,
+  onConfirmBatchDelete,
   onBatchDispatch,
   onConfirmBatchDispatch,
   onBatchVerify,
@@ -211,7 +213,7 @@ export function TaskTable({
           ) : batchDeleteMode ? (
             <>
               <button
-                onClick={onBatchDelete}
+                onClick={onConfirmBatchDelete}
                 disabled={selectedIds.length === 0}
                 className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
