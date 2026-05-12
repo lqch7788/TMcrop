@@ -1,25 +1,74 @@
 /**
  * 合同续签数据管理 Hook
  * 封装状态管理、数据处理和业务逻辑
+ * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
+import { useState, useMemo, useCallback } from 'react';
 import {
-  ContractRenewalRecord,
+  useContractRenewalRecords,
+  useCreateContractRenewal,
+  useUpdateContractRenewal,
+  useDeleteContractRenewal,
+} from '@/hooks/useContractRenewalQueries';
+import type {
+  ContractRenewalRecord as ApiContractRenewalRecord,
+  CreateContractRenewalParams,
+  UpdateContractRenewalParams,
+} from '@/services/apiContractRenewalService';
+import type {
+  ContractRenewalStatus,
   ContractRenewalFilters,
   ContractRenewalFormData,
-  ContractRenewalPagination,
-  ContractRenewalStatus,
 } from '../types/contractRenewal.types';
+
+// API 字段到组件内部格式的映射
+interface ContractRenewalRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  currentContractEnd: string;
+  newContractStart: string;
+  newContractEnd: string;
+  renewalPeriod: number;
+  newSalary?: number;
+  termsChange?: string;
+  status: ContractRenewalStatus;
+  approver?: string;
+  approveTime?: string;
+  remarks?: string;
+}
+
+/**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponent(apiRecord: ApiContractRenewalRecord): ContractRenewalRecord {
+  return {
+    id: apiRecord.id,
+    employeeId: apiRecord.employeeId,
+    employeeName: apiRecord.employeeName,
+    department: apiRecord.department || '',
+    position: apiRecord.position || '',
+    currentContractEnd: apiRecord.currentContractEnd,
+    newContractStart: apiRecord.newContractStart,
+    newContractEnd: apiRecord.newContractEnd,
+    renewalPeriod: apiRecord.renewalPeriod,
+    newSalary: apiRecord.newSalary,
+    termsChange: apiRecord.termsChange,
+    status: apiRecord.statusLabel as ContractRenewalStatus,
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
 
 export interface UseContractRenewalReturn {
   // 状态
   filters: ContractRenewalFilters;
   setFilters: React.Dispatch<React.SetStateAction<ContractRenewalFilters>>;
-  pagination: ContractRenewalPagination;
-  setPagination: React.Dispatch<React.SetStateAction<ContractRenewalPagination>>;
+  pagination: { current: number; pageSize: number; total: number };
+  setPagination: React.Dispatch<React.SetStateAction<{ current: number; pageSize: number; total: number }>>;
   records: ContractRenewalRecord[];
   formData: ContractRenewalFormData;
   setFormData: React.Dispatch<React.SetStateAction<ContractRenewalFormData>>;
@@ -48,22 +97,22 @@ export interface UseContractRenewalReturn {
   handleStaffChange: (employeeId: string, employeeName: string, department: string, position: string, currentContractEnd: string) => void;
   handlePeriodChange: (period: number) => void;
   handleNewStartDateChange: (date: string) => void;
-  handleSubmit: () => void;
-  handleApprove: (record: ContractRenewalRecord) => void;
-  handleReject: (record: ContractRenewalRecord) => void;
+  handleSubmit: () => Promise<void>;
+  handleApprove: (record: ContractRenewalRecord) => Promise<void>;
+  handleReject: (record: ContractRenewalRecord) => Promise<void>;
   handleBatchApprove: () => void;
   handleBatchReject: () => void;
   handleExport: () => void;
   setBatchMode: React.Dispatch<React.SetStateAction<'none' | 'approve' | 'reject' | 'export'>>;
 }
 
-/** 状态映射 */
-function mapApprovalStatus(status: ApprovalStatus): ContractRenewalStatus {
+/** 状态映射：API 状态值 -> 组件内部状态标签 */
+function mapApiStatusToLabel(status: string): ContractRenewalStatus {
   switch (status) {
-    case ApprovalStatus.PENDING: return '待审批';
-    case ApprovalStatus.APPROVED: return '已通过';
-    case ApprovalStatus.REJECTED: return '已拒绝';
-    case ApprovalStatus.CANCELLED: return '已取消';
+    case 'pending': return '待审批';
+    case 'approved': return '已通过';
+    case 'rejected': return '已拒绝';
+    case 'cancelled': return '已取消';
     default: return '待审批';
   }
 }
@@ -85,7 +134,7 @@ export function useContractRenewal(
   });
 
   /** 分页状态 */
-  const [pagination, setPagination] = useState<ContractRenewalPagination>({ current: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   /** 弹窗状态 */
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -116,79 +165,57 @@ export function useContractRenewal(
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // Context & Hooks
+  // React Query 数据获取
   // ============================================================
 
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
+  /** 构建查询参数 */
+  const queryFilters = useMemo(() => ({
+    employeeName: filters.employeeName || undefined,
+    department: filters.department || undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
+
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
+
+  /** 使用 React Query 获取合同续签记录 */
+  const { data: apiData, refetch } = useContractRenewalRecords(queryFilters, queryPagination);
+
+  /** 转换 API 数据为组件内部格式 */
+  const records: ContractRenewalRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
+
+  /** 更新分页信息 */
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
+
+  // ============================================================
+  // Mutations
+  // ============================================================
+
+  const createMutation = useCreateContractRenewal();
+  const updateMutation = useUpdateContractRenewal();
+  const deleteMutation = useDeleteContractRenewal();
 
   // ============================================================
   // 数据处理
   // ============================================================
 
-  /** 合同续签记录数据 */
-  const [records, setRecords] = useState<ContractRenewalRecord[]>([]);
-
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选合同续签类型的审批记录
-    const contractApprovals = approvals.filter(a => a.type === ApprovalType.CONTRACT_RENEWAL);
-
-    // 转换为ContractRenewalRecord格式
-    const contractRecords: ContractRenewalRecord[] = contractApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        employeeId?: string;
-        employeeName?: string;
-        department?: string;
-        position?: string;
-        currentContractEnd?: string;
-        newContractStart?: string;
-        newContractEnd?: string;
-        renewalPeriod?: number;
-        newSalary?: number;
-        termsChange?: string;
-      } | null;
-      return {
-        id: approval.id,
-        employeeId: businessData?.employeeId || approval.applicantId,
-        employeeName: businessData?.employeeName || approval.applicantName,
-        department: businessData?.department || approval.applicantDepartment,
-        position: businessData?.position || '',
-        currentContractEnd: businessData?.currentContractEnd || approval.applyDate,
-        newContractStart: businessData?.newContractStart || '',
-        newContractEnd: businessData?.newContractEnd || '',
-        renewalPeriod: businessData?.renewalPeriod || 12,
-        newSalary: businessData?.newSalary,
-        termsChange: businessData?.termsChange,
-        status: mapApprovalStatus(approval.status),
-        approver: approval.approvers[0]?.userName,
-        approveTime: approval.approvers[0]?.actionTime,
-        remarks: approval.remark,
-      };
-    });
-
-    // 添加一些模拟初始数据
-    const mockRecords: ContractRenewalRecord[] = [
-      { id: 'CR001', employeeId: 'EMP20240001', employeeName: '张伟民', department: '生产部', position: '种植工', currentContractEnd: '2026-05-31', newContractStart: '2026-06-01', newContractEnd: '2027-05-31', renewalPeriod: 12, newSalary: 6500, status: '已通过', approver: '王建国', approveTime: '2026-04-15 10:00:00' },
-      { id: 'CR002', employeeId: 'EMP20240002', employeeName: '李秀英', department: '生产部', position: '农技员', currentContractEnd: '2026-06-30', newContractStart: '2026-07-01', newContractEnd: '2029-06-30', renewalPeriod: 36, status: '待审批' },
-      { id: 'CR003', employeeId: 'EMP20240003', employeeName: '王建国', department: '生产部', position: '生产经理', currentContractEnd: '2026-04-30', newContractStart: '2026-05-01', newContractEnd: '2027-04-30', renewalPeriod: 12, termsChange: '岗位职责调整', status: '已拒绝', remarks: '合同条款需进一步协商' },
-    ];
-
-    setRecords([...mockRecords, ...contractRecords]);
-    setPagination(prev => ({ ...prev, total: mockRecords.length + contractRecords.length }));
-  }, [approvals]);
-
-  /** 过滤后的数据 */
+  /** 过滤后的数据（API 已服务端过滤，此处直接返回） */
   const filteredData = useMemo(() => {
-    return records.filter(record => {
-      if (filters.employeeName && !record.employeeName.includes(filters.employeeName)) return false;
-      if (filters.department && record.department !== filters.department) return false;
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.startDate && record.currentContractEnd < filters.startDate) return false;
-      if (filters.endDate && record.currentContractEnd > filters.endDate) return false;
-      return true;
-    });
-  }, [records, filters]);
+    return records;
+  }, [records]);
 
   /** 部门选项 */
   const departmentOptions = useMemo(() => {
@@ -309,103 +336,65 @@ export function useContractRenewal(
   }, []);
 
   /** 提交合同续签申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.newContractStart || !formData.newContractEnd) {
       alert('请填写完整信息');
       return;
     }
 
-    // 生成新记录
-    const newRecord: ContractRenewalRecord = {
-      id: `CR${Date.now()}`,
-      employeeId: formData.employeeId,
-      employeeName: formData.employeeName,
-      department: formData.department,
-      position: formData.position,
-      currentContractEnd: formData.currentContractEnd,
-      newContractStart: formData.newContractStart,
-      newContractEnd: formData.newContractEnd,
-      renewalPeriod: formData.renewalPeriod,
-      newSalary: formData.newSalary,
-      termsChange: formData.termsChange,
-      status: '待审批',
-      remarks: formData.remarks,
-    };
+    try {
+      const createParams: CreateContractRenewalParams = {
+        employeeId: formData.employeeId,
+        employeeName: formData.employeeName,
+        department: formData.department,
+        position: formData.position,
+        currentContractEnd: formData.currentContractEnd,
+        newContractStart: formData.newContractStart,
+        newContractEnd: formData.newContractEnd,
+        renewalPeriod: formData.renewalPeriod,
+        newSalary: formData.newSalary,
+        termsChange: formData.termsChange,
+        remarks: formData.remarks,
+      };
 
-    // 创建审批记录
-    const approvalLevelResult = generateApprovers(ApprovalType.CONTRACT_RENEWAL, 0);
+      await createMutation.mutateAsync(createParams);
 
-    const approval: Approval = {
-      id: `APR-CR-${Date.now()}`,
-      code: `SP-CR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.CONTRACT_RENEWAL,
-      typeName: '合同续签',
-      category: 'hr',
-      title: `${formData.employeeName}合同续签申请`,
-      description: `合同期限: ${formData.newContractStart} 至 ${formData.newContractEnd}`,
-      applicantId: formData.employeeId,
-      applicantName: formData.employeeName,
-      applicantDepartment: formData.department,
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'contract_renewal',
-        requestId: newRecord.id,
-        employeeId: newRecord.employeeId,
-        employeeName: newRecord.employeeName,
-        department: newRecord.department,
-        position: newRecord.position,
-        currentContractEnd: newRecord.currentContractEnd,
-        newContractStart: newRecord.newContractStart,
-        newContractEnd: newRecord.newContractEnd,
-        renewalPeriod: newRecord.renewalPeriod,
-        newSalary: newRecord.newSalary,
-        termsChange: newRecord.termsChange,
-      },
-    };
-
-    addApproval(approval);
-
-    // 更新本地状态
-    setRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, addApproval, generateApprovers]);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交合同续签申请失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: ContractRenewalRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      approve(approval.id, '同意续签');
+  const handleApprove = useCallback(async (record: ContractRenewalRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('审批失败，请重试');
     }
-    setRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: '已通过' as ContractRenewalStatus } : r)
-    );
-  }, [approve, approvals]);
+  }, [updateMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: ContractRenewalRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      reject(approval.id, '不符合续签条件');
+  const handleReject = useCallback(async (record: ContractRenewalRecord) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-    setRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as ContractRenewalStatus } : r)
-    );
-  }, [reject, approvals]);
+  }, [updateMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

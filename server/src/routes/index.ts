@@ -40,8 +40,14 @@ import indicatorsRouter from './indicators';
 import scheduleRouter from './schedule';
 import attendanceRouter from './attendance';
 import personnelRouter from './personnel';
+import onboardingRouter from './onboarding';
 import iotMonitorRouter from './iotMonitor';
 import alertRouter from './alert';
+import materialsRouter from './materials';
+import resignationRouter from './resignation';
+import recruitmentRouter from './recruitment';
+import contractRenewalRouter from './contractRenewal';
+import salaryBudgetRouter from './salaryBudget';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -179,11 +185,29 @@ router.use('/attendance', requireAuth, attendanceRouter);
 // 人事管理路由 - 需要认证
 router.use('/personnel', requireAuth, personnelRouter);
 
+// 入职管理路由 - 需要认证
+router.use('/onboarding', requireAuth, onboardingRouter);
+
 // IoT设备监控路由 - 需要认证
 router.use('/iot', requireAuth, iotMonitorRouter);
 
 // 告警管理路由 - 需要认证
 router.use('/alerts', requireAuth, alertRouter);
+
+// 物料管理路由 - 需要认证
+router.use('/materials', requireAuth, materialsRouter);
+
+// 离职管理路由 - 需要认证
+router.use('/resignation', requireAuth, resignationRouter);
+
+// 招聘管理路由 - 需要认证
+router.use('/recruitment', requireAuth, recruitmentRouter);
+
+// 合同续签路由 - 需要认证
+router.use('/contract-renewal', requireAuth, contractRenewalRouter);
+
+// 工资预算路由 - 需要认证
+router.use('/salary-budget', requireAuth, salaryBudgetRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

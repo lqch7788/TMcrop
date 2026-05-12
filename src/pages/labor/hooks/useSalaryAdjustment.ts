@@ -1,18 +1,47 @@
 /**
  * 调薪申请数据管理 Hook
  * 封装状态管理、数据处理和业务逻辑
+ * 使用 React Query 和 API 服务，移除 useApprovalContext 依赖
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useApprovalContext } from '../../../contexts/ApprovalContext';
-import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
-import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
+import { useState, useMemo, useCallback } from 'react';
 import {
+  useSalaryAdjustmentRecords,
+  useCreateSalaryAdjustment,
+  useUpdateSalaryAdjustment,
+  useUpdateSalaryAdjustmentStatus,
+} from '@/hooks/useSalaryAdjustmentQueries';
+import type { SalaryAdjustmentRecord as ApiSalaryAdjustmentRecord } from '@/services/apiSalaryAdjustmentService';
+import type {
   SalaryAdjustmentRecord,
   SalaryAdjustmentFilters,
   SalaryAdjustmentFormData,
   SalaryAdjustmentPagination,
   SalaryAdjustmentStatus,
 } from '../types/salaryAdjustment.types';
+
+/**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponent(apiRecord: ApiSalaryAdjustmentRecord): SalaryAdjustmentRecord {
+  return {
+    id: apiRecord.id,
+    employeeId: apiRecord.workerId,
+    employeeName: apiRecord.workerName,
+    department: apiRecord.department,
+    position: apiRecord.position,
+    currentSalary: apiRecord.currentSalary,
+    proposedSalary: apiRecord.proposedSalary,
+    adjustmentAmount: apiRecord.adjustmentAmount,
+    adjustmentRatio: apiRecord.adjustmentRatio,
+    adjustmentType: apiRecord.adjustmentType,
+    effectiveDate: apiRecord.effectiveDate,
+    reason: apiRecord.reason,
+    status: apiRecord.statusLabel as SalaryAdjustmentStatus,
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
 
 export interface UseSalaryAdjustmentReturn {
   // 状态
@@ -51,9 +80,9 @@ export interface UseSalaryAdjustmentReturn {
   handleOpenDetailModal: (record: SalaryAdjustmentRecord) => void;
   handleStaffChange: (employeeId: string, employeeName: string, department: string, position: string, currentSalary: number) => void;
   handleProposedSalaryChange: (value: number) => void;
-  handleSubmit: () => void;
-  handleApprove: (record: SalaryAdjustmentRecord) => void;
-  handleReject: (record: SalaryAdjustmentRecord) => void;
+  handleSubmit: () => Promise<void>;
+  handleApprove: (record: SalaryAdjustmentRecord) => Promise<void>;
+  handleReject: (record: SalaryAdjustmentRecord) => Promise<void>;
   handleBatchApprove: () => void;
   handleBatchReject: () => void;
   handleExport: () => void;
@@ -65,17 +94,6 @@ function calculateAdjustment(current: number, proposed: number) {
   const amount = proposed - current;
   const ratio = current > 0 ? (amount / current) * 100 : 0;
   return { amount, ratio };
-}
-
-/** 状态映射 */
-function mapApprovalStatus(status: ApprovalStatus): SalaryAdjustmentStatus {
-  switch (status) {
-    case ApprovalStatus.PENDING: return '待审批';
-    case ApprovalStatus.APPROVED: return '已通过';
-    case ApprovalStatus.REJECTED: return '已拒绝';
-    case ApprovalStatus.CANCELLED: return '已取消';
-    default: return '待审批';
-  }
 }
 
 export function useSalaryAdjustment(
@@ -126,67 +144,52 @@ export function useSalaryAdjustment(
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // Context & Hooks
+  // 构建查询参数
   // ============================================================
 
-  const { addApproval, approve, reject, approvals } = useApprovalContext();
-  const { generateApprovers } = useApprovalLevel();
+  const queryFilters = useMemo(() => ({
+    keyword: filters.employeeName || undefined,
+    status: filters.status || undefined,
+    department: filters.department || undefined,
+  }), [filters]);
+
+  const queryPagination = useMemo(() => ({
+    page: pagination.current,
+    limit: pagination.pageSize,
+  }), [pagination]);
+
+  // ============================================================
+  // 使用 React Query 获取数据
+  // ============================================================
+
+  const { data: apiData, refetch } = useSalaryAdjustmentRecords(queryFilters, queryPagination);
+
+  // 转换 API 数据
+  const records: SalaryAdjustmentRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponent);
+  }, [apiData]);
+
+  // 更新分页信息
+  useMemo(() => {
+    if (apiData?.pagination) {
+      setPagination(prev => ({
+        ...prev,
+        total: apiData.pagination.total || 0,
+      }));
+    }
+  }, [apiData?.pagination]);
+
+  // ============================================================
+  // Mutations
+  // ============================================================
+
+  const createSalaryAdjustmentMutation = useCreateSalaryAdjustment();
+  const updateSalaryAdjustmentMutation = useUpdateSalaryAdjustment();
+  const updateStatusMutation = useUpdateSalaryAdjustmentStatus();
 
   // ============================================================
   // 数据处理
   // ============================================================
-
-  /** 调薪记录数据 */
-  const [records, setRecords] = useState<SalaryAdjustmentRecord[]>([]);
-
-  /** 初始化加载数据 */
-  useEffect(() => {
-    // 从ApprovalContext中筛选调薪类型的审批记录
-    const salaryApprovals = approvals.filter(a => a.type === ApprovalType.SALARY_ADJUST);
-
-    // 转换为SalaryAdjustmentRecord格式
-    const salaryRecords: SalaryAdjustmentRecord[] = salaryApprovals.map(approval => {
-      const businessData = approval.businessLink as {
-        employeeId?: string;
-        employeeName?: string;
-        department?: string;
-        position?: string;
-        currentSalary?: number;
-        proposedSalary?: number;
-        adjustmentType?: string;
-        effectiveDate?: string;
-        reason?: string;
-      } | null;
-      return {
-        id: approval.id,
-        employeeId: businessData?.employeeId || approval.applicantId,
-        employeeName: businessData?.employeeName || approval.applicantName,
-        department: businessData?.department || approval.applicantDepartment,
-        position: businessData?.position || '',
-        currentSalary: businessData?.currentSalary || 0,
-        proposedSalary: businessData?.proposedSalary || 0,
-        adjustmentAmount: (businessData?.proposedSalary || 0) - (businessData?.currentSalary || 0),
-        adjustmentRatio: businessData?.currentSalary ? ((businessData?.proposedSalary - businessData?.currentSalary) / businessData?.currentSalary * 100) : 0,
-        adjustmentType: businessData?.adjustmentType || '',
-        effectiveDate: businessData?.effectiveDate || approval.applyDate,
-        reason: businessData?.reason || '',
-        status: mapApprovalStatus(approval.status),
-        approver: approval.approvers[0]?.userName,
-        approveTime: approval.approvers[0]?.actionTime,
-        remarks: approval.remark,
-      };
-    });
-
-    // 添加一些模拟初始数据
-    const mockRecords: SalaryAdjustmentRecord[] = [
-      { id: 'SA001', employeeId: 'EMP20240001', employeeName: '张伟民', department: '生产部', position: '种植工', currentSalary: 6000, proposedSalary: 7200, adjustmentAmount: 1200, adjustmentRatio: 20, adjustmentType: '年度调薪', effectiveDate: '2026-05-01', status: '已通过', approver: '王建国', approveTime: '2026-04-20 10:00:00' },
-      { id: 'SA002', employeeId: 'EMP20240002', employeeName: '李秀英', department: '生产部', position: '农技员', currentSalary: 8000, proposedSalary: 10000, adjustmentAmount: 2000, adjustmentRatio: 25, adjustmentType: '晋升调薪', effectiveDate: '2026-06-01', status: '待审批' },
-      { id: 'SA003', employeeId: 'EMP20240003', employeeName: '王建国', department: '生产部', position: '生产经理', currentSalary: 15000, proposedSalary: 15000, adjustmentAmount: 0, adjustmentRatio: 0, adjustmentType: '市场调薪', effectiveDate: '2026-05-01', status: '已拒绝', remarks: '市场调研显示薪酬已具竞争力' },
-    ];
-
-    setRecords([...mockRecords, ...salaryRecords]);
-    setPagination(prev => ({ ...prev, total: mockRecords.length + salaryRecords.length }));
-  }, [approvals]);
 
   /** 过滤后的数据 */
   const filteredData = useMemo(() => {
@@ -285,7 +288,7 @@ export function useSalaryAdjustment(
   }, []);
 
   /** 提交调薪申请 */
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.proposedSalary || !formData.effectiveDate || !formData.reason) {
       alert('请填写完整信息');
       return;
@@ -296,99 +299,50 @@ export function useSalaryAdjustment(
       return;
     }
 
-    const { amount, ratio } = calculateAdjustment(formData.currentSalary, formData.proposedSalary);
+    try {
+      await createSalaryAdjustmentMutation.mutateAsync({
+        workerId: formData.employeeId,
+        workerName: formData.employeeName,
+        department: formData.department,
+        position: formData.position,
+        currentSalary: formData.currentSalary,
+        proposedSalary: formData.proposedSalary,
+        adjustmentType: formData.adjustmentType,
+        effectiveDate: formData.effectiveDate,
+        reason: formData.reason,
+        remarks: formData.remarks,
+      });
 
-    // 生成新记录
-    const newRecord: SalaryAdjustmentRecord = {
-      id: `SA${Date.now()}`,
-      employeeId: formData.employeeId,
-      employeeName: formData.employeeName,
-      department: formData.department,
-      position: formData.position,
-      currentSalary: formData.currentSalary,
-      proposedSalary: formData.proposedSalary,
-      adjustmentAmount: amount,
-      adjustmentRatio: ratio,
-      adjustmentType: formData.adjustmentType,
-      effectiveDate: formData.effectiveDate,
-      reason: formData.reason,
-      status: '待审批',
-      remarks: formData.remarks,
-    };
-
-    // 创建审批记录
-    const approvalLevelResult = generateApprovers(ApprovalType.SALARY_ADJUSTMENT, 0);
-
-    const approval: Approval = {
-      id: `APR-SA-${Date.now()}`,
-      code: `SP-SA-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-      type: ApprovalType.SALARY_ADJUSTMENT,
-      typeName: '调薪申请',
-      category: 'hr',
-      title: `${formData.employeeName}调薪申请 (${formData.currentSalary} → ${formData.proposedSalary})`,
-      description: formData.reason,
-      applicantId: formData.employeeId,
-      applicantName: formData.employeeName,
-      applicantDepartment: formData.department,
-      applyDate: new Date().toISOString().slice(0, 10),
-      applyTime: new Date().toISOString().slice(11, 19),
-      priority: 'normal',
-      status: ApprovalStatus.PENDING,
-      currentStep: 1,
-      totalSteps: approvalLevelResult.totalSteps,
-      approvers: approvalLevelResult.approvers,
-      records: [],
-      remark: formData.remarks,
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationSent: true,
-      businessLink: {
-        type: 'salary_adjustment',
-        requestId: newRecord.id,
-        employeeId: newRecord.employeeId,
-        employeeName: newRecord.employeeName,
-        department: newRecord.department,
-        position: newRecord.position,
-        currentSalary: newRecord.currentSalary,
-        proposedSalary: newRecord.proposedSalary,
-        adjustmentType: newRecord.adjustmentType,
-        effectiveDate: newRecord.effectiveDate,
-        reason: newRecord.reason,
-      },
-    };
-
-    addApproval(approval);
-
-    // 更新本地状态
-    setRecords(prev => [newRecord, ...prev]);
-    setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-
-    setIsFormModalOpen(false);
-    alert('提交成功！');
-  }, [formData, addApproval, generateApprovers]);
+      setIsFormModalOpen(false);
+      refetch();
+      alert('提交成功！');
+    } catch (error) {
+      console.error('提交调薪申请失败:', error);
+      alert('提交失败，请重试');
+    }
+  }, [formData, createSalaryAdjustmentMutation, refetch]);
 
   /** 审批通过 */
-  const handleApprove = useCallback((record: SalaryAdjustmentRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      approve(approval.id, '同意调薪');
+  const handleApprove = useCallback(async (record: SalaryAdjustmentRecord) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: record.id, status: 'approved' });
+      refetch();
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      alert('操作失败，请重试');
     }
-    setRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: '已通过' as SalaryAdjustmentStatus } : r)
-    );
-  }, [approve, approvals]);
+  }, [updateStatusMutation, refetch]);
 
   /** 审批驳回 */
-  const handleReject = useCallback((record: SalaryAdjustmentRecord) => {
-    const approval = approvals.find(a => a.id === record.id);
-    if (approval) {
-      reject(approval.id, '不符合调薪条件');
+  const handleReject = useCallback(async (record: SalaryAdjustmentRecord) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: record.id, status: 'rejected' });
+      refetch();
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      alert('操作失败，请重试');
     }
-    setRecords(prev =>
-      prev.map(r => r.id === record.id ? { ...r, status: '已拒绝' as SalaryAdjustmentStatus } : r)
-    );
-  }, [reject, approvals]);
+  }, [updateStatusMutation, refetch]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

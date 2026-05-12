@@ -1,17 +1,47 @@
-import { useState, useCallback } from 'react';
+/**
+ * 请假管理数据管理 Hook
+ * 使用 React Query 管理请假数据
+ */
+import { useState, useCallback, useMemo } from 'react';
+import { useLeaveRecords, useCreateLeave, useUpdateLeave, useDeleteLeave } from '@/hooks/useLeaveQueries';
+import type { LeaveRecord as ApiLeaveRecord, CreateLeaveParams, UpdateLeaveParams } from '@/services/apiLeaveService';
 import type { LeaveRecord, LeaveFilters, PaginationInfo, UseLeaveReturn, LeaveType, LeaveStatus } from '../types';
 
-// Mock 数据
-const mockLeaveRecords: LeaveRecord[] = [
-  { id: 'LV001', staffId: 'S001', staffName: '郭靖', leaveType: '事假', startDate: '2024-03-15', endDate: '2024-03-16', days: 2, reason: '家中急事需要处理', status: '待审批' },
-  { id: 'LV002', staffId: 'S002', staffName: '杨过', leaveType: '病假', startDate: '2024-03-10', endDate: '2024-03-12', days: 3, reason: '感冒发烧', status: '已审批', approver: '黄药师', approveTime: '2024-03-10 09:30' },
-  { id: 'LV003', staffId: 'S003', staffName: '张无忌', leaveType: '年假', startDate: '2024-03-20', endDate: '2024-03-25', days: 6, reason: '年度旅游休假', status: '待审批' },
-  { id: 'LV004', staffId: 'S004', staffName: '令狐冲', leaveType: '婚假', startDate: '2024-04-01', endDate: '2024-04-05', days: 5, reason: '婚礼筹备及蜜月', status: '已审批', approver: '黄药师', approveTime: '2024-03-20 14:00' },
-  { id: 'LV005', staffId: 'S005', staffName: '段誉', leaveType: '丧假', startDate: '2024-03-08', endDate: '2024-03-10', days: 3, reason: '家中老人去世', status: '已审批', approver: '黄药师', approveTime: '2024-03-08 08:00' },
-  { id: 'LV006', staffId: 'S006', staffName: '黄蓉', leaveType: '产假', startDate: '2024-05-01', endDate: '2024-08-31', days: 123, reason: '生育休假', status: '已审批', approver: '黄药师', approveTime: '2024-04-15 10:00' },
-  { id: 'LV007', staffId: 'S007', staffName: '陈家洛', leaveType: '工伤假', startDate: '2024-02-20', endDate: '2024-03-05', days: 14, reason: '工作中受伤', status: '已审批', approver: '黄药师', approveTime: '2024-02-20 16:00' },
-  { id: 'LV008', staffId: 'S008', staffName: '任盈盈', leaveType: '陪产假', startDate: '2024-04-10', endDate: '2024-04-15', days: 6, reason: '妻子生育', status: '已驳回', approver: '黄药师', approveTime: '2024-04-08 11:00', remarks: '人员紧张，暂不批准' },
-];
+/**
+ * API 数据转换为组件内部格式
+ */
+function mapApiToComponentRecord(apiRecord: ApiLeaveRecord): LeaveRecord {
+  return {
+    id: apiRecord.id,
+    staffId: apiRecord.workerId,
+    staffName: apiRecord.workerName,
+    leaveType: apiRecord.leaveType as LeaveType,
+    startDate: apiRecord.startDate,
+    endDate: apiRecord.endDate,
+    days: apiRecord.days,
+    reason: apiRecord.reason,
+    status: apiRecord.statusLabel as LeaveStatus,
+    approver: apiRecord.approver,
+    approveTime: apiRecord.approveTime,
+    remarks: apiRecord.remarks,
+  };
+}
+
+/**
+ * 组件格式转换为 API 创建参数
+ */
+function mapToCreateParams(data: Partial<LeaveRecord>, staffId: string, staffName: string): CreateLeaveParams {
+  return {
+    workerId: staffId || data.staffId || '',
+    workerName: staffName || data.staffName || '',
+    leaveType: data.leaveType || '事假',
+    startDate: data.startDate || '',
+    endDate: data.endDate || '',
+    days: data.days || 0,
+    reason: data.reason || '',
+    remarks: data.remarks,
+  };
+}
 
 /**
  * 请假管理数据管理 Hook
@@ -26,7 +56,7 @@ export function useLeave(): UseLeaveReturn {
     endDate: '',
   });
 
-  // 分页状态
+  // 分页状态 - React Query 使用 page/limit，这里转换为 currentPage/pageSize
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -37,12 +67,39 @@ export function useLeave(): UseLeaveReturn {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
+  // 构建查询参数
+  const queryFilters = useMemo(() => ({
+    workerName: filters.staffName || undefined,
+    leaveType: filters.leaveType || undefined,
+    status: filters.status || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  }), [filters]);
+
+  const queryPagination = useMemo(() => ({
+    page: currentPage,
+    limit: pageSize,
+  }), [currentPage, pageSize]);
+
+  // 使用 React Query 获取请假记录
+  const { data: apiData, isLoading } = useLeaveRecords(queryFilters, queryPagination);
+
+  // 转换 API 数据为组件格式
+  const data: LeaveRecord[] = useMemo(() => {
+    return (apiData?.records || []).map(mapApiToComponentRecord);
+  }, [apiData]);
+
   // 分页信息
-  const pagination: PaginationInfo = {
+  const pagination: PaginationInfo = useMemo(() => ({
     currentPage,
     pageSize,
-    total: mockLeaveRecords.length,
-  };
+    total: apiData?.pagination?.total || 0,
+  }), [currentPage, pageSize, apiData?.pagination?.total]);
+
+  // Mutations
+  const createLeaveMutation = useCreateLeave();
+  const updateLeaveMutation = useUpdateLeave();
+  const deleteLeaveMutation = useDeleteLeave();
 
   // 设置筛选条件
   const handleSetFilters = useCallback((newFilters: LeaveFilters) => {
@@ -62,30 +119,74 @@ export function useLeave(): UseLeaveReturn {
   }, []);
 
   // 保存记录（新建/编辑）
-  const handleSave = useCallback((data: Partial<LeaveRecord>) => {
-    // 实际项目中这里会调用 API 保存数据
-    setIsFormOpen(false);
-  }, []);
+  const handleSave = useCallback(async (saveData: Partial<LeaveRecord>) => {
+    try {
+      if (selectedRecord) {
+        // 更新现有记录
+        const updateParams: UpdateLeaveParams = {
+          leaveType: saveData.leaveType,
+          startDate: saveData.startDate,
+          endDate: saveData.endDate,
+          days: saveData.days,
+          reason: saveData.reason,
+          remarks: saveData.remarks,
+        };
+        await updateLeaveMutation.mutateAsync({ id: selectedRecord.id, updates: updateParams });
+      } else {
+        // 创建新记录
+        const createParams = mapToCreateParams(saveData, '', '');
+        await createLeaveMutation.mutateAsync(createParams);
+      }
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('保存请假记录失败:', error);
+      throw error;
+    }
+  }, [selectedRecord, createLeaveMutation, updateLeaveMutation]);
 
   // 审批通过
-  const handleApprove = useCallback((record: LeaveRecord) => {
-    // 实际项目中这里会调用 API 执行审批操作
-    setIsDetailOpen(false);
-  }, []);
+  const handleApprove = useCallback(async (record: LeaveRecord) => {
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'approved' },
+      });
+      setIsDetailOpen(false);
+    } catch (error) {
+      console.error('审批通过失败:', error);
+      throw error;
+    }
+  }, [updateLeaveMutation]);
 
   // 驳回
-  const handleReject = useCallback((record: LeaveRecord) => {
-    // 实际项目中这里会调用 API 执行驳回操作
-    setIsDetailOpen(false);
-  }, []);
+  const handleReject = useCallback(async (record: LeaveRecord) => {
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'rejected' },
+      });
+      setIsDetailOpen(false);
+    } catch (error) {
+      console.error('审批驳回失败:', error);
+      throw error;
+    }
+  }, [updateLeaveMutation]);
 
   // 取消申请
-  const handleCancel = useCallback((record: LeaveRecord) => {
-    // 实际项目中这里会调用 API 执行取消操作
-  }, []);
+  const handleCancel = useCallback(async (record: LeaveRecord) => {
+    try {
+      await updateLeaveMutation.mutateAsync({
+        id: record.id,
+        updates: { status: 'cancelled' },
+      });
+    } catch (error) {
+      console.error('取消申请失败:', error);
+      throw error;
+    }
+  }, [updateLeaveMutation]);
 
   return {
-    data: mockLeaveRecords,
+    data,
     filters,
     pagination,
     setFilters: handleSetFilters,
