@@ -37,6 +37,11 @@ import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 import announcementRouter from './announcement';
 import indicatorsRouter from './indicators';
+import scheduleRouter from './schedule';
+import attendanceRouter from './attendance';
+import personnelRouter from './personnel';
+import iotMonitorRouter from './iotMonitor';
+import alertRouter from './alert';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -164,6 +169,21 @@ router.use('/announcements', requireAuth, announcementRouter);
 
 // 指标路由 - 需要认证
 router.use('/indicators', requireAuth, indicatorsRouter);
+
+// 排班管理路由 - 需要认证
+router.use('/schedules', requireAuth, scheduleRouter);
+
+// 考勤管理路由 - 需要认证
+router.use('/attendance', requireAuth, attendanceRouter);
+
+// 人事管理路由 - 需要认证
+router.use('/personnel', requireAuth, personnelRouter);
+
+// IoT设备监控路由 - 需要认证
+router.use('/iot', requireAuth, iotMonitorRouter);
+
+// 告警管理路由 - 需要认证
+router.use('/alerts', requireAuth, alertRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

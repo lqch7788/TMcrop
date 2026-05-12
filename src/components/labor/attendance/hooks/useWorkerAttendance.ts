@@ -1,6 +1,8 @@
 /**
  * 工人考勤数据 Hook
  * 统一管理考勤相关的数据和操作逻辑
+ *
+ * Phase 2: 支持三级降级：API → IndexedDB缓存 → localStorage种子数据
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
@@ -9,7 +11,7 @@ import {
   ExportFormat,
   EXPORT_FORMAT_OPTIONS,
 } from '../types';
-import { apiClient, USE_API } from '../../../../services/apiClient';
+import { useAttendanceStore } from '../../../../stores';
 
 // File System Access API 类型声明
 declare global {
@@ -29,17 +31,8 @@ declare global {
   }
 }
 
-// 模拟考勤数据 - 扩展到8条，覆盖不同部门、状态，关联批次
-const attendanceData: AttendanceRecord[] = [
-  { id: 1, workerId: 'W001', name: '郭靖', dept: '生产部', date: '2024-03-14', checkIn: '07:50', checkOut: '18:10', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T001', batchId: 'B001' },
-  { id: 2, workerId: 'W002', name: '杨过', dept: '生产部', date: '2024-03-14', checkIn: '08:00', checkOut: '18:00', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T002', batchId: 'B002' },
-  { id: 3, workerId: 'W003', name: '张无忌', dept: '生产部', date: '2024-03-14', checkIn: '07:45', checkOut: '17:50', hours: 10, status: '正常', statusClass: 'normal', taskId: 'T003', batchId: 'B003' },
-  { id: 4, workerId: 'W004', name: '令狐冲', dept: '技术部', date: '2024-03-14', checkIn: '08:10', checkOut: '18:00', hours: 9.5, status: '迟到', statusClass: 'warning', taskId: 'T004', batchId: 'B004' },
-  { id: 5, workerId: 'W005', name: '段誉', dept: '生产部', date: '2024-03-14', checkIn: '-', checkOut: '-', hours: 0, status: '请假', statusClass: 'draft', taskId: undefined, batchId: 'B005' },
-  { id: 6, workerId: 'W006', name: '黄蓉', dept: '仓储部', date: '2024-03-14', checkIn: '08:05', checkOut: '17:55', hours: 9.8, status: '正常', statusClass: 'normal', taskId: 'T004', batchId: 'B004' },
-  { id: 7, workerId: 'W007', name: '陈家洛', dept: '生产部', date: '2024-03-14', checkIn: '07:30', checkOut: '18:30', hours: 11, status: '加班', statusClass: 'info', taskId: 'T006', batchId: 'B007' },
-  { id: 8, workerId: 'W008', name: '任盈盈', dept: '生产部', date: '2024-03-14', checkIn: '08:20', checkOut: '18:00', hours: 9.7, status: '早退', statusClass: 'warning', taskId: 'T001', batchId: 'B001' },
-];
+// 模拟考勤数据 - 作为种子数据保留（仅在store为空时使用）
+// 注意：实际数据由 useAttendanceStore 管理，这里仅作类型参考
 
 export interface UseWorkerAttendanceReturn {
   // 数据
@@ -96,47 +89,15 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 考勤数据状态（从 API 加载）
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // 使用 AttendanceStore（支持三级降级：API → IndexedDB → localStorage）
+  const attendanceRecords = useAttendanceStore(state => state.attendanceRecords);
+  const isLoading = useAttendanceStore(state => state.isLoading);
+  const fetchAttendance = useAttendanceStore(state => state.fetchAttendance);
 
-  // 从 API 加载考勤数据
+  // 初始加载数据
   useEffect(() => {
-    const loadAttendanceData = async () => {
-      setIsLoading(true);
-      try {
-        if (USE_API) {
-          // 尝试从 API 获取考勤数据
-          const apiData = await apiClient.get<AttendanceRecord[]>('/labor/attendance');
-          if (apiData && apiData.length > 0) {
-            setAttendanceRecords(apiData);
-          } else {
-            setAttendanceRecords(attendanceData);
-          }
-        } else {
-          // 非 API 模式，检查是否后端已实现
-          try {
-            const apiData = await apiClient.get<AttendanceRecord[]>('/labor/attendance');
-            if (apiData && apiData.length > 0) {
-              setAttendanceRecords(apiData);
-            } else {
-              setAttendanceRecords(attendanceData);
-            }
-          } catch {
-            // API 不可用，使用 mock 数据
-            setAttendanceRecords(attendanceData);
-          }
-        }
-      } catch (error) {
-        console.error('加载考勤数据失败，使用 mock 数据:', error);
-        setAttendanceRecords(attendanceData);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAttendanceData();
-  }, []);
+    fetchAttendance();
+  }, [fetchAttendance]);
 
   // 筛选数据
   const filteredData = useMemo(() => {
@@ -212,7 +173,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
 
   // 执行导出
   const handleDoExport = useCallback(async () => {
-    const selectedData = attendanceData.filter((a) => selectedRows.includes(a.id));
+    const selectedData = attendanceRecords.filter((a) => selectedRows.includes(a.id));
     const exportData = selectedData.map((row) => ({
       '工号': row.workerId,
       '姓名': row.name,

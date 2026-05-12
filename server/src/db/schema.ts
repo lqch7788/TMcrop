@@ -543,6 +543,7 @@ export function initializeDatabase() {
       batch_id TEXT,
       batch_code TEXT,
       create_by TEXT,
+      version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT
     )
@@ -608,6 +609,28 @@ export function initializeDatabase() {
       batch_code TEXT,
       status TEXT DEFAULT 'pending',
       remarks TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 创建考勤记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS attendance_records (
+      id TEXT PRIMARY KEY,
+      worker_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      dept TEXT,
+      date TEXT NOT NULL,
+      check_in TEXT,
+      check_out TEXT,
+      hours REAL DEFAULT 0,
+      status TEXT DEFAULT '正常',
+      status_class TEXT DEFAULT 'normal',
+      task_id TEXT,
+      batch_id TEXT,
+      remarks TEXT,
+      version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT
     )
@@ -1464,6 +1487,7 @@ export function initializeDatabase() {
       greenhouse_id TEXT,
       greenhouse_name TEXT,
       remarks TEXT,
+      version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT
     )
@@ -1487,6 +1511,7 @@ export function initializeDatabase() {
       department_id TEXT,
       department_name TEXT,
       remarks TEXT,
+      version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT
     )
@@ -1666,6 +1691,52 @@ export function initializeDatabase() {
       update_time TEXT
     )
   `);
+
+  // ========== V9.0: 排班管理表 ==========
+  // 排班表 - 用于存储员工排班信息
+  db.run(`
+    CREATE TABLE IF NOT EXISTS schedules (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      staff_name TEXT,
+      date TEXT NOT NULL,
+      shift TEXT,
+      work_zone TEXT,
+      status TEXT DEFAULT '已排班',
+      check_in TEXT,
+      check_out TEXT,
+      remarks TEXT,
+      version INTEGER DEFAULT 1,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 调班申请表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS swap_requests (
+      id TEXT PRIMARY KEY,
+      requester_id TEXT NOT NULL,
+      requester_name TEXT,
+      target_id TEXT NOT NULL,
+      target_name TEXT,
+      original_date TEXT NOT NULL,
+      target_date TEXT NOT NULL,
+      reason TEXT,
+      status TEXT DEFAULT '待审批',
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 为 schedules 表添加索引
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_schedules_date ON schedules(date)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_schedules_staff_id ON schedules(staff_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_schedules_date_staff ON schedules(date, staff_id)`);
+  } catch (e) {
+    // 索引可能已存在
+  }
 
   console.log('数据库表初始化完成');
 
