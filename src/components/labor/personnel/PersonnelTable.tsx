@@ -1,5 +1,6 @@
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
+import { Button } from '@/components/ui/button';
 
 interface PersonnelTableProps {
   workers: Worker[];
@@ -39,12 +40,13 @@ export function PersonnelTable({
         <h3 className="text-lg font-semibold text-gray-900">员工信息</h3>
         {showBatchSelect && (
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
             >
               {selectedRows.length === workers.length ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
@@ -129,30 +131,33 @@ export function PersonnelTable({
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onViewWorker(worker)}
-                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                       title="查看详情"
                     >
                       <Eye className="w-4 h-4" />
-                    </button>
+                    </Button>
                     {canEdit && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onEditWorker(worker)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="编辑"
                       >
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                     {canDelete && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onDeleteWorker(worker)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                         title="删除"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </td>
@@ -182,21 +187,23 @@ export function PersonnelTable({
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>共 {workers.length} 条</span>
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => {}}
               disabled={true}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-emerald-600">1/1</span>
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => {}}
               disabled={true}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       </div>

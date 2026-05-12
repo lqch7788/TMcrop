@@ -2,6 +2,7 @@
  * 绩效考核表格组件
  */
 import { Eye, ChevronLeft, ChevronRight, Edit2, Trash2, Download, Plus, CheckSquare, Square, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { PerformanceRecord } from './types';
 
 interface PerformanceTableProps {
@@ -106,85 +107,86 @@ export function PerformanceTable({
         <div className="flex items-center gap-2">
           {/* 取消按钮 - 批量模式下显示 */}
           {showCheckbox && (
-            <button
+            <Button
+              variant="secondary"
               onClick={onCancelBatch}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="gap-1"
             >
               <X className="w-4 h-4" />
               取消
-            </button>
+            </Button>
           )}
           {/* 新增按钮 - 正常模式显示 */}
           {!showCheckbox && (
-            <button
+            <Button
               onClick={onAddClick}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              className="gap-1"
             >
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           )}
           {/* 编辑/批量编辑按钮 - 同一位置 */}
           {batchEditMode ? (
-            <button
+            <Button
               onClick={onBatchEditClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="gap-1 bg-blue-600 hover:bg-blue-700"
             >
               <Edit2 className="w-4 h-4" />
               批量编辑
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
                 onClick={onBatchEditClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                className="gap-1 bg-blue-600 hover:bg-blue-700"
               >
                 <Edit2 className="w-4 h-4" />
                 编辑
-              </button>
+              </Button>
             )
           )}
           {/* 删除/批量删除按钮 - 同一位置 */}
           {batchDeleteMode ? (
-            <button
+            <Button
               onClick={onBatchDeleteClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="gap-1 bg-red-600 hover:bg-red-700"
             >
               <Trash2 className="w-4 h-4" />
               批量删除
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
                 onClick={onBatchDeleteClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                className="gap-1 bg-red-600 hover:bg-red-700"
               >
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
+              </Button>
             )
           )}
           {/* 导出按钮 - 同一位置 */}
           {exportMode ? (
-            <button
+            <Button
               onClick={onBatchExportClick}
               disabled={selectedRows.length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="gap-1"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           ) : (
             !showCheckbox && (
-              <button
+              <Button
                 onClick={onBatchExportClick}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                className="gap-1"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )
           )}
         </div>
@@ -196,12 +198,14 @@ export function PerformanceTable({
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onSelectAll}
                     className="text-white hover:text-blue-200"
                   >
                     {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
@@ -226,12 +230,14 @@ export function PerformanceTable({
               <tr key={record.id} className={`hover:bg-gray-50 ${selectedRows.includes(record.id) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onSelectRow?.(record.id)}
                       className="text-gray-500 hover:text-emerald-600"
                     >
                       {selectedRows.includes(record.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </td>
                 )}
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffId}</td>
@@ -253,30 +259,33 @@ export function PerformanceTable({
                 {!showCheckbox && (
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onViewDetail(record)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                       {onEdit && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onEdit(record)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
                           title="编辑"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                       {onDelete && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onDelete(record)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </td>
@@ -291,12 +300,13 @@ export function PerformanceTable({
       {showCheckbox && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="ghost"
               onClick={onSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium p-0 h-auto"
             >
               {allSelected ? '全不选' : '全选'}
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         </div>
@@ -321,21 +331,25 @@ export function PerformanceTable({
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>共 {totalCount} 条</span>
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8"
           >
             &lt;
-          </button>
+          </Button>
           <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8"
           >
             &gt;
-          </button>
+          </Button>
         </div>
       </div>
     </div>

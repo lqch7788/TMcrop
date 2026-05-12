@@ -2,6 +2,7 @@
  * 考勤补录页面 - 筛选栏组件
  */
 import { Search, RefreshCw, Plus, Download } from 'lucide-react';
+import { Button } from '@/components/ui';
 import type { AttendanceRepairFilters, BatchMode } from './types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS, STATUS_OPTIONS } from './types/attendanceRepairPage.types';
 
@@ -102,92 +103,94 @@ export function AttendanceRepairPageFilters({
         </div>
 
         {/* 搜索按钮 */}
-        <button
-          onClick={onSearch}
-          className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-        >
+        <Button onClick={onSearch} variant="default" size="default">
           <Search className="w-4 h-4" />
           搜索
-        </button>
+        </Button>
 
         {/* 重置按钮 */}
-        <button
-          onClick={onResetFilters}
-          className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-        >
+        <Button onClick={onResetFilters} variant="secondary" size="default">
           <RefreshCw className="w-4 h-4" />
           重置
-        </button>
+        </Button>
       </div>
 
       {/* 操作按钮栏 */}
       <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-        <button
+        <Button
           onClick={onOpenFormModal}
-          className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+          variant="default"
+          size="default"
         >
           <Plus className="w-4 h-4" />
           新增补录
-        </button>
+        </Button>
 
         {batchMode === 'none' && (
           <>
-            <button
+            <Button
               onClick={() => onBatchModeChange('approve')}
-              className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+              variant="blue"
+              size="default"
             >
               批量通过
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => onBatchModeChange('reject')}
-              className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+              variant="destructive"
+              size="default"
             >
               批量驳回
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => onBatchModeChange('export')}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+              variant="default"
+              size="default"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           </>
         )}
 
         {batchMode !== 'none' && (
           <>
             {batchMode === 'approve' && (
-              <button
+              <Button
                 onClick={onBatchApprove}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                variant="blue"
+                size="default"
               >
                 确认通过 ({selectedRowKeys.length})
-              </button>
+              </Button>
             )}
             {batchMode === 'reject' && (
-              <button
+              <Button
                 onClick={onBatchReject}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                variant="destructive"
+                size="default"
               >
                 确认驳回 ({selectedRowKeys.length})
-              </button>
+              </Button>
             )}
             {batchMode === 'export' && (
-              <button
+              <Button
                 onClick={onExport}
-                className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+                variant="default"
+                size="default"
               >
                 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={onCancelBatch}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              variant="secondary"
+              size="default"
             >
               取消
-            </button>
+            </Button>
           </>
         )}
       </div>

@@ -3,7 +3,7 @@
  */
 
 import { FileText } from 'lucide-react';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { TaskMaterial, TaskWithExtras } from './types';

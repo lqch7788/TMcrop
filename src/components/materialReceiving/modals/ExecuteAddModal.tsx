@@ -1,5 +1,5 @@
 import React from 'react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteAddModalProps {

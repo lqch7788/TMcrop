@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { BarChart3, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useMonthlyReport } from './hooks/useMonthlyReport';
 import { MonthlyReportFilters } from './MonthlyReportFilters';
 import { MonthlyStatsCards } from './MonthlyStatsCards';
@@ -148,13 +149,10 @@ export function MonthlyReportPage() {
           {(batchEditMode || batchDeleteMode || exportMode) && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <button
-                onClick={handleCancelBatch}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
+              <Button variant="outline" onClick={handleCancelBatch} className="gap-1">
                 <X className="w-4 h-4" />
                 取消
-              </button>
+              </Button>
             </div>
           )}
         </div>

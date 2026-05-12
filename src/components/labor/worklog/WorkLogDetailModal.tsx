@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { WorkLogDetailModalProps } from './types';
 
 /**
@@ -68,12 +69,9 @@ export function WorkLogDetailModal({ log, open, onClose }: WorkLogDetailModalPro
   );
 
   const footer = (
-    <button
-      onClick={onClose}
-      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-    >
+    <Button variant="secondary" onClick={onClose}>
       关闭
-    </button>
+    </Button>
   );
 
   return (
@@ -84,12 +82,9 @@ export function WorkLogDetailModal({ log, open, onClose }: WorkLogDetailModalPro
       size="md"
       showFooter={true}
       headerAction={
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

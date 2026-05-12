@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { OnboardingBatchEditModal } from './OnboardingBatchEditModal';
 import type { OnboardingRecord, OnboardingFormData, OnboardingStatus } from './types';
 import { Button } from '@/components/ui/button';

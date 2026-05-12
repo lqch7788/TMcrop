@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, Calculator, Plus, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useBudget } from './hooks/useBudget';
 import { BudgetChart } from './BudgetChart';
 import { BudgetInputForm } from './BudgetInputForm';
@@ -215,20 +216,14 @@ export const BudgetPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
+            <Button variant="outline" size="sm" onClick={handleExportClick}>
               <Download className="w-4 h-4" />
               导出
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-            >
+            </Button>
+            <Button variant="default" size="sm" onClick={() => setShowAddModal(true)}>
               <Plus className="w-4 h-4" />
               新增
-            </button>
+            </Button>
           </div>
         </div>
       </div>

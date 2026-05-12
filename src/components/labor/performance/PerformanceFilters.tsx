@@ -2,6 +2,7 @@
  * 绩效考核筛选栏组件
  */
 import { Search, RotateCcw, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { PerformanceFilters as PerformanceFiltersType } from './types';
 import { DEPT_OPTIONS, getMonthOptions } from './types';
 
@@ -76,13 +77,14 @@ export function PerformanceFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={onReset}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+            className="gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             重置
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
  * 加班申请页面 - 表格组件
  */
 import { Eye, Check, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import type { OvertimeRecord, PaginationState, BatchMode } from './types/overtimePage.types';
@@ -83,29 +84,32 @@ export function OvertimePageTable({
       width: 150,
       render: (_: any, record: OvertimeRecord) => (
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onOpenDetailModal(record)}
-            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
             title="查看详情"
           >
             <Eye className="w-4 h-4" />
-          </button>
+          </Button>
           {record.status === '待审批' && (
             <>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onApprove(record)}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
                 title="批准"
               >
                 <Check className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onReject(record)}
-                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                 title="驳回"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { WorkLogFormModalProps, WorkLog } from './types';
 
 /**
@@ -205,18 +206,12 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
   const footer = (
     <div className="flex justify-end gap-2">
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-      >
+      <Button variant="secondary" onClick={onClose}>
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-      >
+      </Button>
+      <Button onClick={handleSubmit}>
         保存
-      </button>
+      </Button>
     </div>
   );
 
@@ -228,12 +223,9 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
       size="md"
       showFooter={true}
       headerAction={
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

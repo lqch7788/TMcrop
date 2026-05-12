@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { TrendingUp, Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { EfficiencyDashboard } from './EfficiencyDashboard';
 import { EfficiencyChart } from './EfficiencyChart';
 import { EfficiencyTable } from './EfficiencyTable';
@@ -216,20 +217,20 @@ export const EfficiencyPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="outline"
               onClick={handleExportClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 mr-2" />
               导出
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 mr-2" />
               新增
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, FormField } from '../../ui/Modal';
+import { Modal, FormField } from '@/components/ui/Modal';
 import { RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
 
 interface Position {

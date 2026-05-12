@@ -7,6 +7,7 @@ import { LeaveDetailModal } from './LeaveDetailModal';
 import { LeaveFormModal } from './LeaveFormModal';
 import { LeaveQuotaCard, getMockLeaveQuota } from './LeaveQuota';
 import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } from './modals';
+import { Button } from '@/components/ui/button';
 
 /**
  * 请假管理页面主容器组件
@@ -314,12 +315,9 @@ export function LeavePage() {
             {batchEditMode && '（点击批量编辑进入编辑模式）'}
             {batchDeleteMode && '（确认删除选中的记录）'}
           </div>
-          <button
-            onClick={handleCancelBatch}
-            className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
-          >
+          <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
             取消
-          </button>
+          </Button>
         </div>
       )}
 

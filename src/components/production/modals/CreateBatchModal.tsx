@@ -1,4 +1,4 @@
-import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
+import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { CropBatch, Greenhouse, CropType, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';

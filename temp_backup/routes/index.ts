@@ -1,0 +1,151 @@
+/**
+ * 路由汇总
+ */
+
+import { Router, Request, Response, NextFunction } from 'express';
+import cropVarietyRouter from './cropVariety';
+import inventoryRouter from './inventory';
+import seedlingRouter from './seedling';
+import seedSourceRouter from './seedSource';
+import plantingRouter from './planting';
+import harvestRouter from './harvest';
+import supplierRouter from './supplier';
+import cropInstanceRouter from './cropInstance';
+import farmTaskRouter from './farmTask';
+import inspectionRouter from './inspection';
+import problemRouter from './problem';
+import laborRouter from './labor';
+import overtimeRouter from './overtime';
+import leaveRouter from './leave';
+import tempTaskRouter from './tempTask';
+import purchasePlanRouter from './purchasePlan';
+import materialRequestRouter from './materialRequest';
+import basicDataRouter from './basicData';
+import dictionaryRouter from './dictionary';
+import authorityRouter from './authority';
+import notificationRouter from './notification';
+import approvalWorkflowRouter from './approvalWorkflow';
+import approvalRouter from './approval';
+import approvalLinkageRouter from './approvalLinkage';
+import operationLogRouter from './operationLog';
+import cropOrderRouter from './cropOrder';
+import productionPlanRouter from './productionPlan';
+import techSolutionRouter from './techSolution';
+import summaryRouter from './summary';
+import materialCostRouter from './materialCost';
+import monitoringRouter from './monitoring';
+import syncRouter from './sync';
+import { authenticate } from '../middleware/auth';
+
+// JWT 认证中间件 - 要求已登录才能访问
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  authenticate(req, res, next);
+};
+
+const router = Router();
+
+// 作物品种路由 - 公开访问
+router.use('/crop-varieties', cropVarietyRouter);
+
+// 库存路由 - 公开访问
+router.use('/inventory', inventoryRouter);
+
+// 育苗管理路由 - 公开访问
+router.use('/seedlings', seedlingRouter);
+
+// 种源管理路由 - 公开访问
+router.use('/seed-sources', seedSourceRouter);
+
+// 种植管理路由 - 公开访问
+router.use('/plantings', plantingRouter);
+
+// 采收管理路由 - 公开访问
+router.use('/harvest', harvestRouter);
+
+// 供应商路由 - 公开访问
+router.use('/suppliers', supplierRouter);
+
+// 作物实例路由 - 公开访问
+router.use('/crop-instances', cropInstanceRouter);
+
+// 农事任务路由 - 公开访问
+router.use('/farm-tasks', farmTaskRouter);
+
+// 巡查记录路由 - 公开访问
+router.use('/inspections', inspectionRouter);
+
+// 问题记录路由 - 公开访问
+router.use('/problems', problemRouter);
+
+// 人工记录路由 - 公开访问
+router.use('/labor', laborRouter);
+
+// 加班记录路由 - 公开访问
+router.use('/overtime', overtimeRouter);
+
+// 请假记录路由 - 公开访问
+router.use('/leave', leaveRouter);
+
+// 临时任务路由 - 公开访问
+router.use('/temp-tasks', tempTaskRouter);
+
+// 采购计划路由 - 公开访问
+router.use('/purchase-plans', purchasePlanRouter);
+
+// 物料申请路由 - 公开访问
+router.use('/material-requests', materialRequestRouter);
+
+// 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 公开访问
+router.use('/basic-data', basicDataRouter);
+
+// 数据字典路由 - 公开访问
+router.use('/dictionary', dictionaryRouter);
+
+// 组织与权限路由 - 公开（登录/验证接口）
+router.use('/authority', authorityRouter);
+
+// 通知设置路由 - 公开
+router.use('/notifications', notificationRouter);
+
+// 审批工作流路由 - 公开访问
+router.use('/approval-workflows', approvalWorkflowRouter);
+
+// 审批单路由 - 公开访问
+router.use('/approvals', approvalRouter);
+
+// 审批联动路由 - 公开访问
+router.use('/approval-linkage', approvalLinkageRouter);
+
+// 操作日志路由 - 公开访问
+router.use('/operation-logs', operationLogRouter);
+
+// 订单路由 - 公开访问
+router.use('/crop-orders', cropOrderRouter);
+
+// 生产计划路由 - 公开访问
+router.use('/production-plans', productionPlanRouter);
+
+// 生产计划路由别名（兼容前端 /production/plans 调用）- 公开访问
+router.use('/production/plans', productionPlanRouter);
+
+// 技术方案路由 - 公开访问
+router.use('/tech-solutions', techSolutionRouter);
+
+// 生产汇总统计路由 - 公开访问
+router.use('/summary', summaryRouter);
+
+// 成本管理路由（物料成本 + 能源成本）- 公开访问
+router.use('/material-costs', materialCostRouter);
+
+// 性能监控路由 - 公开访问
+router.use('/monitoring', monitoringRouter);
+
+// 数据同步路由 - 公开访问
+router.use('/sync', syncRouter);
+
+// 健康检查
+router.get('/health', (req, res) => {
+  res.json({ success: true, message: 'API 服务正常运行' });
+});
+
+export default router;

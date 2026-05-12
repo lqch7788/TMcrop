@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { EfficiencyMetrics } from './types';
 
 interface EfficiencyBatchEditModalProps {

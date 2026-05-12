@@ -3,7 +3,7 @@ import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
 import { ContractBatchEditModal } from './ContractBatchEditModal';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';

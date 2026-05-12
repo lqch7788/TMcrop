@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { mockTempWorkers } from '../tempWorker/mockData';
+import { Button } from '@/components/ui/button';
 
 interface PieceworkFormModalProps {
   record: PieceRate | null;
@@ -232,18 +233,12 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
 
   const footer = (
     <>
-      <button
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-      >
+      <Button variant="secondary" onClick={onClose}>
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-      >
+      </Button>
+      <Button onClick={handleSubmit}>
         确认
-      </button>
+      </Button>
     </>
   );
 

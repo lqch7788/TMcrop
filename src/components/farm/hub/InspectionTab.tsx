@@ -18,7 +18,7 @@ import { InspectionRecord } from '../../../types';
 import { cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
 import { useUsers, useGreenhouses } from '../../common/settings';
 import QRScanner, { QRData } from '../../common/QRScanner';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 

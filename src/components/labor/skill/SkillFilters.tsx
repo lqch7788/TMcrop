@@ -49,12 +49,13 @@ export function SkillFiltersComponent({ filters, onChange, onReset, allSkillTags
             className="pl-9"
           />
           {filters.search && (
-            <button
+            <Button
+              variant="ghost"
               onClick={() => onChange({ ...filters, search: '' })}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0 h-auto"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>

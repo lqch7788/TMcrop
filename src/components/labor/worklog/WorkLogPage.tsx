@@ -34,7 +34,7 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">×</button>
+            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>

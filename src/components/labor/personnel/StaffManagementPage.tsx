@@ -9,6 +9,7 @@ import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
+import { Button } from '@/components/ui/button';
 
 // 模拟员工数据（后续迁移到SQLite数据库）
 const initialWorkers: Worker[] = [
@@ -326,89 +327,95 @@ export function StaffManagementPage() {
       <div className="flex justify-end">
         {batchEditMode ? (
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={() => setShowBatchEditModal(true)}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+              className="gap-2"
             >
               <Pencil className="w-4 h-4" />
               确认编辑
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleCancelBatchEdit}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              className="gap-2"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : batchDeleteMode ? (
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="destructive"
               onClick={() => setShowDeleteWarning(true)}
-              className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+              className="gap-2"
             >
               <Trash2 className="w-4 h-4" />
               确认删除
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleCancelBatchDelete}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              className="gap-2"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : exportMode ? (
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={() => setShowExportModal(true)}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+              className="gap-2"
             >
               <Download className="w-4 h-4" />
               确认导出
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleCancelExport}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              className="gap-2"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="flex gap-2">
             {canEdit && (
-              <button
+              <Button
+                variant="default"
                 onClick={handleBatchEditClick}
-                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                className="gap-2"
               >
                 <Pencil className="w-4 h-4" />
                 编辑
-              </button>
+              </Button>
             )}
             {canDelete && (
-              <button
+              <Button
+                variant="destructive"
                 onClick={handleBatchDeleteClick}
-                className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+                className="gap-2"
               >
                 <Trash2 className="w-4 h-4" />
                 删除
-              </button>
+              </Button>
             )}
             {canExport && (
-              <button
+              <Button
                 onClick={handleExportClick}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                className="gap-2"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             )}
             {canCreate && (
-              <button
+              <Button
                 onClick={handleAddWorker}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                className="gap-2"
               >
                 <Plus className="w-4 h-4" />
                 新增员工
-              </button>
+              </Button>
             )}
           </div>
         )}

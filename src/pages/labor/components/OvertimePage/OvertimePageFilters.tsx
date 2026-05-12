@@ -2,6 +2,7 @@
  * 加班申请页面 - 筛选栏组件
  */
 import { Search, RefreshCw, Plus, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { OvertimeFilters, BatchMode } from './types/overtimePage.types';
 import { OVERTIME_TYPE_OPTIONS, STATUS_OPTIONS } from './types/overtimePage.types';
 
@@ -89,92 +90,68 @@ export function OvertimePageFilters({
         </div>
 
         {/* 搜索按钮 */}
-        <button
-          onClick={onSearch}
-          className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-        >
+        <Button variant="default" onClick={onSearch} className="gap-1">
           <Search className="w-4 h-4" />
           搜索
-        </button>
+        </Button>
 
         {/* 重置按钮 */}
-        <button
-          onClick={onResetFilters}
-          className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-        >
+        <Button variant="secondary" onClick={onResetFilters} className="gap-1">
           <RefreshCw className="w-4 h-4" />
           重置
-        </button>
+        </Button>
       </div>
 
       {/* 操作按钮栏 */}
       <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-        <button
-          onClick={onOpenFormModal}
-          className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-        >
+        <Button variant="default" onClick={onOpenFormModal} className="gap-1">
           <Plus className="w-4 h-4" />
           新增加班
-        </button>
+        </Button>
 
         {batchMode === 'none' && (
           <>
-            <button
-              onClick={() => onBatchModeChange('approve')}
-              className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
+            <Button variant="blue" onClick={() => onBatchModeChange('approve')}>
               批量通过
-            </button>
-            <button
-              onClick={() => onBatchModeChange('reject')}
-              className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={() => onBatchModeChange('reject')}>
               批量驳回
-            </button>
-            <button
-              onClick={() => onBatchModeChange('export')}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-            >
+            </Button>
+            <Button variant="outline" onClick={() => onBatchModeChange('export')} className="gap-1">
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           </>
         )}
 
         {batchMode !== 'none' && (
           <>
             {batchMode === 'approve' && (
-              <button
+              <Button
+                variant="blue"
                 onClick={onBatchApprove}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
               >
                 确认通过 ({selectedRowKeys.length})
-              </button>
+              </Button>
             )}
             {batchMode === 'reject' && (
-              <button
+              <Button
+                variant="destructive"
                 onClick={onBatchReject}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
               >
                 确认驳回 ({selectedRowKeys.length})
-              </button>
+              </Button>
             )}
             {batchMode === 'export' && (
-              <button
-                onClick={onExport}
-                className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-              >
+              <Button variant="outline" onClick={onExport}>
                 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
-              </button>
+              </Button>
             )}
-            <button
-              onClick={onCancelBatch}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={onCancelBatch}>
               取消
-            </button>
+            </Button>
           </>
         )}
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { MaterialItem } from '../../../types/materialReceiving';
 import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
 import { UserSelect } from '../../common/settings/UserSelect';

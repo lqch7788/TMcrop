@@ -1,6 +1,7 @@
 import { X, Phone, Mail, MapPin, User, Briefcase, Calendar, Award, FileText, GraduationCap, Clock } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
+import { Button } from '@/components/ui/button';
 
 interface PersonnelDetailModalProps {
   worker: Worker | null;
@@ -292,12 +293,12 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
             {WORKER_STATUS_CONFIG[worker.status].label}
           </span>
         </div>
-        <button
+        <Button
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          variant="secondary"
         >
           关闭
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -310,9 +311,9 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
       size="xl"
       showFooter={false}
       headerAction={
-        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5 text-white" />
-        </button>
+        </Button>
       }
     >
       {content}

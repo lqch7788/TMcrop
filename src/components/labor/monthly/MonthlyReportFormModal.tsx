@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { MonthlyReport } from './types';
 
 interface MonthlyReportFormModalProps {

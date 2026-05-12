@@ -73,12 +73,14 @@ export function SalaryFilters({
               className="pl-9"
             />
             {filters.staffName && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onFilterChange({ staffName: undefined })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 h-auto w-auto p-1"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

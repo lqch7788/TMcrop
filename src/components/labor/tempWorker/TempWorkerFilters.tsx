@@ -1,4 +1,5 @@
 import { Search, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { TempWorkerFiltersProps, WorkerType, StaffStatus } from './types';
 
 /**
@@ -64,21 +65,13 @@ export function TempWorkerFilters({
         </div>
 
         {/* 搜索按钮 */}
-        <button
-          onClick={onSearch}
-          className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-        >
-          搜索
-        </button>
+        <Button onClick={onSearch}>搜索</Button>
 
         {/* 新建按钮 */}
-        <button
-          onClick={onAdd}
-          className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
+        <Button onClick={onAdd}>
+          <Plus className="w-4 h-4 mr-1" />
           快速入职
-        </button>
+        </Button>
       </div>
     </div>
   );

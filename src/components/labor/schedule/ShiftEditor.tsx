@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Clock, MapPin, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ShiftConfig, ShiftType } from './types';
 
 interface ShiftEditorProps {
@@ -52,12 +53,13 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
       {/* 头部 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-medium text-gray-800">班次设置</h2>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-1 rounded hover:bg-gray-100 transition-colors"
         >
           <X className="w-5 h-5 text-gray-500" />
-        </button>
+        </Button>
       </div>
 
       {/* 班次列表 */}
@@ -79,18 +81,20 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                     <span className="font-medium text-gray-800">{config.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleCancel}
-                      className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
                     >
                       取消
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
                       onClick={handleSave}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded transition-colors"
                     >
                       保存
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -133,11 +137,13 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                   </label>
                   <div className="flex gap-2">
                     {SHIFT_COLORS.map(color => (
-                      <button
+                      <Button
                         key={color.name}
+                        variant="outline"
+                        size="icon"
                         onClick={() => setTempConfig(prev => ({ ...prev, color: color.name }))}
                         className={`
-                          w-8 h-8 rounded-full flex items-center justify-center transition-all
+                          w-8 h-8 rounded-full p-0
                           ${tempConfig.color === color.name ? 'ring-2 ring-offset-2 ring-gray-400' : ''}
                         `}
                         style={{ backgroundColor: color.name.replace('bg-', '') }}
@@ -145,7 +151,7 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                         {tempConfig.color === color.name && (
                           <Check className="w-4 h-4 text-white" />
                         )}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -163,12 +169,14 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                     </div>
                   </div>
                 </div>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleStartEdit(config.name)}
-                  className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  className="text-blue-600 hover:bg-blue-50"
                 >
                   编辑
-                </button>
+                </Button>
               </div>
             )}
           </div>

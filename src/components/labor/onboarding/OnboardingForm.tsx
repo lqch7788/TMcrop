@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { OnboardingFormData, ContractType } from './types';
 
 interface OnboardingFormProps {
@@ -177,18 +178,12 @@ export function OnboardingForm({
 
       {/* 操作按钮 */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-        >
+        <Button variant="outline" onClick={onCancel}>
           取消
-        </button>
-        <button
-          onClick={onSubmit}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-        >
+        </Button>
+        <Button variant="default" onClick={onSubmit}>
           {isEdit ? '保存' : '创建入职'}
-        </button>
+        </Button>
       </div>
     </div>
   );

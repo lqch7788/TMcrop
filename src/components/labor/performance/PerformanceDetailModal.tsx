@@ -2,7 +2,8 @@
  * 绩效考核详情弹窗组件
  */
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { PerformanceRecord, PERFORMANCE_DIMENSIONS } from './types';
 
 interface PerformanceDetailModalProps {
@@ -122,12 +123,12 @@ export function PerformanceDetailModal({ record, open, onClose }: PerformanceDet
   );
 
   const footer = (
-    <button
+    <Button
+      variant="secondary"
       onClick={onClose}
-      className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
     >
       关闭
-    </button>
+    </Button>
   );
 
   return (
@@ -138,12 +139,13 @@ export function PerformanceDetailModal({ record, open, onClose }: PerformanceDet
       size="lg"
       showFooter={true}
       headerAction={
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded"
         >
           <X className="w-5 h-5 text-gray-500" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Worker, SKILL_TAGS } from '../../../types';
 import { Button } from '@/components/ui/button';
 
@@ -310,18 +310,15 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
             <label className="block text-xs text-gray-500 mb-2">技能标签</label>
             <div className="flex flex-wrap gap-2">
               {SKILL_TAGS.map((tag) => (
-                <button
+                <Button
                   key={tag}
                   type="button"
+                  variant={formData.skillTags?.includes(tag) ? 'default' : 'secondary'}
+                  size="sm"
                   onClick={() => handleSkillTagToggle(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    formData.skillTags?.includes(tag)
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
                 >
                   {tag}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

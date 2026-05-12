@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface OvertimeDeleteWarningModalProps {
   isOpen: boolean;
@@ -38,18 +39,12 @@ export function OvertimeDeleteWarningModal({
             </p>
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="outline" onClick={onClose}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="h-10 px-6 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

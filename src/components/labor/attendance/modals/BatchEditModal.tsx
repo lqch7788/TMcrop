@@ -1,4 +1,5 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { AttendanceRecord } from '../types';
 
 interface BatchEditModalProps {
@@ -60,25 +61,16 @@ export function BatchEditModal({
       footer={
         <div className="flex items-center justify-end gap-3">
           {onConfirmNext && (
-            <button
-              onClick={onConfirmNext}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-            >
+            <Button onClick={onConfirmNext}>
               确认（下一个）
-            </button>
+            </Button>
           )}
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
-          >
+          <Button onClick={onClose} variant="outline">
             取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-          >
+          </Button>
+          <Button onClick={onConfirm}>
             保存修改
-          </button>
+          </Button>
         </div>
       }
     >

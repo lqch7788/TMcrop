@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import type { MonthlyBudget } from '../types';
 
 interface BudgetBatchEditModalProps {

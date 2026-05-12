@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { BudgetInput } from './types';
 
 interface BudgetInputFormProps {
@@ -33,13 +34,10 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
               </option>
             ))}
           </select>
-          <button
-            onClick={onReset}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
-          >
+          <Button variant="ghost" size="sm" onClick={onReset}>
             <RefreshCw className="w-3 h-3" />
             重置
-          </button>
+          </Button>
         </div>
       </div>
 

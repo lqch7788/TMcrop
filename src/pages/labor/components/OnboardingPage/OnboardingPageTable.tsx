@@ -4,6 +4,7 @@
 import { Eye, Check, X } from 'lucide-react';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
+import { Button } from '@/components/ui/button';
 import { OnboardingRecord, STATUS_CONFIG_MAP } from '../../types/onboardingPage.types';
 
 interface OnboardingPageTableProps {
@@ -83,29 +84,17 @@ export function OnboardingPageTable({
       width: 150,
       render: (_: any, record: OnboardingRecord) => (
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onOpenDetail(record)}
-            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-            title="查看详情"
-          >
+          <Button onClick={() => onOpenDetail(record)} variant="ghost" size="icon" title="查看详情">
             <Eye className="w-4 h-4" />
-          </button>
+          </Button>
           {record.status === '待入职' && (
             <>
-              <button
-                onClick={() => onApprove(record)}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
-                title="批准入职"
-              >
+              <Button onClick={() => onApprove(record)} variant="ghost" size="icon" title="批准入职">
                 <Check className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => onReject(record)}
-                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                title="驳回"
-              >
+              </Button>
+              <Button onClick={() => onReject(record)} variant="ghost" size="icon" title="驳回">
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </>
           )}
         </div>

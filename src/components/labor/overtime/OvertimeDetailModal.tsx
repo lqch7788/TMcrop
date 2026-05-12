@@ -1,5 +1,6 @@
 import { X, Check, XCircle } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import type { OvertimeDetailModalProps, OvertimeType } from './types';
 
 /**
@@ -125,28 +126,19 @@ export function OvertimeDetailModal({ record, open, onClose, onApprove, onReject
     <>
       {record.status === '待审批' && (
         <>
-          <button
-            onClick={() => onReject(record)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-          >
-            <XCircle className="w-4 h-4" />
+          <Button variant="destructive" onClick={() => onReject(record)}>
+            <XCircle className="w-4 h-4 mr-1" />
             驳回
-          </button>
-          <button
-            onClick={() => onApprove(record)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-          >
-            <Check className="w-4 h-4" />
+          </Button>
+          <Button onClick={() => onApprove(record)}>
+            <Check className="w-4 h-4 mr-1" />
             批准
-          </button>
+          </Button>
         </>
       )}
-      <button
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-      >
+      <Button variant="outline" onClick={onClose}>
         关闭
-      </button>
+      </Button>
     </>
   );
 
@@ -158,12 +150,9 @@ export function OvertimeDetailModal({ record, open, onClose, onApprove, onReject
       size="md"
       showFooter={true}
       headerAction={
-        <button
-          onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       }
       footer={footer}
     >

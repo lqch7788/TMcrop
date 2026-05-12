@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, FormField, Input, Select, Textarea } from '../../ui/Modal';
+import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { currentUser } from '../../../data/mockData';
 import { useGreenhouses } from '../../common/settings';
@@ -181,18 +182,17 @@ export function TempTaskFormModal({
 
   const footer = (
     <div className="flex gap-3">
-      <button
+      <Button
         onClick={onSubmitDraft}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+        variant="ghost"
       >
         存为草稿
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={onSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
       >
         发布
-      </button>
+      </Button>
     </div>
   );
 
@@ -220,13 +220,13 @@ export function TempTaskFormModal({
                 placeholder="点击生成获取编号"
                 className="flex-1"
               />
-              <button
+              <Button
                 type="button"
                 onClick={generateNewTaskCode}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium whitespace-nowrap"
+                size="sm"
               >
                 生成
-              </button>
+              </Button>
             </div>
           </FormField>
 

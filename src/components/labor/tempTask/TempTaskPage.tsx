@@ -9,7 +9,7 @@ import { TempTaskFormModal } from './TempTaskFormModal';
 import { useTempTaskFilters } from './hooks/useTempTaskFilters';
 import { useTempTaskForm } from './hooks/useTempTaskForm';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
-import { Modal } from '../../ui/Modal';
+import { Modal } from '@/components/ui/Modal';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { Button } from '@/components/ui/button';
