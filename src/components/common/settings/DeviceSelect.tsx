@@ -1,10 +1,10 @@
 /**
  * 设备选择组件
- * 从设置数据中获取设备列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useDevices } from './SettingsDataProvider';
+import { useDeviceStore } from '../../../stores';
 
 interface DeviceSelectProps {
   value?: string;
@@ -25,7 +25,14 @@ export function DeviceSelect({
   deviceType,
   greenhouseOid,
 }: DeviceSelectProps) {
-  const { devices } = useDevices();
+  const devices = useDeviceStore((state) => state.devices);
+  const loading = useDeviceStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (devices.length === 0 && !loading) {
+      useDeviceStore.getState().loadDevices();
+    }
+  }, [devices.length, loading]);
 
   let filteredDevices = devices;
 

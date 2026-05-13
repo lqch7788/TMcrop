@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { StaffSkill, SkillLevel } from './types';
-import { useDepartments, useDictionaries } from '../../common/settings';
+import { useDepartmentStore, useDictionaryStore, getDictItems } from '../../../stores';
 import { Button } from '@/components/ui/button';
 
 interface SkillBatchEditModalProps {
@@ -36,12 +36,23 @@ export function SkillBatchEditModal({
   onConfirm,
   onConfirmNext,
 }: SkillBatchEditModalProps) {
-  // 从SettingsDataProvider获取部门列表和字典数据
-  const { departments } = useDepartments();
-  const { getDictItems } = useDictionaries();
+  // 从Zustand stores获取部门列表和字典数据
+  const departments = useDepartmentStore((state) => state.departments);
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (departments.length === 0) {
+      loadDepartments();
+    }
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [departments.length, loadDepartments, dictionaries.length, loadDictionaries]);
 
   // 获取技能状态字典
-  const statusOptions = getDictItems('skill_status').map(item => item.name);
+  const statusOptions = getDictItems('skill_status').map(item => item.dictLabel);
 
   // 当弹窗打开且没有选择记录时，自动选择第一条
   React.useEffect(() => {

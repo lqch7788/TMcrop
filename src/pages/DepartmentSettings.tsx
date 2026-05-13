@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Target, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDepartments } from '../components/common/settings';
+import { useDepartmentStore } from '../stores';
 
 // 部门列表数据结构
 interface DepartmentData {
@@ -18,9 +18,17 @@ interface DepartmentData {
 }
 
 export default function DepartmentSettings() {
-  const { departments } = useDepartments();
+  const departments = useDepartmentStore((state) => state.departments);
+  const loading = useDepartmentStore((state) => state.loading);
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  useEffect(() => {
+    if (departments.length === 0 && !loading) {
+      loadDepartments();
+    }
+  }, [departments.length, loading, loadDepartments]);
 
   // 将API数据转换为页面需要的格式
   const departmentList: DepartmentData[] = departments.map((dept, index) => ({

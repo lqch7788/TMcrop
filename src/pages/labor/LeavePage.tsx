@@ -4,7 +4,7 @@
  * 拆分后主组件，组合子组件实现完整功能
  */
 import { CalendarDays } from 'lucide-react';
-import { useUsers } from '../../components/common/settings';
+import { useUserStore } from '../../stores';
 import { useLeave } from './hooks/useLeave';
 import { LeaveFilters } from './components/LeaveFilters';
 import { LeaveTable } from './components/LeaveTable';
@@ -13,7 +13,7 @@ import { DetailModal } from './components/LeaveModals/DetailModal';
 import { WithdrawModal } from './components/LeaveModals/WithdrawModal';
 
 export default function LeavePage() {
-  const { workers } = useUsers();
+  const workers = useUserStore((state) => state.users);
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {

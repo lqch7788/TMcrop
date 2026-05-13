@@ -3,7 +3,7 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { cropBatches } from '../../../data/mockData';
-import { useUsers, useGreenhouses } from '../../common/settings';
+import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { warehouseOptions } from '../../../data/farmMockData';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
@@ -46,8 +46,20 @@ const generateProductCode = (cropName: string, variety: string, index: number): 
 };
 
 export default function HarvestPage() {
-  const { users } = useUsers();
-  const { greenhouses } = useGreenhouses();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   // 采收模块权限 - 已取消，直接设置为 true

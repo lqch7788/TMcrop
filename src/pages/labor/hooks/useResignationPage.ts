@@ -3,8 +3,8 @@
  * 封装状态管理、API调用和数据处理逻辑
  * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback } from 'react';
-import { useUsers } from '../../../components/common/settings';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useWorkerStore } from '../../../stores/useWorkerStore';
 import {
   useResignationRecords,
   useCreateResignation,
@@ -64,7 +64,14 @@ const DEFAULT_FORM_DATA: ResignationFormData = {
  * 离职申请页面 Hook
  */
 export function useResignationPage() {
-  const { workers } = useUsers();
+  const workers = useWorkerStore((state) => state.workers);
+  const loadWorkers = useWorkerStore((state) => state.loadWorkers);
+
+  useEffect(() => {
+    if (workers.length === 0) {
+      loadWorkers();
+    }
+  }, [workers.length, loadWorkers]);
 
   // ============================================================
   // 状态定义

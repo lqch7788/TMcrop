@@ -29,7 +29,7 @@ import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTy
 import { taskDispatchFields, taskDispatchStaff } from '../../data/farmMockData';
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
 import { cropBatches } from '../../data/mockData';
-import { useUsers } from '../../components/common/settings';
+import { useUserStore } from '../../stores';
 import { format, parse, addDays, addHours } from 'date-fns';
 
 // 导入弹窗适配器
@@ -120,7 +120,7 @@ export function FarmTaskHub() {
   const tasksHook = useTasks();
   const hub = useFarmHub(tasksHook);
   const { tempTasks } = useTempTasks();
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
   // 批量导入弹窗状态

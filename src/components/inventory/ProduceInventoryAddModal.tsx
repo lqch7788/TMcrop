@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
 import { produceInventory } from '../../data/mockData';
-import { useWarehouses } from '../common/settings';
+import { useWarehouseStore } from '../../stores';
 import { DictSelect } from '../common/settings/DictSelect';
 
 interface ProduceInventoryAddModalProps {
@@ -21,7 +21,14 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
   onClose,
   onAdd,
 }) => {
-  const { warehouses } = useWarehouses();
+  const warehouses = useWarehouseStore((state) => state.warehouses);
+  const loadWarehouses = useWarehouseStore((state) => state.loadWarehouses);
+
+  useEffect(() => {
+    if (warehouses.length === 0) {
+      loadWarehouses();
+    }
+  }, [warehouses.length, loadWarehouses]);
 
   // 获取下一个ID
   const getNextId = () => {

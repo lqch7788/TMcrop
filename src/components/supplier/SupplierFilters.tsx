@@ -1,9 +1,9 @@
 // 供应商筛选组件
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { supplierCategories, getSupplierTypeName } from './data';
-import { useSettingsData } from '../common/settings/SettingsDataProvider';
+import { useDictionaryStore } from '../../stores';
 
 interface SupplierFiltersProps {
   filters: SupplierFiltersState;
@@ -13,10 +13,18 @@ interface SupplierFiltersProps {
 
 export default function SupplierFilters({ filters, onFilterChange, onReset }: SupplierFiltersProps) {
   // 从全局设置数据获取供应商属性字典
-  const { dictionaries } = useSettingsData();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
+
   const attributeOptions = useMemo(() => {
-    const attrs = dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active');
-    return ['全部', ...attrs.map(a => a.name)];
+    const attrs = dictionaries.filter(d => d.categoryCode === 'supplier_attribute' && d.status === 'active');
+    return ['全部', ...attrs.map(a => a.dictLabel)];
   }, [dictionaries]);
 
   const typeOptions = ['全部', 'SP', 'FE', 'PP', 'EQ', 'FA', 'IR', 'OP', 'PH', 'TS', 'UT', 'OT'];

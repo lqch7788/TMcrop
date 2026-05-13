@@ -165,6 +165,7 @@ export default function PlanSummary() {
 
       {/* 数据表格 */}
       <SummaryTable
+        title="生产计划汇总表"
         columns={columns}
         data={paginatedData}
         currentPage={currentPage}
@@ -195,8 +196,14 @@ export default function PlanSummary() {
  */
 function getStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
+    draft: '草稿',
+    planning: '规划中',
     planned: '计划中',
+    published: '已发布',
     in_progress: '进行中',
+    planted: '已种植',
+    growing: '生长中',
+    harvesting: '采收中',
     completed: '已完成',
     cancelled: '已取消',
     suspended: '已暂停',
@@ -209,8 +216,14 @@ function getStatusLabel(status: string): string {
  */
 function getStatusConfig(status: string): { label: string; className: string } {
   const statusMap: Record<string, { label: string; className: string }> = {
-    planned: { label: '计划中', className: 'bg-gray-100 text-gray-700' },
+    draft: { label: '草稿', className: 'bg-gray-100 text-gray-700' },
+    planning: { label: '规划中', className: 'bg-gray-100 text-gray-600' },
+    planned: { label: '计划中', className: 'bg-blue-50 text-blue-700' },
+    published: { label: '已发布', className: 'bg-blue-100 text-blue-700' },
     in_progress: { label: '进行中', className: 'bg-blue-100 text-blue-700' },
+    planted: { label: '已种植', className: 'bg-green-50 text-green-700' },
+    growing: { label: '生长中', className: 'bg-green-100 text-green-700' },
+    harvesting: { label: '采收中', className: 'bg-orange-100 text-orange-700' },
     completed: { label: '已完成', className: 'bg-green-100 text-green-700' },
     cancelled: { label: '已取消', className: 'bg-red-100 text-red-700' },
     suspended: { label: '已暂停', className: 'bg-amber-100 text-amber-700' },

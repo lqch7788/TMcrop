@@ -3,12 +3,12 @@
  * 完整功能集成自 ProblemDispatchPage
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { usePersistentProblems, ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
 import { useTasks } from '../../../hooks/useTasks';
-import { useUsers } from '../../common/settings';
+import { useUserStore } from '../../../stores';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals';
@@ -76,8 +76,15 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
   const { tasks } = useTasks();
-  // 从SettingsDataProvider获取用户列表
-  const { users } = useUsers();
+  // 从Zustand store获取用户列表
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   // 获取默认巡查人员（避免硬编码）
   const defaultInspector = useMemo(() => {

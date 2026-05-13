@@ -122,7 +122,8 @@ export function useBatchSummary(filters?: BatchFilters) {
   // 计算统计卡片数据
   const statCards = useMemo((): SummaryStatCard[] => {
     const total = filteredSummaries.length;
-    const totalArea = filteredSummaries.reduce((sum, s) => sum + s.plantingArea, 0);
+    // plantingArea 是温室/区域名称字符串，不能做数字累加，改为统计不同区域数量
+    const areaCount = new Set(filteredSummaries.map(s => s.plantingArea)).size;
     const totalTargetYield = filteredSummaries.reduce((sum, s) => sum + s.targetYield, 0);
     const totalActualYield = filteredSummaries.reduce((sum, s) => sum + s.actualYield, 0);
     const avgCompletion = total > 0
@@ -131,7 +132,7 @@ export function useBatchSummary(filters?: BatchFilters) {
 
     return [
       { label: '生产批次', value: total, icon: '📦', iconBgColor: 'bg-blue-500' },
-      { label: '种植面积', value: totalArea + '亩', icon: '🌱', iconBgColor: 'bg-green-500' },
+      { label: '种植区域', value: areaCount, icon: '🌱', iconBgColor: 'bg-green-500' },
       { label: '总产量', value: totalActualYield.toLocaleString() + ' kg', icon: '📈', iconBgColor: 'bg-orange-500' },
       { label: '平均完成率', value: avgCompletion + '%', icon: '✅', iconBgColor: 'bg-purple-500' },
     ];

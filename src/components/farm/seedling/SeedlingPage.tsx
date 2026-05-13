@@ -15,7 +15,7 @@ import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaries } from '../../common/settings';
+import { useDictionaryStore, getDictItems } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as seedlingService from '../../../services/apiSeedlingService';
 import * as seedSourceService from '../../../services/apiSeedSourceService';
@@ -34,6 +34,16 @@ export default function SeedlingPage() {
   const canDelete = true;
   const canExport = true;
   const canPrint = true;
+
+  // 字典数据
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -70,12 +80,10 @@ export default function SeedlingPage() {
     return cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   }, [cropVarietyOptions]);
 
-  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
-  const { getDictItems } = useDictionaries();
-
+  // 字典数据转换（使用 Zustand store 获取）
   // 育苗方式选项
   const seedlingTypes = useMemo(() => {
-    const items = getDictItems('seedling_type').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_type').map(d => ({ value: d.dictCode, label: d.dictLabel }));
     // 去重：使用 value 作为唯一键
     const seen = new Set<string>();
     return items.filter(t => {
@@ -83,11 +91,11 @@ export default function SeedlingPage() {
       seen.add(t.value);
       return true;
     });
-  }, [getDictItems]);
+  }, [dictionaries]);
 
   // 场地选项
   const sites = useMemo(() => {
-    const items = getDictItems('seedling_site').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_site').map(d => ({ value: d.dictCode, label: d.dictLabel }));
     // 去重
     const seen = new Set<string>();
     return items.filter(s => {
@@ -95,11 +103,11 @@ export default function SeedlingPage() {
       seen.add(s.value);
       return true;
     });
-  }, [getDictItems]);
+  }, [dictionaries]);
 
   // 育苗状态选项
   const seedlingStatusOptions = useMemo(() => {
-    const items = getDictItems('seedling_status').map(d => ({ value: d.code, label: d.name }));
+    const items = getDictItems('seedling_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
     // 去重
     const seen = new Set<string>();
     return items.filter(s => {
@@ -107,12 +115,12 @@ export default function SeedlingPage() {
       seen.add(s.value);
       return true;
     });
-  }, [getDictItems]);
+  }, [dictionaries]);
 
   // 种植区域选项（用于定植操作）
   const areas = useMemo(() => {
-    return getDictItems('planting_area').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 刷新数据（异步调用API）
   const refreshData = useCallback(async () => {

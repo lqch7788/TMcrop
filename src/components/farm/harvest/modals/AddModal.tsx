@@ -4,7 +4,7 @@
  * V3.1: 使用 API 驱动的 Select 组件替换硬编码选项
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import {
@@ -15,7 +15,7 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import { UserSelect } from '../../../common/settings/UserSelect';
 import { GreenhouseSelect } from '../../../common/settings/GreenhouseSelect';
 import { WarehouseSelect } from '../../../common/settings/WarehouseSelect';
-import { useDictionaries } from '../../../common/settings/SettingsDataProvider';
+import { useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface ProductDetail {
   productCode: string;
@@ -87,7 +87,15 @@ export const AddModal: React.FC<AddModalProps> = ({
   const currentOperator = getCurrentUsername() || '陆启闯';
 
   // 获取数据字典（品质等级、采收类型等）
-  const { getDictItems } = useDictionaries();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
+
   const qualityGradeOptions = getDictItems('quality_grade');
   const harvestTypeOptions = getDictItems('harvest_type');
 
@@ -452,7 +460,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                         >
                           <option value="">等级</option>
                           {qualityGradeOptions.map(g => (
-                            <option key={g.code} value={g.code}>{g.name}</option>
+                            <option key={g.dictCode} value={g.dictCode}>{g.dictLabel}</option>
                           ))}
                         </select>
                       </td>

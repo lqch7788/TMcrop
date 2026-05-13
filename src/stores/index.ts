@@ -100,3 +100,6 @@ export type { Block } from '../services/apiBasicDataService';
 
 export { useUserStore, getUserByOid, getUsersByDepartment, getActiveUsers } from './useUserStore';
 export type { User } from '../services/authorityService';
+
+export { useWorkerStore } from './useWorkerStore';
+export type { Worker } from '../services/apiWorkerService';

@@ -1,7 +1,8 @@
+import React from 'react';
 import { Modal } from '../../../ui/Modal';
 import { usePersistentProblems } from '../../../../hooks/usePersistentProblems';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
-import { useUsers } from '../../../common/settings';
+import { useUserStore } from '../../../../stores';
 
 // 动作类型中文映射
 const ACTION_LABELS: Record<string, string> = {
@@ -82,7 +83,15 @@ function getStatusBadge(status: string) {
 export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem }: DetailInspectionModalProps) {
   // 通过 problemId 获取关联的问题数据和流转记录 - Hook需在条件返回之前调用
   const { problems } = usePersistentProblems();
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  // 加载用户数据
+  React.useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   if (!record) return null;
 

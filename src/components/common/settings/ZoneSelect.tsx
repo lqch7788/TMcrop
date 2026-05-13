@@ -1,10 +1,10 @@
 /**
  * 区域选择组件
- * 从设置数据中获取区域列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useZones } from './SettingsDataProvider';
+import { useZoneStore } from '../../../stores';
 
 interface ZoneSelectProps {
   value?: string;
@@ -23,10 +23,17 @@ export function ZoneSelect({
   disabled = false,
   greenhouseOid,
 }: ZoneSelectProps) {
-  const { zones } = useZones();
+  const zones = useZoneStore((state) => state.zones);
+  const loading = useZoneStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (zones.length === 0 && !loading) {
+      useZoneStore.getState().loadZones();
+    }
+  }, [zones.length, loading]);
 
   const filteredZones = greenhouseOid
-    ? zones.filter((z) => z.greenhouseId === greenhouseOid)
+    ? zones.filter((z) => z.greenhouseOid === greenhouseOid)
     : zones;
 
   return (
@@ -38,7 +45,7 @@ export function ZoneSelect({
     >
       <option value="">{placeholder}</option>
       {filteredZones.map((zone) => (
-        <option key={zone.id} value={zone.id}>
+        <option key={zone.oid} value={zone.oid}>
           {zone.zoneName} ({zone.zoneCode})
         </option>
       ))}

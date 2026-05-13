@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import { cropTypes } from '../../../../data/mockData';
-import { useGreenhouses } from '../../../common/settings';
+import { useGreenhouseStore } from '../../../../stores';
 
 interface CreateProblemModalProps {
   isOpen: boolean;
@@ -29,7 +30,14 @@ export function CreateProblemModal({
   errors,
   onFormChange,
 }: CreateProblemModalProps) {
-  const { greenhouses } = useGreenhouses();
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+
+  useEffect(() => {
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [greenhouses.length, loadGreenhouses]);
 
   const handleGreenhouseChange = (greenhouseId: string) => {
     const greenhouse = greenhouses.find(g => g.id === greenhouseId);

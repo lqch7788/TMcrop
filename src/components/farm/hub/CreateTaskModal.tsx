@@ -3,11 +3,10 @@
  * 样式与现有弹窗统一
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTasks, Task } from '../../../hooks/useTasks';
 import { cropBatches } from '../../../data/mockData';
-import { useUsers } from '../../common/settings';
-import { useGreenhouses } from '../../common/settings';
+import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
@@ -35,8 +34,19 @@ type Worker = User & {
  */
 export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskModalProps) {
   const { createTask } = useTasks();
-  const { users: workers } = useUsers();
-  const { greenhouses } = useGreenhouses();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
 
   const [title, setTitle] = useState(prefillData?.title || '');
   const [description, setDescription] = useState(prefillData?.description || '');

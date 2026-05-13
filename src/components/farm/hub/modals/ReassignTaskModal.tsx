@@ -3,11 +3,11 @@
  * 功能：任务失败/放弃后，选择新执行人重新派发
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
-import { useUsers } from '../../../common/settings';
+import { useUserStore } from '../../../../stores';
 
 interface ReassignTaskModalProps {
   isOpen: boolean;
@@ -22,8 +22,15 @@ export function ReassignTaskModal({
   onConfirm,
   onClose,
 }: ReassignTaskModalProps) {
-  // 从SettingsDataProvider获取用户列表
-  const { users } = useUsers();
+  // 从Zustand store获取用户列表
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
 

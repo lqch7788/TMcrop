@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { useUsers } from '../../common/settings';
+import { useUserStore } from '../../../stores';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,8 +29,15 @@ type Worker = User & {
 };
 
 export function ProblemDispatchModal({ problemId, onClose, onDispatched }: ProblemDispatchModalProps) {
-  // 从SettingsDataProvider获取用户列表
-  const { users: workers } = useUsers();
+  // 从Zustand store获取用户列表
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   const [problem, setProblem] = useState<ProblemEntry | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);

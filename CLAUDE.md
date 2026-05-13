@@ -152,3 +152,38 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 - 测试删除功能时，务必确认只删除测试数据（TK/TEST 开头），不要删除原始种子数据（NS 开头）
 - 批量删除前先确认 `selectedIds` 是否正确传递
 - React Hook 在不同组件实例间不共享状态，需要通过 props 或 context 传递共享实例
+
+### 2026-05-13 会话
+
+**完成的工作：**
+1. **供应商组件迁移到 Zustand**
+   - 更新 `SupplierAddModal.tsx`、`SupplierEditModal.tsx`、`SupplierBatchEditModal.tsx`、`SupplierFilters.tsx`
+   - 从 `useSettingsData` 迁移到 `useDictionaryStore`
+   - 字段映射：`d.category` → `d.categoryCode`，`opt.code` → `opt.dictCode`，`opt.name` → `opt.dictLabel`
+
+2. **创建 useWorkerStore**
+   - 发现 `useUsers()` 返回错误的 User 类型（authorityService）而非 Worker 类型
+   - 创建 `src/stores/useWorkerStore.ts` 处理工人数据
+   - 导出到 `src/stores/index.ts`
+
+3. **修复 labor 模块 CreateModal 组件**
+   - `AttendanceRepairPageCreateModal.tsx` - 从 `useUsers()` 改为 `useWorkerStore`
+   - `OvertimePageCreateModal.tsx` - 从 `useUsers()` 改为 `useWorkerStore`
+   - `ResignationPageCreateModal.tsx` - 从 `useUsers()` 改为 `useWorkerStore`
+   - `useAttendanceRepairPage.ts` hook 也迁移到 `useWorkerStore`
+
+4. **修复 harvest 模块字典字段访问**
+   - `BatchEditModal.tsx` 和 `AddModal.tsx` 更新字典选项渲染
+   - 字段映射：`g.code` → `g.dictCode`，`g.name` → `g.dictLabel`
+
+5. **完成 SettingsDataProvider 完全移除**
+   - `TempTaskTab.tsx` - 迁移到 `useUserStore`
+   - `useDepartmentOptions.ts` - 迁移到 `useDepartmentStore`
+   - `useResignationPage.ts` - 迁移到 `useWorkerStore`
+   - `useOnboardingPage.ts` - 迁移到 `useWorkerStore`
+   - 删除 `SettingsDataProvider.tsx` 文件
+   - 从 `App.tsx` 移除 `SettingsDataProvider` 组件
+   - 更新 `common/settings/index.ts` 移除旧导出
+
+**构建状态：** ✅ 通过
+**所有 SettingsDataProvider 相关代码已完全移除**

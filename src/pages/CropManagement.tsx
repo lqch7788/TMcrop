@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sprout, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
+import { useDictionaryStore, getDictItems } from '../stores';
 import { Button } from '../components/ui/button';
 
 // 作物数据接口
@@ -29,23 +29,30 @@ const cropData: CropItem[] = [
 ];
 
 export default function CropManagement() {
-  // 使用字典hook获取作物类型和状态选项
-  const { getDictItems, getDictItemName } = useDictionaries();
+  // 使用 Zustand store
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loading = useDictionaryStore((state) => state.loading);
+
+  useEffect(() => {
+    if (dictionaries.length === 0 && !loading) {
+      useDictionaryStore.getState().loadDictionaries();
+    }
+  }, [dictionaries.length, loading]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // 从字典获取作物类型选项
+  // 从字典获取作物类型选项 - 注意字段名转换 (categoryCode -> category, dictCode -> code, dictLabel -> name)
   const cropTypes = useMemo(() => {
-    return getDictItems('crop_category').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('crop_category').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, []);
 
   // 从字典获取状态选项
   const statusOptions = useMemo(() => {
-    return getDictItems('status').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, []);
 
   const filteredCrops = cropData.filter(crop => {
     const matchSearch = crop.name.toLowerCase().includes(searchTerm.toLowerCase()) || crop.code.includes(searchTerm);

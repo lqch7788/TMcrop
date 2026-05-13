@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Supplier } from './types';
 import { UnifiedModal } from '../ui/UnifiedModal';
-import { useSettingsData } from '../common/settings/SettingsDataProvider';
+import { useDictionaryStore } from '../../stores';
 
 interface SupplierBatchEditModalProps {
   isOpen: boolean;
@@ -14,9 +14,17 @@ interface SupplierBatchEditModalProps {
 
 export default function SupplierBatchEditModal({ isOpen, suppliers, selectedIds, onClose, onSave }: SupplierBatchEditModalProps) {
   // 从全局设置数据获取供应商属性字典
-  const { dictionaries } = useSettingsData();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
+
   const supplierAttributeOptions = useMemo(() =>
-    dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active'),
+    dictionaries.filter(d => d.categoryCode === 'supplier_attribute' && d.status === 'active'),
     [dictionaries]
   );
 
@@ -85,7 +93,7 @@ export default function SupplierBatchEditModal({ isOpen, suppliers, selectedIds,
           >
             <option value="">不修改</option>
             {supplierAttributeOptions.map(opt => (
-              <option key={opt.code} value={opt.name}>{opt.name}</option>
+              <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
             ))}
           </select>
         </div>

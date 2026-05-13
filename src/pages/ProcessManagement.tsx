@@ -1,29 +1,37 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ScrollText, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDictionaries } from '../components/common/settings/SettingsDataProvider';
+import { useDictionaryStore, getDictItems } from '../stores';
 import { Button } from '../components/ui/button';
 
 export default function ProcessManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // 从 SettingsDataProvider 获取工序类型字典数据
-  const { getDictItems } = useDictionaries();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loading = useDictionaryStore((state) => state.loading);
+
+  useEffect(() => {
+    if (dictionaries.length === 0 && !loading) {
+      useDictionaryStore.getState().loadDictionaries();
+    }
+  }, [dictionaries.length, loading]);
+
+  // 从 Zustand Store 获取工序类型字典数据
   const processData = useMemo(() => {
     const processes = getDictItems('process_type');
-    // 转换为页面所需的格式
+    // 转换为页面所需的格式 - 注意字段名转换
     return processes.map((proc, index) => ({
       id: index + 1,
-      code: proc.code,
-      name: proc.name,
+      code: proc.dictCode,
+      name: proc.dictLabel,
       unit: '亩',
       price: 0,
       bonus: 0,
       status: proc.status === 'active' ? '启用' : '停用',
       statusClass: proc.status === 'active' ? 'normal' : 'disabled',
     }));
-  }, [getDictItems]);
+  }, []);
 
   const totalPages = Math.ceil(processData.length / pageSize);
   const paginatedData = processData.slice((currentPage - 1) * pageSize, currentPage * pageSize);

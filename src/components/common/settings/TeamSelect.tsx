@@ -1,10 +1,10 @@
 /**
  * 班组选择组件
- * 从设置数据中获取班组列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useTeams } from './SettingsDataProvider';
+import { useTeamStore } from '../../../stores';
 
 interface TeamSelectProps {
   value?: string;
@@ -23,7 +23,14 @@ export function TeamSelect({
   disabled = false,
   departmentOid,
 }: TeamSelectProps) {
-  const { teams } = useTeams();
+  const teams = useTeamStore((state) => state.teams);
+  const loading = useTeamStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (teams.length === 0 && !loading) {
+      useTeamStore.getState().loadTeams();
+    }
+  }, [teams.length, loading]);
 
   const filteredTeams = departmentOid
     ? teams.filter((t) => t.departmentOid === departmentOid)

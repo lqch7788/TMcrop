@@ -3,7 +3,7 @@
  * 集成独立巡查页面的所有功能
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { usePersistentInspections } from '../../../hooks/usePersistentInspections';
@@ -16,7 +16,7 @@ import { BatchEditModal } from './modals/BatchEditModal';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
 import { cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
-import { useUsers, useGreenhouses } from '../../common/settings';
+import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
@@ -131,9 +131,20 @@ export function InspectionTab({
   onBatchDelete,
   onBatchEdit,
 }: InspectionTabProps) {
-  // 使用 SettingsDataProvider 获取用户和温室数据
-  const { users } = useUsers();
-  const { greenhouses } = useGreenhouses();
+  // 使用 Zustand stores 获取用户和温室数据
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
 
   // 使用 hub 传来的 inspections 作为数据源，通过 useMemo 派生本地状态
   // 避免状态同步反模式：不再用 useEffect 复制 prop 到 state

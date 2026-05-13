@@ -4,7 +4,7 @@
  * 拆分后主组件，组合子组件实现完整功能
  */
 import { Wallet } from 'lucide-react';
-import { useDepartments } from '../../components/common/settings';
+import { useDepartmentStore } from '../../stores';
 import { useSalaryBudget } from './hooks/useSalaryBudget';
 import { SalaryBudgetFilters } from './components/SalaryBudgetFilters';
 import { SalaryBudgetTable } from './components/SalaryBudgetTable';
@@ -13,7 +13,7 @@ import { DetailModal } from './components/SalaryBudgetModals/DetailModal';
 import { SummaryModal } from './components/SalaryBudgetModals/SummaryModal';
 
 export default function SalaryBudgetPage() {
-  const { departments } = useDepartments();
+  const departments = useDepartmentStore((state) => state.departments);
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {

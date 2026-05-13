@@ -11,7 +11,7 @@ import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/c
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
 import { cropBatches } from '../../../../data/mockData';
 import { taskDispatchFields } from '../../../../data/farmMockData';
-import { useUsers } from '../../../common/settings';
+import { useUserStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
@@ -135,7 +135,14 @@ const initialNewTask: NewTaskState = {
 
 export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalProps) {
   const tasksHook = useTasks();
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   // 新建任务状态
   const [createStep, setCreateStep] = useState(1);

@@ -1,9 +1,9 @@
 // 供应商新增弹窗组件
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Supplier, NewSupplierData } from './types';
 import { supplierCategories, getSupplierTypeName } from './data';
 import { UnifiedModal } from '../ui/UnifiedModal';
-import { useSettingsData } from '../common/settings/SettingsDataProvider';
+import { useDictionaryStore } from '../../stores';
 
 interface SupplierAddModalProps {
   isOpen: boolean;
@@ -14,9 +14,17 @@ interface SupplierAddModalProps {
 
 export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode }: SupplierAddModalProps) {
   // 从全局设置数据获取供应商属性字典
-  const { dictionaries } = useSettingsData();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
+
   const supplierAttributeOptions = useMemo(() =>
-    dictionaries.filter(d => d.category === 'supplier_attribute' && d.status === 'active'),
+    dictionaries.filter(d => d.categoryCode === 'supplier_attribute' && d.status === 'active'),
     [dictionaries]
   );
 
@@ -136,7 +144,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               >
                 <option value="">请选择属性</option>
                 {supplierAttributeOptions.map(opt => (
-                  <option key={opt.code} value={opt.name}>{opt.name}</option>
+                  <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
                 ))}
               </select>
             </div>

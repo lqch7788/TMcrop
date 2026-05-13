@@ -3,8 +3,8 @@
  * 提供从 API 获取的部门列表，支持添加"全部"选项
  */
 
-import { useMemo } from 'react';
-import { useSettingsData } from '../components/common/settings';
+import { useMemo, useEffect } from 'react';
+import { useDepartmentStore } from '../stores/useDepartmentStore';
 
 /**
  * 部门选项配置
@@ -25,7 +25,15 @@ export interface DepartmentOptionsConfig {
  */
 export function useDepartmentOptions(config: DepartmentOptionsConfig = {}) {
   const { includeAll = false, allText = '全部', namesOnly = true } = config;
-  const { departments, isLoading } = useSettingsData();
+  const departments = useDepartmentStore((state) => state.departments);
+  const loading = useDepartmentStore((state) => state.loading);
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
+
+  useEffect(() => {
+    if (departments.length === 0) {
+      loadDepartments();
+    }
+  }, [departments.length, loadDepartments]);
 
   const options = useMemo(() => {
     const result: string[] = [];
@@ -45,7 +53,7 @@ export function useDepartmentOptions(config: DepartmentOptionsConfig = {}) {
 
   return {
     options,
-    isLoading,
+    isLoading: loading,
     departmentNames: departments.map(d => d.name),
   };
 }
@@ -54,7 +62,15 @@ export function useDepartmentOptions(config: DepartmentOptionsConfig = {}) {
  * 带值的部门选项（用于需要 oid 的场景）
  */
 export function useDepartmentOptionsWithValue() {
-  const { departments, isLoading } = useDepartments();
+  const departments = useDepartmentStore((state) => state.departments);
+  const loading = useDepartmentStore((state) => state.loading);
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
+
+  useEffect(() => {
+    if (departments.length === 0) {
+      loadDepartments();
+    }
+  }, [departments.length, loadDepartments]);
 
   const options = useMemo(() => {
     return departments.map(d => ({
@@ -65,7 +81,7 @@ export function useDepartmentOptionsWithValue() {
 
   return {
     options,
-    isLoading,
+    isLoading: loading,
   };
 }
 

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
 import { cropBatches } from '../../../data/mockData';
-import { useUsers, useGreenhouses } from '../../common/settings';
+import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
 import { TasksTable } from './TasksTable';
@@ -116,8 +116,19 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 }
 
 export function TasksPage() {
-  const { users } = useUsers();
-  const { greenhouses } = useGreenhouses();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
 
   // 使用统一任务管理 Hook
   const { tasks, addTask, updateTask, deleteTask, updateTaskStatus } = useTasks();
