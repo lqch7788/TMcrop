@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { SummaryReportTab } from './SummaryReportTab';
 import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
 import { useGreenhouseStore } from '../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
@@ -25,6 +27,21 @@ import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal'
 import { getProductionPlans, addProductionPlan, updateProductionPlan, deleteProductionPlan } from '../../services/apiProductionPlanLocalService';
 
 export default function ProductionPage() {
+  const location = useLocation();
+
+  // Tab 切换状态
+  const [activeTab, setActiveTab] = useState<'list' | 'summary'>('list');
+
+  // 路由联动：根据当前路径设置默认激活的 Tab
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/plan-summary') {
+      setActiveTab('summary');
+    } else {
+      setActiveTab('list');
+    }
+  }, [location.pathname]);
+
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
   const { refreshApprovals } = useApproval();
@@ -918,11 +935,38 @@ export default function ProductionPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <ProductionStatsCards batches={batches} />
+      {/* Tab 切换按钮 */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab('list')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'list'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          计划列表
+        </button>
+        <button
+          onClick={() => setActiveTab('summary')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'summary'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          汇总报表
+        </button>
+      </div>
 
-      {/* Filters */}
-      <ProductionFilters
+      {/* Tab 内容 */}
+      {activeTab === 'list' ? (
+        <>
+          {/* Stats Cards */}
+          <ProductionStatsCards batches={batches} />
+
+          {/* Filters */}
+          <ProductionFilters
         batchCodeSearch={batchCodeSearch}
         plantingModeSearch={plantingModeSearch}
         cropNameSearch={cropNameSearch}
@@ -1047,6 +1091,10 @@ export default function ProductionPage() {
           totalCount={filteredBatches.length}
         />
       </div>
+        </>
+      ) : (
+        <SummaryReportTab />
+      )}
 
       {/* Create Batch Modal */}
       <CreateBatchModal
