@@ -74,6 +74,7 @@ export const STORAGE_ASSIGNMENT: Record<string, 'indexedDB' | 'localStorage'> = 
   'inventory': 'indexedDB',
   'approvals': 'indexedDB',
   'labor-records': 'indexedDB',
+  'material-requests': 'indexedDB',
 
   // === localStorage（极小配置）===
   'auth-token': 'localStorage',

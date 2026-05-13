@@ -731,17 +731,39 @@ export function initializeDatabase() {
       expected_date TEXT,
       warehouse_id TEXT,
       warehouse_name TEXT,
+      plant_area TEXT,
+      production_batch_code TEXT,
       total_amount REAL DEFAULT 0,
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'draft',
       approval_status TEXT DEFAULT 'pending',
       remarks TEXT,
       attachments TEXT,
+      materials TEXT,
       create_by TEXT,
       create_time TEXT,
       update_time TEXT
     )
   `);
+
+  // 为领料申请添加缺失的列
+  try {
+    db.run(`ALTER TABLE material_requests ADD COLUMN plant_area TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  try {
+    db.run(`ALTER TABLE material_requests ADD COLUMN production_batch_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  try {
+    db.run(`ALTER TABLE material_requests ADD COLUMN materials TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // 为已有表添加新列（如果列不存在则添加）
   try {

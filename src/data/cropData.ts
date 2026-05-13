@@ -357,7 +357,10 @@ export const units = [
   { value: '袋', label: '袋' },
   { value: '株', label: '株' },
   { value: '粒', label: '粒' },
-  { value: '个', label: '个' }
+  { value: '千克', label: '千克' },
+  { value: '克', label: '克' },
+  { value: '吨', label: '吨' },
+  { value: '亩', label: '亩' }
 ];
 
 /** 育苗方式选项 */

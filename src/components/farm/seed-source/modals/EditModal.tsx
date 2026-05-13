@@ -1,6 +1,6 @@
 /**
  * 种源编辑弹窗
- * V3.1: 使用 API 驱动的 DictSelect 组件
+ * V3.1: 使用 API 驱动的 DictSelect 组件和 CropCodeSelector
  */
 
 import React, { useState, useEffect } from 'react';
@@ -8,17 +8,15 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
 import { updateSeedSource } from '../../../../services/apiSeedSourceService';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import CropCodeSelector from '../../common/CropCodeSelector';
+import { CropVariety } from '../../../../types/cropVariety';
 
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   record: SeedSource;
-  cropCategories: Array<{ value: string; label: string }>;
-  cropNames: Array<{ value: string; label: string }>;
-  cropVarieties: Array<{ value: string; label: string }>;
   suppliers: Array<{ value: string; label: string }>;
-  units: Array<{ value: string; label: string }>;
 }
 
 export function EditModal({
@@ -26,16 +24,20 @@ export function EditModal({
   onClose,
   onSuccess,
   record,
-  cropCategories,
-  cropNames,
-  cropVarieties,
-  suppliers,
-  units
+  suppliers
 }: EditModalProps) {
+  // 作物编码状态
+  const [cropCode, setCropCode] = useState(record.cropCode || '');
+
+  // 选中的作物信息
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+
   const [formData, setFormData] = useState({
     sourceType: record.sourceType,
     sourceOrigin: record.sourceOrigin || 'external_purchase',
     cropCategory: record.cropCategory,
+    typeName: record.typeName,
+    varietyName: record.varietyName,
     cropName: record.cropName,
     cropVariety: record.cropVariety,
     supplierId: record.supplierId,
@@ -56,10 +58,13 @@ export function EditModal({
 
   // 当 record 变化时重置表单
   useEffect(() => {
+    setCropCode(record.cropCode || '');
     setFormData({
       sourceType: record.sourceType,
       sourceOrigin: record.sourceOrigin || 'external_purchase',
       cropCategory: record.cropCategory,
+      typeName: record.typeName,
+      varietyName: record.varietyName,
       cropName: record.cropName,
       cropVariety: record.cropVariety,
       supplierId: record.supplierId,
@@ -78,6 +83,24 @@ export function EditModal({
       remarks: record.remarks || ''
     });
   }, [record]);
+
+  // 处理作物编码选择
+  const handleCropCodeChange = (code: string, varietyInfo: CropVariety | null) => {
+    setCropCode(code);
+    if (varietyInfo) {
+      setSelectedCrop(varietyInfo);
+      setFormData(prev => ({
+        ...prev,
+        cropCategory: varietyInfo.categoryName,
+        typeName: varietyInfo.typeName,
+        varietyName: varietyInfo.varietyName,
+        cropName: varietyInfo.detailVarietyCode && varietyInfo.detailVarietyCode !== '00'
+          ? varietyInfo.varietyName
+          : (varietyInfo.subVariety1Name || varietyInfo.varietyName),
+        cropVariety: varietyInfo.subVariety1Name || ''
+      }));
+    }
+  };
 
   const handleSubmit = async () => {
     // 验证：选择"其他"时备注必填
@@ -113,8 +136,11 @@ export function EditModal({
         sourceType: formData.sourceType,
         sourceOrigin: formData.sourceOrigin,
         cropCategory: formData.cropCategory,
+        typeName: formData.typeName,
+        varietyName: formData.varietyName,
         cropName: formData.cropName,
         cropVariety: formData.cropVariety,
+        cropCode: cropCode,
         supplierId: formData.supplierId,
         supplierName,
         purchaseDate: formData.purchaseDate,
@@ -160,49 +186,27 @@ export function EditModal({
           />
         </div>
 
-        {/* 作物类型 */}
+        {/* 作物选择 - 使用统一的 CropCodeSelector */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物类型</label>
-          <select
-            value={formData.cropCategory}
-            onChange={(e) => setFormData({ ...formData, cropCategory: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropCategories.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 作物品种 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
-          <select
-            value={formData.cropName}
-            onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 品种 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
-          <select
-            value={formData.cropVariety}
-            onChange={(e) => setFormData({ ...formData, cropVariety: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {cropVarieties.map(v => (
-              <option key={v.value} value={v.value}>{v.label}</option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            <span className="text-red-500">*</span> 作物选择
+          </label>
+          <CropCodeSelector
+            value={cropCode}
+            onChange={handleCropCodeChange}
+            placeholder="搜索或选择作物品种..."
+            size="md"
+            showFullPath={true}
+          />
+          {/* 显示选中作物的详细信息 */}
+          {selectedCrop && (
+            <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+              <div className="text-emerald-700">
+                {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 种源类型 */}

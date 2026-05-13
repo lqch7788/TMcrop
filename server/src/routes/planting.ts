@@ -228,19 +228,23 @@ router.put('/batch', (req: Request, res: Response) => {
 
 /**
  * 批量删除种植记录
- * DELETE /api/plantings/batch
+ * DELETE /api/plantings/batch?ids=id1,id2,id3
  */
 router.delete('/batch', (req: Request, res: Response) => {
   try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是数组' });
+    const { ids } = req.query;
+    if (!ids || typeof ids !== 'string') {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
+    }
+    const idArray = ids.split(',').filter(id => id.trim() !== '');
+    if (idArray.length === 0) {
+      return res.json({ success: true, data: { deletedCount: 0 } });
     }
     const db = getDatabase();
-    const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM plantings WHERE id IN (${placeholders})`, ids);
+    const placeholders = idArray.map(() => '?').join(',');
+    db.run(`DELETE FROM plantings WHERE id IN (${placeholders})`, idArray);
     saveDatabase();
-    res.json({ success: true, data: { deletedCount: ids.length } });
+    res.json({ success: true, data: { deletedCount: idArray.length } });
   } catch (error) {
     res.status(500).json({ success: false, error: '批量删除种植记录失败' });
   }

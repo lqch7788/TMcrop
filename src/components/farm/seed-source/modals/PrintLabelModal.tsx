@@ -28,6 +28,13 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   // 获取当前操作员
   const currentOperator = currentUser.name;
 
+  // 单位转换函数（英文→中文）
+  const unitMap: Record<string, string> = {
+    'bag': '袋', 'plant': '株', 'grain': '粒', 'kg': '千克', 'g': '克', 'ton': '吨', 'mu': '亩',
+    '个': '个', '袋': '袋', '株': '株', '粒': '粒', '千克': '千克', '克': '克', '吨': '吨', '亩': '亩',
+  };
+  const formatUnit = (unit: string) => unitMap[unit] || unit || '';
+
   // 加载打印记录
   useEffect(() => {
     if (isOpen) {
@@ -366,7 +373,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <div className="text-gray-500">可用数量：</div>
-                    <div className="text-gray-900">{record.availableCount} {record.unit}</div>
+                    <div className="text-gray-900">{record.availableCount} {formatUnit(record.unit)}</div>
                     <div className="text-gray-500">采购日期：</div>
                     <div className="text-gray-900">{record.purchaseDate}</div>
                     <div className="text-gray-500">种源批号：</div>

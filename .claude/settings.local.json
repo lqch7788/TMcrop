@@ -111,7 +111,22 @@
       "Bash(D:\\\\TMcrop\\\\yuanxingtu\\\\sqlite3.exe *)",
       "Bash(\"D:\\\\TMcrop\\\\yuanxingtu\\\\sqlite3.exe\" \"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\server\\\\data\\\\yuanxingtu.db\" \".tables\")",
       "Bash(\"D:\\\\TMcrop\\\\yuanxingtu\\\\sqlite3.exe\" \"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\server\\\\data\\\\yuanxingtu.db\" \"SELECT name FROM sqlite_master WHERE type='table'\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(python3 -c \"import json,sys; print\\(json.dumps\\(json.loads\\(sys.stdin.read\\(\\)\\), indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(pkill -f \"tsx\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/material-requests -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(taskkill //F //PID 32580)",
+      "Bash(taskkill //F //PID 30688)",
+      "Bash(taskkill //F //PID 29632)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Total: {d[\\\\\"meta\\\\\"][\\\\\"total\\\\\"]}'\\); [print\\(f' {r[\\\\\"requestCode\\\\\"]} - {r[\\\\\"applicantName\\\\\"]} - {r[\\\\\"status\\\\\"]}'\\) for r in d['data'][:10]]\")",
+      "Bash(rm -f test-*.cjs screenshot-*.png)",
+      "Bash(ls test-*.cjs)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Total:', d['meta']['total']\\); [print\\(f\\\\\"id={r['id']}, requestCode={r['requestCode']}, applicantName={r['applicantName']}\\\\\"\\) for r in d['data']]\")",
+      "Bash(rm -f test-*.cjs)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); dates=set\\(r.get\\('applyDate',''\\) for r in d['data']\\); print\\('Unique dates:', dates\\)\")",
+      "Bash(taskkill *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(x['requestCode'],x.get\\('materials',[]\\)\\) for x in d['data']]\")",
+      "Bash(grep -o '{\"id\":\"[^\"]*\",\"requestCode\":\"LL20260301001\"')"
     ]
   }
 }

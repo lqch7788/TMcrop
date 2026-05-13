@@ -30,15 +30,22 @@ export const useDictionaryStore = create<DictionaryStore>()(
       loadDictionaries: async () => {
         const now = Date.now();
         const lastFetch = get().lastFetch;
+        // 缓存5分钟，但先清空强制重新加载（解决数据格式问题）
         if (lastFetch && now - lastFetch < 5 * 60 * 1000 && get().dictionaries.length > 0) {
-          return;
+          // 检查数据是否有效（是否有 categoryCode 字段）
+          const dicts = get().dictionaries;
+          if (dicts.length > 0 && 'categoryCode' in dicts[0]) {
+            return;
+          }
         }
 
         set({ loading: true, error: null });
         try {
           const data = await getDictionaries();
+          console.log('[DictionaryStore] 加载字典数据:', data.length, '条');
           set({ dictionaries: data, loading: false, lastFetch: now });
         } catch (error) {
+          console.error('[DictionaryStore] 加载字典失败:', error);
           set({ error: error instanceof Error ? error.message : '加载字典失败', loading: false });
         }
       },
@@ -56,16 +63,20 @@ export const useDictionaryStore = create<DictionaryStore>()(
 );
 
 // 辅助函数 - 按分类获取字典项
+// 注意：API返回的是 snake_case (category_code, dict_code)，需要兼容处理
 export const getDictItems = (category: string): Dictionary[] => {
-  return useDictionaryStore.getState().dictionaries.filter(
-    d => d.categoryCode === category && d.status === 'active'
+  const dicts = useDictionaryStore.getState().dictionaries;
+  return dicts.filter(
+    d => (d.categoryCode === category || (d as any).category_code === category) && d.status === 'active'
   );
 };
 
 // 获取字典项名称
 export const getDictItemName = (category: string, code: string): string => {
-  const item = useDictionaryStore.getState().dictionaries.find(
-    d => d.categoryCode === category && d.dictCode === code
+  const dicts = useDictionaryStore.getState().dictionaries;
+  const item = dicts.find(
+    d => (d.categoryCode === category || (d as any).category_code === category) &&
+         (d.dictCode === code || (d as any).dict_code === code)
   );
   return item?.dictLabel || code;
 };
@@ -73,6 +84,6 @@ export const getDictItemName = (category: string, code: string): string => {
 // 获取字典分类列表
 export const getDictionaryCategories = (): string[] => {
   const dicts = useDictionaryStore.getState().dictionaries;
-  const categories = [...new Set(dicts.map(d => d.categoryCode))];
+  const categories = [...new Set(dicts.map(d => d.categoryCode || (d as any).category_code))];
   return categories;
 };

@@ -233,6 +233,34 @@ export interface HarvestRecord {
   updateTime: string;
 }
 
+// 物料申请记录
+export interface MaterialRequest {
+  id?: number;
+  requestCode: string;
+  requestTitle?: string;
+  requestType?: string;
+  departmentId?: string;
+  departmentName?: string;
+  applicantId?: string;
+  applicantName?: string;
+  applyDate?: string;
+  expectedDate?: string;
+  warehouseId?: string;
+  warehouseName?: string;
+  plantArea?: string;
+  productionBatchCode?: string;
+  totalAmount?: number;
+  priority?: string;
+  status?: string;
+  approvalStatus?: string;
+  remarks?: string;
+  attachments?: string;
+  materials?: string;
+  createBy?: string;
+  createTime?: string;
+  updateTime?: string;
+}
+
 // ============================================
 // 数据库类定义
 // ============================================
@@ -245,6 +273,7 @@ class CropDatabase extends Dexie {
   seedlings!: Table<Seedling, number>;
   plantings!: Table<Planting, number>;
   harvestRecords!: Table<HarvestRecord, number>;
+  materialRequests!: Table<MaterialRequest, number>;
 
   constructor() {
     super('CropManagementDB');
@@ -257,6 +286,7 @@ class CropDatabase extends Dexie {
       seedlings: '++id, seedlingCode, instanceId, orderId, cropName, status',
       plantings: '++id, plantCode, instanceId, orderId, cropName, status',
       harvestRecords: '++id, harvestCode, batchCode, instanceId, orderId, cropName, status',
+      materialRequests: '++id, requestCode, applicantName, status, applyDate',
     });
   }
 }
@@ -278,6 +308,7 @@ export async function clearAllData(): Promise<void> {
   await db.seedlings.clear();
   await db.plantings.clear();
   await db.harvestRecords.clear();
+  await db.materialRequests.clear();
   console.log('🧹 已清空所有作物管理数据');
 }
 
@@ -291,17 +322,19 @@ export async function getDataStats(): Promise<{
   seedlings: number;
   plantings: number;
   harvests: number;
+  materialRequests: number;
 }> {
-  const [orders, instances, seedSources, seedlings, plantings, harvestRecords] = await Promise.all([
+  const [orders, instances, seedSources, seedlings, plantings, harvestRecords, materialRequests] = await Promise.all([
     db.orders.count(),
     db.instances.count(),
     db.seedSources.count(),
     db.seedlings.count(),
     db.plantings.count(),
     db.harvestRecords.count(),
+    db.materialRequests.count(),
   ]);
 
-  return { orders, instances, seedSources, seedlings, plantings, harvests: harvestRecords };
+  return { orders, instances, seedSources, seedlings, plantings, harvests: harvestRecords, materialRequests };
 }
 
 /**

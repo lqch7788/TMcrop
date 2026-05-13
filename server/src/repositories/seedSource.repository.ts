@@ -227,6 +227,34 @@ export class SeedSourceRepository {
     saveDatabase();
     return ids.length;
   }
+
+  /**
+   * 获取当日最大序号
+   * @param dateStr 日期字符串 (YYYYMMDD)
+   * @returns 当日最大序号，如果没有则返回 0
+   */
+  async getTodayMaxSerial(dateStr: string): Promise<number> {
+    const db = getDatabase();
+    // 匹配格式: ZZ + 日期 + - + 序号 (如 ZZ20260513-001)
+    const pattern = `ZZ${dateStr}-___`;
+    const stmt = db.prepare(`
+      SELECT source_code FROM seed_sources
+      WHERE source_code LIKE ? AND LENGTH(source_code) = 16
+      ORDER BY source_code DESC LIMIT 1
+    `);
+    stmt.bind([pattern]);
+
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { source_code: string };
+      const code = row.source_code;
+      // 提取序号部分 (最后3位)
+      const serialStr = code.slice(-3);
+      maxSerial = parseInt(serialStr, 10) || 0;
+    }
+    stmt.free();
+    return maxSerial;
+  }
 }
 
 // 导出单例

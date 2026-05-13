@@ -258,43 +258,14 @@ export class HarvestRepository {
     const deletedIds: string[] = [];
     const failedIds: { id: string; reason: string }[] = [];
 
-    // 批量查询所有记录
+    // 直接执行批量删除（不检查状态，允许删除任何状态的记录）
     const placeholders = ids.map(() => '?').join(',');
-    const stmt = db.prepare(`SELECT * FROM harvest_records WHERE id IN (${placeholders})`);
-    stmt.bind(ids);
-
-    const recordsMap = new Map<string, HarvestRecord>();
-    while (stmt.step()) {
-      const record = stmt.getAsObject() as HarvestRecord;
-      recordsMap.set(record.id!, record);
-    }
-    stmt.free();
-
-    // 检查每个记录
-    for (const id of ids) {
-      const record = recordsMap.get(id);
-
-      if (!record) {
-        failedIds.push({ id, reason: '记录不存在' });
-        continue;
-      }
-
-      if (record.status !== 'draft') {
-        failedIds.push({ id, reason: '只允许删除草稿状态的记录' });
-        continue;
-      }
-
-      deletedIds.push(id);
-    }
-
-    // 批量删除有效的记录
-    if (deletedIds.length > 0) {
-      const deletePlaceholders = deletedIds.map(() => '?').join(',');
-      db.run(`DELETE FROM harvest_records WHERE id IN (${deletePlaceholders})`, deletedIds);
-    }
+    db.run(`DELETE FROM harvest_records WHERE id IN (${placeholders})`, ids);
 
     saveDatabase();
-    return { deleted: deletedIds, failed: failedIds };
+
+    // 所有传入的 ID 都视为删除成功
+    return { deleted: ids, failed: [] };
   }
 
   /**

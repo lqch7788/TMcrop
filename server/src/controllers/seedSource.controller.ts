@@ -125,10 +125,31 @@ export class SeedSourceController {
       }
 
       const idArray = (ids as string).split(',');
+      console.log('[deleteBatch] 收到批量删除请求, ids:', idArray);
       const result = await this.service.deleteBatch(idArray);
+      console.log('[deleteBatch] 删除结果:', result);
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error('批量删除种源记录失败:', error);
+      console.error('[deleteBatch] 批量删除种源记录失败:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /seed-sources/generate-code
+   * 生成种源编码
+   */
+  async generateCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { date } = req.query;
+      if (!date || typeof date !== 'string') {
+        res.status(400).json({ success: false, error: '缺少 date 参数' });
+        return;
+      }
+      const code = await this.service.generateCode(date);
+      res.json({ success: true, data: code });
+    } catch (error) {
+      console.error('生成种源编码失败:', error);
       next(error);
     }
   }

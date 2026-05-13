@@ -117,6 +117,20 @@ export class SeedSourceService {
     const deletedCount = await this.repository.deleteBatch(ids);
     return { deletedCount };
   }
+
+  /**
+   * 生成种源编码
+   * @param dateStr 日期字符串 (YYYYMMDD)
+   * @returns 生成的编码，如 ZZ20260513-001
+   */
+  async generateCode(dateStr: string): Promise<string> {
+    // 获取当日最大序号
+    const maxSerial = await this.repository.getTodayMaxSerial(dateStr);
+    const nextSerial = maxSerial + 1;
+    // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
+    const code = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
+    return code;
+  }
 }
 
 // 导出单例
