@@ -2,9 +2,12 @@
  * 生产链条汇总表格组件
  * 展示生产链条各环节的详情表格：生产计划、种源管理、种植管理、采收入库、库存管理
  */
+import { useQuery } from '@tanstack/react-query';
 import { Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { getTechSolutions } from '@/services/apiTechSolutionService';
 
 // 表格类型
 export type ChainTableType = 'plans' | 'seedlings' | 'plantings' | 'harvests' | 'inventory';
@@ -47,8 +50,8 @@ const tableTypeLabels: Record<ChainTableType, string> = {
   inventory: '库存管理',
 };
 
-// 各类型表格列配置
-const columnConfigs: Record<ChainTableType, Column[]> = {
+// 各类型表格列配置（plans 表格的 techSolution 列需要 render 函数，因此先定义基础配置）
+const columnConfigsBase: Record<ChainTableType, Column[]> = {
   // 生产计划表
   plans: [
     { key: 'batchCode', label: '计划编号', width: 'w-32' },
@@ -57,7 +60,6 @@ const columnConfigs: Record<ChainTableType, Column[]> = {
     { key: 'greenhouseName', label: '温室', width: 'w-28' },
     { key: 'targetQuantity', label: '目标产量', width: 'w-24' },
     { key: 'status', label: '状态', width: 'w-20' },
-    { key: 'techSolution', label: '技术方案', width: 'w-28' },
   ],
   // 种源管理表
   seedlings: [
@@ -103,7 +105,52 @@ const columnConfigs: Record<ChainTableType, Column[]> = {
  * 生产链条汇总表格组件
  */
 export function ProductionChainTable({ type, data, onView }: ProductionChainTableProps) {
-  const columns = columnConfigs[type];
+  const navigate = useNavigate();
+
+  // 查询技术方案数据，用于判断生产计划是否关联技术方案
+  const { data: techSolutions = [] } = useQuery({
+    queryKey: ['tech-solutions'],
+    queryFn: getTechSolutions,
+    staleTime: 5 * 60 * 1000, // 5分钟内不重新请求
+  });
+
+  // 收集所有已关联技术方案的生产计划编号
+  const relatedPlanCodes = new Set(
+    techSolutions
+      .filter((solution: any) => solution.relatedBatchCode)
+      .map((solution: any) => solution.relatedBatchCode)
+  );
+
+  // 构建带 techSolution 列的 plans 表格列配置
+  const getColumns = (): Column[] => {
+    if (type === 'plans') {
+      return [
+        ...columnConfigsBase.plans,
+        {
+          key: 'techSolution',
+          label: '技术方案',
+          width: 'w-28',
+          render: (_: any, record: any) => {
+            const hasSolution = relatedPlanCodes.has(record.batchCode);
+            return hasSolution ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/tech-solution?planCode=${record.batchCode}`)}
+              >
+                查看
+              </Button>
+            ) : (
+              <span className="text-gray-400">-</span>
+            );
+          },
+        },
+      ];
+    }
+    return columnConfigsBase[type];
+  };
+
+  const columns = getColumns();
 
   // 渲染单元格内容
   const renderCell = (column: Column, record: any) => {
