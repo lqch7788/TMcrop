@@ -469,25 +469,29 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
     }
   }, []);
 
-  // 刷新所有数据
+  // 刷新所有数据 - 同时调用 Zustand Store 和旧 API
   const refreshAll = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // 调用 Zustand Store 加载函数
       await Promise.all([
-        refreshUsers(),
-        refreshDepartments(),
-        refreshPositions(),
-        refreshTeams(),
-        refreshWarehouses(),
-        refreshGreenhouses(),
-        refreshDictionaries(),
-        refreshDevices(),
+        useUserStore.getState().loadUsers(),
+        useDepartmentStore.getState().loadDepartments(),
+        usePositionStore.getState().loadPositions(),
+        useTeamStore.getState().loadTeams(),
+        useWarehouseStore.getState().loadWarehouses(),
+        useGreenhouseStore.getState().loadGreenhouses(),
+        useDictionaryStore.getState().loadDictionaries(),
+        useDeviceStore.getState().loadDevices(),
+        useZoneStore.getState().loadZones(),
+        useBlockStore.getState().loadBlocks(),
+      ]);
+      // 旧 API（notification 等）
+      await Promise.all([
         refreshNotificationChannels(),
         refreshNotificationRules(),
         refreshCodeRules(),
-        refreshZones(),
-        refreshBlocks(),
         refreshDictionaryCategories(),
       ]);
     } catch (e) {
@@ -497,19 +501,9 @@ export function SettingsDataProvider({ children }: SettingsDataProviderProps) {
       setIsLoading(false);
     }
   }, [
-    refreshUsers,
-    refreshDepartments,
-    refreshPositions,
-    refreshTeams,
-    refreshWarehouses,
-    refreshGreenhouses,
-    refreshDictionaries,
-    refreshDevices,
     refreshNotificationChannels,
     refreshNotificationRules,
     refreshCodeRules,
-    refreshZones,
-    refreshBlocks,
     refreshDictionaryCategories,
   ]);
 
@@ -590,44 +584,80 @@ export function useSettingsData() {
   return context;
 }
 
+// Zustand Store 导入
+import { useUserStore } from '../../../stores/useUserStore';
+import { useDepartmentStore } from '../../../stores/useDepartmentStore';
+import { usePositionStore } from '../../../stores/usePositionStore';
+import { useTeamStore } from '../../../stores/useTeamStore';
+import { useWarehouseStore } from '../../../stores/useWarehouseStore';
+import { useGreenhouseStore } from '../../../stores/useGreenhouseStore';
+import { useDictionaryStore } from '../../../stores/useDictionaryStore';
+import { useDeviceStore } from '../../../stores/useDeviceStore';
+import { useZoneStore } from '../../../stores/useZoneStore';
+import { useBlockStore } from '../../../stores/useBlockStore';
+
 export function useUsers() {
-  const { users, refreshUsers } = useSettingsData();
-  return { users, refreshUsers };
+  const store = useUserStore();
+  return { users: store.users, refreshUsers: store.refreshUsers };
 }
 
 export function useDepartments() {
-  const { departments, refreshDepartments } = useSettingsData();
-  return { departments, refreshDepartments };
+  const store = useDepartmentStore();
+  return { departments: store.departments, refreshDepartments: store.refreshDepartments };
 }
 
 export function usePositions() {
-  const { positions, refreshPositions } = useSettingsData();
-  return { positions, refreshPositions };
+  const store = usePositionStore();
+  return { positions: store.positions, refreshPositions: store.refreshPositions };
 }
 
 export function useTeams() {
-  const { teams, refreshTeams } = useSettingsData();
-  return { teams, refreshTeams };
+  const store = useTeamStore();
+  return { teams: store.teams, refreshTeams: store.refreshTeams };
 }
 
 export function useWarehouses() {
-  const { warehouses, refreshWarehouses } = useSettingsData();
-  return { warehouses, refreshWarehouses };
+  const store = useWarehouseStore();
+  return { warehouses: store.warehouses, refreshWarehouses: store.refreshWarehouses };
 }
 
 export function useGreenhouses() {
-  const { greenhouses, refreshGreenhouses } = useSettingsData();
-  return { greenhouses, refreshGreenhouses };
+  const store = useGreenhouseStore();
+  return { greenhouses: store.greenhouses, refreshGreenhouses: store.refreshGreenhouses };
 }
 
 export function useDictionaries() {
-  const { dictionaries, getDictItems, getDictItemName, refreshDictionaries } = useSettingsData();
-  return { dictionaries, getDictItems, getDictItemName, refreshDictionaries };
+  const store = useDictionaryStore();
+  const dictionaries = store.dictionaries.map(d => ({
+    id: d.id,
+    category: d.categoryCode,
+    code: d.dictCode,
+    name: d.dictLabel,
+    color: d.color,
+    sortNumber: d.sortOrder,
+    status: d.status,
+  }));
+  const getDictItems = (category: string) => dictionaries.filter(d => d.category === category && d.status === 'active');
+  const getDictItemName = (category: string, code: string) => {
+    const item = dictionaries.find(d => d.category === category && d.code === code);
+    return item?.name || code;
+  };
+  return { dictionaries, getDictItems, getDictItemName, refreshDictionaries: store.refreshDictionaries };
 }
 
 export function useDevices() {
-  const { devices, refreshDevices } = useSettingsData();
-  return { devices, refreshDevices };
+  const store = useDeviceStore();
+  return { devices: store.devices, refreshDevices: store.refreshDevices };
+}
+
+export function useZones() {
+  const store = useZoneStore();
+  return { zones: store.zones, refreshZones: store.refreshZones };
+}
+
+export function useBlocks() {
+  const store = useBlockStore();
+  return { blocks: store.blocks, refreshBlocks: store.refreshBlocks };
 }
 
 export function useNotificationChannels() {
@@ -643,16 +673,6 @@ export function useNotificationRules() {
 export function useCodeRules() {
   const { codeRules, refreshCodeRules } = useSettingsData();
   return { codeRules, refreshCodeRules };
-}
-
-export function useZones() {
-  const { zones, refreshZones } = useSettingsData();
-  return { zones, refreshZones };
-}
-
-export function useBlocks() {
-  const { blocks, refreshBlocks } = useSettingsData();
-  return { blocks, refreshBlocks };
 }
 
 export function useDictionaryCategories() {
