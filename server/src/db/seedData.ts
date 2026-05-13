@@ -1572,12 +1572,18 @@ function seedProblems() {
 
 /**
  * 导入作物订单
+ * 注意：如果表中已有数据（用户创建的订单），则跳过导入以保留用户数据
  */
 function seedCropOrders() {
   const db = getDatabase();
 
-  // 先清空现有数据，确保使用完整的字段
-  db.run('DELETE FROM crop_orders');
+  // 检查是否已有数据，如果有则跳过（保留用户创建的订单）
+  const existingCount = db.exec('SELECT COUNT(*) as count FROM crop_orders');
+  const count = existingCount[0]?.values[0]?.[0] || 0;
+  if (count > 0) {
+    console.log(`[seedData] crop_orders 表已有 ${count} 条数据，跳过种子数据导入`);
+    return;
+  }
 
   const orders = [
     {

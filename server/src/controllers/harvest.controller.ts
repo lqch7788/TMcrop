@@ -140,17 +140,25 @@ export class HarvestController {
    */
   async deleteBatch(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { ids } = req.body;
+      const { ids } = req.query;
 
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        res.status(400).json({ success: false, error: '缺少ids参数或ids不是有效数组' });
+      if (!ids || typeof ids !== 'string') {
+        res.status(400).json({ success: false, error: '缺少 ids 参数' });
         return;
       }
 
-      const result = await this.service.deleteBatch(ids);
+      const idArray = ids.split(',').filter(id => id.trim() !== '');
+      if (idArray.length === 0) {
+        res.json({ success: true, data: { deletedCount: 0 } });
+        return;
+      }
+
+      console.log('[deleteBatch] 开始删除, ids:', idArray);
+      const result = await this.service.deleteBatch(idArray);
+      console.log('[deleteBatch] 删除结果:', result);
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error('批量删除采收记录失败:', error);
+      console.error('[deleteBatch] 批量删除采收记录失败:', error);
       next(error);
     }
   }
