@@ -1,10 +1,10 @@
 /**
  * 字典选择组件
- * 从设置数据中获取字典项列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useDictionaries } from './SettingsDataProvider';
+import { useDictionaryStore, getDictItems } from '../../../stores';
 
 interface DictSelectProps {
   value?: string;
@@ -23,7 +23,14 @@ export function DictSelect({
   allowClear = true,
   disabled = false,
 }: DictSelectProps) {
-  const { getDictItems } = useDictionaries();
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loading = useDictionaryStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (dictionaries.length === 0 && !loading) {
+      useDictionaryStore.getState().loadDictionaries();
+    }
+  }, [dictionaries.length, loading]);
 
   const items = getDictItems(category);
 
@@ -52,7 +59,6 @@ interface DictTagProps {
 }
 
 export function DictTag({ category, code, className = '' }: DictTagProps) {
-  const { getDictItemName } = useDictionaries();
   const name = getDictItemName(category, code);
 
   return (

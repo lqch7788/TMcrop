@@ -12,7 +12,7 @@ import { apiClient, USE_API } from '../../services/apiClient';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
-import { useUsers } from '../common/settings';
+import { useUserStore } from '../../stores';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -30,7 +30,14 @@ export function PurchasePlanPage() {
   const canExport = true;
 
   // 用户列表（用于编辑时获取申请人姓名）
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [users.length, loadUsers]);
 
   // 采购计划数据状态（支持审批联动更新）
   const [purchasePlansData, setPurchasePlansData] = useState<PurchasePlan[]>([]);

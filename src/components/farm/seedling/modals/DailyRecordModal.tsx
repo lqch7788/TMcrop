@@ -2,11 +2,11 @@
  * 每日记录弹窗
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { addDailyRecord } from '../../../../services/apiSeedlingService';
-import { useDictionaries } from '../../../common/settings';
+import { useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -16,13 +16,20 @@ interface DailyRecordModalProps {
 }
 
 export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
-  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
-  const { getDictItems } = useDictionaries();
+  // 字典数据转换（使用 Zustand store 获取）
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
 
   // 操作人员选项
   const OPERATORS = useMemo(() => {
-    return getDictItems('operator').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('operator').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   const [formData, setFormData] = useState({
     recordDate: new Date().toISOString().split('T')[0],

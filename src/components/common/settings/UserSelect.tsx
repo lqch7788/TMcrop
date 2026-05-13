@@ -1,10 +1,10 @@
 /**
  * 用户选择组件
- * 从设置数据中获取用户列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useUsers } from './SettingsDataProvider';
+import { useUserStore } from '../../../stores';
 
 interface UserSelectProps {
   value?: string;
@@ -12,7 +12,7 @@ interface UserSelectProps {
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
-  /** 筛选用户角色，如 'worker', 'technician' */
+  /** 筛选用户角色，如 'worker', 'technician' - 暂不支持 */
   roleFilter?: string[];
   /** 是否只显示活跃用户 */
   activeOnly?: boolean;
@@ -24,23 +24,21 @@ export function UserSelect({
   placeholder = '选择用户',
   allowClear = true,
   disabled = false,
-  roleFilter,
   activeOnly = true,
 }: UserSelectProps) {
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
+  const loading = useUserStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (users.length === 0 && !loading) {
+      useUserStore.getState().loadUsers();
+    }
+  }, [users.length, loading]);
 
   const filteredUsers = users.filter((user) => {
     // 过滤活跃状态
     if (activeOnly && user.status !== 'active') {
       return false;
-    }
-    // 过滤角色
-    if (roleFilter && roleFilter.length > 0) {
-      const userRole = user.roleIds?.[0];
-      // 简单的角色匹配
-      if (!roleFilter.some(r => userRole?.includes(r))) {
-        return false;
-      }
     }
     return true;
   });
@@ -54,8 +52,8 @@ export function UserSelect({
     >
       <option value="">{placeholder}</option>
       {filteredUsers.map((user) => (
-        <option key={user.id} value={user.id}>
-          {user.realName || user.name}
+        <option key={user.oid} value={user.oid}>
+          {user.name}
         </option>
       ))}
     </select>
@@ -77,31 +75,23 @@ export function UserMultiSelect({
   onChange,
   placeholder = '选择用户',
   disabled = false,
-  roleFilter,
   activeOnly = true,
 }: UserMultiSelectProps) {
-  const { users } = useUsers();
+  const users = useUserStore((state) => state.users);
+  const loading = useUserStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (users.length === 0 && !loading) {
+      useUserStore.getState().loadUsers();
+    }
+  }, [users.length, loading]);
 
   const filteredUsers = users.filter((user) => {
     if (activeOnly && user.status !== 'active') {
       return false;
     }
-    if (roleFilter && roleFilter.length > 0) {
-      const userRole = user.roleIds?.[0];
-      if (!roleFilter.some(r => userRole?.includes(r))) {
-        return false;
-      }
-    }
     return true;
   });
-
-  const handleToggle = (userId: string) => {
-    if (values.includes(userId)) {
-      onChange(values.filter((v) => v !== userId));
-    } else {
-      onChange([...values, userId]);
-    }
-  };
 
   return (
     <select
@@ -115,8 +105,8 @@ export function UserMultiSelect({
       className="w-full min-h-[100px] px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
       {filteredUsers.map((user) => (
-        <option key={user.id} value={user.id}>
-          {user.realName || user.name}
+        <option key={user.oid} value={user.oid}>
+          {user.name}
         </option>
       ))}
     </select>

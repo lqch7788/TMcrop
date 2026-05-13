@@ -15,7 +15,7 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaries } from '../../common/settings';
+import { useDictionaryStore, getDictItems } from '../../../stores';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/apiPlantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
@@ -33,6 +33,16 @@ export default function PlantingPage() {
   const canDelete = true;
   const canExport = true;
   const canPrint = true;
+
+  // 字典数据
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
 
   // 产品编码生成器状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -66,22 +76,20 @@ export default function PlantingPage() {
   const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
-  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
-  const { getDictItems } = useDictionaries();
-
+  // 字典数据转换（使用 Zustand store 获取）
   // 种植区域选项
   const areas = useMemo(() => {
-    return getDictItems('planting_area').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 来源类型选项
   const sourceTypeOptions = useMemo(() => {
-    return getDictItems('source_type').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('source_type').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 种植状态选项
   const plantingStatusOptions = useMemo(() => {
-    return getDictItems('planting_status').map(d => ({ value: d.code, label: d.name }));
+    return getDictItems('planting_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [getDictItems]);
 
   // 刷新数据（异步调用API）

@@ -1,10 +1,10 @@
 /**
  * 仓库选择组件
- * 从设置数据中获取仓库列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useWarehouses } from './SettingsDataProvider';
+import { useWarehouseStore } from '../../../stores';
 
 interface WarehouseSelectProps {
   value?: string;
@@ -23,7 +23,14 @@ export function WarehouseSelect({
   disabled = false,
   warehouseType,
 }: WarehouseSelectProps) {
-  const { warehouses } = useWarehouses();
+  const warehouses = useWarehouseStore((state) => state.warehouses);
+  const loading = useWarehouseStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (warehouses.length === 0 && !loading) {
+      useWarehouseStore.getState().loadWarehouses();
+    }
+  }, [warehouses.length, loading]);
 
   const filteredWarehouses = warehouseType
     ? warehouses.filter((w) => w.warehouseType === warehouseType)

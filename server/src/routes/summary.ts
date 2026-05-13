@@ -111,6 +111,8 @@ router.get('/batch-stats', (req: Request, res: Response) => {
     }
 
     // 基础 SQL（不含分页）
+    // 注意: plantings 通过 source_id 连接 seedlings, seedlings 通过 production_plan_code 连接 production_plans
+    // 由于 harvest_records.source_id 为空，JOIN 时同时使用 greenhouse_name + crop_name 作为备选匹配条件
     const baseSql = `
       SELECT
         pp.id,
@@ -140,8 +142,9 @@ router.get('/batch-stats', (req: Request, res: Response) => {
         COALESCE(SUM(lr.total_amount), 0) as laborCost,
         pp.planned_quantity - COALESCE(SUM(hr.harvest_quantity), 0) as remainingYield
       FROM production_plans pp
-      LEFT JOIN plantings pl ON pl.production_plan_code = pp.plan_code
-      LEFT JOIN harvest_records hr ON hr.source_id = pl.id
+      LEFT JOIN seedlings s ON s.production_plan_code = pp.plan_code
+      LEFT JOIN plantings pl ON pl.source_id = s.id
+      LEFT JOIN harvest_records hr ON hr.source_id = pl.id OR (hr.greenhouse_name = pp.greenhouse_name AND hr.crop_name = pp.crop_name)
       LEFT JOIN farm_tasks ft ON ft.greenhouse_name = pp.greenhouse_name AND ft.source_type = 'planting' AND ft.source_id = pl.id
       LEFT JOIN labor_records lr ON lr.greenhouse_name = pp.greenhouse_name AND lr.task_description LIKE '%' || pp.plan_code || '%'
       ${whereClause}
@@ -151,7 +154,7 @@ router.get('/batch-stats', (req: Request, res: Response) => {
     const sql = addPagination(`${baseSql} GROUP BY pp.id ORDER BY pp.create_time DESC`, pagination.page, pagination.limit, params);
 
     // 获取总数
-    const countSql = `SELECT COUNT(DISTINCT pp.id) as total FROM production_plans pp LEFT JOIN plantings pl ON pl.production_plan_code = pp.plan_code ${whereClause}`;
+    const countSql = `SELECT COUNT(DISTINCT pp.id) as total FROM production_plans pp LEFT JOIN seedlings s ON s.production_plan_code = pp.plan_code ${whereClause}`;
     const countResult = queryToObjects(db, countSql, countParams);
     const total = countResult[0]?.total || 0;
 

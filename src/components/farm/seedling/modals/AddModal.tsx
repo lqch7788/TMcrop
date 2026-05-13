@@ -14,7 +14,7 @@ import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
-import { useDictionaries } from '../../../common/settings';
+import { useDictionaryStore, getDictItems } from '../../../../stores';
 import { cropBatches, currentUser } from '../../../../data/mockData';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
@@ -47,28 +47,35 @@ export function AddModal({
   // 使用审批Context
   const { addApproval } = useApprovalContext();
 
-  // 字典数据转换（使用组件模式从 SettingsDataProvider 获取）
-  const { getDictItems } = useDictionaries();
+  // 字典数据转换（使用 Zustand store 获取）
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
+  useEffect(() => {
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [dictionaries.length, loadDictionaries]);
 
   // 目标成苗率选项
   const survivalRateOptions = useMemo(() => {
-    return getDictItems('survival_rate_target').map(d => ({ value: Number(d.code), label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('survival_rate_target').map(d => ({ value: Number(d.dictCode), label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 育苗计划类型选项
   const seedlingPlanTypes = useMemo(() => {
-    return getDictItems('seedling_plan_type').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('seedling_plan_type').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 扩繁倍数预设选项
   const propagationMultiples = useMemo(() => {
-    return getDictItems('propagation_multiple').map(d => ({ value: Number(d.code), label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('propagation_multiple').map(d => ({ value: Number(d.dictCode), label: d.dictLabel }));
+  }, [dictionaries]);
 
   // 操作人员选项
   const OPERATORS = useMemo(() => {
-    return getDictItems('operator').map(d => ({ value: d.code, label: d.name }));
-  }, [getDictItems]);
+    return getDictItems('operator').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+  }, [dictionaries]);
 
   const [formData, setFormData] = useState({
     sourceId: '',

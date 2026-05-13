@@ -1,10 +1,11 @@
 /**
  * 离职申请页面新建表单弹窗组件
  */
-import { useUsers } from '../../../../../components/common/settings';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { ResignationFormData, RESIGNATION_TYPE_OPTIONS, VOLUNTARY_REASONS, INVOLUNTARY_REASONS, ResignationType } from '../../../types/resignationPage.types';
+import { useWorkerStore } from '../../../../../stores';
 
 interface ResignationPageCreateModalProps {
   isOpen: boolean;
@@ -27,7 +28,14 @@ export function ResignationPageCreateModal({
   onFormDataChange,
   onSubmit,
 }: ResignationPageCreateModalProps) {
-  const { workers } = useUsers();
+  const workers = useWorkerStore((state) => state.workers);
+  const loadWorkers = useWorkerStore((state) => state.loadWorkers);
+
+  useEffect(() => {
+    if (workers.length === 0) {
+      loadWorkers();
+    }
+  }, [workers.length, loadWorkers]);
 
   return (
     <UnifiedModal

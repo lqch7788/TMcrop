@@ -1,10 +1,10 @@
 /**
  * 部门选择组件
- * 从设置数据中获取部门列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useDepartments } from './SettingsDataProvider';
+import { useDepartmentStore } from '../../../stores';
 
 interface DepartmentSelectProps {
   value?: string;
@@ -21,7 +21,14 @@ export function DepartmentSelect({
   allowClear = true,
   disabled = false,
 }: DepartmentSelectProps) {
-  const { departments } = useDepartments();
+  const departments = useDepartmentStore((state) => state.departments);
+  const loading = useDepartmentStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (departments.length === 0 && !loading) {
+      useDepartmentStore.getState().loadDepartments();
+    }
+  }, [departments.length, loading]);
 
   return (
     <select

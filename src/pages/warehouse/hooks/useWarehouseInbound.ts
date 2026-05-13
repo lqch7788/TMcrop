@@ -40,6 +40,7 @@ export function useWarehouseInbound() {
   // 使用 React Query 获取数据，支持缓存和自动刷新
   const { data: apiInboundRecords = [], refetch, isLoading } = useInboundRecords();
   const createInboundMutation = useCreateInbound();
+  const deleteInboundMutation = useDeleteInbound();
 
   // 将 API 数据同步到本地状态
   const [inboundRecords, setInboundRecords] = useState<InboundRecord[]>([]);

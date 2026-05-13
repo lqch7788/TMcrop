@@ -4,7 +4,7 @@
  * 拆分后主组件，组合子组件实现完整功能
  */
 import { Users } from 'lucide-react';
-import { useDepartments, usePositions } from '../../components/common/settings';
+import { useDepartmentStore, usePositionStore } from '../../stores';
 import { useRecruitment } from './hooks/useRecruitment';
 import { RecruitmentFilters } from './components/RecruitmentFilters';
 import { RecruitmentTable } from './components/RecruitmentTable';
@@ -12,8 +12,8 @@ import { CreateModal } from './components/RecruitmentModals/CreateModal';
 import { DetailModal } from './components/RecruitmentModals/DetailModal';
 
 export default function RecruitmentPage() {
-  const { departments } = useDepartments();
-  const { positions } = usePositions();
+  const departments = useDepartmentStore((state) => state.departments);
+  const positions = usePositionStore((state) => state.positions);
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {

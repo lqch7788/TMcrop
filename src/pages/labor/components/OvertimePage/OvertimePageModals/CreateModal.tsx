@@ -1,11 +1,12 @@
 /**
  * 加班申请页面 - 新增/编辑表单弹窗组件
  */
-import { useUsers } from '../../../../../components/common/settings';
+import { useEffect } from 'react';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import type { OvertimeFormData, OvertimeFeePreview } from '../types/overtimePage.types';
 import { OVERTIME_TYPE_OPTIONS } from '../types/overtimePage.types';
+import { useWorkerStore } from '../../../../../stores';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -28,7 +29,14 @@ export function OvertimePageCreateModal({
   onTimeChange,
   onSubmit,
 }: CreateModalProps) {
-  const { workers } = useUsers();
+  const workers = useWorkerStore((state) => state.workers);
+  const loadWorkers = useWorkerStore((state) => state.loadWorkers);
+
+  useEffect(() => {
+    if (workers.length === 0) {
+      loadWorkers();
+    }
+  }, [workers.length, loadWorkers]);
 
   return (
     <UnifiedModal

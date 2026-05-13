@@ -2,7 +2,7 @@
  * 工人考勤 - 页面容器组件
  * 负责组合所有子组件，提供统一的页面结构
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { useWorkerAttendance } from './hooks/useWorkerAttendance';
 import { WorkerAttendanceFilters } from './WorkerAttendanceFilters';
@@ -10,7 +10,7 @@ import { WorkerAttendanceTable } from './WorkerAttendanceTable';
 import { WorkerAttendanceExport } from './WorkerAttendanceExport';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { AttendanceRecord } from './types';
-import { useDepartments } from '../../common/settings';
+import { useDepartmentStore } from '../../../stores';
 
 // 编辑记录的类型
 type EditedRecordsMap = Record<string, Partial<AttendanceRecord>>;
@@ -62,8 +62,16 @@ export function WorkerAttendancePage() {
   // Data state for local editing
   const [attendanceData, setAttendanceData] = useState(filteredData);
 
-  // 从SettingsDataProvider获取部门列表
-  const { departments } = useDepartments();
+  // 从Zustand store获取部门列表
+  const departments = useDepartmentStore((state) => state.departments);
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
+
+  useEffect(() => {
+    if (departments.length === 0) {
+      loadDepartments();
+    }
+  }, [departments.length, loadDepartments]);
+
   // 转换为页面需要的格式（包含"全部"选项）
   const departmentOptions = ['全部', ...departments.map(d => d.name)];
 

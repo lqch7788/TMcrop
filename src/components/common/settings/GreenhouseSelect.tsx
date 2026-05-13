@@ -1,10 +1,10 @@
 /**
  * 温室选择组件
- * 从设置数据中获取温室列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useGreenhouses } from './SettingsDataProvider';
+import { useGreenhouseStore } from '../../../stores';
 
 interface GreenhouseSelectProps {
   value?: string;
@@ -23,7 +23,14 @@ export function GreenhouseSelect({
   disabled = false,
   greenhouseType,
 }: GreenhouseSelectProps) {
-  const { greenhouses } = useGreenhouses();
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loading = useGreenhouseStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (greenhouses.length === 0 && !loading) {
+      useGreenhouseStore.getState().loadGreenhouses();
+    }
+  }, [greenhouses.length, loading]);
 
   const filteredGreenhouses = greenhouseType
     ? greenhouses.filter((g) => g.greenhouseType === greenhouseType)

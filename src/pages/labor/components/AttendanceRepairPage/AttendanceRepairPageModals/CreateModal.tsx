@@ -1,11 +1,12 @@
 /**
  * 考勤补录页面 - 新增/编辑表单弹窗组件
  */
-import { useUsers } from '../../../../../components/common/settings';
+import { useEffect } from 'react';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui';
 import type { AttendanceRepairFormData } from '../types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS } from '../types/attendanceRepairPage.types';
+import { useWorkerStore } from '../../../../../stores';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -24,7 +25,14 @@ export function AttendanceRepairPageCreateModal({
   onStaffChange,
   onSubmit,
 }: CreateModalProps) {
-  const { workers } = useUsers();
+  const workers = useWorkerStore((state) => state.workers);
+  const loadWorkers = useWorkerStore((state) => state.loadWorkers);
+
+  useEffect(() => {
+    if (workers.length === 0) {
+      loadWorkers();
+    }
+  }, [workers.length, loadWorkers]);
 
   return (
     <UnifiedModal

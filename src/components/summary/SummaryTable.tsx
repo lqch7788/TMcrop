@@ -8,6 +8,7 @@ import { Pagination } from './Pagination';
 import { Button } from '../ui/button';
 
 interface SummaryTableProps<T extends { id: number | string }> {
+  title?: string;
   columns: TableColumn<T>[];
   data: T[];
   currentPage: number;
@@ -22,6 +23,7 @@ interface SummaryTableProps<T extends { id: number | string }> {
 }
 
 export function SummaryTable<T extends { id: number | string }>({
+  title,
   columns,
   data,
   currentPage,
@@ -39,6 +41,11 @@ export function SummaryTable<T extends { id: number | string }>({
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {title && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">

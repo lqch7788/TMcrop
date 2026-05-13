@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
-import { useGreenhouses } from '../common/settings';
+import { useGreenhouseStore } from '../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
@@ -25,8 +25,15 @@ import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal'
 import { getProductionPlans, addProductionPlan, updateProductionPlan, deleteProductionPlan } from '../../services/apiProductionPlanLocalService';
 
 export default function ProductionPage() {
-  const { greenhouses } = useGreenhouses();
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
   const { refreshApprovals } = useApproval();
+
+  useEffect(() => {
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [greenhouses.length, loadGreenhouses]);
 
   // 权限控制 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();

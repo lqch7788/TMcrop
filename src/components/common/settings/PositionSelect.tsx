@@ -1,10 +1,10 @@
 /**
  * 职位选择组件
- * 从设置数据中获取职位列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { usePositions } from './SettingsDataProvider';
+import { usePositionStore } from '../../../stores';
 
 interface PositionSelectProps {
   value?: string;
@@ -23,7 +23,14 @@ export function PositionSelect({
   disabled = false,
   departmentOid,
 }: PositionSelectProps) {
-  const { positions } = usePositions();
+  const positions = usePositionStore((state) => state.positions);
+  const loading = usePositionStore((state) => state.loading);
+
+  React.useEffect(() => {
+    if (positions.length === 0 && !loading) {
+      usePositionStore.getState().loadPositions();
+    }
+  }, [positions.length, loading]);
 
   const filteredPositions = departmentOid
     ? positions.filter((p) => p.departmentOid === departmentOid)

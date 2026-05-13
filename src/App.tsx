@@ -8,7 +8,6 @@ import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { SettingsDataProvider } from './components/common/settings/SettingsDataProvider';
 import { autoInitializeData } from './utils/dataInitializer';
 import { syncManager } from './services/syncManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -303,7 +302,6 @@ function AppContent() {
           <Route path="/inspection" element={<FarmTaskHub />} />
           <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
           <Route path="/harvest" element={<Harvest />} />
-          <Route path="/produce-inventory" element={<ProduceInventory />} />
           <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
           <Route path="/iot-monitor" element={<IoTMonitor />} />
           <Route path="/env-control" element={<EnvControl />} />
@@ -353,13 +351,11 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <OrganizationProvider>
             <SettingsProvider>
-              <SettingsDataProvider>
-                <ToastProvider>
-                  <ApprovalProvider>
-                    <AppContent />
-                  </ApprovalProvider>
-                </ToastProvider>
-              </SettingsDataProvider>
+              <ToastProvider>
+                <ApprovalProvider>
+                  <AppContent />
+                </ApprovalProvider>
+              </ToastProvider>
             </SettingsProvider>
           </OrganizationProvider>
         </QueryClientProvider>

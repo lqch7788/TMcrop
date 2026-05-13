@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Plus, Edit, Eye, ChevronRight, ClipboardCheck, Calendar, Clock, FileText, ChevronLeft } from 'lucide-react';
-import { usePositions } from '../components/common/settings/SettingsDataProvider';
+import { usePositionStore } from '../stores';
 import { Button } from '../components/ui/button';
 
 const hrSubItems = [
@@ -13,8 +13,15 @@ const hrSubItems = [
 ];
 
 export default function PersonnelManagement() {
-  // 从 SettingsDataProvider 获取职位数据
-  const { positions } = usePositions();
+  // 从 Zustand Store 获取职位数据
+  const positions = usePositionStore((state) => state.positions);
+  const loading = usePositionStore((state) => state.loading);
+
+  useEffect(() => {
+    if (positions.length === 0 && !loading) {
+      usePositionStore.getState().loadPositions();
+    }
+  }, [positions.length, loading]);
 
   // 将 API 返回的 positions 数据转换为页面期望的格式
   // API level: 1=高层, 2=中层, 3=基层; UI level: '高层'/'中层'/'基层'

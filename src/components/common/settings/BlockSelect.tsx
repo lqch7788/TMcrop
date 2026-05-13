@@ -1,10 +1,10 @@
 /**
  * 地块选择组件
- * 从设置数据中获取地块列表
+ * 直接使用 Zustand Store
  */
 
 import React from 'react';
-import { useBlocks } from './SettingsDataProvider';
+import { useBlockStore } from '../../../stores';
 
 interface BlockSelectProps {
   value?: string;
@@ -12,7 +12,7 @@ interface BlockSelectProps {
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
-  zoneId?: string;
+  zoneOid?: string;
 }
 
 export function BlockSelect({
@@ -21,12 +21,19 @@ export function BlockSelect({
   placeholder = '选择地块',
   allowClear = true,
   disabled = false,
-  zoneId,
+  zoneOid,
 }: BlockSelectProps) {
-  const { blocks } = useBlocks();
+  const blocks = useBlockStore((state) => state.blocks);
+  const loading = useBlockStore((state) => state.loading);
 
-  const filteredBlocks = zoneId
-    ? blocks.filter((b) => b.zoneId === zoneId)
+  React.useEffect(() => {
+    if (blocks.length === 0 && !loading) {
+      useBlockStore.getState().loadBlocks();
+    }
+  }, [blocks.length, loading]);
+
+  const filteredBlocks = zoneOid
+    ? blocks.filter((b) => b.zoneOid === zoneOid)
     : blocks;
 
   return (
@@ -38,7 +45,7 @@ export function BlockSelect({
     >
       <option value="">{placeholder}</option>
       {filteredBlocks.map((block) => (
-        <option key={block.id} value={block.id}>
+        <option key={block.oid} value={block.oid}>
           {block.blockName} ({block.blockCode})
         </option>
       ))}
