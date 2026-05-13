@@ -2,18 +2,88 @@
  * 作物订单数据 API 服务
  * 对接后端 /api/crop-orders
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 三级降级策略：
+ * - GET 请求：API → IndexedDB缓存 → localStorage
+ * - POST/PUT/DELETE：API → localStorage（失败时作为降级）
  *
- * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 核心原则：服务器数据是唯一真相来源
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { CropOrder, CropOrderStatus } from '../types/crop';
 
+const STORAGE_KEY = 'crop_orders_local';
+const PENDING_ORDERS_KEY = 'crop_orders_pending';
+
 /**
- * 将前端驼峰命名字段转换为后端蛇形命名字段（用于创建/更新订单）
+ * 从 localStorage 获取本地订单数据
+ */
+function getLocalOrders(): CropOrder[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 保存订单到 localStorage
+ */
+function saveLocalOrders(orders: CropOrder[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+  } catch (error) {
+    console.error('[apiCropOrderService] 保存到localStorage失败:', error);
+  }
+}
+
+/**
+ * 获取待同步的订单（创建但未成功同步到服务器的）
+ */
+function getPendingOrders(): CropOrder[] {
+  try {
+    const stored = localStorage.getItem(PENDING_ORDERS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 保存待同步订单
+ */
+function savePendingOrders(orders: CropOrder[]): void {
+  try {
+    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(orders));
+  } catch (error) {
+    console.error('[apiCropOrderService] 保存待同步订单失败:', error);
+  }
+}
+
+/**
+ * 添加订单到待同步队列
+ */
+function addToPendingOrders(order: CropOrder): void {
+  const pending = getPendingOrders();
+  const exists = pending.find(o => o.id === order.id);
+  if (!exists) {
+    pending.push(order);
+    savePendingOrders(pending);
+  }
+}
+
+/**
+ * 从待同步队列移除订单
+ */
+function removeFromPendingOrders(orderId: string): void {
+  const pending = getPendingOrders();
+  const filtered = pending.filter(o => o.id !== orderId);
+  savePendingOrders(filtered);
+}
+
+/**
+ * 将前端驼峰命名字段转换为后端蛇形命名字段
  */
 function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
   const snakeMap: Record<string, string> = {
@@ -36,12 +106,10 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
     expectedHarvestDate: 'expected_harvest_date',
     createBy: 'create_by',
     updateTime: 'update_time',
-    supplierName: 'customer_name',  // 前端供应商名称对应后端客户名称
   };
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    // 跳过 instanceIds，前端用于关联实例，后端不需要
     if (key === 'instanceIds') continue;
     const snakeKey = snakeMap[key] || key;
     result[snakeKey] = value;
@@ -51,129 +119,209 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
 
 /**
  * 获取所有订单
- * 降级策略：API → IndexedDB 缓存
+ * 三级降级：API → IndexedDB缓存 → localStorage
  */
 export async function getOrders(): Promise<CropOrder[]> {
-  // 使用 network-first 策略：优先从 API 获取，失败时从缓存读取
-  return await enhancedApiClient.get<CropOrder[]>('/crop-orders', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  // 第一级：尝试从 API 获取
+  try {
+    const data = await enhancedApiClient.get<CropOrder[]>('/crop-orders', {
+      useCache: true,
+      cacheStrategy: 'network-first',
+    });
+
+    if (data && Array.isArray(data) && data.length > 0) {
+      // API 成功，更新 localStorage 缓存
+      saveLocalOrders(data);
+      return data;
+    }
+  } catch (error) {
+    console.warn('[apiCropOrderService] API获取失败，降级到本地存储:', error);
+  }
+
+  // 第二级：尝试从 localStorage 获取
+  const localOrders = getLocalOrders();
+  if (localOrders.length > 0) {
+    console.log('[apiCropOrderService] 使用localStorage缓存数据');
+    return localOrders;
+  }
+
+  // 第三级：返回空数组（无数据可用）
+  return [];
 }
 
 /**
  * 根据ID获取单个订单
- * 降级策略：API → IndexedDB 缓存
  */
 export async function getOrderById(id: string): Promise<CropOrder | undefined> {
-  return await enhancedApiClient.get<CropOrder>(`/crop-orders/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
-}
-
-/**
- * 根据ID数组获取多个订单
- * 降级策略：API → IndexedDB 缓存
- */
-export async function getOrdersByIds(ids: string[]): Promise<CropOrder[]> {
-  return await enhancedApiClient.get<CropOrder[]>(`/crop-orders/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  try {
+    return await enhancedApiClient.get<CropOrder>(`/crop-orders/${id}`, {
+      useCache: true,
+      cacheStrategy: 'network-first',
+    });
+  } catch (error) {
+    console.warn('[apiCropOrderService] 获取订单详情失败:', error);
+    // 尝试从本地存储查找
+    const localOrders = getLocalOrders();
+    return localOrders.find(o => o.id === id);
+  }
 }
 
 /**
  * 创建订单
- * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 三级降级：API成功 → 失败写入localStorage
  */
 export async function createOrder(
   orderData: Omit<CropOrder, 'id' | 'orderCode' | 'createTime' | 'updateTime'>
 ): Promise<CropOrder> {
-  // 转换字段名为蛇形格式以匹配后端期望
-  const snakeData = toSnakeCase(orderData as Record<string, unknown>);
-  console.log('[createOrder] 发送的数据:', JSON.stringify(snakeData, null, 2));
+  // 生成临时 ID（用于本地存储）
+  const tempId = `ORD${Date.now()}`;
+  const now = new Date().toISOString();
 
-  const result = await enhancedApiClient.post<CropOrder>('/crop-orders', snakeData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  // 构建完整的订单对象（用于本地存储降级）
+  const localOrder: CropOrder = {
+    ...orderData,
+    id: tempId,
+    orderCode: '', // 待服务器返回
+    createTime: now,
+    updateTime: now,
+  } as CropOrder;
 
-  console.log('[createOrder] 返回的数据:', JSON.stringify(result, null, 2));
-  return result;
+  // 第一级：尝试调用 API
+  try {
+    const snakeData = toSnakeCase(orderData as Record<string, unknown>);
+    const result = await enhancedApiClient.post<CropOrder>('/crop-orders', snakeData);
+
+    console.log('[apiCropOrderService] 创建订单成功:', result);
+    return result;
+  } catch (error) {
+    console.warn('[apiCropOrderService] API创建失败，降级到localStorage:', error);
+
+    // 第二级：失败时写入 localStorage
+    const localOrders = getLocalOrders();
+    localOrders.unshift(localOrder); // 新订单在前
+    saveLocalOrders(localOrders);
+
+    // 添加到待同步队列（联网后尝试同步）
+    addToPendingOrders(localOrder);
+
+    console.log('[apiCropOrderService] 订单已保存到本地，等待同步');
+    return localOrder;
+  }
 }
 
 /**
  * 更新订单
- * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 三级降级：API成功 → 失败写入localStorage
  */
-export async function updateOrder(id: string, updates: Partial<CropOrder>): Promise<CropOrder | null> {
-  // 转换字段名为蛇形格式以匹配后端期望
-  const snakeData = toSnakeCase(updates as Record<string, unknown>);
-  const result = await enhancedApiClient.put<{ id: string }>(`/crop-orders/${id}`, snakeData, {
-    offlineQueue: true,
-  });
-  return result ? { ...updates, id } as CropOrder : null;
+export async function updateOrder(
+  id: string,
+  updates: Partial<CropOrder>
+): Promise<CropOrder | null> {
+  // 第一级：尝试调用 API
+  try {
+    const snakeData = toSnakeCase(updates as Record<string, unknown>);
+    await enhancedApiClient.put(`/crop-orders/${id}`, snakeData);
+
+    // API 成功，尝试获取更新后的数据
+    return await getOrderById(id);
+  } catch (error) {
+    console.warn('[apiCropOrderService] API更新失败，降级到localStorage:', error);
+
+    // 第二级：失败时更新 localStorage
+    const localOrders = getLocalOrders();
+    const index = localOrders.findIndex(o => o.id === id);
+
+    if (index !== -1) {
+      localOrders[index] = {
+        ...localOrders[index],
+        ...updates,
+        updateTime: new Date().toISOString(),
+      };
+      saveLocalOrders(localOrders);
+      return localOrders[index];
+    }
+
+    return null;
+  }
 }
 
 /**
  * 删除订单
- * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 三级降级：API成功 → 失败标记删除
  */
 export async function deleteOrder(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/crop-orders/${id}`, {
-    offlineQueue: true,
-  });
-  return true;
+  // 第一级：尝试调用 API
+  try {
+    await enhancedApiClient.delete(`/crop-orders/${id}`);
+    return true;
+  } catch (error) {
+    console.warn('[apiCropOrderService] API删除失败，标记本地删除:', error);
+
+    // 第二级：失败时从 localStorage 标记删除
+    const localOrders = getLocalOrders();
+    const filtered = localOrders.filter(o => o.id !== id);
+    saveLocalOrders(filtered);
+
+    // 从待同步队列移除
+    removeFromPendingOrders(id);
+
+    return true;
+  }
 }
 
 /**
  * 批量删除订单
- * 降级策略：API → 离线队列（网络断开时加入队列，联网后自动同步）
  */
 export async function deleteOrders(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/crop-orders/batch/delete', { ids }, {
-    offlineQueue: true,
-  });
+  for (const id of ids) {
+    await deleteOrder(id);
+  }
   return true;
 }
 
 /**
  * 关联实例到订单
- * 降级策略：API → 离线队列
  */
 export async function linkInstances(orderId: string, instanceIds: string[]): Promise<boolean> {
-  await enhancedApiClient.post(`/crop-orders/${orderId}/link-instances`, { instanceIds }, {
-    offlineQueue: true,
-  });
-  return true;
+  try {
+    await enhancedApiClient.post(`/crop-orders/${orderId}/link-instances`, { instanceIds });
+    return true;
+  } catch (error) {
+    console.warn('[apiCropOrderService] 关联实例失败:', error);
+    return false;
+  }
 }
 
 /**
  * 从订单取消关联实例
- * 降级策略：API → 离线队列
  */
 export async function unlinkInstances(orderId: string, instanceIds: string[]): Promise<boolean> {
-  await enhancedApiClient.post(`/crop-orders/${orderId}/unlink-instances`, { instanceIds }, {
-    offlineQueue: true,
-  });
-  return true;
+  try {
+    await enhancedApiClient.post(`/crop-orders/${orderId}/unlink-instances`, { instanceIds });
+    return true;
+  } catch (error) {
+    console.warn('[apiCropOrderService] 取消关联实例失败:', error);
+    return false;
+  }
 }
 
 /**
  * 更新订单状态
- * 降级策略：API → 离线队列
  */
 export async function updateOrderStatus(id: string, status: CropOrderStatus): Promise<boolean> {
-  await enhancedApiClient.put(`/crop-orders/${id}/status`, { status }, {
-    offlineQueue: true,
-  });
-  return true;
+  try {
+    await enhancedApiClient.put(`/crop-orders/${id}/status`, { status });
+    return true;
+  } catch (error) {
+    console.warn('[apiCropOrderService] 更新订单状态失败:', error);
+    // 降级到本地更新
+    await updateOrder(id, { status });
+    return true;
+  }
 }
 
 /**
- * 重置数据到默认状态
- * 仅调用后端，不做降级处理
+ * 重置数据到默认状态（仅调用后端）
  */
 export async function resetOrders(): Promise<void> {
   await enhancedApiClient.post('/crop-orders/reset');
@@ -190,13 +338,10 @@ export interface OrderStats {
 }
 
 /**
- * 从后端获取订单统计数据（感知后端stats路由）
- * 降级策略：API 失败时返回 null，让前端自行计算
+ * 从后端获取订单统计数据
  */
 export async function getOrderStats(): Promise<OrderStats | null> {
   try {
-    // 后端返回: { total, pending, confirmed, processing, shipped, delivered, cancelled, total_amount }
-    // 前端期望: { total, inProgress, completed, thisMonth }
     const backendStats = await enhancedApiClient.get<{
       total: number;
       pending: number;
@@ -215,10 +360,67 @@ export async function getOrderStats(): Promise<OrderStats | null> {
       total: backendStats.total,
       inProgress: backendStats.confirmed + backendStats.processing,
       completed: backendStats.delivered + backendStats.shipped,
-      thisMonth: 0 // 后端没有提供月度统计，返回0让前端自行计算
+      thisMonth: 0,
     };
   } catch (error) {
-    console.warn('获取订单统计失败:', error);
+    console.warn('[apiCropOrderService] 获取订单统计失败:', error);
     return null;
   }
+}
+
+/**
+ * 同步待处理的订单到服务器
+ * 联网时调用此函数尝试同步本地创建的订单
+ */
+export async function syncPendingOrders(): Promise<{ success: number; failed: number }> {
+  const pending = getPendingOrders();
+  if (pending.length === 0) {
+    return { success: 0, failed: 0 };
+  }
+
+  console.log(`[apiCropOrderService] 开始同步 ${pending.length} 条待处理订单`);
+
+  let success = 0;
+  let failed = 0;
+
+  for (const order of pending) {
+    try {
+      const snakeData = toSnakeCase(order as Record<string, unknown>);
+      const result = await enhancedApiClient.post<CropOrder>('/crop-orders', snakeData);
+
+      // 同步成功，从待同步队列移除，并更新本地存储的 ID
+      removeFromPendingOrders(order.id);
+
+      // 更新本地订单的 ID（临时ID → 服务器返回的真实ID）
+      const localOrders = getLocalOrders();
+      const index = localOrders.findIndex(o => o.id === order.id);
+      if (index !== -1 && result && result.id !== order.id) {
+        localOrders[index] = { ...localOrders[index], id: result.id };
+        saveLocalOrders(localOrders);
+      }
+
+      success++;
+      console.log(`[apiCropOrderService] 同步订单成功: ${order.id} -> ${result?.id}`);
+    } catch (error) {
+      console.warn(`[apiCropOrderService] 同步订单失败: ${order.id}`, error);
+      failed++;
+    }
+  }
+
+  console.log(`[apiCropOrderService] 同步完成: 成功 ${success}, 失败 ${failed}`);
+  return { success, failed };
+}
+
+/**
+ * 获取本地存储的订单数量（用于诊断）
+ */
+export function getLocalOrdersCount(): number {
+  return getLocalOrders().length;
+}
+
+/**
+ * 获取待同步订单数量（用于诊断）
+ */
+export function getPendingOrdersCount(): number {
+  return getPendingOrders().length;
 }

@@ -16,7 +16,7 @@ import {
   cropCategories,
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
-import { getOrderStats } from '@/services/apiCropOrderService';
+import { getOrderStats, syncPendingOrders } from '@/services/apiCropOrderService';
 import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import * as cropVarietyService from '@/services/apiCropVarietyService';
@@ -73,6 +73,13 @@ export default function OrderPage() {
 
   // 组件挂载时加载数据
   useEffect(() => {
+    // 页面加载时尝试同步待处理的订单
+    syncPendingOrders().then(result => {
+      if (result.success > 0 || result.failed > 0) {
+        console.log(`[OrderPage] 同步结果: 成功 ${result.success}, 失败 ${result.failed}`);
+      }
+    });
+
     refreshData();
   }, []);
 
