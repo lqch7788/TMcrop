@@ -7,12 +7,11 @@ import { ShoppingCart } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
-import { getPurchasePlansWithStatus, getPurchasePlansWithStatusAsync, subscribeToStatusChanges } from '../../hooks/usePurchasePlanStore';
 import { apiClient, USE_API } from '../../services/apiClient';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
-import { useUserStore } from '../../stores';
+import { useUserStore, usePurchasePlanStore } from '../../stores';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -39,35 +38,26 @@ export function PurchasePlanPage() {
     }
   }, [users.length, loadUsers]);
 
-  // 采购计划数据状态（支持审批联动更新）
-  const [purchasePlansData, setPurchasePlansData] = useState<PurchasePlan[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // 从 Zustand Store 获取采购计划数据和操作方法
+  const {
+    plans: rawPlans,
+    isLoading,
+    fetchPlans,
+    addPlan,
+    updatePlan,
+    deletePlan,
+    deletePlans,
+    getPlansWithStatus,
+    statusUpdates,
+  } = usePurchasePlanStore();
+
+  // 合并 API 数据与审批状态更新
+  const purchasePlansData = getPlansWithStatus();
 
   // 加载采购计划数据
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getPurchasePlansWithStatusAsync();
-        setPurchasePlansData(data);
-      } catch (error) {
-        console.error('加载采购计划数据失败，使用同步版本:', error);
-        setPurchasePlansData(getPurchasePlansWithStatus());
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, []);
-
-  // 订阅采购计划状态变化事件
-  useEffect(() => {
-    const unsubscribe = subscribeToStatusChanges(() => {
-      // 状态更新时刷新数据
-      setPurchasePlansData(getPurchasePlansWithStatus());
-    });
-    return unsubscribe;
-  }, []);
+    fetchPlans();
+  }, [fetchPlans]);
 
   // 筛选状态
   const [relatedBatchCode, setRelatedBatchCode] = useState('');
@@ -292,8 +282,8 @@ export function PurchasePlanPage() {
           alert('采购计划已创建并提交审批');
         }
 
-        const data = await getPurchasePlansWithStatusAsync();
-        setPurchasePlansData(data);
+        // 刷新 Store 数据
+        fetchPlans();
       }
     } catch (error) {
       console.error('创建采购计划失败:', error);
@@ -472,13 +462,9 @@ export function PurchasePlanPage() {
       const selectedIds = deletablePlans.map(p => p.id);
 
       if (USE_API) {
-        for (const id of selectedIds) {
-          await apiClient.delete(`/purchase-plans/${id}`);
-        }
+        await deletePlans(selectedIds);
       }
 
-      const data = await getPurchasePlansWithStatusAsync();
-      setPurchasePlansData(data);
       setShowDeleteModal(false);
       setBatchDeleteMode(false);
       setSelectedRows([]);
@@ -528,11 +514,8 @@ export function PurchasePlanPage() {
     }
     try {
       if (USE_API) {
-        const result = await apiClient.delete<{ success: boolean; error?: string }>(`/purchase-plans/${plan.id}`);
-        console.log('【删除采购计划】API返回:', result);
+        await deletePlan(plan.id);
       }
-      const data = await getPurchasePlansWithStatusAsync();
-      setPurchasePlansData(data);
       alert('删除成功');
     } catch (error) {
       console.error('删除采购计划失败:', error);
@@ -612,7 +595,7 @@ export function PurchasePlanPage() {
           applicantDepartment: currentEditingPlan.applicantDepartment,
           items: batchEditItems,
         });
-        await apiClient.put(`/purchase-plans/${currentEditingPlan.id}`, {
+        await updatePlan(currentEditingPlan.id, {
           relatedBatchCode: currentEditingPlan.relatedBatchCode,
           purchaseType: batchEditData.purchaseType,
           priority: batchEditData.priority,
@@ -624,8 +607,6 @@ export function PurchasePlanPage() {
           items: batchEditItems,
         });
       }
-      const data = await getPurchasePlansWithStatusAsync();
-      setPurchasePlansData(data);
       setShowBatchEditModal(false);
       setBatchEditMode(false);
       setSelectedRows([]);

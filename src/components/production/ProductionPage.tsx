@@ -3,8 +3,8 @@ import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { cropBatches, cropTypes, plantingModes } from '../../data/mockData';
-import { useGreenhouseStore } from '../../stores';
+import { cropTypes, plantingModes } from '../../data/mockData';
+import { useGreenhouseStore, useProductionPlanStore } from '../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
@@ -22,7 +22,6 @@ import {
   DeleteWarningModal,
 } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
-import { getProductionPlans, addProductionPlan, updateProductionPlan, deleteProductionPlan } from '../../services/apiProductionPlanLocalService';
 
 export default function ProductionPage() {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
@@ -46,50 +45,35 @@ export default function ProductionPage() {
   const [planTypeFilter, setPlanTypeFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [batches, setBatches] = useState<CropBatch[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // 从 API 加载生产计划数据（带有localStorage降级）
-  const loadProductionData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (USE_API) {
-        // 使用 apiProductionPlanLocalService，它会在API失败时自动降级到localStorage
-        const apiData = await getProductionPlans();
-        if (apiData && apiData.length > 0) {
-          setBatches(apiData as unknown as CropBatch[]);
-        } else {
-          setBatches(cropBatches);
-        }
-      } else {
-        // 非 API 模式，使用 mock 数据
-        setBatches(cropBatches);
-      }
-    } catch (error) {
-      console.error('加载生产计划数据失败，使用 mock 数据:', error);
-      setBatches(cropBatches);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // 从 Zustand Store 获取生产计划数据和操作方法
+  const {
+    plans: batches,
+    isLoading,
+    fetchPlans,
+    addPlan,
+    updatePlan,
+    deletePlan,
+    deletePlans,
+  } = useProductionPlanStore();
 
   // 组件挂载时加载数据
   useEffect(() => {
-    loadProductionData();
-  }, [loadProductionData]);
+    fetchPlans();
+  }, [fetchPlans]);
 
   // 页面可见性变化时自动刷新数据（从审批中心返回时自动更新）
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        loadProductionData();
+        fetchPlans();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [loadProductionData]);
+  }, [fetchPlans]);
 
   // 模态框打开时初始化表单默认值
   useEffect(() => {
@@ -242,9 +226,9 @@ export default function ProductionPage() {
     };
 
     try {
-      // 调用后端 API 创建生产计划（带有localStorage降级）
+      // 通过 Zustand Store 创建生产计划（API → IndexedDB → localStorage 三级降级）
       if (USE_API) {
-        await addProductionPlan(apiData);
+        await addPlan(apiData as any);
       }
 
       // 构造前端本地状态使用的 CropBatch 对象
@@ -274,8 +258,6 @@ export default function ProductionPage() {
         planTypeName: formData.planTypeName,
       };
 
-      // 更新本地状态
-      setBatches([newBatch, ...batches]);
       setShowCreateModal(false);
       resetForm();
       setErrors({});
@@ -333,9 +315,9 @@ export default function ProductionPage() {
     };
 
     try {
-      // 调用后端 API 创建生产计划（带有localStorage降级）
+      // 通过 Zustand Store 创建生产计划 + 创建审批单
       if (USE_API) {
-        await addProductionPlan(apiData);
+        await addPlan(apiData as any);
 
         // 创建审批单
         const approvalData = {
@@ -397,8 +379,7 @@ export default function ProductionPage() {
         planTypeName: formData.planTypeName,
       };
 
-      // 更新本地状态
-      setBatches([newBatch, ...batches]);
+      // Zustand Store 已通过 addPlan 更新本地状态，无需手动 setBatches
       setShowCreateModal(false);
       resetForm();
       setErrors({});
@@ -627,8 +608,8 @@ export default function ProductionPage() {
       };
 
       if (USE_API) {
-        // 同时更新生产计划的 batchStatus 为 pending（带有localStorage降级）
-        await updateProductionPlan(currentBatch.id, { batchStatus: 'pending' });
+        // 通过 Store 更新生产计划状态为 pending
+        await updatePlan(currentBatch.id, { batchStatus: 'pending' } as any);
         await apiClient.post('/approvals', approvalData);
       }
 
@@ -637,14 +618,6 @@ export default function ProductionPage() {
 
       // 刷新审批中心数据
       await refreshApprovals();
-
-      // 更新本地状态 - 设置为待审批状态
-      setBatches(batches.map(batch => {
-        if (voidedBatchIds.includes(batch.id)) {
-          return { ...batch, batchStatus: 'pending' as const };
-        }
-        return batch;
-      }));
 
       // 从已选择列表中移除已申请作废的批次（不再允许编辑）
       setSelectedRows(selectedRows.filter(id => !voidedBatchIds.includes(id)));
@@ -689,9 +662,8 @@ export default function ProductionPage() {
     }
     try {
       if (USE_API) {
-        await deleteProductionPlan(batch.id);
+        await deletePlan(batch.id);
       }
-      setBatches(batches.filter(b => b.id !== batch.id));
       alert('删除成功');
     } catch (error) {
       console.error('删除生产计划失败:', error);
@@ -716,11 +688,8 @@ export default function ProductionPage() {
 
     try {
       if (USE_API) {
-        for (const id of toDelete) {
-          await deleteProductionPlan(id);
-        }
+        await deletePlans(toDelete);
       }
-      setBatches(batches.filter(b => !toDelete.includes(b.id)));
       setSelectedRows([]);
     } catch (error) {
       console.error('删除生产计划失败:', error);
@@ -787,7 +756,7 @@ export default function ProductionPage() {
               apiData.batchStatus = edited.isCompleted === true ? 'pending_complete' : 'pending';
 
               console.log('保存编辑:', batch.id, apiData);
-              await updateProductionPlan(batch.id, apiData);
+              await updatePlan(batch.id, apiData as any);
             }
 
             // 2. 创建批次变更审批
@@ -854,16 +823,8 @@ export default function ProductionPage() {
         return;
       }
 
-      // Update local state - 根据是否完成来决定状态
-      setBatches(batches.map(batch => {
-        const edited = editedBatches[batch.batchCode];
-        if (edited) {
-          // 选择"完成计划"则状态为 pending_complete；否则为 pending
-          const newStatus = edited.isCompleted === true ? 'pending_complete' : 'pending';
-          return { ...batch, ...edited, lastModifyDate: new Date().toISOString().slice(0, 10), batchStatus: newStatus as const };
-        }
-        return batch;
-      }));
+      // 刷新 Store 数据以反映最新状态
+      await fetchPlans();
 
       // 从已选择列表中移除已提交的批次（它们已经是待审批状态了）
       const remainingSelectedRows = selectedRows.filter(id => !submittedBatchIds.includes(id));

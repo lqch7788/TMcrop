@@ -6,10 +6,10 @@ import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
-import { getTechSolutions, addTechSolution as apiAddTechSolution, updateTechSolution as apiUpdateTechSolution, deleteTechSolutions as apiDeleteTechSolutions } from '../../services/apiTechSolutionService';
 import { getAllVarieties, getVarietyByCode } from '../../services/apiCropVarietyService';
 import { searchVarieties, initVarieties } from '../../services/cropVarietyService';
 import { getDictionaries } from '../../services/dictionaryService';
+import { useTechSolutionStore } from '../../stores';
 import { CropVariety } from '../../types/crop';
 
 // 技术方案类型定义
@@ -60,10 +60,16 @@ export function TechSolutionPage() {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // 技术方案数据状态
-  const [techSolutions, setTechSolutions] = useState<TechSolution[]>([]);
+  // 从 Zustand Store 获取技术方案数据和操作方法
+  const {
+    solutions: techSolutions,
+    isLoading,
+    fetchSolutions,
+    addSolution,
+    updateSolution,
+    deleteSolutions,
+  } = useTechSolutionStore();
 
   // 作物品种选项
   const [cropVarietyOptions, setCropVarietyOptions] = useState<{ value: string; label: string; cropCode?: string }[]>([]);
@@ -193,40 +199,21 @@ export function TechSolutionPage() {
     }
   }, []);
 
-  // 从 API 加载技术方案数据（带有localStorage降级）
-  const loadTechSolutions = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (USE_API) {
-        // 使用 apiTechSolutionService，它会在API失败时自动降级到localStorage
-        const response = await getTechSolutions();
-        setTechSolutions(response || []);
-      } else {
-        setTechSolutions([]);
-      }
-    } catch (error) {
-      console.error('加载技术方案数据失败:', error);
-      setTechSolutions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   // 组件挂载时加载数据
   useEffect(() => {
-    loadTechSolutions();
-  }, [loadTechSolutions]);
+    fetchSolutions();
+  }, [fetchSolutions]);
 
   // 页面可见性变化时自动刷新数据
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        loadTechSolutions();
+        fetchSolutions();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [loadTechSolutions]);
+  }, [fetchSolutions]);
 
   // 过滤后的技术方案数据
   const filteredTechSolutions = techSolutions.filter(tech => {
@@ -377,10 +364,8 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        await apiUpdateTechSolution(selectedTech.id, updateData);
+        await updateSolution(selectedTech.id, updateData);
       }
-      // 刷新技术方案列表
-      await loadTechSolutions();
       setEditModalOpen(false);
     } catch (error) {
       console.error('更新技术方案失败:', error);
@@ -410,8 +395,8 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        // 调用后端 API 创建技术方案（带有localStorage降级）
-        const result = await apiAddTechSolution(techSolutionData);
+        // 通过 Zustand Store 创建技术方案
+        const result = await addSolution(techSolutionData);
 
         // 只有提交审批模式才创建审批单
         if (submitMode === 'submit') {
@@ -444,9 +429,6 @@ export function TechSolutionPage() {
           await refreshApprovals();
         }
       }
-
-      // 刷新技术方案列表
-      await loadTechSolutions();
 
       // 关闭模态框
       setCreateModalOpen(false);
@@ -597,11 +579,9 @@ export function TechSolutionPage() {
 
     try {
       if (USE_API) {
-        // 调用API批量删除（带有localStorage降级）
-        await apiDeleteTechSolutions(selectedIds);
+        // 通过 Store 批量删除
+        await deleteSolutions(selectedIds);
       }
-      // 刷新技术方案列表
-      await loadTechSolutions();
     } catch (error) {
       console.error('删除技术方案失败:', error);
       alert('删除失败，请重试');
@@ -1761,11 +1741,11 @@ export function TechSolutionPage() {
               onClick={async () => {
                 try {
                   if (USE_API) {
-                    // 逐条调用API更新（带有localStorage降级）
+                    // 通过 Store 逐条更新技术方案
                     for (const tech of techSolutions) {
                       const edited = editedTechs[tech.code];
                       if (edited) {
-                        await apiUpdateTechSolution(tech.id, {
+                        await updateSolution(tech.id, {
                           solutionTitle: edited.title ?? tech.title,
                           cropName: edited.crop ?? tech.crop,
                           plantingMode: edited.plantingMode ?? tech.plantingMode,
@@ -1780,8 +1760,6 @@ export function TechSolutionPage() {
                       }
                     }
                   }
-                  // 刷新技术方案列表
-                  await loadTechSolutions();
                   setShowBatchEditModal(false);
                   setBatchEditMode(false);
                   setSelectedRows([]);

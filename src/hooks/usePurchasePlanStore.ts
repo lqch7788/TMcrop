@@ -1,14 +1,9 @@
-// ============================================================
-// 采购计划状态管理
-// 使用 localStorage 持久化状态更新，支持审批联动
-// 已迁移到 Zustand Store (src/stores/usePurchasePlanStore.ts)
-// 本文件保留用于向后兼容
-// ============================================================
-
+/**
+ * 采购计划状态管理 - 兼容层
+ * 已迁移到 Zustand Store (src/stores/usePurchasePlanStore.ts)
+ * 本文件保留用于向后兼容
+ */
 import { usePurchasePlanStore as useZustandPurchasePlanStore } from '../stores/usePurchasePlanStore';
-import { purchasePlans as initialPurchasePlans } from '../data/mockData';
-import { getPurchasePlans } from '../services/apiPurchasePlanService';
-import type { PurchasePlan } from '../types/purchase';
 
 export type { PurchasePlanStatusUpdate } from '../stores/usePurchasePlanStore';
 
@@ -27,7 +22,7 @@ export function updatePurchasePlanStatus(planId: string, status: string, statusT
   useZustandPurchasePlanStore.getState().updatePurchasePlanStatus(planId, status, statusText);
 }
 
-export function getStatusUpdates(): Record<string, PurchasePlanStatusUpdate> {
+export function getStatusUpdates(): Record<string, any> {
   return useZustandPurchasePlanStore.getState().getStatusUpdates();
 }
 
@@ -35,42 +30,23 @@ export function clearAllStatusUpdates(): void {
   useZustandPurchasePlanStore.getState().clearAllUpdates();
 }
 
-// 获取应用状态更新后的采购计划数据
-export function getPurchasePlansWithStatus(): PurchasePlan[] {
-  const updates = useZustandPurchasePlanStore.getState().getStatusUpdates();
-
-  return initialPurchasePlans.map(plan => {
-    const update = updates[plan.id];
-    if (update) {
-      return {
-        ...plan,
-        status: update.status as PurchasePlan['status'],
-        statusText: update.statusText,
-      };
-    }
-    return plan;
-  }) as PurchasePlan[];
+// 获取应用状态更新后的采购计划数据（向后兼容）
+export function getPurchasePlansWithStatus() {
+  return useZustandPurchasePlanStore.getState().getPlansWithStatus();
 }
 
-// 异步获取采购计划数据（使用 apiPurchasePlanService，带localStorage降级）
-export async function getPurchasePlansWithStatusAsync(): Promise<PurchasePlan[]> {
-  const apiData = await getPurchasePlans();
-  const updates = useZustandPurchasePlanStore.getState().getStatusUpdates();
-
-  return apiData.map(plan => {
-    const update = updates[plan.id];
-    if (update) {
-      return {
-        ...plan,
-        status: update.status as PurchasePlan['status'],
-        statusText: update.statusText,
-      };
-    }
-    return plan;
-  }) as PurchasePlan[];
+// 异步获取采购计划数据（向后兼容 - 从 Store 刷新后返回带状态的数据）
+export async function getPurchasePlansWithStatusAsync() {
+  const store = useZustandPurchasePlanStore.getState();
+  await store.fetchPlans();
+  return store.getPlansWithStatus();
 }
 
-// 监听状态变化
-export function subscribeToStatusChanges(callback: (planId: string, status: string, statusText: string) => void): () => void {
-  return () => {};
+// 监听状态变化（向后兼容 - Zustand 自带订阅机制）
+export function subscribeToStatusChanges(callback: () => void): () => void {
+  return useZustandPurchasePlanStore.subscribe((state, prevState) => {
+    if (state.statusUpdates !== prevState.statusUpdates) {
+      callback();
+    }
+  });
 }
