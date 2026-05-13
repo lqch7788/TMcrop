@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Grid3X3, Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, MapPin, Layers, Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useSettingsData } from '../components/common/settings/SettingsDataProvider';
+import { useGreenhouseStore } from '../stores';
 import { getZones, createZone, updateZone as updateZoneApi, deleteZone, Zone as ZoneType } from '../services/apiBasicDataService';
 
 // 区域类型选项
@@ -33,8 +33,9 @@ const statusColors = {
 };
 
 export default function BlockManagement() {
-  // 从全局设置获取基地列表
-  const { greenhouses, dictionaries } = useSettingsData();
+  // 从 Zustand Store 获取基地列表
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
   const [zones, setZones] = useState<Zone[]>([]);
   const [searchText, setSearchText] = useState('');
   const [baseFilter, setBaseFilter] = useState<string>('all');
@@ -78,6 +79,10 @@ export default function BlockManagement() {
       setLoading(false);
     }
   }, [greenhouses]);
+
+  useEffect(() => {
+    loadGreenhouses();
+  }, [loadGreenhouses]);
 
   useEffect(() => {
     loadZones();

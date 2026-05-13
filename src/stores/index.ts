@@ -69,3 +69,34 @@ export { useOrganizationStore } from './useOrganizationStore';
 export { useApprovalStore } from './useApprovalStore';
 
 export { useNotificationStore, type Notification, type NotificationVariant } from './useNotificationStore';
+
+// SettingsDataProvider 迁移到 Zustand
+export { useDepartmentStore, getDepartmentByOid, getActiveDepartments } from './useDepartmentStore';
+export type { Department } from '../services/apiBasicDataService';
+
+export { usePositionStore, getPositionByOid, getPositionsByDepartment, getActivePositions } from './usePositionStore';
+export type { Position } from '../services/apiBasicDataService';
+
+export { useDictionaryStore, getDictItems, getDictItemName, getDictionaryCategories } from './useDictionaryStore';
+export type { Dictionary } from '../services/apiBasicDataService';
+
+export { useGreenhouseStore, getGreenhouseByOid, getGreenhousesByBase, getActiveGreenhouses } from './useGreenhouseStore';
+export type { Greenhouse } from '../services/apiBasicDataService';
+
+export { useWarehouseStore, getWarehouseByOid, getActiveWarehouses } from './useWarehouseStore';
+export type { Warehouse } from '../services/apiBasicDataService';
+
+export { useZoneStore, getZoneByOid, getZonesByBase, getActiveZones } from './useZoneStore';
+export type { Zone } from '../services/apiBasicDataService';
+
+export { useDeviceStore, getDeviceByOid, getDevicesByGreenhouseOid, getActiveDevices } from './useDeviceStore';
+export type { Device } from '../services/apiBasicDataService';
+
+export { useTeamStore, getTeamByOid, getTeamsByDepartment, getActiveTeams } from './useTeamStore';
+export type { Team } from '../services/apiBasicDataService';
+
+export { useBlockStore, getBlockByOid, getBlocksByZone, getActiveBlocks } from './useBlockStore';
+export type { Block } from '../services/apiBasicDataService';
+
+export { useUserStore, getUserByOid, getUsersByDepartment, getActiveUsers } from './useUserStore';
+export type { User } from '../services/authorityService';
