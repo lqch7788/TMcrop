@@ -163,7 +163,7 @@ export default function ApplicationTab({ materialData, setMaterialData }: Applic
         <BatchEditModal
           isOpen={hook.showBatchEditModal}
           selectedRows={hook.selectedRows}
-          records={hook.materialData}
+          recordsList={hook.materialData}
           onClose={() => hook.setShowBatchEditModal(false)}
           onSave={(updatedRecords) => {
             hook.setMaterialData(prev => prev.map(r => updatedRecords[r.id] || r));

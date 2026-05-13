@@ -284,6 +284,70 @@ hongzhiyun/
 
 ## 最近更新
 
+### 2026-05-13 - 种源管理批量删除功能修复
+**问题**: 种源管理列表的批量删除功能无法删除数据，提示"删除失败，请重试"
+
+**根本原因**: Express 路由匹配顺序错误
+
+**问题分析**:
+1. `server/src/routes/seedSource.ts` 中路由定义顺序错误：
+   ```typescript
+   // 错误顺序 - /:id 在 /batch 之前
+   router.get('/:id', ...);        // batch 会被当作 :id 参数匹配
+   router.delete('/:id', ...);
+   router.delete('/batch', ...);   // 永远不会被匹配到
+   ```
+
+2. 当前端发送 `DELETE /api/seed-sources/batch?ids=xxx` 请求时
+   - Express 按顺序匹配路由
+   - `/batch` 被 `/:id` 路由捕获，把 "batch" 当作 id 参数
+   - Controller 层收到 `id = 'batch'`，查找失败返回 404
+
+3. 错误日志显示：
+   - HTTP 404 Not Found
+   - `{"success":false,"error":"删除种源记录失败"}`
+
+**修复方案**:
+将 `/batch` 路由移到 `/:id` 路由之前，确保精确匹配优先于参数匹配：
+
+```typescript
+// 正确顺序 - /batch 在 /:id 之前
+router.get('/generate-code', ...);     // 精确匹配
+router.delete('/batch', ...);          // 批量删除 - 在 /:id 之前
+router.get('/', ...);                  // 列表
+router.get('/:id', ...);               // 单个详情的 :id 参数
+router.post('/', ...);
+router.put('/:id', ...);
+router.delete('/:id', ...);
+```
+
+**Express 路由匹配原则**:
+- Express 按路由定义顺序进行匹配
+- 精确匹配的路径优先于参数路径
+- `/batch` 是精确匹配，`/:id` 是参数匹配
+- **必须将精确匹配路由放在参数路由之前**
+
+**涉及文件**:
+- `server/src/routes/seedSource.ts` - 修复路由顺序
+
+**验证结果**:
+- ✅ 重启后端服务后，curl 测试批量删除成功返回 `{"success":true}`
+- ✅ 前端批量删除功能恢复正常
+
+### 2026-05-13 - 育苗管理批量删除功能修复
+**问题**: 育苗管理列表的批量删除功能无法删除数据
+
+**根本原因**: Express 路由匹配顺序错误（与种源管理相同的问题）
+
+**修复方案**:
+将 `/batch` 等批量操作路由移到 `/:id` 路由之前
+
+**涉及文件**:
+- `server/src/routes/seedling.ts` - 修复路由顺序
+
+**验证结果**:
+- ✅ 重启后端服务后，curl 测试批量删除成功返回 `{"success":true}`
+
 ### 2026-04-29 - 作物管理模块重构（第一阶段+第二阶段完成）
 **目标**: 减少重复代码，消除硬编码，建立公共组件体系
 

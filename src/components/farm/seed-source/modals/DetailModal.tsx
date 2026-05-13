@@ -28,6 +28,13 @@ export function DetailModal({
     [StockStatus.DEPLETED]: { label: '耗尽', color: 'text-red-600 bg-red-50' }
   };
 
+  // 单位转换函数（英文→中文）
+  const unitMap: Record<string, string> = {
+    'bag': '袋', 'plant': '株', 'grain': '粒', 'kg': '千克', 'g': '克', 'ton': '吨', 'mu': '亩',
+    '个': '个', '袋': '袋', '株': '株', '粒': '粒', '千克': '千克', '克': '克', '吨': '吨', '亩': '亩',
+  };
+  const formatUnit = (unit: string) => unitMap[unit] || unit || '';
+
   // 类型映射
   const sourceTypeMap = {
     [SourceType.SEED]: '种子',
@@ -117,11 +124,11 @@ export function DetailModal({
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">采购数量：</span>
-              <span className="text-sm text-gray-900">{record.quantity} {record.unit}</span>
+              <span className="text-sm text-gray-900">{record.quantity} {formatUnit(record.unit)}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">单价：</span>
-              <span className="text-sm text-gray-900">¥{record.unitPrice}/{record.unit}</span>
+              <span className="text-sm text-gray-900">¥{record.unitPrice}/{formatUnit(record.unit)}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">总金额：</span>
@@ -129,11 +136,11 @@ export function DetailModal({
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">初始数量：</span>
-              <span className="text-sm text-gray-900">{record.initialCount.toLocaleString()} {record.unit}</span>
+              <span className="text-sm text-gray-900">{record.initialCount.toLocaleString()} {formatUnit(record.unit)}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">可用数量：</span>
-              <span className="text-sm font-medium text-emerald-600">{record.availableCount.toLocaleString()} {record.unit}</span>
+              <span className="text-sm font-medium text-emerald-600">{record.availableCount.toLocaleString()} {formatUnit(record.unit)}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">库存状态：</span>

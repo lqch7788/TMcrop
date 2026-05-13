@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { X, Upload, RefreshCw, Search, Plus, Check, Leaf } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
 import { SourceType, StockStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -14,13 +14,14 @@ import { addSeedSource, updateSeedSource, generateSeedCode } from '../../../../s
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import * as supplierService from '../../../../services/supplierService';
-import { CropVariety, CropVarietySearchResult } from '../../../../types/cropVariety';
+import { CropVariety } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
-import { currentUser, bases, cropBatches } from '../../../../data/mockData';
+import { currentUser, cropBatches } from '../../../../data/mockData';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import CropCodeSelector from '../../common/CropCodeSelector';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -59,9 +60,6 @@ export function AddModal({
     // V3.0 新增字段
     productionPlanId: '',    // 关联生产计划ID
     productionPlanCode: '',   // 关联生产计划批次号
-    supplierIsInternal: false, // true=自产, false=外购
-    baseId: '',              // 基地ID
-    baseName: '',            // 基地名称
     // V3.1 补录相关字段
     isSupplementary: false,  // 是否补录
     supplementaryReason: '',  // 补录原因
@@ -74,11 +72,7 @@ export function AddModal({
   const [seedCode, setSeedCode] = useState('');
 
   // 作物搜索状态
-  const [showCropSearch, setShowCropSearch] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState<CropVarietySearchResult[]>([]);
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
 
   // 供应商搜索状态
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
@@ -95,30 +89,6 @@ export function AddModal({
     // 初始化品种库
     cropVarietyService.initVarieties();
   }, []);
-
-  // 点击外部关闭搜索结果
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowCropSearch(false);
-      }
-      if (supplierSearchRef.current && !supplierSearchRef.current.contains(event.target as Node)) {
-        setShowSupplierSearch(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // 搜索作物
-  useEffect(() => {
-    if (searchKeyword.trim()) {
-      const results = cropVarietyService.searchVarieties(searchKeyword);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchKeyword]);
 
   // 搜索供应商
   useEffect(() => {
@@ -147,14 +117,18 @@ export function AddModal({
       cropName: cropNameValue,              // 作物名称（最细化，如：圆叶菠菜）
       cropVariety: variety.subVariety1Name  // 子品种名称（如：红颜）
     }));
-    setShowCropSearch(false);
-    setSearchKeyword('');
-    setSearchResults([]);
   };
 
   // 快速新增品种成功后选中
   const handleQuickAddSuccess = (variety: CropVariety) => {
     handleSelectCrop(variety);
+  };
+
+  // 处理作物编码选择（来自 CropCodeSelector）
+  const handleCropCodeChange = (code: string, varietyInfo: CropVariety | null) => {
+    if (varietyInfo) {
+      handleSelectCrop(varietyInfo);
+    }
   };
 
   // 选择供应商后填充表单
@@ -171,11 +145,11 @@ export function AddModal({
   };
 
   // 生成种源批号
-  const handleGenerateSeedCode = () => {
+  const handleGenerateSeedCode = async () => {
     const dateStr = formData.purchaseDate
       ? formData.purchaseDate.replace(/-/g, '')
       : new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const newCode = generateSeedCode(dateStr);
+    const newCode = await generateSeedCode(dateStr);
     setSeedCode(newCode);
   };
 
@@ -192,12 +166,6 @@ export function AddModal({
     // 外部采购时供应商必填
     if (formData.sourceOrigin === 'external_purchase' && !formData.supplierId) {
       alert('请选择供应商');
-      return;
-    }
-
-    // 验证：选择"其他"时备注必填
-    if (formData.sourceType === SourceType.OTHER && !formData.remarks.trim()) {
-      alert('选择"其他"种源类型时，备注为必填项，请输入详细说明');
       return;
     }
 
@@ -227,7 +195,6 @@ export function AddModal({
     try {
       newSeedSource = await addSeedSource({
       seedCode: seedCode,
-      sourceType: formData.sourceType,
       sourceOrigin: formData.sourceOrigin,
       cropCategory: formData.cropCategory,
       typeName: formData.typeName,
@@ -253,9 +220,6 @@ export function AddModal({
       // V3.0 新增字段
       productionPlanId: formData.productionPlanId,
       productionPlanCode: formData.productionPlanCode,
-      supplierIsInternal: formData.supplierIsInternal,
-      baseId: formData.baseId,
-      baseName: formData.baseName,
     });
     } catch (error) {
       console.error('创建种源失败:', error);
@@ -352,9 +316,6 @@ export function AddModal({
       // V3.0 新增字段
       productionPlanId: '',
       productionPlanCode: '',
-      supplierIsInternal: false,
-      baseId: '',
-      baseName: '',
       // V3.1 补录相关字段
       isSupplementary: false,
       supplementaryReason: '',
@@ -401,117 +362,25 @@ export function AddModal({
             <p className="mt-1 text-xs text-gray-400">格式：ZZ + 年月日(8位) + "-" + 流水号(3位)</p>
           </div>
 
-          {/* 作物选择 - 搜索框 */}
-          <div ref={searchRef} className="relative">
+          {/* 作物选择 - 使用统一的 CropCodeSelector */}
+          <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
               <span className="text-red-500">*</span> 作物选择
             </label>
-            {selectedCrop ? (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Leaf className="w-5 h-5 text-emerald-600" />
-                    <span className="text-sm font-medium text-emerald-800">
-                      {/* 显示最细化的作物品种名称 */}
-                      {selectedCrop.detailVarietyCode && selectedCrop.detailVarietyCode !== '00'
-                        ? selectedCrop.varietyName
-                        : (selectedCrop.subVariety1Name || selectedCrop.varietyName)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCrop(null)}
-                    className="p-1 hover:bg-emerald-100 rounded"
-                  >
-                    <X className="w-4 h-4 text-emerald-600" />
-                  </button>
+            <CropCodeSelector
+              value={cropCode}
+              onChange={handleCropCodeChange}
+              placeholder="搜索或选择作物品种..."
+              size="md"
+              showFullPath={true}
+            />
+            {/* 显示选中作物的详细信息 */}
+            {selectedCrop && (
+              <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                <div className="text-emerald-700">
+                  {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                  {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
                 </div>
-                {/* 作物编码 */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-emerald-600 w-16">作物编码：</span>
-                  <span className="text-xs font-mono text-emerald-700">{selectedCrop.cropCode}</span>
-                </div>
-                {/* 品种路径 */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-emerald-600 w-16">品种路径：</span>
-                  <span className="text-xs text-emerald-700">
-                    {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt;
-                    {selectedCrop.varietyName}
-                    {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
-                    {(selectedCrop.detailVarietyCode && selectedCrop.detailVarietyCode !== '00') && ` > ${selectedCrop.varietyName}`}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="flex">
-                  <input
-                    type="text"
-                    value={searchKeyword}
-                    onChange={(e) => setSearchKeyword(e.target.value)}
-                    onFocus={() => setShowCropSearch(true)}
-                    placeholder="搜索作物编码、名称或别名..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCropSearch(!showCropSearch)}
-                    className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200"
-                  >
-                    <Search className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-
-                {/* 搜索结果下拉 */}
-                {showCropSearch && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((result) => {
-                        // 获取最细化的作物品种名称
-                        const cropName = result.variety.detailVarietyCode && result.variety.detailVarietyCode !== '00'
-                          ? result.variety.varietyName
-                          : (result.variety.subVariety1Name || result.variety.varietyName);
-                        return (
-                          <button
-                            key={result.variety.id}
-                            type="button"
-                            onClick={() => handleSelectCrop(result.variety)}
-                            className="w-full px-3 py-2 text-left hover:bg-emerald-50 flex items-center justify-between border-b border-gray-100 last:border-b-0"
-                          >
-                            <div>
-                              <p className="text-sm font-medium text-gray-800">{cropName}</p>
-                              <p className="text-xs text-gray-500">
-                                {result.variety.cropCode} · {result.variety.categoryName} &gt; {result.variety.typeName}
-                                {result.matchField === 'alias' && ` · 别名匹配: ${result.matchText}`}
-                                {result.matchField === 'subVariety1Name' && ` · 子品种匹配`}
-                              </p>
-                            </div>
-                            <Check className="w-4 h-4 text-emerald-600" />
-                          </button>
-                        );
-                      })
-                    ) : searchKeyword.trim() ? (
-                      <div className="p-4 text-center">
-                        <p className="text-sm text-gray-500 mb-2">未找到 "{searchKeyword}"</p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCropSearch(false);
-                            setShowQuickAdd(true);
-                          }}
-                          className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-1 mx-auto"
-                        >
-                          <Plus className="w-4 h-4" />
-                          快速新增品种
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        输入关键字搜索作物
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -647,55 +516,6 @@ export function AddModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
                 readOnly
               />
-            </div>
-          )}
-
-          {/* V3.0 自产/外购标识 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">来源类型</label>
-            <DictSelect
-              category="supplier_is_internal"
-              value={formData.supplierIsInternal ? 'internal' : 'external'}
-              onChange={(value) => {
-                const isInternal = value === 'internal';
-                setFormData(prev => ({
-                  ...prev,
-                  supplierIsInternal: isInternal,
-                  // 切换时清空基地信息
-                  baseId: isInternal ? prev.baseId : '',
-                  baseName: isInternal ? prev.baseName : '',
-                }));
-              }}
-              placeholder="选择来源类型"
-            />
-            <p className="mt-1 text-xs text-gray-400">
-              {formData.supplierIsInternal ? '自产种源：必选选择所属基地' : '外购种源：必选选择供应商'}
-            </p>
-          </div>
-
-          {/* V3.0 基地选择（自产时必填） */}
-          {formData.supplierIsInternal && (
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                <span className="text-red-500">*</span> 所属基地
-              </label>
-              <select
-                value={formData.baseId}
-                onChange={(e) => {
-                  const base = bases.find(b => b.id === e.target.value);
-                  setFormData(prev => ({
-                    ...prev,
-                    baseId: e.target.value,
-                    baseName: base?.name || '',
-                  }));
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">请选择基地</option>
-                {bases.filter(b => b.status === 'active').map(base => (
-                  <option key={base.id} value={base.id}>{base.name}</option>
-                ))}
-              </select>
             </div>
           )}
 

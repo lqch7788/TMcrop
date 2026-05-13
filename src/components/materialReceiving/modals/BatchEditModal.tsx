@@ -46,20 +46,20 @@ interface BatchEditModalProps {
 export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   isOpen,
   selectedRows,
-  batchEditedRecords,
-  currentBatchEditIndex,
-  recordsList,
+  batchEditedRecords = {},
+  currentBatchEditIndex = 0,
+  recordsList = [],
   onClose,
-  onRecordChange,
-  onFieldChange,
-  onMaterialChange,
-  onMaterialDelete,
-  onNextRecord,
-  onVoidApply,
-  onSaveAll,
+  onRecordChange = () => {},
+  onFieldChange = () => {},
+  onMaterialChange = () => {},
+  onMaterialDelete = () => {},
+  onNextRecord = () => {},
+  onVoidApply = () => {},
+  onSaveAll = () => {},
 }) => {
-  const currentRecordId = selectedRows[currentBatchEditIndex];
-  const currentRecord = recordsList.find(r => r.id === currentRecordId);
+  const currentRecordId = selectedRows?.[currentBatchEditIndex];
+  const currentRecord = recordsList?.find(r => r.id === currentRecordId);
   const currentEditedData = batchEditedRecords[currentRecordId] || currentRecord || {};
   const editedCount = Object.keys(batchEditedRecords).length;
   const currentRecordData = currentEditedData as RecordType;

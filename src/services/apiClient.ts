@@ -96,13 +96,26 @@ class ApiClient {
         throw new Error(errorMessage);
       }
 
-      const result: ApiResponse<T> = await response.json();
+      const result: ApiResponse<T> | T = await response.json();
 
-      if (!result.success) {
-        throw new Error(result.error || 'API request failed');
+      // 如果是数组格式（直接返回数组），直接返回
+      if (Array.isArray(result)) {
+        return result as T;
       }
 
-      return result.data as T;
+      // 如果是标准格式 {success, data, meta}，检查 success
+      if ('success' in result) {
+        if (!result.success) {
+          throw new Error((result as ApiResponse<T>).error || 'API request failed');
+        }
+        // 如果有 meta 字段，保留完整响应结构
+        if ('meta' in result && result.meta) {
+          return result as T;
+        }
+        return (result as ApiResponse<T>).data as T;
+      }
+
+      return result as T;
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {

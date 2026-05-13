@@ -664,13 +664,13 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'SI001', categoryCode: 'supplier_is_internal', dictCode: 'internal', dictLabel: '内部自产', dictValue: 'internal', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'SI002', categoryCode: 'supplier_is_internal', dictCode: 'external', dictLabel: '外部采购', dictValue: 'external', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
   // 单位
-  { id: 'UT001', categoryCode: 'unit', dictCode: 'bag', dictLabel: '袋', dictValue: 'bag', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'UT002', categoryCode: 'unit', dictCode: 'plant', dictLabel: '株', dictValue: 'plant', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'UT003', categoryCode: 'unit', dictCode: 'grain', dictLabel: '粒', dictValue: 'grain', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'UT004', categoryCode: 'unit', dictCode: 'kg', dictLabel: '千克', dictValue: 'kg', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'UT005', categoryCode: 'unit', dictCode: 'g', dictLabel: '克', dictValue: 'g', color: 'purple', sortOrder: 5, isDefault: 0, status: 'active' },
-  { id: 'UT006', categoryCode: 'unit', dictCode: 'ton', dictLabel: '吨', dictValue: 'ton', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
-  { id: 'UT007', categoryCode: 'unit', dictCode: 'mu', dictLabel: '亩', dictValue: 'mu', color: 'green', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'UT001', categoryCode: 'unit', dictCode: '袋', dictLabel: '袋', dictValue: '袋', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'UT002', categoryCode: 'unit', dictCode: '株', dictLabel: '株', dictValue: '株', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'UT003', categoryCode: 'unit', dictCode: '粒', dictLabel: '粒', dictValue: '粒', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'UT004', categoryCode: 'unit', dictCode: '千克', dictLabel: '千克', dictValue: '千克', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'UT005', categoryCode: 'unit', dictCode: '克', dictLabel: '克', dictValue: '克', color: 'purple', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'UT006', categoryCode: 'unit', dictCode: '吨', dictLabel: '吨', dictValue: '吨', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'UT007', categoryCode: 'unit', dictCode: '亩', dictLabel: '亩', dictValue: '亩', color: 'green', sortOrder: 7, isDefault: 0, status: 'active' },
   // 通用是否
   { id: 'YN001', categoryCode: 'yes_no', dictCode: 'yes', dictLabel: '是', dictValue: 'yes', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'YN002', categoryCode: 'yes_no', dictCode: 'no', dictLabel: '否', dictValue: 'no', color: 'gray', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -1200,8 +1200,26 @@ export function seedDictionaryCategories() {
 export function seedDictionaries() {
   const db = getDatabase();
 
-  // 先清理种植模式字典，避免旧数据(DICT010-DICT013等)与新数据(PM001-PM015等)重复
-  db.run(`DELETE FROM dictionaries WHERE category_code = 'planting_mode'`);
+  // 先清理可能重复的字典分类，避免与 seedData.ts 中的数据重复
+  // seedData.ts 中有以下分类的 biz-xxx 格式 ID，需要清理
+  const categoriesToClean = [
+    'source_type',       // biz-020 ~ biz-027
+    'seedling_type',     // biz-001 ~ biz-012
+    'seedling_site',     // biz-030 ~ biz-033
+    'planting_area',     // biz-040 ~ biz-044
+    'survival_rate_target', // biz-050 ~ biz-052
+    'seedling_plan_type',   // biz-060 ~ biz-062
+    'propagation_multiple',  // biz-070 ~ biz-077
+    'planting_status',   // biz-085 ~ biz-088
+    'operator',          // biz-080 ~ biz-084
+    'material_type',     // dt-mat-xxx
+    'employee_status',   // dt-emp-xxx
+    'gender',            // dt-gender-xxx
+  ];
+
+  for (const cat of categoriesToClean) {
+    db.run(`DELETE FROM dictionaries WHERE category_code = ?`, [cat]);
+  }
 
   for (const dict of defaultDictionaries) {
     db.run(`

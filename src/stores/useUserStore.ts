@@ -28,16 +28,17 @@ export const useUserStore = create<UserStore>()(
       lastFetch: null,
 
       loadUsers: async () => {
-        const now = Date.now();
-        const lastFetch = get().lastFetch;
-        if (lastFetch && now - lastFetch < 5 * 60 * 1000 && get().users.length > 0) {
-          return;
+        // 防止重复调用
+        if (get().loading) return;
+        if (get().users.length > 0 && get().lastFetch) {
+          const now = Date.now();
+          if (now - get().lastFetch < 5 * 60 * 1000) return;
         }
 
         set({ loading: true, error: null });
         try {
           const data = await getUsers();
-          set({ users: data, loading: false, lastFetch: now });
+          set({ users: data, loading: false, lastFetch: Date.now() });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载用户失败', loading: false });
         }

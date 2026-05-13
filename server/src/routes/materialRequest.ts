@@ -79,10 +79,11 @@ router.get('/', (req: Request, res: Response) => {
 
     const items = queryToObjects(db, sql, params);
 
-    // 解析 attachments JSON 字段
+    // 解析 attachments 和 materials JSON 字段
     const result = items.map((item: Record<string, unknown>) => ({
       ...item,
       attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
+      materials: item.materials ? JSON.parse(item.materials as string) : [],
     }));
 
     res.json({ success: true, data: result, meta: { total, page: Number(page), limit: Number(limit) } });
@@ -112,10 +113,11 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '物料申请不存在' });
     }
 
-    // 解析 attachments JSON 字段
+    // 解析 attachments 和 materials JSON 字段
     const result = {
       ...item,
       attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
+      materials: item.materials ? JSON.parse(item.materials as string) : [],
     };
 
     res.json({ success: true, data: result });
@@ -144,12 +146,15 @@ router.post('/', (req: Request, res: Response) => {
       expected_date,
       warehouse_id,
       warehouse_name,
+      plant_area,
+      production_batch_code,
       total_amount,
       priority,
       status,
       approval_status,
       remarks,
       attachments,
+      materials,
       create_by,
     } = req.body;
 
@@ -157,46 +162,73 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const requestCode = request_code || generateMaterialRequestCode();
 
-    const db = getDatabase();
-    db.run(`
-      INSERT INTO material_requests (
-        id, request_code, request_title, request_type,
-        department_id, department_name,
-        applicant_id, applicant_name,
-        apply_date, expected_date,
-        warehouse_id, warehouse_name, total_amount,
-        priority, status, approval_status,
-        remarks, attachments, create_by,
-        create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      newId,
-      requestCode,
-      request_title,
-      request_type,
-      department_id,
-      department_name,
-      applicant_id,
-      applicant_name,
-      apply_date || now.substring(0, 10),
-      expected_date,
-      warehouse_id,
-      warehouse_name,
-      total_amount || 0,
-      priority || 'medium',
-      status || 'draft',
-      approval_status || 'pending',
-      remarks,
-      JSON.stringify(attachments || []),
-      create_by,
-      now,
-      now,
-    ]);
+    console.log('【DEBUG】准备创建物料申请:', { newId, requestCode, request_title, request_type });
 
-    saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, request_code: requestCode } });
+    const db = getDatabase();
+
+    // 检查表是否存在
+    try {
+      const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='material_requests'");
+      if (!tableCheck.step()) {
+        console.error('【DEBUG】material_requests 表不存在!');
+        tableCheck.free();
+        res.status(500).json({ success: false, error: '数据库表不存在' });
+        return;
+      }
+      tableCheck.free();
+      console.log('【DEBUG】material_requests 表存在');
+    } catch (e) {
+      console.error('【DEBUG】检查表失败:', e);
+    }
+
+    try {
+      db.run(`
+        INSERT INTO material_requests (
+          id, request_code, request_title, request_type,
+          department_id, department_name,
+          applicant_id, applicant_name,
+          apply_date, expected_date,
+          warehouse_id, warehouse_name,
+          plant_area, production_batch_code,
+          total_amount, priority, status, approval_status,
+          remarks, attachments, materials, create_by,
+          create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        newId,
+        requestCode,
+        request_title || null,
+        request_type || null,
+        department_id || null,
+        department_name || null,
+        applicant_id || null,
+        applicant_name || null,
+        apply_date || now.substring(0, 10),
+        expected_date || null,
+        warehouse_id || null,
+        warehouse_name || null,
+        plant_area || null,
+        production_batch_code || null,
+        total_amount || 0,
+        priority || 'medium',
+        status || 'draft',
+        approval_status || 'pending',
+        remarks || null,
+        JSON.stringify(attachments || []),
+        JSON.stringify(materials || []),
+        create_by || null,
+        now,
+        now,
+      ]);
+
+      saveDatabase();
+      res.status(201).json({ success: true, data: { id: newId, request_code: requestCode } });
+    } catch (dbError) {
+      console.error('【DEBUG】数据库INSERT失败:', dbError);
+      res.status(500).json({ success: false, error: '创建物料申请失败: ' + (dbError instanceof Error ? dbError.message : String(dbError)) });
+    }
   } catch (error) {
-    console.error('创建物料申请失败:', error);
+    console.error('【DEBUG】创建物料申请失败:', error);
     res.status(500).json({ success: false, error: '创建物料申请失败' });
   }
 });

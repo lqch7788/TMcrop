@@ -1,10 +1,10 @@
 /**
  * 用户选择组件
- * 直接使用 Zustand Store
+ * 直接从 API 获取用户数据，不使用 localStorage 缓存
  */
 
-import React from 'react';
-import { useUserStore } from '../../../stores';
+import React, { useState, useEffect, useRef } from 'react';
+import { getUsers, type User } from '../../../services/authorityService';
 
 interface UserSelectProps {
   value?: string;
@@ -26,14 +26,29 @@ export function UserSelect({
   disabled = false,
   activeOnly = true,
 }: UserSelectProps) {
-  const users = useUserStore((state) => state.users);
-  const loading = useUserStore((state) => state.loading);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const hasLoadedRef = useRef(false);
 
-  React.useEffect(() => {
-    if (users.length === 0 && !loading) {
-      useUserStore.getState().loadUsers();
-    }
-  }, [users.length, loading]);
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const data = await getUsers();
+        setUsers(data || []);
+      } catch (error) {
+        console.error('加载用户失败:', error);
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const filteredUsers = users.filter((user) => {
     // 过滤活跃状态
@@ -47,10 +62,10 @@ export function UserSelect({
     <select
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
+      disabled={disabled || loading}
       className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
-      <option value="">{placeholder}</option>
+      <option value="">{loading ? '加载中...' : placeholder}</option>
       {filteredUsers.map((user) => (
         <option key={user.oid} value={user.oid}>
           {user.name}
@@ -77,14 +92,29 @@ export function UserMultiSelect({
   disabled = false,
   activeOnly = true,
 }: UserMultiSelectProps) {
-  const users = useUserStore((state) => state.users);
-  const loading = useUserStore((state) => state.loading);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const hasLoadedRef = useRef(false);
 
-  React.useEffect(() => {
-    if (users.length === 0 && !loading) {
-      useUserStore.getState().loadUsers();
-    }
-  }, [users.length, loading]);
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const data = await getUsers();
+        setUsers(data || []);
+      } catch (error) {
+        console.error('加载用户失败:', error);
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const filteredUsers = users.filter((user) => {
     if (activeOnly && user.status !== 'active') {
@@ -101,7 +131,7 @@ export function UserMultiSelect({
         const selected = Array.from(e.target.selectedOptions, (option) => option.value);
         onChange(selected);
       }}
-      disabled={disabled}
+      disabled={disabled || loading}
       className="w-full min-h-[100px] px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
       {filteredUsers.map((user) => (

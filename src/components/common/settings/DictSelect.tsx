@@ -27,7 +27,9 @@ export function DictSelect({
   const loading = useDictionaryStore((state) => state.loading);
 
   React.useEffect(() => {
-    if (dictionaries.length === 0 && !loading) {
+    // 检查数据是否有效（转换后的格式有 categoryCode 字段）
+    const hasValidData = dictionaries.length > 0 && 'categoryCode' in dictionaries[0];
+    if ((dictionaries.length === 0 || !hasValidData) && !loading) {
       useDictionaryStore.getState().loadDictionaries();
     }
   }, [dictionaries.length, loading]);
@@ -43,8 +45,8 @@ export function DictSelect({
     >
       <option value="">{placeholder}</option>
       {items.map((item) => (
-        <option key={item.code} value={item.code}>
-          {item.name}
+        <option key={item.dictCode} value={item.dictCode}>
+          {item.dictLabel}
         </option>
       ))}
     </select>

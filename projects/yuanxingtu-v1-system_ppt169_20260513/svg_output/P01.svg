@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="decorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F3F4F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+
+  <!-- 顶部装饰条 -->
+  <rect x="0" y="0" width="1280" height="8" fill="url(#bgGrad)"/>
+
+  <!-- 左侧装饰块 -->
+  <rect x="0" y="0" width="320" height="720" fill="url(#decorGrad)"/>
+
+  <!-- 左侧图标装饰 -->
+  <g transform="translate(100, 200)">
+    <circle cx="60" cy="60" r="50" fill="#10B981" opacity="0.1"/>
+    <g transform="translate(30, 30)">
+      <path d="M30 5 L30 45 M30 5 C30 5 50 15 50 30 C50 45 30 45 30 45 M30 25 L10 15 M30 25 L10 35 M30 35 L15 45"
+            stroke="#10B981" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- 左侧文字 -->
+  <text x="60" y="380" font-family="Microsoft YaHei, Arial" font-size="18" fill="#6B7280">农业数字化管理系统</text>
+  <text x="60" y="410" font-family="Microsoft YaHei, Arial" font-size="14" fill="#9CA3AF">V1.1 版本</text>
+
+  <!-- 主标题 -->
+  <text x="450" y="280" font-family="Microsoft YaHei, Arial" font-size="56" font-weight="bold" fill="#1F2937">
+    农业种植管理系统
+  </text>
+  <text x="450" y="350" font-family="Microsoft YaHei, Arial" font-size="32" fill="#10B981">
+    系统功能详细介绍
+  </text>
+
+  <!-- 分隔线 -->
+  <rect x="450" y="380" width="200" height="4" fill="#10B981" rx="2"/>
+
+  <!-- 副标题 -->
+  <text x="450" y="440" font-family="Microsoft YaHei, Arial" font-size="20" fill="#6B7280">
+    面向开发人员及领导汇报
+  </text>
+
+  <!-- 日期 -->
+  <text x="450" y="600" font-family="Microsoft YaHei, Arial" font-size="16" fill="#9CA3AF">
+    2026年5月
+  </text>
+
+  <!-- 右下角装饰 -->
+  <g transform="translate(1100, 600)">
+    <circle cx="80" cy="80" r="100" fill="#10B981" opacity="0.05"/>
+    <circle cx="80" cy="80" r="60" fill="#10B981" opacity="0.08"/>
+    <path d="M50 80 Q80 50 110 80 Q80 110 50 80" fill="#10B981" opacity="0.2"/>
+  </g>
+</svg>

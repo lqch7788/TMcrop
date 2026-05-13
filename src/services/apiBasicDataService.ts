@@ -507,16 +507,31 @@ export async function deleteSystemConfig(id: string): Promise<void> {
 /**
  * 获取所有字典项
  * 降级策略：API → IndexedDB 缓存
+ *
+ * 注意：后端返回 snake_case (category_code, dict_code)，
+ * 需要转换为前端使用的 camelCase (categoryCode, dictCode)
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
-  const params: Record<string, string> = {};
-  if (category) params.category = category;
-
-  const data = await enhancedApiClient.get<Dictionary[]>('/dictionary/dictionaries', {
-    useCache: true,
-    cacheStrategy: 'network-first',
+  // 临时禁用缓存，确保获取最新数据
+  const response = await enhancedApiClient.get<Record<string, any>[]>('/dictionary/dictionaries', {
+    useCache: false,
   });
-  return data || [];
+
+  if (!response) return [];
+
+  // 转换 snake_case 为 camelCase
+  return response.map(item => ({
+    id: item.id,
+    categoryCode: item.category_code,
+    dictCode: item.dict_code,
+    dictLabel: item.dict_label,
+    dictValue: item.dict_value,
+    sortOrder: item.sort_order,
+    color: item.color,
+    status: item.status,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
 }
 
 /**

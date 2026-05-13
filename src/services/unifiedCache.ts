@@ -205,6 +205,7 @@ class UnifiedCache {
       'seedling-records': 'seedlings',
       'planting-records': 'plantings',
       'seed-sources': 'seedSources',
+      'material-requests': 'materialRequests',
     };
     return map[key] || 'metadata';
   }

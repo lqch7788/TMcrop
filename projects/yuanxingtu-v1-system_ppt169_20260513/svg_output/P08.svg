@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+
+  <!-- 顶部装饰条 -->
+  <rect x="0" y="0" width="1280" height="6" fill="#10B981"/>
+
+  <!-- 章节标题 -->
+  <text x="80" y="80" font-family="Microsoft YaHei, Arial" font-size="36" font-weight="bold" fill="#1F2937">02</text>
+  <text x="160" y="75" font-family="Microsoft YaHei, Arial" font-size="28" font-weight="bold" fill="#1F2937">人工管理模块详解</text>
+  <rect x="80" y="95" width="100" height="3" fill="#10B981"/>
+
+  <!-- 模块概述 -->
+  <g transform="translate(80, 130)">
+    <rect width="1120" height="80" rx="10" fill="#ECFDF5"/>
+    <text x="30" y="30" font-family="Microsoft YaHei, Arial" font-size="16" font-weight="bold" fill="#1F2937">模块概述</text>
+    <text x="30" y="55" font-family="Microsoft YaHei, Arial" font-size="13" fill="#4B5563">人工管理模块涵盖人力资源管理的全过程，包括考勤管理、人事管理、薪酬管理、运营分析、请假加班、招聘入职等功能，提高人力资源管理效率。</text>
+  </g>
+
+  <!-- 功能模块详情 -->
+  <g transform="translate(80, 230)">
+    <!-- 第一行 -->
+    <g transform="translate(0, 0)">
+      <rect width="350" height="180" rx="10" fill="#FFFFFF" stroke="#059669" stroke-width="2"/>
+      <rect x="0" y="0" width="350" height="40" rx="10" fill="#059669"/>
+      <rect x="0" y="30" width="350" height="10" fill="#059669"/>
+      <text x="175" y="28" font-family="Microsoft YaHei, Arial" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">考勤管理</text>
+      <text x="20" y="70" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 上下班打卡签到</text>
+      <text x="20" y="95" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 排班计划管理</text>
+      <text x="20" y="120" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 异常考勤处理</text>
+      <text x="20" y="145" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 月度考勤汇总</text>
+    </g>
+
+    <g transform="translate(385, 0)">
+      <rect width="350" height="180" rx="10" fill="#FFFFFF" stroke="#10B981" stroke-width="2"/>
+      <rect x="0" y="0" width="350" height="40" rx="10" fill="#10B981"/>
+      <rect x="0" y="30" width="350" height="10" fill="#10B981"/>
+      <text x="175" y="28" font-family="Microsoft YaHei, Arial" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">人事管理</text>
+      <text x="20" y="70" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 员工档案管理</text>
+      <text x="20" y="95" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 岗位分配调整</text>
+      <text x="20" y="120" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 合同到期提醒</text>
+      <text x="20" y="145" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 离职手续办理</text>
+    </g>
+
+    <g transform="translate(770, 0)">
+      <rect width="350" height="180" rx="10" fill="#FFFFFF" stroke="#F59E0B" stroke-width="2"/>
+      <rect x="0" y="0" width="350" height="40" rx="10" fill="#F59E0B"/>
+      <rect x="0" y="30" width="350" height="10" fill="#F59E0B"/>
+      <text x="175" y="28" font-family="Microsoft YaHei, Arial" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">薪酬管理</text>
+      <text x="20" y="70" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 工资结构配置</text>
+      <text x="20" y="95" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 考勤数据关联</text>
+      <text x="20" y="120" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 绩效奖金计算</text>
+      <text x="20" y="145" font-family="Microsoft YaHei, Arial" font-size="13" fill="#374151">• 工资条发放</text>
+    </g>
+  </g>
+
+  <!-- 第二行 -->
+  <g transform="translate(80, 430)">
+    <g transform="translate(0, 0)">
+      <rect width="260" height="180" rx="10" fill="#FFFFFF" stroke="#3B82F6" stroke-width="2"/>
+      <rect x="0" y="0" width="260" height="40" rx="10" fill="#3B82F6"/>
+      <rect x="0" y="30" width="260" height="10" fill="#3B82F6"/>
+      <text x="130" y="28" font-family="Microsoft YaHei, Arial" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">运营分析</text>
+      <text x="15" y="70" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 人效指标统计</text>
+      <text x="15" y="95" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 劳动力成本分析</text>
+      <text x="15" y="120" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 出勤率趋势</text>
+      <text x="15" y="145" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 部门对比报表</text>
+    </g>
+
+    <g transform="translate(290, 0)">
+      <rect width="260" height="180" rx="10" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="2"/>
+      <rect x="0" y="0" width="260" height="40" rx="10" fill="#8B5CF6"/>
+      <rect x="0" y="30" width="260" height="10" fill="#8B5CF6"/>
+      <text x="130" y="28" font-family="Microsoft YaHei, Arial" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">请假加班</text>
+      <text x="15" y="70" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 请假申请审批</text>
+      <text x="15" y="95" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 加班时长记录</text>
+      <text x="15" y="120" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 调休管理</text>
+      <text x="15" y="145" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 假期余额查询</text>
+    </g>
+
+    <g transform="translate(580, 0)">
+      <rect width="260" height="180" rx="10" fill="#FFFFFF" stroke="#EC4899" stroke-width="2"/>
+      <rect x="0" y="0" width="260" height="40" rx="10" fill="#EC4899"/>
+      <rect x="0" y="30" width="260" height="10" fill="#EC4899"/>
+      <text x="130" y="28" font-family="Microsoft YaHei, Arial" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">招聘入职</text>
+      <text x="15" y="70" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 招聘需求登记</text>
+      <text x="15" y="95" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 面试记录管理</text>
+      <text x="15" y="120" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 入职手续办理</text>
+      <text x="15" y="145" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 试用期跟踪</text>
+    </g>
+
+    <g transform="translate(870, 0)">
+      <rect width="260" height="180" rx="10" fill="#FFFFFF" stroke="#059669" stroke-width="2"/>
+      <rect x="0" y="0" width="260" height="40" rx="10" fill="#059669"/>
+      <rect x="0" y="30" width="260" height="10" fill="#059669"/>
+      <text x="130" y="28" font-family="Microsoft YaHei, Arial" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">报表导出</text>
+      <text x="15" y="70" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 考勤明细报表</text>
+      <text x="15" y="95" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 薪酬汇总报表</text>
+      <text x="15" y="120" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 人员结构分析</text>
+      <text x="15" y="145" font-family="Microsoft YaHei, Arial" font-size="12" fill="#374151">• 自定义报表</text>
+    </g>
+  </g>
+</svg>

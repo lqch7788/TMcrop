@@ -15,8 +15,6 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import {
   cropCategories,
-  cropNames,
-  cropVarieties,
   suppliers,
   units,
   seedSourceStatusOptions
@@ -91,9 +89,9 @@ export default function SeedSourcePage() {
   const [printMode, setPrintMode] = useState(false);
   const [printRecords, setPrintRecords] = useState<SeedSource[]>([]);
 
-  // 筛选后的数据
+  // 筛选后的数据（按创建时间倒序，新数据在前）
   const filteredData = useMemo(() => {
-    return seedSources.filter(item => {
+    const filtered = seedSources.filter(item => {
       if (filters.cropCategory && item.cropCategory !== filters.cropCategory) return false;
       if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
       if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
@@ -104,6 +102,12 @@ export default function SeedSourcePage() {
       if (filters.endDate && item.purchaseDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
       return true;
+    });
+    // 按创建时间倒序排列（最新的在前）
+    return filtered.sort((a, b) => {
+      const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
+      const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
+      return timeB - timeA;
     });
   }, [filters, seedSources]);
 
@@ -450,11 +454,7 @@ export default function SeedSourcePage() {
           onClose={() => setEditModalOpen(false)}
           onSuccess={refreshData}
           record={currentRecord}
-          cropCategories={cropCategories}
-          cropNames={cropNames}
-          cropVarieties={cropVarieties}
           suppliers={suppliers}
-          units={units}
         />
       )}
 

@@ -13,6 +13,29 @@ import { CropVariety } from '../../../../types/crop';
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
 
+// 单位转换函数（英文→中文）
+const unitMap: Record<string, string> = {
+  'bag': '袋',
+  'plant': '株',
+  'grain': '粒',
+  'kg': '千克',
+  'g': '克',
+  'ton': '吨',
+  'mu': '亩',
+  '个': '个',
+  '袋': '袋',
+  '株': '株',
+  '粒': '粒',
+  '千克': '千克',
+  '克': '克',
+  '吨': '吨',
+  '亩': '亩',
+};
+
+function formatUnit(unit: string): string {
+  return unitMap[unit] || unit || '';
+}
+
 interface SeedSourceTableProps {
   data: SeedSource[];
   pagination: { current: number; pageSize: number };
@@ -455,10 +478,10 @@ export function SeedSourceTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
                   <td className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
-                    {record.initialCount.toLocaleString()} {record.unit}
+                    {record.initialCount.toLocaleString()} {formatUnit(record.unit)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {record.availableCount.toLocaleString()} {record.unit}
+                    {record.availableCount.toLocaleString()} {formatUnit(record.unit)}
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {record.initialCount > 0 ? (
