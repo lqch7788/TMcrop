@@ -6,8 +6,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVarietyOption } from '@/types/cropVariety';
-import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropVarietyService from '@/services/cropVarietyService';
+import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { Modal } from '@/components/ui/Modal';
 
 interface EditModalProps {
@@ -188,7 +188,9 @@ export function EditModal({
     console.log('[EditModal] 准备更新的订单数据:', JSON.stringify(updates, null, 2));
 
     try {
-      const result = await cropOrderService.updateOrder(record.id, updates);
+      // 通过 Zustand Store 更新订单（同时更新后端和本地状态，避免缓存导致数据不刷新）
+      const store = useOrderDataStore.getState();
+      const result = await store.updateOrder(record.id, updates);
       console.log('[EditModal] 更新订单成功:', result);
     } catch (error) {
       console.error('更新订单失败:', error);

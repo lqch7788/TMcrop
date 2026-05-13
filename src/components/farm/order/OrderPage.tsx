@@ -16,8 +16,7 @@ import {
   cropCategories,
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
-import { getOrderStats, syncPendingOrders } from '@/services/apiCropOrderService';
-import * as cropOrderService from '@/services/apiCropOrderService';
+import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import * as cropVarietyService from '@/services/apiCropVarietyService';
 
@@ -26,6 +25,20 @@ export default function OrderPage() {
   const canCreate = true;
   const canDelete = true;
   const canExport = true;
+
+  // 从 Zustand Store 获取订单数据和操作方法
+  const {
+    orders,
+    isLoading: loading,
+    stats: apiStats,
+    fetchOrders,
+    fetchStats,
+    addOrder,
+    updateOrder,
+    deleteOrder,
+    deleteOrders,
+    syncPending,
+  } = useOrderDataStore();
 
   // 筛选状态
   const [filters, setFilters] = useState<CropOrderFilters>({
@@ -41,13 +54,6 @@ export default function OrderPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 订单数据
-  const [orders, setOrders] = useState<CropOrder[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // API统计数据（感知后端stats路由）
-  const [apiStats, setApiStats] = useState<{ total: number; inProgress: number; completed: number; thisMonth: number } | null>(null);
-
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
     cropVarietyService.initVarieties();
@@ -58,45 +64,17 @@ export default function OrderPage() {
   const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
   const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
 
-  // 刷新数据
-  const refreshData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await cropOrderService.getOrders();
-      setOrders(data || []);
-    } catch (error) {
-      console.error('获取订单数据失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // 组件挂载时加载数据
   useEffect(() => {
-    // 页面加载时尝试同步待处理的订单
-    syncPendingOrders().then(result => {
+    // 同步待处理订单 + 加载数据
+    syncPending().then(result => {
       if (result.success > 0 || result.failed > 0) {
         console.log(`[OrderPage] 同步结果: 成功 ${result.success}, 失败 ${result.failed}`);
       }
     });
-
-    refreshData();
-  }, []);
-
-  // 获取API统计数据
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const stats = await getOrderStats();
-        if (stats) {
-          setApiStats(stats);
-        }
-      } catch (error) {
-        console.warn('获取API统计失败，使用本地计算:', error);
-      }
-    };
+    fetchOrders();
     fetchStats();
-  }, [refreshKey]);
+  }, [fetchOrders, fetchStats, syncPending]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -165,8 +143,7 @@ export default function OrderPage() {
   const handleDelete = async (ids: string[]) => {
     if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
       try {
-        await cropOrderService.deleteOrders(ids);
-        refreshData();
+        await deleteOrders(ids);
         setSelectedRows([]);
       } catch (error) {
         console.error('删除订单失败:', error);
@@ -413,7 +390,7 @@ export default function OrderPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSuccess={() => {
-          refreshData();
+          fetchOrders();
         }}
         orderTypeOptions={orderTypeOptions}
       />
@@ -431,7 +408,7 @@ export default function OrderPage() {
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           onSuccess={() => {
-            refreshData();
+            // Store 的 updateOrder 已同步更新本地状态，无需重新 fetch
           }}
           record={currentRecord}
           orderTypeOptions={orderTypeOptions}

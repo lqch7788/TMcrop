@@ -1268,6 +1268,7 @@ export function initializeDatabase() {
     `ALTER TABLE crop_orders ADD COLUMN planned_quantity INTEGER DEFAULT 0`,
     `ALTER TABLE crop_orders ADD COLUMN actual_quantity INTEGER DEFAULT 0`,
     `ALTER TABLE crop_orders ADD COLUMN expected_harvest_date TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN supplier_name TEXT`,
   ];
   for (const sql of cropOrdersMigrations) {
     try {

@@ -6,8 +6,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVarietyOption } from '@/types/cropVariety';
-import * as cropOrderService from '@/services/apiCropOrderService';
 import * as cropVarietyService from '@/services/cropVarietyService';
+import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { Modal } from '@/components/ui/Modal';
 
 interface AddModalProps {
@@ -157,7 +157,9 @@ export function AddModal({
     console.log('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
 
     try {
-      const result = await cropOrderService.createOrder(newOrder);
+      // 通过 Zustand Store 创建订单（同时更新后端和本地状态）
+      const store = useOrderDataStore.getState();
+      const result = await store.addOrder(newOrder);
       console.log('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
     } catch (error) {
       console.error('创建订单失败:', error);

@@ -104,6 +104,10 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
     expectedDeliveryDate: 'expected_delivery_date',
     actualDeliveryDate: 'actual_delivery_date',
     expectedHarvestDate: 'expected_harvest_date',
+    supplierName: 'supplier_name',
+    unit: 'unit',
+    remarks: 'remarks',
+    status: 'status',
     createBy: 'create_by',
     updateTime: 'update_time',
   };

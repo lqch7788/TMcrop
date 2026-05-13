@@ -99,19 +99,18 @@ router.get('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
 
-    const stmt = db.prepare('SELECT * FROM crop_orders WHERE id = ?');
-    stmt.bind([id]);
-    let item: Record<string, unknown> | null = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
+    // 使用 queryToObjects 自动转换字段名为驼峰命名
+    const items = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM crop_orders WHERE id = ?',
+      [id]
+    );
 
-    if (!item || Object.keys(item).length === 0) {
+    if (!items || items.length === 0) {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    res.json({ success: true, data: item });
+    res.json({ success: true, data: items[0] });
   } catch (error) {
     console.error('获取订单详情失败:', error);
     res.status(500).json({ success: false, error: '获取订单详情失败' });
@@ -150,7 +149,8 @@ router.post('/', (req: Request, res: Response) => {
       crop_category,
       planned_quantity,
       actual_quantity,
-      expected_harvest_date
+      expected_harvest_date,
+      supplier_name
     } = req.body;
 
     // 如果没有提供id，则自动生成一个
@@ -209,8 +209,9 @@ router.post('/', (req: Request, res: Response) => {
         customer_name, customer_contact, delivery_address,
         order_date, expected_delivery_date, actual_delivery_date,
         status, remarks, create_by, create_time, update_time,
-        order_name, crop_category, planned_quantity, actual_quantity, expected_harvest_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        order_name, crop_category, planned_quantity, actual_quantity, expected_harvest_date,
+      supplier_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -236,50 +237,20 @@ router.post('/', (req: Request, res: Response) => {
       crop_category || '',
       planned_quantity || 0,
       actual_quantity || 0,
-      expected_harvest_date || ''
+      expected_harvest_date || '',
+      supplier_name || ''
     ]);
 
     saveDatabase();
 
-    // 查询刚创建的完整订单数据并返回
-    const newOrder = db.prepare('SELECT * FROM crop_orders WHERE id = ?');
-    newOrder.bind([id]);
-    let orderData: Record<string, unknown> = {};
-    if (newOrder.step()) {
-      orderData = newOrder.getAsObject();
-    }
-    newOrder.free();
+    // 使用 queryToObjects 查询并自动转换为驼峰命名
+    const newOrders = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM crop_orders WHERE id = ?',
+      [id]
+    );
 
-    // 转换为驼峰命名返回给前端
-    const response = {
-      id: orderData.id,
-      orderCode: orderData.order_code,
-      orderName: orderData.order_name,
-      orderType: orderData.order_type,
-      cropName: orderData.crop_name,
-      cropVariety: orderData.crop_variety,
-      quantity: orderData.quantity,
-      unit: orderData.unit,
-      unitPrice: orderData.unit_price,
-      totalAmount: orderData.total_amount,
-      customerName: orderData.customer_name,
-      customerContact: orderData.customer_contact,
-      deliveryAddress: orderData.delivery_address,
-      orderDate: orderData.order_date,
-      expectedDeliveryDate: orderData.expected_delivery_date,
-      actualDeliveryDate: orderData.actual_delivery_date,
-      status: orderData.status,
-      remarks: orderData.remarks,
-      createBy: orderData.create_by,
-      createTime: orderData.create_time,
-      updateTime: orderData.update_time,
-      cropCategory: orderData.crop_category,
-      plannedQuantity: orderData.planned_quantity,
-      actualQuantity: orderData.actual_quantity,
-      expectedHarvestDate: orderData.expected_harvest_date,
-    };
-
-    res.status(201).json({ success: true, data: response });
+    res.status(201).json({ success: true, data: newOrders[0] || {} });
   } catch (error) {
     console.error('创建订单失败:', error);
     res.status(500).json({ success: false, error: '创建订单失败' });
@@ -334,6 +305,7 @@ router.put('/:id', (req: Request, res: Response) => {
       plannedQuantity: 'planned_quantity',
       actualQuantity: 'actual_quantity',
       expectedHarvestDate: 'expected_harvest_date',
+      supplierName: 'supplier_name',
       createBy: 'create_by'
     };
 
@@ -359,7 +331,18 @@ router.put('/:id', (req: Request, res: Response) => {
     db.run(`UPDATE crop_orders SET ${updateFields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
-    res.json({ success: true, message: '订单更新成功' });
+    // 查询更新后的完整数据并返回（自动 camelCase 转换）
+    const updatedOrders = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM crop_orders WHERE id = ?',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: '订单更新成功',
+      data: updatedOrders.length > 0 ? updatedOrders[0] : null
+    });
   } catch (error) {
     console.error('更新订单失败:', error);
     res.status(500).json({ success: false, error: '更新订单失败' });
