@@ -267,7 +267,7 @@ function AppContent() {
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
           <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
-          <Route path="/plan-summary" element={<Production />} />
+          <Route path="/plan-summary" element={<PlanSummary />} />
           <Route path="/worker-attendance" element={<WorkerAttendance />} />
           <Route path="/work-log" element={<WorkLog />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />
