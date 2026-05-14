@@ -134,7 +134,7 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
               bg: 'bg-gray-100',
               color: 'text-gray-600',
             };
-            const priorityStyle = PRIORITY_STYLES[task.priority || 'normal'];
+            const priorityStyle = PRIORITY_STYLES[task.priority || 'normal'] || PRIORITY_STYLES.normal;
 
             return (
               <tr

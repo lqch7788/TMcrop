@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui';
 import { Space } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
+import { useProductionPlanStore } from '@/stores';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
@@ -161,20 +162,15 @@ export default function MonthlyPlanningPage() {
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
 
   const { generateMonthlyPlan } = useMonthlyTaskPlanning();
+  const { plans: storeBatches, fetchPlans } = useProductionPlanStore();
 
-  // 获取批次列表
-  const batches = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('yuanxingtu_batches');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : (parsed.data || []);
-      }
-    } catch (e) {
-      console.warn('读取批次数据失败:', e);
-    }
-    return [];
-  }, []);
+  // 挂载时从API加载批次数据
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
+  // 从 Zustand Store 获取批次列表
+  const batches = storeBatches;
 
   // 批次选项
   const batchOptions = useMemo(() => {

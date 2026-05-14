@@ -1,10 +1,10 @@
 /**
  * 库存总览页面
- * 从 WarehouseMaterialsPage 拆分出来，专注物料库存总览
- * 数据来源：API → enhancedApiClient → React Query
+ * 数据来源：Zustand Store → enhancedApiClient → API
+ * 三级降级：API → IndexedDB → localStorage
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from '../../components/warehouse/MaterialFilters';
 import { MaterialsTable } from '../../components/warehouse/MaterialsTable';
 import { MaterialDetailModal } from '../../components/warehouse/MaterialDetailModal';
@@ -16,7 +16,7 @@ import { BatchDeleteConfirmDialog } from '../../components/warehouse/BatchDelete
 import { MaterialExportModal } from '../../components/warehouse/MaterialExportModal';
 import PageHeader from '../../components/warehouse/PageHeader';
 import ActionToolbar from '../../components/warehouse/ActionToolbar';
-import { useWarehouseOverview } from './hooks/useWarehouseOverview';
+import { useWarehouseMaterialStore } from '../../stores';
 
 const categoryConfig: Record<string, { name: string; categories: Record<string, { name: string; subCategories: Record<string, { name: string; prefix: string }> }> }> = {
   'SP': { name: '生产投入类', categories: {
@@ -172,33 +172,45 @@ const categoryConfig: Record<string, { name: string; categories: Record<string, 
 };
 
 export default function WarehouseOverviewPage() {
-  // 使用 Hook 获取数据（从 API）
-  const {
-    materials: filteredMaterials,
-    allMaterials: warehouseData,
-    isLoading,
-    refreshData,
-    filters,
-    handleFiltersChange,
-    lowStockCount,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    selectedRows,
-    setSelectedRows,
-    batchEditMode,
-    setBatchEditMode,
-    deleteMode,
-    setDeleteMode,
-    exportMode,
-    setExportMode,
-    handleSelectAll,
-    handleSelectRow,
-    handleCancelSelection,
-    handleConfirmDelete,
-    handleBatchDelete,
-  } = useWarehouseOverview();
+  // Zustand Store 数据
+  const { items: allMaterials, isLoading, loadItems, addItem, updateItem, deleteItem, deleteItems } = useWarehouseMaterialStore();
+
+  // 初始化加载
+  useEffect(() => { loadItems(); }, [loadItems]);
+
+  // 筛选状态
+  const [filters, setFilters] = useState<MaterialFiltersState>({
+    code: '', name: '', category: '全部', supplier: '', location: '',
+    searchBigCategory: '', searchMidCategory: '', searchSubCategory: '', showLowStock: false,
+  });
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // 选择/模式状态
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+
+  // 筛选数据
+  const filteredMaterials = useMemo(() => filterMaterials(allMaterials, filters), [allMaterials, filters]);
+
+  // 低库存数量
+  const lowStockCount = useMemo(() => allMaterials.filter(m => m.quantity < m.minStock).length, [allMaterials]);
+
+  // 选择操作
+  const handleSelectAll = () => {
+    if (selectedRows.length === filteredMaterials.length) setSelectedRows([]);
+    else setSelectedRows(filteredMaterials.map(m => m.id));
+  };
+  const handleSelectRow = (id: number) => {
+    setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]);
+  };
+  const handleCancelSelection = () => {
+    setExportMode(false); setBatchEditMode(false); setDeleteMode(false); setSelectedRows([]);
+  };
 
   // UI 状态
   const [showExportModal, setShowExportModal] = useState(false);
@@ -214,90 +226,72 @@ export default function WarehouseOverviewPage() {
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
 
+  // 筛选变化
+  const handleFiltersChange = (newFilters: MaterialFiltersState) => {
+    setFilters(newFilters); setCurrentPage(1);
+  };
+
+  // 删除操作（通过Store调用API）
+  const handleConfirmDelete = async (id: number) => {
+    await deleteItem(id);
+    await loadItems();
+  };
+
+  const handleBatchDelete = async (ids: number[]) => {
+    await deleteItems(ids);
+    await loadItems();
+  };
+
   // 导出处理
   const handleDoExport = async () => {
     const selectedData = filteredMaterials.filter(m => selectedRows.includes(m.id));
-
-    // 生成Excel HTML内容
     const headers = ['物料编码', '物料名称', '分类', '规格', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '数据状态'];
     const rows = selectedData.map(m => [
       m.code, m.name, m.category, m.specification, m.unit,
       m.quantity, m.minStock, m.maxStock, m.price, m.supplier, m.location, m.dataStatus
     ]);
-
     let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-    rows.forEach(row => {
-      content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`;
-    });
+    rows.forEach(row => { content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`; });
     content += '</table></body></html>';
-
     const mimeType = 'application/vnd.ms-excel;charset=utf-8';
-    const extension = 'xls';
-    const fileName = `物料汇总表_${new Date().toISOString().slice(0, 10)}.${extension}`;
-
+    const fileName = `物料汇总表_${new Date().toISOString().slice(0, 10)}.xls`;
     try {
       if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{ accept: { [mimeType]: ['.' + extension] } }],
-        });
+        const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ accept: { [mimeType]: ['.xls'] } }] });
         const writable = await handle.createWritable();
         await writable.write(content);
         await writable.close();
       } else {
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
         URL.revokeObjectURL(url);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('Export failed:', err);
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
         URL.revokeObjectURL(url);
       }
     }
-
-    setShowExportModal(false);
-    setExportMode(false);
-    setSelectedRows([]);
+    setShowExportModal(false); setExportMode(false); setSelectedRows([]);
   };
 
   // 查看/编辑/删除操作
-  const handleView = (material: Material) => {
-    setSelectedMaterial(material);
-    setShowDetailModal(true);
-  };
-
-  const handleEdit = (material: Material) => {
-    setSelectedMaterial(material);
-    setShowEditModal(true);
-  };
-
-  const handleDelete = (material: Material) => {
-    setSelectedMaterial(material);
-    setShowDeleteModal(true);
-  };
+  const handleView = (material: Material) => { setSelectedMaterial(material); setShowDetailModal(true); };
+  const handleEdit = (material: Material) => { setSelectedMaterial(material); setShowEditModal(true); };
+  const handleDelete = (material: Material) => { setSelectedMaterial(material); setShowDeleteModal(true); };
 
   const handleConfirmDeleteAction = () => {
-    if (selectedMaterial) {
-      handleConfirmDelete(selectedMaterial.id);
-    }
-    setShowDeleteModal(false);
-    setSelectedMaterial(null);
+    if (selectedMaterial) handleConfirmDelete(selectedMaterial.id);
+    setShowDeleteModal(false); setSelectedMaterial(null);
   };
 
-  const handleSaveEdit = (material: Material) => {
-    setShowEditModal(false);
-    setSelectedMaterial(null);
+  const handleSaveEdit = async (material: Material) => {
+    await updateItem(material.id, material);
+    await loadItems();
+    setShowEditModal(false); setSelectedMaterial(null);
   };
 
   // ActionToolbar callbacks
@@ -308,20 +302,11 @@ export default function WarehouseOverviewPage() {
   const handleConfirmBatchEdit = () => {
     if (selectedRows.length === 1) {
       const material = filteredMaterials.find(m => m.id === selectedRows[0]);
-      if (material) {
-        setSelectedMaterial(material);
-        setShowEditModal(true);
-        setBatchEditMode(false);
-        setSelectedRows([]);
-      }
-    } else {
-      setShowBatchEditModal(true);
-    }
+      if (material) { setSelectedMaterial(material); setShowEditModal(true); setBatchEditMode(false); setSelectedRows([]); }
+    } else { setShowBatchEditModal(true); }
   };
   const handleCancelBatchEdit = () => { setBatchEditMode(false); setSelectedRows([]); };
-  const handleConfirmBatchDeleteAction = () => {
-    setShowBatchDeleteConfirm(true);
-  };
+  const handleConfirmBatchDeleteAction = () => { setShowBatchDeleteConfirm(true); };
   const handleCancelDeleteAction = () => { setDeleteMode(false); setSelectedRows([]); };
   const handleConfirmExportClick = () => setShowExportModal(true);
   const handleCancelExportAction = () => { setExportMode(false); setSelectedRows([]); };
@@ -329,9 +314,7 @@ export default function WarehouseOverviewPage() {
   // 批量删除确认
   const handleBatchDeleteConfirm = () => {
     handleBatchDelete(selectedRows);
-    setShowBatchDeleteConfirm(false);
-    setDeleteMode(false);
-    setSelectedRows([]);
+    setShowBatchDeleteConfirm(false); setDeleteMode(false); setSelectedRows([]);
   };
 
   return (

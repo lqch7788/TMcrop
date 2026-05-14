@@ -14,6 +14,7 @@
 import { useCallback } from 'react';
 import { CropBatch } from '../types';
 import { useLocalStorage } from './useLocalStorage';
+import { useProductionPlanStore } from '../stores';
 import { COST_CONFIG } from '../data/costConfig';
 import { CROP_STAGE_TASK_CONFIG, DEFAULT_TASK_CONFIG } from '../data/cropStageTaskConfig';
 
@@ -369,16 +370,11 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
     const startDate = `${month}-01`;
     const endDate = getMonthEndDate(month);
 
-    // 从localStorage获取批次数据
-    let batches: CropBatch[] = [];
-    try {
-      const stored = localStorage.getItem('yuanxingtu_batches');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        batches = Array.isArray(parsed) ? parsed : (parsed.data || []);
-      }
-    } catch (e) {
-      console.warn('读取批次数据失败:', e);
+    // 从 Zustand Store 获取批次数据
+    const batches: CropBatch[] = useProductionPlanStore.getState().plans || [];
+    if (batches.length === 0) {
+      // Store 可能尚未加载，尝试 fetch
+      useProductionPlanStore.getState().fetchPlans();
     }
 
     // 过滤指定批次的执行中/已发布批次

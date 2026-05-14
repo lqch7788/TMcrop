@@ -73,16 +73,39 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, supplier_code, supplier_name, contact_person, contact_phone, address, supplier_type, status, remarks, create_by } = req.body;
+    const {
+      id, supplier_code, supplier_name, contact_person, contact_phone,
+      mobile_phone, work_phone, fax,
+      address, supplier_type, supplier_attribute,
+      status, country, province, city,
+      bank_name, bank_card_number,
+      organization, create_date, remarks, create_by
+    } = req.body;
 
     const newId = id || `SUP${Date.now()}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO suppliers (id, supplier_code, supplier_name, contact_person, contact_phone, address, supplier_type, status, remarks, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, supplier_code, supplier_name, contact_person, contact_phone, address, supplier_type, status || 'active', remarks, create_by, now, now]);
+      INSERT INTO suppliers (
+        id, supplier_code, supplier_name, contact_person, contact_phone,
+        mobile_phone, work_phone, fax,
+        address, supplier_type, supplier_attribute,
+        status, country, province, city,
+        bank_name, bank_card_number,
+        organization, create_date, remarks, create_by,
+        create_time, update_time
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newId, supplier_code, supplier_name, contact_person || null, contact_phone || null,
+      mobile_phone || null, work_phone || null, fax || null,
+      address || null, supplier_type || null, supplier_attribute || null,
+      status || 'active', country || null, province || null, city || null,
+      bank_name || null, bank_card_number || null,
+      organization || null, create_date || null, remarks || null, create_by || null,
+      now, now
+    ]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });

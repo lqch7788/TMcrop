@@ -1,15 +1,15 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type {
   MaterialReceivingRecord,
   MaterialItem,
   ExecuteMaterialItem,
 } from '../../types/materialReceiving';
 import {
-  materialReceivingDetails,
   materialExecuteDetails,
 } from '../../data/materialReceivingData';
 import { useApprovalContext } from '../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { useMaterialRequestDataStore } from '../../stores';
 
 // 领料申请表单类型
 interface EditFormState {
@@ -217,8 +217,20 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
   // 领料申请页面状态
   // ============================================
 
-  // 领料申请数据状态化（支持 CRUD 操作）
-  const [materialData, setMaterialData] = useState<MaterialReceivingRecord[]>(materialReceivingDetails);
+  // 数据从 Zustand Store 获取（不再使用 mock 数据）
+  const {
+    items: materialData,
+    isLoading,
+    loadItems,
+    addItem: storeAddItem,
+    updateItem: storeUpdateItem,
+    deleteItem: storeDeleteItem,
+    deleteItems: storeDeleteItems,
+    refresh,
+  } = useMaterialRequestDataStore();
+
+  // 初始化加载数据
+  useEffect(() => { loadItems(); }, [loadItems]);
 
   // 获取审批上下文（用于联动）
   const approvalContext = useApprovalContext();
@@ -433,20 +445,20 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     setShowDeleteConfirm(true);
   }, []);
 
-  const confirmDelete = useCallback(() => {
-    // 执行删除：从数据中移除待删除的记录
+  const confirmDelete = useCallback(async () => {
+    // 调用 API 删除记录
     if (deletingId !== null) {
-      setMaterialData(prev => prev.filter(r => r.id !== deletingId));
+      await storeDeleteItem(deletingId);
+      await loadItems();
     }
     setShowDeleteConfirm(false);
     setDeletingId(null);
-  }, [deletingId]);
+  }, [deletingId, storeDeleteItem, loadItems]);
 
-  const handleSaveEdit = useCallback(() => {
+  const handleSaveEdit = useCallback(async () => {
     if (!selectedRecord) return;
 
-    const updatedRecord: MaterialReceivingRecord = {
-      ...selectedRecord,
+    const updates = {
       date: editForm.date,
       applicant: editForm.applicant,
       department: editForm.department,
@@ -459,13 +471,10 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       materials: editForm.materials.map((m) => ({ ...m, actualQuantity: 0 })),
     };
 
-    // 修复：使用不可变方式更新
-    setMaterialData((prev) => prev.map((r) => r.id === selectedRecord.id ? updatedRecord : r));
-
+    await storeUpdateItem(selectedRecord.id, updates as any);
+    await loadItems();
     setShowEditModal(false);
-    // 编辑保存成功提示（实际项目中应使用 Toast 组件）
-    console.info('领料单编辑已保存，状态已更新为待审批');
-  }, [selectedRecord, editForm]);
+  }, [selectedRecord, editForm, storeUpdateItem, loadItems]);
 
   const handleVoidApply = useCallback(() => {
     if (!selectedRecord) return;
@@ -473,25 +482,19 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     setShowVoidModal(true);
   }, [selectedRecord]);
 
-  const submitVoidApply = useCallback(() => {
+  const submitVoidApply = useCallback(async () => {
     if (!voidReason.trim()) {
-      // 验证作废原因是否填写（实际项目中应使用 Toast 组件提示）
       console.warn('作废申请需要填写作废原因');
       return;
     }
     if (!selectedRecord) return;
 
-    // 修复：使用不可变方式更新
-    setMaterialData((prev) => prev.map((r) =>
-      r.id === selectedRecord.id
-        ? { ...r, status: '已作废', statusClass: 'voided' }
-        : r
-    ));
-
+    await storeUpdateItem(selectedRecord.id, { status: '已作废', statusClass: 'voided' } as any);
+    await loadItems();
     setShowVoidModal(false);
     setShowEditModal(false);
     setVoidReason('');
-  }, [voidReason, selectedRecord]);
+  }, [voidReason, selectedRecord, storeUpdateItem, loadItems]);
 
   const handleAddMaterial = useCallback(() => {
     const newMaterial: MaterialItem = {
@@ -527,10 +530,8 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     []
   );
 
-  const handleSaveAdd = useCallback(() => {
-    // 1. 验证表单
+  const handleSaveAdd = useCallback(async () => {
     if (!addForm.applicant) {
-      // 验证申请人是否填写（实际项目中应使用 Toast 组件提示）
       console.warn('新增领料单需要选择申请人');
       return;
     }
@@ -539,14 +540,9 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       return;
     }
 
-    // 2. 生成单号
-    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialData.length + 1).padStart(3, '0')}`;
     const now = new Date().toISOString();
-
-    // 3. 创建领料记录
-    const newRecord: MaterialReceivingRecord = {
-      id: materialData.length + 1,
-      code: newCode,
+    // 通过 Store 调用 API 创建
+    const result = await storeAddItem({
       date: addForm.date,
       applicant: addForm.applicant,
       department: addForm.department,
@@ -554,34 +550,32 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       plantArea: addForm.plantArea,
       reviewer: addForm.reviewer,
       productionBatchCode: addForm.productionBatchCode,
-      status: '待审批',
-      statusClass: 'pending',
       materials: addForm.materials.map((m) => ({ ...m, actualQuantity: 0 })),
-    };
+    });
 
-    // 4. 写入领料数据（修复 bug）
-    setMaterialData((prev) => [newRecord, ...prev]);
+    const newRecord = result;
+    const newCode = newRecord?.code || '';
 
-    // 5. 同步创建审批记录（核心联动功能）
-    if (approvalContext) {
+    // 同步创建审批记录（核心联动功能）
+    if (approvalContext && newRecord) {
       const approval: Approval = {
         id: `MAT-AP-${Date.now()}`,
-        code: newRecord.code,
+        code: newCode,
         type: ApprovalType.MATERIAL_REQUEST,
         typeName: '领料单',
         category: 'business',
-        title: `${newRecord.applicant}的领料申请`,
-        description: `申请从${newRecord.warehouseLocation}领取物料，用于${newRecord.plantArea}`,
-        applicantId: `user_${newRecord.applicant}`,
-        applicantName: newRecord.applicant,
-        applicantDepartment: newRecord.department,
-        applyDate: newRecord.date,
+        title: `${addForm.applicant}的领料申请`,
+        description: `申请从${addForm.warehouseLocation}领取物料，用于${addForm.plantArea}`,
+        applicantId: `user_${addForm.applicant}`,
+        applicantName: addForm.applicant,
+        applicantDepartment: addForm.department,
+        applyDate: addForm.date,
         applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
         currentStep: 1,
         totalSteps: 1,
         approvers: [{
-          userId: `user_${newRecord.reviewer}`,
-          userName: newRecord.reviewer,
+          userId: `user_${addForm.reviewer}`,
+          userName: addForm.reviewer,
           role: '审批人',
           order: 1,
           status: 'pending'
@@ -602,8 +596,8 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
         })),
         businessLink: {
           type: 'material',
-          requestId: String(newRecord.id),
-          requestCode: newRecord.code,
+          requestId: String(newRecord?.id || ''),
+          requestCode: newCode,
           materials: addForm.materials.map((m) => ({
             materialId: m.materialCode,
             materialCode: m.materialCode,
@@ -616,7 +610,6 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       approvalContext.addApproval(approval);
     }
 
-    // 6. 关闭弹窗，重置表单
     setShowAddModal(false);
     setAddForm({
       code: '',
@@ -629,7 +622,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       productionBatchCode: '',
       materials: [],
     });
-  }, [addForm, materialData.length, approvalContext]);
+  }, [addForm, storeAddItem, approvalContext]);
 
   const handleCancelAdd = useCallback(() => {
     setShowAddModal(false);

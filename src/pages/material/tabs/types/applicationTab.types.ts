@@ -10,8 +10,7 @@ import type { Approval, ApprovalType, ApprovalStatus } from '../../../types/appr
 
 /** ApplicationTab 组件Props */
 export interface ApplicationTabProps {
-  materialData: MaterialReceivingRecord[];
-  setMaterialData: React.Dispatch<React.SetStateAction<MaterialReceivingRecord[]>>;
+  // 组件不再需要外部传入数据，内部使用 Zustand Store
 }
 
 // ============================================
@@ -118,10 +117,6 @@ export interface EditAlertState {
 
 /** useApplicationTab Hook 返回类型 */
 export interface UseApplicationTabReturn {
-  // Props 数据
-  materialData: MaterialReceivingRecord[];
-  setMaterialData: React.Dispatch<React.SetStateAction<MaterialReceivingRecord[]>>;
-
   // 搜索筛选状态
   searchCode: string;
   setSearchCode: (value: string) => void;

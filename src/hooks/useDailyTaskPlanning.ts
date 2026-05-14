@@ -16,6 +16,7 @@ import {
   WeatherData,
 } from '../types/planning';
 import { useLocalStorage } from './useLocalStorage';
+import { useProductionPlanStore } from '../stores';
 import { useComprehensiveDispatch } from './useComprehensiveDispatch';
 import type { WorkerRecommendation } from './useComprehensiveDispatch';
 
@@ -239,17 +240,12 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const getPendingDispatchTasks = useCallback((targetDate: string): PredictedTask[] => {
     const pendingTasks: PredictedTask[] = [];
 
-    // 获取执行中的批次
-    let batches: CropBatch[] = [];
-    try {
-      const stored = localStorage.getItem('yuanxingtu_batches');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        batches = Array.isArray(parsed) ? parsed : (parsed.data || []);
-      }
-    } catch (e) {
-      console.warn('读取批次数据失败:', e);
+    // 从 Zustand Store 获取执行中的批次
+    const allBatches: CropBatch[] = useProductionPlanStore.getState().plans || [];
+    if (allBatches.length === 0) {
+      useProductionPlanStore.getState().fetchPlans();
     }
+    const batches: CropBatch[] = allBatches;
 
     // 过滤执行中批次
     const activeBatches = batches.filter(

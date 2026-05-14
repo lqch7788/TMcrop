@@ -307,12 +307,7 @@ export function MaterialReturnPage() {
                   取消
                 </button>
                 <button
-                  onClick={() => {
-                    console.log('批量删除:', hook.selectedRows);
-                    hook.setShowBatchDeleteConfirm(false);
-                    hook.setDeleteMode(false);
-                    hook.setSelectedRows([]);
-                  }}
+                  onClick={hook.confirmBatchDelete}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
                 >
                   确认删除

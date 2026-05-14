@@ -16,14 +16,14 @@ import type { MaterialReceivingRecord } from '@/types/materialReceiving';
 
 // Props接口定义
 interface ExecuteTabProps {
-  materialData: MaterialReceivingRecord[];
+  materialData?: MaterialReceivingRecord[];
 }
 
 /**
  * ExecuteTab 组件
  * 领料出库页面，包含出库单搜索、表格、详情、编辑、新增等功能
  */
-export default function ExecuteTab({ materialData }: ExecuteTabProps) {
+export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
   const {
     // 搜索状态
     executeSearchCode,
