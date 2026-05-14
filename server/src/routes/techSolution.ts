@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
@@ -35,42 +36,46 @@ function generateSolutionCode(): string {
  * 字段映射：将数据库字段映射到前端期望的字段名
  */
 function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unknown> {
+  // queryToObjects 返回 camelCase，同时兼容 snake_case 回退
+  const sc = (k: string) => item[k] ?? ''; // snake_case 访问
+  const cc = (k: string) => item[k] ?? ''; // camelCase 访问
+  const getVal = (camel: string, snake: string) => (item[camel] ?? item[snake] ?? '');
+
+  const batchStatus = getVal('batchStatus', 'batch_status') as string;
+
   const result: Record<string, unknown> = {
     id: item.id,
-    code: item.solution_code,
-    title: item.solution_title,
-    crop: item.crop_name,
-    cropCode: item.crop_code,
-    plantingMode: item.planting_mode,
+    code: getVal('solutionCode', 'solution_code'),
+    title: getVal('solutionTitle', 'solution_title'),
+    crop: getVal('cropName', 'crop_name'),
+    cropCode: getVal('cropCode', 'crop_code'),
+    plantingMode: getVal('plantingMode', 'planting_mode'),
     stage: item.stage,
     version: item.version || 'V1.0',
     content: item.content,
     author: item.author,
-    authorId: item.author_id,
-    createDate: item.create_time ? String(item.create_time).split('T')[0] : '',
-    updateTime: item.update_time,
-    // 使用 batch_status 作为前端 status（用于显示）
-    status: item.batch_status === 'published' ? '已发布' :
-            item.batch_status === 'pending' ? '待审批' :
-            item.batch_status === 'draft' ? '草稿' :
-            item.batch_status === 'approved' ? '已审批' :
-            item.batch_status === 'rejected' ? '已拒绝' :
-            item.batch_status === 'cancelled' ? '已作废' : '草稿',
-    // 保留 batchStatus 字段
-    batchStatus: item.batch_status,
-    statusClass: item.batch_status === 'published' ? 'normal' :
-                 item.batch_status === 'pending' ? 'pending' : 'draft',
-    // 审批相关字段
-    approveStatus: item.batch_status === 'published' || item.batch_status === 'approved' ? '已审批' : '待审批',
-    approvalCode: item.approval_code,
-    approvalDate: item.approved_at,
+    authorId: getVal('authorId', 'author_id'),
+    createDate: getVal('createTime', 'create_time') ? String(getVal('createTime', 'create_time')).split('T')[0] : '',
+    updateTime: getVal('updateTime', 'update_time'),
+    status: batchStatus === 'published' ? '已发布' :
+            batchStatus === 'pending' ? '待审批' :
+            batchStatus === 'draft' ? '草稿' :
+            batchStatus === 'approved' ? '已审批' :
+            batchStatus === 'rejected' ? '已拒绝' :
+            batchStatus === 'cancelled' ? '已作废' : '草稿',
+    batchStatus: batchStatus,
+    statusClass: batchStatus === 'published' ? 'normal' :
+                 batchStatus === 'pending' ? 'pending' : 'draft',
+    approveStatus: batchStatus === 'published' || batchStatus === 'approved' ? '已审批' : '待审批',
+    approvalCode: getVal('approvalCode', 'approval_code'),
+    approvalDate: getVal('approvedAt', 'approved_at'),
     approver: item.approver,
-    relatedBatchCode: item.related_batch_code,
-    planDetailFileName: item.plan_detail_file_name,
+    relatedBatchCode: getVal('relatedBatchCode', 'related_batch_code'),
+    planDetailFileName: getVal('planDetailFileName', 'plan_detail_file_name'),
     priority: item.priority || 'normal',
     remarks: item.remarks,
-    lastSubmitTime: item.last_submit_time || '',
-    isValid: item.is_valid || '有效',
+    lastSubmitTime: getVal('lastSubmitTime', 'last_submit_time') || '',
+    isValid: getVal('isValid', 'is_valid') || '有效',
   };
   return result;
 }
@@ -118,26 +123,15 @@ router.get('/', (req: Request, res: Response) => {
     sql += ` LIMIT ? OFFSET ?`;
     params.push(Number(limit), offset);
 
-    const stmt = db.prepare(sql);
-    if (params.length > 0) {
-      stmt.bind(params);
-    }
+    // 使用 queryToObjects 自动转换 snake_case → camelCase
+    const rawItems = queryToObjects<Record<string, unknown>>(db, sql, params);
 
-    const items: Record<string, unknown>[] = [];
-    while (stmt.step()) {
-      const item = stmt.getAsObject();
-      console.log('[获取技术方案列表] 原始数据 related_batch_code:', item.related_batch_code);
-      items.push(item);
-    }
-    stmt.free();
-
-    // 转换字段格式为camelCase
-    const camelItems = mapArrayToFrontend(items);
-    console.log('[获取技术方案列表] 转换后数据 relatedBatchCode:', camelItems.map((i: any) => i.relatedBatchCode));
+    // 转换字段格式为前端期望格式
+    const camelItems = mapArrayToFrontend(rawItems);
 
     // 获取总数
     let countSql = 'SELECT COUNT(*) as total FROM tech_solutions WHERE 1=1';
-    const countParams: string[] = [];
+    const countParams: (string | number)[] = [];
     if (crop) {
       countSql += ' AND crop_name LIKE ?';
       countParams.push(`%${crop}%`);
@@ -152,13 +146,8 @@ router.get('/', (req: Request, res: Response) => {
       countParams.push(kw, kw, kw);
     }
 
-    const countStmt = db.prepare(countSql);
-    if (countParams.length > 0) {
-      countStmt.bind(countParams);
-    }
-    countStmt.step();
-    const total = countStmt.getAsObject().total as number;
-    countStmt.free();
+    const countResult = queryToObjects<{total: number}>(db, countSql, countParams);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
 
     res.json({
       success: true,
@@ -180,21 +169,20 @@ router.get('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
 
-    const stmt = db.prepare('SELECT * FROM tech_solutions WHERE id = ?');
-    stmt.bind([id]);
+    const items = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM tech_solutions WHERE id = ?',
+      [id]
+    );
 
-    if (stmt.step()) {
-      const item = stmt.getAsObject();
-      stmt.free();
+    if (items && items.length > 0) {
       res.json({
         success: true,
-        data: mapFieldsToFrontend(item),
+        data: mapFieldsToFrontend(items[0]),
       });
     } else {
-      stmt.free();
       res.status(404).json({ success: false, error: '技术方案不存在' });
-    }
-  } catch (error) {
+    }  } catch (error) {
     console.error('获取技术方案详情失败:', error);
     res.status(500).json({ success: false, error: '获取技术方案详情失败' });
   }
@@ -269,14 +257,13 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
     console.log('[技术方案创建] 插入数据 - related_batch_code:', relatedBatchCode || '');
 
+    const newItems = queryToObjects(db, 'SELECT * FROM tech_solutions WHERE id = ?', [id]);
+    const resultData = newItems.length > 0 ? mapFieldsToFrontend(newItems[0]) : {};
+
     res.json({
       success: true,
       message: '技术方案创建成功',
-      data: {
-        id,
-        code: solutionCode,
-        ...req.body,
-      },
+      data: resultData,
     });
   } catch (error) {
     console.error('创建技术方案失败:', error);
@@ -348,10 +335,10 @@ router.put('/:id', (req: Request, res: Response) => {
 
     saveDatabase();
 
-    res.json({
-      success: true,
-      message: '技术方案更新成功',
-    });
+    const updatedItems = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM tech_solutions WHERE id = ?', [id]);
+    const updatedData = updatedItems.length > 0 ? mapFieldsToFrontend(updatedItems[0]) : null;
+
+    res.json({ success: true, message: '技术方案更新成功', data: updatedData });
   } catch (error) {
     console.error('更新技术方案失败:', error);
     res.status(500).json({ success: false, error: '更新技术方案失败' });

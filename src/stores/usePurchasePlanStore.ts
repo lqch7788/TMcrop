@@ -69,7 +69,7 @@ export const usePurchasePlanStore = create<PurchasePlanState>()(
         const result = await planService.updatePurchasePlan(id, updates);
         if (result) {
           set((state) => ({
-            plans: state.plans.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+            plans: state.plans.map((p) => (p.id === id ? { ...p, ...(result as any) } : p)),
           }));
         }
         return result;

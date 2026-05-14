@@ -7,7 +7,6 @@ import { ShoppingCart } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
-import { apiClient, USE_API } from '../../services/apiClient';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
@@ -223,36 +222,48 @@ export function PurchasePlanPage() {
     setCreateForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // 创建提交
+  // 创建提交（走 Zustand Store → enhancedApiClient 数据流）
   const handleCreateSubmit = async () => {
     try {
       const totalAmount = createItems.reduce((sum, item) => sum + (item.estimatedTotalPrice || 0), 0);
 
-      const planData = {
-        plan_code: createForm.purchaseApplicationCode,
-        plan_title: `${createForm.purchaseType} - ${createForm.purchaseApplicationCode}`,
-        plan_type: createForm.purchaseType,
-        department_id: '',
-        department_name: createForm.applicantDepartment,
-        applicant_id: localStorage.getItem('userId') || '',
-        applicant_name: createForm.applicant,
-        apply_date: createForm.applyDate,
-        expected_date: createForm.requiredDate,
-        supplier_id: '',
-        supplier_name: '',
-        total_amount: totalAmount,
-        priority: createForm.priority === '紧急' ? 'urgent' :
-                 createForm.priority === '高' ? 'high' :
-                 createForm.priority === '中' ? 'normal' : 'low',
-        status: 'pending',
-        approval_status: 'pending',
-        remarks: createForm.remark,
-        attachments: [],
-        items: createItems,
-        create_by: createForm.applicant,
+      // 显示名称 → 编码映射
+      const priorityMap: Record<string, string> = {
+        '紧急': 'urgent',
+        '高': 'high',
+        '中': 'normal',
+        '低': 'low',
+      };
+      const purchaseTypeReverseMap: Record<string, string> = {
+        '生产物资采购': 'production',
+        '紧急采购': 'urgent',
+        '常规采购': 'routine',
+        '劳保用品': 'safety',
+        '通用物资': 'material',
+        '设备采购': 'equipment',
+        '其他': 'other',
       };
 
-      const result = await apiClient.post<{ id: string; plan_code: string }>('/purchase-plans', planData);
+      const planData = {
+        purchaseApplicationCode: createForm.purchaseApplicationCode,
+        relatedBatchCode: createForm.relatedBatchCode,
+        purchaseType: purchaseTypeReverseMap[createForm.purchaseType] || 'production',
+        applicant: createForm.applicant,
+        applicantId: localStorage.getItem('userId') || '',
+        applicantDepartment: createForm.applicantDepartment,
+        applyDate: createForm.applyDate,
+        requiredDate: createForm.requiredDate,
+        priority: priorityMap[createForm.priority] || 'normal',
+        status: 'pending' as const,
+        approvalStatus: 'pending' as const,
+        remarks: createForm.remark,
+        approvalPerson: createForm.approvalPerson,
+        items: createItems,
+        totalAmount,
+        attachments: [],
+      };
+
+      const result = await addPlan(planData);
 
       if (result && result.id) {
         const approvalAmount = totalAmount;
@@ -261,12 +272,12 @@ export function PurchasePlanPage() {
 
         const approvalResult = await submitPurchaseApproval({
           purchaseId: result.id,
-          purchaseCode: result.plan_code || createForm.purchaseApplicationCode,
-          purchaseName: planData.plan_title,
+          purchaseCode: result.purchaseApplicationCode || createForm.purchaseApplicationCode,
+          purchaseName: result.planTitle || `${createForm.purchaseType} - ${createForm.purchaseApplicationCode}`,
           amount: approvalAmount,
-          applicantId: planData.applicant_id,
-          applicantName: planData.applicant_name,
-          department: planData.department_name,
+          applicantId: result.applicantId || planData.applicantId,
+          applicantName: result.applicant,
+          department: result.applicantDepartment,
         });
 
         console.log('【创建采购计划】审批提交结果:', approvalResult);
@@ -281,9 +292,6 @@ export function PurchasePlanPage() {
         } else {
           alert('采购计划已创建并提交审批');
         }
-
-        // 刷新 Store 数据
-        fetchPlans();
       }
     } catch (error) {
       console.error('创建采购计划失败:', error);
@@ -350,16 +358,16 @@ export function PurchasePlanPage() {
     const selectedData = purchasePlansData.filter(p => selectedRows.includes(p.id));
     const headers = ['计划编号', '计划名称', '类型', '申请人', '申请日期', '总金额', '供应商', '交货日期', '优先级', '状态'];
     const exportData = selectedData.map(row => ({
-      '计划编号': row.code,
-      '计划名称': row.name,
-      '类型': row.type,
+      '计划编号': row.purchaseApplicationCode,
+      '计划名称': row.planTitle,
+      '类型': row.purchaseTypeName,
       '申请人': row.applicant,
       '申请日期': row.applyDate,
       '总金额': row.totalAmount,
-      '供应商': row.supplier,
-      '交货日期': row.deliveryDate,
-      '优先级': row.priority,
-      '状态': row.status
+      '供应商': row.supplierName,
+      '交货日期': row.requiredDate,
+      '优先级': row.priorityText,
+      '状态': row.statusText
     }));
 
     let content = '';
@@ -461,9 +469,7 @@ export function PurchasePlanPage() {
 
       const selectedIds = deletablePlans.map(p => p.id);
 
-      if (USE_API) {
-        await deletePlans(selectedIds);
-      }
+      await deletePlans(selectedIds);
 
       setShowDeleteModal(false);
       setBatchDeleteMode(false);
@@ -513,9 +519,7 @@ export function PurchasePlanPage() {
       return;
     }
     try {
-      if (USE_API) {
-        await deletePlan(plan.id);
-      }
+      await deletePlan(plan.id);
       alert('删除成功');
     } catch (error) {
       console.error('删除采购计划失败:', error);
@@ -577,36 +581,34 @@ export function PurchasePlanPage() {
       return;
     }
     try {
-      if (USE_API) {
-        // 根据 applicantId 获取申请人姓名
-        const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
-        const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
+      // 根据 applicantId 获取申请人姓名
+      const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
+      const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
 
-        console.log('[保存采购计划] currentEditingPlan:', currentEditingPlan);
-        console.log('[保存采购计划] batchEditItems:', batchEditItems);
-        console.log('[保存采购计划] 发送数据:', {
-          relatedBatchCode: currentEditingPlan.relatedBatchCode,
-          purchaseType: batchEditData.purchaseType,
-          priority: batchEditData.priority,
-          requiredDate: batchEditData.requiredDate,
-          remark: batchEditData.remark,
-          applicantId: currentEditingPlan.applicantId,
-          applicantName: applicantName,
-          applicantDepartment: currentEditingPlan.applicantDepartment,
-          items: batchEditItems,
-        });
-        await updatePlan(currentEditingPlan.id, {
-          relatedBatchCode: currentEditingPlan.relatedBatchCode,
-          purchaseType: batchEditData.purchaseType,
-          priority: batchEditData.priority,
-          requiredDate: batchEditData.requiredDate,
-          remark: batchEditData.remark,
-          applicantId: currentEditingPlan.applicantId,
-          applicantName: applicantName,
-          applicantDepartment: currentEditingPlan.applicantDepartment,
-          items: batchEditItems,
-        });
-      }
+      console.log('[保存采购计划] currentEditingPlan:', currentEditingPlan);
+      console.log('[保存采购计划] batchEditItems:', batchEditItems);
+      console.log('[保存采购计划] 发送数据:', {
+        relatedBatchCode: currentEditingPlan.relatedBatchCode,
+        purchaseType: batchEditData.purchaseType,
+        priority: batchEditData.priority,
+        requiredDate: batchEditData.requiredDate,
+        remark: batchEditData.remark,
+        applicantId: currentEditingPlan.applicantId,
+        applicantName: applicantName,
+        applicantDepartment: currentEditingPlan.applicantDepartment,
+        items: batchEditItems,
+      });
+      await updatePlan(currentEditingPlan.id, {
+        relatedBatchCode: currentEditingPlan.relatedBatchCode,
+        purchaseType: batchEditData.purchaseType,
+        priority: batchEditData.priority,
+        requiredDate: batchEditData.requiredDate,
+        remark: batchEditData.remark,
+        applicantId: currentEditingPlan.applicantId,
+        applicantName: applicantName,
+        applicantDepartment: currentEditingPlan.applicantDepartment,
+        items: batchEditItems,
+      });
       setShowBatchEditModal(false);
       setBatchEditMode(false);
       setSelectedRows([]);

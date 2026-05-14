@@ -170,11 +170,12 @@ export async function getPurchasePlanById(id: string): Promise<PurchasePlan | un
  * 降级策略：API → 离线队列
  */
 export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<PurchasePlan> {
-  const result = await enhancedApiClient.post<{ id: string }>('/purchase-plans', plan, {
+  const result = await enhancedApiClient.post<PurchasePlan>('/purchase-plans', plan, {
     offlineQueue: true,
     useCache: true,
   });
-  return { ...plan, id: result.id } as PurchasePlan;
+  // POST 响应现在返回经过 mapToFrontendFormat 的完整数据
+  return transformPurchasePlan(result) as PurchasePlan;
 }
 
 /**
@@ -182,10 +183,11 @@ export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<P
  * 降级策略：API → 离线队列
  */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/purchase-plans/${id}`, updates, {
+  const result = await enhancedApiClient.put<{ data: PurchasePlan }>(`/purchase-plans/${id}`, updates, {
     offlineQueue: true,
   });
-  return result ? { ...updates, id } as PurchasePlan : null;
+  // PUT 响应现在返回经过 mapToFrontendFormat 的完整更新数据
+  return result?.data ? transformPurchasePlan(result.data) as PurchasePlan : null;
 }
 
 /**
