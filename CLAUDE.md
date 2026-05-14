@@ -248,3 +248,16 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 通过（两轮构建均成功）
 **前后端均正常运行，API 返回数据正常**
+
+8. **核查+改造任务中心全部TAB页数据层（升级方案V1.0）**
+   - 核查发现：临时任务(纯localStorage)、巡查记录/问题管理(API存在但未用)、农事任务(半迁移双写)
+   - 新建 3 个 Zustand Store：`useTempTaskStore`、`useInspectionDataStore`、`useProblemStore`
+   - useTempTasks.ts：`useLocalStorage` → `useTempTaskStore`（API CRUD），保留全部业务逻辑
+   - InspectionTab + InspectionDetailModal：直接localStorage R/W → `useInspectionDataStore`
+   - ProblemTab + ProblemDispatchModal：`usePersistentProblems` → `useProblemStore`
+   - TaskDetailModal/VerifyTaskModal/TaskAcceptanceAdapter：localStorage → `useFarmTaskStore`
+   - useFarmHub.ts：移除重复API调用和localStorage降级，统一走Store
+   - 完整CRUD测试：4模块16项操作全部通过
+
+**构建状态：** ✅ 通过
+**提交：** `558c58a` - refactor: 农事任务中心4个TAB页 localStorage → Zustand Store 完整迁移
