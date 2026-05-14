@@ -5,7 +5,7 @@ import { PieceworkTable } from './PieceworkTable';
 import { PieceworkFormModal } from './PieceworkFormModal';
 import { PieceworkBatchEditModal } from './PieceworkBatchEditModal';
 import type { PieceRate, PieceworkFormData } from './types';
-import { mockTempWorkers } from '../tempWorker/mockData';
+import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 import { taskOptions } from './hooks/usePiecework';
 import { Button } from '@/components/ui/button';
 
@@ -175,7 +175,8 @@ export const PieceworkPage: React.FC = () => {
 
   // 提交新增
   const handleFormConfirm = (formData: PieceworkFormData) => {
-    const worker = mockTempWorkers.find((w) => w.id === formData.workerId);
+    const workers = useTempWorkerStore.getState().workers;
+    const worker = workers.find((w) => w.id === formData.workerId);
     const task = taskOptions.find((t) => t.id === formData.taskId);
 
     if (!worker || !task) return;

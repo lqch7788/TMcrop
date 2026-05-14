@@ -96,7 +96,7 @@ router.post('/', (req: Request, res: Response) => {
         organization, create_date, remarks, create_by,
         create_time, update_time
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId, supplier_code, supplier_name, contact_person || null, contact_phone || null,
       mobile_phone || null, work_phone || null, fax || null,

@@ -1,45 +1,32 @@
 /**
- * 调薪申请数据管理 Hook
- * 封装状态管理、数据处理和业务逻辑
- * 使用 React Query 和 API 服务，移除 useApprovalContext 依赖
+ * 调薪申请数据管理 Hook（V2.0 改造）
+ * 使用 Zustand Store 替代 React Query
+ * 保留所有业务逻辑，替换数据源为 useSalaryAdjustmentStore
  */
-import { useState, useMemo, useCallback } from 'react';
-import {
-  useSalaryAdjustmentRecords,
-  useCreateSalaryAdjustment,
-  useUpdateSalaryAdjustment,
-  useUpdateSalaryAdjustmentStatus,
-} from '@/hooks/useSalaryAdjustmentQueries';
-import type { SalaryAdjustmentRecord as ApiSalaryAdjustmentRecord } from '@/services/apiSalaryAdjustmentService';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSalaryAdjustmentStore } from '@/stores';
+import type { SalaryAdjustmentData } from '@/stores';
 import type {
-  SalaryAdjustmentRecord,
   SalaryAdjustmentFilters,
   SalaryAdjustmentFormData,
   SalaryAdjustmentPagination,
-  SalaryAdjustmentStatus,
 } from '../types/salaryAdjustment.types';
 
-/**
- * API 数据转换为组件内部格式
- */
-function mapApiToComponent(apiRecord: ApiSalaryAdjustmentRecord): SalaryAdjustmentRecord {
+/** API 数据转换为组件内部格式（Store 已处理 normalize，此处做状态标签映射） */
+function mapStatusLabel(item: SalaryAdjustmentData): SalaryAdjustmentData {
+  const statusMap: Record<string, string> = {
+    'pending': '待审批',
+    'approved': '已通过',
+    'rejected': '已拒绝',
+    'cancelled': '已取消',
+    'PENDING': '待审批',
+    'APPROVED': '已通过',
+    'REJECTED': '已拒绝',
+    'CANCELLED': '已取消',
+  };
   return {
-    id: apiRecord.id,
-    employeeId: apiRecord.workerId,
-    employeeName: apiRecord.workerName,
-    department: apiRecord.department,
-    position: apiRecord.position,
-    currentSalary: apiRecord.currentSalary,
-    proposedSalary: apiRecord.proposedSalary,
-    adjustmentAmount: apiRecord.adjustmentAmount,
-    adjustmentRatio: apiRecord.adjustmentRatio,
-    adjustmentType: apiRecord.adjustmentType,
-    effectiveDate: apiRecord.effectiveDate,
-    reason: apiRecord.reason,
-    status: apiRecord.statusLabel as SalaryAdjustmentStatus,
-    approver: apiRecord.approver,
-    approveTime: apiRecord.approveTime,
-    remarks: apiRecord.remarks,
+    ...item,
+    statusLabel: statusMap[item.status] || item.statusLabel || item.status,
   };
 }
 
@@ -49,11 +36,11 @@ export interface UseSalaryAdjustmentReturn {
   setFilters: React.Dispatch<React.SetStateAction<SalaryAdjustmentFilters>>;
   pagination: SalaryAdjustmentPagination;
   setPagination: React.Dispatch<React.SetStateAction<SalaryAdjustmentPagination>>;
-  records: SalaryAdjustmentRecord[];
+  records: SalaryAdjustmentData[];
   formData: SalaryAdjustmentFormData;
   setFormData: React.Dispatch<React.SetStateAction<SalaryAdjustmentFormData>>;
-  selectedRecord: SalaryAdjustmentRecord | null;
-  setSelectedRecord: React.Dispatch<React.SetStateAction<SalaryAdjustmentRecord | null>>;
+  selectedRecord: SalaryAdjustmentData | null;
+  setSelectedRecord: React.Dispatch<React.SetStateAction<SalaryAdjustmentData | null>>;
   selectedRowKeys: React.Key[];
   setSelectedRowKeys: React.Dispatch<React.SetStateAction<React.Key[]>>;
   batchMode: 'none' | 'approve' | 'reject' | 'export';
@@ -65,7 +52,7 @@ export interface UseSalaryAdjustmentReturn {
   setIsDetailModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
   // 过滤后的数据
-  filteredData: SalaryAdjustmentRecord[];
+  filteredData: SalaryAdjustmentData[];
   departmentOptions: { value: string; label: string }[];
 
   // 计算属性
@@ -77,12 +64,12 @@ export interface UseSalaryAdjustmentReturn {
   handleResetFilters: () => void;
   handleSearch: () => void;
   handleOpenFormModal: () => void;
-  handleOpenDetailModal: (record: SalaryAdjustmentRecord) => void;
+  handleOpenDetailModal: (record: SalaryAdjustmentData) => void;
   handleStaffChange: (employeeId: string, employeeName: string, department: string, position: string, currentSalary: number) => void;
   handleProposedSalaryChange: (value: number) => void;
   handleSubmit: () => Promise<void>;
-  handleApprove: (record: SalaryAdjustmentRecord) => Promise<void>;
-  handleReject: (record: SalaryAdjustmentRecord) => Promise<void>;
+  handleApprove: (record: SalaryAdjustmentData) => Promise<void>;
+  handleReject: (record: SalaryAdjustmentData) => Promise<void>;
   handleBatchApprove: () => void;
   handleBatchReject: () => void;
   handleExport: () => void;
@@ -99,11 +86,20 @@ function calculateAdjustment(current: number, proposed: number) {
 export function useSalaryAdjustment(
   workers: { workerId: string; name: string; department: string; position: string; wagesType?: string; salary?: number }[]
 ): UseSalaryAdjustmentReturn {
-  // ============================================================
-  // 状态定义
-  // ============================================================
+  // ========== 从 Store 获取数据和方法 ==========
+  const storeItems = useSalaryAdjustmentStore((s) => s.items);
+  const fetchItems = useSalaryAdjustmentStore((s) => s.fetchItems);
+  const createItem = useSalaryAdjustmentStore((s) => s.createItem);
+  const approveItemStore = useSalaryAdjustmentStore((s) => s.approveItem);
+  const rejectItemStore = useSalaryAdjustmentStore((s) => s.rejectItem);
 
-  /** 筛选条件 */
+  // ========== 组件挂载时加载数据 ==========
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  // ========== 状态定义 ==========
+
   const [filters, setFilters] = useState<SalaryAdjustmentFilters>({
     employeeName: '',
     department: '',
@@ -113,20 +109,14 @@ export function useSalaryAdjustment(
     endDate: '',
   });
 
-  /** 分页状态 */
   const [pagination, setPagination] = useState<SalaryAdjustmentPagination>({ current: 1, pageSize: 10, total: 0 });
 
-  /** 弹窗状态 */
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  /** 选中记录 */
-  const [selectedRecord, setSelectedRecord] = useState<SalaryAdjustmentRecord | null>(null);
-
-  /** 批量选择 */
+  const [selectedRecord, setSelectedRecord] = useState<SalaryAdjustmentData | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  /** 表单数据 */
   const [formData, setFormData] = useState<SalaryAdjustmentFormData>({
     employeeId: '',
     employeeName: '',
@@ -140,56 +130,19 @@ export function useSalaryAdjustment(
     remarks: '',
   });
 
-  /** 批量操作模式 */
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
-  // ============================================================
-  // 构建查询参数
-  // ============================================================
+  // ========== 数据处理 ==========
 
-  const queryFilters = useMemo(() => ({
-    keyword: filters.employeeName || undefined,
-    status: filters.status || undefined,
-    department: filters.department || undefined,
-  }), [filters]);
+  /** Store 数据映射状态标签 */
+  const records: SalaryAdjustmentData[] = useMemo(() => {
+    return storeItems.map(mapStatusLabel);
+  }, [storeItems]);
 
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination]);
-
-  // ============================================================
-  // 使用 React Query 获取数据
-  // ============================================================
-
-  const { data: apiData, refetch } = useSalaryAdjustmentRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
-  const records: SalaryAdjustmentRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
-
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
-
-  // ============================================================
-  // Mutations
-  // ============================================================
-
-  const createSalaryAdjustmentMutation = useCreateSalaryAdjustment();
-  const updateSalaryAdjustmentMutation = useUpdateSalaryAdjustment();
-  const updateStatusMutation = useUpdateSalaryAdjustmentStatus();
-
-  // ============================================================
-  // 数据处理
-  // ============================================================
+  /** 更新分页总数 */
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, total: records.length }));
+  }, [records.length]);
 
   /** 过滤后的数据 */
   const filteredData = useMemo(() => {
@@ -197,7 +150,7 @@ export function useSalaryAdjustment(
       if (filters.employeeName && !record.employeeName.includes(filters.employeeName)) return false;
       if (filters.department && record.department !== filters.department) return false;
       if (filters.adjustmentType && record.adjustmentType !== filters.adjustmentType) return false;
-      if (filters.status && record.status !== filters.status) return false;
+      if (filters.status && record.statusLabel !== filters.status) return false;
       if (filters.startDate && record.effectiveDate < filters.startDate) return false;
       if (filters.endDate && record.effectiveDate > filters.endDate) return false;
       return true;
@@ -215,28 +168,22 @@ export function useSalaryAdjustment(
     return calculateAdjustment(formData.currentSalary, formData.proposedSalary);
   }, [formData.currentSalary, formData.proposedSalary]);
 
-  // ============================================================
-  // 事件处理
-  // ============================================================
+  // ========== 事件处理 ==========
 
-  /** 筛选条件变化 */
   const handleFilterChange = useCallback((field: keyof SalaryAdjustmentFilters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 重置筛选 */
   const handleResetFilters = useCallback(() => {
     setFilters({ employeeName: '', department: '', adjustmentType: '', status: '', startDate: '', endDate: '' });
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 搜索 */
   const handleSearch = useCallback(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 打开新增弹窗 */
   const handleOpenFormModal = useCallback(() => {
     setSelectedRecord(null);
     setFormData({
@@ -254,13 +201,11 @@ export function useSalaryAdjustment(
     setIsFormModalOpen(true);
   }, []);
 
-  /** 打开详情弹窗 */
-  const handleOpenDetailModal = useCallback((record: SalaryAdjustmentRecord) => {
+  const handleOpenDetailModal = useCallback((record: SalaryAdjustmentData) => {
     setSelectedRecord(record);
     setIsDetailModalOpen(true);
   }, []);
 
-  /** 员工选择变化 */
   const handleStaffChange = useCallback((
     employeeId: string,
     employeeName: string,
@@ -279,12 +224,8 @@ export function useSalaryAdjustment(
     }));
   }, []);
 
-  /** 拟调薪资变化 */
   const handleProposedSalaryChange = useCallback((value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      proposedSalary: value,
-    }));
+    setFormData(prev => ({ ...prev, proposedSalary: value }));
   }, []);
 
   /** 提交调薪申请 */
@@ -299,50 +240,36 @@ export function useSalaryAdjustment(
       return;
     }
 
-    try {
-      await createSalaryAdjustmentMutation.mutateAsync({
-        workerId: formData.employeeId,
-        workerName: formData.employeeName,
-        department: formData.department,
-        position: formData.position,
-        currentSalary: formData.currentSalary,
-        proposedSalary: formData.proposedSalary,
-        adjustmentType: formData.adjustmentType,
-        effectiveDate: formData.effectiveDate,
-        reason: formData.reason,
-        remarks: formData.remarks,
-      });
+    const result = await createItem({
+      employeeId: formData.employeeId,
+      employeeName: formData.employeeName,
+      department: formData.department,
+      position: formData.position,
+      currentSalary: formData.currentSalary,
+      proposedSalary: formData.proposedSalary,
+      adjustmentType: formData.adjustmentType,
+      effectiveDate: formData.effectiveDate,
+      reason: formData.reason,
+      remarks: formData.remarks,
+    });
 
+    if (result) {
       setIsFormModalOpen(false);
-      refetch();
       alert('提交成功！');
-    } catch (error) {
-      console.error('提交调薪申请失败:', error);
+    } else {
       alert('提交失败，请重试');
     }
-  }, [formData, createSalaryAdjustmentMutation, refetch]);
+  }, [formData, createItem]);
 
   /** 审批通过 */
-  const handleApprove = useCallback(async (record: SalaryAdjustmentRecord) => {
-    try {
-      await updateStatusMutation.mutateAsync({ id: record.id, status: 'approved' });
-      refetch();
-    } catch (error) {
-      console.error('审批通过失败:', error);
-      alert('操作失败，请重试');
-    }
-  }, [updateStatusMutation, refetch]);
+  const handleApprove = useCallback(async (record: SalaryAdjustmentData) => {
+    await approveItemStore(record.id);
+  }, [approveItemStore]);
 
   /** 审批驳回 */
-  const handleReject = useCallback(async (record: SalaryAdjustmentRecord) => {
-    try {
-      await updateStatusMutation.mutateAsync({ id: record.id, status: 'rejected' });
-      refetch();
-    } catch (error) {
-      console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
-    }
-  }, [updateStatusMutation, refetch]);
+  const handleReject = useCallback(async (record: SalaryAdjustmentData) => {
+    await rejectItemStore(record.id);
+  }, [rejectItemStore]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {
@@ -381,7 +308,7 @@ export function useSalaryAdjustment(
       '调整比例': `${row.adjustmentRatio.toFixed(1)}%`,
       '调整类型': row.adjustmentType,
       '生效日期': row.effectiveDate,
-      '状态': row.status,
+      '状态': row.statusLabel || row.status,
       '审批人': row.approver || '',
       '备注': row.remarks || '',
     }));
@@ -403,35 +330,19 @@ export function useSalaryAdjustment(
   }, [selectedRowKeys, filteredData]);
 
   return {
-    // 状态
-    filters,
-    setFilters,
-    pagination,
-    setPagination,
+    filters, setFilters,
+    pagination, setPagination,
     records,
-    formData,
-    setFormData,
-    selectedRecord,
-    setSelectedRecord,
-    selectedRowKeys,
-    setSelectedRowKeys,
+    formData, setFormData,
+    selectedRecord, setSelectedRecord,
+    selectedRowKeys, setSelectedRowKeys,
     batchMode,
-
-    // 弹窗状态
-    isFormModalOpen,
-    setIsFormModalOpen,
-    isDetailModalOpen,
-    setIsDetailModalOpen,
-
-    // 数据
+    isFormModalOpen, setIsFormModalOpen,
+    isDetailModalOpen, setIsDetailModalOpen,
     filteredData,
     departmentOptions,
-
-    // 计算属性
     displayAmount,
     displayRatio,
-
-    // 事件处理
     handleFilterChange,
     handleResetFilters,
     handleSearch,

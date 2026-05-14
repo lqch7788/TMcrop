@@ -87,6 +87,7 @@ export interface UseTempWorkerReturn {
   data: TempWorker[];
   filters: TempWorkerFilters;
   pagination: PaginationInfo;
+  isLoading?: boolean;
   setFilters: (filters: TempWorkerFilters) => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;

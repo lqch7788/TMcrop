@@ -1,38 +1,44 @@
 /**
  * 员工信息管理页面组件
+ * 架构：useWorkerStore (Zustand Store → API) + useWorkerPersonnel (筛选Hook)
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, Download, Pencil, Trash2 } from 'lucide-react';
 import { Worker } from '../../../types';
-import { useAuthPermission } from '../../../hooks/usePermission';
+import { useWorkerStore } from '@/stores/useWorkerStore';
 import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { Button } from '@/components/ui/button';
 
-// 模拟员工数据（后续迁移到SQLite数据库）
-const initialWorkers: Worker[] = [
-  { id: '1', workerId: 'A001', name: '张伟民', gender: '男', age: 35, department: '生产部', position: '普工', phone: '138****1234', status: '在职' },
-  { id: '2', workerId: 'A002', name: '李明轩', gender: '女', age: 28, department: '技术部', position: '技术员', phone: '139****5678', status: '在职' },
-  { id: '3', workerId: 'A003', name: '王建国', gender: '男', age: 42, department: '生产部', position: '生产主管', phone: '136****9012', status: '在职' },
-  { id: '4', workerId: 'A004', name: '赵俊杰', gender: '女', age: 30, department: '技术部', position: '技术员', phone: '137****3456', status: '在职' },
-  { id: '5', workerId: 'A005', name: '钱文涛', gender: '男', age: 25, department: '生产部', position: '普工', phone: '135****7890', status: '在职' },
-  { id: '6', workerId: 'A006', name: '孙晓峰', gender: '女', age: 33, department: '后勤部', position: '仓库管理员', phone: '134****2345', status: '在职' },
-];
-
 export function StaffManagementPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
   const canCreate = true;
   const canEdit = true;
   const canDelete = true;
   const canExport = true;
 
+  const { workers: storeWorkers, loadWorkers } = useWorkerStore();
+
+  // 本地 CRUD 状态（Store 不支持 mutation 时的临时方案）
+  const [workerList, setWorkerList] = useState<Worker[]>([]);
+
+  // 初次加载：从 Store 获取数据
+  useEffect(() => {
+    loadWorkers();
+  }, [loadWorkers]);
+
+  // 同步 Store 数据到本地状态
+  useEffect(() => {
+    if (storeWorkers.length > 0) {
+      setWorkerList(storeWorkers);
+    }
+  }, [storeWorkers]);
+
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
-  const [workerList, setWorkerList] = useState<Worker[]>(initialWorkers);
 
   // Batch Edit state
   const [batchEditMode, setBatchEditMode] = useState(false);
@@ -56,10 +62,11 @@ export function StaffManagementPage() {
     filteredWorkers,
     stats,
     departments,
+    isLoading,
     setSearchTerm,
     setDepartmentFilter,
     setStatusFilter,
-  } = useWorkerPersonnel({ workers: workerList });
+  } = useWorkerPersonnel();
 
   const handleViewWorker = (worker: Worker) => {
     setSelectedWorker(worker);
@@ -422,16 +429,22 @@ export function StaffManagementPage() {
       </div>
 
       {/* 表格组件 */}
-      <PersonnelTable
-        workers={filteredWorkers}
-        onViewWorker={handleViewWorker}
-        onEditWorker={handleEditWorker}
-        onDeleteWorker={handleDeleteWorker}
-        showBatchSelect={batchEditMode || batchDeleteMode || exportMode}
-        selectedRows={selectedRows}
-        onSelectAll={handleSelectAll}
-        onSelectRow={handleSelectRow}
-      />
+      {isLoading ? (
+        <div className="bg-white rounded-xl p-8 text-center text-gray-500 shadow-sm">
+          加载中...
+        </div>
+      ) : (
+        <PersonnelTable
+          workers={filteredWorkers}
+          onViewWorker={handleViewWorker}
+          onEditWorker={handleEditWorker}
+          onDeleteWorker={handleDeleteWorker}
+          showBatchSelect={batchEditMode || batchDeleteMode || exportMode}
+          selectedRows={selectedRows}
+          onSelectAll={handleSelectAll}
+          onSelectRow={handleSelectRow}
+        />
+      )}
 
       {/* 详情弹窗 */}
       {showDetailModal && (

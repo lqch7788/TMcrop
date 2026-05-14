@@ -1,17 +1,12 @@
 /**
  * 离职申请页面 Hook
  * 封装状态管理、API调用和数据处理逻辑
- * 使用 React Query 和 API 服务
+ * 使用 Zustand Store 替代 React Query
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useWorkerStore } from '../../../stores/useWorkerStore';
-import {
-  useResignationRecords,
-  useCreateResignation,
-  useUpdateResignation,
-  useDeleteResignation,
-} from '@/hooks/useResignationQueries';
-import type { ResignationRecord as ApiResignationRecord, CreateResignationParams, UpdateResignationParams } from '@/services/apiResignationService';
+import { useResignationStore } from '@/stores';
+import type { ResignationData } from '@/stores';
 import type {
   ResignationRecord,
   ResignationFilters,
@@ -21,21 +16,21 @@ import type {
   ResignationType,
 } from '../types/resignationPage.types';
 
-// API 数据转换为组件内部格式
-function mapApiToComponent(apiRecord: ApiResignationRecord): ResignationRecord {
+// Store 数据转换为组件内部格式（保留业务逻辑：中文状态标签映射）
+function mapApiToComponent(storeItem: ResignationData): ResignationRecord {
   return {
-    id: apiRecord.id,
-    resignationCode: apiRecord.resignationCode,
-    workerId: apiRecord.workerId,
-    workerName: apiRecord.workerName,
-    resignationType: apiRecord.resignationType as ResignationType,
-    reason: apiRecord.reason,
-    expectedLastDay: apiRecord.expectedLastDay,
-    handoverNote: apiRecord.handoverNote,
-    handoverUserId: apiRecord.handoverUserId,
-    handoverUserName: apiRecord.handoverUserName,
-    status: apiRecord.statusLabel as any,
-    createTime: apiRecord.createTime,
+    id: storeItem.id,
+    resignationCode: storeItem.resignationCode,
+    workerId: storeItem.workerId,
+    workerName: storeItem.workerName,
+    resignationType: storeItem.resignationType as ResignationType,
+    reason: storeItem.reason,
+    expectedLastDay: storeItem.expectedLastDay,
+    handoverNote: storeItem.handoverNote || '',
+    handoverUserId: storeItem.handoverUserId || '',
+    handoverUserName: storeItem.handoverUserName || '',
+    status: storeItem.statusLabel as any,
+    createTime: storeItem.createTime,
   };
 }
 
@@ -100,48 +95,43 @@ export function useResignationPage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // React Query
+  // Zustand Store
   // ============================================================
 
-  const queryFilters = useMemo(() => ({
-    workerName: filters.workerName || undefined,
-    resignationType: filters.resignationType || undefined,
-    status: filters.status || undefined,
-    startDate: filters.startDate || undefined,
-    endDate: filters.endDate || undefined,
-  }), [filters]);
+  const items = useResignationStore((s) => s.items);
+  const fetchItems = useResignationStore((s) => s.fetchItems);
+  const createItem = useResignationStore((s) => s.createItem);
+  const updateItem = useResignationStore((s) => s.updateItem);
 
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination.current, pagination.pageSize]);
+  // 组件挂载时加载数据
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
-  const { data: apiData, refetch } = useResignationRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
+  // 转换 Store 数据为组件格式
   const resignationRecords: ResignationRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
+    return items.map(mapApiToComponent);
+  }, [items]);
 
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
+  // 根据筛选条件过滤（纯前端计算）
+  const filteredResignationRecords = useMemo(() => {
+    return resignationRecords.filter((r) => {
+      if (filters.workerName && !r.workerName.includes(filters.workerName)) return false;
+      if (filters.resignationType && r.resignationType !== filters.resignationType) return false;
+      if (filters.status && r.status !== filters.status) return false;
+      if (filters.startDate && r.createTime < filters.startDate) return false;
+      if (filters.endDate && r.createTime > filters.endDate) return false;
+      return true;
+    });
+  }, [resignationRecords, filters]);
 
-  // Mutations
-  const createResignationMutation = useCreateResignation();
-  const updateResignationMutation = useUpdateResignation();
-  const deleteResignationMutation = useDeleteResignation();
+  // 更新分页总数（纯前端计算）
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, total: filteredResignationRecords.length }));
+  }, [filteredResignationRecords.length]);
 
-  // 过滤后的数据
-  const filteredData = useMemo(() => {
-    return resignationRecords;
-  }, [resignationRecords]);
+  // 过滤后的数据（兼容旧接口名）
+  const filteredData = filteredResignationRecords;
 
   // ============================================================
   // 事件处理
@@ -219,7 +209,7 @@ export function useResignationPage() {
     }
 
     try {
-      const createParams: CreateResignationParams = {
+      const result = await createItem({
         workerId: formData.workerId,
         workerName: formData.workerName,
         resignationType: formData.resignationType,
@@ -228,45 +218,39 @@ export function useResignationPage() {
         handoverUserId: formData.handoverUserId,
         handoverUserName: formData.handoverUserName,
         handoverNote: formData.handoverNote,
-      };
+      });
 
-      await createResignationMutation.mutateAsync(createParams);
-      setIsFormModalOpen(false);
-      refetch();
-      alert('提交成功！');
+      if (result) {
+        setIsFormModalOpen(false);
+        alert('提交成功！');
+      } else {
+        alert('提交失败，请重试');
+      }
     } catch (error) {
       console.error('提交离职申请失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, createResignationMutation, refetch]);
+  }, [formData, createItem]);
 
   /** 审批通过 */
   const handleApprove = useCallback(async (record: ResignationRecord) => {
     try {
-      await updateResignationMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'approved' },
-      });
-      refetch();
+      await updateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
       alert('审批失败，请重试');
     }
-  }, [updateResignationMutation, refetch]);
+  }, [updateItem]);
 
   /** 审批驳回 */
   const handleReject = useCallback(async (record: ResignationRecord) => {
     try {
-      await updateResignationMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'rejected' },
-      });
-      refetch();
+      await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
       alert('操作失败，请重试');
     }
-  }, [updateResignationMutation, refetch]);
+  }, [updateItem]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

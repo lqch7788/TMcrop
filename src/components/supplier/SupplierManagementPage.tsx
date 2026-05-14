@@ -63,6 +63,10 @@ export default function SupplierManagementPage() {
   // 当前选中的供应商
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
+  // 批量编辑状态（逐条编辑+累积保存模式，参照物料入库）
+  const [batchEditedSuppliers, setBatchEditedSuppliers] = useState<Record<number, Partial<Supplier>>>({});
+  const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
+
   // 编码生成器状态（内联展开，参照物料入库）
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   const [codeGen, setCodeGen] = useState({ bigCategory: '', midCategory: '', generatedCode: '' });
@@ -97,6 +101,8 @@ export default function SupplierManagementPage() {
     setBatchEditMode(true);
     setDeleteMode(false);
     setExportMode(false);
+    setBatchEditedSuppliers({});
+    setCurrentBatchEditIndex(0);
     setShowBatchEditModal(true);
   };
 
@@ -118,17 +124,53 @@ export default function SupplierManagementPage() {
     setSelectedRows([]);
   };
 
-  // 批量操作确认
-  const handleConfirmBatchEdit = () => {
+  // 批量编辑处理（逐条编辑+累积保存，参照物料入库模式）
+  const handleSupplierSelect = (index: number) => {
+    setCurrentBatchEditIndex(index);
+  };
+
+  const handleBatchFieldChange = (supplierId: number, field: string, value: string) => {
+    setBatchEditedSuppliers(prev => ({
+      ...prev,
+      [supplierId]: { ...(prev[supplierId] || {}), [field]: value },
+    }));
+  };
+
+  const handleBatchNext = () => {
+    if (currentBatchEditIndex < selectedRows.length - 1) {
+      setCurrentBatchEditIndex(prev => prev + 1);
+    }
+  };
+
+  const handleSaveAllBatch = async () => {
+    const entries = Object.entries(batchEditedSuppliers);
+    if (entries.length === 0) {
+      alert('没有需要保存的修改');
+      return;
+    }
+    let successCount = 0;
+    for (const [idStr, updates] of entries) {
+      const id = Number(idStr);
+      const result = await storeUpdateItem(id, updates);
+      if (result) successCount++;
+    }
+    await loadItems();
+    setBatchEditedSuppliers({});
+    setCurrentBatchEditIndex(0);
+    setSelectedRows([]);
     setBatchEditMode(false);
     setShowBatchEditModal(false);
-    setSelectedRows([]);
+    if (successCount < entries.length) {
+      alert(`批量编辑完成：成功 ${successCount}/${entries.length} 项`);
+    }
   };
 
   const handleCancelBatchEdit = () => {
     setBatchEditMode(false);
     setShowBatchEditModal(false);
     setSelectedRows([]);
+    setBatchEditedSuppliers({});
+    setCurrentBatchEditIndex(0);
   };
 
   const handleCancelDelete = () => {
@@ -180,39 +222,48 @@ export default function SupplierManagementPage() {
 
   // 保存操作
   const handleSaveEdit = async (updatedSupplier: Supplier) => {
-    await storeUpdateItem(updatedSupplier.id, updatedSupplier);
-    await loadItems();
-    setShowEditModal(false);
+    const result = await storeUpdateItem(updatedSupplier.id, updatedSupplier);
+    if (result) {
+      await loadItems();
+      setShowEditModal(false);
+    } else {
+      alert('编辑失败，请重试');
+    }
   };
 
   const handleSaveAdd = async (newSupplier: Supplier) => {
-    await storeAddItem(newSupplier);
-    await loadItems();
-    setShowAddModal(false);
-  };
-
-  const handleSaveBatchEdit = async (updates: Record<number, Partial<Supplier>>) => {
-    for (const [id, update] of Object.entries(updates)) {
-      await storeUpdateItem(Number(id), update);
+    const result = await storeAddItem(newSupplier);
+    if (result) {
+      await loadItems();
+      setShowAddModal(false);
+    } else {
+      alert('添加失败，请检查网络连接或联系管理员');
     }
-    await loadItems();
-    setSelectedRows([]);
-    setBatchEditMode(false);
   };
 
   const handleConfirmDelete = async () => {
     if (selectedSupplier) {
-      await storeDeleteItem(selectedSupplier.id);
-      await loadItems();
+      const result = await storeDeleteItem(selectedSupplier.id);
+      if (result) {
+        await loadItems();
+      } else {
+        alert('删除失败，请重试');
+      }
       setSelectedSupplier(null);
     }
     setShowDeleteWarning(false);
   };
 
   const handleConfirmBatchDelete = async () => {
-    await storeDeleteItems(selectedRows);
-    await loadItems();
-    setSelectedRows([]);
+    const result = await storeDeleteItems(selectedRows);
+    if (result) {
+      await loadItems();
+      setSelectedRows([]);
+    } else {
+      alert('批量删除部分失败，请检查网络连接');
+      await loadItems();
+      setSelectedRows([]);
+    }
     setShowBatchDeleteConfirm(false);
   };
 
@@ -514,10 +565,14 @@ export default function SupplierManagementPage() {
 
       <SupplierBatchEditModal
         isOpen={showBatchEditModal}
-        suppliers={suppliers}
-        selectedIds={selectedRows}
-        onClose={() => setShowBatchEditModal(false)}
-        onSave={handleSaveBatchEdit}
+        selectedSuppliers={suppliers.filter(s => selectedRows.includes(s.id))}
+        batchEditedSuppliers={batchEditedSuppliers}
+        currentBatchEditIndex={currentBatchEditIndex}
+        onClose={handleCancelBatchEdit}
+        onSupplierSelect={handleSupplierSelect}
+        onFieldChange={handleBatchFieldChange}
+        onNext={handleBatchNext}
+        onSaveAll={handleSaveAllBatch}
       />
 
       <SupplierExportModal

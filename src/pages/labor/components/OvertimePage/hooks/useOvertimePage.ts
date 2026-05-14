@@ -1,11 +1,10 @@
 /**
- * 加班申请页面 Hook
+ * 加班申请页面 Hook (V2.0 改造：Zustand Store 替代 React Query)
  * 封装状态管理和业务逻辑
- * 使用 React Query 和 API 服务
  */
-import { useState, useMemo, useCallback } from 'react';
-import { useOvertimeRecords, useCreateOvertime, useUpdateOvertime, useDeleteOvertime, useDeleteOvertimeBatch, useApproveOvertime } from '@/hooks/useOvertimeQueries';
-import type { OvertimeRecord as ApiOvertimeRecord, CreateOvertimeParams, UpdateOvertimeParams } from '@/services/apiOvertimeService';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useOvertimeStore } from '@/stores/overtimeStore';
+import type { OvertimeRecord as StoreOvertimeRecord } from '@/stores/overtimeStore';
 import type {
   OvertimeRecord,
   OvertimeFilters,
@@ -16,23 +15,53 @@ import type {
 } from '../types/overtimePage.types';
 import { OVERTIME_TYPE_MAP, DEFAULT_BASE_SALARY } from '../types/overtimePage.types';
 
+/** 加班类型中文 → 英文映射（Store 内部使用英文枚举） */
+const OVERTIME_TYPE_TO_STORE: Record<string, string> = {
+  '工作日加班': 'workday',
+  '休息日加班': 'weekend',
+  '节假日加班': 'holiday',
+};
+
+/** 状态中文 → 英文映射 */
+const STATUS_TO_STORE: Record<string, string> = {
+  '待审批': 'pending',
+  '已通过': 'approved',
+  '已拒绝': 'rejected',
+  '已取消': 'cancelled',
+};
+
+/** 英文状态 → 中文映射 */
+const STATUS_FROM_STORE: Record<string, string> = {
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已拒绝',
+  cancelled: '已取消',
+};
+
+/** 英文加班类型 → 中文映射 */
+const TYPE_FROM_STORE: Record<string, string> = {
+  workday: '工作日加班',
+  weekend: '休息日加班',
+  holiday: '节假日加班',
+};
+
 /**
- * API 数据转换为组件内部格式
+ * Store 数据转换为组件内部格式
  */
-function mapApiToComponent(apiRecord: ApiOvertimeRecord): OvertimeRecord {
+function mapStoreToComponent(storeRecord: StoreOvertimeRecord): OvertimeRecord {
   return {
-    id: apiRecord.id,
-    staffId: apiRecord.workerId,
-    staffName: apiRecord.workerName,
-    overtimeType: apiRecord.overtimeTypeLabel || apiRecord.overtimeType,
-    startTime: apiRecord.startTime,
-    endTime: apiRecord.endTime,
-    hours: apiRecord.hours,
-    reason: apiRecord.reason,
-    status: apiRecord.statusLabel as OvertimeRecord['status'],
-    approver: apiRecord.approver,
-    approveTime: apiRecord.approveTime,
-    remarks: apiRecord.remarks,
+    id: storeRecord.id,
+    staffId: storeRecord.workerId,
+    staffName: storeRecord.workerName,
+    overtimeType: TYPE_FROM_STORE[storeRecord.overtimeType] || storeRecord.overtimeTypeLabel || storeRecord.overtimeType,
+    startTime: storeRecord.startTime,
+    endTime: storeRecord.endTime,
+    hours: storeRecord.hours,
+    reason: storeRecord.reason,
+    status: (STATUS_FROM_STORE[storeRecord.status] || storeRecord.statusLabel || storeRecord.status) as OvertimeRecord['status'],
+    approver: undefined,
+    approveTime: storeRecord.approvedAt,
+    remarks: storeRecord.remarks,
   };
 }
 
@@ -50,7 +79,17 @@ const DEFAULT_FORM_DATA: OvertimeFormData = {
 
 export function useOvertimePage() {
   // ============================================================
-  // 状态定义
+  // Zustand Store
+  // ============================================================
+  const store = useOvertimeStore();
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    store.fetchItems();
+  }, []);
+
+  // ============================================================
+  // 本地 UI 状态
   // ============================================================
 
   const [filters, setFilters] = useState<OvertimeFilters>({
@@ -74,50 +113,45 @@ export function useOvertimePage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // 数据获取（使用 React Query）
+  // 数据获取（使用 Zustand Store）
   // ============================================================
 
-  // 构建查询参数
-  const queryFilters = useMemo(() => ({
-    workerName: filters.staffName || undefined,
-    overtimeType: filters.overtimeType ? OVERTIME_TYPE_MAP[filters.overtimeType] : undefined,
-    status: filters.status || undefined,
-    startDate: filters.startDate || undefined,
-    endDate: filters.endDate || undefined,
-  }), [filters]);
+  // Store 中的所有加班记录
+  const allRecords: StoreOvertimeRecord[] = store.overtimeRecords;
 
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination]);
-
-  // 使用 React Query 获取加班记录
-  const { data: apiData, refetch } = useOvertimeRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
+  // 转换 Store 数据为组件格式并应用筛选
   const overtimeRecords: OvertimeRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
+    let filtered = allRecords.map(mapStoreToComponent);
 
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
+    // 客户端筛选（Store 数据已全部加载）
+    if (filters.staffName) {
+      filtered = filtered.filter(r => r.staffName.includes(filters.staffName));
     }
-  }, [apiData?.pagination]);
+    if (filters.overtimeType) {
+      filtered = filtered.filter(r => r.overtimeType === filters.overtimeType);
+    }
+    if (filters.status) {
+      filtered = filtered.filter(r => r.status === filters.status);
+    }
+    if (filters.startDate) {
+      filtered = filtered.filter(r => r.startTime >= filters.startDate);
+    }
+    if (filters.endDate) {
+      filtered = filtered.filter(r => r.startTime <= filters.endDate);
+    }
 
-  // Mutations
-  const createOvertimeMutation = useCreateOvertime();
-  const updateOvertimeMutation = useUpdateOvertime();
-  const deleteOvertimeMutation = useDeleteOvertime();
-  const deleteOvertimeBatchMutation = useDeleteOvertimeBatch();
-  const approveOvertimeMutation = useApproveOvertime();
+    return filtered;
+  }, [allRecords, filters]);
+
+  // 更新分页总数
+  useMemo(() => {
+    if (overtimeRecords.length !== pagination.total) {
+      setPagination(prev => ({ ...prev, total: overtimeRecords.length }));
+    }
+  }, [overtimeRecords.length]);
 
   // ============================================================
-  // 过滤后的数据
+  // 过滤后的数据（已在上面完成筛选）
   // ============================================================
 
   const filteredData = useMemo(() => {
@@ -131,7 +165,7 @@ export function useOvertimePage() {
   const overtimeFeePreview = useMemo((): OvertimeFeePreview | null => {
     if (formData.hours <= 0) return null;
     const overtimeTypeEnum = OVERTIME_TYPE_MAP[formData.overtimeType];
-    const hourlyRate = DEFAULT_BASE_SALARY / 22 / 8; // 简化的时薪计算
+    const hourlyRate = DEFAULT_BASE_SALARY / 22 / 8;
     let rate = 1.5;
     if (overtimeTypeEnum === 'weekend') rate = 2.0;
     if (overtimeTypeEnum === 'holiday') rate = 3.0;
@@ -161,7 +195,15 @@ export function useOvertimePage() {
 
   const handleSearch = useCallback(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
-  }, []);
+    // 重新从 API 获取
+    store.fetchItems({
+      workerName: filters.staffName || undefined,
+      overtimeType: filters.overtimeType ? OVERTIME_TYPE_TO_STORE[filters.overtimeType] : undefined,
+      status: filters.status ? STATUS_TO_STORE[filters.status] : undefined,
+      startDate: filters.startDate || undefined,
+      endDate: filters.endDate || undefined,
+    } as Record<string, string>);
+  }, [filters, store]);
 
   const handleOpenFormModal = useCallback(() => {
     setSelectedRecord(null);
@@ -202,7 +244,7 @@ export function useOvertimePage() {
     });
   }, [calculateHours]);
 
-  /** 提交加班申请 */
+  /** 提交加班申请 — 使用 Store */
   const handleSubmit = useCallback(async () => {
     if (!formData.staffId || !formData.startTime || !formData.endTime || !formData.reason) {
       alert('请填写完整信息');
@@ -210,10 +252,10 @@ export function useOvertimePage() {
     }
 
     try {
-      const createParams: CreateOvertimeParams = {
+      await store.createItem({
         workerId: formData.staffId,
         workerName: formData.staffName,
-        overtimeType: OVERTIME_TYPE_MAP[formData.overtimeType],
+        overtimeType: OVERTIME_TYPE_TO_STORE[formData.overtimeType] as StoreOvertimeRecord['overtimeType'],
         workDate: formData.startTime.split('T')[0],
         startTime: formData.startTime,
         endTime: formData.endTime,
@@ -221,48 +263,36 @@ export function useOvertimePage() {
         baseSalary: DEFAULT_BASE_SALARY,
         reason: formData.reason,
         remarks: formData.remarks,
-      };
-
-      await createOvertimeMutation.mutateAsync(createParams);
+        status: 'pending',
+      });
 
       setIsFormModalOpen(false);
-      refetch();
       alert('提交成功！');
     } catch (error) {
       console.error('提交加班申请失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, createOvertimeMutation, refetch]);
+  }, [formData, store]);
 
-  /** 审批通过 */
+  /** 审批通过 — 使用 Store */
   const handleApprove = useCallback(async (record: OvertimeRecord) => {
     try {
-      await approveOvertimeMutation.mutateAsync({
-        id: record.id,
-        approved: true,
-        comment: '同意',
-      });
-      refetch();
+      await store.approveOvertime(record.id);
     } catch (error) {
       console.error('审批通过失败:', error);
       alert('操作失败，请重试');
     }
-  }, [approveOvertimeMutation, refetch]);
+  }, [store]);
 
-  /** 审批驳回 */
+  /** 审批驳回 — 使用 Store */
   const handleReject = useCallback(async (record: OvertimeRecord) => {
     try {
-      await approveOvertimeMutation.mutateAsync({
-        id: record.id,
-        approved: false,
-        comment: '不符合条件',
-      });
-      refetch();
+      await store.rejectOvertime(record.id, '不符合条件');
     } catch (error) {
       console.error('审批驳回失败:', error);
       alert('操作失败，请重试');
     }
-  }, [approveOvertimeMutation, refetch]);
+  }, [store]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {
@@ -284,31 +314,29 @@ export function useOvertimePage() {
     setBatchMode('none');
   }, [selectedRowKeys, overtimeRecords, handleReject]);
 
-  /** 删除单条记录 */
+  /** 删除单条记录 — 使用 Store */
   const handleDelete = useCallback(async (record: OvertimeRecord) => {
     try {
-      await deleteOvertimeMutation.mutateAsync(record.id);
-      refetch();
+      await store.deleteItem(record.id);
       alert('删除成功！');
     } catch (error) {
       console.error('删除失败:', error);
       alert('删除失败，请重试');
     }
-  }, [deleteOvertimeMutation, refetch]);
+  }, [store]);
 
-  /** 批量删除 */
+  /** 批量删除 — 使用 Store */
   const handleBatchDelete = useCallback(async () => {
     try {
-      await deleteOvertimeBatchMutation.mutateAsync(selectedRowKeys as string[]);
+      await store.deleteItems(selectedRowKeys as string[]);
       setSelectedRowKeys([]);
       setBatchMode('none');
-      refetch();
       alert('批量删除成功！');
     } catch (error) {
       console.error('批量删除失败:', error);
       alert('批量删除失败，请重试');
     }
-  }, [selectedRowKeys, deleteOvertimeBatchMutation, refetch]);
+  }, [selectedRowKeys, store]);
 
   /** 导出功能 */
   const handleExport = useCallback(() => {

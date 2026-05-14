@@ -1,67 +1,16 @@
 /**
- * 工资预算数据管理 Hook
- * 封装状态管理、数据处理和业务逻辑
- * 使用 React Query 和 API 服务
+ * 工资预算数据管理 Hook（V2.0 改造）
+ * 使用 Zustand Store 替代 React Query
+ * 保留所有业务逻辑，替换数据源为 useSalaryBudgetStore
  */
-import { useState, useMemo, useCallback } from 'react';
-import {
-  useSalaryBudgetRecords,
-  useCreateSalaryBudget,
-  useUpdateSalaryBudget,
-  useDeleteSalaryBudget,
-} from '@/hooks/useSalaryBudgetQueries';
-import type {
-  SalaryBudgetRecord as ApiSalaryBudgetRecord,
-  CreateSalaryBudgetParams,
-  UpdateSalaryBudgetParams,
-} from '@/services/apiSalaryBudgetService';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSalaryBudgetStore } from '@/stores';
+import type { SalaryBudgetData } from '@/stores';
 import type {
   SalaryBudgetFilters,
   SalaryBudgetFormData,
   BudgetSummary,
 } from '../types/salaryBudget.types';
-
-// API 字段到组件内部格式的映射
-interface SalaryBudgetRecord {
-  id: string;
-  budgetCode: string;
-  deptId: string;
-  deptName: string;
-  budgetMonth: string;
-  totalBaseSalary: number;
-  totalOvertimePay: number;
-  totalBonus: number;
-  grandTotal: number;
-  status: string;
-  statusLabel: string;
-  applicantId: string;
-  applicantName: string;
-  applyDate: string;
-  remark?: string;
-}
-
-/**
- * API 数据转换为组件内部格式
- */
-function mapApiToComponent(apiRecord: ApiSalaryBudgetRecord): SalaryBudgetRecord {
-  return {
-    id: apiRecord.id,
-    budgetCode: apiRecord.budgetCode,
-    deptId: apiRecord.deptId,
-    deptName: apiRecord.deptName,
-    budgetMonth: apiRecord.budgetMonth,
-    totalBaseSalary: apiRecord.totalBaseSalary,
-    totalOvertimePay: apiRecord.totalOvertimePay,
-    totalBonus: apiRecord.totalBonus,
-    grandTotal: apiRecord.grandTotal,
-    status: apiRecord.status,
-    statusLabel: apiRecord.statusLabel || apiRecord.status,
-    applicantId: apiRecord.applicantId,
-    applicantName: apiRecord.applicantName,
-    applyDate: apiRecord.applyDate,
-    remark: apiRecord.remark,
-  };
-}
 
 export interface UseSalaryBudgetReturn {
   // 状态
@@ -69,11 +18,11 @@ export interface UseSalaryBudgetReturn {
   setFilters: React.Dispatch<React.SetStateAction<SalaryBudgetFilters>>;
   pagination: { current: number; pageSize: number; total: number };
   setPagination: React.Dispatch<React.SetStateAction<{ current: number; pageSize: number; total: number }>>;
-  budgetRecords: SalaryBudgetRecord[];
+  budgetRecords: SalaryBudgetData[];
   formData: SalaryBudgetFormData;
   setFormData: React.Dispatch<React.SetStateAction<SalaryBudgetFormData>>;
-  selectedRecord: SalaryBudgetRecord | null;
-  setSelectedRecord: React.Dispatch<React.SetStateAction<SalaryBudgetRecord | null>>;
+  selectedRecord: SalaryBudgetData | null;
+  setSelectedRecord: React.Dispatch<React.SetStateAction<SalaryBudgetData | null>>;
   selectedRowKeys: React.Key[];
   setSelectedRowKeys: React.Dispatch<React.SetStateAction<React.Key[]>>;
   grandTotal: number;
@@ -87,7 +36,7 @@ export interface UseSalaryBudgetReturn {
   setIsSummaryModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
   // 过滤后的数据
-  filteredData: SalaryBudgetRecord[];
+  filteredData: SalaryBudgetData[];
   summaryData: BudgetSummary[];
 
   // 事件处理
@@ -95,12 +44,12 @@ export interface UseSalaryBudgetReturn {
   handleResetFilters: () => void;
   handleSearch: () => void;
   handleOpenFormModal: () => void;
-  handleOpenDetailModal: (record: SalaryBudgetRecord) => void;
+  handleOpenDetailModal: (record: SalaryBudgetData) => void;
   handleOpenSummaryModal: () => void;
   handleDeptChange: (deptId: string, deptName: string) => void;
   handleSubmit: () => Promise<void>;
-  handleApprove: (record: SalaryBudgetRecord) => Promise<void>;
-  handleReject: (record: SalaryBudgetRecord) => Promise<void>;
+  handleApprove: (record: SalaryBudgetData) => Promise<void>;
+  handleReject: (record: SalaryBudgetData) => Promise<void>;
   handleExport: () => void;
 }
 
@@ -121,33 +70,36 @@ export function getMonthOptions(): { value: string; label: string }[] {
   return options;
 }
 
-export function useSalaryBudget(departments: { id: string; name: string }[]): UseSalaryBudgetReturn {
-  // ============================================================
-  // 状态定义
-  // ============================================================
+export function useSalaryBudget(_departments: { id: string; name: string }[]): UseSalaryBudgetReturn {
+  // ========== 从 Store 获取数据和方法 ==========
+  const storeItems = useSalaryBudgetStore((s) => s.items);
+  const fetchItems = useSalaryBudgetStore((s) => s.fetchItems);
+  const createItem = useSalaryBudgetStore((s) => s.createItem);
+  const approveItemStore = useSalaryBudgetStore((s) => s.approveItem);
+  const rejectItemStore = useSalaryBudgetStore((s) => s.rejectItem);
 
-  /** 筛选条件 */
+  // ========== 组件挂载时加载数据 ==========
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  // ========== 状态定义 ==========
+
   const [filters, setFilters] = useState<SalaryBudgetFilters>({
     deptId: '',
     budgetMonth: '',
     status: '',
   });
 
-  /** 分页状态 */
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  /** 弹窗状态 */
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
-  /** 选中记录 */
-  const [selectedRecord, setSelectedRecord] = useState<SalaryBudgetRecord | null>(null);
-
-  /** 批量选择 */
+  const [selectedRecord, setSelectedRecord] = useState<SalaryBudgetData | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  /** 表单数据 */
   const [formData, setFormData] = useState<SalaryBudgetFormData>({
     deptId: '',
     deptName: '',
@@ -158,69 +110,30 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
     remark: '',
   });
 
-  /** 预算记录列表（从 API 获取） */
-  const [budgetRecords, setBudgetRecords] = useState<SalaryBudgetRecord[]>([]);
+  // ========== 数据处理 ==========
 
-  // ============================================================
-  // React Query 数据获取
-  // ============================================================
+  /** Store 数据直接使用（已 normalize 为 camelCase） */
+  const budgetRecords: SalaryBudgetData[] = storeItems;
 
-  /** 构建查询参数 */
-  const queryFilters = useMemo(() => ({
-    deptId: filters.deptId || undefined,
-    budgetMonth: filters.budgetMonth || undefined,
-    status: filters.status || undefined,
-  }), [filters]);
-
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination]);
-
-  /** 使用 React Query 获取工资预算记录 */
-  const { data: apiData, refetch } = useSalaryBudgetRecords(queryFilters, queryPagination);
-
-  /** 转换 API 数据为组件内部格式 */
-  const apiRecords: SalaryBudgetRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
-
-  /** 更新预算记录列表 */
-  useMemo(() => {
-    setBudgetRecords(apiRecords);
-  }, [apiRecords]);
-
-  /** 更新分页信息 */
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
-
-  // ============================================================
-  // Mutations
-  // ============================================================
-
-  const createMutation = useCreateSalaryBudget();
-  const updateMutation = useUpdateSalaryBudget();
-  const deleteMutation = useDeleteSalaryBudget();
-
-  // ============================================================
-  // 数据处理
-  // ============================================================
+  /** 更新分页总数 */
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, total: budgetRecords.length }));
+  }, [budgetRecords.length]);
 
   /** 计算总计 */
   const grandTotal = useMemo(() => {
     return formData.totalBaseSalary + formData.totalOvertimePay + formData.totalBonus;
   }, [formData.totalBaseSalary, formData.totalOvertimePay, formData.totalBonus]);
 
-  /** 过滤后的数据（API 已服务端过滤，此处直接返回） */
+  /** 过滤后的数据 */
   const filteredData = useMemo(() => {
-    return budgetRecords;
-  }, [budgetRecords]);
+    return budgetRecords.filter(record => {
+      if (filters.deptId && record.deptId !== filters.deptId) return false;
+      if (filters.budgetMonth && !record.budgetMonth.includes(filters.budgetMonth)) return false;
+      if (filters.status && record.status !== filters.status) return false;
+      return true;
+    });
+  }, [budgetRecords, filters]);
 
   /** 按月份汇总数据 */
   const summaryData = useMemo((): BudgetSummary[] => {
@@ -249,28 +162,22 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
     return Array.from(summaryMap.values()).sort((a, b) => b.month.localeCompare(a.month));
   }, [filteredData]);
 
-  // ============================================================
-  // 事件处理
-  // ============================================================
+  // ========== 事件处理 ==========
 
-  /** 筛选条件变化 */
   const handleFilterChange = useCallback((field: keyof SalaryBudgetFilters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 重置筛选 */
   const handleResetFilters = useCallback(() => {
     setFilters({ deptId: '', budgetMonth: '', status: '' });
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 搜索 */
   const handleSearch = useCallback(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  /** 打开新增弹窗 */
   const handleOpenFormModal = useCallback(() => {
     setSelectedRecord(null);
     const currentMonth = new Date();
@@ -287,18 +194,15 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
     setIsFormModalOpen(true);
   }, []);
 
-  /** 打开详情弹窗 */
-  const handleOpenDetailModal = useCallback((record: SalaryBudgetRecord) => {
+  const handleOpenDetailModal = useCallback((record: SalaryBudgetData) => {
     setSelectedRecord(record);
     setIsDetailModalOpen(true);
   }, []);
 
-  /** 打开汇总弹窗 */
   const handleOpenSummaryModal = useCallback(() => {
     setIsSummaryModalOpen(true);
   }, []);
 
-  /** 部门选择变化 */
   const handleDeptChange = useCallback((deptId: string, deptName: string) => {
     setFormData(prev => ({
       ...prev,
@@ -314,57 +218,35 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
       return;
     }
 
-    try {
-      const createParams: CreateSalaryBudgetParams = {
-        deptId: formData.deptId,
-        deptName: formData.deptName,
-        budgetMonth: formData.budgetMonth,
-        totalBaseSalary: formData.totalBaseSalary,
-        totalOvertimePay: formData.totalOvertimePay,
-        totalBonus: formData.totalBonus,
-        remark: formData.remark,
-        applicantId: 'U013', // 当前登录用户
-        applicantName: '陆启闯', // 当前登录用户
-      };
+    const result = await createItem({
+      deptId: formData.deptId,
+      deptName: formData.deptName,
+      budgetMonth: formData.budgetMonth,
+      totalBaseSalary: formData.totalBaseSalary,
+      totalOvertimePay: formData.totalOvertimePay,
+      totalBonus: formData.totalBonus,
+      remark: formData.remark,
+      applicantId: 'U013',
+      applicantName: '陆启闯',
+    });
 
-      await createMutation.mutateAsync(createParams);
-
+    if (result) {
       setIsFormModalOpen(false);
-      refetch();
       alert('提交成功！');
-    } catch (error) {
-      console.error('提交工资预算申请失败:', error);
+    } else {
       alert('提交失败，请重试');
     }
-  }, [formData, createMutation, refetch]);
+  }, [formData, createItem]);
 
   /** 审批通过 */
-  const handleApprove = useCallback(async (record: SalaryBudgetRecord) => {
-    try {
-      await updateMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'approved' },
-      });
-      refetch();
-    } catch (error) {
-      console.error('审批通过失败:', error);
-      alert('审批失败，请重试');
-    }
-  }, [updateMutation, refetch]);
+  const handleApprove = useCallback(async (record: SalaryBudgetData) => {
+    await approveItemStore(record.id);
+  }, [approveItemStore]);
 
   /** 审批驳回 */
-  const handleReject = useCallback(async (record: SalaryBudgetRecord) => {
-    try {
-      await updateMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'rejected' },
-      });
-      refetch();
-    } catch (error) {
-      console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
-    }
-  }, [updateMutation, refetch]);
+  const handleReject = useCallback(async (record: SalaryBudgetData) => {
+    await rejectItemStore(record.id);
+  }, [rejectItemStore]);
 
   /** 导出Excel功能 */
   const handleExport = useCallback(() => {
@@ -372,10 +254,7 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
       ? filteredData.filter(r => selectedRowKeys.includes(r.id))
       : filteredData;
 
-    // 表头
     const headers = ['预算编号', '部门', '预算月份', '基本工资总额', '加班费总额', '奖金总额', '总计', '状态', '申请人', '申请日期'];
-
-    // 数据行
     const exportData = dataToExport.map(row => ({
       '预算编号': row.budgetCode,
       '部门': row.deptName,
@@ -389,13 +268,11 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
       '申请日期': row.applyDate,
     }));
 
-    // 生成CSV内容
     let content = headers.join(',') + '\n';
     content += exportData.map(row =>
       headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
     ).join('\n');
 
-    // 创建Blob并下载
     const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -408,33 +285,18 @@ export function useSalaryBudget(departments: { id: string; name: string }[]): Us
   }, [selectedRowKeys, filteredData]);
 
   return {
-    // 状态
-    filters,
-    setFilters,
-    pagination,
-    setPagination,
+    filters, setFilters,
+    pagination, setPagination,
     budgetRecords,
-    formData,
-    setFormData,
-    selectedRecord,
-    setSelectedRecord,
-    selectedRowKeys,
-    setSelectedRowKeys,
+    formData, setFormData,
+    selectedRecord, setSelectedRecord,
+    selectedRowKeys, setSelectedRowKeys,
     grandTotal,
-
-    // 弹窗状态
-    isFormModalOpen,
-    setIsFormModalOpen,
-    isDetailModalOpen,
-    setIsDetailModalOpen,
-    isSummaryModalOpen,
-    setIsSummaryModalOpen,
-
-    // 数据
+    isFormModalOpen, setIsFormModalOpen,
+    isDetailModalOpen, setIsDetailModalOpen,
+    isSummaryModalOpen, setIsSummaryModalOpen,
     filteredData,
     summaryData,
-
-    // 事件处理
     handleFilterChange,
     handleResetFilters,
     handleSearch,

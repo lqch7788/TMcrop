@@ -52,6 +52,47 @@ export interface PersonnelFilters {
   status?: EmployeeStatus;
 }
 
+// ========== 字段映射（后端 snake_case → 前端 camelCase）==========
+
+const FIELD_MAP: Record<string, string> = {
+  employee_id: 'employeeId',
+  id_card: 'idCard',
+  birth_date: 'birthDate',
+  hire_date: 'hireDate',
+  contract_end_date: 'contractEndDate',
+  bank_account: 'bankAccount',
+  emergency_contact: 'emergencyContact',
+  emergency_phone: 'emergencyPhone',
+  photo_url: 'photoUrl',
+  create_time: 'createTime',
+  update_time: 'updateTime',
+};
+
+/** 后端 → 前端 字段映射（当API返回不同命名时使用） */
+function normalizePersonnel(db: Record<string, unknown>): PersonnelRecord {
+  const result: Record<string, unknown> = { ...db };
+  for (const [snake, camel] of Object.entries(FIELD_MAP)) {
+    if (snake in result && !(camel in result)) {
+      result[camel] = result[snake];
+    }
+  }
+  return result as unknown as PersonnelRecord;
+}
+
+/** 前端 → 后端 字段映射 */
+function denormalizePersonnel(record: Partial<PersonnelRecord>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const reverse: Record<string, string> = {};
+  for (const [snake, camel] of Object.entries(FIELD_MAP)) {
+    reverse[camel] = snake;
+  }
+  for (const [key, value] of Object.entries(record)) {
+    const backendKey = reverse[key] || key;
+    result[backendKey] = value;
+  }
+  return result;
+}
+
 // ========== Store 类型 ==========
 
 interface PersonnelState {
@@ -242,7 +283,6 @@ export const usePersonnelStore = create<PersonnelState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         personnelRecords: state.personnelRecords,
-        filters: state.filters,
       }),
     }
   )

@@ -21,14 +21,18 @@ interface SupplierState {
   deleteItems: (ids: number[]) => Promise<boolean>;
 }
 
-/** 前端camelCase → 后端snake_case映射 */
-function toBackendFields(item: any) {
+/**
+ * 前端camelCase → 后端请求体snake_case映射
+ * 数据库列名为snake_case（supplier_code, supplier_name等）
+ * 写入时直接匹配DB列名，供API路由的INSERT/UPDATE使用
+ */
+function toBackendFields(item: any): Record<string, any> {
   return {
     supplier_code: item.code,
     supplier_name: item.name,
     contact_person: item.contact,
-    contact_phone: item.mobilePhone,
     mobile_phone: item.mobilePhone,
+    contact_phone: item.mobilePhone,    // 后端也接受contact_phone
     work_phone: item.workPhone,
     fax: item.fax,
     address: item.address,
@@ -38,8 +42,8 @@ function toBackendFields(item: any) {
     country: item.country,
     province: item.province,
     city: item.city,
-    bank_name: item.bankName,
-    bank_card_number: item.bankCardNumber,
+    bank_name: item.bankName || '',
+    bank_card_number: item.bankCardNumber || '',
     organization: item.organization,
     create_date: item.createDate,
     remarks: item.remarks,
@@ -47,27 +51,31 @@ function toBackendFields(item: any) {
   };
 }
 
-/** 后端snake_case → 前端camelCase映射 */
+/**
+ * 后端API响应 → 前端camelCase映射
+ * queryToObjects已将DB的snake_case转为camelCase（supplier_code→supplierCode）
+ * 优先匹配camelCase（实际API返回格式），snake_case作为兜底
+ */
 function fromBackendFields(record: any): Supplier {
   return {
     id: record.id,
-    code: record.supplier_code || record.code || '',
-    name: record.supplier_name || record.name || '',
-    supplierType: record.supplier_type || record.supplierType || '',
-    supplierAttribute: record.supplier_attribute || record.supplierAttribute || '',
-    contact: record.contact_person || record.contact || '',
-    mobilePhone: record.mobile_phone || record.contact_phone || record.mobilePhone || '',
-    workPhone: record.work_phone || record.workPhone || '',
+    code: record.supplierCode || record.supplier_code || record.code || '',
+    name: record.supplierName || record.supplier_name || record.name || '',
+    supplierType: record.supplierType || record.supplier_type || record.supplierType || '',
+    supplierAttribute: record.supplierAttribute || record.supplier_attribute || record.supplierAttribute || '',
+    contact: record.contactPerson || record.contact_person || record.contact || '',
+    mobilePhone: record.mobilePhone || record.mobile_phone || record.contactPhone || record.contact_phone || record.mobilePhone || '',
+    workPhone: record.workPhone || record.work_phone || record.workPhone || '',
     fax: record.fax || '',
     status: record.status === 'active' ? '合作中' : record.status === 'inactive' ? '暂停' : record.status || '',
     country: record.country || '',
     province: record.province || '',
     city: record.city || '',
     address: record.address || '',
-    bankName: record.bank_name || record.bankName || '',
-    bankCardNumber: record.bank_card_number || record.bankCardNumber || '',
+    bankName: record.bankName || record.bank_name || record.bankName || '',
+    bankCardNumber: record.bankCardNumber || record.bank_card_number || record.bankCardNumber || '',
     organization: record.organization || '',
-    createDate: record.create_date || record.createDate || '',
+    createDate: record.createDate || record.create_date || record.createDate || '',
     remarks: record.remarks || '',
   };
 }
@@ -103,7 +111,7 @@ export const useSupplierStore = create<SupplierState>()(
           });
           const newItem: Supplier = {
             ...item,
-            id: result?.data?.id || result?.id || Date.now(),
+            id: result?.id || Date.now(),
           };
           set((s) => ({ items: [newItem, ...s.items] }));
           return newItem;
@@ -154,6 +162,6 @@ export const useSupplierStore = create<SupplierState>()(
         }
       },
     }),
-    { name: 'supplier-storage', partialize: (s) => ({ items: s.items }) }
+    { name: 'supplier-storage', version: 1, partialize: (s) => ({ items: s.items }) }
   )
 );

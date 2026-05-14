@@ -1,12 +1,13 @@
 /**
  * 绩效考核数据 Hook
  * 统一管理考核相关的数据和操作逻辑
+ * V2.0: 数据源迁移到 usePerformanceStore (Zustand)
  */
-import { useState, useCallback, useMemo } from 'react';
-import {
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { usePerformanceStore } from '@/stores';
+import type {
   PerformanceRecord,
   PerformanceFilters,
-  MOCK_PERFORMANCE_DATA,
 } from '../types';
 
 export interface UsePerformanceReturn {
@@ -31,12 +32,21 @@ export interface UsePerformanceReturn {
 }
 
 export function usePerformance(): UsePerformanceReturn {
-  // 筛选条件状态
-  const [filters, setFiltersState] = useState<PerformanceFilters>({
-    month: '',
-    department: '',
-    keyword: '',
-  });
+  // ========== Zustand Store ==========
+  const items = usePerformanceStore((state) => state.items);
+  const storeFilters = usePerformanceStore((state) => state.filters);
+  const storeSetFilters = usePerformanceStore((state) => state.setFilters);
+  const storeResetFilters = usePerformanceStore((state) => state.resetFilters);
+  const fetchItems = usePerformanceStore((state) => state.fetchItems);
+
+  // 初始化种子数据
+  useEffect(() => {
+    if (items.length === 0) {
+      fetchItems();
+    }
+  }, [items.length, fetchItems]);
+
+  // ========== 本地状态 ==========
 
   // 分页状态
   const [pagination, setPaginationState] = useState({
@@ -48,22 +58,23 @@ export function usePerformance(): UsePerformanceReturn {
   const [selectedRecord, setSelectedRecord] = useState<PerformanceRecord | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // 筛选数据
+  // ========== 筛选数据（纯计算，不依赖localStorage）==========
+
   const filteredData = useMemo(() => {
-    return MOCK_PERFORMANCE_DATA.filter((item) => {
+    return items.filter((item) => {
       // 月份筛选
-      if (filters.month && item.month !== filters.month) return false;
+      if (storeFilters.month && item.month !== storeFilters.month) return false;
       // 部门筛选
-      if (filters.department && item.department !== filters.department) return false;
+      if (storeFilters.department && item.department !== storeFilters.department) return false;
       // 关键词筛选
-      if (filters.keyword && !item.staffName.includes(filters.keyword) && !item.staffId.includes(filters.keyword)) return false;
+      if (storeFilters.keyword && !item.staffName.includes(storeFilters.keyword) && !item.staffId.includes(storeFilters.keyword)) return false;
       return true;
     }).sort((a, b) => {
       // 按月份和总分排序
       if (a.month !== b.month) return b.month.localeCompare(a.month);
       return b.totalScore - a.totalScore;
     });
-  }, [filters]);
+  }, [items, storeFilters]);
 
   // 分页数据
   const paginatedData = useMemo(() => {
@@ -79,9 +90,9 @@ export function usePerformance(): UsePerformanceReturn {
 
   // 更新筛选条件
   const setFilters = useCallback((newFilters: Partial<PerformanceFilters>) => {
-    setFiltersState((prev) => ({ ...prev, ...newFilters }));
+    storeSetFilters(newFilters);
     setPaginationState((prev) => ({ ...prev, currentPage: 1 })); // 重置页码
-  }, []);
+  }, [storeSetFilters]);
 
   // 更新分页
   const setPagination = useCallback((newPagination: Partial<{ currentPage: number; pageSize: number }>) => {
@@ -105,13 +116,13 @@ export function usePerformance(): UsePerformanceReturn {
 
   // 重置筛选
   const handleResetFilters = useCallback(() => {
-    setFiltersState({ month: '', department: '', keyword: '' });
+    storeResetFilters();
     setPaginationState((prev) => ({ ...prev, currentPage: 1 }));
-  }, []);
+  }, [storeResetFilters]);
 
   return {
     // 数据
-    filters,
+    filters: storeFilters,
     pagination,
     selectedRecord,
     showDetailModal,

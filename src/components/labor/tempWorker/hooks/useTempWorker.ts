@@ -1,15 +1,15 @@
 /**
  * 临时工数据管理 Hook
- * 统一管理临时工相关的数据和操作逻辑
+ * 数据源：useTempWorkerStore (Zustand store, mock种子数据 + localStorage持久化)
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   TempWorker,
   TempWorkerFilters,
   PaginationInfo,
   UseTempWorkerReturn,
 } from '../types';
-import { mockTempWorkers } from '../mockData';
+import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 
 /**
  * 生成新的员工工号
@@ -23,8 +23,29 @@ function generateEmployeeCode(): string {
 }
 
 export function useTempWorker(): UseTempWorkerReturn {
-  // 数据列表
-  const [data, setData] = useState<TempWorker[]>(mockTempWorkers);
+  const {
+    workers: storeWorkers,
+    isLoading,
+    fetchWorkers,
+    addWorker: storeAdd,
+    updateWorker: storeUpdate,
+    deleteWorker: storeDelete,
+  } = useTempWorkerStore();
+
+  // 数据（从 Store 获取）
+  const [data, setData] = useState<TempWorker[]>(storeWorkers);
+
+  // 初次加载时初始化种子数据
+  useEffect(() => {
+    if (storeWorkers.length === 0) {
+      fetchWorkers();
+    }
+  }, []);
+
+  // 同步 Store 数据到本地 state（保证 UI 响应）
+  useEffect(() => {
+    setData(storeWorkers);
+  }, [storeWorkers]);
 
   // 筛选条件状态
   const [filters, setFilters] = useState<TempWorkerFilters>({
@@ -37,7 +58,7 @@ export function useTempWorker(): UseTempWorkerReturn {
   const [pagination, setPaginationState] = useState<PaginationInfo>({
     currentPage: 1,
     pageSize: 10,
-    total: mockTempWorkers.length,
+    total: storeWorkers.length,
   });
 
   // 选中记录（用于详情/编辑）
@@ -52,22 +73,13 @@ export function useTempWorker(): UseTempWorkerReturn {
   // 筛选数据
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      // 按工人类型筛选
-      if (filters.workerType && item.workerType !== filters.workerType) {
-        return false;
-      }
-      // 按状态筛选
-      if (filters.status && item.status !== filters.status) {
-        return false;
-      }
-      // 按关键词搜索（姓名、工号）
+      if (filters.workerType && item.workerType !== filters.workerType) return false;
+      if (filters.status && item.status !== filters.status) return false;
       if (filters.keyword) {
         const keyword = filters.keyword.toLowerCase();
         const matchName = item.name.toLowerCase().includes(keyword);
         const matchCode = item.employeeCode.toLowerCase().includes(keyword);
-        if (!matchName && !matchCode) {
-          return false;
-        }
+        if (!matchName && !matchCode) return false;
       }
       return true;
     });
@@ -76,7 +88,7 @@ export function useTempWorker(): UseTempWorkerReturn {
   // 更新筛选条件
   const setFiltersHandler = useCallback((newFilters: TempWorkerFilters) => {
     setFilters(newFilters);
-    setPaginationState((prev) => ({ ...prev, currentPage: 1 })); // 重置页码
+    setPaginationState((prev) => ({ ...prev, currentPage: 1 }));
   }, []);
 
   // 更新分页
@@ -91,35 +103,28 @@ export function useTempWorker(): UseTempWorkerReturn {
   // 保存（新建/编辑）
   const handleSave = useCallback((formData: Partial<TempWorker>) => {
     if (formData.id) {
-      // 编辑模式
-      setData((prev) =>
-        prev.map((item) =>
-          item.id === formData.id ? { ...item, ...formData } : item
-        )
-      );
+      storeUpdate(formData.id, formData);
     } else {
-      // 新建模式
-      const newRecord: TempWorker = {
-        ...formData as TempWorker,
-        id: String(Date.now()),
-        employeeCode: generateEmployeeCode(),
+      storeAdd({
+        ...formData,
+        employeeCode: formData.employeeCode || generateEmployeeCode(),
         joinDate: new Date().toISOString().slice(0, 10),
-      };
-      setData((prev) => [newRecord, ...prev]);
+      });
     }
     setIsFormOpen(false);
     setSelectedRecord(null);
-  }, []);
+  }, [storeAdd, storeUpdate]);
 
   // 删除
   const handleDelete = useCallback((record: TempWorker) => {
-    setData((prev) => prev.filter((item) => item.id !== record.id));
-  }, []);
+    storeDelete(record.id);
+  }, [storeDelete]);
 
   return {
     data: filteredData,
     filters,
-    pagination,
+    pagination: { ...pagination, total: filteredData.length },
+    isLoading,
     setFilters: setFiltersHandler,
     setPage,
     setPageSize,

@@ -1,19 +1,13 @@
 /**
  * 入职办理页面 Hook
  * 封装状态管理、API调用和数据处理逻辑
- * 使用 React Query 和 API 服务，移除 useApprovalContext 依赖
+ * V2.0: 数据源迁移到 useOnboardingStore (Zustand)，移除 React Query
+ * 与 components版共用同一个 useOnboardingStore
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useWorkerStore } from '../../../stores/useWorkerStore';
-import {
-  useOnboardingRecords,
-  useCreateOnboarding,
-  useUpdateOnboarding,
-  useDeleteOnboarding,
-  useDeleteOnboardingBatch,
-  useUpdateOnboardingStatus,
-} from '@/hooks/useOnboardingQueries';
-import type { OnboardingRecord as ApiOnboardingRecord } from '@/services/apiOnboardingService';
+import { useWorkerStore } from '@/stores';
+import { useOnboardingStore } from '@/stores/useOnboardingStore';
+import type { OnboardingData } from '@/stores/useOnboardingStore';
 import type {
   OnboardingRecord,
   OnboardingFilters,
@@ -21,7 +15,27 @@ import type {
   BatchMode,
   PaginationState,
 } from '../types/onboardingPage.types';
-import type { CreateOnboardingParams, UpdateStatusParams } from '@/services/apiOnboardingService';
+
+/** Store 数据 → 组件数据映射 */
+function mapStoreToComponent(item: OnboardingData): OnboardingRecord {
+  return {
+    id: item.id,
+    employeeId: item.oid || item.id,
+    employeeName: item.name,
+    department: item.department,
+    position: item.position,
+    expectedStartDate: item.joinDate,
+    actualStartDate: undefined,
+    status: item.status as OnboardingRecord['status'],
+    education: '',
+    major: '',
+    contactPhone: item.phone,
+    emergencyContact: '',
+    idCard: item.idCard,
+    bankCard: '',
+    remarks: item.remarks,
+  };
+}
 
 // 默认筛选条件
 const DEFAULT_FILTERS: OnboardingFilters = {
@@ -47,40 +61,32 @@ const DEFAULT_FORM_DATA: OnboardingFormData = {
 };
 
 /**
- * API 数据转换为组件内部格式
- */
-function mapApiToComponent(apiRecord: ApiOnboardingRecord): OnboardingRecord {
-  return {
-    id: apiRecord.id,
-    employeeId: apiRecord.oid || apiRecord.id,
-    employeeName: apiRecord.name,
-    department: apiRecord.department,
-    position: apiRecord.position,
-    expectedStartDate: apiRecord.joinDate,
-    actualStartDate: undefined,
-    status: apiRecord.status as OnboardingRecord['status'],
-    education: '',
-    major: '',
-    contactPhone: apiRecord.phone,
-    emergencyContact: '',
-    idCard: apiRecord.idCard,
-    bankCard: '',
-    remarks: apiRecord.remarks,
-  };
-}
-
-/**
  * 入职办理页面 Hook
  */
 export function useOnboardingPage() {
+  // ========== 依赖 Store ==========
   const workers = useWorkerStore((state) => state.workers);
   const loadWorkers = useWorkerStore((state) => state.loadWorkers);
 
+  const storeItems = useOnboardingStore((state) => state.items);
+  const storeFetchItems = useOnboardingStore((state) => state.fetchItems);
+  const storeCreateItem = useOnboardingStore((state) => state.createItem);
+  const storeUpdateItem = useOnboardingStore((state) => state.updateItem);
+  const storeDeleteItem = useOnboardingStore((state) => state.deleteItem);
+  const storeDeleteItems = useOnboardingStore((state) => state.deleteItems);
+  const storeUpdateStatus = useOnboardingStore((state) => state.updateStatus);
+
+  // 初始化 workers
   useEffect(() => {
     if (workers.length === 0) {
       loadWorkers();
     }
   }, [workers.length, loadWorkers]);
+
+  // 初始化入职数据
+  useEffect(() => {
+    storeFetchItems();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ============================================================
   // 状态定义
@@ -109,53 +115,13 @@ export function useOnboardingPage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // 构建查询参数
+  // 数据转换
   // ============================================================
 
-  const queryFilters = useMemo(() => ({
-    keyword: filters.employeeName || undefined,
-    status: filters.status || undefined,
-  }), [filters]);
-
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination]);
-
-  // ============================================================
-  // 使用 React Query 获取数据
-  // ============================================================
-
-  const { data: apiData, refetch } = useOnboardingRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
+  /** Store 数据转换为组件格式 */
   const records: OnboardingRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
-
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
-
-  // ============================================================
-  // Mutations
-  // ============================================================
-
-  const createOnboardingMutation = useCreateOnboarding();
-  const updateOnboardingMutation = useUpdateOnboarding();
-  const deleteOnboardingMutation = useDeleteOnboarding();
-  const deleteOnboardingBatchMutation = useDeleteOnboardingBatch();
-  const updateStatusMutation = useUpdateOnboardingStatus();
-
-  // ============================================================
-  // 数据处理
-  // ============================================================
+    return storeItems.map(mapStoreToComponent);
+  }, [storeItems]);
 
   /** 过滤后的数据 */
   const filteredData = useMemo(() => {
@@ -172,7 +138,7 @@ export function useOnboardingPage() {
   const departmentOptions = useMemo(() => {
     const depts = [...new Set(workers.map(w => w.department))];
     return [{ value: '', label: '全部' }, ...depts.map(d => ({ value: d, label: d }))];
-  }, []);
+  }, [workers]);
 
   // ============================================================
   // 事件处理
@@ -228,7 +194,7 @@ export function useOnboardingPage() {
     }
 
     try {
-      const createParams: CreateOnboardingParams = {
+      await storeCreateItem({
         name: formData.employeeName,
         idCard: formData.idCard,
         phone: formData.contactPhone,
@@ -236,63 +202,51 @@ export function useOnboardingPage() {
         department: formData.department,
         joinDate: formData.expectedStartDate,
         remarks: formData.remarks,
-      };
-
-      await createOnboardingMutation.mutateAsync(createParams);
+      });
       setIsFormModalOpen(false);
-      refetch();
       alert('提交成功！');
     } catch (error) {
       console.error('提交入职申请失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, createOnboardingMutation, refetch]);
+  }, [formData, storeCreateItem]);
 
   /** 审批通过 */
   const handleApprove = useCallback(async (record: OnboardingRecord) => {
     try {
-      const params: UpdateStatusParams = {
-        status: '已入职',
-      };
-      await updateStatusMutation.mutateAsync({ id: record.id, params });
-      refetch();
+      await storeUpdateStatus(record.id, 'onboarded');
     } catch (error) {
       console.error('审批通过失败:', error);
       alert('操作失败，请重试');
     }
-  }, [updateStatusMutation, refetch]);
+  }, [storeUpdateStatus]);
 
   /** 审批驳回 */
   const handleReject = useCallback(async (record: OnboardingRecord) => {
     try {
-      // 更新状态为已取消
-      await updateOnboardingMutation.mutateAsync({
-        id: record.id,
-        updates: { status: '已取消' },
-      });
-      refetch();
+      await storeUpdateItem(record.id, { status: '已取消' });
     } catch (error) {
       console.error('审批驳回失败:', error);
       alert('操作失败，请重试');
     }
-  }, [updateOnboardingMutation, refetch]);
+  }, [storeUpdateItem]);
 
   /** 批量审批通过 */
-  const handleBatchApprove = useCallback(() => {
-    selectedRowKeys.forEach(key => {
+  const handleBatchApprove = useCallback(async () => {
+    for (const key of selectedRowKeys) {
       const record = records.find(r => r.id === key);
-      if (record) handleApprove(record);
-    });
+      if (record) await handleApprove(record);
+    }
     setSelectedRowKeys([]);
     setBatchMode('none');
   }, [selectedRowKeys, records, handleApprove]);
 
   /** 批量审批驳回 */
-  const handleBatchReject = useCallback(() => {
-    selectedRowKeys.forEach(key => {
+  const handleBatchReject = useCallback(async () => {
+    for (const key of selectedRowKeys) {
       const record = records.find(r => r.id === key);
-      if (record) handleReject(record);
-    });
+      if (record) await handleReject(record);
+    }
     setSelectedRowKeys([]);
     setBatchMode('none');
   }, [selectedRowKeys, records, handleReject]);

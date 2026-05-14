@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { PieceRate, PieceworkFormData } from './types';
-import { mockTempWorkers } from '../tempWorker/mockData';
+import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
+import { taskOptions } from './hooks/usePiecework';
 import { Button } from '@/components/ui/button';
+
+// 单位选项（共享常量）
+const unitOptions = ['斤', '箱', '个', 'kg', '筐'];
 
 interface PieceworkFormModalProps {
   record: PieceRate | null;
@@ -27,18 +31,6 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
     workDate: new Date().toISOString().split('T')[0],
     remarks: '',
   });
-
-  // 任务选项（简化）
-  const taskOptions = [
-    { id: 'T001', name: '番茄采收' },
-    { id: 'T002', name: '黄瓜分装' },
-    { id: 'T003', name: '辣椒采收' },
-    { id: 'T004', name: '茄子打包' },
-    { id: 'T005', name: '番茄包装' },
-  ];
-
-  // 单位选项
-  const unitOptions = ['斤', '箱', '个', 'kg', '筐'];
 
   useEffect(() => {
     if (record) {
@@ -68,7 +60,8 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
   const total = formData.quantity * formData.unitPrice;
 
   const handleSubmit = () => {
-    const worker = mockTempWorkers.find((w) => w.id === formData.workerId);
+    const workers = useTempWorkerStore.getState().workers;
+    const worker = workers.find((w) => w.id === formData.workerId);
     const task = taskOptions.find((t) => t.id === formData.taskId);
 
     if (!worker || !task) {
@@ -103,7 +96,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           <option value="">请选择员工</option>
-          {mockTempWorkers
+          {useTempWorkerStore.getState().workers
             .filter((w) => w.status === '在职')
             .map((worker) => (
               <option key={worker.id} value={worker.id}>
