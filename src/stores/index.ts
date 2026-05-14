@@ -125,3 +125,12 @@ export type { User } from '../services/authorityService';
 
 export { useWorkerStore } from './useWorkerStore';
 export type { Worker } from '../services/apiWorkerService';
+
+export { useTempTaskStore } from './useTempTaskStore';
+export type { TempTaskData } from './useTempTaskStore';
+
+export { useInspectionDataStore } from './useInspectionDataStore';
+export type { InspectionData } from './useInspectionDataStore';
+
+export { useProblemStore } from './useProblemStore';
+export type { ProblemData } from './useProblemStore';

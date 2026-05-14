@@ -5,12 +5,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTasks, Task, TASK_STATUS_CONFIG } from './useTasks';
-import { usePersistentProblems, ProblemEntry } from './usePersistentProblems';
+import { usePersistentProblems } from './usePersistentProblems';
+import type { ProblemEntry } from './usePersistentProblems';
 import { usePersistentWorkLogs, WorkLogRecord } from './usePersistentWorkLogs';
 import { STORAGE_KEYS } from './useLocalStorage';
 import { InspectionRecord } from '../types';
-
-// 巡查搜索过滤器类型
+import { useInspectionDataStore, useProblemStore } from '../stores';
 export interface InspectionSearchFilters {
   recordCode: string;
   inspectorName: string;
@@ -35,9 +35,6 @@ const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
 // 导入初始任务数据（用于空状态时显示）
 import { taskDispatchTasks } from '../data/farmMockData';
 import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, inspectionRecords as mockInspectionRecords } from '../data/mockData';
-// 导入巡查和问题API服务
-import { getAllInspections } from '../services/apiInspectionService';
-import { getAllProblems } from '../services/apiProblemService';
 
 // ============================================
 // 类型定义
@@ -351,70 +348,32 @@ export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn
   const loadData = useCallback(() => {
     setIsLoading(true);
 
-    // 尝试从API加载数据，失败时回退到localStorage
-    const loadFromAPIs = async () => {
-      try {
-        // 并行请求API数据
-        const [apiProblems, apiInspections] = await Promise.allSettled([
-          getAllProblems(),
-          getAllInspections()
-        ]);
-
-        // 处理问题数据：只新增不覆盖，避免丢失 mock 完整数据
-        if (apiProblems.status === 'fulfilled' && apiProblems.value && Array.isArray(apiProblems.value)) {
-          setProblems(prev => {
-            const existingIds = new Set(prev.map(p => String(p.id)));
-            const newRecords = (apiProblems.value as ProblemEntry[]).filter(p => !existingIds.has(String(p.id)));
-            console.log('[useFarmHub] 从API获取到问题数据:', (apiProblems.value as any[]).length, '条，新增:', newRecords.length);
-            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
-          });
-        }
-
-        // 处理巡查数据：只新增不覆盖 + 字段标准化，避免丢失 mock 完整数据
-        if (apiInspections.status === 'fulfilled' && apiInspections.value && Array.isArray(apiInspections.value)) {
-          setInspections(prev => {
-            const existingIds = new Set(prev.map(r => r.id));
-            const newRecords = (apiInspections.value as InspectionRecord[])
-              .map(normalizeInspectionRecord)  // 补全缺失字段
-              .filter(r => !existingIds.has(r.id));
-            console.log('[useFarmHub] 从API获取到巡查数据:', (apiInspections.value as any[]).length, '条，新增:', newRecords.length);
-            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
-          });
-        }
-      } catch (error) {
-        console.warn('[useFarmHub] API调用失败，使用本地数据:', error);
-      }
-    };
-
-    // 加载本地数据作为备份
+    // 从 Zustand Store 加载数据（Store 内部处理 API → IndexedDB → localStorage 降级）
     const loadFromLocal = () => {
       try {
-        // 读取问题数据
-        const storedProblems = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
-        if (storedProblems) {
-          const parsed = JSON.parse(storedProblems);
-          setProblems(Array.isArray(parsed) ? parsed : []);
+        // 问题数据：从 useProblemStore 获取
+        const storeProblems = useProblemStore.getState().problems;
+        if (storeProblems.length > 0) {
+          setProblems(prev => {
+            const existingIds = new Set(prev.map(p => String(p.id)));
+            const newRecords = storeProblems.filter(p => !existingIds.has(String(p.id)));
+            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
+          });
         }
 
-        // 读取巡查数据：只新增不覆盖 + 字段标准化
-        const storedInspections = localStorage.getItem(STORAGE_KEYS.INSPECTION_RECORDS);
-        if (storedInspections) {
-          try {
-            const parsed = JSON.parse(storedInspections);
-            const localRecords = Array.isArray(parsed) ? parsed : [];
-            if (localRecords.length > 0) {
-              setInspections(prev => {
-                const existingIds = new Set(prev.map(r => r.id));
-                const newRecords = localRecords
-                  .map((r: InspectionRecord) => normalizeInspectionRecord(r))
-                  .filter((r: InspectionRecord) => !existingIds.has(r.id));
-                return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
-              });
-            }
-          } catch { /* JSON解析失败，忽略 */ }
+        // 巡查数据：从 useInspectionDataStore 获取
+        const storeInspections = useInspectionDataStore.getState().records;
+        if (storeInspections.length > 0) {
+          setInspections(prev => {
+            const existingIds = new Set(prev.map(r => r.id));
+            const newRecords = storeInspections
+              .map((r: Record<string, unknown>) => normalizeInspectionRecord(r as InspectionRecord))
+              .filter((r: InspectionRecord) => !existingIds.has(r.id));
+            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
+          });
         }
 
-        // 读取操作记录
+        // 操作记录从 localStorage 读取（日志类数据，非核心业务）
         const storedRecords = localStorage.getItem(STORAGE_KEYS.OPERATION_RECORDS);
         if (storedRecords) {
           const parsed = JSON.parse(storedRecords);
@@ -425,12 +384,14 @@ export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn
       } finally {
         setIsLoading(false);
       }
-      // 刷新任务计数，触发任务列表重新渲染
       setRefreshKey(k => k + 1);
     };
 
-    // 先尝试API加载，然后回退到本地
-    loadFromAPIs().finally(() => {
+    // 触发Store加载API数据，完成后合并本地
+    Promise.allSettled([
+      useProblemStore.getState().fetchProblems(),
+      useInspectionDataStore.getState().fetchRecords(),
+    ]).finally(() => {
       loadFromLocal();
     });
   }, []);

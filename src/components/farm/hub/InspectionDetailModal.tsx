@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { InspectionRecord } from '../../../types';
-import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { useInspectionDataStore } from '../../../stores';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -41,15 +41,11 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
 
   useEffect(() => {
     try {
-      const storedInspections = localStorage.getItem(STORAGE_KEYS.INSPECTION_RECORDS);
-      if (storedInspections) {
-        const parsed = JSON.parse(storedInspections);
-        const inspectionsList = Array.isArray(parsed) ? parsed : [];
-        const foundInspection = inspectionsList.find((i: InspectionRecord) => i.id === recordId);
-        if (foundInspection) {
-          setInspection(foundInspection);
-          setIssues(foundInspection.issues || []);
-        }
+      const inspectionsList = useInspectionDataStore.getState().records as unknown as InspectionRecord[];
+      const foundInspection = inspectionsList.find((i: InspectionRecord) => i.id === recordId);
+      if (foundInspection) {
+        setInspection(foundInspection);
+        setIssues(foundInspection.issues || []);
       }
     } catch (error) {
       // 加载数据失败，无需额外处理

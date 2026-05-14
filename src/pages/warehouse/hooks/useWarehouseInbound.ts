@@ -371,7 +371,6 @@ export function useWarehouseInbound() {
 
     // 数据相关
     inboundRecords,
-    setInboundRecords,
     expandedRows,
     setExpandedRows,
 

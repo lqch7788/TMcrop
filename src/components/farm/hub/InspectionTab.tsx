@@ -6,8 +6,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
-import { createInspection, updateInspection, deleteInspection } from '../../../services/apiInspectionService';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
+import { useInspectionDataStore } from '../../../stores';
 import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
 import { InspectionToolbar } from './components/InspectionToolbar';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
@@ -145,6 +145,17 @@ export function InspectionTab({
       loadGreenhouses();
     }
   }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+
+  // 巡查数据 Zustand Store - 替代 localStorage
+  const storeRecords = useInspectionDataStore((state) => state.records);
+  const fetchRecords = useInspectionDataStore((state) => state.fetchRecords);
+  const createStoreRecord = useInspectionDataStore((state) => state.createRecord);
+  const updateStoreRecord = useInspectionDataStore((state) => state.updateRecord);
+  const deleteStoreRecord = useInspectionDataStore((state) => state.deleteRecord);
+
+  useEffect(() => {
+    fetchRecords();
+  }, [fetchRecords]);
 
   // 本地巡查记录状态：从 prop 初始化，prop 变化时同步
   const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(inspections);
@@ -597,10 +608,8 @@ export function InspectionTab({
     // 更新本地状态
     const updatedRecords = [record, ...inspectionRecords];
     setInspectionRecords(updatedRecords);
-    // 持久化到 localStorage（与 useFarmHub 加载格式保持一致）
-    localStorage.setItem(STORAGE_KEYS.INSPECTION_RECORDS, JSON.stringify(updatedRecords));
-    // 同步到后端 API（fire-and-forget）
-    createInspection(record).catch(err => console.warn('巡查记录创建API同步失败:', err));
+    // 持久化到后端（通过 Zustand Store）
+    createStoreRecord(record);
     handleCloseCreateModal();
   };
 
@@ -716,12 +725,10 @@ export function InspectionTab({
       }
     });
     setInspectionRecords(updatedRecords);
-    // 持久化到 localStorage
-    localStorage.setItem(STORAGE_KEYS.INSPECTION_RECORDS, JSON.stringify(updatedRecords));
-    // 同步到后端 API（批量更新）
+    // 持久化到后端（通过 Zustand Store）
     editedRecordIds.forEach(id => {
       if (editedRecords[id]) {
-        updateInspection(id, editedRecords[id]).catch(err => console.warn('巡查记录更新API同步失败:', err));
+        updateStoreRecord(id, editedRecords[id]);
       }
     });
     setShowBatchEditModal(false);
@@ -747,11 +754,9 @@ export function InspectionTab({
       })
       .map(r => r.id);
     setInspectionRecords(remainingRecords);
-    // 持久化到 localStorage
-    localStorage.setItem(STORAGE_KEYS.INSPECTION_RECORDS, JSON.stringify(remainingRecords));
-    // 同步到后端 API（批量删除，fire-and-forget）
+    // 持久化到后端（通过 Zustand Store）
     deletedIds.forEach(id => {
-      deleteInspection(id).catch(err => console.warn('巡查记录删除API同步失败:', err));
+      deleteStoreRecord(id);
     });
     setShowDeleteWarning(false);
     onToggleBatchDeleteMode();

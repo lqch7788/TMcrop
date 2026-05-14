@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Task, useTasks } from '../../../hooks/useTasks';
-import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { useFarmTaskStore } from '@/stores';
 import { Modal } from '@/components/ui/Modal';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,15 +53,11 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
   // 加载任务数据和记录
   useEffect(() => {
     try {
-      // 加载任务数据
-      const storedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
-      if (storedTasks) {
-        const parsed = JSON.parse(storedTasks);
-        const tasksData = parsed.data || parsed;
-        const foundTask = Array.isArray(tasksData) ? tasksData.find((t: Task) => t.id === taskId) : null;
-        if (foundTask) {
-          setTask(foundTask);
-        }
+      // 加载任务数据 (来自 FarmTaskStore)
+      const farmTasks = useFarmTaskStore.getState().tasks;
+      const foundTask = farmTasks.find((t: any) => t.id === taskId);
+      if (foundTask) {
+        setTask(foundTask as Task);
       }
 
       // 加载任务记录

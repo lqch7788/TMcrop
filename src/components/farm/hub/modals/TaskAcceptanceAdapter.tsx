@@ -8,6 +8,7 @@ import { TaskAcceptanceModal } from './TaskAcceptanceModal';
 import { Task, TaskRecord } from '../../../../types/task';
 import { useTasks } from '../../../../hooks/useTasks';
 import { STORAGE_KEYS } from '../../../../hooks/useLocalStorage';
+import { useFarmTaskStore } from '@/stores';
 
 interface TaskAcceptanceAdapterProps {
   taskId: string | null;
@@ -21,6 +22,7 @@ export function TaskAcceptanceAdapter({
   onVerified,
 }: TaskAcceptanceAdapterProps) {
   const tasksHook = useTasks();
+  const { tasks: storeTasks } = useFarmTaskStore();
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
 
@@ -31,10 +33,10 @@ export function TaskAcceptanceAdapter({
       return;
     }
 
-    // 查找任务
-    const foundTask = tasksHook.tasks.find(t => t.id === taskId);
+    // 查找任务 (来自 FarmTaskStore)
+    const foundTask = storeTasks.find((t: any) => t.id === taskId);
     if (foundTask) {
-      setTask(foundTask);
+      setTask(foundTask as Task);
     }
 
     // 获取任务记录
@@ -49,7 +51,7 @@ export function TaskAcceptanceAdapter({
         setRecords([]);
       }
     }
-  }, [taskId, tasksHook.tasks]);
+  }, [taskId, storeTasks]);
 
   const handleAccept = (comments?: string) => {
     if (!task) return;
