@@ -13,16 +13,39 @@ const TASK_STATUS_MAP: Record<string, string> = {
   '待处理': 'pending',
   '处理中': 'in_progress',
   '已完成': 'completed',
+  '草稿': 'draft',
+  '待接受': 'pending',
+  '已接受': 'accepted',
+  '进行中': 'in_progress',
+  '待验收': 'waiting_acceptance',
+  '返工中': 'rejected',
+  '任务失败': 'failed',
+  '已取消': 'cancelled',
+  '已放弃': 'abandoned',
+  'draft': 'draft',
   'pending': 'pending',
+  'accepted': 'accepted',
   'in_progress': 'in_progress',
+  'waiting_acceptance': 'waiting_acceptance',
   'completed': 'completed',
+  'rejected': 'rejected',
+  'failed': 'failed',
+  'cancelled': 'cancelled',
+  'abandoned': 'abandoned',
 };
 
 // 英文状态值到中文的映射
 const TASK_STATUS_LABEL_MAP: Record<string, string> = {
-  'pending': '待处理',
+  'draft': '草稿',
+  'pending': '待接受',
+  'accepted': '已接受',
   'in_progress': '进行中',
+  'waiting_acceptance': '待验收',
   'completed': '已完成',
+  'rejected': '返工中',
+  'failed': '任务失败',
+  'cancelled': '已取消',
+  'abandoned': '已放弃',
 };
 
 /**
@@ -42,22 +65,85 @@ function getTaskStatusLabel(status: string): string {
 
 /**
  * 转换数据库字段名为前端期望的字段名
- * 注意：queryToObjects 已经将下划线字段名转换为驼峰格式
+ * queryToObjects 已将下划线字段转为驼峰格式，这里做补充映射
  */
 function transformTaskFields(item: any): any {
   return {
     ...item,
-    // 数据库字段 -> 前端字段映射（使用驼峰格式）
-    title: item.taskTitle || '',
+    // 基础字段映射
+    id: item.id || '',
+    taskCode: item.taskCode || item.id || '',
+    title: item.taskTitle || item.title || '',
+    type: item.taskType || '',
     typeName: item.taskType || '',
     description: item.taskContent || '',
-    // 作物
+    // 状态
+    status: item.status || 'pending',
+    statusLabel: getTaskStatusLabel(item.status || 'pending'),
+    priority: item.priority || 'normal',
+    progress: item.progress || 0,
+    // 执行人
+    assigneeId: item.assigneeId || '',
+    assigneeName: item.assigneeName || '',
+    assignerId: item.assignerId || '',
+    assignerName: item.assignerName || '',
+    // 地块与作物
+    greenhouseId: item.greenhouseId || '',
+    greenhouseName: item.greenhouseName || '',
+    field: item.greenhouseName || '',
     crop: item.crop || '',
+    cropName: item.crop || '',
+    areaName: item.areaName || '',
+    // 计划时间
+    planDate: item.planDate || '',
+    planTime: item.planTime || '',
+    planStart: item.planDate && item.planTime ? `${item.planDate} ${item.planTime}` : '',
+    planEnd: item.planDate || '',
+    dueDate: item.dueDate || item.planDate || '',
     // 任务工时
     estimatedHours: item.estimatedHours || 0,
-    // 添加状态标签
-    statusLabel: getTaskStatusLabel(item.status || 'pending'),
+    estimatedDays: item.estimatedDays || 0,
+    // 批次
+    batchId: item.batchId || '',
+    batchCode: item.batchCode || '',
+    // 来源
+    sourceType: item.sourceType || 'dispatch',
+    dispatchMode: item.dispatchMode || 'farm',
+    sourceId: item.sourceId || '',
+    // 反馈要求
+    feedbackRequirements: parseJsonField(item.feedbackRequirements, []),
+    requiredFeedback: parseJsonField(item.feedbackRequirements, []),
+    // 返工
+    reworkCount: item.reworkCount || 0,
+    reworkHistory: parseJsonField(item.reworkHistory, []),
+    // 延期
+    deadlineExtensions: parseJsonField(item.deadlineExtensions, []),
+    // 版本
+    version: item.version || 1,
+    // 时间戳
+    createdAt: item.createTime || item.createdAt || '',
+    updatedAt: item.updateTime || item.updatedAt || '',
+    acceptedAt: item.acceptedAt || '',
+    completedAt: item.completedAt || '',
+    // 备注
+    remarks: item.remarks || '',
+    // 物资工具（JSON字段）
+    materials: parseJsonField(item.materials, []),
+    tools: parseJsonField(item.tools, []),
+    // 创建者
+    createdBy: item.createBy || '',
   };
+}
+
+/** 安全解析JSON字段 */
+function parseJsonField(value: any, defaultValue: any): any {
+  if (!value) return defaultValue;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return defaultValue;
+  }
 }
 
 router.get('/', (req: Request, res: Response) => {
@@ -217,6 +303,56 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
+// 前端驼峰字段名 → 数据库下划线列名映射
+const FIELD_NAME_MAP: Record<string, string> = {
+  taskCode: 'task_code',
+  taskTitle: 'task_title',
+  taskType: 'task_type',
+  taskContent: 'task_content',
+  assigneeId: 'assignee_id',
+  assigneeName: 'assignee_name',
+  greenhouseId: 'greenhouse_id',
+  greenhouseName: 'greenhouse_name',
+  areaName: 'area_name',
+  planDate: 'plan_date',
+  planTime: 'plan_time',
+  createBy: 'create_by',
+  dueDate: 'due_date',
+  estimatedHours: 'estimated_hours',
+  estimatedDays: 'estimated_days',
+  batchId: 'batch_id',
+  batchCode: 'batch_code',
+  sourceType: 'source_type',
+  sourceId: 'source_id',
+  assignerId: 'assigner_id',
+  assignerName: 'assigner_name',
+  acceptedAt: 'accepted_at',
+  completedAt: 'completed_at',
+  reworkCount: 'rework_count',
+  dispatchMode: 'dispatch_mode',
+  feedbackRequirements: 'feedback_requirements',
+  requiredFeedback: 'feedback_requirements',
+  createTime: 'create_time',
+  updateTime: 'update_time',
+  cropName: 'crop',
+};
+
+/**
+ * 将前端字段名转换为数据库列名
+ */
+function toDbColumnName(fieldName: string): string {
+  return FIELD_NAME_MAP[fieldName] || fieldName;
+}
+
+/**
+ * 将对象中的值转为可存储的格式（数组/对象 → JSON字符串）
+ */
+function toDbValue(value: any): any {
+  if (value === undefined || value === null) return value;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value;
+}
+
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -230,18 +366,24 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    if (fields.length === 0) {
+    // 过滤有效字段并转换为数据库列名
+    const validKeys = Object.keys(updates).filter(k =>
+      k !== 'id' && updates[k] !== undefined
+    );
+
+    if (validKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const setClauses = validKeys.map(k => `${toDbColumnName(k)} = ?`).join(', ');
+    const values = validKeys.map(k => toDbValue(updates[k]));
     values.push(now, id);
 
-    db.run(`UPDATE farm_tasks SET ${fields}, update_time = ? WHERE id = ?`, values);
+    db.run(`UPDATE farm_tasks SET ${setClauses}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
+    console.error('更新农事任务失败:', error);
     res.status(500).json({ success: false, error: '更新农事任务失败' });
   }
 });

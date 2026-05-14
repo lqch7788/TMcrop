@@ -44,6 +44,21 @@ import { useFarmTaskStore } from '../stores/farmTaskStore';
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
 
+// ========== API 同步辅助函数 ==========
+
+/** 异步API同步（fire-and-forget），失败不影响本地操作 */
+function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
+  Promise.resolve().then(async () => {
+    try {
+      await apiCall();
+    } catch (error) {
+      console.warn(`[useTasks] ${label} API同步失败:`, error);
+    }
+  });
+}
+
+// ============================================
+
 // ============================================
 // 状态标签配置
 // ============================================
@@ -837,6 +852,12 @@ export function useTasks(): UseTasksReturn {
     if (updatedTasks) {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updatedTasks }));
     }
+
+    // API异步同步：发布任务
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/publish`),
+      `publishTask(${id})`
+    );
   }, [taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 撤回任务（撤回执行人，任务可重新派发）
@@ -864,6 +885,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：撤回任务
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/withdraw`, { reason }),
+      `withdrawTask(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 取消任务（彻底取消，后续不再执行）
@@ -896,6 +923,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：取消任务
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/cancel`, { reason }),
+      `cancelTask(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 in_progress
@@ -946,6 +979,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：接受任务 → 开始执行
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/accept`),
+      `acceptTask(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, addAttendance]);
 
   // 选择执行人（用于待派工任务）- 设置执行人，状态变为 pending（待接受）
@@ -979,6 +1018,14 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：选择执行人即重新派发
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
+        assigneeId, assigneeName,
+      }),
+      `acceptAndAssign(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 提交进度
@@ -1123,6 +1170,23 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：提交进度 或 申请验收
+    if (options?.isFinal) {
+      syncToApi(
+        () => enhancedApiClient.post(`/farm-tasks/${id}/submit-acceptance`, {
+          progress, comment: options?.remarks,
+        }),
+        `submitAcceptance(${id})`
+      );
+    } else {
+      syncToApi(
+        () => enhancedApiClient.post(`/farm-tasks/${id}/progress`, {
+          progress, comment: options?.remarks,
+        }),
+        `submitProgress(${id})`
+      );
+    }
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, attendance, updateAttendance, syncWorkLogFromTask]);
 
   // 超时处理
@@ -1186,6 +1250,23 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：超时处理
+    if (action === 'continue') {
+      syncToApi(
+        () => enhancedApiClient.post(`/farm-tasks/${id}/overtime-continue`, {
+          newDeadline: options?.newDeadline, reason: options?.reason,
+        }),
+        `overtimeContinue(${id})`
+      );
+    } else {
+      syncToApi(
+        () => enhancedApiClient.post(`/farm-tasks/${id}/overtime-abandon`, {
+          reason: options?.reason,
+        }),
+        `overtimeAbandon(${id})`
+      );
+    }
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 验收通过
@@ -1261,16 +1342,11 @@ export function useTasks(): UseTasksReturn {
       });
     }
 
-    // 调用后端API完成任务验收（使用 farmTaskStore）
-    Promise.resolve().then(async () => {
-      try {
-        // 使用 farmTaskStore 的 updateTaskStatus（内置三级降级）
-        await useFarmTaskStore.getState().updateTaskStatus(id, 'completed');
-        console.log('[acceptCompletion] 后端API完成任务验收成功:', id);
-      } catch (error) {
-        console.error('[acceptCompletion] 后端API完成任务验收失败:', error);
-      }
-    });
+    // API异步同步：验收通过（使用专用端点，后端会记录操作历史）
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/complete`, { comments }),
+      `acceptCompletion(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, attendance, updateAttendance]);
 
   // 验收驳回
@@ -1318,6 +1394,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：验收驳回
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/reject`, { reason }),
+      `rejectForRework(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 继续执行（返工后）
@@ -1348,6 +1430,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：继续执行（返工后重新执行）
+    syncToApi(
+      () => enhancedApiClient.put(`/farm-tasks/${id}`, { status: 'in_progress' }),
+      `continueExecution(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 执行人拒绝任务（拒绝后任务状态变为rejected，可重新派发）
@@ -1401,6 +1489,14 @@ export function useTasks(): UseTasksReturn {
 
       return updatedTasks;
     });
+
+    // API异步同步：执行人拒绝
+    syncToApi(
+      () => enhancedApiClient.put(`/farm-tasks/${id}`, {
+        status: 'rejected', assigneeId: '', assigneeName: '',
+      }),
+      `rejectByExecutor(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords]);
 
   // 重新派发
@@ -1448,6 +1544,14 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：重新派发
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
+        assigneeId: newAssigneeId, assigneeName: newAssigneeName,
+      }),
+      `reassignTask(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 催办
@@ -1498,6 +1602,12 @@ export function useTasks(): UseTasksReturn {
     // 同时创建任务操作记录
     const record = createTaskRecord(task, 'remind', undefined, { comment: message });
     saveTaskRecords([record, ...taskRecords]);
+
+    // API异步同步：催办
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/remind`, { message }),
+      `sendReminder(${id})`
+    );
   }, [tasks, reminderRecords, saveReminderRecords, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 延期
@@ -1545,6 +1655,14 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API异步同步：延期
+    syncToApi(
+      () => enhancedApiClient.post(`/farm-tasks/${id}/extend-deadline`, {
+        newDeadline, reason,
+      }),
+      `extendDeadline(${id})`
+    );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
   // 删除任务（同时从本地和后端删除）
@@ -1565,7 +1683,7 @@ export function useTasks(): UseTasksReturn {
     }
   }, [setTasks]);
 
-  // 更新任务
+  // 更新任务（本地乐观更新 + API同步）
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     setTasks(prev => {
       const updated = prev.map(task =>
@@ -1576,9 +1694,15 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API 异步同步：使用通用 PUT 端点
+    syncToApi(
+      () => enhancedApiClient.put(`/farm-tasks/${id}`, updates),
+      `updateTask(${id})`
+    );
   }, [setTasks]);
 
-  // 更新任务状态（通用状态更新）
+  // 更新任务状态（通用状态更新，本地+API同步）
   const updateTaskStatus = useCallback((id: string, status: TaskStatus) => {
     setTasks(prev => {
       const updated = prev.map(task =>
@@ -1589,6 +1713,12 @@ export function useTasks(): UseTasksReturn {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
       return updated;
     });
+
+    // API 异步同步
+    syncToApi(
+      () => enhancedApiClient.put(`/farm-tasks/${id}`, { status }),
+      `updateTaskStatus(${id})`
+    );
   }, [setTasks]);
 
   // 更新任务进度
