@@ -202,8 +202,8 @@ router.post('/', (req: Request, res: Response) => {
         create_time, update_time
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId, worker_id, worker_name, normalizedType, start_date, end_date, days || 0,
-      reason || '', normalizedStatus, department_id, department_name, remarks || '',
+      newId, worker_id || null, worker_name || null, normalizedType, start_date || null, end_date || null, days || 0,
+      reason || '', normalizedStatus, department_id || null, department_name || null, remarks || '',
       now, now
     ]);
 
@@ -211,7 +211,7 @@ router.post('/', (req: Request, res: Response) => {
     res.status(201).json({ success: true, data: { id: newId } });
   } catch (error) {
     console.error('创建请假记录失败:', error);
-    res.status(500).json({ success: false, error: '创建请假记录失败' });
+    res.status(500).json({ success: false, error: '创建请假记录失败', detail: String(error) });
   }
 });
 

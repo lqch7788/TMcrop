@@ -18,7 +18,7 @@ interface LeaveBatchEditModalProps {
 }
 
 const leaveTypes: LeaveType[] = ['事假', '病假', '年假', '婚假', '产假', '陪产假', '丧假', '工伤假'];
-const leaveStatuses = ['待审批', '已审批', '已驳回', '已取消'];
+const leaveStatuses = ['待审批', '已通过', '已拒绝', '已取消'];
 
 export function LeaveBatchEditModal({
   isOpen,

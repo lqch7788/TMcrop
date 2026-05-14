@@ -235,8 +235,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
     const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '生产批次号', '状态'];
     const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'productionBatchCode', 'status'];
 
-    const materialHeaders = ['物料编码', '物料名称', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
-    const materialFields = ['materialCode', 'materialName', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'warehousePosition', 'warehousePosition', 'remark'];
+    const materialHeaders = ['物料编码', '物料名称', '批次号', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
+    const materialFields = ['materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'warehousePosition', 'warehousePosition', 'remark'];
 
     let content: string | Uint8Array = '';
     let mimeType = '';
@@ -397,6 +397,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     const newMaterial: MaterialItem = {
       materialCode: '',
       materialName: '',
+      batchNo: '',
       spec: '',
       unit: '',
       category: '种质资源',
@@ -504,6 +505,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     const newMaterial: MaterialItem = {
       materialCode: '',
       materialName: '',
+      batchNo: '',
       spec: '',
       unit: '',
       category: '种质资源',

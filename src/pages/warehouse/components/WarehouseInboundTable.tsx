@@ -171,8 +171,8 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                           <tbody className="divide-y divide-gray-300">
                             {record.materials.map((material, idx) => (
                               <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-gray-800 font-mono text-xs">{material.materialCode}</td>
-                                <td className="px-3 py-2 text-gray-800 font-medium">{material.materialName}</td>
+                                <td className="px-3 py-2 text-gray-800 font-mono text-xs">{material.code}</td>
+                                <td className="px-3 py-2 text-gray-800 font-medium">{material.name}</td>
                                 <td className="px-3 py-2 text-gray-600">{material.category}</td>
                                 <td className="px-3 py-2 text-gray-600">{material.specification}</td>
                                 <td className="px-3 py-2 text-right text-gray-800">{material.quantity} {material.unit}</td>

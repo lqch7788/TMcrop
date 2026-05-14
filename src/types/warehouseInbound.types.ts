@@ -8,8 +8,8 @@
  */
 export interface InboundMaterial {
   id: number;
-  materialCode: string;
-  materialName: string;
+  code: string;
+  name: string;
   category: string;
   bigCategory: string;
   midCategory: string;
@@ -19,7 +19,6 @@ export interface InboundMaterial {
   unit: string;
   quantity: number;
   price: string;
-  supplier: string;
   location: string;
   batchNo: string;
   productionDate: string;

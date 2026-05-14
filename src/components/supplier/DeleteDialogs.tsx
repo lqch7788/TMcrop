@@ -47,37 +47,67 @@ export function DeleteWarningDialog({ isOpen, onClose, onConfirm, title = '确�
 interface BatchDeleteConfirmDialogProps {
   isOpen: boolean;
   count: number;
+  supplierNames: string[];
   onClose: () => void;
   onConfirm: () => void;
 }
 
-export function BatchDeleteConfirmDialog({ isOpen, count, onClose, onConfirm }: BatchDeleteConfirmDialogProps) {
+export function BatchDeleteConfirmDialog({ isOpen, count, supplierNames, onClose, onConfirm }: BatchDeleteConfirmDialogProps) {
   if (!isOpen) return null;
+
+  const displayNames = supplierNames.slice(0, 5).join('、');
+  const moreCount = supplierNames.length > 5 ? ` 等${count}个` : '';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <h3 className="font-semibold text-gray-900">批量删除确认</h3>
+      <div className="bg-white rounded-xl p-6 w-[460px] shadow-xl">
+        {/* 标题 */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-6 h-6 text-red-600" />
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-gray-500" />
-          </Button>
+          <h3 className="text-lg font-semibold text-gray-900">批量删除确认</h3>
         </div>
-        <div className="p-4">
-          <p className="text-gray-600 mb-4">
-            确定要删除选中的 <span className="font-bold text-red-600">{count}</span> 个供应商吗？此操作不可撤销。
+
+        {/* 删除内容详情 */}
+        <div className="text-sm text-gray-600 space-y-3 mb-6">
+          <p>
+            确定要删除选中的 <span className="font-bold text-red-600">{count}</span> 个供应商吗？
           </p>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={onConfirm}>
-              确认删除
-            </Button>
+          <div className="p-3 bg-gray-50 rounded-lg text-xs">
+            <p className="font-medium text-gray-700 mb-1">选中供应商：</p>
+            <p className="text-gray-600">{displayNames}{moreCount}</p>
           </div>
+
+          {/* 数据完整性警告 */}
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm font-medium text-red-700 mb-2">⚠ 数据完整性风险提示：</p>
+            <ul className="list-disc list-inside space-y-1 text-xs text-red-600">
+              <li>删除后将无法恢复供应商基础信息</li>
+              <li>关联的采购计划可能缺少供应商来源</li>
+              <li>物料的供应商追溯链可能出现断链</li>
+              <li>入库记录的供应商字段将失去关联</li>
+              <li>财务对账记录中的供应商信息可能受影响</li>
+            </ul>
+          </div>
+
+          <p className="text-red-500 font-medium">此操作不可撤销！请谨慎操作。</p>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+          >
+            已知晓风险，确认删除
+          </button>
         </div>
       </div>
     </div>

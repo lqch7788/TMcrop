@@ -261,3 +261,33 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 通过
 **提交：** `558c58a` - refactor: 农事任务中心4个TAB页 localStorage → Zustand Store 完整迁移
+
+### 2026-05-14 会话 (第二阶段)
+
+**完成的工作：**
+
+1. **入库记录数据架构修复（3阶段计划全部完成）**
+   - **阶段1 - 后端PUT路由 + 供应商关联**：
+     - `server/src/db/materials.ts`：新增 `updateInboundRecord()` + `syncInboundToMaterials()`
+     - `server/src/routes/materials.ts`：新增 `PUT /inbound/:id`，POST/PUT 返回完整记录
+     - `src/services/apiWarehouseMaterialService.ts`：新增 `updateInboundRecord()`
+     - `src/stores/useInboundStore.ts`：`updateItem` 改为调用 API（原来只做本地 splice）
+     - CreateModal/EditModal 供应商从自由文本改为下拉选择（useSupplierStore）
+   - **阶段2 - 移除物料行级supplier + 字段统一**：
+     - `InboundMaterial` 类型：移除 `supplier`，`materialCode`→`code`，`materialName`→`name`
+     - 同步更新：CreateModal、EditModal、DetailModal、BatchEditModal、ExportModal、WarehouseInboundTable、warehouseInbound.utils.ts
+   - **阶段3 - 入库完成自动更新库存**：
+     - `syncInboundToMaterials()`：按 code 匹配，已有物料累加 quantity，新物料 INSERT
+     - POST/PUT 路由中仅在 status 转为 'completed' 时触发同步
+
+2. **CreateModal UI 增强**
+   - 顶部颜色改为渐变色（与生产领料新增弹窗一致）：`bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500`
+   - 物料名称自动关联：输入名称后搜索仓库已有物料，选中后自动填充 code/category/spec/barcode/unit/price/location
+   - 物料名称输入框改为搜索+下拉菜单模式（`position: fixed` 避免被 overflow 裁剪）
+   - 自动填充字段蓝色背景、手动录入字段黄色背景，附图例说明
+   - 弹窗支持鼠标拖动（拖标题栏移动）+ 8 方向缩放（四角+四边），最小尺寸 640×400px
+   - 最大化按钮修复：最大化时 overlay flex 改为 `flex-start`，dialog 置顶
+   - 提交报错修复：后端 POST/PUT 现在返回完整记录（含 materials 数组）
+
+**构建状态：** ✅ 通过
+**涉及文件：** 13 个文件修改，约 500+ 行变更

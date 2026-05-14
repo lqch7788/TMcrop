@@ -3,11 +3,13 @@
  * 从 InboundModals 拆分出来，独立管理新增入库记录弹窗
  */
 
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Plus, Trash2, Search } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
 import { currentUser } from '@/data/mockData';
+import { useSupplierStore } from '@/stores/useSupplierStore';
+import { useWarehouseMaterialStore } from '@/stores/useWarehouseMaterialStore';
 
 interface InboundAddModalProps {
   isOpen: boolean;
@@ -27,26 +29,111 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   // 获取当天日期字符串
   const today = new Date().toISOString().split('T')[0];
 
+  // 供应商列表（从 Zustand Store 获取）
+  const suppliers = useSupplierStore((s) => s.items);
+  const loadSuppliers = useSupplierStore((s) => s.loadItems);
+
+  // 仓库已有物料列表（用于输入物料名称时自动关联）
+  const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
+  const loadWarehouseMaterials = useWarehouseMaterialStore((s) => s.loadItems);
+
+  // 弹窗打开时加载供应商列表和物料列表
+  useEffect(() => {
+    if (isOpen) {
+      if (suppliers.length === 0) loadSuppliers();
+      if (warehouseMaterials.length === 0) loadWarehouseMaterials();
+    }
+  }, [isOpen, suppliers.length, loadSuppliers, warehouseMaterials.length, loadWarehouseMaterials]);
+
+  // 物料名称搜索输入 → 更新搜索词并打开下拉
+  const handleMaterialSearchChange = (materialId: number, query: string) => {
+    setMaterialSearchQueries(prev => ({ ...prev, [materialId]: query }));
+    setOpenDropdowns(prev => ({ ...prev, [materialId]: true }));
+    // 同时更新物料行名称字段
+    setMaterials(materials.map(m =>
+      m.id === materialId ? { ...m, name: query } : m
+    ));
+  };
+
+  // 选中下拉物料 → 自动填充基本信息
+  const handleSelectMaterial = (materialId: number, wm: typeof warehouseMaterials[number]) => {
+    setMaterials(materials.map(m => {
+      if (m.id !== materialId) return m;
+      return {
+        ...m,
+        name: wm.name,
+        code: wm.code || m.code,
+        category: wm.category || m.category,
+        specification: wm.specification || m.specification,
+        barcode: wm.barcode || m.barcode,
+        unit: wm.unit || m.unit,
+        price: wm.price || m.price,
+        location: wm.location || m.location,
+      };
+    }));
+    setMaterialSearchQueries(prev => ({ ...prev, [materialId]: wm.name }));
+    setOpenDropdowns(prev => ({ ...prev, [materialId]: false }));
+  };
+
   // 表单数据状态
   const [formData, setFormData] = useState({
     code: '',
     inboundDate: today,
     supplier: '',
     operator: currentUser.name,
+    status: 'completed' as 'completed' | 'pending',
   });
 
   // 物料列表状态
   const [materials, setMaterials] = useState<InboundMaterial[]>([]);
 
+  // 物料名称搜索状态（每个物料行独立）
+  const [materialSearchQueries, setMaterialSearchQueries] = useState<Record<number, string>>({});
+  const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
+  // 输入框 ref 映射：用于计算下拉菜单的 fixed 定位
+  const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  // 获取某个物料行的搜索结果（最多显示8条）
+  const getFilteredMaterials = (materialId: number) => {
+    const query = (materialSearchQueries[materialId] || '').trim().toLowerCase();
+    if (!query) return warehouseMaterials.filter(wm => wm.dataStatus === '启用').slice(0, 8);
+    return warehouseMaterials
+      .filter(wm => wm.dataStatus === '启用' && (
+        wm.name.toLowerCase().includes(query) ||
+        wm.code.toLowerCase().includes(query)
+      ))
+      .slice(0, 8);
+  };
+
   // 编码错误状态
   const [codeError, setCodeError] = useState('');
 
-  // 弹窗大小状态
+  // 弹窗大小和位置状态
   const [isMaximized, setIsMaximized] = useState(false);
+  const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
+  const [dialogPos, setDialogPos] = useState({ left: 0, top: 0 });
+  const minSize = { width: 640, height: 400 };
 
   // 拖动状态
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
+
+  // 缩放状态
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDir, setResizeDir] = useState('');
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0, left: 0, top: 0 });
+
+  // 弹窗打开时记录初始尺寸和居中位置
+  useEffect(() => {
+    if (isOpen) {
+      const dialog = document.getElementById('inbound-add-dialog');
+      if (dialog) {
+        const rect = dialog.getBoundingClientRect();
+        setDialogSize({ width: rect.width, height: rect.height });
+        setDialogPos({ left: rect.left, top: rect.top });
+      }
+    }
+  }, [isOpen]);
 
   // 拖动开始处理
   const handleDragStart = (e: React.MouseEvent) => {
@@ -66,24 +153,91 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
     }
   };
 
-  // 拖动处理
+  // 缩放开始处理
+  const handleResizeStart = (e: React.MouseEvent, dir: string) => {
+    if (isMaximized) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeDir(dir);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      w: dialogSize.width,
+      h: dialogSize.height,
+      left: dialogPos.left,
+      top: dialogPos.top,
+    });
+  };
+
+  // 拖动 + 缩放 统一处理
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      const dialog = document.getElementById('inbound-add-dialog');
-      if (dialog) {
-        dialog.style.position = 'fixed';
-        dialog.style.left = `${dragStart.left + deltaX}px`;
-        dialog.style.top = `${dragStart.top + deltaY}px`;
-        dialog.style.margin = '0';
+      if (isDragging) {
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        const dialog = document.getElementById('inbound-add-dialog');
+        if (dialog) {
+          dialog.style.position = 'fixed';
+          dialog.style.left = `${dragStart.left + deltaX}px`;
+          dialog.style.top = `${dragStart.top + deltaY}px`;
+          dialog.style.margin = '0';
+        }
+      }
+      if (isResizing) {
+        const dx = e.clientX - resizeStart.x;
+        const dy = e.clientY - resizeStart.y;
+        let newW = resizeStart.w;
+        let newH = resizeStart.h;
+        let newLeft = resizeStart.left;
+        let newTop = resizeStart.top;
+
+        if (resizeDir.includes('e')) newW = Math.max(minSize.width, resizeStart.w + dx);
+        if (resizeDir.includes('s')) newH = Math.max(minSize.height, resizeStart.h + dy);
+        if (resizeDir.includes('w')) {
+          newW = Math.max(minSize.width, resizeStart.w - dx);
+          newLeft = resizeStart.left + (resizeStart.w - newW);
+        }
+        if (resizeDir.includes('n')) {
+          newH = Math.max(minSize.height, resizeStart.h - dy);
+          newTop = resizeStart.top + (resizeStart.h - newH);
+        }
+
+        const dialog = document.getElementById('inbound-add-dialog');
+        if (dialog) {
+          dialog.style.position = 'fixed';
+          dialog.style.width = `${newW}px`;
+          dialog.style.height = `${newH}px`;
+          dialog.style.left = `${newLeft}px`;
+          dialog.style.top = `${newTop}px`;
+          dialog.style.margin = '0';
+          dialog.style.maxWidth = 'none';
+          dialog.style.maxHeight = 'none';
+        }
       }
     };
 
     const handleMouseUp = () => {
+      if (isDragging) {
+        const dialog = document.getElementById('inbound-add-dialog');
+        if (dialog) {
+          const rect = dialog.getBoundingClientRect();
+          setDialogPos({ left: rect.left, top: rect.top });
+        }
+      }
+      if (isResizing) {
+        const dialog = document.getElementById('inbound-add-dialog');
+        if (dialog) {
+          const rect = dialog.getBoundingClientRect();
+          setDialogSize({ width: rect.width, height: rect.height });
+          setDialogPos({ left: rect.left, top: rect.top });
+        }
+      }
       setIsDragging(false);
+      setIsResizing(false);
+      setResizeDir('');
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -93,23 +247,48 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart]);
+  }, [isDragging, isResizing, dragStart, resizeStart, resizeDir, minSize.width, minSize.height]);
 
   // 最大化/还原切换
   const toggleMaximize = () => {
     const dialog = document.getElementById('inbound-add-dialog');
+    const overlay = document.getElementById('inbound-add-overlay');
     if (!isMaximized && dialog) {
+      // 最大化前保存当前尺寸和位置
+      const rect = dialog.getBoundingClientRect();
+      setDialogSize({ width: rect.width, height: rect.height });
+      setDialogPos({ left: rect.left, top: rect.top });
+      // 最大化：铺满视口
+      dialog.style.position = 'fixed';
+      dialog.style.top = '0';
+      dialog.style.left = '0';
       dialog.style.width = '100vw';
       dialog.style.height = '100vh';
       dialog.style.maxWidth = 'none';
       dialog.style.maxHeight = 'none';
       dialog.style.borderRadius = '0';
+      dialog.style.margin = '0';
+      dialog.style.transform = 'none';
+      if (overlay) {
+        overlay.style.alignItems = 'flex-start';
+        overlay.style.justifyContent = 'flex-start';
+      }
     } else if (dialog) {
+      // 还原：清除内联样式，恢复 CSS class 控制
+      dialog.style.position = '';
+      dialog.style.top = '';
+      dialog.style.left = '';
       dialog.style.width = '';
       dialog.style.height = '';
       dialog.style.maxWidth = '';
       dialog.style.maxHeight = '';
       dialog.style.borderRadius = '';
+      dialog.style.margin = '';
+      dialog.style.transform = '';
+      if (overlay) {
+        overlay.style.alignItems = '';
+        overlay.style.justifyContent = '';
+      }
     }
     setIsMaximized(!isMaximized);
   };
@@ -146,8 +325,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   const handleAddMaterial = () => {
     const newMaterial: InboundMaterial = {
       id: Date.now(),
-      materialCode: '',
-      materialName: '',
+      code: '',
+      name: '',
       category: '',
       bigCategory: '',
       midCategory: '',
@@ -157,7 +336,6 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       unit: '袋',
       quantity: 0,
       price: '',
-      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',
@@ -186,7 +364,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       inboundDate: formData.inboundDate,
       supplier: formData.supplier,
       operator: formData.operator,
-      status: 'pending' as const,
+      status: formData.status,
       materials,
     });
     setFormData({
@@ -194,6 +372,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       inboundDate: today,
       supplier: '',
       operator: currentUser.name,
+      status: 'completed',
     });
     setMaterials([]);
     onClose();
@@ -203,14 +382,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div id="inbound-add-overlay" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div
         id="inbound-add-dialog"
         className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[90vh] flex flex-col relative"
       >
         {/* 标题栏 */}
         <div
-          className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0 cursor-move"
+          className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 cursor-move rounded-t-xl"
           onMouseDown={handleDragStart}
         >
           <h3 className="text-lg font-semibold text-white select-none">新增入库记录</h3>
@@ -218,7 +397,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
             {/* 最大化/还原按钮 */}
             <button
               onClick={toggleMaximize}
-              className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors"
+              className="text-white hover:bg-emerald-500 p-1.5 rounded transition-colors"
               title={isMaximized ? '还原' : '最大化'}
             >
               {isMaximized ? (
@@ -240,7 +419,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
         {/* 基本信息区域 */}
         <div className="p-4 bg-emerald-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {/* 入库单号 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</label>
@@ -282,8 +461,15 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                 type="text"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                placeholder="选择或输入供应商名称"
+                list="supplier-list"
                 className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
               />
+              <datalist id="supplier-list">
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.name} />
+                ))}
+              </datalist>
             </div>
 
             {/* 操作员 */}
@@ -296,13 +482,37 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                 className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
               />
             </div>
+
+            {/* 状态 */}
+            <div>
+              <label className="block text-xs font-medium text-emerald-700 mb-1">状态</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'completed' | 'pending' })}
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-white"
+              >
+                <option value="completed">已完成</option>
+                <option value="pending">待审核</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* 物料明细区域 */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-800">物料明细（{materials.length}种物料）</h4>
+            <div className="flex items-center gap-4">
+              <h4 className="text-sm font-semibold text-gray-800">物料明细（{materials.length}种物料）</h4>
+              <span className="text-xs text-gray-400">|</span>
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <span className="w-3 h-3 rounded border border-blue-300 bg-blue-50 inline-block"></span>
+                自动关联
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <span className="w-3 h-3 rounded border border-yellow-300 bg-yellow-50 inline-block"></span>
+                手动录入
+              </span>
+            </div>
             <Button variant="blue" size="sm" onClick={handleAddMaterial}>
               <Plus className="w-3 h-3" />
               添加物料
@@ -327,7 +537,6 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">单位</th>
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">数量</th>
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">单价</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">供应商</th>
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">存放位置</th>
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">批号</th>
                     <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">生产日期</th>
@@ -346,25 +555,66 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                       <td className="px-1 py-1.5 whitespace-nowrap">
                         <input
                           type="text"
-                          value={m.materialCode}
-                          onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          value={m.code}
+                          onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
+                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={m.materialName}
-                          onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
-                          className="w-24 h-6 px-1 border border-gray-200 rounded text-xs"
-                        />
+                      <td className="px-1 py-1.5">
+                        <div className="flex items-center">
+                          <input
+                            ref={(el) => { inputRefs.current[m.id] = el; }}
+                            type="text"
+                            value={materialSearchQueries[m.id] ?? m.name}
+                            onChange={(e) => handleMaterialSearchChange(m.id, e.target.value)}
+                            onFocus={() => setOpenDropdowns(prev => ({ ...prev, [m.id]: true }))}
+                            onBlur={() => {
+                              setTimeout(() => setOpenDropdowns(prev => ({ ...prev, [m.id]: false })), 150);
+                            }}
+                            placeholder="搜索物料名称"
+                            className="w-32 h-6 px-1.5 pr-5 border border-blue-300 rounded text-xs bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                          />
+                          <Search className="w-3 h-3 text-blue-400 -ml-4" />
+                        </div>
+                        {/* 下拉搜索结果 — fixed 定位突破 overflow 限制 */}
+                        {openDropdowns[m.id] && (() => {
+                          const results = getFilteredMaterials(m.id);
+                          if (results.length === 0) return null;
+                          const inputEl = inputRefs.current[m.id];
+                          const rect = inputEl?.getBoundingClientRect();
+                          return (
+                            <div
+                              className="fixed z-[999] bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto"
+                              style={{
+                                top: rect ? rect.bottom + 2 : 0,
+                                left: rect ? rect.left : 0,
+                                minWidth: rect ? rect.width : 200,
+                              }}
+                            >
+                              {results.map((wm) => (
+                                <button
+                                  key={wm.id}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    handleSelectMaterial(m.id, wm);
+                                  }}
+                                  className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-blue-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
+                                >
+                                  <span className="font-medium text-gray-800 truncate max-w-[140px]">{wm.name}</span>
+                                  <span className="text-gray-400 font-mono text-[10px] ml-2 flex-shrink-0">{wm.code}</span>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
                         <input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -372,7 +622,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -380,7 +630,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -388,7 +638,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
-                          className="w-12 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-12 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -396,7 +646,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="number"
                           value={m.quantity}
                           onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-16 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          placeholder="数量"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -404,15 +655,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
-                        />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={m.supplier}
-                          onChange={(e) => handleMaterialChange(m.id, 'supplier', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -420,7 +663,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -428,7 +671,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-20 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          placeholder="批号"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -436,7 +680,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="date"
                           value={m.productionDate}
                           onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
-                          className="w-24 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-24 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -444,7 +688,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="date"
                           value={m.expiryDate}
                           onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
-                          className="w-24 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-24 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -452,7 +696,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="w-20 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          placeholder="备注"
                         />
                       </td>
                     </tr>
@@ -472,6 +717,22 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
             提交
           </Button>
         </div>
+
+        {/* 缩放拖拽手柄（最大化时隐藏） */}
+        {!isMaximized && (
+          <>
+            {/* 四角手柄 */}
+            <div className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+            <div className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+            <div className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+            <div className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+            {/* 四边手柄 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-n-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 'n')} />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-s-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 's')} />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 cursor-w-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 'w')} />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-12 cursor-e-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+          </>
+        )}
       </div>
     </div>
   );

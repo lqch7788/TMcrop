@@ -9,6 +9,7 @@ export interface MaterialItem {
   stockQuantity: number;
   unitPrice: number;
   warehousePosition: string;
+  batchNo?: string; // 批次号（批次级库存追溯）
   remark?: string;
 }
 
@@ -33,6 +34,7 @@ export interface MaterialReceivingRecord {
 export interface ExecuteMaterialItem {
   materialCode: string;
   materialName: string;
+  batchNo?: string; // 批次号（批次级库存追溯）
   spec: string;
   unit: string;
   category: string;

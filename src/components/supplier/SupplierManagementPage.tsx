@@ -532,6 +532,7 @@ export default function SupplierManagementPage() {
           selectedRows={selectedRows}
           exportMode={exportMode}
           batchEditMode={batchEditMode}
+          deleteMode={deleteMode}
           onPageChange={setCurrentPage}
           onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
           onSelectAll={handleSelectAll}
@@ -593,6 +594,7 @@ export default function SupplierManagementPage() {
       <BatchDeleteConfirmDialog
         isOpen={showBatchDeleteConfirm}
         count={selectedRows.length}
+        supplierNames={suppliers.filter(s => selectedRows.includes(s.id)).map(s => s.name)}
         onClose={() => setShowBatchDeleteConfirm(false)}
         onConfirm={handleConfirmBatchDelete}
       />

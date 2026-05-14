@@ -2101,6 +2101,9 @@ function seedDictionaries() {
     { id: 'dt-030', category: 'supplier_attribute', code: 'enterprise', name: '企业', sort_number: 1 },
     { id: 'dt-031', category: 'supplier_attribute', code: 'individual', name: '个体户', sort_number: 2 },
     { id: 'dt-032', category: 'supplier_attribute', code: 'institution', name: '事业单位', sort_number: 3 },
+    { id: 'dt-033', category: 'supplier_attribute', code: 'personal', name: '个人', sort_number: 4 },
+    { id: 'dt-034', category: 'supplier_attribute', code: 'online_platform', name: '网络平台', sort_number: 5 },
+    { id: 'dt-035', category: 'supplier_attribute', code: 'agent', name: '代理商', sort_number: 6 },
 
     // 审批状态
     { id: 'dt-040', category: 'approval_status', code: 'pending', name: '待审批', sort_number: 1 },

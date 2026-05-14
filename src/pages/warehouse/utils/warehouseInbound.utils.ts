@@ -101,8 +101,8 @@ export const filterInboundRecords = (
     // 物料名称或编码搜索（匹配任意物料明细）
     if (filters.materialName || filters.materialCode) {
       const hasMatch = record.materials.some(m => {
-        const nameMatch = !filters.materialName || (m.materialName && m.materialName.toLowerCase().includes(filters.materialName.toLowerCase()));
-        const codeMatch = !filters.materialCode || (m.materialCode && m.materialCode.toLowerCase().includes(filters.materialCode.toLowerCase()));
+        const nameMatch = !filters.materialName || (m.name && m.name.toLowerCase().includes(filters.materialName.toLowerCase()));
+        const codeMatch = !filters.materialCode || (m.code && m.code.toLowerCase().includes(filters.materialCode.toLowerCase()));
         return nameMatch && codeMatch;
       });
       if (!hasMatch) return false;

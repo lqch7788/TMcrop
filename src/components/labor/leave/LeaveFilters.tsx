@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
  */
 export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: LeaveFiltersProps) {
   const leaveTypes: LeaveType[] = ['事假', '病假', '年假', '婚假', '产假', '陪产假', '丧假', '工伤假'];
-  const statuses: LeaveStatus[] = ['待审批', '已审批', '已驳回', '已取消'];
+  const statuses: LeaveStatus[] = ['待审批', '已通过', '已拒绝', '已取消'];
 
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">

@@ -156,6 +156,7 @@ export function EditModal({
             <tr>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">批次号</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
@@ -187,6 +188,14 @@ export function EditModal({
                       value={material.materialName}
                       onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      type="text"
+                      value={material.batchNo || ''}
+                      onChange={(e) => onMaterialChange(idx, 'batchNo', e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -467,6 +476,7 @@ export function AddModal({
             <tr>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">批次号</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
@@ -498,6 +508,14 @@ export function AddModal({
                       value={material.materialName}
                       onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      type="text"
+                      value={material.batchNo || ''}
+                      onChange={(e) => onMaterialChange(idx, 'batchNo', e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">

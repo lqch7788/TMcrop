@@ -51,8 +51,9 @@ export const useInboundStore = create<InboundState>()(
 
       updateItem: async (id, updates) => {
         try {
-          set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
-          return { id, ...updates } as InboundRecord;
+          const result = await warehouseService.updateInboundRecord(id, updates);
+          if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...result } : i) }));
+          return result;
         } catch (error) {
           console.error('[useInboundStore] 更新入库记录失败:', error);
           return null;

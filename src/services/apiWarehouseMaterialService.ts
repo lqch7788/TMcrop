@@ -36,8 +36,8 @@ export interface Material {
 // 入库物料明细类型
 export interface InboundMaterial {
   id: number;
-  materialCode: string;
-  materialName: string;
+  code: string;
+  name: string;
   category: string;
   bigCategory: string;
   midCategory: string;
@@ -47,7 +47,6 @@ export interface InboundMaterial {
   unit: string;
   quantity: number;
   price: string;
-  supplier: string;
   location: string;
   batchNo: string;
   productionDate: string;
@@ -97,6 +96,16 @@ export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Pr
   return await enhancedApiClient.post<InboundRecord>('/materials/inbound', record, {
     offlineQueue: true,
     useCache: true,
+  });
+}
+
+/**
+ * 更新入库记录
+ * 降级策略：API → 离线队列
+ */
+export async function updateInboundRecord(id: number, updates: Partial<InboundRecord>): Promise<InboundRecord | null> {
+  return await enhancedApiClient.put<InboundRecord>(`/materials/inbound/${id}`, updates, {
+    offlineQueue: true,
   });
 }
 

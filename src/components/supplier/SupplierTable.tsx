@@ -11,6 +11,7 @@ interface SupplierTableProps {
   selectedRows: number[];
   exportMode: boolean;
   batchEditMode: boolean;
+  deleteMode: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSelectAll: () => void;
@@ -27,6 +28,7 @@ export default function SupplierTable({
   selectedRows,
   exportMode,
   batchEditMode,
+  deleteMode,
   onPageChange,
   onPageSizeChange,
   onSelectAll,
@@ -48,7 +50,7 @@ export default function SupplierTable({
         <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'fixed' }}>
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
-              {(exportMode || batchEditMode) && (
+              {(exportMode || batchEditMode || deleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
@@ -68,7 +70,7 @@ export default function SupplierTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">所在地区</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">创建时间</th>
-              {!exportMode && !batchEditMode && (
+              {!exportMode && !batchEditMode && !deleteMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">操作</th>
               )}
             </tr>
@@ -76,7 +78,7 @@ export default function SupplierTable({
           <tbody className="divide-y divide-gray-300">
             {displayedSuppliers.map((supplier) => (
               <tr key={supplier.id} className="hover:bg-blue-100 transition-colors">
-                {(exportMode || batchEditMode) && (
+                {(exportMode || batchEditMode || deleteMode) && (
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -106,7 +108,7 @@ export default function SupplierTable({
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.province} {supplier.city}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.createDate}</td>
-                {!exportMode && !batchEditMode && (
+                {!exportMode && !batchEditMode && !deleteMode && (
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="icon" onClick={() => onView(supplier)} title="查看">
