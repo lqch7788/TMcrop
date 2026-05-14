@@ -165,6 +165,47 @@ function isToday(dateStr: string): boolean {
   return dateStr.startsWith(getTodayString());
 }
 
+/**
+ * 补全巡查记录缺失字段，确保数据完整性
+ * 后端数据库仅存储核心字段，前端需补充默认值防止表格渲染丢数据
+ */
+function normalizeInspectionRecord(record: InspectionRecord): InspectionRecord {
+  return {
+    ...record,
+    cropName: record.cropName || '',
+    cropStatus: record.cropStatus || '',
+    issues: Array.isArray(record.issues) ? record.issues : [],
+    images: Array.isArray(record.images) ? record.images : [],
+    weather: record.weather || '',
+    temperature: record.temperature || 0,
+    humidity: record.humidity || 0,
+    remarks: record.remarks || '',
+    plantHeight: record.plantHeight || 0,
+    leafCount: record.leafCount || 0,
+    duration: record.duration || 0,
+    issueCategories: Array.isArray(record.issueCategories) ? record.issueCategories : [],
+    issuePresets: Array.isArray(record.issuePresets) ? record.issuePresets : [],
+    issuePhotos: Array.isArray(record.issuePhotos) ? record.issuePhotos : [],
+    feedbackUsers: Array.isArray(record.feedbackUsers) ? record.feedbackUsers : [],
+    issueStatus: record.issueStatus || (record.status === 'attention' ? 'pending' : 'resolved'),
+    airTemperature: record.airTemperature || 0,
+    airHumidity: record.airHumidity || 0,
+    lightIntensity: record.lightIntensity || 0,
+    co2Concentration: record.co2Concentration || 0,
+    soilTemperature: record.soilTemperature || 0,
+    soilMoisture: record.soilMoisture || 0,
+    soilEc: record.soilEc || 0,
+    soilPh: record.soilPh || 0,
+  };
+}
+
+/**
+ * 巡检记录默认初始化数据（带类型守卫）
+ */
+function getInitialInspections(): InspectionRecord[] {
+  return mockInspectionRecords.map(normalizeInspectionRecord);
+}
+
 // ============================================
 // useFarmHub Hook
 // ============================================
@@ -181,7 +222,7 @@ export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn
 
   // 其他数据使用独立状态
   const [problems, setProblems] = useState<ProblemEntry[]>([]);
-  const [inspections, setInspections] = useState<InspectionRecord[]>(mockInspectionRecords);
+  const [inspections, setInspections] = useState<InspectionRecord[]>(getInitialInspections());
   const [operationRecords, setOperationRecords] = useState<WorkLogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -319,16 +360,26 @@ export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn
           getAllInspections()
         ]);
 
-        // 处理问题数据
-        if (apiProblems.status === 'fulfilled' && apiProblems.value && Array.isArray(apiProblems.value) && apiProblems.value.length > 0) {
-          console.log('[useFarmHub] 从API获取到问题数据:', apiProblems.value.length, '条');
-          setProblems(apiProblems.value as ProblemEntry[]);
+        // 处理问题数据：只新增不覆盖，避免丢失 mock 完整数据
+        if (apiProblems.status === 'fulfilled' && apiProblems.value && Array.isArray(apiProblems.value)) {
+          setProblems(prev => {
+            const existingIds = new Set(prev.map(p => String(p.id)));
+            const newRecords = (apiProblems.value as ProblemEntry[]).filter(p => !existingIds.has(String(p.id)));
+            console.log('[useFarmHub] 从API获取到问题数据:', (apiProblems.value as any[]).length, '条，新增:', newRecords.length);
+            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
+          });
         }
 
-        // 处理巡查数据
-        if (apiInspections.status === 'fulfilled' && apiInspections.value && Array.isArray(apiInspections.value) && apiInspections.value.length > 0) {
-          console.log('[useFarmHub] 从API获取到巡查数据:', apiInspections.value.length, '条');
-          setInspections(apiInspections.value as InspectionRecord[]);
+        // 处理巡查数据：只新增不覆盖 + 字段标准化，避免丢失 mock 完整数据
+        if (apiInspections.status === 'fulfilled' && apiInspections.value && Array.isArray(apiInspections.value)) {
+          setInspections(prev => {
+            const existingIds = new Set(prev.map(r => r.id));
+            const newRecords = (apiInspections.value as InspectionRecord[])
+              .map(normalizeInspectionRecord)  // 补全缺失字段
+              .filter(r => !existingIds.has(r.id));
+            console.log('[useFarmHub] 从API获取到巡查数据:', (apiInspections.value as any[]).length, '条，新增:', newRecords.length);
+            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
+          });
         }
       } catch (error) {
         console.warn('[useFarmHub] API调用失败，使用本地数据:', error);
@@ -345,11 +396,22 @@ export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn
           setProblems(Array.isArray(parsed) ? parsed : []);
         }
 
-        // 读取巡查数据
+        // 读取巡查数据：只新增不覆盖 + 字段标准化
         const storedInspections = localStorage.getItem(STORAGE_KEYS.INSPECTION_RECORDS);
         if (storedInspections) {
-          const parsed = JSON.parse(storedInspections);
-          setInspections(Array.isArray(parsed) ? parsed : []);
+          try {
+            const parsed = JSON.parse(storedInspections);
+            const localRecords = Array.isArray(parsed) ? parsed : [];
+            if (localRecords.length > 0) {
+              setInspections(prev => {
+                const existingIds = new Set(prev.map(r => r.id));
+                const newRecords = localRecords
+                  .map((r: InspectionRecord) => normalizeInspectionRecord(r))
+                  .filter((r: InspectionRecord) => !existingIds.has(r.id));
+                return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
+              });
+            }
+          } catch { /* JSON解析失败，忽略 */ }
         }
 
         // 读取操作记录
