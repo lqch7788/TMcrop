@@ -16,6 +16,12 @@ function transformInspectionRecord(db: any) {
   if (!db) return db;
   const issueText = db.issueText || db.issue_text || '';
   const images = db.images || [];
+  // 解析 feedback_users（数据库存储为 JSON 字符串，sql.js 转为 camelCase）
+  let feedbackUsers = db.feedbackUsers || db.feedback_users || [];
+  if (typeof feedbackUsers === 'string') {
+    try { feedbackUsers = JSON.parse(feedbackUsers); } catch { feedbackUsers = []; }
+  }
+  if (!Array.isArray(feedbackUsers)) feedbackUsers = [];
   return {
     ...db,
     // 确保必要字段存在
@@ -34,7 +40,7 @@ function transformInspectionRecord(db: any) {
     issueCategories: Array.isArray(db.issueCategories) ? db.issueCategories : [],
     issuePresets: Array.isArray(db.issuePresets) ? db.issuePresets : [],
     issuePhotos: Array.isArray(db.issuePhotos) ? db.issuePhotos : [],
-    feedbackUsers: Array.isArray(db.feedbackUsers) ? db.feedbackUsers : [],
+    feedbackUsers: feedbackUsers,
     issueStatus: db.issueStatus || db.issue_status || (db.status === 'attention' ? 'pending' : 'resolved'),
     expectedCompletion: db.expectedCompletion || db.expected_completion || '',
     // 环境参数
@@ -132,7 +138,8 @@ router.get('/:id', (req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   try {
     const { id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-            check_date, check_time, check_result, issue_severity, issue_text, images, status } = req.body;
+            check_date, check_time, check_result, issue_severity, issue_text, images, status,
+            feedbackUsers } = req.body;
 
     const newId = id || `INS${Date.now()}`;
     const now = new Date().toISOString();
@@ -140,10 +147,11 @@ router.post('/', (req: Request, res: Response) => {
     const db = getDatabase();
     db.run(`
       INSERT INTO inspections (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-        check_date, check_time, check_result, issue_severity, issue_text, images, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        check_date, check_time, check_result, issue_severity, issue_text, images, status, feedback_users, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-        check_date, check_time, check_result, issue_severity, issue_text, images, status || 'pending', now, now]);
+        check_date, check_time, check_result, issue_severity, issue_text, images, status || 'pending',
+        feedbackUsers ? JSON.stringify(feedbackUsers) : null, now, now]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });
@@ -156,16 +164,26 @@ router.post('/', (req: Request, res: Response) => {
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
+
+    // 特殊处理：feedbackUsers 序列化为 JSON 字符串存储
+    if ('feedbackUsers' in updates) {
+      updates.feedback_users = Array.isArray(updates.feedbackUsers)
+        ? JSON.stringify(updates.feedbackUsers) : null;
+      delete updates.feedbackUsers;
+    }
+    // 移除 id 字段防止更新主键
+    delete updates.id;
+
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     if (fields.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const values = Object.values(updates);
     values.push(now, id);
 
     db.run(`UPDATE inspections SET ${fields}, update_time = ? WHERE id = ?`, values);
