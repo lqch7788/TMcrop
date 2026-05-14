@@ -214,54 +214,39 @@ function seedInventory() {
 function seedSuppliers() {
   const db = getDatabase();
 
+  // 从前端mock数据迁移的完整供应商数据
   const suppliers = [
-    {
-      id: 'SUP001',
-      supplier_code: 'GYS001',
-      supplier_name: '杭州农资公司',
-      contact_person: '张经理',
-      contact_phone: '13800138001',
-      address: '浙江省杭州市西湖区',
-      supplier_type: '种子',
-      status: 'active',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    },
-    {
-      id: 'SUP002',
-      supplier_code: 'GYS002',
-      supplier_name: '上海肥料批发',
-      contact_person: '李经理',
-      contact_phone: '13800138002',
-      address: '上海市浦东新区',
-      supplier_type: '肥料',
-      status: 'active',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    },
-    {
-      id: 'SUP003',
-      supplier_code: 'GYS003',
-      supplier_name: '宁波农膜厂',
-      contact_person: '王经理',
-      contact_phone: '13800138003',
-      address: '浙江省宁波市鄞州区',
-      supplier_type: '农资',
-      status: 'active',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    }
+    { id: 'SUP001', supplier_code: 'SU_SP01001', supplier_name: '金色稻种有限公司', contact_person: '张志远', contact_phone: '13800138001', mobile_phone: '13800138001', work_phone: '0571-88886666', fax: '0571-88886667', address: '岳麓区科技园路1号', supplier_type: 'SP', supplier_attribute: '企业', status: 'active', country: '中国', province: '湖南省', city: '长沙市', bank_name: '中国农业银行长沙分行', bank_card_number: '6228481234567890123', organization: '宁波帮帮忙公司', create_date: '2024-01-15', remarks: '长期合作供应商，品质稳定' },
+    { id: 'SUP002', supplier_code: 'SU_SP01002', supplier_name: '丰收种业公司', contact_person: '李志刚', contact_phone: '13800138002', mobile_phone: '13800138002', work_phone: '025-88888888', fax: '025-88888889', address: '江宁区农业路88号', supplier_type: 'SP', supplier_attribute: '企业', status: 'active', country: '中国', province: '江苏省', city: '南京市', bank_name: '中国工商银行南京分行', bank_card_number: '6228881234567890124', organization: '成都帮帮您公司', create_date: '2024-02-20', remarks: '' },
+    { id: 'SUP003', supplier_code: 'SU_SP03001', supplier_name: '绿叶蔬菜种苗基地', contact_person: '王老板', contact_phone: '13800138003', mobile_phone: '13800138003', work_phone: '0536-88888888', fax: '0536-88888889', address: '蔬菜批发市场A区12号', supplier_type: 'SP', supplier_attribute: '个体户', status: 'active', country: '中国', province: '山东省', city: '寿光市', bank_name: '中国建设银行寿光支行', bank_card_number: '6227001234567890125', organization: '宁波帮帮忙公司', create_date: '2024-03-10', remarks: '主营蔬菜种苗' },
+    { id: 'SUP004', supplier_code: 'SU_FE01001', supplier_name: '有机肥生产厂家', contact_person: '赵总', contact_phone: '13800138004', mobile_phone: '13800138004', work_phone: '0371-88886666', fax: '0371-88886667', address: '中原区化工路56号', supplier_type: 'FE', supplier_attribute: '企业', status: 'active', country: '中国', province: '河南省', city: '郑州市', bank_name: '中国银行郑州分行', bank_card_number: '6228881234567890126', organization: '成都帮帮您公司', create_date: '2024-01-25', remarks: '' },
+    { id: 'SUP005', supplier_code: 'SU_FE02001', supplier_name: '复合化肥供应公司', contact_person: '钱厂', contact_phone: '13800138005', mobile_phone: '13800138005', work_phone: '0311-88888888', fax: '0311-88888889', address: '裕华区农资中心B座', supplier_type: 'FE', supplier_attribute: '企业', status: 'active', country: '中国', province: '河北省', city: '石家庄市', bank_name: '中国农业银行石家庄支行', bank_card_number: '6228482345678900127', organization: '宁波帮帮忙公司', create_date: '2024-04-05', remarks: '化肥批发商' },
+    { id: 'SUP006', supplier_code: 'SU_PP01001', supplier_name: '高效杀虫剂供应商', contact_person: '孙经理', contact_phone: '13800138006', mobile_phone: '13800138006', work_phone: '0512-88886666', fax: '0512-88886667', address: '工业园区东兴路128号', supplier_type: 'PP', supplier_attribute: '企业', status: 'active', country: '中国', province: '江苏省', city: '苏州市', bank_name: '中国工商银行苏州分行', bank_card_number: '6228883456789010128', organization: '宁波帮帮忙公司', create_date: '2024-02-18', remarks: '' },
+    { id: 'SUP007', supplier_code: 'SU_PP02001', supplier_name: '杀菌剂供应中心', contact_person: '周经理', contact_phone: '13800138007', mobile_phone: '13800138007', work_phone: '0571-88888888', fax: '0571-88888889', address: '西湖区文三路45号', supplier_type: 'PP', supplier_attribute: '个体户', status: 'active', country: '中国', province: '浙江省', city: '杭州市', bank_name: '中国建设银行杭州分行', bank_card_number: '6227004567890120129', organization: '成都帮帮您公司', create_date: '2024-03-22', remarks: '农药批发' },
+    { id: 'SUP008', supplier_code: 'SU_EQ01001', supplier_name: '拖拉机制造商', contact_person: '吴总', contact_phone: '13800138008', mobile_phone: '13800138008', work_phone: '0537-88886666', fax: '0537-88886667', address: '任城区农机工业园68号', supplier_type: 'EQ', supplier_attribute: '企业', status: 'active', country: '中国', province: '山东省', city: '济宁市', bank_name: '中国农业银行济宁分行', bank_card_number: '6228484567890120130', organization: '宁波帮帮忙公司', create_date: '2024-01-30', remarks: '' },
+    { id: 'SUP009', supplier_code: 'SU_EQ03001', supplier_name: '植保无人机公司', contact_person: '郑经理', contact_phone: '13800138009', mobile_phone: '13800138009', work_phone: '0755-88888888', fax: '0755-88888889', address: '南山区科技园北区A栋', supplier_type: 'EQ', supplier_attribute: '企业', status: 'active', country: '中国', province: '广东省', city: '深圳市', bank_name: '招商银行深圳分行', bank_card_number: '6228885678901230131', organization: '成都帮帮您公司', create_date: '2024-05-12', remarks: '提供无人机植保服务' },
+    { id: 'SUP010', supplier_code: 'SU_FA01001', supplier_name: '温室大棚骨架厂', contact_person: '王老板', contact_phone: '13800138010', mobile_phone: '13800138010', work_phone: '010-88886666', fax: '010-88886667', address: '大兴区农业装备基地3号', supplier_type: 'FA', supplier_attribute: '个体户', status: 'active', country: '中国', province: '北京市', city: '北京市', bank_name: '中国工商银行北京分行', bank_card_number: '6228886789012340132', organization: '宁波帮帮忙公司', create_date: '2024-02-08', remarks: '' },
+    { id: 'SUP011', supplier_code: 'SU_FA02001', supplier_name: 'PO膜供应商', contact_person: '冯总', contact_phone: '13800138011', mobile_phone: '13800138011', work_phone: '0513-88888888', fax: '0513-88888889', address: '崇川区工业园纬一路', supplier_type: 'FA', supplier_attribute: '企业', status: 'inactive', country: '中国', province: '江苏省', city: '南通市', bank_name: '中国建设银行南通支行', bank_card_number: '6227006789012340133', organization: '成都帮帮您公司', create_date: '2024-03-18', remarks: '暂停合作' },
+    { id: 'SUP012', supplier_code: 'SU_IR01001', supplier_name: '水泵设备供应商', contact_person: '陈志明', contact_phone: '13800138012', mobile_phone: '13800138012', work_phone: '0577-88886666', fax: '0577-88886667', address: '瓯海区机械工业园12号', supplier_type: 'IR', supplier_attribute: '个体户', status: 'active', country: '中国', province: '浙江省', city: '温州市', bank_name: '中国农业银行温州分行', bank_card_number: '6228487890123450134', organization: '宁波帮帮忙公司', create_date: '2024-04-25', remarks: '' },
+    { id: 'SUP013', supplier_code: 'SU_OP01001', supplier_name: '劳保用品公司', contact_person: '刘总', contact_phone: '13800138013', mobile_phone: '13800138013', work_phone: '021-88888888', fax: '021-88888889', address: '浦东新区商城路368号', supplier_type: 'OP', supplier_attribute: '企业', status: 'active', country: '中国', province: '上海市', city: '上海市', bank_name: '中国银行上海分行', bank_card_number: '6228887890123450135', organization: '成都帮帮您公司', create_date: '2024-05-08', remarks: '' },
+    { id: 'SUP014', supplier_code: 'SU_TS01001', supplier_name: '土壤检测服务中心', contact_person: '黄经理', contact_phone: '13800138014', mobile_phone: '13800138014', work_phone: '020-88886666', fax: '020-88886667', address: '天河区农业技术中心大厦', supplier_type: 'TS', supplier_attribute: '事业单位', status: 'active', country: '中国', province: '广东省', city: '广州市', bank_name: '中国建设银行广州分行', bank_card_number: '6227008901234560136', organization: '宁波帮帮忙公司', create_date: '2024-03-30', remarks: '提供专业检测报告' },
+    { id: 'SUP015', supplier_code: 'SU_UT03001', supplier_name: '电线电缆供应商', contact_person: '许总', contact_phone: '13800138015', mobile_phone: '13800138015', work_phone: '0514-88888888', fax: '0514-88888889', address: '广陵区工业园电缆路1号', supplier_type: 'UT', supplier_attribute: '企业', status: 'active', country: '中国', province: '江苏省', city: '扬州市', bank_name: '中国工商银行扬州分行', bank_card_number: '6228888901234560137', organization: '成都帮帮您公司', create_date: '2024-06-15', remarks: '' },
   ];
 
+  const nowStr = new Date().toISOString();
   for (const sup of suppliers) {
     db.run(`
       INSERT OR REPLACE INTO suppliers
       (id, supplier_code, supplier_name, contact_person, contact_phone,
-       address, supplier_type, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       mobile_phone, work_phone, fax, address, supplier_type, supplier_attribute,
+       status, country, province, city, bank_name, bank_card_number,
+       organization, create_date, remarks, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       sup.id, sup.supplier_code, sup.supplier_name, sup.contact_person, sup.contact_phone,
-      sup.address, sup.supplier_type, sup.status, sup.create_time, sup.update_time
+      sup.mobile_phone, sup.work_phone, sup.fax, sup.address, sup.supplier_type, sup.supplier_attribute,
+      sup.status, sup.country, sup.province, sup.city, sup.bank_name, sup.bank_card_number,
+      sup.organization, sup.create_date, sup.remarks, nowStr, nowStr
     ]);
   }
 
@@ -1458,6 +1443,7 @@ function seedInspections() {
       issue_text: '未发现问题',
       images: null,
       status: 'completed',
+      feedback_users: '["令狐冲"]',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
@@ -1475,6 +1461,7 @@ function seedInspections() {
       issue_text: '发现少量蚜虫，需要进行防治',
       images: null,
       status: 'pending',
+      feedback_users: '["任盈盈","向问天"]',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     },
@@ -1492,6 +1479,7 @@ function seedInspections() {
       issue_text: '生长状况良好',
       images: null,
       status: 'completed',
+      feedback_users: '["乔峰"]',
       create_time: new Date().toISOString(),
       update_time: new Date().toISOString()
     }
@@ -1501,12 +1489,12 @@ function seedInspections() {
     db.run(`
       INSERT OR REPLACE INTO inspections
       (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-       check_date, check_time, check_result, issue_severity, issue_text, images, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       check_date, check_time, check_result, issue_severity, issue_text, images, status, feedback_users, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ins.id, ins.record_code, ins.inspection_type, ins.inspector_id, ins.inspector_name,
       ins.greenhouse_name, ins.check_date, ins.check_time, ins.check_result, ins.issue_severity,
-      ins.issue_text, ins.images, ins.status, ins.create_time, ins.update_time
+      ins.issue_text, ins.images, ins.status, ins.feedback_users, ins.create_time, ins.update_time
     ]);
   }
 
@@ -2377,6 +2365,24 @@ function seedDictionaries() {
     // 性别
     { id: 'dt-gender-001', category: 'gender', code: 'male', name: '男', sort_number: 1 },
     { id: 'dt-gender-002', category: 'gender', code: 'female', name: '女', sort_number: 2 },
+
+    // 反馈人员（金庸武侠人物名，用于巡查记录反馈）
+    { id: 'dt-fb-001', category: 'feedback_personnel', code: 'guojing', name: '郭靖', sort_number: 1 },
+    { id: 'dt-fb-002', category: 'feedback_personnel', code: 'huangrong', name: '黄蓉', sort_number: 2 },
+    { id: 'dt-fb-003', category: 'feedback_personnel', code: 'yangguo', name: '杨过', sort_number: 3 },
+    { id: 'dt-fb-004', category: 'feedback_personnel', code: 'xiaolongnv', name: '小龙女', sort_number: 4 },
+    { id: 'dt-fb-005', category: 'feedback_personnel', code: 'linghuchong', name: '令狐冲', sort_number: 5 },
+    { id: 'dt-fb-006', category: 'feedback_personnel', code: 'renyingying', name: '任盈盈', sort_number: 6 },
+    { id: 'dt-fb-007', category: 'feedback_personnel', code: 'zhangwuji', name: '张无忌', sort_number: 7 },
+    { id: 'dt-fb-008', category: 'feedback_personnel', code: 'zhaomin', name: '赵敏', sort_number: 8 },
+    { id: 'dt-fb-009', category: 'feedback_personnel', code: 'qiaofeng', name: '乔峰', sort_number: 9 },
+    { id: 'dt-fb-010', category: 'feedback_personnel', code: 'duanyu', name: '段誉', sort_number: 10 },
+    { id: 'dt-fb-011', category: 'feedback_personnel', code: 'xuzhu', name: '虚竹', sort_number: 11 },
+    { id: 'dt-fb-012', category: 'feedback_personnel', code: 'wangyuyan', name: '王语嫣', sort_number: 12 },
+    { id: 'dt-fb-013', category: 'feedback_personnel', code: 'weixiaobao', name: '韦小宝', sort_number: 13 },
+    { id: 'dt-fb-014', category: 'feedback_personnel', code: 'zhoubotong', name: '周伯通', sort_number: 14 },
+    { id: 'dt-fb-015', category: 'feedback_personnel', code: 'hongqigong', name: '洪七公', sort_number: 15 },
+    { id: 'dt-fb-016', category: 'feedback_personnel', code: 'xiangwentian', name: '向问天', sort_number: 16 },
   ];
 
   for (const dict of dictionaries) {
@@ -2815,6 +2821,7 @@ function seedBusinessInspectionRecords() {
       check_result: '发现问题', issue_severity: '中等',
       issue_text: '黄瓜叶片出现轻微萎蔫，大棚内温度偏高导致，建议增加通风遮阳',
       images: null, status: 'attention',
+      feedback_users: '["郭靖","黄蓉"]',
       create_time: new Date().toISOString(), update_time: new Date().toISOString()
     },
     {
@@ -2825,6 +2832,7 @@ function seedBusinessInspectionRecords() {
       check_result: '发现问题', issue_severity: '轻微',
       issue_text: '草莓叶片发现白粉虱成虫，数量较少但需密切关注，发现2株有虫害迹象',
       images: null, status: 'pending',
+      feedback_users: '["杨过","小龙女"]',
       create_time: new Date().toISOString(), update_time: new Date().toISOString()
     },
     {
@@ -2835,6 +2843,7 @@ function seedBusinessInspectionRecords() {
       check_result: '发现问题', issue_severity: '轻微',
       issue_text: '土壤偏干，需要及时浇水',
       images: null, status: 'attention',
+      feedback_users: '["黄蓉","郭靖"]',
       create_time: new Date().toISOString(), update_time: new Date().toISOString()
     },
   ];
@@ -2843,12 +2852,13 @@ function seedBusinessInspectionRecords() {
     db.run(`
       INSERT OR REPLACE INTO inspections
       (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-       check_date, check_time, check_result, issue_severity, issue_text, images, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       check_date, check_time, check_result, issue_severity, issue_text, images, status,
+       feedback_users, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ins.id, ins.record_code, ins.inspection_type, ins.inspector_id, ins.inspector_name,
       ins.greenhouse_name, ins.check_date, ins.check_time, ins.check_result, ins.issue_severity,
-      ins.issue_text, ins.images, ins.status, ins.create_time, ins.update_time
+      ins.issue_text, ins.images, ins.status, ins.feedback_users, ins.create_time, ins.update_time
     ]);
   }
 
@@ -3385,6 +3395,49 @@ function seedBusinessApprovals() {
 }
 
 /**
+ * 导入生产退料种子数据
+ */
+function seedMaterialReturns() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM material_returns');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`退料数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const returns = [
+    { id: 'MTR001', code: 'TL20240301001', date: '2024-03-05', type: '生产退料', applicant: '李建国', department: '生产部', warehouseLocation: 'A区-01', status: '已完成', statusClass: 'completed', remark: '', operator: '郭靖', reviewer: '黄药师', reviewDate: '2024-03-05', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240301001', materialCode: 'SP0103001', category: '种质资源-粮食作物种子', materialName: '番茄种子', spec: '50g/袋', unit: '袋', returnQuantity: 5, unitPrice: 12.5, warehousePosition: 'A区-01-01', reason: '质量问题', remark: '' }, { sourceApplicationCode: 'CK20240301001', materialCode: 'SP0201001', category: '肥料与土壤改良剂-有机肥', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', returnQuantity: 10, unitPrice: 85, warehousePosition: 'A区-01-02', reason: '规格不符', remark: '' }]) },
+    { id: 'MTR002', code: 'TL20240302001', date: '2024-03-08', type: '生产退料', applicant: '王建华', department: '种植部', warehouseLocation: 'B区-03', status: '待审批', statusClass: 'pending', remark: '', operator: '杨过', reviewer: '小龙女', reviewDate: '', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240302001', materialCode: 'SP0302001', category: '农药与植保产品-杀菌剂', materialName: '多菌灵', spec: '100g/瓶', unit: '箱', returnQuantity: 3, unitPrice: 45, warehousePosition: 'B区-03-01', reason: '过期产品', remark: '' }]) },
+    { id: 'MTR003', code: 'TL20240303001', date: '2024-03-10', type: '生产退料', applicant: '李建国', department: '生产部', warehouseLocation: 'A区-02', status: '已审批', statusClass: 'approved', remark: '', operator: '张无忌', reviewer: '周芷若', reviewDate: '2024-03-10', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240303001', materialCode: 'EQ0202001', category: '设施与装备类-覆盖材料', materialName: 'PO膜', spec: '2m×100m', unit: '㎡', returnQuantity: 50, unitPrice: 8.5, warehousePosition: 'A区-02-01', reason: '运输损坏', remark: '' }, { sourceApplicationCode: 'CK20240303001', materialCode: 'SP0301001', category: '农药与植保产品-杀虫剂', materialName: '吡虫啉', spec: '10g×10袋/盒', unit: '盒', returnQuantity: 20, unitPrice: 28, warehousePosition: 'A区-02-02', reason: '库存积压', remark: '' }]) },
+    { id: 'MTR004', code: 'TL20240304001', date: '2024-03-12', type: '生产退料', applicant: '张建华', department: '设备部', warehouseLocation: 'C区-05', status: '已完成', statusClass: 'completed', remark: '', operator: '段誉', reviewer: '萧峰', reviewDate: '2024-03-12', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240304001', materialCode: 'SP0202001', category: '肥料与土壤改良剂-化学肥料', materialName: '尿素', spec: '50kg/袋', unit: '袋', returnQuantity: 8, unitPrice: 95, warehousePosition: 'C区-05-01', reason: '质量问题', remark: '' }]) },
+    { id: 'MTR005', code: 'TL20240305001', date: '2024-03-15', type: '生产退料', applicant: '赵技术', department: '种植部', warehouseLocation: 'B区-01', status: '已驳回', statusClass: 'rejected', remark: '不符合退货条件', operator: '陈家洛', reviewer: '霍青桐', reviewDate: '2024-03-15', rejectReason: '超出退料期限', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240305001', materialCode: 'SP0202002', category: '肥料与土壤改良剂-化学肥料', materialName: '复合肥', spec: '25kg/袋', unit: '袋', returnQuantity: 15, unitPrice: 120, warehousePosition: 'B区-01-01', reason: '规格不符', remark: '' }]) },
+    { id: 'MTR006', code: 'TL20240306001', date: '2024-03-16', type: '生产退料', applicant: '李建国', department: '生产部', warehouseLocation: 'A区-03', status: '待审批', statusClass: 'pending', remark: '', operator: '令狐冲', reviewer: '任盈盈', reviewDate: '', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240306001', materialCode: 'PH0104001', category: '采后处理与流通类-包装材料', materialName: '农药瓶', spec: '500ml/瓶', unit: '瓶', returnQuantity: 30, unitPrice: 3.5, warehousePosition: 'A区-03-01', reason: '过期产品', remark: '' }]) },
+    { id: 'MTR007', code: 'TL20240307001', date: '2024-03-17', type: '生产退料', applicant: '王建华', department: '种植部', warehouseLocation: 'B区-02', status: '已审批', statusClass: 'approved', remark: '', operator: '袁承志', reviewer: '夏雪宜', reviewDate: '2024-03-17', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240307001', materialCode: 'EQ0202002', category: '设施与装备类-覆盖材料', materialName: '农用薄膜', spec: '5m×100m', unit: '卷', returnQuantity: 25, unitPrice: 150, warehousePosition: 'B区-02-01', reason: '质量问题', remark: '' }]) },
+    { id: 'MTR008', code: 'TL20240308001', date: '2024-03-18', type: '生产退料', applicant: '张建华', department: '设备部', warehouseLocation: 'C区-01', status: '已完成', statusClass: 'completed', remark: '', operator: '胡斐', reviewer: '程灵素', reviewDate: '2024-03-18', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240308001', materialCode: 'EQ0103001', category: '设施与装备类-植保机械', materialName: '电动喷雾机', spec: '16L', unit: '台', returnQuantity: 5, unitPrice: 280, warehousePosition: 'C区-01-01', reason: '运输损坏', remark: '' }]) },
+    { id: 'MTR009', code: 'TL20240309001', date: '2024-03-19', type: '生产退料', applicant: '王技术', department: '生产部', warehouseLocation: 'A区-04', status: '已作废', statusClass: 'voided', remark: '已重新开单', operator: '虚竹', reviewer: '扫地僧', reviewDate: '2024-03-19', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240309001', materialCode: 'SP0203001', category: '肥料与土壤改良剂-叶面肥', materialName: '磷酸二氢钾', spec: '500g/袋', unit: '袋', returnQuantity: 20, unitPrice: 35, warehousePosition: 'A区-04-01', reason: '其他', remark: '' }]) },
+    { id: 'MTR010', code: 'TL20240310001', date: '2024-03-20', type: '生产退料', applicant: '赵建华', department: '种植部', warehouseLocation: 'B区-03', status: '已作废', statusClass: 'voided', remark: '重复申请', operator: '狄云', reviewer: '丁典', reviewDate: '2024-03-20', rejectReason: '', materials: JSON.stringify([{ sourceApplicationCode: 'CK20240310001', materialCode: 'EQ0301001', category: '设施与装备类-灌溉设备', materialName: '滴灌管', spec: '16mm×500m', unit: '卷', returnQuantity: 10, unitPrice: 180, warehousePosition: 'B区-03-01', reason: '规格不符', remark: '' }]) },
+  ];
+
+  for (const ret of returns) {
+    db.run(`
+      INSERT OR REPLACE INTO material_returns
+      (id, code, date, type, applicant, department, warehouseLocation, status, statusClass,
+       remark, operator, reviewer, reviewDate, rejectReason, materials, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      ret.id, ret.code, ret.date, ret.type, ret.applicant, ret.department,
+      ret.warehouseLocation, ret.status, ret.statusClass,
+      ret.remark, ret.operator, ret.reviewer, ret.reviewDate, ret.rejectReason,
+      ret.materials, now, now
+    ]);
+  }
+
+  console.log(`已导入 ${returns.length} 条退料数据`);
+}
+
+/**
  * 导入所有业务数据
  */
 export function seedAllBusinessData() {
@@ -3401,6 +3454,7 @@ export function seedAllBusinessData() {
   seedBusinessTempTasks();
   seedMaterialCosts();
   seedEnergyCosts();
+  seedMaterialReturns();
 
   saveDatabase();
   console.log('业务数据种子数据导入完成');

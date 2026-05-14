@@ -350,12 +350,18 @@ export function InspectionTable({
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.feedbackUsers && record.feedbackUsers.length > 0 ? (
-                    <span className="text-gray-700">
+                    <span className="text-gray-700" title={record.feedbackUsers.join('、')}>
                       {(() => {
-                        const user = users.find(u => u.id === record.feedbackUsers![0]);
-                        return user ? user.name : record.feedbackUsers![0];
+                        // 优先从用户库按ID查找，查不到则直接显示（已为人名）
+                        const names = record.feedbackUsers!.map(fu => {
+                          const user = users.find(u => u.id === fu);
+                          return user ? user.name : fu;
+                        });
+                        if (names.length <= 2) {
+                          return names.join('、');
+                        }
+                        return names[0] + '等' + names.length + '人';
                       })()}
-                      {record.feedbackUsers.length > 1 && '等'}
                     </span>
                   ) : (
                     <span className="text-gray-400">-</span>

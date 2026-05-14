@@ -765,6 +765,30 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ==================== 生产退料表 ====================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_returns (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      date TEXT,
+      type TEXT DEFAULT '生产退料',
+      applicant TEXT,
+      department TEXT,
+      warehouseLocation TEXT,
+      status TEXT DEFAULT '待审批',
+      statusClass TEXT DEFAULT 'pending',
+      remark TEXT,
+      operator TEXT,
+      reviewer TEXT,
+      reviewDate TEXT,
+      rejectReason TEXT,
+      materials TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // 为已有表添加新列（如果列不存在则添加）
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN production_plan_code TEXT`);
@@ -863,6 +887,19 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+
+  // 供应商管理扩展字段（前端完整字段）
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN mobile_phone TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN work_phone TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN fax TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN country TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN province TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN city TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN bank_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN bank_card_number TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN organization TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN supplier_attribute TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN create_date TEXT`); } catch (e) {}
 
   // 为农事任务表添加创建者ID关联（如果还没有的话）
   try {
@@ -978,6 +1015,13 @@ export function initializeDatabase() {
   // 为巡查记录表添加关联字段
   try {
     db.run(`ALTER TABLE inspections ADD COLUMN greenhouse_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // 添加反馈人员字段
+  try {
+    db.run(`ALTER TABLE inspections ADD COLUMN feedback_users TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }

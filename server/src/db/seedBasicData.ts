@@ -488,6 +488,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC046', code: 'warehouse', name: '仓库', module: 'warehouse', description: '仓库分类', sortOrder: 46, status: 'active' },
   { id: 'DC047', code: 'harvest_greenhouse', name: '采收区域', module: 'crop', description: '采收区域分类', sortOrder: 47, status: 'active' },
   { id: 'DC048', code: 'source_type', name: '种源类型', module: 'crop', description: '种源类型(繁殖方式)', sortOrder: 48, status: 'active' },
+  { id: 'DC049', code: 'feedback_personnel', name: '反馈人员', module: 'inspection', description: '巡查记录反馈人员列表（金庸武侠人物）', sortOrder: 49, status: 'active' },
 ];
 
 // ============================================
