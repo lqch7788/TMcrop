@@ -1,9 +1,9 @@
 // 供应商编辑弹窗组件
 import { useState, useEffect, useMemo } from 'react';
 import { Supplier, EditFormData } from './types';
-import { supplierCategories, getSupplierTypeName } from './data';
+import { getSupplierTypeName } from './data';
 import { UnifiedModal } from '../ui/UnifiedModal';
-import { useDictionaryStore } from '../../stores';
+import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -27,6 +27,9 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
     dictionaries.filter(d => d.categoryCode === 'supplier_attribute' && d.status === 'active'),
     [dictionaries]
   );
+
+  // 从Store获取分类数据（与编码规则页同步）
+  const categories = useSupplierCodeRuleStore((s) => s.categories);
 
   const [form, setForm] = useState<EditFormData>({
     name: '',
@@ -134,7 +137,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">请选择类型</option>
-                {supplierCategories.map(cat => (
+                {categories.map(cat => (
                   <option key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</option>
                 ))}
               </select>

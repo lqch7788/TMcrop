@@ -1,5 +1,6 @@
 // 供应商管理静态数据
 import { SupplierBigCategory, Supplier } from './types';
+import { useSupplierCodeRuleStore } from '../../stores';
 
 // 供应商分类数据
 export const supplierCategories: SupplierBigCategory[] = [
@@ -47,22 +48,11 @@ export const supplierCategories: SupplierBigCategory[] = [
   ]},
 ];
 
-// 获取供应商类型中文名称
+// 获取供应商类型中文名称（从Store动态读取，与编码规则页同步）
 export const getSupplierTypeName = (code: string): string => {
-  const typeMap: Record<string, string> = {
-    'SP': '种子与种苗类',
-    'FE': '肥料与土壤改良类',
-    'PP': '农药与植保产品类',
-    'EQ': '农业机械与设备类',
-    'FA': '设施农业资材类',
-    'IR': '灌溉与水肥一体化类',
-    'OP': '日常劳保与劳动工具类',
-    'PH': '仓储与物流资材类',
-    'TS': '检测与技术服务类',
-    'UT': '能源与辅助耗材类',
-    'OT': '其他综合类'
-  };
-  return typeMap[code] || code;
+  const categories = useSupplierCodeRuleStore.getState().categories;
+  const category = categories.find(c => c.code === code);
+  return category?.name || code;
 };
 
 // 供应商数据

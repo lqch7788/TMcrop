@@ -43,20 +43,8 @@ export default function SupplierTable({
   const isAllSelected = suppliers.length > 0 && selectedRows.length === suppliers.length;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ maxHeight: 'calc(100vh - 420px)', display: 'flex', flexDirection: 'column' }}>
-      {/* 操作栏 */}
-      {(exportMode || batchEditMode) && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onSelectAll}>
-              {isAllSelected ? '全不选' : '全选'}
-            </Button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-          </div>
-        </div>
-      )}
-
-      <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+    <>
+      <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'fixed' }}>
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
@@ -140,7 +128,7 @@ export default function SupplierTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
           <select
@@ -165,6 +153,6 @@ export default function SupplierTable({
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

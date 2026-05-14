@@ -1,10 +1,9 @@
-// 供应商管理主页面组件 - 数据来源：Zustand Store → enhancedApiClient → API
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import PageHeader from './PageHeader';
 import SupplierFilters, { filterSuppliers } from './SupplierFilters';
 import SupplierTable from './SupplierTable';
-import ActionToolbar from './ActionToolbar';
 import SupplierDetailModal from './SupplierDetailModal';
 import SupplierEditModal from './SupplierEditModal';
 import SupplierAddModal from './SupplierAddModal';
@@ -60,11 +59,16 @@ export default function SupplierManagementPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
-  const [showCodeGen, setShowCodeGen] = useState(false);
 
   // 当前选中的供应商
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [generatedCode, setGeneratedCode] = useState('');
+
+  // 编码生成器状态（内联展开，参照物料入库）
+  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
+  const [codeGen, setCodeGen] = useState({ bigCategory: '', midCategory: '', generatedCode: '' });
+  const [codeGenError, setCodeGenError] = useState('');
+  const [codeGenSuccess, setCodeGenSuccess] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // 筛选后的供应商
   const filteredSuppliers = useMemo(() => filterSuppliers(suppliers, filters), [suppliers, filters]);
@@ -82,7 +86,7 @@ export default function SupplierManagementPage() {
 
   // 工具栏操作
   const handleAdd = () => {
-    setShowCodeGen(true);
+    setShowAddModal(true);
   };
 
   const handleBatchEdit = () => {
@@ -290,15 +294,94 @@ export default function SupplierManagementPage() {
   };
 
   // 编码生成
-  const handleCodeGenerated = (code: string) => {
-    setGeneratedCode(code);
-    setShowAddModal(true);
-  };
+  const handleGenerateCode = useCallback(() => {
+    setCodeGenError('');
+    setCodeGenSuccess('');
+    if (!codeGen.bigCategory || !codeGen.midCategory) {
+      setCodeGenError('请选择供应商大类和供应商中类');
+      return;
+    }
+    const serialNum = String(Math.floor(Math.random() * 99) + 1).padStart(3, '0');
+    const code = `SU_${codeGen.bigCategory}${codeGen.midCategory}${serialNum}`;
+    setCodeGen(prev => ({ ...prev, generatedCode: code }));
+    setCodeGenSuccess('编码生成成功！');
+  }, [codeGen.bigCategory, codeGen.midCategory]);
+
+  const handleCopyCode = useCallback(() => {
+    if (codeGen.generatedCode) {
+      navigator.clipboard.writeText(codeGen.generatedCode);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  }, [codeGen.generatedCode]);
+
+  const handleResetCodeGen = useCallback(() => {
+    setCodeGen({ bigCategory: '', midCategory: '', generatedCode: '' });
+    setCodeGenError('');
+    setCodeGenSuccess('');
+  }, []);
+
+  const handleCodeGenChange = useCallback((field: 'bigCategory' | 'midCategory', value: string) => {
+    setCodeGen(prev => {
+      const newState = { ...prev, [field]: value };
+      if (field === 'bigCategory') {
+        newState.midCategory = '';
+        newState.generatedCode = '';
+      } else if (field === 'midCategory') {
+        newState.generatedCode = '';
+      }
+      return newState;
+    });
+    setCodeGenError('');
+    setCodeGenSuccess('');
+  }, []);
+
+  const isAllSelected = filteredSuppliers.length > 0 && selectedRows.length === filteredSuppliers.length;
+  const hasActiveMode = batchEditMode || deleteMode || exportMode;
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-6">
       {/* 页头 */}
       <PageHeader />
+
+      {/* 编码规则按钮 + 编码生成器（参照物料入库样式） */}
+      <div className="flex items-center gap-4">
+        <div className="h-6 w-px bg-gray-500"></div>
+        <button
+          onClick={() => navigate('/supplier-code-rule')}
+          className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+        >
+          编码规则 &gt;&gt;
+        </button>
+        <span className="text-base font-bold text-blue-600">供应商编码生成</span>
+        <button
+          onClick={() => setCodeGenExpanded(!codeGenExpanded)}
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          title={codeGenExpanded ? '收起' : '展开'}
+        >
+          {codeGenExpanded ? (
+            <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
+          )}
+        </button>
+      </div>
+
+      {/* 编码规则生成器 */}
+      {codeGenExpanded && (
+        <SupplierCodeGenerator
+          expanded={codeGenExpanded}
+          onToggleExpand={() => setCodeGenExpanded(!codeGenExpanded)}
+          codeGen={codeGen}
+          onCodeGenChange={handleCodeGenChange}
+          onGenerate={handleGenerateCode}
+          onCopy={handleCopyCode}
+          onReset={handleResetCodeGen}
+          error={codeGenError}
+          success={codeGenSuccess}
+          copySuccess={copySuccess}
+        />
+      )}
 
       {/* 筛选 */}
       <SupplierFilters
@@ -307,56 +390,106 @@ export default function SupplierManagementPage() {
         onReset={handleResetFilters}
       />
 
-      {/* 工具栏 */}
-      <ActionToolbar
-        batchEditMode={batchEditMode}
-        deleteMode={deleteMode}
-        exportMode={exportMode}
-        selectedRows={selectedRows}
-        onBatchEdit={handleBatchEdit}
-        onDelete={handleDelete}
-        onExport={handleExport}
-        onAdd={handleAdd}
-        onConfirmBatchEdit={handleConfirmBatchEdit}
-        onCancelBatchEdit={handleCancelBatchEdit}
-        onConfirmDelete={() => setShowBatchDeleteConfirm(true)}
-        onCancelDelete={handleCancelDelete}
-        onConfirmExport={handleConfirmExport}
-        onCancelExport={handleCancelExport}
-      />
-
-      {/* 表格 */}
-      <SupplierTable
-        suppliers={filteredSuppliers}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        selectedRows={selectedRows}
-        exportMode={exportMode}
-        batchEditMode={batchEditMode}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
-        onSelectAll={handleSelectAll}
-        onSelectRow={handleSelectRow}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDeleteSingle}
-      />
-
-      {/* 编码生成器侧边栏 */}
-      {showCodeGen && (
-        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowCodeGen(false)} />
-      )}
-      {showCodeGen && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 p-4 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">供应商编码生成</h3>
-            <Button variant="ghost" size="icon" onClick={() => setShowCodeGen(false)}>
-              ✕
-            </Button>
+      {/* 表格区域 */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        {/* 工具栏 - 集成在表格卡片内 */}
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          {/* 标题和选择信息 */}
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900">供应商列表</h3>
+            {hasActiveMode && (
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  {isAllSelected ? '全不选' : '全选'}
+                </button>
+                <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+              </div>
+            )}
           </div>
-          <SupplierCodeGenerator onCodeGenerated={handleCodeGenerated} />
+
+          {/* 操作按钮 */}
+          <div className="flex items-center gap-2">
+            {/* 正常模式 */}
+            {!hasActiveMode ? (
+              <>
+                <Button size="sm" onClick={handleAdd}>
+                  <Plus className="w-4 h-4" />
+                  新增
+                </Button>
+                <Button size="sm" variant="blue" onClick={() => setBatchEditMode(true)}>
+                  <Pencil className="w-4 h-4" />
+                  编辑
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </Button>
+                <Button size="sm" onClick={() => setExportMode(true)}>
+                  <Download className="w-4 h-4" />
+                  导出
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* 编辑模式 */}
+                {batchEditMode && (
+                  <>
+                    <Button size="sm" variant="blue" onClick={handleBatchEdit}>
+                      确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelBatchEdit}>
+                      取消
+                    </Button>
+                  </>
+                )}
+                {/* 删除模式 */}
+                {deleteMode && (
+                  <>
+                    <Button size="sm" variant="destructive" onClick={handleDelete}>
+                      确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelDelete}>
+                      取消
+                    </Button>
+                  </>
+                )}
+                {/* 导出模式 */}
+                {exportMode && (
+                  <>
+                    <Button size="sm" onClick={handleConfirmExport}>
+                      <Download className="w-4 h-4" />
+                      确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleCancelExport}>
+                      取消选择
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* 表格 */}
+        <SupplierTable
+          suppliers={filteredSuppliers}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          selectedRows={selectedRows}
+          exportMode={exportMode}
+          batchEditMode={batchEditMode}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          onSelectAll={handleSelectAll}
+          onSelectRow={handleSelectRow}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDeleteSingle}
+        />
+      </div>
 
       {/* 弹窗 */}
       <SupplierDetailModal
@@ -376,7 +509,7 @@ export default function SupplierManagementPage() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={handleSaveAdd}
-        generatedCode={generatedCode}
+        generatedCode={codeGen.generatedCode}
       />
 
       <SupplierBatchEditModal
