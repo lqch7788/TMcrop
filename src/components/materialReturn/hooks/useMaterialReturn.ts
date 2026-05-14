@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { MaterialItem, ReturnRecord, SearchForm, EditFormData, AddFormData } from '../types';
-import { mockReturns } from '../mockData';
+import { useMaterialReturnStore } from '../../../stores';
 
 // 初始搜索表单
 const initialSearchForm: SearchForm = {
@@ -69,6 +69,20 @@ const generateReturnCode = (existingCodes: string[]): string => {
 };
 
 export function useMaterialReturn() {
+  // ========== 数据获取（从 Zustand Store）==========
+  const {
+    items: storeItems,
+    isLoading,
+    loadItems,
+    addItem: storeAddItem,
+    updateItem: storeUpdateItem,
+    deleteItem: storeDeleteItem,
+    deleteItems: storeDeleteItems,
+  } = useMaterialReturnStore();
+
+  // 初始化加载
+  useEffect(() => { loadItems(); }, [loadItems]);
+
   // ========== 状态定义 ==========
 
   // 搜索状态
@@ -140,7 +154,7 @@ export function useMaterialReturn() {
 
   // 过滤后的数据
   const filteredReturns = useMemo(() => {
-    return mockReturns.filter(item => {
+    return storeItems.filter(item => {
       if (searchForm.code && !item.code.toLowerCase().includes(searchForm.code.toLowerCase())) return false;
       if (searchForm.material && !item.materials.some(m => m.materialName.toLowerCase().includes(searchForm.material.toLowerCase()))) return false;
       if (searchForm.warehouse && !item.warehouseLocation.toLowerCase().includes(searchForm.warehouse.toLowerCase())) return false;
@@ -149,7 +163,7 @@ export function useMaterialReturn() {
       if (searchForm.department !== 'all' && item.department !== searchForm.department) return false;
       return true;
     });
-  }, [searchForm]);
+  }, [searchForm, storeItems]);
 
   const totalPages = Math.ceil(filteredReturns.length / pageSize);
 
@@ -240,11 +254,26 @@ export function useMaterialReturn() {
     setShowEditModal(true);
   }, []);
 
-  const handleSaveEdit = useCallback(() => {
-    // 编辑保存（实际项目中应通过 API 保存数据）
-    console.info('退料单编辑已保存');
+  const handleSaveEdit = useCallback(async () => {
+    if (!selectedRecord) return;
+    const updates = {
+      date: editForm.date,
+      type: editForm.type,
+      applicant: editForm.applicant,
+      department: editForm.department,
+      warehouseLocation: editForm.warehouseLocation,
+      status: editForm.status,
+      remark: editForm.remark,
+      operator: editForm.operator,
+      reviewer: editForm.reviewer,
+      reviewDate: editForm.reviewDate,
+      rejectReason: editForm.rejectReason,
+      materials: editForm.materials,
+    };
+    await storeUpdateItem(selectedRecord.id, updates as any);
+    await loadItems();
     setShowEditModal(false);
-  }, []);
+  }, [selectedRecord, editForm, storeUpdateItem, loadItems]);
 
   // ========== 作废操作 ==========
 
@@ -272,16 +301,14 @@ export function useMaterialReturn() {
     setShowDeleteConfirm(true);
   }, []);
 
-  const confirmDelete = useCallback(() => {
-    // 执行删除：从数据中移除待删除的记录
+  const confirmDelete = useCallback(async () => {
     if (deletingId !== null) {
-      // 注意：这里需要访问 mockReturns，但由于是 hook 内部，需要通过外部传入或使用其他方式
-      // 原型系统中暂时只关闭弹窗，实际删除由页面组件处理
-      console.info('删除操作已确认，记录ID:', deletingId);
+      await storeDeleteItem(deletingId);
+      await loadItems();
     }
     setShowDeleteConfirm(false);
     setDeletingId(null);
-  }, [deletingId]);
+  }, [deletingId, storeDeleteItem, loadItems]);
 
   // ========== 新增操作 ==========
 
@@ -321,10 +348,10 @@ export function useMaterialReturn() {
   // ========== 生成退料单号 ==========
 
   const handleGenerateCode = useCallback(() => {
-    const existingCodes = mockReturns.map(r => r.code);
+    const existingCodes = storeItems.map(r => r.code);
     const newCode = generateReturnCode(existingCodes);
     setAddForm(prev => ({ ...prev, code: newCode }));
-  }, []);
+  }, [storeItems]);
 
   // ========== 编辑物料操作 ==========
 
@@ -361,14 +388,12 @@ export function useMaterialReturn() {
     }));
   }, []);
 
-  const handleSaveAdd = useCallback(() => {
+  const handleSaveAdd = useCallback(async () => {
     if (!addForm.code) {
       console.warn('新增退料单需要先生成退料单号');
       return;
     }
-    // 使用时间戳作为唯一ID，避免ID冲突
-    const newRecord: ReturnRecord = {
-      id: Date.now(),
+    const newRecord: Omit<ReturnRecord, 'id'> = {
       code: addForm.code,
       date: addForm.date,
       type: addForm.type,
@@ -384,9 +409,11 @@ export function useMaterialReturn() {
       rejectReason: '',
       materials: addForm.materials,
     };
+    await storeAddItem(newRecord as any);
+    await loadItems();
     setShowAddModal(false);
     setAddForm(initialAddForm);
-  }, []);
+  }, [addForm, storeAddItem, loadItems]);
 
   const handleCancelAdd = useCallback(() => {
     setShowAddModal(false);
@@ -521,7 +548,6 @@ export function useMaterialReturn() {
   // ========== 批量操作 ==========
 
   const handleBatchDeleteConfirm = useCallback(() => {
-    // 验证：批量删除前检查是否选中了记录
     if (selectedRows.length === 0) {
       console.warn('批量删除需要先选择要删除的记录');
       setShowBatchDeleteConfirm(false);
@@ -529,6 +555,17 @@ export function useMaterialReturn() {
     }
     setShowBatchDeleteConfirm(true);
   }, [selectedRows.length]);
+
+  // 实际执行批量删除
+  const confirmBatchDelete = useCallback(async () => {
+    if (selectedRows.length > 0) {
+      await storeDeleteItems(selectedRows);
+      await loadItems();
+    }
+    setShowBatchDeleteConfirm(false);
+    setDeleteMode(false);
+    setSelectedRows([]);
+  }, [selectedRows, storeDeleteItems, loadItems]);
 
   const handleBatchEditWarning = useCallback(() => {
     if (selectedRows.length === 0) {
@@ -643,6 +680,7 @@ export function useMaterialReturn() {
     handleBatchEditWarning,
     setShowBatchEditModal,
     setShowBatchDeleteConfirm,
+    confirmBatchDelete,
     setShowEditWarning,
     setShowDeleteWarning,
     setEditAlertMessage,

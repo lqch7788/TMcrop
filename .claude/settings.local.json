@@ -126,7 +126,27 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); dates=set\\(r.get\\('applyDate',''\\) for r in d['data']\\); print\\('Unique dates:', dates\\)\")",
       "Bash(taskkill *)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(x['requestCode'],x.get\\('materials',[]\\)\\) for x in d['data']]\")",
-      "Bash(grep -o '{\"id\":\"[^\"]*\",\"requestCode\":\"LL20260301001\"')"
+      "Bash(grep -o '{\"id\":\"[^\"]*\",\"requestCode\":\"LL20260301001\"')",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }')",
+      "Bash(echo \"curl exit: $?\")",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }')",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(cmd.exe *)",
+      "Bash(powershell *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'CREATE: success={d[\\\\\"success\\\\\"]}, id={d.get\\(\\\\\"data\\\\\",{}\\).get\\(\\\\\"id\\\\\",\\\\\"?\\\\\"\\)}'\\)\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f'{t[\\\\\"id\\\\\"]} | {t[\\\\\"status\\\\\"]} | progress={t[\\\\\"progress\\\\\"]}'\\) for t in data['data']]\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Count: {len\\(d[\\\\\"data\\\\\"]\\)}, Success: {d[\\\\\"success\\\\\"]}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Harvest Count: {len\\(d[\\\\\"data\\\\\"]\\)}, Success: {d[\\\\\"success\\\\\"]}'\\)\")",
+      "mcp__memory__add_observations",
+      "Bash(pkill -f \"tsx watch\")",
+      "Bash(pkill -f \"node.*index\")",
+      "Read(//c/Windows/System32/**)",
+      "Read(//mnt/c/Windows/System32/**)",
+      "Bash(/c/Windows/System32/taskkill.exe *)",
+      "Bash(/c/Program Files/nodejs/node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('total:',j.meta.total\\);j.data.slice\\(0,2\\).forEach\\(r=>{console.log\\('---'\\);console.log\\('id:',r.id,'recordCode:',r.recordCode\\);console.log\\('cropName:',r.cropName,'cropStatus:',r.cropStatus\\);console.log\\('weather:',r.weather,'temperature:',r.temperature\\);console.log\\('issues:',JSON.stringify\\(r.issues\\)\\);console.log\\('issueCategories:',JSON.stringify\\(r.issueCategories\\)\\);console.log\\('airTemperature:',r.airTemperature,'soilPh:',r.soilPh\\);}\\)\")"
     ]
   }
 }

@@ -1,5 +1,5 @@
-// 供应商管理主页面组件
-import { useState, useMemo } from 'react';
+// 供应商管理主页面组件 - 数据来源：Zustand Store → enhancedApiClient → API
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from './PageHeader';
 import SupplierFilters, { filterSuppliers } from './SupplierFilters';
@@ -13,14 +13,28 @@ import SupplierExportModal from './SupplierExportModal';
 import SupplierCodeGenerator from './SupplierCodeGenerator';
 import { DeleteWarningDialog, BatchDeleteConfirmDialog } from './DeleteDialogs';
 import { Supplier, SupplierFiltersState } from './types';
-import { suppliers as initialSuppliers, getSupplierTypeName } from './data';
+import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
+import { useSupplierStore } from '../../stores';
 
 export default function SupplierManagementPage() {
   const navigate = useNavigate();
 
-  // 状态定义
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
+  // 数据从 Zustand Store 获取
+  const {
+    items: suppliers,
+    isLoading,
+    loadItems,
+    addItem: storeAddItem,
+    updateItem: storeUpdateItem,
+    deleteItem: storeDeleteItem,
+    deleteItems: storeDeleteItems,
+  } = useSupplierStore();
+
+  // 初始化加载
+  useEffect(() => { loadItems(); }, [loadItems]);
+
+  // 本地 UI 状态
   const [filters, setFilters] = useState<SupplierFiltersState>({
     code: '',
     name: '',
@@ -161,37 +175,39 @@ export default function SupplierManagementPage() {
   };
 
   // 保存操作
-  const handleSaveEdit = (updatedSupplier: Supplier) => {
-    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+  const handleSaveEdit = async (updatedSupplier: Supplier) => {
+    await storeUpdateItem(updatedSupplier.id, updatedSupplier);
+    await loadItems();
     setShowEditModal(false);
   };
 
-  const handleSaveAdd = (newSupplier: Supplier) => {
-    setSuppliers(prev => [...prev, newSupplier]);
+  const handleSaveAdd = async (newSupplier: Supplier) => {
+    await storeAddItem(newSupplier);
+    await loadItems();
     setShowAddModal(false);
   };
 
-  const handleSaveBatchEdit = (updates: Record<number, Partial<Supplier>>) => {
-    setSuppliers(prev => prev.map(s => {
-      if (updates[s.id]) {
-        return { ...s, ...updates[s.id] };
-      }
-      return s;
-    }));
+  const handleSaveBatchEdit = async (updates: Record<number, Partial<Supplier>>) => {
+    for (const [id, update] of Object.entries(updates)) {
+      await storeUpdateItem(Number(id), update);
+    }
+    await loadItems();
     setSelectedRows([]);
     setBatchEditMode(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedSupplier) {
-      setSuppliers(prev => prev.filter(s => s.id !== selectedSupplier.id));
+      await storeDeleteItem(selectedSupplier.id);
+      await loadItems();
       setSelectedSupplier(null);
     }
     setShowDeleteWarning(false);
   };
 
-  const handleConfirmBatchDelete = () => {
-    setSuppliers(prev => prev.filter(s => !selectedRows.includes(s.id)));
+  const handleConfirmBatchDelete = async () => {
+    await storeDeleteItems(selectedRows);
+    await loadItems();
     setSelectedRows([]);
     setShowBatchDeleteConfirm(false);
   };

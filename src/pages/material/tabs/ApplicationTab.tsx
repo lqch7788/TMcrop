@@ -17,22 +17,12 @@ import { EditWarningModal } from '../../../components/materialReceiving/modals/E
 import { DeleteWarningModal } from '../../../components/materialReceiving/modals/DeleteWarningModal';
 import { BatchDeleteConfirmModal } from '../../../components/materialReceiving/modals/BatchDeleteConfirmModal';
 
-import type { MaterialReceivingRecord } from '../../types/materialReceiving';
-
-// ============================================
-// Props 接口
-// ============================================
-interface ApplicationTabProps {
-  materialData: MaterialReceivingRecord[];
-  setMaterialData: React.Dispatch<React.SetStateAction<MaterialReceivingRecord[]>>;
-}
-
 // ============================================
 // 领料申请单页面主组件
 // ============================================
-export default function ApplicationTab({ materialData, setMaterialData }: ApplicationTabProps) {
-  // 使用自定义hook管理所有状态和逻辑
-  const hook = useApplicationTab(materialData, setMaterialData);
+export default function ApplicationTab() {
+  // 使用自定义hook管理所有状态和逻辑（数据从 Zustand Store 获取）
+  const hook = useApplicationTab();
 
   // ============================================
   // JSX - 领料申请单Tab内容

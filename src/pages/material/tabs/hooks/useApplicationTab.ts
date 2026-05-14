@@ -1,26 +1,15 @@
 // useApplicationTab Hook
 // 提取 ApplicationTab 的所有状态和业务逻辑
+// V1.2 升级：数据从 Zustand Store 获取，CRUD 通过 API 操作
 import { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
 import { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';
 import { Approval, ApprovalType, ApprovalStatus } from '@/types/approval';
 import { useApprovalContext } from '@/contexts/ApprovalContext';
-import { materialReceivingDetails } from '@/data/materialReceivingData';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
-import { createMaterialRequest } from '@/services/apiMaterialRequestService';
 import { getUsers, type User } from '@/services/authorityService';
-
-// 简单的哈希函数，用于生成稳定的数字ID（与 MaterialReceiving.tsx 保持一致）
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash);
-}
+import { useMaterialRequestDataStore } from '@/stores';
 
 // 默认新增表单初始状态
 const getDefaultAddForm = () => ({
@@ -39,13 +28,24 @@ const getDefaultAddForm = () => ({
 /**
  * ApplicationTab Hook
  * 管理领料申请单的所有状态和业务逻辑
+ * V1.2 升级：数据从 Zustand Store 获取，所有 CRUD 操作通过 API 持久化
  */
-export function useApplicationTab(
-  materialData: MaterialReceivingRecord[],
-  setMaterialData: React.Dispatch<React.SetStateAction<MaterialReceivingRecord[]>>
-): UseApplicationTabReturn {
+export function useApplicationTab(): UseApplicationTabReturn {
   // 获取审批上下文（用于联动）
   const approvalContext = useApprovalContext();
+
+  // 数据从 Zustand Store 获取（三级降级：API → IndexedDB → localStorage）
+  const {
+    items: materialData,
+    isLoading,
+    loadItems,
+    addItem: storeAddItem,
+    updateItem: storeUpdateItem,
+    deleteItem: storeDeleteItem,
+  } = useMaterialRequestDataStore();
+
+  // 初始化加载数据
+  useEffect(() => { loadItems(); }, [loadItems]);
 
   // ============================================
   // 用户ID到名称的映射（用于解决申请人/审核人显示ID而非中文名的问题）
@@ -230,7 +230,7 @@ export function useApplicationTab(
   };
 
   const confirmExport = async () => {
-    const exportData = materialReceivingDetails.filter(item => selectedRows.includes(item.id));
+    const exportData = materialData.filter(item => selectedRows.includes(item.id));
 
     const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '生产批次号', '状态'];
     const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'productionBatchCode', 'status'];
@@ -435,7 +435,12 @@ export function useApplicationTab(
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    // 调用 API 删除记录
+    if (deletingId !== null) {
+      await storeDeleteItem(deletingId);
+      await loadItems();
+    }
     setShowDeleteConfirm(false);
     setDeletingId(null);
   };
@@ -443,14 +448,10 @@ export function useApplicationTab(
   // ============================================
   // 保存编辑（重新提交）
   // ============================================
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!selectedRecord) return;
 
-    const currentRecord = materialData.find(r => r.id === selectedRecord.id);
-    if (!currentRecord) return;
-
-    const updatedRecord: MaterialReceivingRecord = {
-      ...currentRecord,
+    const updates = {
       date: editForm.date,
       applicant: editForm.applicant,
       department: editForm.department,
@@ -460,10 +461,11 @@ export function useApplicationTab(
       productionBatchCode: editForm.productionBatchCode,
       status: '待审批',
       statusClass: 'pending',
-      materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 }))
+      materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
     };
 
-    setMaterialData(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+    await storeUpdateItem(selectedRecord.id, updates as any);
+    await loadItems();
 
     setShowEditModal(false);
     alert('编辑已保存，领料单已重新提交，等待审批');
@@ -481,18 +483,15 @@ export function useApplicationTab(
   // ============================================
   // 提交作废申请
   // ============================================
-  const submitVoidApply = () => {
+  const submitVoidApply = async () => {
     if (!voidReason.trim()) {
       alert('请填写作废原因');
       return;
     }
     if (!selectedRecord) return;
 
-    setMaterialData(prev => prev.map(r =>
-      r.id === selectedRecord.id
-        ? { ...r, status: '已作废', statusClass: 'voided' }
-        : r
-    ));
+    await storeUpdateItem(selectedRecord.id, { status: '已作废', statusClass: 'voided' } as any);
+    await loadItems();
 
     setShowVoidModal(false);
     setShowEditModal(false);
@@ -556,124 +555,82 @@ export function useApplicationTab(
       return;
     }
 
-    // 生成临时单号用于显示（后端会生成真正的唯一单号）
-    const tempCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(Date.now() % 1000).padStart(3, '0')}`;
-
-    // 计算总金额
-    const totalAmount = addForm.materials.reduce((sum, m) => {
-      return sum + (m.requestedQuantity * (m.unitPrice || 0));
-    }, 0);
-
     // 从用户映射中获取申请人中文名称
     const applicantName = userMap[addForm.applicant] || addForm.applicant;
     const reviewerName = userMap[addForm.reviewer] || addForm.reviewer;
 
-    // 先调用后端 API 保存领料单，让后端生成唯一的 request_code
-    let backendId: string;
-    let backendCode: string;
-    try {
-      const result = await createMaterialRequest({
-        // 不传 request_code，让后端自动生成唯一单号
-        request_title: `${applicantName}的领料申请`,
-        request_type: '领料申请',
-        applicant_id: addForm.applicant,
-        applicant_name: applicantName,
-        department_name: addForm.department,
-        apply_date: addForm.date,
-        warehouse_name: addForm.warehouseLocation,
-        plant_area: addForm.plantArea,
-        production_batch_code: addForm.productionBatchCode,
-        total_amount: totalAmount,
-        priority: 'medium',
-        status: 'pending',
-        approval_status: 'pending',
-        remarks: addForm.batchRemark,
-        materials: addForm.materials,
-        create_by: addForm.applicant,
-      });
-      backendId = result.id;
-      backendCode = result.request_code;
-    } catch (error) {
-      console.error('保存领料单失败:', error);
+    // 通过 Zustand Store 调用 API 创建记录（三级降级）
+    const newRecord = await storeAddItem({
+      date: addForm.date,
+      applicant: applicantName,
+      department: addForm.department,
+      warehouseLocation: addForm.warehouseLocation,
+      plantArea: addForm.plantArea,
+      reviewer: reviewerName,
+      productionBatchCode: addForm.productionBatchCode,
+      materials: addForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
+    });
+
+    if (!newRecord) {
       alert('保存领料单失败，请重试');
       return;
     }
 
-    // 使用后端生成的唯一 request_code
-    const finalCode = backendCode || tempCode;
-
-    const newRecord: MaterialReceivingRecord = {
-      id: hashCode(finalCode), // 使用后端返回的 request_code 的哈希值
-      code: finalCode,
-      date: addForm.date,
-      applicant: applicantName, // 使用中文名称显示
-      department: addForm.department,
-      warehouseLocation: addForm.warehouseLocation,
-      plantArea: addForm.plantArea,
-      reviewer: reviewerName, // 使用中文名称显示
-      productionBatchCode: addForm.productionBatchCode,
-      status: '待审批',
-      statusClass: 'pending',
-      materials: addForm.materials.map(m => ({ ...m, actualQuantity: 0 }))
-    };
-
-    setMaterialData(prev => [newRecord, ...prev]);
-
-    // 同步创建审批记录（核心联动功能），使用后端返回的 ID
+    // 同步创建审批记录（核心联动功能）
     if (approvalContext) {
       try {
         const approval: Approval = {
-        id: `MAT-AP-${Date.now()}`,
-        code: newRecord.code,
-        type: ApprovalType.MATERIAL_REQUEST,
-        typeName: '领料单',
-        category: 'business',
-        title: `${applicantName}的领料申请`,
-        description: `申请从${newRecord.warehouseLocation}领取物料，用于${newRecord.plantArea}`,
-        applicantId: addForm.applicant,
-        applicantName: applicantName,
-        applicantDepartment: newRecord.department,
-        applyDate: newRecord.date,
-        applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
-        currentStep: 1,
-        totalSteps: 1,
-        approvers: [{
-          userId: newRecord.reviewer,
-          userName: reviewerName,
-          role: '审批人',
-          order: 1,
-          status: 'pending'
-        }],
-        records: [],
-        status: ApprovalStatus.PENDING,
-        priority: 'normal',
-        reminderCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        notificationSent: false,
-        materials: addForm.materials.map(m => ({
-          materialId: m.materialCode,
-          materialCode: m.materialCode,
-          materialName: m.materialName,
-          requestedQuantity: m.requestedQuantity,
-          unit: m.unit
-        })),
-        businessLink: {
-          type: 'material',
-          requestId: backendId,  // 使用后端返回的 ID
-          requestCode: newRecord.code,
-          plantArea: addForm.plantArea,
-          warehouseLocation: addForm.warehouseLocation,
-          batchCode: addForm.productionBatchCode,
+          id: `MAT-AP-${Date.now()}`,
+          code: newRecord.code,
+          type: ApprovalType.MATERIAL_REQUEST,
+          typeName: '领料单',
+          category: 'business',
+          title: `${applicantName}的领料申请`,
+          description: `申请从${addForm.warehouseLocation}领取物料，用于${addForm.plantArea}`,
+          applicantId: addForm.applicant,
+          applicantName: applicantName,
+          applicantDepartment: addForm.department,
+          applyDate: addForm.date,
+          applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+          currentStep: 1,
+          totalSteps: 1,
+          approvers: [{
+            userId: addForm.reviewer,
+            userName: reviewerName,
+            role: '审批人',
+            order: 1,
+            status: 'pending'
+          }],
+          records: [],
+          status: ApprovalStatus.PENDING,
+          priority: 'normal',
+          reminderCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          notificationSent: false,
           materials: addForm.materials.map(m => ({
             materialId: m.materialCode,
             materialCode: m.materialCode,
             materialName: m.materialName,
             requestedQuantity: m.requestedQuantity,
             unit: m.unit
-          }))
-        }
-      };
+          })),
+          businessLink: {
+            type: 'material',
+            requestId: String(newRecord.id),
+            requestCode: newRecord.code,
+            plantArea: addForm.plantArea,
+            warehouseLocation: addForm.warehouseLocation,
+            batchCode: addForm.productionBatchCode,
+            materials: addForm.materials.map(m => ({
+              materialId: m.materialCode,
+              materialCode: m.materialCode,
+              materialName: m.materialName,
+              requestedQuantity: m.requestedQuantity,
+              unit: m.unit
+            }))
+          }
+        };
         await approvalContext.addApproval(approval);
       } catch (error) {
         console.error('创建审批记录失败:', error);
@@ -696,10 +653,6 @@ export function useApplicationTab(
   // 返回所有状态和函数
   // ============================================
   return {
-    // Props 数据
-    materialData,
-    setMaterialData,
-
     // 搜索筛选状态
     searchCode,
     setSearchCode,

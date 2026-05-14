@@ -1,7 +1,8 @@
 /**
  * 仓库入库数据管理 Hook
  * 从 WarehouseInboundPage 拆分出来，集中管理状态和业务逻辑
- * 数据来源：API → enhancedApiClient → React Query
+ * 数据来源：Zustand Store → enhancedApiClient → API
+ * 三级降级：API → IndexedDB → localStorage
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
@@ -21,41 +22,42 @@ import {
   generateSequentialOrderCode,
   filterInboundRecords,
   calculatePagination,
-  handleSelectAll,
-  handleSelectRow,
+  handleSelectAll as utilSelectAll,
+  handleSelectRow as utilSelectRow,
   handleCancelSelection,
 } from '../utils/warehouseInbound.utils';
-import { useInboundRecords, useCreateInbound, useDeleteInbound } from '../../../hooks/useWarehouseQueries';
-import { queryClient } from '../../../lib/queryClient';
+import { useInboundStore } from '../../../stores';
 
 /**
  * 仓库入库 Hook
  * 集中管理入库页面的所有状态和业务逻辑
- * 数据从 API 获取，支持缓存和自动刷新
+ * 数据从 Zustand Store 获取，支持三级降级
  */
 export function useWarehouseInbound() {
   const navigate = useNavigate();
 
-  // ========== 数据获取（从 API）==========
-  // 使用 React Query 获取数据，支持缓存和自动刷新
-  const { data: apiInboundRecords = [], refetch, isLoading } = useInboundRecords();
-  const createInboundMutation = useCreateInbound();
-  const deleteInboundMutation = useDeleteInbound();
+  // ========== 数据获取（从 Zustand Store）==========
+  const {
+    items: inboundRecords,
+    isLoading,
+    loadItems,
+    addItem: storeAddItem,
+    updateItem: storeUpdateItem,
+    deleteItem: storeDeleteItem,
+    deleteItems: storeDeleteItems,
+  } = useInboundStore();
 
-  // 将 API 数据同步到本地状态
-  const [inboundRecords, setInboundRecords] = useState<InboundRecord[]>([]);
-
-  // 当 API 数据变化时同步到本地状态
+  // 初始化加载数据
   useEffect(() => {
-    if (apiInboundRecords.length > 0) {
-      setInboundRecords(apiInboundRecords);
+    if (inboundRecords.length === 0) {
+      loadItems();
     }
-  }, [apiInboundRecords]);
+  }, []);
 
   // 刷新数据
   const refreshData = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    loadItems();
+  }, [loadItems]);
 
   // 编码生成相关状态
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -182,12 +184,12 @@ export function useWarehouseInbound() {
 
   // 全选/取消全选
   const onSelectAll = useCallback(() => {
-    handleSelectAll(displayedRecords, selectedRows, deleteMode, setSelectedRows);
+    utilSelectAll(displayedRecords, selectedRows, deleteMode, setSelectedRows);
   }, [displayedRecords, selectedRows, deleteMode]);
 
   // 选择/取消单行
   const onSelectRow = useCallback((id: number) => {
-    handleSelectRow(id, selectedRows, setSelectedRows);
+    utilSelectRow(id, selectedRows, setSelectedRows);
   }, [selectedRows]);
 
   // 取消选择模式
@@ -227,32 +229,33 @@ export function useWarehouseInbound() {
   // 确认删除
   const onConfirmInboundDelete = useCallback(async () => {
     if (selectedInboundRecords.length > 0) {
-      // 调用 API 删除每条记录
+      // 调用 Store 删除每条记录
       for (const record of selectedInboundRecords) {
-        await deleteInboundMutation.mutateAsync(record.id);
+        await storeDeleteItem(record.id);
       }
       // 刷新数据
-      refetch();
+      loadItems();
     }
     setShowInboundDeleteModal(false);
     setSelectedInboundRecords([]);
-  }, [selectedInboundRecords, deleteInboundMutation, refetch]);
+  }, [selectedInboundRecords, storeDeleteItem, loadItems]);
 
   // 保存编辑
-  const onSaveInboundEdit = useCallback((record: InboundRecord) => {
+  const onSaveInboundEdit = useCallback(async (record: InboundRecord) => {
+    await storeUpdateItem(record.id, record);
+    await loadItems();
     setShowInboundEditModal(false);
     setSelectedInboundRecord(null);
-  }, []);
+  }, [storeUpdateItem, loadItems]);
 
   // 批量保存记录
-  const onBatchSaveRecord = useCallback((records: InboundRecord[]) => {
-    setInboundRecords(prev => {
-      const idsToUpdate = records.map(r => r.id);
-      const otherRecords = prev.filter(r => !idsToUpdate.includes(r.id));
-      return [...otherRecords, ...records];
-    });
+  const onBatchSaveRecord = useCallback(async (records: InboundRecord[]) => {
+    for (const record of records) {
+      await storeUpdateItem(record.id, record);
+    }
+    await loadItems();
     setShowInboundEditModal(false);
-  }, []);
+  }, [storeUpdateItem, loadItems]);
 
   // 添加记录
   const onAddRecord = useCallback(() => {
@@ -267,15 +270,15 @@ export function useWarehouseInbound() {
   // 保存新记录
   const onSaveNewInbound = useCallback(async (record: Omit<InboundRecord, 'id'>) => {
     try {
-      // 调用 API 创建记录
-      await createInboundMutation.mutateAsync(record);
+      // 调用 Store 创建记录
+      await storeAddItem(record as any);
       // 刷新数据
-      refetch();
+      loadItems();
     } catch (error) {
       console.error('创建入库记录失败:', error);
     }
     setShowInboundAddModal(false);
-  }, [createInboundMutation, refetch]);
+  }, [storeAddItem, loadItems]);
 
   // 确认编辑
   const onConfirmEdit = useCallback(() => {

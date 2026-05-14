@@ -101,6 +101,17 @@ export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Pr
 }
 
 /**
+ * 创建物料
+ * 降级策略：API → 离线队列
+ */
+export async function createMaterial(material: Omit<Material, 'id'>): Promise<{ id: number }> {
+  return await enhancedApiClient.post<{ id: number }>('/materials', material, {
+    offlineQueue: true,
+    useCache: true,
+  });
+}
+
+/**
  * 更新物料
  * 降级策略：API → 离线队列
  */

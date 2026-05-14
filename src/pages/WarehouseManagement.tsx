@@ -1,7 +1,7 @@
 /**
  * 仓库管理页面
  * 功能：仓库信息的新增、编辑、删除、查询
- * 使用 API 替代 localStorage
+ * 数据来源：Zustand Store → API
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,39 +9,31 @@ import { Link } from 'react-router-dom';
 import { Warehouse, Search, Plus, Edit2, Trash2, Layers, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
-  getWarehouses,
-  createWarehouse,
-  updateWarehouse,
-  deleteWarehouse as deleteWarehouseApi,
-  Warehouse as WarehouseType,
-} from '../services/apiBasicDataService';
+  useWarehouseStore,
+  type Warehouse as WarehouseType,
+} from '../stores';
 
 const WAREHOUSE_TYPES = ['原料仓库', '成品仓库', '耗材仓库', '农药仓库', '化肥仓库', '设备仓库', '其他'];
 
 export default function WarehouseManagement() {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  // 数据从 Zustand Store 获取
+  const {
+    warehouses,
+    loading,
+    error,
+    loadWarehouses,
+    addWarehouse,
+    editWarehouse,
+    removeWarehouse,
+    refreshWarehouses,
+  } = useWarehouseStore();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
-  const [newWarehouse, setNewWarehouse] = useState<Partial<Warehouse>>({ status: 'active' });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<WarehouseType | null>(null);
+  const [newWarehouse, setNewWarehouse] = useState<Partial<WarehouseType>>({ status: 'active' });
 
-  // 加载仓库数据
-  const loadWarehouses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getWarehouses();
-      setWarehouses(data);
-    } catch (err) {
-      console.error('加载仓库数据失败:', err);
-      setError('加载仓库数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // 初始化加载
   useEffect(() => {
     loadWarehouses();
   }, [loadWarehouses]);
@@ -57,7 +49,7 @@ export default function WarehouseManagement() {
       return;
     }
     try {
-      await createWarehouse({
+      await addWarehouse({
         name: newWarehouse.name,
         code: newWarehouse.code,
         warehouseType: newWarehouse.warehouseType,
@@ -66,7 +58,7 @@ export default function WarehouseManagement() {
         managerId: newWarehouse.managerId,
         managerName: newWarehouse.managerName,
       });
-      await loadWarehouses();
+      await refreshWarehouses();
       setShowModal(false);
       setNewWarehouse({ status: 'active' });
     } catch (err) {
@@ -79,7 +71,7 @@ export default function WarehouseManagement() {
   const handleUpdate = async () => {
     if (!editingWarehouse) return;
     try {
-      await updateWarehouse(editingWarehouse.id, {
+      await editWarehouse(editingWarehouse.id, {
         name: newWarehouse.name,
         code: newWarehouse.code,
         warehouseType: newWarehouse.warehouseType,
@@ -88,7 +80,7 @@ export default function WarehouseManagement() {
         managerId: newWarehouse.managerId,
         managerName: newWarehouse.managerName,
       });
-      await loadWarehouses();
+      await refreshWarehouses();
       setShowModal(false);
       setEditingWarehouse(null);
       setNewWarehouse({ status: 'active' });
@@ -102,16 +94,16 @@ export default function WarehouseManagement() {
   const handleDeleteWarehouse = async (id: string) => {
     if (!confirm('确定删除该仓库吗？')) return;
     try {
-      await deleteWarehouseApi(id);
-      await loadWarehouses();
+      await removeWarehouse(id);
+      await refreshWarehouses();
     } catch (err) {
       console.error('删除仓库失败:', err);
       alert('删除仓库失败');
     }
   };
 
-  // 编辑仓库
-  const editWarehouse = (warehouse: Warehouse) => {
+  // 打开编辑弹窗
+  const openEditModal = (warehouse: WarehouseType) => {
     setEditingWarehouse(warehouse);
     setNewWarehouse(warehouse);
     setShowModal(true);
@@ -267,7 +259,7 @@ export default function WarehouseManagement() {
                 <p className="text-xs text-gray-500 mt-2">{warehouse.description}</p>
               )}
               <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-                <Button size="icon" variant="ghost" onClick={() => editWarehouse(warehouse)}>
+                <Button size="icon" variant="ghost" onClick={() => openEditModal(warehouse)}>
                   <Edit2 className="w-4 h-4 text-gray-600" />
                 </Button>
                 <Button size="icon" variant="destructive" onClick={() => handleDeleteWarehouse(warehouse.id)}>

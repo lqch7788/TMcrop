@@ -10,7 +10,7 @@ import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } f
  * useExecuteTab Hook
  * 管理领料出库页面的所有状态和业务逻辑
  */
-export function useExecuteTab(materialData: MaterialReceivingRecord[]): UseExecuteTabReturn {
+export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): UseExecuteTabReturn {
   // 搜索状态
   const [executeSearchCode, setExecuteSearchCode] = useState('');
   const [executeSearchApplicant, setExecuteSearchApplicant] = useState('');

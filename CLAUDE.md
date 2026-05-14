@@ -199,3 +199,22 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 通过
 **所有 SettingsDataProvider 相关代码已完全移除**
+
+### 2026-05-14 会话
+
+**完成的工作：**
+
+1. **恢复 SmartDispatch.tsx 完整页面（882行）**
+   - 从 2 行 re-export 恢复为完整派工确认页面
+   - 使用 Tailwind CSS + lucide-react（无 antd）
+   - 导入 7 个现有 hooks + 6 个 dispatch 子组件
+   - 包含：StatsCards、TaskCard、TaskGroup、BatchActionsBar、4 列布局、4 个 Modal
+
+2. **DailyPlanningPage 和 MonthlyPlanningPage 数据源升级**
+   - 替换 `localStorage.getItem('yuanxingtu_batches')` 为 `useProductionPlanStore`
+   - 修改文件：`MonthlyPlanningPage.tsx`（Zustand Store + fetchPlans on mount）
+   - 修改文件：`useDailyTaskPlanning.ts`（`useProductionPlanStore.getState().plans`）
+   - 修改文件：`useMonthlyTaskPlanning.ts`（`useProductionPlanStore.getState().plans`）
+   - 符合升级优化方案 V1.0 架构要求：Zustand Store → API → 组件
+
+**构建状态：** ✅ 通过（三页均编译成功）
