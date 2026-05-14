@@ -3,177 +3,19 @@ import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTri
 import { useNavigate } from 'react-router-dom';
 import { AddMidModal } from '../components/codeRule/AddMidModal';
 import { Button } from '../components/ui/button';
-
-// 编码规则配置 - 大类(2位字母) + 中类(2位数字) + 流水号(3位数字)
-// 完整格式: SU_ + 大类代码 + 中类代码 + 流水号
-interface MidCategory {
-  code: string;
-  name: string;
-}
-
-interface BigCategory {
-  code: string;
-  name: string;
-  nameEn: string;
-  midCategories: MidCategory[];
-}
-
-// 初始分类数据
-const initialCategories: BigCategory[] = [
-  // 种子与种苗类 SP
-  {
-    code: 'SP',
-    name: '种子与种苗类',
-    nameEn: 'Seed & Seedling',
-    midCategories: [
-      { code: '01', name: '粮食作物种子' },
-      { code: '02', name: '经济作物种子' },
-      { code: '03', name: '蔬菜种子/种苗' },
-      { code: '04', name: '水果苗木' },
-      { code: '05', name: '花卉与观赏植物' },
-      { code: '06', name: '食用菌/药用菌菌种' },
-      { code: '99', name: '其他种质资源' },
-    ]
-  },
-  // 肥料与土壤改良类 FE
-  {
-    code: 'FE',
-    name: '肥料与土壤改良类',
-    nameEn: 'Fertilizer & Soil Amendment',
-    midCategories: [
-      { code: '01', name: '有机肥' },
-      { code: '02', name: '化学肥料' },
-      { code: '03', name: '微生物菌剂/生物刺激素' },
-      { code: '04', name: '土壤调理剂' },
-      { code: '05', name: '育苗基质' },
-      { code: '99', name: '其他肥料类' },
-    ]
-  },
-  // 农药与植保产品类 PP
-  {
-    code: 'PP',
-    name: '农药与植保产品类',
-    nameEn: 'Pesticide & Plant Protection',
-    midCategories: [
-      { code: '01', name: '杀虫剂' },
-      { code: '02', name: '杀菌剂' },
-      { code: '03', name: '除草剂' },
-      { code: '04', name: '植物生长调节剂' },
-      { code: '05', name: '绿色防控产品' },
-      { code: '06', name: '生物农药' },
-      { code: '99', name: '其他植保产品' },
-    ]
-  },
-  // 农业机械与设备类 EQ
-  {
-    code: 'EQ',
-    name: '农业机械与设备类',
-    nameEn: 'Agricultural Machinery & Equipment',
-    midCategories: [
-      { code: '01', name: '耕作与动力机械' },
-      { code: '02', name: '播种/移栽设备' },
-      { code: '03', name: '植保机械' },
-      { code: '04', name: '收获与采收机械' },
-      { code: '05', name: '初加工与分选设备' },
-      { code: '99', name: '其他农机设备' },
-    ]
-  },
-  // 设施农业资材类 FA
-  {
-    code: 'FA',
-    name: '设施农业资材类',
-    nameEn: 'Facility Agriculture Materials',
-    midCategories: [
-      { code: '01', name: '温室/大棚骨架材料' },
-      { code: '02', name: '覆盖材料' },
-      { code: '03', name: '通风降温设备' },
-      { code: '04', name: '加温设备' },
-      { code: '05', name: '补光系统' },
-      { code: '06', name: '智能环控系统' },
-      { code: '99', name: '其他设施农业资材' },
-    ]
-  },
-  // 灌溉与水肥一体化类 IR
-  {
-    code: 'IR',
-    name: '灌溉与水肥一体化类',
-    nameEn: 'Irrigation & Fertilization',
-    midCategories: [
-      { code: '01', name: '水泵与水源设备' },
-      { code: '02', name: '输水管网' },
-      { code: '03', name: '过滤系统' },
-      { code: '04', name: '施肥装置' },
-      { code: '05', name: '灌溉终端' },
-      { code: '99', name: '其他灌溉设备' },
-    ]
-  },
-  // 日常劳保与劳动工具类 OP
-  {
-    code: 'OP',
-    name: '日常劳保与劳动工具类',
-    nameEn: 'Labor Protection & Tools',
-    midCategories: [
-      { code: '01', name: '劳动防护用品' },
-      { code: '02', name: '日常手动工具' },
-      { code: '03', name: '小型电动工具' },
-      { code: '04', name: '清洁与卫生用品' },
-      { code: '99', name: '其他作业支持用品' },
-    ]
-  },
-  // 仓储与物流资材类 PH
-  {
-    code: 'PH',
-    name: '仓储与物流资材类',
-    nameEn: 'Storage & Logistics Materials',
-    midCategories: [
-      { code: '01', name: '采收容器' },
-      { code: '02', name: '农产品包装材料' },
-      { code: '03', name: '冷链设备' },
-      { code: '04', name: '装卸与仓储设备' },
-      { code: '99', name: '其他采后处理' },
-    ]
-  },
-  // 检测与技术服务类 TS
-  {
-    code: 'TS',
-    name: '检测与技术服务类',
-    nameEn: 'Testing & Technical Services',
-    midCategories: [
-      { code: '01', name: '土壤/水质检测服务' },
-      { code: '02', name: '农残快检设备与试剂' },
-      { code: '03', name: '农业物联网设备' },
-      { code: '04', name: '数字农业软件服务' },
-      { code: '05', name: '农业技术咨询与培训' },
-      { code: '99', name: '其他技术服务' },
-    ]
-  },
-  // 能源与辅助耗材类 UT
-  {
-    code: 'UT',
-    name: '能源与辅助耗材类',
-    nameEn: 'Energy & Auxiliary Consumables',
-    midCategories: [
-      { code: '01', name: '燃油/润滑油' },
-      { code: '02', name: '电力与新能源' },
-      { code: '03', name: '通用工业耗材' },
-      { code: '99', name: '其他能源与耗材' },
-    ]
-  },
-  // 其他综合类 OT
-  {
-    code: 'OT',
-    name: '其他综合类',
-    nameEn: 'Others',
-    midCategories: [
-      { code: '01', name: '其他未分类供应商' },
-    ]
-  },
-];
+import { useSupplierCodeRuleStore } from '../stores';
 
 export default function SupplierCodeRule() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<BigCategory[]>(initialCategories);
-  const [expandedBig, setExpandedBig] = useState<Set<string>>(new Set(initialCategories.map(c => c.code)));
+  const categories = useSupplierCodeRuleStore((s) => s.categories);
+  const updateBigName = useSupplierCodeRuleStore((s) => s.updateBigName);
+  const updateMidName = useSupplierCodeRuleStore((s) => s.updateMidName);
+  const addBigCategory = useSupplierCodeRuleStore((s) => s.addBigCategory);
+  const addMidCategory = useSupplierCodeRuleStore((s) => s.addMidCategory);
+  const deleteBigCategory = useSupplierCodeRuleStore((s) => s.deleteBigCategory);
+  const deleteMidCategory = useSupplierCodeRuleStore((s) => s.deleteMidCategory);
+
+  const [expandedBig, setExpandedBig] = useState<Set<string>>(new Set(categories.map(c => c.code)));
   const [editingCell, setEditingCell] = useState<{type: 'big' | 'mid'; bigCode: string; midCode?: string} | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showAddBig, setShowAddBig] = useState(false);
@@ -202,25 +44,15 @@ export default function SupplierCodeRule() {
     setEditValue(currentName || '');
   };
 
-  // 保存编辑
+  // 保存编辑（通过Store持久化）
   const saveEdit = () => {
     if (!editingCell || !editValue.trim()) return;
 
-    setCategories(prev => prev.map(big => {
-      if (big.code !== editingCell.bigCode) return big;
-
-      if (editingCell.type === 'big') {
-        return { ...big, name: editValue.trim() };
-      }
-
-      return {
-        ...big,
-        midCategories: big.midCategories.map(mid => {
-          if (mid.code !== editingCell.midCode) return mid;
-          return { ...mid, name: editValue.trim() };
-        })
-      };
-    }));
+    if (editingCell.type === 'big') {
+      updateBigName(editingCell.bigCode, editValue.trim());
+    } else if (editingCell.midCode) {
+      updateMidName(editingCell.bigCode, editingCell.midCode, editValue.trim());
+    }
 
     setEditingCell(null);
     setEditValue('');
@@ -232,54 +64,34 @@ export default function SupplierCodeRule() {
     setEditValue('');
   };
 
-  // 添加大类
-  const addBigCategory = () => {
+  // 添加大类（通过Store持久化）
+  const handleAddBigCategory = () => {
     if (!newBigCode.trim() || !newBigName.trim()) return;
-    setCategories(prev => [...prev, {
-      code: newBigCode.trim().toUpperCase(),
-      name: newBigName.trim(),
-      nameEn: '',
-      midCategories: []
-    }]);
+    addBigCategory(newBigCode.trim().toUpperCase(), newBigName.trim());
     setNewBigCode('');
     setNewBigName('');
     setShowAddBig(false);
   };
 
-  // 添加中类
-  const addMidCategory = (bigCode: string, midCode: string, midName: string) => {
+  // 添加中类（通过Store持久化）
+  const handleAddMidCategory = (bigCode: string, midCode: string, midName: string) => {
     if (!midCode.trim() || !midName.trim()) return;
-    setCategories(prev => prev.map(big => {
-      if (big.code !== bigCode) return big;
-      return {
-        ...big,
-        midCategories: [...big.midCategories, {
-          code: midCode.trim(),
-          name: midName.trim()
-        }]
-      };
-    }));
+    addMidCategory(bigCode, midCode.trim(), midName.trim());
     setNewMidCode('');
     setNewMidName('');
     setShowAddMid(null);
   };
 
-  // 删除大类
-  const deleteBigCategory = (bigCode: string) => {
+  // 删除大类（通过Store持久化）
+  const handleDeleteBigCategory = (bigCode: string) => {
     if (!confirm(`确定要删除大类 "${bigCode}" 吗？`)) return;
-    setCategories(prev => prev.filter(big => big.code !== bigCode));
+    deleteBigCategory(bigCode);
   };
 
-  // 删除中类
-  const deleteMidCategory = (bigCode: string, midCode: string) => {
+  // 删除中类（通过Store持久化）
+  const handleDeleteMidCategory = (bigCode: string, midCode: string) => {
     if (!confirm(`确定要删除中类 "${midCode}" 吗？`)) return;
-    setCategories(prev => prev.map(big => {
-      if (big.code !== bigCode) return big;
-      return {
-        ...big,
-        midCategories: big.midCategories.filter(mid => mid.code !== midCode)
-      };
-    }));
+    deleteMidCategory(bigCode, midCode);
   };
 
   // 渲染编辑单元格
@@ -376,7 +188,7 @@ export default function SupplierCodeRule() {
       )}
 
       {/* 分类表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden w-1/2">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden w-[65%]">
         <table className="w-full">
           <thead className="bg-emerald-600">
             <tr>
@@ -405,7 +217,7 @@ export default function SupplierCodeRule() {
                         placeholder="大类名称"
                         className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
-                      <Button variant="default" size="sm" onClick={addBigCategory}>添加</Button>
+                      <Button variant="default" size="sm" onClick={handleAddBigCategory}>添加</Button>
                       <Button variant="secondary" size="sm" onClick={() => setShowAddBig(false)}>取消</Button>
                     </div>
                   ) : (
@@ -462,7 +274,7 @@ export default function SupplierCodeRule() {
                           <div className="flex items-center gap-4">
                             {isEditing ? renderEditCell('mid', big.code, mid.code, mid.name) : <span className="font-medium text-gray-800 text-sm">{mid.name}</span>}
                             {isEditing && (
-                              <Button variant="ghost" size="icon" onClick={() => deleteMidCategory(big.code, mid.code)}>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteMidCategory(big.code, mid.code)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             )}
@@ -497,7 +309,7 @@ export default function SupplierCodeRule() {
         isOpen={!!showAddMid}
         onClose={() => setShowAddMid(null)}
         bigCode={showAddMid || ''}
-        onAdd={(midCode, midName) => addMidCategory(showAddMid!, midCode, midName)}
+        onAdd={(midCode, midName) => handleAddMidCategory(showAddMid!, midCode, midName)}
       />
 
       {/* 保存确认弹窗 */}
@@ -536,7 +348,7 @@ export default function SupplierCodeRule() {
               <Button variant="destructive" onClick={() => {
                   setShowSaveConfirm(false);
                   setIsEditing(false);
-                  alert('编码规则已保存！（演示模式）');
+                  alert('编码规则已保存！数据将持久化存储，清除缓存后不会丢失。');
                 }}>
                 确认保存
               </Button>

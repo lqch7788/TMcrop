@@ -134,3 +134,5 @@ export type { InspectionData } from './useInspectionDataStore';
 
 export { useProblemStore } from './useProblemStore';
 export type { ProblemData } from './useProblemStore';
+
+export { useSupplierCodeRuleStore } from './useSupplierCodeRuleStore';
