@@ -8,6 +8,55 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+/**
+ * 将数据库记录转换为前端 InspectionRecord 格式
+ * 数据库仅存储核心字段，其余字段填充默认值确保前端不丢数据
+ */
+function transformInspectionRecord(db: any) {
+  if (!db) return db;
+  const issueText = db.issueText || db.issue_text || '';
+  const images = db.images || [];
+  return {
+    ...db,
+    // 确保必要字段存在
+    cropName: db.cropName || db.crop_name || '',
+    cropStatus: db.cropStatus || db.crop_status || '',
+    issues: Array.isArray(db.issues) ? db.issues : (issueText ? [issueText] : []),
+    images: Array.isArray(images) ? images : [],
+    weather: db.weather || '',
+    temperature: db.temperature || 0,
+    humidity: db.humidity || 0,
+    remarks: db.remarks || '',
+    plantHeight: db.plantHeight || db.plant_height || 0,
+    leafCount: db.leafCount || db.leaf_count || 0,
+    duration: db.duration || 0,
+    // 问题相关字段
+    issueCategories: Array.isArray(db.issueCategories) ? db.issueCategories : [],
+    issuePresets: Array.isArray(db.issuePresets) ? db.issuePresets : [],
+    issuePhotos: Array.isArray(db.issuePhotos) ? db.issuePhotos : [],
+    feedbackUsers: Array.isArray(db.feedbackUsers) ? db.feedbackUsers : [],
+    issueStatus: db.issueStatus || db.issue_status || (db.status === 'attention' ? 'pending' : 'resolved'),
+    expectedCompletion: db.expectedCompletion || db.expected_completion || '',
+    // 环境参数
+    airTemperature: db.airTemperature || db.air_temperature || 0,
+    airHumidity: db.airHumidity || db.air_humidity || 0,
+    lightIntensity: db.lightIntensity || db.light_intensity || 0,
+    co2Concentration: db.co2Concentration || db.co2_concentration || 0,
+    soilTemperature: db.soilTemperature || db.soil_temperature || 0,
+    soilMoisture: db.soilMoisture || db.soil_moisture || 0,
+    soilEc: db.soilEc || db.soil_ec || 0,
+    soilPh: db.soilPh || db.soil_ph || 0,
+    // 关联信息
+    batchId: db.batchId || db.batch_id || '',
+    batchCode: db.batchCode || db.batch_code || '',
+    problemId: db.problemId || db.problem_id || undefined,
+    equipmentId: db.equipmentId || db.equipment_id || '',
+    equipmentName: db.equipmentName || db.equipment_name || '',
+    infrastructureId: db.infrastructureId || db.infrastructure_id || '',
+    infrastructureName: db.infrastructureName || db.infrastructure_name || '',
+  };
+}
+
 router.get('/', (req: Request, res: Response) => {
   try {
     const { inspection_type, status, greenhouse_name, page = 1, limit = 50 } = req.query;
@@ -48,8 +97,12 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
-    res.json({ success: true, data: items, meta: { total, page: Number(page), limit: Number(limit) } });
+    // 转换字段，补充缺失字段默认值
+    const transformed = items.map(transformInspectionRecord);
+
+    res.json({ success: true, data: transformed, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
+    console.error('获取巡查记录失败:', error);
     res.status(500).json({ success: false, error: '获取巡查记录失败' });
   }
 });
@@ -70,7 +123,7 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '巡查记录不存在' });
     }
 
-    res.json({ success: true, data: item });
+    res.json({ success: true, data: transformInspectionRecord(item) });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取巡查详情失败' });
   }
