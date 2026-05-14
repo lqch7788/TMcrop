@@ -135,11 +135,12 @@ export async function getProductionPlanByCode(batchCode: string): Promise<Produc
  * 降级策略：API → 离线队列
  */
 export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promise<ProductionPlan> {
-  const result = await enhancedApiClient.post<{ id: string }>('/production-plans', plan, {
+  const result = await enhancedApiClient.post<ProductionPlan>('/production-plans', plan, {
     offlineQueue: true,
     useCache: true,
   });
-  return { ...plan, id: result.id } as ProductionPlan;
+  // POST 响应现在返回经过 mapFieldsToFrontend 的完整数据
+  return transformProductionPlan(result) as ProductionPlan;
 }
 
 /**
@@ -147,10 +148,11 @@ export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promi
  * 降级策略：API → 离线队列
  */
 export async function updateProductionPlan(id: string, updates: Partial<ProductionPlan>): Promise<ProductionPlan | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/production-plans/${id}`, updates, {
+  const result = await enhancedApiClient.put<{ data: ProductionPlan }>(`/production-plans/${id}`, updates, {
     offlineQueue: true,
   });
-  return result ? { ...updates, id } as ProductionPlan : null;
+  // PUT 响应现在返回经过 mapFieldsToFrontend 的完整更新数据
+  return result?.data ? transformProductionPlan(result.data) as ProductionPlan : null;
 }
 
 /**

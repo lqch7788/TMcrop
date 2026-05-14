@@ -57,7 +57,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         const result = await planService.updateProductionPlan(id, updates as any);
         if (result) {
           set((state) => ({
-            plans: state.plans.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+            plans: state.plans.map((p) => (p.id === id ? { ...p, ...(result as any) } : p)),
           }));
         }
         return result as unknown as CropBatch | null;

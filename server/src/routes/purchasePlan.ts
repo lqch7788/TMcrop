@@ -207,23 +207,21 @@ router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM purchase_plans WHERE id = ?');
-    stmt.bind([id]);
-    let item: Record<string, unknown> | null = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
+    const items = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM purchase_plans WHERE id = ?',
+      [id]
+    );
 
-    if (!item || Object.keys(item).length === 0) {
+    if (!items || items.length === 0) {
       return res.status(404).json({ success: false, error: '采购计划不存在' });
     }
 
     // 解析 attachments 和 items JSON 字段，并映射为前端期望的格式
     const parsed = {
-      ...item,
-      attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
-      items: item.items ? JSON.parse(item.items as string) : [],
+      ...items[0],
+      attachments: items[0].attachments ? JSON.parse(items[0].attachments as string) : [],
+      items: items[0].items ? JSON.parse(items[0].items as string) : [],
     };
     const result = mapToFrontendFormat(parsed);
 
@@ -240,32 +238,29 @@ router.get('/:id', (req: Request, res: Response) => {
  */
 router.post('/', (req: Request, res: Response) => {
   try {
+    // 接受 camelCase 前端字段
     const {
       id,
-      plan_code,
-      plan_title,
-      plan_type,
-      department_id = '',
-      department_name = '',
-      applicant_id = '',
-      applicant_name = '',
-      apply_date,
-      expected_date,
-      supplier_id = '',
-      supplier_name = '',
-      total_amount = 0,
-      priority = 'medium',
+      purchaseApplicationCode = '',
+      purchaseType = '',
+      applicant = '',
+      applicantId = '',
+      applicantDepartment = '',
+      applyDate = '',
+      requiredDate = '',
+      priority = 'normal',
       status = 'draft',
-      approval_status = 'pending',
+      approvalStatus = 'pending',
       remarks = '',
+      approvalPerson = '',
+      relatedBatchCode = '',
       attachments = [],
       items = [],
-      create_by = '',
     } = req.body;
 
     const newId = id || `PP${Date.now()}`;
     const now = new Date().toISOString();
-    const planCode = plan_code || generatePurchasePlanCode();
+    const planCode = purchaseApplicationCode || generatePurchasePlanCode();
 
     const db = getDatabase();
 
@@ -283,32 +278,41 @@ router.post('/', (req: Request, res: Response) => {
     `, [
       newId,
       planCode,
-      plan_title,
-      plan_type,
-      department_id,
-      department_name,
-      applicant_id,
-      applicant_name,
-      apply_date || now.substring(0, 10),
-      expected_date || null,
-      supplier_id,
-      supplier_name,
-      total_amount,
+      `${purchaseType} - ${planCode}`,  // plan_title
+      purchaseType,                      // plan_type
+      '',                                 // department_id
+      applicantDepartment,                // department_name
+      applicantId,                        // applicant_id
+      applicant,                          // applicant_name
+      applyDate || now.substring(0, 10),  // apply_date
+      requiredDate || null,               // expected_date
+      '',                                 // supplier_id
+      '',                                 // supplier_name
+      0,                                  // total_amount (从 items 计算)
       priority,
       status,
-      approval_status,
+      approvalStatus,
       remarks,
       JSON.stringify(attachments),
       JSON.stringify(items),
-      '',  // related_batch_code
-      '',  // approval_person
-      create_by,
+      relatedBatchCode,                   // related_batch_code
+      approvalPerson,                     // approval_person
+      applicant,                          // create_by
       now,
       now,
     ]);
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, plan_code: planCode } });
+
+    // 返回完整数据给前端
+    const newItems = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM purchase_plans WHERE id = ?', [newId]);
+    const fullData = newItems.length > 0 ? mapToFrontendFormat({
+      ...newItems[0],
+      attachments: newItems[0].attachments ? JSON.parse(newItems[0].attachments as string) : [],
+      items: newItems[0].items ? JSON.parse(newItems[0].items as string) : [],
+    }) : { id: newId, plan_code: planCode };
+
+    res.status(201).json({ success: true, data: fullData });
   } catch (error) {
     console.error('创建采购计划失败:', error);
     res.status(500).json({ success: false, error: '创建采购计划失败' });
@@ -448,7 +452,15 @@ router.put('/:id', (req: Request, res: Response) => {
       console.error('[更新采购计划] 数据库执行错误:', dbError);
       return res.status(500).json({ success: false, error: `数据库错误: ${(dbError as Error).message}` });
     }
-    res.json({ success: true, data: { id } });
+    // 返回更新后的完整数据
+    const updatedItems = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM purchase_plans WHERE id = ?', [id]);
+    const fullData = updatedItems.length > 0 ? mapToFrontendFormat({
+      ...updatedItems[0],
+      attachments: updatedItems[0].attachments ? JSON.parse(updatedItems[0].attachments as string) : [],
+      items: updatedItems[0].items ? JSON.parse(updatedItems[0].items as string) : [],
+    }) : { id };
+
+    res.json({ success: true, data: fullData });
   } catch (error) {
     console.error('更新采购计划失败, 错误详情:', error);
     console.error('  错误消息:', (error as Error).message);

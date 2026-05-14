@@ -181,20 +181,18 @@ router.get('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
 
-    const stmt = db.prepare('SELECT * FROM production_plans WHERE id = ?');
-    stmt.bind([id]);
-    let item: Record<string, unknown> | null = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
+    const items = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM production_plans WHERE id = ?',
+      [id]
+    );
 
-    if (!item || Object.keys(item).length === 0) {
+    if (!items || items.length === 0) {
       return res.status(404).json({ success: false, error: '生产计划不存在' });
     }
 
     // 转换字段格式为前端期望格式
-    const camelItem = mapFieldsToFrontend(item);
+    const camelItem = mapFieldsToFrontend(items[0]);
     res.json({ success: true, data: camelItem });
   } catch (error) {
     console.error('获取生产计划详情失败:', error);
@@ -386,7 +384,15 @@ router.put('/:id', (req: Request, res: Response) => {
     db.run(`UPDATE production_plans SET ${updateFields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
-    res.json({ success: true, message: '生产计划更新成功' });
+    // 查询更新后的完整数据并返回（自动 camelCase 转换）
+    const updatedPlans = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM production_plans WHERE id = ?',
+      [id]
+    );
+    const updatedData = updatedPlans.length > 0 ? mapFieldsToFrontend(updatedPlans[0]) : null;
+
+    res.json({ success: true, message: '生产计划更新成功', data: updatedData });
   } catch (error) {
     console.error('更新生产计划失败:', error);
     res.status(500).json({ success: false, error: '更新生产计划失败' });
