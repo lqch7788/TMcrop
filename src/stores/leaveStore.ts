@@ -193,16 +193,7 @@ export const useLeaveStore = create<LeaveState>()(
           const query = params.toString();
           const url = `/leave${query ? `?${query}` : ''}`;
 
-          const response = await enhancedApiClient.get<{
-            success: boolean;
-            data: Record<string, unknown>[];
-          }>(url);
-
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
+          const data = await enhancedApiClient.get<Record<string, unknown>[]>(url);
           const normalized = (Array.isArray(data) ? data : []).map(normalize);
           set({ leaveRecords: normalized, isLoading: false });
         } catch (error) {

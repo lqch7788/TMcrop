@@ -321,10 +321,10 @@ const ExecuteTabWrapper: React.FC<ExecuteTabWrapperProps> = ({ activeTab }) => {
       onCancelEdit={() => setShowEditModal(false)}
       onSaveAdd={() => setShowAddModal(false)}
       onCancelAdd={() => setShowAddModal(false)}
-      onEditAddMaterial={() => setEditForm(prev => ({ ...prev, materials: [...prev.materials, { materialCode: '', materialName: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }] }))}
+      onEditAddMaterial={() => setEditForm(prev => ({ ...prev, materials: [...prev.materials, { materialCode: '', materialName: '', batchNo: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }] }))}
       onEditRemoveMaterial={(index) => setEditForm(prev => ({ ...prev, materials: prev.materials.filter((_, i) => i !== index) }))}
       onEditMaterialChange={() => {}}
-      onAddMaterial={() => setAddForm(prev => ({ ...prev, materials: [...prev.materials, { materialCode: '', materialName: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }] }))}
+      onAddMaterial={() => setAddForm(prev => ({ ...prev, materials: [...prev.materials, { materialCode: '', materialName: '', batchNo: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }] }))}
       onRemoveMaterial={(index) => setAddForm(prev => ({ ...prev, materials: prev.materials.filter((_, i) => i !== index) }))}
       onMaterialChange={() => {}}
       onAddToMaterialPool={() => {}}

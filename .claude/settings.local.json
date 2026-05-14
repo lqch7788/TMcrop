@@ -146,7 +146,14 @@
       "Read(//c/Windows/System32/**)",
       "Read(//mnt/c/Windows/System32/**)",
       "Bash(/c/Windows/System32/taskkill.exe *)",
-      "Bash(/c/Program Files/nodejs/node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('total:',j.meta.total\\);j.data.slice\\(0,2\\).forEach\\(r=>{console.log\\('---'\\);console.log\\('id:',r.id,'recordCode:',r.recordCode\\);console.log\\('cropName:',r.cropName,'cropStatus:',r.cropStatus\\);console.log\\('weather:',r.weather,'temperature:',r.temperature\\);console.log\\('issues:',JSON.stringify\\(r.issues\\)\\);console.log\\('issueCategories:',JSON.stringify\\(r.issueCategories\\)\\);console.log\\('airTemperature:',r.airTemperature,'soilPh:',r.soilPh\\);}\\)\")"
+      "Bash(/c/Program Files/nodejs/node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('total:',j.meta.total\\);j.data.slice\\(0,2\\).forEach\\(r=>{console.log\\('---'\\);console.log\\('id:',r.id,'recordCode:',r.recordCode\\);console.log\\('cropName:',r.cropName,'cropStatus:',r.cropStatus\\);console.log\\('weather:',r.weather,'temperature:',r.temperature\\);console.log\\('issues:',JSON.stringify\\(r.issues\\)\\);console.log\\('issueCategories:',JSON.stringify\\(r.issueCategories\\)\\);console.log\\('airTemperature:',r.airTemperature,'soilPh:',r.soilPh\\);}\\)\")",
+      "Bash(bash *)",
+      "Bash(D:\\\\TMcrop\\\\sqlite3.exe *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Total: {d.get\\(\\\\\"meta\\\\\",{}\\).get\\(\\\\\"total\\\\\",\\\\\"?\\\\\"\\)} records'\\); ids=[r['id'] for r in d['data']]; print\\(f'IDs: {ids}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); r=d['data'][0] if d['data'] else {}; print\\(list\\(r.keys\\(\\)\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Total: {d.get\\(\\\\\"meta\\\\\",{}\\).get\\(\\\\\"total\\\\\",\\\\\"?\\\\\"\\)} records'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Total: {d[\\\\\"meta\\\\\"][\\\\\"total\\\\\"]} records'\\)\")",
+      "Bash(python *)"
     ]
   }
 }

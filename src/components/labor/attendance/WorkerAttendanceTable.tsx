@@ -27,6 +27,7 @@ interface WorkerAttendanceTableProps {
   onExportClick?: () => void;
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
+  onViewDetail?: (record: AttendanceRecord) => void;
 }
 
 export function WorkerAttendanceTable({
@@ -50,6 +51,7 @@ export function WorkerAttendanceTable({
   onExportClick,
   onCancelBatchEdit,
   onCancelBatchDelete,
+  onViewDetail,
 }: WorkerAttendanceTableProps) {
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
   const allSelected = data.length > 0 && selectedRows.length === totalCount;
@@ -263,7 +265,8 @@ export function WorkerAttendanceTable({
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="查看"
+                    title="查看详情"
+                    onClick={() => onViewDetail?.(att)}
                   >
                     <Eye className="w-4 h-4" />
                   </Button>

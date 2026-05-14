@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { useSupplierStore } from '@/stores/useSupplierStore';
 
 interface InboundEditModalProps {
   record: InboundRecord | null;
@@ -21,15 +22,22 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
   onClose,
   onSave,
 }) => {
-  // 编辑后的物料列表
+  // 供应商列表
+  const suppliers = useSupplierStore((s) => s.items);
+  const loadSuppliers = useSupplierStore((s) => s.loadItems);
+
+  // 编辑后表单数据
+  const [editedSupplier, setEditedSupplier] = useState('');
   const [editedMaterials, setEditedMaterials] = useState<InboundMaterial[]>([]);
 
   // 初始化编辑数据
   useEffect(() => {
     if (record) {
+      setEditedSupplier(record.supplier);
       setEditedMaterials(record.materials);
+      if (suppliers.length === 0) loadSuppliers();
     }
-  }, [record]);
+  }, [record, suppliers.length, loadSuppliers]);
 
   if (!isOpen || !record) return null;
 
@@ -50,8 +58,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
   const handleAddMaterial = () => {
     const newMaterial: InboundMaterial = {
       id: Date.now(),
-      materialCode: '',
-      materialName: '',
+      code: '',
+      name: '',
       category: '',
       bigCategory: '',
       midCategory: '',
@@ -61,7 +69,6 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
       unit: '袋',
       quantity: 0,
       price: '',
-      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',
@@ -73,7 +80,7 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
 
   // 保存
   const handleSave = () => {
-    onSave({ ...record, materials: editedMaterials });
+    onSave({ ...record, supplier: editedSupplier, materials: editedMaterials });
     onClose();
   };
 
@@ -124,7 +131,23 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">供应商</span>
-                <span className="text-sm font-medium text-gray-900">{record.supplier}</span>
+                {record.status === 'pending' ? (
+                  <input
+                    type="text"
+                    value={editedSupplier}
+                    onChange={(e) => setEditedSupplier(e.target.value)}
+                    placeholder="选择或输入供应商名称"
+                    list="edit-supplier-list"
+                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-gray-900">{record.supplier}</span>
+                )}
+                <datalist id="edit-supplier-list">
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.name} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">操作员</span>
@@ -200,24 +223,24 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         {record.status === 'pending' ? (
                           <input
                             type="text"
-                            value={m.materialCode}
-                            onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
+                            value={m.code}
+                            onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
                             className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
                           />
                         ) : (
-                          <span className="text-xs text-blue-600 font-medium">{m.materialCode}</span>
+                          <span className="text-xs text-blue-600 font-medium">{m.code}</span>
                         )}
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <input
                             type="text"
-                            value={m.materialName}
-                            onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
+                            value={m.name}
+                            onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
                             className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
                           />
                         ) : (
-                          <span className="text-xs text-gray-900">{m.materialName}</span>
+                          <span className="text-xs text-gray-900">{m.name}</span>
                         )}
                       </td>
                       <td className="px-1 py-1.5">

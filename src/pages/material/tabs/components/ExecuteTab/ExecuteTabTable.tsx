@@ -240,6 +240,7 @@ export function ExecuteTabTable({
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">来源领料单号</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申请数量</th>
@@ -261,6 +262,7 @@ export function ExecuteTabTable({
                                     <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.applicationCode}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.materialCode}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.materialName}</td>
+                                    <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.batchNo || ''}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.spec}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.unit}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.requestedQuantity}</td>

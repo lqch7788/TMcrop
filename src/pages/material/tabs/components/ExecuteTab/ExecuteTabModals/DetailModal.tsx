@@ -86,6 +86,7 @@ export function ExecuteDetailModal({
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">批次号</th>
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
                     <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
@@ -99,6 +100,7 @@ export function ExecuteDetailModal({
                       <td className="px-3 py-2 text-sm text-blue-700 font-mono">{m.applicationCode}</td>
                       <td className="px-3 py-2 text-sm text-blue-700 font-mono">{m.materialCode}</td>
                       <td className="px-3 py-2 text-sm text-blue-700">{m.materialName}</td>
+                      <td className="px-3 py-2 text-sm text-blue-700 font-mono">{m.batchNo || ''}</td>
                       <td className="px-3 py-2 text-sm text-gray-600">{m.spec || '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-600">{m.unit}</td>
                       <td className="px-3 py-2 text-sm text-gray-600">{m.requestedQuantity}</td>

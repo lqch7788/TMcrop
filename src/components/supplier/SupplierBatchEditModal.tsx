@@ -242,7 +242,7 @@ export default function SupplierBatchEditModal({
               <select
                 value={getValue('supplierType')}
                 onChange={(e) => handleFieldChange('supplierType', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               >
                 <option value="">不修改</option>
                 {categories.map(cat => (
@@ -255,7 +255,7 @@ export default function SupplierBatchEditModal({
               <select
                 value={getValue('supplierAttribute')}
                 onChange={(e) => handleFieldChange('supplierAttribute', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               >
                 <option value="">不修改</option>
                 {supplierAttributeOptions.map(opt => (
@@ -268,7 +268,7 @@ export default function SupplierBatchEditModal({
               <select
                 value={getValue('organization')}
                 onChange={(e) => handleFieldChange('organization', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               >
                 <option value="">不修改</option>
                 <option value="宁波帮帮忙公司">宁波帮帮忙公司</option>
@@ -280,7 +280,7 @@ export default function SupplierBatchEditModal({
               <select
                 value={getValue('status')}
                 onChange={(e) => handleFieldChange('status', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               >
                 <option value="">不修改</option>
                 <option value="合作中">合作中</option>
@@ -291,7 +291,7 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 联系信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">联系信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">联系信息</h4>
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">联系人</label>
@@ -300,7 +300,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('contact')}
                 onChange={(e) => handleFieldChange('contact', e.target.value)}
                 placeholder={currentSupplier?.contact || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -310,7 +310,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('mobilePhone')}
                 onChange={(e) => handleFieldChange('mobilePhone', e.target.value)}
                 placeholder={currentSupplier?.mobilePhone || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -320,7 +320,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('workPhone')}
                 onChange={(e) => handleFieldChange('workPhone', e.target.value)}
                 placeholder={currentSupplier?.workPhone || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -330,13 +330,13 @@ export default function SupplierBatchEditModal({
                 value={getValue('fax')}
                 onChange={(e) => handleFieldChange('fax', e.target.value)}
                 placeholder={currentSupplier?.fax || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
           {/* 地区信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">地区信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">地区信息</h4>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">国家</label>
@@ -345,7 +345,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('country')}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
                 placeholder={currentSupplier?.country || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -355,7 +355,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('province')}
                 onChange={(e) => handleFieldChange('province', e.target.value)}
                 placeholder={currentSupplier?.province || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -365,7 +365,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('city')}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
                 placeholder={currentSupplier?.city || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -376,12 +376,12 @@ export default function SupplierBatchEditModal({
               value={getValue('address')}
               onChange={(e) => handleFieldChange('address', e.target.value)}
               placeholder={currentSupplier?.address || '未填写'}
-              className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           {/* 财务信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">财务信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">财务信息</h4>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">开户行</label>
@@ -390,7 +390,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('bankName')}
                 onChange={(e) => handleFieldChange('bankName', e.target.value)}
                 placeholder={currentSupplier?.bankName || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -400,26 +400,26 @@ export default function SupplierBatchEditModal({
                 value={getValue('bankCardNumber')}
                 onChange={(e) => handleFieldChange('bankCardNumber', e.target.value)}
                 placeholder={currentSupplier?.bankCardNumber || '未填写'}
-                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
           </div>
 
           {/* 备注 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">备注</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">备注</h4>
           <div>
             <textarea
               value={getValue('remarks')}
               onChange={(e) => handleFieldChange('remarks', e.target.value)}
               placeholder={currentSupplier?.remarks || '未填写'}
               rows={2}
-              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
         </div>
 
         {/* 底部操作按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-between gap-3 flex-shrink-0">
+        <div className="p-4 border-t border-gray-300 flex justify-between gap-3 flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
             取消
           </Button>

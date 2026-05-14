@@ -52,9 +52,9 @@ export function LeaveTable({
     switch (status) {
       case '待审批':
         return 'bg-amber-100 text-amber-700';
-      case '已审批':
+      case '已通过':
         return 'bg-green-100 text-green-700';
-      case '已驳回':
+      case '已拒绝':
         return 'bg-red-100 text-red-700';
       case '已取消':
         return 'bg-gray-100 text-gray-500';

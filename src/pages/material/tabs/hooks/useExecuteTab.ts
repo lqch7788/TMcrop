@@ -138,8 +138,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     const exportData = materialExecuteDetails.filter(item => executeSelectedRows.includes(item.id));
     const headers = ['出库单号', '日期', '申领人', '仓库地点', '审核人', '操作人', '生产批次号', '执行状态'];
     const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'operator', 'productionBatchCode', 'executeStatus'];
-    const materialHeaders = ['来源领料单号', '物料编码', '物料名称', '规格', '单位', '申请数量', '实际库存', '本次实发', '单价(元)', '仓库货位', '备注'];
-    const materialFields = ['applicationCode', 'materialCode', 'materialName', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'actualQuantity', 'unitPrice', 'warehousePosition', 'remark'];
+    const materialHeaders = ['来源领料单号', '物料编码', '物料名称', '批次号', '规格', '单位', '申请数量', '实际库存', '本次实发', '单价(元)', '仓库货位', '备注'];
+    const materialFields = ['applicationCode', 'materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'actualQuantity', 'unitPrice', 'warehousePosition', 'remark'];
 
     const escapeCSV = (str: string): string => {
       if (str === null || str === undefined) return '';
@@ -300,6 +300,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       return {
         materialCode: material.materialCode,
         materialName: material.materialName,
+        batchNo: (material as any).batchNo || '',
         spec: material.spec,
         unit: material.unit,
         category: material.category,
@@ -427,7 +428,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       ...executeEditForm,
       materials: [
         ...executeEditForm.materials,
-        { materialCode: '', materialName: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }
+        { materialCode: '', materialName: '', batchNo: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }
       ]
     });
   }, [executeEditForm]);
@@ -450,7 +451,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       ...executeAddForm,
       materials: [
         ...executeAddForm.materials,
-        { materialCode: '', materialName: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }
+        { materialCode: '', materialName: '', batchNo: '', spec: '', unit: '', category: '', requestedQuantity: 0, stockQuantity: 0, actualQuantity: 0, remark: '', applicationCode: '' }
       ]
     });
   }, [executeAddForm]);

@@ -170,6 +170,79 @@ export function createInboundRecord(record: {
 }
 
 /**
+ * 更新入库记录
+ */
+export function updateInboundRecord(id: number, updates: Record<string, any>): boolean {
+  const db = getDatabase();
+  const fields = Object.keys(updates)
+    .filter(k => k !== 'id')
+    .map(k => `${k} = ?`)
+    .join(', ');
+  if (fields.length === 0) return false;
+
+  const values = Object.keys(updates)
+    .filter(k => k !== 'id')
+    .map(k => updates[k]);
+  db.run(`UPDATE inbound_records SET ${fields} WHERE id = ?`, [...values, id]);
+  saveDatabase();
+  return true;
+}
+
+/**
+ * 入库完成 → 自动同步物料库存（按 code + batchNo 匹配累加或新增）
+ * 同编码不同批次独立存储，批次用完标记"已用完"而非删除，保留追溯
+ */
+export function syncInboundToMaterials(materials: any[]): void {
+  const db = getDatabase();
+
+  for (const m of materials) {
+    if (!m.code) continue; // 无物料编码则跳过
+    const batchNo = m.batchNo || ''; // 批次号为空则视为同一批次
+
+    // 按 code + batchNo 精确匹配批次
+    const existing = db.exec(
+      'SELECT id, quantity FROM materials WHERE code = ? AND batchNo = ?',
+      [m.code, batchNo]
+    );
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      // 已有同批次：累加数量 + 恢复启用状态（防止之前因用完被标记）
+      const oldQty = existing[0].values[0][1] as number;
+      const newQty = oldQty + (Number(m.quantity) || 0);
+      db.run(
+        'UPDATE materials SET quantity = ?, lastUpdateTime = ?, dataStatus = ? WHERE code = ? AND batchNo = ?',
+        [newQty, new Date().toISOString(), '启用', m.code, batchNo]
+      );
+    } else {
+      // 新批次：新增物料记录
+      db.run(`
+        INSERT INTO materials
+        (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        m.code,
+        m.name || '',
+        m.category || '',
+        m.specification || '',
+        m.unit || '袋',
+        Number(m.quantity) || 0,
+        m.minStock || 0,
+        m.maxStock || 0,
+        m.price || '',
+        m.supplier || '',
+        m.location || '',
+        m.barcode || '',
+        batchNo,
+        m.productionDate || '',
+        m.expiryDate || '',
+        new Date().toISOString(),
+        '启用'
+      ]);
+    }
+  }
+  saveDatabase();
+}
+
+/**
  * 删除入库记录
  */
 export function deleteInboundRecord(id: number): boolean {

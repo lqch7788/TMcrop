@@ -244,6 +244,7 @@ export function ApplicationTable({
                               <tr>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
                                 <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</th>
@@ -262,6 +263,7 @@ export function ApplicationTable({
                                   <tr key={idx} className="hover:bg-[#F2F6FA]/50">
                                     <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.materialCode}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.materialName}</td>
+                                    <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.batchNo || ''}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.spec}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.unit}</td>
                                     <td className={`px-3 py-2 text-sm ${isStockWarning ? 'text-red-600 font-bold' : 'text-blue-800'}`}>{material.requestedQuantity}{isStockWarning && ' ⚠️'}</td>

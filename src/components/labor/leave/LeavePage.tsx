@@ -8,6 +8,7 @@ import { LeaveFormModal } from './LeaveFormModal';
 import { LeaveQuotaCard, getMockLeaveQuota } from './LeaveQuota';
 import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } from './modals';
 import { Button } from '@/components/ui/button';
+import { useLeaveStore } from '@/stores/leaveStore';
 
 /**
  * 请假管理页面主容器组件
@@ -125,29 +126,23 @@ export function LeavePage() {
   };
 
   const handleConfirmBatchEdit = () => {
-    // 应用编辑结果
+    // 通过Store批量更新选中的记录
+    const store = useLeaveStore.getState();
     editedRecordIds.forEach(id => {
       const editedData = editedRecords[id];
-      if (editedData) {
-        const record = data.find(r => r.id.toString() === id);
-        if (record) {
-          handleSave({ ...record, ...editedData });
-        }
+      if (editedData && Object.keys(editedData).length > 0) {
+        store.updateItem(id, editedData);
       }
     });
+    store.fetchItems();
     setShowBatchEditModal(false);
     handleCancelBatch();
   };
 
   const handleConfirmBatchDelete = () => {
     if (selectedRows.length === 0) return;
-    // 执行删除
-    selectedRows.forEach(id => {
-      const record = data.find(r => r.id.toString() === id);
-      if (record) {
-        handleReject(record); // 使用 handleReject 模拟删除/取消
-      }
-    });
+    const store = useLeaveStore.getState();
+    store.deleteItems(selectedRows).then(() => store.fetchItems());
     setShowDeleteWarning(false);
     handleCancelBatch();
   };

@@ -66,8 +66,8 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
   const handleAddMaterial = () => {
     const newMaterial: InboundMaterial = {
       id: Date.now(),
-      materialCode: '',
-      materialName: '',
+      code: '',
+      name: '',
       category: '',
       bigCategory: '',
       midCategory: '',
@@ -77,7 +77,6 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
       unit: '袋',
       quantity: 0,
       price: '',
-      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',
@@ -263,7 +262,6 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">单位</th>
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">数量</th>
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">单价</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-600">供应商</th>
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">存放位置</th>
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">批号</th>
                   <th className="px-2 py-2 text-left font-semibold text-gray-600">生产日期</th>
@@ -287,24 +285,24 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                       {currentRecord.status === 'pending' ? (
                         <input
                           type="text"
-                          value={m.materialCode}
-                          onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
+                          value={m.code}
+                          onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
                           className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
                         />
                       ) : (
-                        <span className="text-xs text-gray-900">{m.materialCode || '-'}</span>
+                        <span className="text-xs text-gray-900">{m.code || '-'}</span>
                       )}
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
                         <input
                           type="text"
-                          value={m.materialName}
-                          onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
+                          value={m.name}
+                          onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
                           className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
                         />
                       ) : (
-                        <span className="text-xs text-gray-900">{m.materialName || '-'}</span>
+                        <span className="text-xs text-gray-900">{m.name || '-'}</span>
                       )}
                     </td>
                     <td className="px-1 py-1.5">
@@ -377,18 +375,6 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.price}元</span>
-                      )}
-                    </td>
-                    <td className="px-1 py-1.5">
-                      {currentRecord.status === 'pending' ? (
-                        <input
-                          type="text"
-                          value={m.supplier}
-                          onChange={(e) => handleMaterialChange(m.id, 'supplier', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
-                        />
-                      ) : (
-                        <span className="text-xs text-gray-600">{m.supplier || '-'}</span>
                       )}
                     </td>
                     <td className="px-1 py-1.5">
@@ -541,8 +527,8 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                       <tbody className="bg-white divide-y divide-gray-100">
                         {currentEditedMaterials.map((m) => (
                           <tr key={m.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-blue-600 font-medium">{m.materialCode || '-'}</td>
-                            <td className="px-3 py-2 text-gray-900">{m.materialName || '-'}</td>
+                            <td className="px-3 py-2 text-blue-600 font-medium">{m.code || '-'}</td>
+                            <td className="px-3 py-2 text-gray-900">{m.name || '-'}</td>
                             <td className="px-3 py-2 text-gray-600">{m.specification || '-'}</td>
                             <td className="px-3 py-2 text-gray-900">{m.quantity}</td>
                             <td className="px-3 py-2 text-gray-600">{m.unit}</td>

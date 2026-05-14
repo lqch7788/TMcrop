@@ -1860,6 +1860,13 @@ export function initializeDatabase() {
     )
   `);
 
+  // 物料批次索引（code + batchNo 联合查询加速）
+  try {
+    db.run('CREATE INDEX IF NOT EXISTS idx_materials_code_batch ON materials(code, batchNo)');
+  } catch (e) {
+    // 索引可能已存在
+  }
+
   // 入库记录表
   db.run(`
     CREATE TABLE IF NOT EXISTS inbound_records (

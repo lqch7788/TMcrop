@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Barcode, Package } from 'lucide-react';
 import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
@@ -12,7 +13,22 @@ interface MaterialEditModalProps {
 }
 
 export function MaterialEditModal({ material, isOpen, onClose, onSave }: MaterialEditModalProps) {
-  if (!isOpen || !material) return null;
+  // 本地编辑表单状态
+  const [form, setForm] = useState<Material | null>(null);
+
+  useEffect(() => {
+    if (material) setForm({ ...material });
+  }, [material]);
+
+  if (!isOpen || !material || !form) return null;
+
+  const handleChange = (field: keyof Material, value: string | number) => {
+    setForm(prev => prev ? { ...prev, [field]: value } : null);
+  };
+
+  const handleSubmit = () => {
+    if (form) onSave(form);
+  };
 
   return (
     <UnifiedModal
@@ -21,10 +37,11 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
       title="编辑物料库存"
       size="xl"
       showFooter={true}
-      onSubmit={() => onSave(material)}
+      onSubmit={handleSubmit}
       submitText="保存"
       cancelText="取消"
     >
+      {/* 条形码标识 */}
       <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
         <div className="flex items-center justify-between">
           <div>
@@ -35,7 +52,8 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+      {/* 只读信息 */}
+      <div className="bg-gray-50 rounded-lg p-4 mb-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <span className="text-xs text-gray-500 block">物料编码</span>
@@ -50,30 +68,134 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             <span className="text-sm font-medium text-gray-900">{material.category}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 block">规格型号</span>
-            <span className="text-sm font-medium text-gray-900">{material.specification}</span>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500 block">单位</span>
-            <span className="text-sm font-medium text-gray-900">{material.unit}</span>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500 block">当前库存</span>
-            <span className="text-sm font-medium text-gray-900">{material.quantity} {material.unit}</span>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500 block">单价</span>
-            <span className="text-sm font-medium text-gray-900">{material.price}</span>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500 block">供应商</span>
-            <span className="text-sm font-medium text-gray-900">{material.supplier}</span>
+            <span className="text-xs text-gray-500 block">最后更新</span>
+            <span className="text-sm font-medium text-gray-900">{material.lastUpdateTime || '-'}</span>
           </div>
         </div>
       </div>
 
-      <div className="text-center text-sm text-gray-500 py-4">
-        完整编辑功能待实现
+      {/* 可编辑字段 */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {/* 当前库存 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">当前库存</label>
+          <input
+            type="number"
+            value={form.quantity}
+            onChange={(e) => handleChange('quantity', parseFloat(e.target.value) || 0)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 单位 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">单位</label>
+          <input
+            type="text"
+            value={form.unit}
+            onChange={(e) => handleChange('unit', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 规格型号 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">规格型号</label>
+          <input
+            type="text"
+            value={form.specification}
+            onChange={(e) => handleChange('specification', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 最低库存 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">最低库存限值</label>
+          <input
+            type="number"
+            value={form.minStock}
+            onChange={(e) => handleChange('minStock', parseFloat(e.target.value) || 0)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 最高库存 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">最高库存限值</label>
+          <input
+            type="number"
+            value={form.maxStock}
+            onChange={(e) => handleChange('maxStock', parseFloat(e.target.value) || 0)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 单价 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">单价</label>
+          <input
+            type="text"
+            value={form.price}
+            onChange={(e) => handleChange('price', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 供应商 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">供应商</label>
+          <input
+            type="text"
+            value={form.supplier}
+            onChange={(e) => handleChange('supplier', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 存放位置 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">存放位置</label>
+          <input
+            type="text"
+            value={form.location}
+            onChange={(e) => handleChange('location', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 批次号 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">批次号</label>
+          <input
+            type="text"
+            value={form.batchNo}
+            onChange={(e) => handleChange('batchNo', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 生产日期 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">生产日期</label>
+          <input
+            type="date"
+            value={form.productionDate}
+            onChange={(e) => handleChange('productionDate', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* 过期日期 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">过期日期</label>
+          <input
+            type="date"
+            value={form.expiryDate}
+            onChange={(e) => handleChange('expiryDate', e.target.value)}
+            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
       </div>
     </UnifiedModal>
   );

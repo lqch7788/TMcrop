@@ -140,7 +140,7 @@ export function MaterialsTable({
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.batchNo}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionDate}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expiryDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.lastUpdateTime}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     item.dataStatus === '启用' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'

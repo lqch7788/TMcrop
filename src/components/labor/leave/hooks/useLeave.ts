@@ -92,10 +92,30 @@ export function useLeave(): UseLeaveReturn {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // ========== Store数据 → 组件格式 ==========
+  // ========== Store数据 → 组件格式（含前端筛选） ==========
   const data: LeaveRecord[] = useMemo(() => {
-    return storeRecords.map(mapStoreToComponent);
-  }, [storeRecords]);
+    let result = storeRecords.map(mapStoreToComponent);
+    // 按员工姓名筛选
+    if (filters.staffName) {
+      result = result.filter(r => r.staffName.includes(filters.staffName));
+    }
+    // 按请假类型筛选
+    if (filters.leaveType) {
+      result = result.filter(r => r.leaveType === filters.leaveType);
+    }
+    // 按状态筛选
+    if (filters.status) {
+      result = result.filter(r => r.status === filters.status);
+    }
+    // 按日期范围筛选
+    if (filters.startDate) {
+      result = result.filter(r => r.startDate >= filters.startDate);
+    }
+    if (filters.endDate) {
+      result = result.filter(r => r.endDate <= filters.endDate);
+    }
+    return result;
+  }, [storeRecords, filters]);
 
   // ========== 分页信息 ==========
   const pagination: PaginationInfo = useMemo(() => ({

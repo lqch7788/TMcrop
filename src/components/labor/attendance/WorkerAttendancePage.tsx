@@ -8,9 +8,9 @@ import { useWorkerAttendance } from './hooks/useWorkerAttendance';
 import { WorkerAttendanceFilters } from './WorkerAttendanceFilters';
 import { WorkerAttendanceTable } from './WorkerAttendanceTable';
 import { WorkerAttendanceExport } from './WorkerAttendanceExport';
-import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
+import { BatchEditModal, DeleteWarningModal, ExportFormatModal, DetailModal } from './modals';
 import { AttendanceRecord } from './types';
-import { useDepartmentStore } from '../../../stores';
+import { useDepartmentStore, useAttendanceStore } from '../../../stores';
 
 // 编辑记录的类型
 type EditedRecordsMap = Record<string, Partial<AttendanceRecord>>;
@@ -59,6 +59,10 @@ export function WorkerAttendancePage() {
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
 
+  // Detail modal state
+  const [detailRecord, setDetailRecord] = useState<AttendanceRecord | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
   // Data state for local editing
   const [attendanceData, setAttendanceData] = useState(filteredData);
 
@@ -81,6 +85,17 @@ export function WorkerAttendancePage() {
     setBatchEditMode(true);
   };
 
+  // 当批量编辑弹窗打开时，自动选中第一条记录
+  const openBatchEditModal = () => {
+    if (selectedRows.length === 0) return;
+    setShowBatchEditModal(true);
+    // 自动选中第一条选中的记录
+    const firstRecord = filteredData.find(r => selectedRows.includes(r.id));
+    if (firstRecord) {
+      setSelectedRecordId(firstRecord.id.toString());
+    }
+  };
+
   const handleCancelBatchEdit = () => {
     setBatchEditMode(false);
     setSelectedRows([]);
@@ -90,7 +105,11 @@ export function WorkerAttendancePage() {
   };
 
   const handleConfirmBatchEdit = () => {
-    // Apply edits - in real app would update backend
+    // 应用所有编辑到 Store（乐观更新）
+    const updateAttendance = useAttendanceStore.getState().updateAttendance;
+    Object.entries(editedRecords).forEach(([id, updates]) => {
+      updateAttendance(id, updates);
+    });
     setShowBatchEditModal(false);
     setBatchEditMode(false);
     setSelectedRows([]);
@@ -101,13 +120,19 @@ export function WorkerAttendancePage() {
 
   // 确认（下一个）- 保存当前记录并选择下一条
   const handleConfirmNext = () => {
+    // 保存当前编辑到 Store
+    if (selectedRecordId && editedRecords[selectedRecordId]) {
+      useAttendanceStore.getState().updateAttendance(selectedRecordId, editedRecords[selectedRecordId]);
+    }
     // 将当前记录标记为已编辑
     if (selectedRecordId && !editedRecordIds.includes(selectedRecordId)) {
       setEditedRecordIds([...editedRecordIds, selectedRecordId]);
     }
 
-    // 找到下一条未编辑的记录
-    const selectedRecords = selectedRows.map(index => paginatedData[index]).filter(Boolean);
+    // selectedRows 是记录ID数组，需通过ID查找记录
+    const selectedRecords = selectedRows
+      .map(id => filteredData.find(r => r.id === id))
+      .filter(Boolean) as AttendanceRecord[];
     const currentIndex = selectedRecords.findIndex(r => r.id.toString() === selectedRecordId);
     const nextUneditedRecord = selectedRecords.find((r, idx) => {
       return idx > currentIndex && !editedRecordIds.includes(r.id.toString());
@@ -125,6 +150,12 @@ export function WorkerAttendancePage() {
       setEditedRecords({});
       setSelectedRecordId('');
     }
+  };
+
+  // Detail view handler
+  const handleViewDetail = (record: AttendanceRecord) => {
+    setDetailRecord(record);
+    setShowDetailModal(true);
   };
 
   // Batch Delete handlers
@@ -207,8 +238,8 @@ export function WorkerAttendancePage() {
         onShowExportModal={() => setShowExportModal(true)}
         onBatchEditClick={() => {
           if (batchEditMode) {
-            // 在批量编辑模式下，打开批量编辑弹窗
-            setShowBatchEditModal(true);
+            // 在批量编辑模式下，打开批量编辑弹窗（自动选中第一条）
+            openBatchEditModal();
           } else {
             // 进入批量编辑模式
             setBatchEditMode(true);
@@ -240,6 +271,7 @@ export function WorkerAttendancePage() {
         }}
         onCancelBatchEdit={handleCancelBatchEdit}
         onCancelBatchDelete={handleCancelBatchDelete}
+        onViewDetail={handleViewDetail}
       />
 
       {/* 批量操作提示栏 */}
@@ -278,6 +310,16 @@ export function WorkerAttendancePage() {
         onConfirm={handleConfirmBatchEdit}
         onConfirmNext={handleConfirmNext}
         departments={departmentOptions}
+      />
+
+      {/* 详情弹窗 */}
+      <DetailModal
+        isOpen={showDetailModal}
+        record={detailRecord}
+        onClose={() => {
+          setShowDetailModal(false);
+          setDetailRecord(null);
+        }}
       />
 
       {/* 删除确认弹窗 */}

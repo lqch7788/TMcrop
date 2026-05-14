@@ -33,7 +33,10 @@ export function BatchEditModal({
   onConfirmNext,
   departments,
 }: BatchEditModalProps) {
-  const selectedRecords = selectedRows.map(index => records[index]).filter(Boolean) as AttendanceRecord[];
+  // selectedRows 是记录ID数组，需通过ID查找记录
+  const selectedRecords = selectedRows
+    .map(id => records.find(r => r.id === id))
+    .filter(Boolean) as AttendanceRecord[];
   const currentRecord = selectedRecordId ? records.find(r => r.id.toString() === selectedRecordId) : null;
   const editedData = selectedRecordId ? editedRecords[selectedRecordId] || {} : {};
 
@@ -147,9 +150,9 @@ export function BatchEditModal({
             <FormField label="工时">
               <Input
                 type="number"
-                step="0.1"
-                value={editedData.hours ?? currentRecord.hours ?? 0}
-                onChange={(e) => handleFieldChange('hours', parseFloat(e.target.value) || 0)}
+                step="1"
+                value={Math.round(editedData.hours ?? currentRecord.hours ?? 0)}
+                onChange={(e) => handleFieldChange('hours', Math.round(parseFloat(e.target.value) || 0))}
               />
             </FormField>
 
