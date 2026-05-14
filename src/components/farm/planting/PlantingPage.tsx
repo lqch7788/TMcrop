@@ -15,7 +15,7 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems } from '../../../stores';
+import { useDictionaryStore, getDictItems, usePlantingStore } from '../../../stores';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as plantingService from '../../../services/apiPlantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
@@ -61,10 +61,8 @@ export default function PlantingPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从API加载数据，初始为空数组
-  const [plantings, setPlantings] = useState<Planting[]>([]);
-  // Loading状态
-  const [loading, setLoading] = useState(false);
+  // 从 Zustand Store 获取种植数据
+  const { items: plantings, isLoading: loading, loadItems, deleteItem, deleteItems } = usePlantingStore();
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -92,23 +90,10 @@ export default function PlantingPage() {
     return getDictItems('planting_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [getDictItems]);
 
-  // 刷新数据（异步调用API）
-  const refreshData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await plantingService.getPlantings();
-      setPlantings(data);
-    } catch (error) {
-      console.error('获取种植数据失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // 初始化数据
+  // 初始化数据（从 Store 加载）
   useEffect(() => {
-    refreshData();
-  }, []);
+    loadItems();
+  }, [loadItems]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -188,15 +173,9 @@ export default function PlantingPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
-    if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      try {
-        await plantingService.deletePlantings(ids);
-        refreshData();
-        setSelectedRows([]);
-      } catch (error) {
-        console.error('删除种植记录失败:', error);
-        alert('删除失败，请重试');
-      }
+    const success = await deleteItems(ids);
+    if (success) {
+      setSelectedRows([]);
     }
   };
 
@@ -468,7 +447,7 @@ export default function PlantingPage() {
       <AddModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={refreshData}
+        onSuccess={loadItems}
         cropNames={cropNames}
         cropVarieties={cropVarieties}
         areas={areas}
@@ -479,7 +458,7 @@ export default function PlantingPage() {
         <EditModal
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
           cropVarietyOptions={cropVarietyOptions}
           areas={areas}
@@ -498,7 +477,7 @@ export default function PlantingPage() {
         <HarvestModal
           isOpen={harvestModalOpen}
           onClose={() => setHarvestModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
         />
       )}

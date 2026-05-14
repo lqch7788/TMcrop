@@ -20,9 +20,10 @@ import {
   seedSourceStatusOptions
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
-import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
+import { useToastStore } from '../../../stores/useToastStore';
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -33,6 +34,18 @@ export default function SeedSourcePage() {
   const canDelete = true;
   const canExport = true;
   const canPrint = true;
+
+  // 从 Zustand Store 获取种源数据和操作方法
+  const {
+    items: seedSources,
+    isLoading,
+    loadItems,
+    deleteItem,
+    deleteItems,
+  } = useSeedSourceStore();
+
+  // Toast 通知
+  const toast = useToastStore((s) => s.toast);
 
   // 状态
   const [filters, setFilters] = useState<SeedSourceFilters>({
@@ -50,23 +63,10 @@ export default function SeedSourcePage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从API加载数据，初始为空数组
-  const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
-
-  // 刷新数据（异步调用API）
-  const refreshData = useCallback(async () => {
-    try {
-      const data = await seedSourceService.getSeedSources();
-      setSeedSources(data);
-    } catch (error) {
-      console.error('获取种源数据失败:', error);
-    }
-  }, []);
-
   // 组件挂载时加载数据
   useEffect(() => {
-    refreshData();
-  }, []);
+    loadItems();
+  }, [loadItems]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -177,25 +177,21 @@ export default function SeedSourcePage() {
     setLightboxOpen(true);
   };
 
-  // 处理删除
+  // 处理删除（通过 Store）
   const handleDelete = async (ids: string[]) => {
-    if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      try {
-        await seedSourceService.deleteSeedSources(ids);
-        await refreshData();
-        setSelectedRows([]);
-      } catch (error) {
-        console.error('删除失败:', error);
-        alert('删除失败，请重试');
-      }
+    const success = await deleteItems(ids);
+    if (success) {
+      setSelectedRows([]);
     }
   };
 
   // 处理批量删除
   const handleBatchDelete = () => {
-    if (selectedRows.length > 0) {
-      handleDelete(selectedRows);
+    if (selectedRows.length === 0) {
+      toast.warning('请先选择要删除的记录');
+      return;
     }
+    handleDelete(selectedRows);
   };
 
   // 处理结束计划
@@ -444,7 +440,7 @@ export default function SeedSourcePage() {
       <AddModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={refreshData}
+        onSuccess={loadItems}
         units={units}
       />
 
@@ -452,7 +448,7 @@ export default function SeedSourcePage() {
         <EditModal
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
           suppliers={suppliers}
         />

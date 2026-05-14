@@ -457,13 +457,13 @@ export function PurchasePlanPage() {
   // 删除确认
   const handleDeleteConfirm = async () => {
     try {
-      // 只删除草稿和已作废状态的采购计划
+      // 只删除草稿、待审批和审批被拒绝状态的采购计划
       const deletablePlans = purchasePlansData
         .filter(p => selectedRows.includes(p.purchaseApplicationCode))
-        .filter(p => p.status === 'draft' || p.approvalStatus === 'rejected');
+        .filter(p => p.status === 'draft' || p.status === 'pending' || p.approvalStatus === 'rejected');
 
       if (deletablePlans.length === 0) {
-        alert('没有可删除的采购计划（只能删除草稿和审批被拒绝状态）');
+        alert('没有可删除的采购计划（只能删除草稿、待审批和审批被拒绝状态）');
         return;
       }
 
@@ -513,9 +513,9 @@ export function PurchasePlanPage() {
   // 单条删除处理
   const handleSingleDelete = async (plan: PurchasePlan) => {
     console.log('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
-    // 只有草稿或审批被拒绝的计划可以删除
-    if (plan.status !== 'draft' && plan.approvalStatus !== 'rejected') {
-      alert('只有草稿和审批被拒绝的采购计划才能删除');
+    // 草稿、待审批或审批被拒绝的计划可以删除
+    if (plan.status !== 'draft' && plan.status !== 'pending' && plan.approvalStatus !== 'rejected') {
+      alert('只有草稿、待审批和审批被拒绝的采购计划才能删除');
       return;
     }
     try {

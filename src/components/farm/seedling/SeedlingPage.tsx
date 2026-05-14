@@ -15,7 +15,7 @@ import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as seedlingService from '../../../services/apiSeedlingService';
 import * as seedSourceService from '../../../services/apiSeedSourceService';
@@ -62,12 +62,10 @@ export default function SeedlingPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从API加载数据，初始为空数组
-  const [seedlings, setSeedlings] = useState<Seedling[]>([]);
-  // 种源数据
+  // 从 Zustand Store 获取育苗数据
+  const { items: seedlings, isLoading: loading, loadItems, deleteItem, deleteItems } = useSeedlingStore();
+  // 种源数据（用于筛选和关联）
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
-  // Loading状态
-  const [loading, setLoading] = useState(false);
 
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
@@ -122,19 +120,6 @@ export default function SeedlingPage() {
     return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
 
-  // 刷新数据（异步调用API）
-  const refreshData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await seedlingService.getSeedlings();
-      setSeedlings(data);
-    } catch (error) {
-      console.error('获取育苗数据失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // 加载种源数据
   useEffect(() => {
     const loadSeedSources = async () => {
@@ -148,10 +133,10 @@ export default function SeedlingPage() {
     loadSeedSources();
   }, []);
 
-  // 初始化数据
+  // 初始化数据（从 Store 加载）
   useEffect(() => {
-    refreshData();
-  }, []);
+    loadItems();
+  }, [loadItems]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -253,18 +238,9 @@ export default function SeedlingPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
-    if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
-      setLoading(true);
-      try {
-        await seedlingService.deleteSeedlings(ids);
-        await refreshData();
-        setSelectedRows([]);
-      } catch (error) {
-        console.error('删除失败:', error);
-        alert('删除失败，请重试');
-      } finally {
-        setLoading(false);
-      }
+    const success = await deleteItems(ids);
+    if (success) {
+      setSelectedRows([]);
     }
   };
 
@@ -301,7 +277,7 @@ export default function SeedlingPage() {
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
-      refreshData();
+      loadItems();
     } else {
       alert('结束失败');
     }
@@ -557,7 +533,7 @@ export default function SeedlingPage() {
       <AddModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={refreshData}
+        onSuccess={loadItems}
         seedSources={seedSources}
         cropVarietyOptions={cropVarietyOptions}
         seedlingTypes={seedlingTypes}
@@ -568,7 +544,7 @@ export default function SeedlingPage() {
         <EditModal
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
           seedSources={seedSources}
           cropVarietyOptions={cropVarietyOptions}
@@ -589,7 +565,7 @@ export default function SeedlingPage() {
         <DailyRecordModal
           isOpen={dailyRecordModalOpen}
           onClose={() => setDailyRecordModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
         />
       )}
@@ -598,7 +574,7 @@ export default function SeedlingPage() {
         <TransplantModal
           isOpen={transplantModalOpen}
           onClose={() => setTransplantModalOpen(false)}
-          onSuccess={refreshData}
+          onSuccess={loadItems}
           record={currentRecord}
           areas={areas}
         />

@@ -3,7 +3,7 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { cropBatches } from '../../../data/mockData';
-import { useUserStore, useGreenhouseStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useHarvestStore } from '../../../stores';
 import { warehouseOptions } from '../../../data/farmMockData';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
@@ -85,26 +85,13 @@ export default function HarvestPage() {
     status: '',
   });
 
-  // Harvest Records State - 从API加载数据，初始为空数组
-  const [harvestRecords, setHarvestRecords] = useState<any[]>([]);
-  // Loading状态
-  const [loading, setLoading] = useState(false);
+  // 从 Zustand Store 获取采收数据
+  const { items: harvestRecords, isLoading: loading, loadItems, deleteItem, deleteItems } = useHarvestStore();
 
-  // 初始化数据（从API加载）
+  // 初始化数据（从 Store 加载）
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const data = await harvestService.getHarvestRecords();
-        setHarvestRecords(data);
-      } catch (error) {
-        console.error('获取采收数据失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+    loadItems();
+  }, [loadItems]);
 
   // Export state
   const [exportMode, setExportMode] = useState(false);
@@ -369,7 +356,8 @@ export default function HarvestPage() {
       alert(`部分记录更新失败: ${failedIds.join(', ')}`);
     }
 
-    setHarvestRecords(updatedRecords);
+    // 通过 Store 重新加载数据
+    loadItems();
     setShowBatchEditModal(false);
     setBatchEditMode(false);
     setSelectedRows([]);
@@ -399,19 +387,11 @@ export default function HarvestPage() {
       return;
     }
 
-    // 调用后端API删除
+    // 通过 Store 批量删除
     try {
-      await harvestService.deleteHarvestRecords(idsToDelete);
-      // 删除成功后更新本地状态
-      const indicesToDeleteSet = new Set(selectedRows);
-      const remainingRecords = harvestRecords.filter((_, index) => {
-        const filteredIndex = filteredRecords.findIndex(r => r.id === harvestRecords[index].id);
-        return !indicesToDeleteSet.has(filteredIndex);
-      });
-      setHarvestRecords(remainingRecords);
+      await deleteItems(idsToDelete);
     } catch (error) {
       console.error('批量删除失败:', error);
-      alert('删除失败，请重试');
     }
 
     setShowDeleteWarning(false);
@@ -528,14 +508,9 @@ export default function HarvestPage() {
     }));
   };
 
-  // 刷新采收数据
-  const refreshHarvestData = async () => {
-    try {
-      const data = await harvestService.getHarvestRecords();
-      setHarvestRecords(data);
-    } catch (error) {
-      console.error('获取采收数据失败:', error);
-    }
+  // 刷新采收数据（通过 Store）
+  const refreshHarvestData = () => {
+    loadItems();
   };
 
   const handleCreateRecord = async () => {
