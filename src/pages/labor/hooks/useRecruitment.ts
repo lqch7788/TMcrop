@@ -1,15 +1,11 @@
 /**
  * 招聘申请数据管理 Hook
  * 封装状态管理、数据处理和业务逻辑
- * 使用 React Query 和 API 服务
+ * 使用 Zustand Store 替代 React Query
  */
-import { useState, useMemo, useCallback } from 'react';
-import {
-  useRecruitmentRecords,
-  useCreateRecruitment,
-  useUpdateRecruitment,
-} from '@/hooks/useRecruitmentQueries';
-import type { RecruitmentRecord as ApiRecruitmentRecord, CreateRecruitmentParams, UpdateRecruitmentParams } from '@/services/apiRecruitmentService';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRecruitmentStore } from '@/stores';
+import type { RecruitmentData } from '@/stores';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -18,26 +14,26 @@ import type {
   RecruitmentStatus,
 } from '../types/recruitment.types';
 
-// API 数据转换为组件内部格式
-function mapApiToComponent(apiRecord: ApiRecruitmentRecord): RecruitmentRecord {
+// Store 数据转换为组件内部格式（保留业务逻辑：中文标签映射）
+function mapApiToComponent(storeItem: RecruitmentData): RecruitmentRecord {
   return {
-    id: apiRecord.id,
-    recruitmentCode: apiRecord.recruitmentCode,
-    deptId: apiRecord.deptId,
-    deptName: apiRecord.deptName,
-    positionId: apiRecord.positionId,
-    position: apiRecord.position,
-    headcount: apiRecord.headcount,
-    employmentType: apiRecord.employmentType,
-    salaryMin: apiRecord.salaryMin,
-    salaryMax: apiRecord.salaryMax,
-    priority: apiRecord.priorityLabel || apiRecord.priority,
-    status: apiRecord.statusLabel as RecruitmentStatus,
-    reason: apiRecord.reason,
-    remarks: apiRecord.remarks,
-    applicantId: apiRecord.applicantId,
-    applicantName: apiRecord.applicantName,
-    applyDate: apiRecord.applyDate,
+    id: storeItem.id,
+    recruitmentCode: storeItem.recruitmentCode,
+    deptId: storeItem.deptId,
+    deptName: storeItem.deptName,
+    positionId: storeItem.positionId,
+    position: storeItem.position,
+    headcount: storeItem.headcount,
+    employmentType: storeItem.employmentType,
+    salaryMin: storeItem.salaryMin,
+    salaryMax: storeItem.salaryMax,
+    priority: storeItem.priorityLabel || storeItem.priority,
+    status: storeItem.statusLabel as RecruitmentStatus,
+    reason: storeItem.reason,
+    remarks: storeItem.remarks,
+    applicantId: storeItem.applicantId,
+    applicantName: storeItem.applicantName,
+    applyDate: storeItem.applyDate,
   };
 }
 
@@ -130,47 +126,44 @@ export function useRecruitment(
   const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
 
   // ============================================================
-  // React Query
+  // Zustand Store
   // ============================================================
 
-  const queryFilters = useMemo(() => ({
-    recruitmentCode: filters.recruitmentCode || undefined,
-    deptId: filters.deptId || undefined,
-    position: filters.position || undefined,
-    status: filters.status || undefined,
-    priority: filters.priority || undefined,
-  }), [filters]);
+  const items = useRecruitmentStore((s) => s.items);
+  const isLoading = useRecruitmentStore((s) => s.isLoading);
+  const fetchItems = useRecruitmentStore((s) => s.fetchItems);
+  const createItem = useRecruitmentStore((s) => s.createItem);
+  const updateItem = useRecruitmentStore((s) => s.updateItem);
 
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination.current, pagination.pageSize]);
+  // 组件挂载时加载数据
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
-  const { data: apiData, refetch } = useRecruitmentRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
+  // 转换 Store 数据为组件格式
   const records: RecruitmentRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
+    return items.map(mapApiToComponent);
+  }, [items]);
 
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
+  // 根据筛选条件过滤数据（纯前端计算）
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (filters.recruitmentCode && !r.recruitmentCode.includes(filters.recruitmentCode)) return false;
+      if (filters.deptId && r.deptId !== filters.deptId) return false;
+      if (filters.position && !r.position.includes(filters.position)) return false;
+      if (filters.status && r.status !== filters.status) return false;
+      if (filters.priority && r.priority !== filters.priority) return false;
+      return true;
+    });
+  }, [records, filters]);
 
-  // Mutations
-  const createRecruitmentMutation = useCreateRecruitment();
-  const updateRecruitmentMutation = useUpdateRecruitment();
+  // 更新分页总数（纯前端计算）
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, total: filteredRecords.length }));
+  }, [filteredRecords.length]);
 
-  // 过滤后的数据
-  const filteredData = useMemo(() => {
-    return records;
-  }, [records]);
+  // 过滤后的数据（store 数据已过滤，这里兼容旧接口名）
+  const filteredData = filteredRecords;
 
   /** 根据选择的部门筛选岗位 */
   const availablePositions = useMemo(() => {
@@ -253,7 +246,7 @@ export function useRecruitment(
     const position = positions.find(p => p.id === formData.positionId);
 
     try {
-      const createParams: CreateRecruitmentParams = {
+      const result = await createItem({
         deptId: formData.deptId,
         deptName: dept?.name || '',
         positionId: formData.positionId,
@@ -269,45 +262,38 @@ export function useRecruitment(
         remarks: formData.remarks,
         applicantId: 'U001',
         applicantName: '王建华',
-      };
-
-      await createRecruitmentMutation.mutateAsync(createParams);
-      setIsFormModalOpen(false);
-      refetch();
-      alert('提交成功！');
+      });
+      if (result) {
+        setIsFormModalOpen(false);
+        alert('提交成功！');
+      } else {
+        alert('提交失败，请重试');
+      }
     } catch (error) {
       console.error('提交招聘申请失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, departments, positions, createRecruitmentMutation, refetch]);
+  }, [formData, departments, positions, createItem]);
 
   /** 审批通过 */
   const handleApprove = useCallback(async (record: RecruitmentRecord) => {
     try {
-      await updateRecruitmentMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'approved' },
-      });
-      refetch();
+      await updateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
       alert('审批失败，请重试');
     }
-  }, [updateRecruitmentMutation, refetch]);
+  }, [updateItem]);
 
   /** 审批驳回 */
   const handleReject = useCallback(async (record: RecruitmentRecord) => {
     try {
-      await updateRecruitmentMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'rejected' },
-      });
-      refetch();
+      await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
       alert('操作失败，请重试');
     }
-  }, [updateRecruitmentMutation, refetch]);
+  }, [updateItem]);
 
   /** 批量审批通过 */
   const handleBatchApprove = useCallback(() => {

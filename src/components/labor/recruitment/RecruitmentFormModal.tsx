@@ -1,14 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField } from '@/components/ui/Modal';
 import { RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
-
-interface Position {
-  id: string;
-  name: string;
-  departmentOid: string;
-  departmentName: string;
-  code: string;
-}
+import { usePositionStore, getPositionsByDepartment } from '@/stores/usePositionStore';
+import { useDepartmentStore } from '@/stores/useDepartmentStore';
 
 interface RecruitmentFormModalProps {
   isOpen: boolean;
@@ -41,11 +35,6 @@ const priorityOptions: { value: Priority; label: string; color: string }[] = [
   { value: '低', label: '低', color: 'gray' },
 ];
 
-// 部门选项 - 与数据库 departments 表同步
-const departmentOptions = [
-  '生产部', '技术部', '仓储部', '财务部', '综合办'
-];
-
 export function RecruitmentFormModal({
   isOpen,
   onClose,
@@ -55,82 +44,30 @@ export function RecruitmentFormModal({
   errors,
   onFormChange,
 }: RecruitmentFormModalProps) {
-  // 岗位列表状态
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [filteredPositions, setFilteredPositions] = useState<Position[]>([]);
-  const [loadingPositions, setLoadingPositions] = useState(false);
+  // 从 Zustand Store 获取岗位和部门数据
+  const positionStore = usePositionStore();
+  const departmentStore = useDepartmentStore();
 
-  // 从 API 获取岗位列表
+  // 弹窗打开时加载数据
   useEffect(() => {
-    if (!isOpen) return;
-
-    const fetchPositions = async () => {
-      setLoadingPositions(true);
-      try {
-        const token = localStorage.getItem('token');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const response = await fetch('/api/basic-data/positions', { headers });
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          console.log('[DEBUG] 获取到岗位数据:', result.data.length, '条');
-          setPositions(result.data);
-          // 如果没有选择部门，显示所有岗位
-          if (!formData.department) {
-            setFilteredPositions(result.data);
-          }
-        } else {
-          console.warn('[DEBUG] API 返回数据格式异常:', result);
-        }
-      } catch (error) {
-        console.error('[DEBUG] 获取岗位列表失败:', error);
-      } finally {
-        setLoadingPositions(false);
-      }
-    };
-
-    fetchPositions();
-  }, [isOpen]);
-
-  // 当岗位列表更新时，如果已选择部门则重新过滤
-  useEffect(() => {
-    if (positions.length > 0 && formData.department) {
-      const filtered = positions.filter(pos =>
-        pos.departmentOid === formData.department
-      );
-      console.log('[DEBUG] 根据部门过滤岗位:', formData.department, '->', filtered.length, '条');
-      setFilteredPositions(filtered);
+    if (isOpen) {
+      positionStore.loadPositions();
+      departmentStore.loadDepartments();
     }
-  }, [positions, formData.department]);
+  }, [isOpen, positionStore.loadPositions, departmentStore.loadDepartments]);
 
-  // 当部门选择改变时，过滤岗位列表
-  useEffect(() => {
+  // 部门选项（从 Store 获取）
+  const departmentOptions = useMemo(() => {
+    return departmentStore.departments.map(d => d.name);
+  }, [departmentStore.departments]);
+
+  // 根据已选部门过滤岗位
+  const filteredPositions = useMemo(() => {
     if (!formData.department) {
-      // 如果没有选择部门，显示所有岗位
-      console.log('[DEBUG] 未选择部门，显示所有岗位:', positions.length, '条');
-      setFilteredPositions(positions);
-    } else {
-      // 根据部门过滤岗位
-      const filtered = positions.filter(pos =>
-        pos.departmentOid === formData.department
-      );
-      console.log('[DEBUG] 部门变更:', formData.department, '-> 匹配岗位:', filtered.length, '条');
-      setFilteredPositions(filtered);
+      return positionStore.positions;
     }
-  }, [formData.department, positions]);
-
-  // 当部门改变时，清空岗位选择
-  useEffect(() => {
-    // 如果岗位当前值不在过滤后的列表中，清空选择
-    if (formData.position) {
-      const exists = filteredPositions.some(pos => pos.name === formData.position);
-      if (!exists && filteredPositions.length > 0) {
-        // 岗位选择不在新列表中，可以选择第一个，或保持当前值
-        // 这里选择清空，强制用户重新选择
-      }
-    }
-  }, [filteredPositions, formData.position]);
+    return getPositionsByDepartment(formData.department);
+  }, [positionStore.positions, formData.department]);
 
   return (
     <Modal
@@ -164,7 +101,7 @@ export function RecruitmentFormModal({
 
           {/* 招聘岗位 */}
           <FormField label="招聘岗位" required error={errors.position}>
-            {loadingPositions ? (
+            {positionStore.loading ? (
               <select
                 value=""
                 disabled

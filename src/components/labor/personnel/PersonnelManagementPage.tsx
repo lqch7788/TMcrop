@@ -1,13 +1,13 @@
 /**
- * 人事管理聚合页面组件
- * 使用 API 数据架构：API → enhancedApiClient → React Query → 组件
+ * 人事管理聚合页面组件（职务管理）
+ * 架构：usePositionStore (Zustand Store) 替代 React Query
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { Button } from '@/components/ui/button';
-import { usePositions, useCreatePosition, useUpdatePosition, useDeletePosition } from '../../../hooks/usePositionQueries';
-import type { Position, CreatePositionParams, UpdatePositionParams } from '../../../services/apiPositionService';
+import { usePositionStore } from '@/stores/usePositionStore';
+import type { Position } from '@/services/apiBasicDataService';
 
 // 页面内部使用的职位类型（适配后端 API）
 interface PositionItem {
@@ -31,49 +31,32 @@ function adaptPositionToPage(position: Position): PositionItem {
     name: position.name,
     dept: position.departmentName || '',
     level: position.level === 1 ? '高层' : position.level === 2 ? '中层' : '基层',
-    salary: 0, // 后端 positions 表无此字段
-    staffCount: 0, // 后端 positions 表无此字段
+    salary: 0,
+    staffCount: 0,
     description: position.description || '',
     status: position.status === 'active' ? '启用' : '停用',
     statusClass: position.status === 'active' ? 'normal' : 'disabled',
   };
 }
 
-// 将页面格式转换为后端 API 格式（创建）
-function adaptPageToCreateParams(item: Partial<PositionItem>, deptOid?: string): CreatePositionParams {
-  const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
-  return {
-    code: item.code || '',
-    name: item.name || '',
-    departmentOid: deptOid || '',
-    departmentName: item.dept || '',
-    level: levelMap[item.level || '基层'] || 3,
-    description: item.description || '',
-    sortOrder: 0,
-  };
-}
-
-// 将页面格式转换为后端 API 格式（更新）
-function adaptPageToUpdateParams(item: Partial<PositionItem>): UpdatePositionParams {
-  const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
-  return {
-    code: item.code,
-    name: item.name,
-    departmentName: item.dept,
-    level: levelMap[item.level || '基层'] || 3,
-    description: item.description,
-    status: item.status === '启用' ? 'active' : 'inactive',
-  };
-}
-
 export function PersonnelManagementPage() {
-  // ========== 数据获取（从 API）==========
-  const { data: positions = [], isLoading, refetch } = usePositions();
-  const createPositionMutation = useCreatePosition();
-  const updatePositionMutation = useUpdatePosition();
-  const deletePositionMutation = useDeletePosition();
+  // ========== 数据获取（从 Zustand Store）==========
+  const {
+    positions,
+    loading: isLoading,
+    loadPositions,
+    addPosition,
+    editPosition,
+    removePosition,
+    refreshPositions,
+  } = usePositionStore();
 
-  // 将 API 数据转换为页面格式
+  // 初次加载
+  useEffect(() => {
+    loadPositions();
+  }, [loadPositions]);
+
+  // 将 Store 数据转换为页面格式
   const pagePositions: PositionItem[] = useMemo(() => {
     return positions.map(adaptPositionToPage);
   }, [positions]);
@@ -112,8 +95,8 @@ export function PersonnelManagementPage() {
 
   // 刷新数据
   const refreshData = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    refreshPositions();
+  }, [refreshPositions]);
 
   // 批量选择操作
   const handleSelectAll = () => {
@@ -156,16 +139,28 @@ export function PersonnelManagementPage() {
 
   const handleSave = async (data: Partial<PositionItem>) => {
     try {
+      const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
       if (editingPosition) {
         // 更新
-        const updates = adaptPageToUpdateParams(data);
-        await updatePositionMutation.mutateAsync({ id: editingPosition.id, updates });
+        await editPosition(editingPosition.id, {
+          code: data.code,
+          name: data.name,
+          departmentName: data.dept,
+          level: levelMap[data.level || '基层'] || 3,
+          description: data.description,
+          status: data.status === '启用' ? 'active' : 'inactive',
+        });
       } else {
         // 创建
-        const params = adaptPageToCreateParams(data);
-        await createPositionMutation.mutateAsync(params);
+        await addPosition({
+          code: data.code || '',
+          name: data.name || '',
+          departmentName: data.dept || '',
+          level: levelMap[data.level || '基层'] || 3,
+          description: data.description || '',
+          sortOrder: 0,
+        });
       }
-      refreshData();
     } catch (error) {
       console.error('保存职位失败:', error);
       alert('保存失败，请重试');
@@ -189,14 +184,20 @@ export function PersonnelManagementPage() {
 
   const handleConfirmBatchEdit = async () => {
     try {
+      const levelMap: Record<string, number> = { '高层': 1, '中层': 2, '基层': 3 };
       for (const id of editedRecordIds) {
         const editedData = editedRecords[id];
         if (editedData) {
-          const updates = adaptPageToUpdateParams(editedData);
-          await updatePositionMutation.mutateAsync({ id, updates });
+          await editPosition(id, {
+            code: editedData.code,
+            name: editedData.name,
+            departmentName: editedData.dept,
+            level: levelMap[editedData.level || '基层'] || 3,
+            description: editedData.description,
+            status: editedData.status === '启用' ? 'active' : 'inactive',
+          });
         }
       }
-      refreshData();
     } catch (error) {
       console.error('批量更新职位失败:', error);
       alert('批量更新失败，请重试');
@@ -221,9 +222,8 @@ export function PersonnelManagementPage() {
   const handleConfirmBatchDelete = async () => {
     try {
       for (const id of selectedRows) {
-        await deletePositionMutation.mutateAsync(id);
+        await removePosition(id);
       }
-      refreshData();
     } catch (error) {
       console.error('批量删除职位失败:', error);
       alert('批量删除失败，请重试');

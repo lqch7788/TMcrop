@@ -136,3 +136,79 @@ export { useProblemStore } from './useProblemStore';
 export type { ProblemData } from './useProblemStore';
 
 export { useSupplierCodeRuleStore } from './useSupplierCodeRuleStore';
+
+// ==================== 人工管理模块 V2.0 Stores ====================
+export { useContractStore } from './useContractStore';
+export type { ContractData, ContractFormData, ContractFilters, ContractType, ContractStatus } from './useContractStore';
+
+export { useContractRenewalStore } from './useContractRenewalStore';
+export type { ContractRenewalData } from './useContractRenewalStore';
+
+export { useSalaryAdjustmentStore } from './useSalaryAdjustmentStore';
+export type { SalaryAdjustmentData } from './useSalaryAdjustmentStore';
+
+export { useSalaryBudgetStore } from './useSalaryBudgetStore';
+export type { SalaryBudgetData } from './useSalaryBudgetStore';
+
+// ==================== 绩效考核 V2.0 Store ====================
+export { usePerformanceStore } from './usePerformanceStore';
+
+// ==================== 劳动风险预警 V2.0 Store ====================
+export { useRiskStore } from './useRiskStore';
+export type { RiskStats } from './useRiskStore';
+
+// ==================== 考勤补录 V2.0 Store ====================
+export { useAttendanceRepairStore } from './useAttendanceRepairStore';
+export type { AttendanceRepairRecord, CreateAttendanceRepairParams, UpdateAttendanceRepairParams } from './useAttendanceRepairStore';
+
+// ==================== 入职办理 V2.0 Store（pages版 + components版共用）====================
+export { useOnboardingStore } from './useOnboardingStore';
+export type { OnboardingData, OnboardingProgressStep } from './useOnboardingStore';
+
+// ==================== 人效分析 V2.0 Store ====================
+export { useEfficiencyStore } from './useEfficiencyStore';
+export type { EfficiencyMetrics } from './useEfficiencyStore';
+
+// ==================== 月度报表 V2.0 Store ====================
+export { useMonthlyReportStore } from './useMonthlyReportStore';
+export type { MonthlyReport } from './useMonthlyReportStore';
+
+// ==================== 派工调度 V2.0 Store ====================
+export { useDispatchStore } from './useDispatchStore';
+export type { DispatchTask, MockWorker } from './useDispatchStore';
+
+// ==================== 招聘管理(管理端) V2.0 Store ====================
+export { useRecruitmentManageStore, generateRequestCode } from './useRecruitmentManageStore';
+export type { RecruitmentRequest, RecruitmentStatus, RecruitmentSource, ApprovalHistoryItem } from './useRecruitmentManageStore';
+
+// ==================== 离职办理 V2.0 Store ====================
+export { useResignationStore } from './useResignationStore';
+export type { ResignationData } from './useResignationStore';
+
+// ==================== 招聘管理(pages版) V2.0 Store ====================
+export { useRecruitmentStore } from './useRecruitmentStore';
+export type { RecruitmentData } from './useRecruitmentStore';
+
+// ==================== 工资管理 V2.0 Store ====================
+export { useSalaryStore } from './useSalaryStore';
+export type { SalaryRecord as SalaryRecordV2, SalaryCalcType, SalaryStatus } from './useSalaryStore';
+
+// ==================== 临时工入职 V2.0 Store ====================
+export { useTempWorkerStore } from './useTempWorkerStore';
+export type { TempWorker, WorkerType, ContractType, StaffStatus, SkillTag } from './useTempWorkerStore';
+
+// ==================== 计件工资 V2.0 Store ====================
+export { usePieceworkStore } from './usePieceworkStore';
+export type { PieceRate, PieceRateStatus } from './usePieceworkStore';
+
+// ==================== 技能档案 V2.0 Store ====================
+export { useSkillStore } from './useSkillStore';
+export type { StaffSkill, TrainingRecord as TrainingRecordV2, SkillItem, SkillLevel as SkillLevelV2 } from './useSkillStore';
+
+// ==================== 班组分配管理 V2.0 Store ====================
+export { useTeamManageStore } from './useTeamManageStore';
+export type { Team as TeamManage, UnassignedWorker } from './useTeamManageStore';
+
+// ==================== 工作日志 V2.0 Store ====================
+export { useWorkLogStore } from './useWorkLogStore';
+export type { WorkLog, WorkLogFilters } from './useWorkLogStore';

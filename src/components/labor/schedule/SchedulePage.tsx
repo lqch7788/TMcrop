@@ -16,19 +16,7 @@ import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
 import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
-import type { ScheduleRecord, ShiftType, Staff } from './types';
-
-// 模拟员工列表
-const MOCK_STAFF: Staff[] = [
-  { id: 'S001', name: '张三', workZone: 'A区' },
-  { id: 'S002', name: '李四', workZone: 'B区' },
-  { id: 'S003', name: '王五', workZone: 'A区' },
-  { id: 'S004', name: '赵六', workZone: 'C区' },
-  { id: 'S005', name: '钱七', workZone: 'B区' },
-  { id: 'S006', name: '孙八', workZone: 'A区' },
-  { id: 'S007', name: '周九', workZone: 'C区' },
-  { id: 'S008', name: '吴十', workZone: 'B区' },
-];
+import type { ScheduleRecord, ShiftType } from './types';
 
 export function SchedulePage() {
   const {
@@ -93,7 +81,7 @@ export function SchedulePage() {
       alert('请选择员工和日期');
       return;
     }
-    const staff = MOCK_STAFF.find(s => s.id === newSchedule.staffId);
+    const staff = staffList.find(s => s.id === newSchedule.staffId);
     if (staff) {
       addSchedule({
         ...newSchedule,
@@ -600,7 +588,7 @@ export function SchedulePage() {
 
       {showSwapModal && (
         <SwapRequestModal
-          staffList={MOCK_STAFF}
+          staffList={staffList}
           onSubmit={handleSwapSubmit}
           onClose={() => setShowSwapModal(false)}
         />
@@ -612,7 +600,7 @@ export function SchedulePage() {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddSchedule}
         formData={newSchedule}
-        staffList={MOCK_STAFF}
+        staffList={staffList}
         shiftConfigs={shiftConfigs}
         onFormChange={(field, value) => setNewSchedule(prev => ({ ...prev, [field]: value }))}
       />

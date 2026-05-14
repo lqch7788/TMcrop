@@ -1,40 +1,71 @@
 /**
  * 考勤补录页面 Hook
  * 封装状态管理和业务逻辑
- * 使用 React Query 和 API 服务
+ * V2.0: 数据源迁移到 useAttendanceRepairStore (Zustand)，移除 React Query
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useWorkerStore } from '../../../../../stores';
-import {
-  useAttendanceRepairRecords,
-  useCreateAttendanceRepair,
-  useUpdateAttendanceRepair,
-} from '@/hooks/useAttendanceRepairQueries';
-import type { AttendanceRepairRecord as ApiAttendanceRepairRecord, CreateAttendanceRepairParams } from '@/services/apiAttendanceRepairService';
+import { useWorkerStore } from '@/stores';
+import { useAttendanceRepairStore } from '@/stores/useAttendanceRepairStore';
 import type {
   AttendanceRepairRecord,
+  CreateAttendanceRepairParams,
+} from '@/stores/useAttendanceRepairStore';
+import type {
   AttendanceRepairFilters,
   AttendanceRepairFormData,
   BatchMode,
   PaginationState,
 } from '../types/attendanceRepairPage.types';
 
-// API 数据转换为组件内部格式
-function mapApiToComponent(apiRecord: ApiAttendanceRepairRecord): AttendanceRepairRecord {
-  return {
-    id: apiRecord.id,
-    employeeId: apiRecord.employeeId,
-    employeeName: apiRecord.employeeName,
-    department: apiRecord.department,
-    repairDate: apiRecord.repairDate,
-    checkInTime: apiRecord.checkInTime,
-    checkOutTime: apiRecord.checkOutTime,
-    reason: apiRecord.reason,
-    status: apiRecord.statusLabel as any,
-    approver: apiRecord.approver,
-    approveTime: apiRecord.approveTime,
-    remarks: apiRecord.remarks,
+/** 组件内部使用的记录类型（status 使用中文标签） */
+interface ComponentRepairRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  repairDate: string;
+  checkInTime: string;
+  checkOutTime: string;
+  reason: string;
+  status: '待审批' | '已通过' | '已拒绝' | '已取消';
+  approver?: string;
+  approveTime?: string;
+  remarks?: string;
+}
+
+/** API 记录 → 组件记录 映射 */
+function mapStoreToComponent(item: AttendanceRepairRecord): ComponentRepairRecord {
+  const statusLabelMap: Record<string, ComponentRepairRecord['status']> = {
+    pending: '待审批',
+    approved: '已通过',
+    rejected: '已拒绝',
+    cancelled: '已取消',
   };
+  return {
+    id: item.id,
+    employeeId: item.employeeId,
+    employeeName: item.employeeName,
+    department: item.department,
+    repairDate: item.repairDate,
+    checkInTime: item.checkInTime,
+    checkOutTime: item.checkOutTime,
+    reason: item.reason,
+    status: statusLabelMap[item.status] || '待审批',
+    approver: item.approver,
+    approveTime: item.approveTime,
+    remarks: item.remarks,
+  };
+}
+
+/** 组件状态 → Store状态 映射 */
+function componentStatusToStoreStatus(status: ComponentRepairRecord['status']): AttendanceRepairRecord['status'] {
+  const map: Record<string, AttendanceRepairRecord['status']> = {
+    '待审批': 'pending',
+    '已通过': 'approved',
+    '已拒绝': 'rejected',
+    '已取消': 'cancelled',
+  };
+  return map[status] || 'pending';
 }
 
 // 默认表单数据
@@ -51,14 +82,26 @@ const DEFAULT_FORM_DATA: AttendanceRepairFormData = {
 };
 
 export function useAttendanceRepairPage() {
+  // ========== 依赖 Store ==========
   const workers = useWorkerStore((state) => state.workers);
   const loadWorkers = useWorkerStore((state) => state.loadWorkers);
 
+  const storeItems = useAttendanceRepairStore((state) => state.items);
+  const storeFetchItems = useAttendanceRepairStore((state) => state.fetchItems);
+  const storeCreateItem = useAttendanceRepairStore((state) => state.createItem);
+  const storeUpdateItem = useAttendanceRepairStore((state) => state.updateItem);
+  const storeDeleteItem = useAttendanceRepairStore((state) => state.deleteItem);
+
+  // 初始化 workers 和补录数据
   useEffect(() => {
     if (workers.length === 0) {
       loadWorkers();
     }
   }, [workers.length, loadWorkers]);
+
+  useEffect(() => {
+    storeFetchItems();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ============================================================
   // 状态定义
@@ -82,7 +125,7 @@ export function useAttendanceRepairPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   /** 选中记录 */
-  const [selectedRecord, setSelectedRecord] = useState<AttendanceRepairRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<ComponentRepairRecord | null>(null);
 
   /** 批量选择 */
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -94,53 +137,32 @@ export function useAttendanceRepairPage() {
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
 
   // ============================================================
-  // React Query
+  // 数据转换与过滤
   // ============================================================
 
-  const queryFilters = useMemo(() => ({
-    employeeName: filters.employeeName || undefined,
-    department: filters.department || undefined,
-    status: filters.status || undefined,
-    startDate: filters.startDate || undefined,
-    endDate: filters.endDate || undefined,
-  }), [filters]);
+  /** Store 数据转换为组件格式 */
+  const records: ComponentRepairRecord[] = useMemo(() => {
+    return storeItems.map(mapStoreToComponent);
+  }, [storeItems]);
 
-  const queryPagination = useMemo(() => ({
-    page: pagination.current,
-    limit: pagination.pageSize,
-  }), [pagination.current, pagination.pageSize]);
-
-  const { data: apiData, refetch } = useAttendanceRepairRecords(queryFilters, queryPagination);
-
-  // 转换 API 数据
-  const records: AttendanceRepairRecord[] = useMemo(() => {
-    return (apiData?.records || []).map(mapApiToComponent);
-  }, [apiData]);
-
-  // 更新分页信息
-  useMemo(() => {
-    if (apiData?.pagination) {
-      setPagination(prev => ({
-        ...prev,
-        total: apiData.pagination.total || 0,
-      }));
-    }
-  }, [apiData?.pagination]);
-
-  // Mutations
-  const createMutation = useCreateAttendanceRepair();
-  const updateMutation = useUpdateAttendanceRepair();
-
-  // 过滤后的数据
+  /** 过滤后的数据（本地筛选） */
   const filteredData = useMemo(() => {
-    return records;
-  }, [records]);
+    return records.filter((item) => {
+      if (filters.employeeName && !item.employeeName.includes(filters.employeeName)) return false;
+      if (filters.department && item.department !== filters.department) return false;
+      if (filters.reason && item.reason !== filters.reason) return false;
+      if (filters.status && item.status !== filters.status) return false;
+      if (filters.startDate && item.repairDate < filters.startDate) return false;
+      if (filters.endDate && item.repairDate > filters.endDate) return false;
+      return true;
+    }).sort((a, b) => b.repairDate.localeCompare(a.repairDate));
+  }, [records, filters]);
 
   /** 部门选项 */
   const departmentOptions = useMemo(() => {
     const depts = [...new Set(workers.map(w => w.department))];
     return [{ value: '', label: '全部' }, ...depts.map(d => ({ value: d, label: d }))];
-  }, []);
+  }, [workers]);
 
   // ============================================================
   // 事件处理
@@ -184,7 +206,7 @@ export function useAttendanceRepairPage() {
   }, []);
 
   /** 打开详情弹窗 */
-  const handleOpenDetailModal = useCallback((record: AttendanceRepairRecord) => {
+  const handleOpenDetailModal = useCallback((record: ComponentRepairRecord) => {
     setSelectedRecord(record);
     setIsDetailModalOpen(true);
   }, []);
@@ -196,13 +218,11 @@ export function useAttendanceRepairPage() {
       return;
     }
 
-    // 当选择"其他"时，必须填写具体原因
     if (formData.reason === '其他' && !formData.customReason.trim()) {
       alert('请填写具体的补录原因');
       return;
     }
 
-    // 如果选择"其他"，使用自定义原因
     const finalReason = formData.reason === '其他' ? formData.customReason : formData.reason;
 
     try {
@@ -217,60 +237,51 @@ export function useAttendanceRepairPage() {
         remarks: formData.remarks,
       };
 
-      await createMutation.mutateAsync(createParams);
+      await storeCreateItem(createParams);
       setIsFormModalOpen(false);
-      refetch();
       alert('提交成功！');
     } catch (error) {
       console.error('提交考勤补录失败:', error);
       alert('提交失败，请重试');
     }
-  }, [formData, createMutation, refetch]);
+  }, [formData, storeCreateItem]);
 
   /** 审批通过 */
-  const handleApprove = useCallback(async (record: AttendanceRepairRecord) => {
+  const handleApprove = useCallback(async (record: ComponentRepairRecord) => {
     try {
-      await updateMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'approved' },
-      });
-      refetch();
+      await storeUpdateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
       alert('审批失败，请重试');
     }
-  }, [updateMutation, refetch]);
+  }, [storeUpdateItem]);
 
   /** 审批驳回 */
-  const handleReject = useCallback(async (record: AttendanceRepairRecord) => {
+  const handleReject = useCallback(async (record: ComponentRepairRecord) => {
     try {
-      await updateMutation.mutateAsync({
-        id: record.id,
-        updates: { status: 'rejected' },
-      });
-      refetch();
+      await storeUpdateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
       alert('操作失败，请重试');
     }
-  }, [updateMutation, refetch]);
+  }, [storeUpdateItem]);
 
   /** 批量审批通过 */
-  const handleBatchApprove = useCallback(() => {
-    selectedRowKeys.forEach(key => {
+  const handleBatchApprove = useCallback(async () => {
+    for (const key of selectedRowKeys) {
       const record = records.find(r => r.id === key);
-      if (record) handleApprove(record);
-    });
+      if (record) await handleApprove(record);
+    }
     setSelectedRowKeys([]);
     setBatchMode('none');
   }, [selectedRowKeys, records, handleApprove]);
 
   /** 批量审批驳回 */
-  const handleBatchReject = useCallback(() => {
-    selectedRowKeys.forEach(key => {
+  const handleBatchReject = useCallback(async () => {
+    for (const key of selectedRowKeys) {
       const record = records.find(r => r.id === key);
-      if (record) handleReject(record);
-    });
+      if (record) await handleReject(record);
+    }
     setSelectedRowKeys([]);
     setBatchMode('none');
   }, [selectedRowKeys, records, handleReject]);

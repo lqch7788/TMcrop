@@ -89,7 +89,6 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
       ...supplier,
       ...form
     });
-    onClose();
   };
 
   if (!isOpen || !supplier) return null;

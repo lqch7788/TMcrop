@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Worker } from '../../../../types';
+import { useWorkerStore } from '@/stores/useWorkerStore';
 
 interface WorkerFilters {
   searchTerm: string;
@@ -7,11 +8,19 @@ interface WorkerFilters {
   statusFilter: string;
 }
 
-interface UseWorkerPersonnelProps {
-  workers: Worker[];
-}
+/**
+ * 员工人事数据管理Hook
+ * 数据源：useWorkerStore (Zustand Store → API → 组件)
+ * 组件不直接读写 localStorage，不直接调用 API
+ */
+export function useWorkerPersonnel() {
+  const { workers, loading, loadWorkers } = useWorkerStore();
 
-export function useWorkerPersonnel({ workers }: UseWorkerPersonnelProps) {
+  // 初次加载时获取数据
+  useEffect(() => {
+    loadWorkers();
+  }, [loadWorkers]);
+
   const [filters, setFilters] = useState<WorkerFilters>({
     searchTerm: '',
     departmentFilter: '全部',
@@ -68,6 +77,7 @@ export function useWorkerPersonnel({ workers }: UseWorkerPersonnelProps) {
     filteredWorkers,
     stats,
     departments,
+    isLoading: loading,
     setSearchTerm,
     setDepartmentFilter,
     setStatusFilter,

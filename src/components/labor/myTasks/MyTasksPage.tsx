@@ -4,10 +4,11 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+
+import { useUserStore } from '@/stores/useUserStore';
 
 // 导入统一任务管理 Hook（数据闭环核心）
 import { useTasks } from '../../../hooks/useTasks';
@@ -64,12 +65,8 @@ export function MyTasksPage() {
   // 强制刷新key，用于刷新任务列表状态
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从 localStorage 读取任务（仅用于兼容旧数据初始化）
-  // 注意：问题分派的任务存储在 TASKS key 下
-  const [localTasks, setLocalTasks] = useLocalStorage<TaskDispatchTask[]>(STORAGE_KEYS.TASKS, []);
-
-  // 获取当前用户名（原型阶段默认使用陆启闯）
-  const currentUserName = localStorage.getItem('username') || '陆启闯';
+  // 获取当前用户名（从 Zustand Store，原型阶段默认使用陆启闯）
+  const currentUserName = useUserStore((s) => s.users[0]?.name) || '陆启闯';
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 兼容处理：如果是 Task[] 类型直接使用，否则从 unifiedTasks 获取
@@ -134,7 +131,7 @@ export function MyTasksPage() {
         // 用于排序的创建时间字段
         createdAt: (t as TaskWithExtras).createdAt || '',
       }))
-    : localTasks.length > 0 ? localTasks : taskDispatchTasks;
+    : taskDispatchTasks;
 
   // 任务筛选状态：全部 / 问题处理 / 生产任务 / 临时任务
   const [taskFilter, setTaskFilter] = useState<TaskFilterType>('all');

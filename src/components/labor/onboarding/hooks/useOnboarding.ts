@@ -1,54 +1,38 @@
 /**
  * 入职办理页面 Hook
- * 使用 API 数据架构：API → enhancedApiClient → React Query → 组件
+ * 使用 Zustand Store 替代 React Query
+ * 数据流：Store → Hook → 组件
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  useOnboardingRecords,
-  useCreateOnboarding,
-  useUpdateOnboarding,
-  useDeleteOnboarding,
-  useUpdateOnboardingStatus,
-} from '../../../../hooks/useOnboardingQueries';
-import type { OnboardingRecord, CreateOnboardingParams, UpdateOnboardingParams } from '../../../../services/apiOnboardingService';
+import { useOnboardingStore } from '@/stores';
+import type { OnboardingData } from '@/stores';
+import type { OnboardingRecord } from '../../../../services/apiOnboardingService';
 
-// 类型适配：后端API返回的记录格式转换为页面使用的格式
-function adaptApiRecord(apiRecord: any): OnboardingRecord {
-  // 解析进度（如果需要）
-  let progress = apiRecord.progress;
-  if (typeof progress === 'string') {
-    try {
-      progress = JSON.parse(progress);
-    } catch {
-      progress = [];
-    }
-  }
-
+// Store 数据已通过 normalize 完成格式转换，这里做最终适配
+function adaptStoreItem(storeItem: OnboardingData): OnboardingRecord {
   return {
-    id: apiRecord.id,
-    oid: apiRecord.oid || '',
-    name: apiRecord.name,
-    idCard: apiRecord.idCard || apiRecord.id_card || '',
-    phone: apiRecord.phone || '',
-    position: apiRecord.position || '',
-    department: apiRecord.department || '',
-    departmentOid: apiRecord.departmentOid || apiRecord.department_oid || '',
-    contractType: apiRecord.contractType || apiRecord.contract_type || '',
-    dailyWage: apiRecord.dailyWage || apiRecord.daily_wage,
-    hourlyWage: apiRecord.hourlyWage || apiRecord.hourly_wage,
-    joinDate: apiRecord.joinDate || apiRecord.join_date || '',
-    status: apiRecord.status === 'pending' ? '待入职' :
-            apiRecord.status === 'processing' ? '办理中' :
-            apiRecord.status === 'onboarded' ? '已入职' : '待入职',
-    progress: progress || [],
-    requestCode: apiRecord.requestCode || apiRecord.request_code || '',
-    recruitmentId: apiRecord.recruitmentId || apiRecord.recruitment_id || '',
-    operatorId: apiRecord.operatorId || apiRecord.operator_id || '',
-    operatorName: apiRecord.operatorName || apiRecord.operator_name || '',
-    approvedAt: apiRecord.approvedAt || apiRecord.approved_at || '',
-    remarks: apiRecord.remarks || '',
-    createTime: apiRecord.createTime || apiRecord.create_time || '',
-    updateTime: apiRecord.updateTime || apiRecord.update_time || '',
+    id: storeItem.id,
+    oid: storeItem.oid,
+    name: storeItem.name,
+    idCard: storeItem.idCard,
+    phone: storeItem.phone,
+    position: storeItem.position,
+    department: storeItem.department,
+    departmentOid: storeItem.departmentOid,
+    contractType: storeItem.contractType,
+    dailyWage: storeItem.dailyWage,
+    hourlyWage: storeItem.hourlyWage,
+    joinDate: storeItem.joinDate,
+    status: storeItem.status as '待入职' | '办理中' | '已入职',
+    progress: storeItem.progress,
+    requestCode: storeItem.requestCode || '',
+    recruitmentId: storeItem.recruitmentId || '',
+    operatorId: storeItem.operatorId,
+    operatorName: storeItem.operatorName,
+    approvedAt: storeItem.approvedAt || '',
+    remarks: storeItem.remarks || '',
+    createTime: storeItem.createTime || '',
+    updateTime: storeItem.updateTime || '',
   };
 }
 
@@ -107,41 +91,41 @@ export function useOnboarding(): UseOnboardingReturn {
     total: 0,
   });
 
-  // 将筛选条件转换为 API 参数
-  const apiFilters = useMemo(() => ({
-    status: filters.status || undefined,
-    keyword: filters.keyword || undefined,
-  }), [filters]);
+  // ============================================================
+  // Zustand Store
+  // ============================================================
 
-  const apiPagination = useMemo(() => ({
-    page: pagination.currentPage,
-    limit: pagination.pageSize,
-  }), [pagination.currentPage, pagination.pageSize]);
+  const items = useOnboardingStore((s) => s.items);
+  const isLoading = useOnboardingStore((s) => s.isLoading);
+  const fetchItems = useOnboardingStore((s) => s.fetchItems);
+  const createItem = useOnboardingStore((s) => s.createItem);
+  const updateItem = useOnboardingStore((s) => s.updateItem);
+  const storeUpdateStatus = useOnboardingStore((s) => s.updateStatus);
+  const storeDeleteItem = useOnboardingStore((s) => s.deleteItem);
 
-  // 使用 React Query 获取数据
-  const { data: apiResponse, isLoading, refetch } = useOnboardingRecords(apiFilters, apiPagination);
-
-  // API mutations
-  const createMutation = useCreateOnboarding();
-  const updateMutation = useUpdateOnboarding();
-  const deleteMutation = useDeleteOnboarding();
-  const updateStatusMutation = useUpdateOnboardingStatus();
-
-  // 将 API 数据转换为页面格式
-  const records: OnboardingRecord[] = useMemo(() => {
-    if (!apiResponse?.records) return [];
-    return apiResponse.records.map(adaptApiRecord);
-  }, [apiResponse]);
-
-  // 更新分页总数
+  // 组件挂载时加载数据
   useEffect(() => {
-    if (apiResponse?.pagination) {
-      setPaginationState(prev => ({
-        ...prev,
-        total: apiResponse.pagination.total,
-      }));
-    }
-  }, [apiResponse?.pagination]);
+    fetchItems();
+  }, [fetchItems]);
+
+  // 将 Store 数据转换为页面格式
+  const records: OnboardingRecord[] = useMemo(() => {
+    return items.map(adaptStoreItem);
+  }, [items]);
+
+  // 基于筛选条件的前端过滤
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (filters.status && r.status !== filters.status) return false;
+      if (filters.keyword && !r.name.includes(filters.keyword) && !r.idCard.includes(filters.keyword)) return false;
+      return true;
+    });
+  }, [records, filters]);
+
+  // 更新分页总数（纯前端计算）
+  useEffect(() => {
+    setPaginationState(prev => ({ ...prev, total: filteredRecords.length }));
+  }, [filteredRecords.length]);
 
   // 设置页码
   const setPage = useCallback((page: number) => {
@@ -155,7 +139,7 @@ export function useOnboarding(): UseOnboardingReturn {
 
   // 创建入职记录
   const createOnboarding = useCallback((formData: OnboardingFormData, operatorId: string, operatorName: string) => {
-    const params: CreateOnboardingParams = {
+    createItem({
       name: formData.name,
       idCard: formData.idCard,
       phone: formData.phone,
@@ -167,17 +151,12 @@ export function useOnboarding(): UseOnboardingReturn {
       joinDate: formData.joinDate,
       operatorId,
       operatorName,
-    };
-    createMutation.mutate(params, {
-      onSuccess: () => {
-        refetch();
-      },
     });
-  }, [createMutation, refetch]);
+  }, [createItem]);
 
   // 更新入职记录
   const updateOnboarding = useCallback((id: string, data: Partial<OnboardingFormData>) => {
-    const updates: UpdateOnboardingParams = {
+    updateItem(id, {
       name: data.name,
       idCard: data.idCard,
       phone: data.phone,
@@ -187,13 +166,8 @@ export function useOnboarding(): UseOnboardingReturn {
       dailyWage: data.dailyWage,
       hourlyWage: data.hourlyWage,
       joinDate: data.joinDate,
-    };
-    updateMutation.mutate({ id, updates }, {
-      onSuccess: () => {
-        refetch();
-      },
     });
-  }, [updateMutation, refetch]);
+  }, [updateItem]);
 
   // 更新入职状态
   const updateStatus = useCallback((id: string, status: OnboardingStatus, operatorId: string, operatorName: string) => {
@@ -202,36 +176,21 @@ export function useOnboarding(): UseOnboardingReturn {
       '办理中': 'processing',
       '已入职': 'onboarded',
     };
-    updateStatusMutation.mutate({
-      id,
-      params: {
-        status: statusMap[status],
-        operatorId,
-        operatorName,
-      },
-    }, {
-      onSuccess: () => {
-        refetch();
-      },
-    });
-  }, [updateStatusMutation, refetch]);
+    storeUpdateStatus(id, statusMap[status], operatorId, operatorName);
+  }, [storeUpdateStatus]);
 
   // 删除入职记录
   const deleteOnboarding = useCallback((id: string) => {
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        refetch();
-      },
-    });
-  }, [deleteMutation, refetch]);
+    storeDeleteItem(id);
+  }, [storeDeleteItem]);
 
   // 根据ID获取记录
   const getOnboardingById = useCallback((id: string): OnboardingRecord | undefined => {
     return records.find(r => r.id === id);
   }, [records]);
 
-  // 过滤后的数据（用于前端筛选，这里因为API已经做了筛选，所以直接返回）
-  const filteredData = records;
+  // 过滤后的数据
+  const filteredData = filteredRecords;
 
   return {
     data: records,

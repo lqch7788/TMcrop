@@ -357,6 +357,9 @@ router.get('/', (req: Request, res: Response) => {
     // 构建基础SQL，关联crop_varieties获取标准作物编码
     // 关联seed_sources获取种源批号（seed_code字段）
     // 关联production_plans获取生产计划批次号
+    // JOIN逻辑：
+    // - 如果 crop_name 匹配 sub_variety1_name（细分品种），使用该品种
+    // - 如果 crop_name 匹配 variety_name（主品种），使用该品种
     let sql = `
       SELECT s.*,
         COALESCE(cv.crop_code, '') AS cropCode,
@@ -369,8 +372,7 @@ router.get('/', (req: Request, res: Response) => {
       FROM seedlings s
       LEFT JOIN crop_varieties cv ON (
         s.crop_name = cv.sub_variety1_name
-        OR (s.crop_name = cv.variety_name AND cv.sub_variety1_name IS NULL)
-        OR (s.crop_name = cv.variety_name AND cv.sub_variety1_name = '')
+        OR s.crop_name = cv.variety_name
       )
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
