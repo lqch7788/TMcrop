@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
-import { cropBatches } from '../../../data/mockData';
-import { useUserStore, useGreenhouseStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../../stores';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
 import { TasksTable } from './TasksTable';
@@ -120,6 +119,8 @@ export function TasksPage() {
   const loadUsers = useUserStore((state) => state.loadUsers);
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  const cropBatches = useProductionPlanStore((state) => state.plans);
+  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -128,7 +129,10 @@ export function TasksPage() {
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+    if (cropBatches.length === 0) {
+      fetchPlans();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, cropBatches.length, fetchPlans]);
 
   // 使用统一任务管理 Hook
   const { tasks, addTask, updateTask, deleteTask, updateTaskStatus } = useTasks();

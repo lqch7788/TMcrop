@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDepartmentStore } from '../../../stores';
 import type { RecruitmentRequest, RecruitmentStatus, RecruitmentSource } from './types';
 
 interface RecruitmentBatchEditModalProps {
@@ -19,7 +20,10 @@ interface RecruitmentBatchEditModalProps {
 
 const statusOptions: RecruitmentStatus[] = ['待审批', '招聘中', '已完成', '已取消'];
 const sourceOptions: RecruitmentSource[] = ['劳务公司', '个人零工', '学生实习', '内部推荐'];
-const departmentOptions = ['生产部', '采收部', '技术部', '设备部', '仓储部', '包装部', '质量部', '安全部', '行政部', '财务部'];
+
+function getDepartmentOptions(): string[] {
+  return useDepartmentStore.getState().departments.map(d => d.name);
+}
 
 export function RecruitmentBatchEditModal({
   isOpen,
@@ -136,7 +140,7 @@ export function RecruitmentBatchEditModal({
                   onChange={(e) => handleFieldChange('department', e.target.value)}
                   className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                 >
-                  {departmentOptions.map(dept => (
+                  {getDepartmentOptions().map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>

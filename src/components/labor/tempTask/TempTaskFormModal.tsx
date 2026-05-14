@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
-import { currentUser } from '../../../data/mockData';
-import { useGreenhouseStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
@@ -60,12 +59,20 @@ export function TempTaskFormModal({
 }: TempTaskFormModalProps) {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  const users = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
 
   useEffect(() => {
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [greenhouses.length, loadGreenhouses]);
+    if (users.length === 0) {
+      loadUsers();
+    }
+  }, [greenhouses.length, loadGreenhouses, users.length, loadUsers]);
+
+  // 从 Store 获取当前登录用户（管理员）
+  const currentUser = users[0] || { name: '管理员' };
 
   // 派发模式状态（默认手动选择）
   const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>(externalDispatchMode || 'manual');

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../../types';
-import { tempTasks } from '../../../../data/mockData';
+import { useTempTaskStore } from '../../../../stores/useTempTaskStore';
 
 interface TempTaskFormData {
   taskCode: string;
@@ -28,13 +28,14 @@ interface UseTempTaskFormProps {
 }
 
 // 生成任务编号（带查重）
-const generateTaskCode = (existingTasks: TempTask[] = tempTasks): string => {
+const generateTaskCode = (existingTasks?: TempTask[]): string => {
+  const tasks = existingTasks || (useTempTaskStore.getState().tasks as unknown as TempTask[]);
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
 
   // 查找当天已有的任务编号
   const todayPrefix = `TT${dateStr}`;
-  const todayTasks = existingTasks.filter(t => t.taskCode && t.taskCode.startsWith(todayPrefix));
+  const todayTasks = tasks.filter(t => t.taskCode && t.taskCode.startsWith(todayPrefix));
 
   // 计算当天最大流水号
   let maxSequence = 0;

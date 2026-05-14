@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, AlertTriangle, Edit, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
 import { TempTask, TEMP_TASK_TYPES } from '../../../types';
-import { tempTasks as initialTempTasks } from '../../../data/mockData';
 import { useUserStore } from '../../../stores';
 import { TempTaskFilters } from './TempTaskFilters';
 import { TempTaskTable } from './TempTaskTable';

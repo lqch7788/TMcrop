@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import type { Position } from '../PositionManagementPage';
 import { Button } from '@/components/ui/button';
+import { useDepartmentStore } from '../../../../stores';
 
 interface PositionBatchEditModalProps {
   isOpen: boolean;
@@ -17,9 +18,12 @@ interface PositionBatchEditModalProps {
   onConfirmNext: () => void;
 }
 
-const deptOptions = ['管理层', '技术部', '生产部', '后勤部', '财务部', '人事部'];
 const levelOptions = ['高层', '中层', '基层'];
 const statusOptions = ['启用', '停用'];
+
+function getDeptOptions(): string[] {
+  return useDepartmentStore.getState().departments.map(d => d.name);
+}
 
 export function PositionBatchEditModal({
   isOpen,
@@ -130,7 +134,7 @@ export function PositionBatchEditModal({
                   onChange={(e) => handleFieldChange('dept', e.target.value)}
                   className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                 >
-                  {deptOptions.map(dept => (
+                  {getDeptOptions().map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>

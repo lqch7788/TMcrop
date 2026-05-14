@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import type { OnboardingRecord, OnboardingStatus, ContractType } from './types';
 import { Button } from '@/components/ui/button';
+import { useDepartmentStore } from '../../../stores';
 
 interface OnboardingBatchEditModalProps {
   isOpen: boolean;
@@ -20,7 +21,10 @@ interface OnboardingBatchEditModalProps {
 
 const statusOptions: OnboardingStatus[] = ['待入职', '办理中', '已入职'];
 const contractTypes: ContractType[] = ['劳动合同', '实习协议', '劳务合同'];
-const departmentOptions = ['生产部', '采收部', '技术部', '设备部', '仓储部', '包装部', '质量部', '安全部', '行政部', '财务部'];
+
+function getDepartmentOptions(): string[] {
+  return useDepartmentStore.getState().departments.map(d => d.name);
+}
 
 export function OnboardingBatchEditModal({
   isOpen,
@@ -161,7 +165,7 @@ export function OnboardingBatchEditModal({
                   onChange={(e) => handleFieldChange('department', e.target.value)}
                   className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                 >
-                  {departmentOptions.map(dept => (
+                  {getDepartmentOptions().map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>

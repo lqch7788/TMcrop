@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { useDepartmentStore } from '../../../../stores';
 
 interface Position {
   id: number;
@@ -22,11 +23,13 @@ interface PositionFormModalProps {
   onSave: (data: Partial<Position>) => void;
 }
 
-const deptOptions = ['管理层', '技术部', '生产部', '后勤部', '财务部', '人事部'];
 const levelOptions = ['高层', '中层', '基层'];
 const statusOptions = ['启用', '停用'];
 
 export function PositionFormModal({ record, open, onClose, onSave }: PositionFormModalProps) {
+  const deptOptions = useMemo(() => {
+    return useDepartmentStore.getState().departments.map(d => d.name);
+  }, []);
   const [formData, setFormData] = useState<Partial<Position>>({
     name: '',
     dept: '技术部',
