@@ -1,12 +1,11 @@
 /**
  * 统一临时任务管理 Hook
  * 管理临时任务的增删改查、状态流转
- * 数据存储在 localStorage，实现刷新后数据不丢失
+ * 数据通过 Zustand Store 与后端 API 同步，实现持久化及刷新后数据不丢失
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocalStorage } from './useLocalStorage';
-import { tempTasks as mockTempTasks } from '../data/mockData';
+import { useTempTaskStore, type TempTaskData } from '../stores';
 
 // ============================================
 // 临时任务状态流转
@@ -219,6 +218,46 @@ function generateRecordCode(): string {
 }
 
 // ============================================
+// Store 数据结构 → TempTask 格式映射函数
+// ============================================
+/** 将后端 Store 的数据格式映射为前端 TempTask 格式 */
+function mapStoreTaskToTempTask(t: TempTaskData): TempTask {
+  return {
+    id: t.id || '',
+    taskCode: t.taskCode || t.task_code || '',
+    title: t.title || t.task_title || '',
+    type: t.type || t.task_type || '',
+    typeName: '',
+    urgency: (t.urgency || t.priority || 'normal') as TempTask['urgency'],
+    location: t.location || t.area_name || '',
+    greenhouseId: t.greenhouseId || t.greenhouse_id,
+    greenhouseName: t.greenhouseName || t.greenhouse_name,
+    priority: (t.priority || t.urgency || 'normal') as TempTask['priority'],
+    status: (t.status || 'draft') as TempTaskStatus,
+    assigneeId: t.assigneeId || t.assignee_id || '',
+    assigneeName: t.assigneeName || t.assignee_name || '',
+    assignerId: t.requesterId || t.requester_id || '',
+    assignerName: t.requesterName || t.requester_name || '',
+    estimatedHours: t.estimatedHours ?? 0,
+    estimatedDays: undefined,
+    workerCount: t.workerCount,
+    actualHours: t.actualHours,
+    description: t.description || t.task_content,
+    remarks: t.remarks,
+    rejectReason: t.rejectReason || t.reject_reason,
+    acceptanceRemarks: t.acceptanceRemarks || t.acceptance_remarks,
+    completionRemarks: t.completionRemarks || t.completion_note,
+    rejectCount: t.rejectCount ?? 0,
+    dueDate: t.dueDate || '',
+    acceptedAt: undefined,
+    createdAt: t.createdAt || t.create_time || '',
+    updatedAt: t.updatedAt || t.update_time || '',
+    completedAt: t.completedAt || t.completion_date,
+    progress: t.progress,
+  };
+}
+
+// ============================================
 // Hook 返回类型
 // ============================================
 export interface UseTempTasksReturn {
@@ -264,8 +303,19 @@ export interface UseTempTasksReturn {
 // useTempTasks Hook
 // ============================================
 export function useTempTasks(): UseTempTasksReturn {
-  // 从 localStorage 读取临时任务数据，如果存储的数据为空则使用 mockData 作为初始数据
-  const [tempTasks, setTempTasks] = useLocalStorage<TempTask[]>('yuanxingtu_tempTasks', mockTempTasks);
+  // 从 Zustand Store 获取临时任务数据（替代 localStorage）
+  const store = useTempTaskStore();
+  const [tempTasks, setTempTasks] = useState<TempTask[]>([]);
+
+  // 首次加载时从 Store（后端 API）获取数据
+  useEffect(() => {
+    store.fetchTasks().then(() => {
+      const tasks = useTempTaskStore.getState().tasks;
+      if (tasks.length > 0) {
+        setTempTasks(tasks.map(mapStoreTaskToTempTask));
+      }
+    });
+  }, []);
 
   // 操作记录状态
   const [operationRecords, setOperationRecords] = useState<TempTaskOperationRecord[]>([]);
@@ -303,6 +353,32 @@ export function useTempTasks(): UseTempTasksReturn {
 
     setTempTasks(prev => [newTask, ...prev]);
 
+    // 异步持久化到后端（通过 Zustand Store）
+    store.createTask({
+      id: newTask.id,
+      taskCode: newTask.taskCode,
+      title: newTask.title,
+      type: newTask.type,
+      description: newTask.description,
+      assigneeId: newTask.assigneeId,
+      assigneeName: newTask.assigneeName,
+      requesterId: newTask.assignerId,
+      requesterName: newTask.assignerName,
+      greenhouseId: newTask.greenhouseId,
+      greenhouseName: newTask.greenhouseName,
+      location: newTask.location,
+      status: newTask.status,
+      priority: newTask.urgency || newTask.priority,
+      urgency: newTask.urgency || newTask.priority,
+      dueDate: newTask.dueDate,
+      estimatedHours: newTask.estimatedHours,
+      workerCount: newTask.workerCount,
+      progress: newTask.progress,
+      remarks: newTask.remarks,
+      createdAt: newTask.createdAt,
+      updatedAt: newTask.updatedAt,
+    });
+
     // 创建操作记录
     const record: TempTaskOperationRecord = {
       id: `TEMP_OP_${Date.now()}`,
@@ -320,7 +396,7 @@ export function useTempTasks(): UseTempTasksReturn {
     saveOperationRecords([record, ...operationRecords]);
 
     return newTask;
-  }, [setTempTasks, operationRecords, saveOperationRecords]);
+  }, [setTempTasks, operationRecords, saveOperationRecords, store]);
 
   // 更新临时任务
   const updateTempTask = useCallback((id: string, updates: Partial<TempTask>) => {
@@ -329,34 +405,75 @@ export function useTempTasks(): UseTempTasksReturn {
         ? { ...task, ...updates, updatedAt: new Date().toISOString() }
         : task
     ));
-  }, [setTempTasks]);
+
+    // 异步持久化到后端（通过 Zustand Store）
+    store.updateTask(id, {
+      ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.type !== undefined && { type: updates.type }),
+      ...(updates.description !== undefined && { description: updates.description }),
+      ...(updates.status !== undefined && { status: updates.status }),
+      ...(updates.assigneeId !== undefined && { assigneeId: updates.assigneeId }),
+      ...(updates.assigneeName !== undefined && { assigneeName: updates.assigneeName }),
+      ...(updates.location !== undefined && { location: updates.location }),
+      ...(updates.greenhouseId !== undefined && { greenhouseId: updates.greenhouseId }),
+      ...(updates.greenhouseName !== undefined && { greenhouseName: updates.greenhouseName }),
+      ...(updates.priority !== undefined && { priority: updates.priority, urgency: updates.priority }),
+      ...(updates.estimatedHours !== undefined && { estimatedHours: updates.estimatedHours }),
+      ...(updates.actualHours !== undefined && { actualHours: updates.actualHours }),
+      ...(updates.workerCount !== undefined && { workerCount: updates.workerCount }),
+      ...(updates.progress !== undefined && { progress: updates.progress }),
+      ...(updates.remarks !== undefined && { remarks: updates.remarks }),
+      ...(updates.rejectReason !== undefined && { rejectReason: updates.rejectReason }),
+      ...(updates.rejectCount !== undefined && { rejectCount: updates.rejectCount }),
+      ...(updates.completionRemarks !== undefined && { completionRemarks: updates.completionRemarks }),
+      ...(updates.acceptanceRemarks !== undefined && { acceptanceRemarks: updates.acceptanceRemarks }),
+      ...(updates.dueDate !== undefined && { dueDate: updates.dueDate }),
+      ...(updates.completedAt !== undefined && { completedAt: updates.completedAt }),
+    });
+  }, [setTempTasks, store]);
 
   // 更新临时任务状态
   const updateTempTaskStatus = useCallback((id: string, status: TempTaskStatus, rejectReason?: string) => {
+    const computedUpdates: Partial<TempTask> = {};
+
     setTempTasks(prev => prev.map(task => {
       if (task.id !== id) return task;
 
+      const now = new Date().toISOString();
       const updates: Partial<TempTask> = {
         status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       };
 
       if (status === 'completed') {
-        updates.completedAt = new Date().toISOString();
+        updates.completedAt = now;
       }
 
-      // 开始执行时记录接受时间
+      // 开始执行时记录接受时间（仅在首次记录）
       if (status === 'in_progress' && !task.acceptedAt) {
-        updates.acceptedAt = new Date().toISOString();
+        updates.acceptedAt = now;
       }
 
       if (rejectReason) {
         updates.rejectReason = rejectReason;
       }
 
+      // 保存计算的更新，用于异步持久化
+      Object.assign(computedUpdates, updates);
+
       return { ...task, ...updates };
     }));
-  }, [setTempTasks]);
+
+    // 异步持久化到后端（通过 Zustand Store）
+    if (computedUpdates.status) {
+      store.updateTask(id, {
+        status: computedUpdates.status,
+        updatedAt: computedUpdates.updatedAt,
+        ...(computedUpdates.completedAt && { completedAt: computedUpdates.completedAt }),
+        ...(computedUpdates.rejectReason && { rejectReason: computedUpdates.rejectReason }),
+      });
+    }
+  }, [setTempTasks, store]);
 
   // 提交完成（执行人提交）
   const submitCompletion = useCallback((id: string, hours: number, remarks: string) => {
@@ -465,7 +582,10 @@ export function useTempTasks(): UseTempTasksReturn {
   // 删除临时任务
   const deleteTempTask = useCallback((id: string) => {
     setTempTasks(prev => prev.filter(task => task.id !== id));
-  }, [setTempTasks]);
+
+    // 同步删除后端数据（通过 Zustand Store）
+    store.deleteTask(id);
+  }, [setTempTasks, store]);
 
   // 获取临时任务
   const getTempTask = useCallback((id: string) => {

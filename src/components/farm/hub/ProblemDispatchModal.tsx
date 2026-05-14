@@ -5,8 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProblemEntry } from '../../../hooks/usePersistentProblems';
-import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { useUserStore } from '../../../stores';
+import { useUserStore, useProblemStore } from '../../../stores';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +38,10 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
     }
   }, [users.length, loadUsers]);
 
+  // 从 Zustand Store 获取问题数据
+  const storeProblems = useProblemStore((state) => state.problems);
+  const updateProblemInStore = useProblemStore((state) => state.updateProblem);
+
   const [problem, setProblem] = useState<ProblemEntry | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [priority, setPriority] = useState<'高' | '中' | '低'>('中');
@@ -48,23 +51,36 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    try {
-      const storedProblems = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
-      if (storedProblems) {
-        const parsed = JSON.parse(storedProblems);
-        const problemsList = Array.isArray(parsed) ? parsed : [];
-        const foundProblem = problemsList.find((p: ProblemEntry) => p.id === problemId);
-        if (foundProblem) {
-          setProblem(foundProblem);
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          setExpectedDate(tomorrow.toISOString().split('T')[0]);
-        }
-      }
-    } catch (error) {
-      // 加载数据失败，无需额外处理
+    const found = storeProblems.find(p => p.id === problemId);
+    if (found) {
+      // 将 Store 的 ProblemData 映射为 ProblemEntry 格式供 UI 使用
+      setProblem({
+        id: found.id as number,
+        problemCode: found.problemCode || '',
+        issueText: found.description || found.title || '',
+        issueSeverity: (found.severity || '中等') as '轻微' | '中等' | '严重',
+        greenhouseName: found.greenhouseName || '',
+        // 注意：原文使用了 greehouseName（拼写错误），保留原字段名称
+        sourceModule: (found.sourceType || 'manual') as ProblemEntry['sourceModule'],
+        handlerId: found.handlerId || '',
+        status: (found.status || '待处理') as ProblemEntry['status'],
+        // 填充 ProblemEntry 的必填字段（UI 未使用但类型需要）
+        greenhouseId: found.greenhouseId || '',
+        cropName: '',
+        inspectorId: '',
+        inspectorName: '',
+        checkDate: '',
+        checkTime: '',
+        weather: '',
+        temperature: 0,
+        humidity: 0,
+        cropStatus: '',
+      } as ProblemEntry);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setExpectedDate(tomorrow.toISOString().split('T')[0]);
     }
-  }, [problemId]);
+  }, [problemId, storeProblems]);
 
   const availableWorkers = workers.filter(w => w.id !== problem?.handlerId);
 
@@ -72,31 +88,20 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
     if (!problem || !selectedWorkerId) return;
     setIsSubmitting(true);
     try {
-      const storedProblems = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
-      if (storedProblems) {
-        const parsed = JSON.parse(storedProblems);
-        const problemsList = Array.isArray(parsed) ? parsed : [];
-        const problemIndex = problemsList.findIndex((p: ProblemEntry) => p.id === problemId);
+      const selectedWorker = workers.find(w => w.id === selectedWorkerId);
 
-        if (problemIndex !== -1) {
-          const selectedWorker = workers.find(w => w.id === selectedWorkerId);
-
-          problemsList[problemIndex] = {
-            ...problemsList[problemIndex],
-            status: '处理中',
-            handler: selectedWorker?.name || '',
-            handlerId: selectedWorkerId,
-            dispatchTime: new Date().toISOString(),
-            priority,
-            expectedDate,
-            requireCheckin,
-            requirePhoto,
-          };
-
-          localStorage.setItem(STORAGE_KEYS.DAILY_PROBLEMS, JSON.stringify(problemsList));
-          onDispatched();
-        }
-      }
+      // 通过 Zustand Store 更新问题（乐观更新 + API 写入）
+      await updateProblemInStore(problemId, {
+        status: 'processing',
+        handlerName: selectedWorker?.name || '',
+        handlerId: selectedWorkerId,
+        assignedAt: new Date().toISOString(),
+        priority: priority,
+        expectedDate: expectedDate,
+        requireCheckin: requireCheckin,
+        requirePhoto: requirePhoto,
+      } as Record<string, unknown>);
+      onDispatched();
     } catch (error) {
       // 提交分派失败
     } finally {

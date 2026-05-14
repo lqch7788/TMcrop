@@ -217,4 +217,34 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
    - 修改文件：`useMonthlyTaskPlanning.ts`（`useProductionPlanStore.getState().plans`）
    - 符合升级优化方案 V1.0 架构要求：Zustand Store → API → 组件
 
-**构建状态：** ✅ 通过（三页均编译成功）
+3. **修复 WarehouseManagement.tsx 构建错误**
+   - `editWarehouse` 在 store 解构和本地函数中重复声明
+   - 重命名本地函数为 `openEditModal`
+
+4. **创建 useMaterialRequestDataStore（Zustand Store）**
+   - 文件：`src/stores/useMaterialRequestDataStore.ts`
+   - 使用 `enhancedApiClient` 直连 `/material-requests` API
+   - 数据流：API → IndexedDB → localStorage（三级降级）
+   - 后端字段映射：`applicant_name→applicant`, `apply_date→date`, `warehouse_name→warehouseLocation`
+
+5. **改造 useApplicationTab hook（领料申请核心逻辑）**
+   - 文件：`src/pages/material/tabs/hooks/useApplicationTab.ts`（816行）
+   - 改用 `useMaterialRequestDataStore` 替代 `materialData`/`setMaterialData` props
+   - `confirmDelete` → `storeDeleteItem` + `loadItems()`
+   - `handleSaveEdit` → `storeUpdateItem` + `loadItems()`
+   - `submitVoidApply` → `storeUpdateItem({status: '已作废'})` + `loadItems()`
+   - `handleSaveAdd` → `storeAddItem()` + 审批联动
+
+6. **简化 MaterialReceiving.tsx 页面**
+   - 文件：`src/pages/MaterialReceiving.tsx`（从205行简化到85行）
+   - 移除所有 mock 数据导入（materialReceivingDetails 等）
+   - 移除 TanStack Query hooks（useMaterialRequests）
+   - 移除三方合并逻辑（mock + API + local）
+   - ApplicationTab/ExecuteTab 不再需要外部传入数据 props
+
+7. **更新 ApplicationTab/ExecuteTab 组件接口**
+   - ApplicationTab：移除 `materialData`/`setMaterialData` props，hook 内部从 store 获取
+   - ExecuteTab：props 改为可选，默认空数组（执行tab仍为存根状态）
+
+**构建状态：** ✅ 通过（两轮构建均成功）
+**前后端均正常运行，API 返回数据正常**

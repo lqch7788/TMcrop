@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { usePersistentProblems, ProblemEntry } from '../../../hooks/usePersistentProblems';
+import { useProblemStore } from '../../../stores';
+import type { ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
 import { useTasks } from '../../../hooks/useTasks';
@@ -68,8 +69,14 @@ interface ProblemTabProps {
  */
 export function ProblemTab({ onProblemDispatched, externalTasks, stats }: ProblemTabProps) {
   // ========== 数据Hooks ==========
-  // 使用 usePersistentProblems 获取实时问题数据
-  const { problems, addProblem, deleteProblem } = usePersistentProblems();
+  // 使用 useProblemStore 获取实时问题数据
+  const store = useProblemStore();
+
+  // 组件挂载时从 API 加载问题数据
+  useEffect(() => {
+    store.fetchProblems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 使用 useProblemDispatch 获取分派功能
   const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, handledProblems, totalCount } = useProblemDispatch();
   // 使用 useComprehensiveDispatch 获取AI推荐功能
@@ -436,9 +443,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const handleCreateSubmit = () => {
     if (!validateForm()) return;
 
-    addProblem({
+    // 通过 Zustand Store 创建问题（API 写入 + 乐观更新）
+    store.createProblem({
+      title: formData.issueText.slice(0, 100),
+      description: formData.issueText,
+      severity: formData.issueSeverity,
       greenhouseId: formData.greenhouseId,
       greenhouseName: formData.greenhouseName,
+      status: 'pending',
+      sourceType: 'manual',
+      // 以下为扩展字段（Store 会合并到对象中）
       cropName: formData.cropName,
       inspectorId: formData.inspectorId,
       inspectorName: formData.inspectorName,
@@ -450,9 +464,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       cropStatus: DEFAULT_PROBLEM_VALUES.cropStatus,
       issueText: formData.issueText,
       issueSeverity: formData.issueSeverity,
-      status: '待处理',
       sourceModule: 'manual',
-    });
+    } as Record<string, unknown>);
 
     setShowCreateModal(false);
     setFormData({
@@ -490,12 +503,13 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   // ========== 处理删除确认 ==========
   const handleDeleteConfirm = () => {
     const allProblems = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
-    selectedRows.forEach(id => {
-      const problem = allProblems.find(p => p.id === id);
-      if (problem && problem.status === '待处理' && !problem.sourceTaskId) {
-        deleteProblem(id);
-      }
-    });
+    const idsToDelete = allProblems
+      .filter(p => selectedRows.includes(p.id) && p.status === '待处理' && !p.sourceTaskId)
+      .map(p => p.id);
+
+    if (idsToDelete.length > 0) {
+      store.deleteProblems(idsToDelete);
+    }
 
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
@@ -1194,7 +1208,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         </div>
 
         {/* AI推荐面板 - 当有待分派问题时显示 */}
-        {problems.some(p => p.status === '待处理') && (
+        {pendingProblems.length > 0 && (
           <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -1203,7 +1217,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-purple-700 mb-2">AI智能推荐</h4>
                 <p className="text-sm text-gray-600 mb-3">
-                  系统检测到 <span className="font-medium text-purple-600">{problems.filter(p => p.status === '待处理').length}</span> 个待分派问题，AI已自动分析最优执行人匹配方案
+                  系统检测到 <span className="font-medium text-purple-600">{pendingProblems.length}</span> 个待分派问题，AI已自动分析最优执行人匹配方案
                 </p>
                 <div className="flex gap-2">
                   <Button variant="default" size="sm">
