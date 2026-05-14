@@ -491,9 +491,10 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '采购计划不存在' });
     }
 
-    // 只允许删除草稿或已拒绝的计划
-    if (plan.status !== 'draft' && plan.approval_status !== 'rejected') {
-      return res.status(400).json({ success: false, error: '只允许删除草稿或已拒绝的采购计划' });
+    // 只允许删除草稿、待审批或已拒绝的计划
+    const deletableStatuses = ['draft', 'pending', 'rejected'];
+    if (!deletableStatuses.includes(plan.status as string) && plan.approval_status !== 'rejected') {
+      return res.status(400).json({ success: false, error: '只能删除草稿、待审批或已拒绝的采购计划' });
     }
 
     db.run('DELETE FROM purchase_plans WHERE id = ?', [id]);
@@ -502,6 +503,30 @@ router.delete('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('删除采购计划失败:', error);
     res.status(500).json({ success: false, error: '删除采购计划失败' });
+  }
+});
+
+/**
+ * 批量删除采购计划
+ * POST /api/purchase-plans/batch-delete
+ */
+router.post('/batch-delete', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    const db = getDatabase();
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '请选择要删除的采购计划' });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`DELETE FROM purchase_plans WHERE id IN (${placeholders})`, ids);
+    saveDatabase();
+
+    res.json({ success: true, message: `成功删除 ${ids.length} 个采购计划` });
+  } catch (error) {
+    console.error('批量删除采购计划失败:', error);
+    res.status(500).json({ success: false, error: '批量删除采购计划失败' });
   }
 });
 

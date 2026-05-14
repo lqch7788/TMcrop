@@ -1,16 +1,15 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload, X, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload, Leaf } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
-import { getAllVarieties, getVarietyByCode } from '../../services/apiCropVarietyService';
-import { searchVarieties, initVarieties } from '../../services/cropVarietyService';
 import { getDictionaries } from '../../services/dictionaryService';
 import { useTechSolutionStore } from '../../stores';
-import { CropVariety } from '../../types/crop';
+import { CropVariety } from '../../types/cropVariety';
+import CropCodeSelector from '../farm/common/CropCodeSelector';
 
 // 技术方案类型定义
 export interface TechSolution {
@@ -71,75 +70,11 @@ export function TechSolutionPage() {
     deleteSolutions,
   } = useTechSolutionStore();
 
-  // 作物品种选项
-  const [cropVarietyOptions, setCropVarietyOptions] = useState<{ value: string; label: string; cropCode?: string }[]>([]);
-
   // 操作人员选项（从数据字典获取）
   const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([]);
 
-  // 作物搜索相关状态（复制自种源管理）
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState<{ variety: CropVariety; matchField: string; matchText: string }[]>([]);
-  const [showCropSearch, setShowCropSearch] = useState(false);
-  const cropSearchRef = useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭搜索结果
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (cropSearchRef.current && !cropSearchRef.current.contains(event.target as Node)) {
-        setShowCropSearch(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // 搜索作物
-  useEffect(() => {
-    if (searchKeyword.trim()) {
-      const results = searchVarieties(searchKeyword);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchKeyword]);
-
-  // 选择作物后填充表单
-  const handleSelectCrop = (variety: CropVariety) => {
-    // 获取最细化的作物品种名称
-    const cropNameValue = variety.detailVarietyCode && variety.detailVarietyCode !== '00'
-      ? variety.varietyName
-      : (variety.subVariety1Name || variety.varietyName);
-    setNewPlanForm(prev => ({
-      ...prev,
-      crop: cropNameValue,
-      cropCode: variety.cropCode,
-    }));
-    setShowCropSearch(false);
-    setSearchKeyword('');
-    setSearchResults([]);
-  };
-
-  // 加载作物品种数据
-  useEffect(() => {
-    // 初始化本地作物品种库
-    initVarieties();
-
-    async function loadCropVarieties() {
-      try {
-        const varieties = await getAllVarieties();
-        const options = varieties.map(v => ({
-          value: v.varietyName || '',
-          label: `${v.varietyName}${v.subVariety1Name ? ` > ${v.subVariety1Name}` : ''}${v.detailVarietyName ? ` > ${v.detailVarietyName}` : ''}`,
-          cropCode: v.cropCode,
-        }));
-        setCropVarietyOptions(options);
-      } catch (error) {
-        console.error('加载作物品种失败:', error);
-      }
-    }
-    loadCropVarieties();
-  }, []);
+  // 作物品种选择（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
   // 加载操作人员数据（从数据字典获取）
   useEffect(() => {
@@ -172,31 +107,6 @@ export function TechSolutionPage() {
       }
     }
     loadOperators();
-  }, []);
-
-  // 搜索作物品种（使用本地服务搜索完整列表）
-  const searchCropVarieties = useCallback(async (keyword: string): Promise<{ value: string; label: string; cropCode?: string }[]> => {
-    if (!keyword.trim()) {
-      return [];
-    }
-    try {
-      const results = searchVarieties(keyword);
-      const options = results.map(r => {
-        // 获取最细化的作物品种名称
-        const cropName = r.variety.detailVarietyCode && r.variety.detailVarietyCode !== '00'
-          ? r.variety.varietyName
-          : (r.variety.subVariety1Name || r.variety.varietyName);
-        return {
-          value: cropName,
-          label: `${cropName} (${r.variety.cropCode})`,
-          cropCode: r.variety.cropCode,
-        };
-      });
-      return options;
-    } catch (error) {
-      console.error('搜索作物品种失败:', error);
-      return [];
-    }
   }, []);
 
   // 组件挂载时加载数据
@@ -301,13 +211,23 @@ export function TechSolutionPage() {
     relatedBatchCode: '',
   });
 
-  // 处理作物品种选择变化，自动获取作物编码
-  const handleCropChange = (varietyName: string, cropCode?: string) => {
-    setNewPlanForm(prev => ({
-      ...prev,
-      crop: varietyName,
-      cropCode: cropCode || '',
-    }));
+  // 作物品种选择回调（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
+  const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
+    if (varietyInfo) {
+      setSelectedCrop(varietyInfo);
+      setNewPlanForm(prev => ({
+        ...prev,
+        crop: varietyInfo.subVariety1Name || varietyInfo.varietyName,
+        cropCode: varietyInfo.cropCode,
+      }));
+    } else {
+      setSelectedCrop(null);
+      setNewPlanForm(prev => ({
+        ...prev,
+        crop: '',
+        cropCode: '',
+      }));
+    }
   };
 
   const generateCode = () => {
@@ -493,7 +413,7 @@ export function TechSolutionPage() {
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
-      '最后提交时间': row.lastSubmitTime || '-',
+      '最后提交时间': row.lastSubmitTime ? row.lastSubmitTime.slice(0, 10) : '-',
       '审核人': row.approver,
       '审批状态': row.approveStatus,
       '状态': row.status,
@@ -856,7 +776,7 @@ export function TechSolutionPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.lastSubmitTime || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.lastSubmitTime ? tech.lastSubmitTime.slice(0, 10) : '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.approver}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -1219,83 +1139,28 @@ export function TechSolutionPage() {
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="作物品种">
-              <div ref={cropSearchRef} className="relative">
-                {newPlanForm.crop ? (
-                  // 已选中作物品种，显示选中状态
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-emerald-800">{newPlanForm.crop}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" type="button" onClick={() => {
-                          setNewPlanForm(prev => ({ ...prev, crop: '', cropCode: '' }));
-                        }}>
-                        <X className="w-4 h-4 text-emerald-600" />
-                      </Button>
-                    </div>
-                    <div className="mt-1 text-xs text-emerald-600 font-mono">编码: {newPlanForm.cropCode}</div>
+            {/* 作物品种 - 使用统一的 CropCodeSelector（与种源管理一致） */}
+            <FormField label="作物品种" required>
+              <CropCodeSelector
+                value={newPlanForm.cropCode || ''}
+                onChange={handleCropChange}
+                placeholder="搜索或选择作物品种..."
+                size="md"
+                showFullPath={true}
+              />
+              {/* 显示选中作物的详细信息 */}
+              {selectedCrop && (
+                <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                  <div className="text-emerald-700 flex items-center gap-1">
+                    <Leaf className="w-3 h-3 flex-shrink-0" />
+                    {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                    {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
                   </div>
-                ) : (
-                  // 未选中，显示搜索框
-                  <div className="relative">
-                    <div className="flex">
-                      <input
-                        type="text"
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        onFocus={() => setShowCropSearch(true)}
-                        placeholder="搜索作物编码、名称或别名..."
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                      <Button variant="secondary" size="sm" type="button" onClick={() => setShowCropSearch(!showCropSearch)}>
-                        <Search className="w-4 h-4 text-gray-500" />
-                      </Button>
-                    </div>
-
-                    {/* 搜索结果下拉 */}
-                    {showCropSearch && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                        {searchResults.length > 0 ? (
-                          searchResults.map((result) => {
-                            // 获取最细化的作物品种名称
-                            const cropName = result.variety.detailVarietyCode && result.variety.detailVarietyCode !== '00'
-                              ? result.variety.varietyName
-                              : (result.variety.subVariety1Name || result.variety.varietyName);
-                            return (
-                              <Button
-                                key={result.variety.id}
-                                type="button"
-                                variant="ghost"
-                                className="w-full justify-start"
-                                onClick={() => handleSelectCrop(result.variety)}
-                              >
-                                <div>
-                                  <p className="text-sm font-medium text-gray-800">{cropName}</p>
-                                  <p className="text-xs text-gray-500">
-                                    {result.variety.cropCode} · {result.variety.categoryName} &gt; {result.variety.typeName}
-                                    {result.matchField === 'alias' && ` · 别名匹配: ${result.matchText}`}
-                                    {result.matchField === 'subVariety1Name' && ` · 子品种匹配`}
-                                  </p>
-                                </div>
-                                <Check className="w-4 h-4 text-emerald-600" />
-                              </Button>
-                            );
-                          })
-                        ) : searchKeyword.trim() ? (
-                          <div className="p-4 text-center text-sm text-gray-500">
-                            未找到 "{searchKeyword}"
-                          </div>
-                        ) : (
-                          <div className="p-4 text-center text-sm text-gray-500">
-                            输入关键字搜索作物
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  <div className="text-emerald-600 mt-0.5">
+                    编码：{selectedCrop.cropCode}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </FormField>
             <FormField label="作物编码">
               <Input

@@ -8,7 +8,7 @@ import { useGreenhouseStore, useProductionPlanStore } from '../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
-import { apiClient } from '../../services/apiClient';
+import { apiClient, USE_API } from '../../services/apiClient';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';

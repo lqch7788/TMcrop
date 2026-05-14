@@ -206,7 +206,7 @@ export async function deletePurchasePlan(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/purchase-plans/batch?ids=${ids.join(',')}`, {
+  await enhancedApiClient.post('/purchase-plans/batch-delete', { ids }, {
     offlineQueue: true,
   });
   return true;

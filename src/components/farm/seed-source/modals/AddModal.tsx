@@ -17,7 +17,10 @@ import * as supplierService from '../../../../services/supplierService';
 import { CropVariety } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
-import { currentUser, cropBatches } from '../../../../data/mockData';
+import { useUserStore } from '../../../../stores/useUserStore';
+import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
+// 后备数据：当 Store 中无数据时使用
+import { currentUser as fallbackUser, cropBatches as fallbackBatches } from '../../../../data/mockData';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -38,6 +41,14 @@ export function AddModal({
 }: AddModalProps) {
   // 使用审批Context
   const { addApproval } = useApprovalContext();
+
+  // 从 Store 获取当前用户和生产计划（后备：mockData）
+  const storeUsers = useUserStore((s) => s.users);
+  const storePlans = useProductionPlanStore((s) => s.plans);
+  const currentUser = storeUsers.length > 0 ? storeUsers[0] : fallbackUser;
+  const cropBatches = storePlans.length > 0
+    ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: p.batchStatus || p.status, planType: p.planType, planTypeName: p.planTypeName || '育种计划', cropName: p.cropName }))
+    : fallbackBatches;
 
   // 表单数据
   const [formData, setFormData] = useState({
