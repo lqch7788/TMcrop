@@ -1,3 +1,4 @@
+import React from 'react';
 import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUserStore } from '../../../stores';
 
