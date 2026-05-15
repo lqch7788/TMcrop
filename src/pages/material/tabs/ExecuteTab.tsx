@@ -1,6 +1,7 @@
 // ExecuteTab 组件
 // 领料出库页面
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { useExecuteTab } from './hooks/useExecuteTab';
 import {
   ExecuteTabFilters,
@@ -202,12 +203,9 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
               <p className="text-sm text-gray-600">新增功能开发中...</p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleExecuteCancelAdd}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={handleExecuteCancelAdd}>
                 取消
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -224,18 +222,12 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
               <p className="text-sm text-gray-600">编辑功能开发中...</p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={handleExecuteCancelEdit}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={handleExecuteCancelEdit}>
                 取消
-              </button>
-              <button
-                onClick={handleExecuteSaveEdit}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
-              >
+              </Button>
+              <Button variant="default" onClick={handleExecuteSaveEdit}>
                 保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -255,18 +247,12 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
               <p className="text-gray-500">确定要删除这条领料出库记录吗？此操作不可撤销。</p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setExecuteShowDeleteConfirm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={() => setExecuteShowDeleteConfirm(false)}>
                 取消
-              </button>
-              <button
-                onClick={confirmExecuteDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
-              >
+              </Button>
+              <Button variant="destructive" onClick={confirmExecuteDelete}>
                 确认删除
-              </button>
+              </Button>
             </div>
           </div>
         </div>

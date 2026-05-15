@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ClipboardList, FileText, ClipboardCheck, BarChart3, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // 成本核算Tab组件
 import CostTab from '../components/materialReceiving/tabs/CostTab';
@@ -38,10 +39,11 @@ export default function MaterialReceiving() {
             { key: 'statistics', label: '领料统计', icon: BarChart3 },
             { key: 'cost', label: '成本核算', icon: DollarSign },
           ].map((tab) => (
-            <button
+            <Button
               key={tab.key}
+              variant="ghost"
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 pb-3 text-base font-semibold transition-all relative ${
+              className={`pb-3 text-base font-semibold relative ${
                 activeTab === tab.key
                   ? 'text-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
@@ -52,7 +54,7 @@ export default function MaterialReceiving() {
               {activeTab === tab.key && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
