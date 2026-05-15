@@ -3,7 +3,7 @@
  * 包含四个核心模块的示例数据
  */
 
-import { greenhouses, users, cropBatches } from './mockData';
+import { greenhouses, users, cropBatches } from './farm/farmData';
 import { COMMON_STATUS, HARVEST_STATUS, INSPECTION_STATUS } from '../types/farm/common';
 
 // ============================================

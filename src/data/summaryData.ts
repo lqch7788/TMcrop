@@ -3,7 +3,11 @@
  * 用于 PlanSummary 页面和成本对比分析
  */
 
-import { cropBatches, tasks, workLogs, attendanceRecords, materialReceivings } from './mockData';
+import { cropBatches, tasks } from './farm/farmData';
+// workLogs / attendanceRecords / materialReceivings 无对应源数据，初始化为空数组
+const workLogs: any[] = [];
+const attendanceRecords: any[] = [];
+const materialReceivings: any[] = [];
 import type { BatchSummaryRow, BatchCostDetail, CostComparison } from '../types/views';
 
 // WorkLog 和 Attendance 的 batchId 关联通过 useWorkLog 和 useWorkerAttendance 的 mock 数据提供

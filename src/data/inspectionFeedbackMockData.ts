@@ -4,7 +4,7 @@
  * 巡查编号, 巡查类型, 提交人, 位置/对象, 巡查日期, 巡查结果, 问题分类, 严重程度, 问题照片, 反馈状态, 反馈人员, 处理进度, 操作
  */
 
-import { inspectionRecords } from './mockData';
+import { inspectionRecords } from './farm/farmData';
 
 export interface InspectionFeedbackTaskData {
   id: string;
