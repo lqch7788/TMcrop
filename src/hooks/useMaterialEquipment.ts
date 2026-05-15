@@ -14,12 +14,10 @@ import type {
   MaterialStatus,
   EquipmentStatus,
 } from '../types/material';
-import {
-  MOCK_EQUIPMENTS,
-  MOCK_EQUIPMENT_ALERTS,
-} from '../types/material';
 // 物料数据改用 useWarehouseMaterialStore（Zustand Store）
 import { useWarehouseMaterialStore } from '../stores/useWarehouseMaterialStore';
+// 设备数据改用 useEquipmentStore（Zustand Store）
+import { useEquipmentStore } from '../stores/useEquipmentStore';
 
 // ============================================
 // Hook 返回类型
@@ -105,11 +103,30 @@ export function useMaterialEquipment(): UseMaterialEquipmentReturn {
     });
   });
 
-  // 设备状态
-  const [equipments, setEquipments] = useState<Equipment[]>(MOCK_EQUIPMENTS);
+  // 设备状态 — 从 useEquipmentStore 获取并映射到本地 Equipment 类型
+  const [equipments, setEquipments] = useState<Equipment[]>(() => {
+    const storeEquip = useEquipmentStore.getState().equipment;
+    if (storeEquip.length === 0) return [];
+    return storeEquip.map(e => ({
+      id: e.id,
+      code: e.code,
+      name: e.name,
+      type: (e.type?.includes('灌溉') || e.type?.includes('水泵')) ? 'irrigation'
+        : (e.type?.includes('喷雾')) ? 'sprayer'
+        : (e.type?.includes('传感') || e.type?.includes('监控')) ? 'sensor'
+        : (e.type?.includes('运输') || e.type?.includes('车')) ? 'vehicle'
+        : 'other',
+      model: '',
+      location: e.location,
+      status: e.status as Equipment['status'],
+      lastMaintenanceDate: e.lastMaintenanceDate,
+      nextMaintenanceDate: e.nextMaintenanceDate,
+      totalUsageHours: 0,
+    })) as Equipment[];
+  });
 
-  // 设备告警
-  const [equipmentAlerts, setEquipmentAlerts] = useState<EquipmentAlert[]>(MOCK_EQUIPMENT_ALERTS);
+  // 设备告警 — 运行时动态生成
+  const [equipmentAlerts, setEquipmentAlerts] = useState<EquipmentAlert[]>([]);
 
   // 使用记录
   const [materialUsageRecords, setMaterialUsageRecords] = useState<MaterialUsageRecord[]>([]);
