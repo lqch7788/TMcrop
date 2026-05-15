@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { taskDispatchTasks, TaskDispatchTask } from '../../../data/farmMockData';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
 
 import { useUserStore } from '@/stores/useUserStore';
 
@@ -62,6 +62,17 @@ export function MyTasksPage() {
   const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, getTaskRecordsByTaskId } = useTasks();
   const { addTaskRecord, getRecordsByTaskId } = useOperationRecords();
 
+  // 从 Zustand Store 获取任务数据（作为统一任务加载失败时的降级数据源）
+  const storeTasks = useFarmTaskStore((s) => s.tasks);
+  const fetchStoreTasks = useFarmTaskStore((s) => s.fetchTasks);
+
+  // 组件挂载时确保 Store 有数据
+  useEffect(() => {
+    if (storeTasks.length === 0) {
+      fetchStoreTasks();
+    }
+  }, []);
+
   // 强制刷新key，用于刷新任务列表状态
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -69,8 +80,8 @@ export function MyTasksPage() {
   const currentUserName = useUserStore((s) => s.users[0]?.name) || '陆启闯';
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
-  // 兼容处理：如果是 Task[] 类型直接使用，否则从 unifiedTasks 获取
-  const myTasks: (TaskDispatchTask | Task)[] = unifiedTasks.length > 0
+  // 降级：unifiedTasks 为空时使用 Store 数据
+  const myTasks: (FarmTask | Task)[] = unifiedTasks.length > 0
     ? unifiedTasks.map(t => ({
         id: t.id,
         taskCode: t.taskCode || t.id,
@@ -131,7 +142,61 @@ export function MyTasksPage() {
         // 用于排序的创建时间字段
         createdAt: (t as TaskWithExtras).createdAt || '',
       }))
-    : taskDispatchTasks;
+    : storeTasks.map(t => ({
+        id: t.id,
+        taskCode: t.taskCode || t.id,
+        title: t.title || '',
+        types: [] as string[],
+        typeLabel: t.typeName || '',
+        typeName: t.typeName || '',
+        field: t.greenhouseName || t.field || '',
+        crop: t.cropName || t.crop || '',
+        assignee: t.assigneeName || t.assignee || '',
+        assigneeName: t.assigneeName || t.assignee || '',
+        planStart: t.planStart || t.startTime || '',
+        planEnd: t.planEnd || t.dueDate || '',
+        progress: t.progress || 0,
+        status: t.status as string,
+        priority: t.priority || 'normal',
+        estimatedDays: t.estimatedDays || 0,
+        estimatedHours: t.estimatedHours || 0,
+        dueDate: t.dueDate || '',
+        startDate: t.startTime || '',
+        requiredFeedback: t.feedbackRequirements || [],
+        feedbackRequirements: t.feedbackRequirements || [],
+        remarks: t.remarks || '',
+        typeConfig: t.typeConfig || {},
+        sopContent: t.sopContent || '',
+        materials: t.materials || [],
+        tools: t.tools || [],
+        sourceProblemId: t.sourceProblemId,
+        sourceType: t.sourceType,
+        workLocation: t.greenhouseName || '',
+        urgency: t.priority || 'normal',
+        tempTaskType: '',
+        workerCount: 1,
+        totalEstimatedHours: t.estimatedHours || 0,
+        sourceId: t.sourceInspectionId,
+        recordCode: '',
+        inspectionType: 'farm',
+        submitterId: t.assignerId,
+        submitterName: t.assignerName || '',
+        location: t.greenhouseName || t.field || '',
+        checkDate: t.planStart?.split(' ')?.[0] || '',
+        checkTime: '',
+        checkResult: '',
+        issueCategories: [] as string[],
+        issueSeverity: '',
+        issueText: '',
+        photos: [] as string[],
+        feedbackStatus: t.status,
+        feedbackUsers: [] as string[],
+        processProgress: t.progress || 0,
+        inspectorId: '',
+        inspectorName: t.assignerName || '',
+        createdAt: t.createdAt || '',
+      }));
+      // 注：unifiedTasks 优先；Store 任务作为降级数据源，字段映射保持兼容
 
   // 任务筛选状态：全部 / 问题处理 / 生产任务 / 临时任务
   const [taskFilter, setTaskFilter] = useState<TaskFilterType>('all');
@@ -144,8 +209,8 @@ export function MyTasksPage() {
   const filteredTasks = useMemo(() => {
     // 排序函数：按创建时间倒序（最新在前）
     // 使用时间戳比较，确保无效日期也能正确排序
-    const sortByCreatedAt = (a: TaskDispatchTask | Task, b: TaskDispatchTask | Task) => {
-      const getCreatedAtTime = (task: TaskDispatchTask | Task): number => {
+    const sortByCreatedAt = (a: FarmTask | Task | Task, b: FarmTask | Task | Task) => {
+      const getCreatedAtTime = (task: FarmTask | Task | Task): number => {
         const timeStr = (task as TaskWithExtras).createdAt || (task as TaskWithExtras).planStart || (task as TaskWithExtras).startDate || '';
         if (!timeStr) return 0;
         const date = new Date(timeStr);
@@ -203,13 +268,13 @@ export function MyTasksPage() {
   }), [myTasks]);
 
   // 详情弹窗状态
-  const [selectedTask, setSelectedTask] = useState<TaskDispatchTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<FarmTask | Task | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showSopModal, setShowSopModal] = useState(false);
-  const [selectedSopTask, setSelectedSopTask] = useState<TaskDispatchTask | null>(null);
+  const [selectedSopTask, setSelectedSopTask] = useState<FarmTask | Task | null>(null);
 
   // 详情弹窗引用（用于传递正确的数据）
-  const openDetailModal = (task: TaskDispatchTask) => {
+  const openDetailModal = (task: FarmTask | Task) => {
     setSelectedTask(task);
     setShowDetailModal(true);
   };
@@ -220,7 +285,7 @@ export function MyTasksPage() {
   // 反馈表单状态
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
-    task: TaskDispatchTask | null;
+    task: FarmTask | Task | null;
   }>({ isOpen: false, task: null });
 
   const [feedbackForm, setFeedbackForm] = useState<FeedbackFormData>({
@@ -243,13 +308,13 @@ export function MyTasksPage() {
   // 拒绝原因弹窗
   const [rejectModal, setRejectModal] = useState<{
     isOpen: boolean;
-    task: TaskDispatchTask | null;
+    task: FarmTask | Task | null;
   }>({ isOpen: false, task: null });
 
   const [rejectReason, setRejectReason] = useState('');
 
   // 处理接单 - 使用统一任务管理
-  const handleAccept = (task: TaskDispatchTask) => {
+  const handleAccept = (task: FarmTask | Task) => {
     if (task.sourceProblemId) {
       acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
     }
@@ -278,7 +343,7 @@ export function MyTasksPage() {
   };
 
   // 打开拒绝弹窗
-  const openRejectModal = (task: TaskDispatchTask) => {
+  const openRejectModal = (task: FarmTask | Task) => {
     setRejectModal({ isOpen: true, task });
     setRejectReason('');
   };
@@ -318,7 +383,7 @@ export function MyTasksPage() {
   };
 
   // 开始处理 - 使用统一任务管理
-  const handleStartProcessing = (task: TaskDispatchTask) => {
+  const handleStartProcessing = (task: FarmTask | Task) => {
     const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       updateTaskStatus(unifiedTask.id, 'in_progress');
@@ -327,7 +392,7 @@ export function MyTasksPage() {
   };
 
   // 打开反馈弹窗
-  const openFeedbackModal = (task: TaskDispatchTask) => {
+  const openFeedbackModal = (task: FarmTask | Task) => {
     setFeedbackModal({ isOpen: true, task });
     setFeedbackForm({
       resultText: '',
@@ -590,7 +655,7 @@ export function MyTasksPage() {
   };
 
   // 打开SOP弹窗
-  const openSopModal = (task: TaskDispatchTask, e: React.MouseEvent) => {
+  const openSopModal = (task: FarmTask | Task, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedSopTask(task);
     setShowSopModal(true);
@@ -610,7 +675,7 @@ export function MyTasksPage() {
   };
 
   // 确认完成 - 使用统一任务管理
-  const handleConfirmComplete = (task: TaskDispatchTask) => {
+  const handleConfirmComplete = (task: FarmTask | Task) => {
     const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       // 验收完成时确保进度为100%
@@ -622,7 +687,7 @@ export function MyTasksPage() {
   };
 
   // 继续执行 - 返工后恢复任务执行
-  const handleContinueExecution = (task: TaskDispatchTask) => {
+  const handleContinueExecution = (task: FarmTask | Task) => {
     const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       continueExecution(unifiedTask.id);

@@ -3,10 +3,9 @@
  * 样式与现有弹窗统一
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTasks, Task } from '../../../hooks/useTasks';
-import { cropBatches } from '../../../data/mockData';
-import { useUserStore, useGreenhouseStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../../stores';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
@@ -38,6 +37,8 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   const loadUsers = useUserStore((state) => state.loadUsers);
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  const storePlans = useProductionPlanStore((state) => state.plans);
+  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -46,7 +47,18 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+    if (storePlans.length === 0) {
+      fetchPlans();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, storePlans.length, fetchPlans]);
+
+  // 从Store计算生产批次列表
+  const cropBatches = useMemo(() => storePlans.map(p => ({
+    id: p.id,
+    batchCode: p.batchCode,
+    cropName: (p as any).cropName || (p as any).cropTypeName || '',
+    batchStatus: (p as any).batchStatus || (p as any).status,
+  })), [storePlans]);
 
   const [title, setTitle] = useState(prefillData?.title || '');
   const [description, setDescription] = useState(prefillData?.description || '');

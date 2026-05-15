@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 
 // 类型定义
 interface MaterialItem {
@@ -199,18 +200,12 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
 
       {/* 操作按钮 */}
       <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onNextRecord}
-          className="px-4 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-        >
+        <Button variant="outline" onClick={onNextRecord} className="whitespace-nowrap">
           确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
-        </button>
-        <button
-          onClick={onSaveAll}
-          className="px-4 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
-        >
+        </Button>
+        <Button onClick={onSaveAll} className="whitespace-nowrap">
           保存全部 ({editedCount} 个)
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );
@@ -254,13 +249,15 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                   <tr key={idx}>
                     {/* 删除按钮 */}
                     <td className="px-2 py-2 text-center">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onMaterialDelete(idx)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        className="text-red-500 hover:bg-red-50"
                         title="删除此物料"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </td>
                     <td className="px-3 py-2">
                       <input

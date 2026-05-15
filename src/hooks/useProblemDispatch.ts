@@ -8,7 +8,7 @@ import { usePersistentProblems, type ProblemEntry } from './usePersistentProblem
 import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
 import { useTasks } from './useTasks';
 import type { Task } from '../types';
-import { workers } from '../data/mockData';
+import { useWorkerStore } from '../stores/useWorkerStore';
 
 // 问题类型到任务类型的映射
 const PROBLEM_TYPE_MAP: Record<string, Task['type']> = {
@@ -490,7 +490,8 @@ export function useProblemDispatch() {
 
   // 获取员工列表（陆启闯排在第一位）
   const workerList = useMemo(() => {
-    const filtered = workers.filter(w => w.status === '在职').map(w => ({
+    const storeWorkers = useWorkerStore.getState().workers;
+    const filtered = storeWorkers.filter(w => w.status === '在职').map(w => ({
       id: w.id,
       workerId: w.workerId,
       name: w.name,

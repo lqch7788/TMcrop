@@ -35,9 +35,9 @@ export function ExecuteBatchEditModal({
         {/* 头部 */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-blue-600">
           <h3 className="text-lg font-semibold text-white">批量编辑出库单</h3>
-          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded transition-colors">
-            <X className="w-5 h-5 text-white" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/20 text-white">
+            <X className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* 内容 */}

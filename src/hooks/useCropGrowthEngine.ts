@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTasks } from './useTasks';
 import { usePersistentAttendance } from './usePersistentAttendance';
-import { cropBatches } from '../data/mockData';
+import { useProductionPlanStore } from '../stores/useProductionPlanStore';
 import type { Task } from './useTasks';
 import { generateAlertTriggeredTasks, useEnvironmentData } from './useEnvironmentData';
 
@@ -254,7 +254,8 @@ export function useCropGrowthEngine(): UseCropGrowthEngineReturn {
 
   // 计算批次当前生长阶段
   const getBatchCurrentStage = useCallback((batchId: string): GrowthStage | null => {
-    const batch = cropBatches.find(b => b.id === batchId);
+    const plans = useProductionPlanStore.getState().plans;
+    const batch = plans.find(b => b.id === batchId);
     if (!batch) return null;
 
     const plantingDate = new Date(batch.startDate);
@@ -282,7 +283,8 @@ export function useCropGrowthEngine(): UseCropGrowthEngineReturn {
     const seasonalAdjustment = getSeasonalIntervalAdjustment(currentSeason);
     const tasks: PredictedTask[] = [];
 
-    cropBatches.forEach(batch => {
+    const plans = useProductionPlanStore.getState().plans;
+    plans.forEach(batch => {
       const plantingDate = new Date(batch.startDate);
       const daysSincePlanting = Math.floor((today.getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24));
 

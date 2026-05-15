@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
-import { iotSensors } from '../../data/mockData';
-import { cropBatches } from '../../data/mockData';
+import { useIotStore } from '@/stores/iotStore';
+import { useProductionPlanStore } from '@/stores';
 import {
   EnvAlert,
   EnvAlertRule,
@@ -55,8 +55,8 @@ export function useEnvAlert() {
   const greenhouseCropMap = useMemo(() => {
     const map = new Map<string, GreenhouseCrop>();
 
-    // 从 cropBatches 获取温室作物信息
-    cropBatches.forEach(batch => {
+    // 从 productionPlanStore 获取温室作物信息
+    useProductionPlanStore.getState().plans.forEach((batch) => {
       if (!map.has(batch.greenhouseId)) {
         map.set(batch.greenhouseId, {
           greenhouseId: batch.greenhouseId,
@@ -75,8 +75,8 @@ export function useEnvAlert() {
   const loadSensors = useCallback(() => {
     setIsLoading(true);
     try {
-      // 使用 mockData 中的传感器数据
-      const sensorData = iotSensors.map(sensor => ({
+      // 从 IotStore 获取传感器数据
+      const sensorData = useIotStore.getState().devices.map((sensor) => ({
         id: sensor.id,
         sensorId: sensor.sensorId,
         greenhouseId: sensor.greenhouseId,

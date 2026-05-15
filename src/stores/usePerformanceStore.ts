@@ -103,7 +103,6 @@ export const usePerformanceStore = create<PerformanceState>()(
         // 首次加载时写入种子数据
         if (items.length === 0) {
           set({ items: MOCK_PERFORMANCE_DATA });
-          console.log('[PerformanceStore] 已初始化种子数据:', MOCK_PERFORMANCE_DATA.length, '条考核记录');
         }
       },
 

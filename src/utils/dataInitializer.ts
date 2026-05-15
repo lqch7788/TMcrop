@@ -10,7 +10,6 @@
  */
 
 import { db, clearAllData, isDataInitialized } from '../db/database';
-import { cropBatches } from '../data/mockData';
 
 // ============================================
 // localStorage 存储键名
@@ -103,41 +102,9 @@ function generateHarvestCode(): string {
   return `HS${dateStr}${String(Math.floor(Math.random() * 900) + 100)}`;
 }
 
-// 生产计划映射函数 - 根据作物名称获取对应的生产计划
-function getProductionPlan(cropName: string, type: 'seed' | 'seedling' | 'planting'): { id: string; code: string } {
-  // 获取对应的生产计划
-  const plans = cropBatches.filter(b => {
-    if (type === 'seed') return b.batchCode.startsWith('JZB');
-    if (type === 'seedling') return b.batchCode.startsWith('YMB');
-    if (type === 'planting') return b.batchCode.startsWith('ZZB');
-    return false;
-  });
-
-  // 根据作物名称匹配
-  const cropMapping: Record<string, string[]> = {
-    '红果番茄': ['JZB2026-001', 'YMB2026-001', 'ZZB2026-001'],
-    '水果黄瓜': ['JZB2026-002', 'YMB2026-002', 'ZZB2026-002'],
-    '散叶生菜': ['YMB2026-001', 'ZZB2026-001'], // 借用番茄的计划
-    '红颜草莓': ['YMB2026-003', 'ZZB2026-003'],
-    '紫长茄子': ['JZB2026-001', 'YMB2026-001', 'ZZB2026-001'], // 借用番茄的计划
-    '红尖椒': ['JZB2026-001', 'YMB2026-001', 'ZZB2026-001'], // 借用番茄的计划
-  };
-
-  const planCodes = cropMapping[cropName] || ['JZB2026-001', 'YMB2026-001', 'ZZB2026-001'];
-  let planCodeIndex = 0;
-  if (type === 'seed') planCodeIndex = 0;
-  else if (type === 'seedling') planCodeIndex = 1;
-  else if (type === 'planting') planCodeIndex = 2;
-
-  const planCode = planCodes[planCodeIndex] || planCodes[0];
-  const plan = plans.find(p => p.batchCode === planCode);
-
-  if (plan) {
-    return { id: plan.id, code: plan.batchCode };
-  }
-
-  // 如果没找到，返回第一个计划
-  return { id: plans[0]?.id || '', code: plans[0]?.batchCode || '' };
+// 生产计划映射函数 - 根据作物名称获取对应的生产计划（返回空，生产计划数据由 API/Zustand Store 管理）
+function getProductionPlan(_cropName: string, _type: 'seed' | 'seedling' | 'planting'): { id: string; code: string } {
+  return { id: '', code: '' };
 }
 
 // ============================================

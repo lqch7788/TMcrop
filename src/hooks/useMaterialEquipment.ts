@@ -15,10 +15,11 @@ import type {
   EquipmentStatus,
 } from '../types/material';
 import {
-  MOCK_MATERIALS,
   MOCK_EQUIPMENTS,
   MOCK_EQUIPMENT_ALERTS,
 } from '../types/material';
+// 物料数据改用 useWarehouseMaterialStore（Zustand Store）
+import { useWarehouseMaterialStore } from '../stores/useWarehouseMaterialStore';
 
 // ============================================
 // Hook 返回类型
@@ -64,8 +65,45 @@ export interface UseMaterialEquipmentReturn {
 // ============================================
 
 export function useMaterialEquipment(): UseMaterialEquipmentReturn {
-  // 物料状态
-  const [materials, setMaterials] = useState<Material[]>(MOCK_MATERIALS);
+  // 物料状态：从 useWarehouseMaterialStore 获取，映射到本地 Material 类型
+  const [materials, setMaterials] = useState<Material[]>(() => {
+    const storeItems = useWarehouseMaterialStore.getState().items;
+    if (storeItems.length === 0) return [];
+    return storeItems.map(item => {
+      // 根据库存量推导物料状态
+      let status: Material['status'] = 'available';
+      if (item.quantity <= 0) {
+        status = 'out_of_stock';
+      } else if (item.minStock && item.quantity < item.minStock) {
+        status = 'low_stock';
+      }
+      // 类型映射：warehouse category → MaterialType
+      const mapType = (cat: string): Material['type'] => {
+        const lower = cat.toLowerCase();
+        if (lower.includes('肥料') || lower.includes('fertilizer')) return 'fertilizer';
+        if (lower.includes('农药') || lower.includes('pesticide')) return 'pesticide';
+        if (lower.includes('种子') || lower.includes('seed')) return 'seed';
+        if (lower.includes('工具') || lower.includes('tool')) return 'tool';
+        return 'other';
+      };
+      return {
+        id: String(item.id),
+        code: item.code,
+        name: item.name,
+        type: mapType(item.category || ''),
+        unit: (item.unit || 'kg') as Material['unit'],
+        quantity: item.quantity,
+        minStock: item.minStock || 0,
+        maxStock: item.maxStock || 0,
+        location: item.location || '',
+        supplier: item.supplier || '',
+        purchaseDate: item.productionDate || '',
+        expiryDate: item.expiryDate || '',
+        status,
+        remark: '',
+      };
+    });
+  });
 
   // 设备状态
   const [equipments, setEquipments] = useState<Equipment[]>(MOCK_EQUIPMENTS);

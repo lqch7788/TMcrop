@@ -30,17 +30,15 @@ import {
   TASK_ACTION_CONFIG,
 } from '../config/taskConfig';
 
-// 导入原始任务数据（保留原有数据）
-import { taskDispatchTasks, TaskDispatchTask } from '../data/farmMockData';
-
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
 import { updateSeedling } from '../services/apiSeedlingService';
 import { SeedlingStatus } from '../types/crop';
-// 导入临时任务数据和巡查反馈处理任务数据
-import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, InspectionFeedbackTaskData } from '../data/mockData';
-import { TempTask } from '../hooks/useTempTasks';
 // 导入农事任务 Store（统一数据层）
-import { useFarmTaskStore } from '../stores/farmTaskStore';
+import { useFarmTaskStore, Task as StoreTask } from '../stores/farmTaskStore';
+// 导入临时任务 Store
+import { useTempTaskStore, TempTaskData } from '../stores/useTempTaskStore';
+// 导入巡查记录 Store
+import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
 
@@ -76,158 +74,123 @@ export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: stri
 };
 
 // ============================================
-// 原始任务数据转换函数
-// 将 taskDispatchTasks 转换为 Task 格式
+// Store → Task 转换函数
+// 将各 Zustand Store 的数据统一转换为 Task 格式
 // ============================================
-function convertToTask(t: TaskDispatchTask): Task {
-  // 获取第一个任务类型作为主类型
-  const primaryType = t.types[0] || 'other';
-  const typeNameMap: Record<string, string> = {
-    fertilization: '施肥',
-    irrigation: '灌溉',
-    pruning: '修剪',
-    harvest: '采收',
-    plant_protection: '植保',
-    pesticide: '植保',
-    weeding: '除草',
-    other: '其他',
-  };
 
-  return {
-    id: t.id,
-    taskCode: t.id,
-    title: `${t.field}${t.crop}${typeNameMap[primaryType] || '任务'}`,
-    type: primaryType,
-    typeName: t.typeLabel || typeNameMap[primaryType] || '其他',
-    status: t.status as TaskStatus,
-    priority: t.priority as 'urgent' | 'high' | 'normal',
-    progress: t.progress,
-    sourceType: 'dispatch',
-    dispatchMode: 'farm', // 标记为农事任务
-    assigneeId: `W${t.assignee.charCodeAt(0)}`,
-    assigneeName: t.assignee,
-    assignerId: 'M001',
-    assignerName: '王主管',
-    dueDate: t.planEnd?.split(' ')[0] || '',
-    startTime: t.progress > 0 ? t.planStart : undefined,
-    // 兼容旧界面字段
-    greenhouseId: t.field,
-    greenhouseName: t.field,
-    cropName: t.crop,
-    types: t.types,
-    field: t.field,
-    assignee: t.assignee,
-    crop: t.crop,
-    planStart: t.planStart,
-    planEnd: t.planEnd,
-    estimatedDays: t.estimatedDays,
-    estimatedHours: t.estimatedHours,
-    // 转换必填反馈
-    feedbackRequirements: (t.requiredFeedback || []).map((f: string) => {
-      const feedbackMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text'; label: string; required: boolean }> = {
+/** 将 useFarmTaskStore 的 StoreTask 转换为本地 Task 格式 */
+function convertStoreFarmTaskToTask(t: StoreTask): Task {
+  const defaultFeedback = (t.feedbackRequirements || t.requiredFeedback || []).map((f: unknown) => {
+    if (typeof f === 'string') {
+      const feedbackMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
         gps: { type: 'gps', label: 'GPS位置', required: true },
         photo_before: { type: 'image_before', label: '作业前照片', required: true },
         photo_after: { type: 'image_after', label: '作业后照片', required: true },
         material: { type: 'materials', label: '物料使用', required: true },
       };
-      return feedbackMap[f] || { type: 'text', label: f, required: false };
-    }),
-    // 其他字段
-    materials: t.materials,
-    tools: t.tools,
-    sopContent: t.sopContent,
-    typeConfig: t.typeConfig,
-    sourceProblemId: t.sourceProblemId,
-    // sourceInspectionId 可能存在于 TaskDispatchTask 但不在 Task 类型中
-    sourceInspectionId: (t as unknown as { sourceInspectionId?: string }).sourceInspectionId,
-    reworkCount: 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    // 从任务 ID 解析日期：格式如 NS20260417-001，取中间的日期部分
-    createdAt: t.id && t.id.length >= 10
-      ? `2026-${t.id.substring(5, 7)}-${t.id.substring(7, 9)}T08:00:00Z`
-      : new Date().toISOString(),
-    updatedAt: t.id && t.id.length >= 10
-      ? `2026-${t.id.substring(5, 7)}-${t.id.substring(7, 9)}T08:00:00Z`
-      : new Date().toISOString(),
+      return feedbackMap[f] || { type: 'text' as const, label: f, required: false };
+    }
+    return f as { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean };
+  });
+
+  return {
+    id: t.id || '',
+    taskCode: t.taskCode || t.id || '',
+    title: t.title || '',
+    type: t.type || 'other',
+    typeName: t.typeName || t.type || '其他',
+    status: (t.status as TaskStatus) || 'pending',
+    priority: (t.priority as 'urgent' | 'high' | 'normal') || 'normal',
+    progress: t.progress || 0,
+    sourceType: (t.sourceType as 'dispatch' | 'tempTask' | 'smart') || 'dispatch',
+    dispatchMode: (t.dispatchMode as 'farm' | 'tempTask' | 'smart') || 'farm',
+    assigneeId: t.assigneeId || '',
+    assigneeName: t.assigneeName || '',
+    assignerId: t.assignerId || '',
+    assignerName: t.assignerName || '',
+    dueDate: t.dueDate || '',
+    startTime: t.startTime || undefined,
+    greenhouseId: t.greenhouseId || '',
+    greenhouseName: t.greenhouseName || '',
+    cropName: t.cropName || '',
+    types: (t as Record<string, unknown>).types as string[] || [],
+    field: t.field || t.greenhouseName || '',
+    assignee: (t as Record<string, unknown>).assignee as string || t.assigneeName || '',
+    crop: (t as Record<string, unknown>).crop as string || t.cropName || '',
+    planStart: t.planStart || '',
+    planEnd: t.planEnd || '',
+    estimatedDays: t.estimatedDays || 0,
+    estimatedHours: t.estimatedHours || 0,
+    feedbackRequirements: defaultFeedback,
+    materials: t.materials || [],
+    tools: t.tools || [],
+    sopContent: t.sopContent || '',
+    typeConfig: t.typeConfig || {},
+    sourceProblemId: t.sourceProblemId || undefined,
+    sourceInspectionId: t.sourceInspectionId || undefined,
+    reworkCount: t.reworkCount || 0,
+    reworkHistory: t.reworkHistory || [],
+    deadlineExtensions: t.deadlineExtensions || [],
+    version: t.version || 1,
+    createdAt: t.createdAt || new Date().toISOString(),
+    updatedAt: t.updatedAt || new Date().toISOString(),
   };
 }
 
-// ============================================
-// 巡查反馈处理任务转换函数
-// 将 InspectionFeedbackTask 转换为 Task 格式
-// ============================================
-function convertInspectionFeedbackTaskToTask(t: InspectionFeedbackTaskData): Task {
-  const catMap: Record<string, string> = { environment: '环境', pest: '病虫害', equipment: '设备', infrastructure: '基础设施', other: '其他' };
-  const chineseCats = (t.issueCategories || []).map(c => catMap[c] || c);
+/** 将 useTempTaskStore 的 TempTaskData 转换为本地 Task 格式 */
+function convertStoreTempTaskToTask(t: TempTaskData): Task {
+  // 统一字段（兼容 snake_case 和 camelCase）
+  const id = t.taskCode || t.id || '';
+  const title = t.title || t.task_title || '';
+  const type = t.type || t.task_type || '';
+  const assigneeId = t.assigneeId || t.assignee_id || '';
+  const assigneeName = t.assigneeName || t.assignee_name || '';
+  const requesterId = t.requesterId || t.requester_id || '';
+  const requesterName = t.requesterName || t.requester_name || '';
+  const location = t.location || t.greenhouseName || t.greenhouse_name || t.area_name || '';
+  const greenhouseId = t.greenhouseId || t.greenhouse_id || '';
+  const greenhouseName = t.greenhouseName || t.greenhouse_name || location || '';
+  const createdAt = t.createdAt || t.createTime || t.create_time || new Date().toISOString();
+  const status = t.status || 'pending';
+
   return {
-    id: t.id,
-    taskCode: t.recordCode,
-    title: `${t.greenhouseName || '园区'} 巡查反馈`,
-    type: 'other',
-    typeName: '巡查反馈处理',
-    status: t.status as TaskStatus,
-    priority: t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'normal' : 'normal',
-    progress: PROGRESS_MAP[t.status] || 0,
-    sourceType: 'dispatch',
-    dispatchMode: 'inspection',
-    assigneeId: 'U013',
-    assigneeName: t.assigneeName,
-    assignerId: t.inspectorId,
-    assignerName: t.inspectorName,
-    dueDate: t.checkDate,
-    startTime: undefined,
-    greenhouseId: t.greenhouseId,
-    greenhouseName: t.greenhouseName,
-    cropName: t.cropName,
-    types: chineseCats,
-    field: t.greenhouseName,
-    assignee: t.assignee,
-    crop: t.cropName,
-    planStart: t.checkDate + ' ' + t.checkTime,
-    planEnd: t.checkDate + ' 17:00',
-    estimatedDays: 1,
-    estimatedHours: 8,
-    feedbackRequirements: t.requiredFeedback.map((f: string) => {
-      const feedbackMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text'; label: string; required: boolean }> = {
-        gps: { type: 'gps', label: 'GPS位置', required: true },
-        photo_before: { type: 'image_before', label: '作业前照片', required: true },
-        photo_after: { type: 'image_after', label: '作业后照片', required: true },
-      };
-      return feedbackMap[f] || { type: 'text', label: f, required: false };
-    }),
-    materials: t.materials,
-    tools: t.tools,
-    sopContent: t.sopContent,
-    typeConfig: {},
-    sourceProblemId: t.problemId,
-    sourceInspectionId: t.inspectionId,
-    // 巡查编号（来自巡查记录）
-    sourceId: t.inspectionId,
-    recordCode: t.recordCode,
-    inspectionType: t.inspectionType,
-    submitterId: t.submitterId || t.inspectorId,
-    submitterName: t.submitterName || t.inspectorName,
-    location: t.location || t.greenhouseName || '园区',
-    checkDate: t.checkDate,
-    checkTime: t.checkTime,
-    checkResult: t.checkResult || (t.issueSeverity === '严重' ? '严重' : t.issueSeverity === '中等' ? '异常' : '轻微'),
-    issueCategories: chineseCats,
-    issueSeverity: t.issueSeverity,
-    issueText: t.issueText,
-    photos: t.photos || [],
-    feedbackStatus: t.feedbackStatus || (t.status === 'pending' ? '待接受' : t.status === 'in_progress' ? '处理中' : t.status === 'rejected' ? '已返工' : t.status === 'waiting_acceptance' ? '待验收' : t.status === 'completed' ? '已完成' : '未知'),
-    feedbackUsers: t.feedbackUsers || [t.assigneeName],
-    processProgress: t.processProgress || (PROGRESS_MAP[t.status] ? String(PROGRESS_MAP[t.status]) : '0'),
-    inspectorId: t.inspectorId,
-    inspectorName: t.inspectorName,
-    reworkCount: 0,
+    id,
+    taskCode: id,
+    title,
+    type: type || 'other',
+    typeName: type || '其他',
+    status: status as TaskStatus,
+    priority: (t.priority as 'urgent' | 'high' | 'normal') || (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
+    progress: t.progress || 0,
+    sourceType: 'tempTask',
+    dispatchMode: 'tempTask',
+    assigneeId,
+    assigneeName,
+    assignerId: requesterId,
+    assignerName: requesterName,
+    dueDate: t.dueDate || '',
+    feedbackRequirements: [],
+    greenhouseId,
+    greenhouseName,
+    cropName: '',
+    field: location,
+    reworkCount: t.rejectCount || 0,
     reworkHistory: [],
     deadlineExtensions: [],
     version: 1,
-    createdAt: t.checkDate + 'T' + t.checkTime + 'Z',
-    updatedAt: t.checkDate + 'T' + t.checkTime + 'Z',
+    createdAt,
+    updatedAt: t.updatedAt || t.updateTime || t.update_time || createdAt,
+    acceptedAt: undefined,
+    completedAt: status === 'completed' ? new Date().toISOString() : undefined,
+    workLocation: location,
+    urgency: (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
+    tempTaskType: type,
+    estimatedDays: 0,
+    estimatedHours: t.estimatedHours || 0,
+    workerCount: t.workerCount || 1,
+    remarks: t.remarks || t.description || '',
+    requiredFeedback: [],
+    startDate: '',
   };
 }
 
@@ -240,83 +203,125 @@ const PROGRESS_MAP: Record<string, number> = {
   rejected: 0,
 };
 
-// ============================================
-// 演示任务初始数据（来自原始 taskDispatchTasks）
-// ============================================
-const INITIAL_TASKS: Task[] = taskDispatchTasks.map(convertToTask);
-
-// ============================================
-// 临时任务转换函数
-// 将 mockTempTasks 转换为 Task 格式
-// ============================================
-function convertTempTaskToTask(t: TempTask): Task {
-  const progress = t.actualHours
-    ? Math.min(100, Math.round((t.actualHours / t.estimatedHours) * 100))
-    : 0;
-
-  // 将 TempTaskStatus 映射为 TaskStatus
-  // pending_reassign 映射为 rejected（等待重新派发的任务相当于被驳回）
-  const statusMap: Record<string, TaskStatus> = {
-    draft: 'draft',
-    pending: 'pending',
-    in_progress: 'in_progress',
-    waiting_acceptance: 'waiting_acceptance',
-    completed: 'completed',
-    rejected: 'rejected',
-    pending_reassign: 'rejected',
-  };
-  const taskStatus = statusMap[t.status] || 'pending';
+/** 将 useInspectionDataStore 的 InspectionData 转换为本地 Task 格式 */
+function convertStoreInspectionToTask(t: InspectionData): Task {
+  const id = t.id || '';
+  const recordCode = t.recordCode || t.record_code || id;
+  const greenhouseName = t.greenhouseName || t.greenhouse_name || '园区';
+  const inspectorId = t.inspectorId || t.inspector_id || '';
+  const inspectorName = t.inspectorName || t.inspector_name || '';
+  const checkDate = t.checkDate || t.check_date || '';
+  const checkTime = t.checkTime || t.check_time || '08:00';
+  const issues = Array.isArray(t.issues) ? t.issues : [];
+  const feedbackUsers = Array.isArray(t.feedbackUsers) ? t.feedbackUsers : [];
+  const assigneeName = feedbackUsers.length > 0 ? feedbackUsers[0] : inspectorName;
+  const status = t.status || 'pending';
+  const issueSeverity = t.issueSeverity || t.issue_severity || '轻微';
 
   return {
-    id: t.taskCode,
-    taskCode: t.taskCode,
-    title: t.title,
-    type: t.type,
-    typeName: t.typeName,
-    status: taskStatus,
-    priority: t.priority === 'urgent' ? 'urgent' : t.priority === 'high' ? 'high' : 'normal',
-    progress,
-    sourceType: 'tempTask',
-    dispatchMode: 'tempTask',
-    assigneeId: t.assigneeId,
-    assigneeName: t.assigneeName,
-    assignerId: t.assignerId,
-    assignerName: t.assignerName,
-    dueDate: t.dueDate,
-    feedbackRequirements: t.requiredFeedback || [],
-    greenhouseId: t.greenhouseId || '',
-    greenhouseName: t.workLocation || t.location || '',
-    cropName: '',
-    field: t.workLocation || t.location || t.greenhouseName || '',
-    reworkCount: t.rejectCount,
+    id,
+    taskCode: recordCode,
+    title: `${greenhouseName} 巡查反馈`,
+    type: 'other',
+    typeName: '巡查反馈处理',
+    status: status as TaskStatus,
+    priority: issueSeverity === '严重' ? 'high' : 'normal',
+    progress: PROGRESS_MAP[status] || 0,
+    sourceType: 'dispatch',
+    dispatchMode: 'inspection',
+    assigneeId: feedbackUsers.length > 0 ? `EMP_${assigneeName.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0)}` : '',
+    assigneeName,
+    assignerId: inspectorId,
+    assignerName: inspectorName,
+    dueDate: checkDate,
+    startTime: undefined,
+    greenhouseId: t.greenhouseId || t.greenhouse_id || '',
+    greenhouseName,
+    cropName: t.cropName || '',
+    types: issues,
+    field: greenhouseName,
+    assignee: assigneeName,
+    crop: t.cropName || '',
+    planStart: checkDate ? `${checkDate} ${checkTime}` : '',
+    planEnd: checkDate ? `${checkDate} 17:00` : '',
+    estimatedDays: 1,
+    estimatedHours: 8,
+    feedbackRequirements: [],
+    materials: [],
+    tools: [],
+    sopContent: '',
+    typeConfig: {},
+    sourceProblemId: undefined,
+    sourceInspectionId: id,
+    sourceId: id,
+    recordCode,
+    inspectionType: t.inspectionType || t.inspection_type || '',
+    submitterId: inspectorId,
+    submitterName: inspectorName,
+    location: greenhouseName,
+    checkDate,
+    checkTime,
+    checkResult: t.checkResult || t.check_result || (issueSeverity === '严重' ? '严重' : issueSeverity === '中等' ? '异常' : '轻微'),
+    issueCategories: issues,
+    issueSeverity,
+    issueText: t.issueText || t.issue_text || '',
+    photos: Array.isArray(t.images) ? t.images : [],
+    feedbackStatus: status === 'pending' ? '待接受' : status === 'in_progress' ? '处理中' : status === 'rejected' ? '已返工' : status === 'waiting_acceptance' ? '待验收' : status === 'completed' ? '已完成' : '未知',
+    feedbackUsers,
+    processProgress: PROGRESS_MAP[status] ? String(PROGRESS_MAP[status]) : '0',
+    inspectorId,
+    inspectorName,
+    reworkCount: 0,
     reworkHistory: [],
     deadlineExtensions: [],
     version: 1,
-    createdAt: t.createdAt,
-    updatedAt: t.updatedAt,
-    acceptedAt: t.acceptedAt,
-    completedAt: t.status === 'completed' ? new Date().toISOString() : undefined,
-    // 临时任务特有字段
-    workLocation: t.workLocation || t.location || t.greenhouseName || '',
-    urgency: t.urgency || 'normal',
-    tempTaskType: t.tempTaskType || t.type || '',
-    estimatedDays: t.estimatedDays || 0,
-    estimatedHours: t.estimatedHours || 0,
-    workerCount: t.workerCount || 1,
-    remarks: t.remarks || '',
-    requiredFeedback: t.requiredFeedback || [],
-    // 开始时间
-    startDate: t.startDate || '',
+    createdAt: t.createdAt || t.createTime || t.create_time || (checkDate ? `${checkDate}T${checkTime}:00Z` : new Date().toISOString()),
+    updatedAt: t.updatedAt || t.updateTime || t.update_time || new Date().toISOString(),
   };
 }
+
+// ============================================
+// 从 Zustand Store 获取种子任务数据（替代 mock 数据导入）
+// ============================================
+function getInitialFarmTasks(): Task[] {
+  try {
+    const storeTasks = useFarmTaskStore.getState().tasks;
+    if (storeTasks && storeTasks.length > 0) {
+      return storeTasks.map(convertStoreFarmTaskToTask);
+    }
+  } catch { /* store 数据为空或未初始化 */ }
+  return [];
+}
+
+function getInitialTempTasks(): Task[] {
+  try {
+    const storeItems = useTempTaskStore.getState().tasks;
+    if (storeItems && storeItems.length > 0) {
+      return storeItems.map(convertStoreTempTaskToTask);
+    }
+  } catch { /* store 数据为空或未初始化 */ }
+  return [];
+}
+
+function getInitialInspectionTasks(): Task[] {
+  try {
+    const storeRecords = useInspectionDataStore.getState().records;
+    if (storeRecords && storeRecords.length > 0) {
+      return storeRecords.map(convertStoreInspectionToTask);
+    }
+  } catch { /* store 数据为空或未初始化 */ }
+  return [];
+}
+
+const INITIAL_TASKS: Task[] = getInitialFarmTasks();
 
 // ============================================
 // 合并初始任务数据（农事任务 + 临时任务 + 巡查反馈处理任务）
 // ============================================
 const INITIAL_TASKS_WITH_TEMP: Task[] = [
   ...INITIAL_TASKS,
-  ...mockTempTasks.map(convertTempTaskToTask),
-  ...mockInspectionFeedbackTasks.map(convertInspectionFeedbackTaskToTask),
+  ...getInitialTempTasks(),
+  ...getInitialInspectionTasks(),
 ];
 
 // 数据版本控制（用于检测数据结构变化，自动重置数据）
@@ -728,7 +733,7 @@ export function useTasks(): UseTasksReturn {
     const taskId = generateTaskCode([]);
 
     // 确保执行人信息完整
-    // assignee 可能存在于 TaskDispatchTask 但不在 Task 类型中
+    // assignee 可能是后端返回的扩展字段
     const finalAssigneeName = taskData.assigneeName || (taskData as unknown as { assignee?: string }).assignee || '';
     const finalAssigneeId = taskData.assigneeId ||
       (finalAssigneeName ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}` : '');

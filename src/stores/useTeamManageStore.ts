@@ -177,7 +177,7 @@ export const useTeamManageStore = create<TeamManageState>()(
         const teams = generateTeams();
         const unassigned = generateUnassignedWorkers();
         set({ teams, unassignedWorkers: unassigned, isLoading: false });
-        console.log('[TeamManageStore] 已初始化种子数据:', teams.length, '个班组,', unassigned.length, '个待分配工人');
+        // 种子数据初始化完成
       },
     }),
     {

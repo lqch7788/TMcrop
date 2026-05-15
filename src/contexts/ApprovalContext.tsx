@@ -15,7 +15,7 @@ import {
   ApprovalStats,
   BusinessLink,
 } from '../types/approval';
-import { approvals as mockApprovals } from '../data/mockData';
+import { useApprovalStore } from '../stores/useApprovalStore';
 import {
   executeApprovalIntegration,
   registerApprovalIntegration,
@@ -109,27 +109,21 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     approvals: initialApprovals || [],
   });
 
-  // 从 API 加载审批数据
+  // 从 API 加载审批数据（通过 useApprovalStore）
   const loadApprovalsFromAPI = useCallback(async () => {
     try {
-      const response = await fetch(API_BASE);
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-        // API 返回有效数据
-        dispatch({ type: 'SET_APPROVALS', payload: result.data });
-      } else if (result.success && Array.isArray(result.data) && result.data.length === 0) {
-        // API 返回空数据，使用 mock 数据（数据库可能为空）
-        console.warn('API returned empty approvals, using mock data');
-        dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
+      await useApprovalStore.getState().fetchApprovals();
+      const storeApprovals = useApprovalStore.getState().approvals;
+      if (storeApprovals.length > 0) {
+        dispatch({ type: 'SET_APPROVALS', payload: storeApprovals });
       } else {
-        console.warn('Failed to load approvals from API:', result.error);
-        // 如果 API 加载失败，使用 mock 数据
-        dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
+        // API 无数据且 store 无缓存时，保持空列表
+        console.warn('[ApprovalContext] API 和 Store 均无审批数据');
+        dispatch({ type: 'SET_APPROVALS', payload: [] });
       }
     } catch (error) {
-      console.warn('Failed to load approvals from API, using mock data:', error);
-      // 如果 API 加载失败，使用 mock 数据
-      dispatch({ type: 'SET_APPROVALS', payload: mockApprovals });
+      console.warn('[ApprovalContext] 加载审批数据失败:', error);
+      // 加载失败时保持现有数据（或空列表）
     }
   }, []);
 

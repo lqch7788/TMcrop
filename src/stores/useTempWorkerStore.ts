@@ -159,7 +159,7 @@ export const useTempWorkerStore = create<TempWorkerState>()(
       _initSeedData: () => {
         const seed = generateSeedData();
         set({ workers: seed, isLoading: false });
-        console.log('[TempWorkerStore] 已初始化种子数据:', seed.length, '条临时工记录');
+        // 种子数据初始化完成
       },
     }),
     {

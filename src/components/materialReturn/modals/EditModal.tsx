@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { ReturnRecord, EditFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { RETURN_TYPES } from '../config';
-import { mockSourceApplications } from '../mockData';
+import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
@@ -32,6 +32,11 @@ export function EditModal({
 }: EditModalProps) {
   // 从 API 获取部门选项
   const { options: departmentOptions } = useDepartmentOptions();
+  // 从 Zustand Store 获取退料数据，提取来源领料单号
+  const returnItems = useMaterialReturnStore(state => state.items);
+  const sourceApplicationOptions = Array.from(
+    new Set(returnItems.flatMap(r => r.materials?.map(m => m.sourceApplicationCode) || []))
+  ).filter(Boolean);
 
   if (!record) return null;
 
@@ -184,8 +189,8 @@ export function EditModal({
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     >
                       <option value="">请选择</option>
-                      {mockSourceApplications.map(app => (
-                        <option key={app.code} value={app.code}>{app.code}</option>
+                      {sourceApplicationOptions.map(code => (
+                        <option key={code} value={code}>{code}</option>
                       ))}
                     </select>
                   </td>

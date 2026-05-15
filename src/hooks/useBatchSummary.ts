@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { BatchSummaryRow, SummaryStatCard, BatchFilters } from '../types/views';
-import { cropBatches, tasks } from '../data/mockData';
+import { useProductionPlanStore } from '../stores/useProductionPlanStore';
+import { useFarmTaskStore } from '../stores/farmTaskStore';
 import { getBatchStats, type BatchStatsItem } from '../services/summaryService';
 
 /**
@@ -41,9 +42,11 @@ export function useBatchSummary(filters?: BatchFilters) {
 
   // 回退到 mockData
   const fallbackToMockData = useCallback(() => {
-    const mockData: BatchStatsItem[] = cropBatches.map(batch => {
-      const batchTasks = tasks.filter(t => t.batchId === batch.id);
-      const completedTasks = batchTasks.filter(t => t.status === 'completed');
+    const plans = useProductionPlanStore.getState().plans;
+    const allTasks = useFarmTaskStore.getState().tasks;
+    const mockData: BatchStatsItem[] = plans.map(batch => {
+      const batchTasks = allTasks.filter((t: any) => t.batchId === batch.id);
+      const completedTasks = batchTasks.filter((t: any) => t.status === 'completed');
       const completionRate = batchTasks.length > 0
         ? Math.round((completedTasks.length / batchTasks.length) * 100)
         : 0;
@@ -51,10 +54,10 @@ export function useBatchSummary(filters?: BatchFilters) {
       return {
         id: batch.id,
         batchCode: batch.batchCode,
-        batchName: batch.batchName || batch.batchCode,
+        batchName: batch.cropName, // CropBatch 无 batchName 字段，使用 cropName
         cropName: batch.cropName,
         variety: batch.variety,
-        greenhouse: typeof batch.greenhouse === 'string' ? batch.greenhouse : batch.greenhouseName || '',
+        greenhouse: batch.greenhouseName || '',
         plantingArea: batch.plantingArea,
         targetYield: batch.targetYield,
         actualQuantity: batch.actualYield,
@@ -62,13 +65,15 @@ export function useBatchSummary(filters?: BatchFilters) {
         completionRate,
         status: batch.status,
         plantingDate: batch.startDate,
-        expectedHarvestDate: batch.endDate,
+        // CropBatch 用 expectedHarvestDate 替代 endDate
+        expectedHarvestDate: (batch as any).endDate || batch.expectedHarvestDate || '',
         actualHarvestDate: '',
         taskCount: batchTasks.length,
         completedTaskCount: completedTasks.length,
-        pendingTaskCount: batchTasks.filter(t => t.status === 'pending').length,
-        inProgressTaskCount: batchTasks.filter(t => t.status === 'in_progress').length,
-        totalWorkHours: batchTasks.reduce((sum, t) => sum + t.workDuration, 0),
+        pendingTaskCount: batchTasks.filter((t: any) => t.status === 'pending').length,
+        inProgressTaskCount: batchTasks.filter((t: any) => t.status === 'in_progress').length,
+        // FarmTaskStore Task 无 workDuration 字段，使用 estimatedHours 代替
+        totalWorkHours: batchTasks.reduce((sum: number, t: any) => sum + (t.workDuration || t.estimatedHours || 0), 0),
         laborCost: 0,
         remainingYield: batch.targetYield - batch.actualYield,
       };
@@ -165,8 +170,9 @@ function getStatusClass(completionRate: number | string, status: string): 'norma
  * 获取批次下拉选项（从 mockData 获取，保持兼容性）
  */
 export function useBatchFilterOptions() {
+  const plans = useProductionPlanStore.getState().plans;
   const cropNames = useMemo(() => {
-    const names = [...new Set(cropBatches.map(b => b.cropName))];
+    const names = [...new Set(plans.map(b => b.cropName))];
     return [
       { value: '', label: '全部' },
       ...names.map(n => ({ value: n, label: n })),
@@ -183,9 +189,7 @@ export function useBatchFilterOptions() {
   ], []);
 
   const greenhouses = useMemo(() => {
-    const names = [...new Set(cropBatches.map(b =>
-      typeof b.greenhouse === 'string' ? b.greenhouse : b.greenhouseName
-    ))];
+    const names = [...new Set(plans.map(b => b.greenhouseName))];
     return [
       { value: '', label: '全部' },
       ...names.map(n => ({ value: n, label: n })),

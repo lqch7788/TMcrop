@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
-import { produceInventory } from '../../data/mockData';
 import { useWarehouseStore } from '../../stores';
 import { DictSelect } from '../common/settings/DictSelect';
 
@@ -30,28 +29,19 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
     }
   }, [warehouses.length, loadWarehouses]);
 
-  // 获取下一个ID
-  const getNextId = () => {
-    const maxId = produceInventory.reduce((max, item) => {
-      const num = parseInt(item.id.replace('PI', ''), 10);
-      return num > max ? num : max;
-    }, 0);
-    return `PI${String(maxId + 1).padStart(3, '0')}`;
-  };
-
-  // 获取下一个业务ID
+  // 获取下一个业务ID（基于时间戳生成）
   const getNextBusinessId = (stockType: StockType) => {
     const prefix = stockType === StockType.SEED ? 'SR' : stockType === StockType.SEEDLING ? 'SL' : 'H';
-    const count = produceInventory.filter(item => item.stockType === stockType).length;
-    return `${prefix}${String(count + 1).padStart(3, '0')}`;
+    const ts = String(Date.now() % 100000).padStart(5, '0');
+    return `${prefix}${ts}`;
   };
 
-  // 获取下一个批次号
+  // 获取下一个批次号（基于时间戳生成）
   const getNextBatchCode = (stockType: StockType) => {
     const prefix = stockType === StockType.SEED ? 'SZ' : stockType === StockType.SEEDLING ? 'SM' : 'FQ';
     const year = new Date().getFullYear();
-    const count = produceInventory.filter(item => item.stockType === stockType).length;
-    return `${prefix}${year}-${String(count + 1).padStart(3, '0')}`;
+    const ts = String(Date.now() % 10000).padStart(4, '0');
+    return `${prefix}${year}-${ts}`;
   };
 
   // 表单状态

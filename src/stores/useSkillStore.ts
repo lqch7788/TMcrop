@@ -280,7 +280,7 @@ export const useSkillStore = create<SkillState>()(
         const skills = generateStaffSkills();
         const trainings = generateTrainingRecords();
         set({ staffSkills: skills, trainingRecords: trainings, isLoading: false });
-        console.log('[SkillStore] 已初始化种子数据:', skills.length, '条技能档案,', trainings.length, '条培训记录');
+        // 种子数据初始化完成
       },
     }),
     {

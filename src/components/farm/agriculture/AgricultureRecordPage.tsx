@@ -13,7 +13,6 @@ import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type Farm
 import { useTasks } from '../../../hooks/useTasks';
 import { useTempTasks } from '../../../hooks/useTempTasks';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
-import { greenhouseOptions, operatorOptions, materialOptions, workloadUnitOptions } from '../../../data/farmMockData';
 import { AddOperationRecordModal, ExportFormatModal, DeleteWarningModal } from './modals';
 // 引入权限控制 Hook
 import { useAuthPermission } from '../../../hooks/usePermission';

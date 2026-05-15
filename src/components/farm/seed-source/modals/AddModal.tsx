@@ -19,8 +19,6 @@ import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { useUserStore } from '../../../../stores/useUserStore';
 import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
-// 后备数据：当 Store 中无数据时使用
-import { currentUser as fallbackUser, cropBatches as fallbackBatches } from '../../../../data/mockData';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -42,13 +40,15 @@ export function AddModal({
   // 使用审批Context
   const { addApproval } = useApprovalContext();
 
-  // 从 Store 获取当前用户和生产计划（后备：mockData）
-  const storeUsers = useUserStore((s) => s.users);
-  const storePlans = useProductionPlanStore((s) => s.plans);
-  const currentUser = storeUsers.length > 0 ? storeUsers[0] : fallbackUser;
+  // 从 Store 获取当前用户和生产计划（使用 getState() 读取）
+  const storeUsers = useUserStore.getState().users;
+  const storePlans = useProductionPlanStore.getState().plans;
+  const currentUser = storeUsers.length > 0
+    ? { id: storeUsers[0].oid, name: storeUsers[0].name, department: storeUsers[0].orgOid || '生产部' }
+    : { id: 'U013', name: localStorage.getItem('username') || '未知用户', department: '生产部' };
   const cropBatches = storePlans.length > 0
-    ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: p.batchStatus || p.status, planType: p.planType, planTypeName: p.planTypeName || '育种计划', cropName: p.cropName }))
-    : fallbackBatches;
+    ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
+    : [];
 
   // 表单数据
   const [formData, setFormData] = useState({

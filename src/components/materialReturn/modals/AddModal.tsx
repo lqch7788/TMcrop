@@ -1,7 +1,8 @@
 import { Trash2, RefreshCw } from 'lucide-react';
 import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
-import { mockSourceApplications, currentUser } from '../mockData';
+import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
+import { useUserStore } from '../../../stores/useUserStore';
 import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
@@ -31,6 +32,13 @@ export function AddModal({
 }: AddModalProps) {
   // 从 API 获取部门选项
   const { options: departmentOptions } = useDepartmentOptions();
+  // 从 Zustand Store 获取当前用户和退料数据
+  const currentUserName = useUserStore(state => state.users[0]?.name) || localStorage.getItem('username') || '系统管理员';
+  const returnItems = useMaterialReturnStore(state => state.items);
+  // 从退料记录中提取唯一的来源领料单号
+  const sourceApplicationOptions = Array.from(
+    new Set(returnItems.flatMap(r => r.materials?.map(m => m.sourceApplicationCode) || []))
+  ).filter(Boolean).map(code => ({ value: code, label: code }));
   return (
     <UnifiedModal
       isOpen={open}
@@ -108,7 +116,7 @@ export function AddModal({
             <span className="text-gray-500 w-20 shrink-0">操作人：</span>
             <input
               type="text"
-              value={currentUser.name}
+              value={currentUserName}
               readOnly
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
             />
@@ -144,7 +152,7 @@ export function AddModal({
             <span className="text-sm text-gray-600">选择领料单号：</span>
             <SearchableSelect
             value=""
-            options={mockSourceApplications.map(app => ({ value: app.code, label: app.code }))}
+            options={sourceApplicationOptions}
             onChange={(val) => {
               if (val) {
                 onSelectMaterialsFromSource(val);

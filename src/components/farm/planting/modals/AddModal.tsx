@@ -11,7 +11,7 @@ import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
-import { cropBatches } from '../../../../data/mockData';
+import { useProductionPlanStore } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
 
@@ -52,13 +52,23 @@ export function AddModal({
     productionPlanCode: ''   // 关联生产计划批次号
   });
 
+  // 从Store获取生产计划
+  const storePlans = useProductionPlanStore((s) => s.plans);
+  const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
+
+  useEffect(() => {
+    if (storePlans.length === 0) {
+      fetchPlans();
+    }
+  }, [storePlans.length, fetchPlans]);
+
   // 筛选可用的生产计划批次（已发布和执行中，且只显示种植计划类型）
   const availableProductionPlans = useMemo(() => {
-    return cropBatches.filter(batch =>
-      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress') &&
+    return storePlans.filter((batch: any) =>
+      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress' || batch.status === 'published' || batch.status === 'in_progress') &&
       batch.planType === PlanType.PLANTING
     );
-  }, []);
+  }, [storePlans]);
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
@@ -247,7 +257,7 @@ export function AddModal({
           <select
             value={formData.productionPlanId}
             onChange={(e) => {
-              const plan = cropBatches.find(b => b.id === e.target.value);
+              const plan = storePlans.find((b: any) => b.id === e.target.value);
               setFormData(prev => ({
                 ...prev,
                 productionPlanId: e.target.value,

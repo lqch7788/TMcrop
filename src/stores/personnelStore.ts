@@ -275,7 +275,7 @@ export const usePersonnelStore = create<PersonnelState>()(
 
       _initializeSeedData: () => {
         set({ isLoading: false });
-        console.log('[PersonnelStore] 已初始化，使用空数据');
+        // 种子数据初始化完成
       },
     }),
     {

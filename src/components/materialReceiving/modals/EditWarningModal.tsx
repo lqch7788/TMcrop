@@ -1,18 +1,30 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface EditWarningModalProps {
-  show: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
+  /** ApplicationTab 传入 isOpen，兼容旧版 show */
+  show?: boolean;
+  isOpen?: boolean;
+  /** ApplicationTab 传入 onClose，兼容旧版 onCancel */
+  onCancel?: () => void;
+  onClose?: () => void;
+  /** ApplicationTab 无 onConfirm，默认关闭弹窗 */
+  onConfirm?: () => void;
 }
 
 export const EditWarningModal: React.FC<EditWarningModalProps> = ({
   show,
+  isOpen,
   onCancel,
+  onClose,
   onConfirm,
 }) => {
-  if (!show) return null;
+  const visible = show ?? isOpen ?? false;
+  if (!visible) return null;
+
+  const handleCancel = onCancel || onClose || (() => {});
+  const handleConfirm = onConfirm || onClose || (() => {});
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -32,18 +44,12 @@ export const EditWarningModal: React.FC<EditWarningModalProps> = ({
           </ul>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={handleCancel} className="flex-1">
             取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
+          </Button>
+          <Button onClick={handleConfirm} className="flex-1">
             确认
-          </button>
+          </Button>
         </div>
       </div>
     </div>

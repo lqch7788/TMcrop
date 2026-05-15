@@ -93,27 +93,27 @@ export function ExecuteTabTable({
         <h3 className="text-lg font-semibold text-gray-900">出库单列表</h3>
         {exportMode ? (
           <div className="flex gap-2">
-            <Button onClick={onExportConfirm}>
+            <Button size="sm" onClick={onExportConfirm}>
               <Download className="w-4 h-4" />
               确认导出
             </Button>
-            <Button variant="secondary" onClick={onCancelExport}>
+            <Button variant="secondary" size="sm" onClick={onCancelExport}>
               取消
             </Button>
           </div>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={onAdd}>
+            <Button size="sm" onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
             </Button>
             {!batchEditMode && (
               <>
-                <Button onClick={onBatchEditClick}>
+                <Button variant="blue" size="sm" onClick={onBatchEditClick}>
                   <Edit className="w-4 h-4" />
                   编辑
                 </Button>
-                <Button variant="destructive" onClick={onBatchDeleteClick}>
+                <Button variant="destructive" size="sm" onClick={onBatchDeleteClick}>
                   <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
@@ -121,19 +121,19 @@ export function ExecuteTabTable({
             )}
             {batchEditMode && (
               <div className="flex gap-2">
-                <Button onClick={onBatchEditConfirm}>
+                <Button variant="blue" size="sm" onClick={onBatchEditConfirm}>
                   确认编辑
                 </Button>
-                <Button variant="destructive" onClick={onBatchDeleteConfirm}>
+                <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
                   确认删除
                 </Button>
-                <Button variant="secondary" onClick={onBatchCancel}>
+                <Button variant="secondary" size="sm" onClick={onBatchCancel}>
                   取消
                 </Button>
               </div>
             )}
             {!batchEditMode && (
-              <Button onClick={() => onExportClick()}>
+              <Button size="sm" onClick={() => onExportClick()}>
                 <Download className="w-4 h-4" />
                 导出
               </Button>

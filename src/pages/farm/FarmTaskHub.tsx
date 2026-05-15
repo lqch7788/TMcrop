@@ -26,10 +26,34 @@ import { BatchImportModal, ImportRow } from '../../components/farm/hub/modals/Ba
 import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
-import { taskDispatchFields, taskDispatchStaff } from '../../data/farmMockData';
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
-import { cropBatches } from '../../data/mockData';
 import { useUserStore } from '../../stores';
+
+/** 任务派发地块列表（UI配置/种子数据，共20个地块） */
+const taskDispatchFields: { id: number; name: string; type: string; crop: string; area: number }[] = [
+  // 温室大棚 (12个)
+  { id: 1, name: '1号棚', type: '温室', crop: '番茄', area: 6500 },
+  { id: 2, name: '2号棚', type: '温室', crop: '番茄', area: 6500 },
+  { id: 3, name: '3号棚', type: '温室', crop: '番茄', area: 6500 },
+  { id: 4, name: '4号棚', type: '温室', crop: '黄瓜', area: 7000 },
+  { id: 5, name: '5号棚', type: '温室', crop: '黄瓜', area: 7000 },
+  { id: 6, name: '6号棚', type: '温室', crop: '草莓', area: 6000 },
+  { id: 7, name: '7号棚', type: '温室', crop: '草莓', area: 6000 },
+  { id: 8, name: '8号棚', type: '温室', crop: '辣椒', area: 5500 },
+  { id: 9, name: '9号棚', type: '温室', crop: '辣椒', area: 5500 },
+  { id: 10, name: '10号棚', type: '温室', crop: '生菜', area: 5000 },
+  { id: 11, name: '11号棚', type: '温室', crop: '生菜', area: 5000 },
+  { id: 12, name: '12号棚', type: '温室', crop: '西瓜', area: 7000 },
+  // 大田 (8个)
+  { id: 13, name: 'A1地块', type: '大田', crop: '水稻', area: 100 },
+  { id: 14, name: 'A2地块', type: '大田', crop: '水稻', area: 100 },
+  { id: 15, name: 'A3地块', type: '大田', crop: '水稻', area: 100 },
+  { id: 16, name: 'B1地块', type: '大田', crop: '小麦', area: 100 },
+  { id: 17, name: 'B2地块', type: '大田', crop: '小麦', area: 100 },
+  { id: 18, name: 'C1地块', type: '大田', crop: '油菜', area: 80 },
+  { id: 19, name: 'C2地块', type: '大田', crop: '油菜', area: 70 },
+  { id: 20, name: 'D1地块', type: '大田', crop: '蔬菜', area: 50 },
+];
 import { format, parse, addDays, addHours } from 'date-fns';
 
 // 导入弹窗适配器

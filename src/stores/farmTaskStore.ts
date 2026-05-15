@@ -160,25 +160,14 @@ export const useFarmTaskStore = create<FarmTaskState>()(
             cacheStrategy: 'network-first',
           });
 
-          // 调试日志
-          console.log('[FarmTaskStore] API返回原始数据:', JSON.stringify(apiData)?.slice(0, 200));
-          console.log('[FarmTaskStore] apiData类型:', typeof apiData);
-          console.log('[FarmTaskStore] apiData.success:', apiData?.success);
-          console.log('[FarmTaskStore] apiData.data:', apiData?.data);
-          console.log('[FarmTaskStore] Array.isArray(apiData?.data):', Array.isArray(apiData?.data));
-          console.log('[FarmTaskStore] apiData?.data?.length:', apiData?.data?.length);
-
           // 正确处理 API 返回的 { success, data, meta } 结构
           if (apiData && apiData.success && Array.isArray(apiData.data) && apiData.data.length > 0) {
-            console.log('[FarmTaskStore] 从API获取到任务数据:', apiData.data.length, '条');
             set({ tasks: apiData.data, isLoading: false });
             return;
           }
 
           // API返回空或失败，使用本地数据
-          console.log('[FarmTaskStore] API数据无效，使用本地数据');
           const localTasks = get().tasks;
-          console.log('[FarmTaskStore] localTasks.length:', localTasks.length);
           if (localTasks.length === 0) {
             // 首次使用，初始化种子数据
             get()._initializeSeedData();
@@ -320,7 +309,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         // 注意：由于农事任务数据复杂，种子数据初始化逻辑保留在 useTasks 中
         // 这里只设置加载状态
         set({ isLoading: false });
-        console.log('[FarmTaskStore] 使用空数据，请通过 useTasks 获取完整数据');
+        // 种子数据初始化完成（使用空数据，由 useTasks 填充）
       },
     }),
     {

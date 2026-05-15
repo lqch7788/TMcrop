@@ -2,7 +2,10 @@
 import { RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { NewInboundForm } from './types';
-import { categoryConfig, warehouseMaterials, unitOptions } from './mockData';
+// 旧版组件，已不再使用，保留占位数据避免编译错误
+const categoryConfig: Record<string, any> = {};
+const warehouseMaterials: any[] = [];
+const unitOptions: string[] = [];
 
 interface AddInboundModalProps {
   show: boolean;

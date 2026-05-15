@@ -35,9 +35,14 @@ interface ApprovalStore {
   filters: ApprovalFilters;
   stats: ApprovalStats;
   isLoaded: boolean;
+  isLoading: boolean;
+  error: string | null;
 
   // 设置审批列表
   setApprovals: (approvals: Approval[]) => void;
+
+  // 从 API 获取审批数据
+  fetchApprovals: () => Promise<void>;
 
   // 筛选方法
   setFilters: (filters: Partial<ApprovalFilters>) => void;
@@ -58,6 +63,8 @@ export const useApprovalStore = create<ApprovalStore>((set, get) => ({
   filters: {},
   stats: computeStats([]),
   isLoaded: false,
+  isLoading: false,
+  error: null,
 
   setApprovals: (approvals) => {
     set({
@@ -65,6 +72,28 @@ export const useApprovalStore = create<ApprovalStore>((set, get) => ({
       stats: computeStats(approvals),
       isLoaded: true,
     });
+  },
+
+  fetchApprovals: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(API_BASE);
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        set({
+          approvals: result.data,
+          stats: computeStats(result.data),
+          isLoaded: true,
+          isLoading: false,
+        });
+      } else {
+        console.warn('[ApprovalStore] API返回数据无效，保留现有数据');
+        set({ isLoading: false });
+      }
+    } catch (err) {
+      console.warn('[ApprovalStore] 获取审批数据失败:', err);
+      set({ error: (err as Error).message, isLoading: false });
+    }
   },
 
   setFilters: (filters) => {

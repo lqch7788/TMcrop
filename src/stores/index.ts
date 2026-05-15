@@ -212,3 +212,7 @@ export type { Team as TeamManage, UnassignedWorker } from './useTeamManageStore'
 // ==================== 工作日志 V2.0 Store ====================
 export { useWorkLogStore } from './useWorkLogStore';
 export type { WorkLog, WorkLogFilters } from './useWorkLogStore';
+
+// ==================== Dashboard 总览 Store ====================
+export { useDashboardStore } from './useDashboardStore';
+export type { BatchStatItem, DashboardStats, AlertsBreakdown } from './useDashboardStore';

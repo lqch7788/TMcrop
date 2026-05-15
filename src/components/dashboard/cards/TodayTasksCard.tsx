@@ -1,7 +1,46 @@
+import { useEffect, useMemo } from 'react';
 import { ClipboardList, Sprout, Activity, Calendar, CheckSquare } from 'lucide-react';
-import { todayTasksBreakdown } from '../../../data/mockData';
+import { useFarmTaskStore } from '../../../stores/farmTaskStore';
 
 export function TodayTasksCard() {
+  const tasks = useFarmTaskStore((s) => s.tasks);
+  const fetchTasks = useFarmTaskStore((s) => s.fetchTasks);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // 根据任务 type/typeName 计算今日待办分类统计
+  const todayTasksBreakdown = useMemo(() => {
+    // 筛选未完成的任务（今日待办）
+    const pendingTasks = tasks.filter((t) =>
+      t.status !== 'completed' && t.status !== 'cancelled' && t.status !== 'abandoned'
+    );
+
+    const equipment = pendingTasks.filter((t) =>
+      t.typeName?.includes('设备') || t.type?.includes('equipment') || t.typeName?.includes('维护')
+    ).length;
+
+    const harvest = pendingTasks.filter((t) =>
+      t.typeName?.includes('采收') || t.type?.includes('harvest')
+    ).length;
+
+    const approval = pendingTasks.filter((t) =>
+      t.typeName?.includes('审批') || t.type?.includes('approval')
+    ).length;
+
+    // 剩余任务归入农事任务
+    const farming = pendingTasks.length - equipment - harvest - approval;
+
+    return {
+      total: pendingTasks.length,
+      farming,
+      harvest,
+      equipment,
+      approval,
+    };
+  }, [tasks]);
+
   return (
     <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">

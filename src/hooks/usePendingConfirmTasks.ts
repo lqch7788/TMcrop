@@ -11,7 +11,7 @@ import { useProblemDispatch } from './useProblemDispatch';
 import { useCropGrowthEngine, type PredictedTask } from './useCropGrowthEngine';
 import { useAIOptimization, type AIOptimizationSuggestion } from './useAIOptimization';
 import type { WorkerRecommendation, UnifiedDispatchTask, WorkerComprehensiveStatus } from './useComprehensiveDispatch';
-import { workers as mockWorkers } from '../data/mockData';
+
 
 // ============================================
 // 类型定义

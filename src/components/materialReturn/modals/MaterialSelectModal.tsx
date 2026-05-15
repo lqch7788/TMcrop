@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { MaterialItem } from '../types';
-import { mockSourceApplicationMaterials } from '../mockData';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { useWarehouseMaterialStore } from '../../../stores/useWarehouseMaterialStore';
 
 interface MaterialSelectModalProps {
   open: boolean;
@@ -19,17 +19,32 @@ export function MaterialSelectModal({
 }: MaterialSelectModalProps) {
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
   const [searchKeyword, setSearchKeyword] = useState('');
+  // 从 Zustand Store 获取仓库物料列表
+  const warehouseMaterials = useWarehouseMaterialStore(state => state.items);
+  const loadWarehouseMaterials = useWarehouseMaterialStore(state => state.loadItems);
 
   useEffect(() => {
     if (open) {
       setSelectedMaterials(new Set());
       setSearchKeyword('');
+      if (warehouseMaterials.length === 0) {
+        loadWarehouseMaterials();
+      }
     }
-  }, [open]);
+  }, [open, warehouseMaterials.length, loadWarehouseMaterials]);
 
-  const materials = mockSourceApplicationMaterials.filter(
-    m => m.sourceApplicationCode === sourceAppCode
-  );
+  // 将仓库物料转换为选择列表格式
+  const materials = warehouseMaterials.map(wm => ({
+    sourceApplicationCode: sourceAppCode,
+    materialCode: wm.code || wm.name,
+    materialName: wm.name,
+    spec: wm.specification || '',
+    unit: wm.unit || '',
+    quantity: wm.stockQuantity || 0,
+    unitPrice: wm.unitPrice || 0,
+    warehousePosition: wm.location || '',
+    category: wm.category || '',
+  }));
 
   const filteredMaterials = useMemo(() => {
     if (!searchKeyword) return materials;

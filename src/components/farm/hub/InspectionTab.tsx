@@ -7,7 +7,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
-import { useInspectionDataStore } from '../../../stores';
+import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems } from '../../../stores';
 import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
 import { InspectionToolbar } from './components/InspectionToolbar';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
@@ -15,7 +15,7 @@ import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { BatchEditModal } from './modals/BatchEditModal';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
-import { cropTypes, cropBatches, equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
+import { equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
@@ -137,6 +137,11 @@ export function InspectionTab({
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
+  const storePlans = useProductionPlanStore((state) => state.plans);
+  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+
   useEffect(() => {
     if (users.length === 0) {
       loadUsers();
@@ -144,7 +149,31 @@ export function InspectionTab({
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+    if (storePlans.length === 0) {
+      fetchPlans();
+    }
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, storePlans.length, fetchPlans, dictionaries.length, loadDictionaries]);
+
+  // 从Store计算生产批次和作物类型
+  const cropBatches = useMemo(() => storePlans.map(p => ({
+    id: p.id,
+    batchCode: p.batchCode,
+    batchStatus: (p as any).batchStatus || (p as any).status,
+    planType: (p as any).planType,
+    planTypeName: (p as any).planTypeName,
+    cropName: (p as any).cropName || (p as any).cropTypeName,
+    variety: (p as any).variety,
+    plantingMode: (p as any).plantingMode,
+    targetYield: (p as any).targetYield,
+  })), [storePlans]);
+
+  const cropTypes = useMemo(() =>
+    getDictItems('crop_category').map(d => ({ value: d.dictLabel, label: d.dictLabel, name: d.dictLabel })),
+    [dictionaries]
+  );
 
   // 巡查数据 Zustand Store - 替代 localStorage
   const storeRecords = useInspectionDataStore((state) => state.records);

@@ -9,7 +9,7 @@ import { Download, Printer } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, LabelPrintType, PrintRecord } from '../../../../types/crop';
 import { getPrintRecords, printLabel, generateAllLabelNumbers, generateLabelNumber } from '../../../../services/seedSourceService';
-import { currentUser } from '../../../../data/mockData';
+import { useUserStore } from '../../../../stores';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -25,8 +25,9 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [printHistory, setPrintHistory] = useState<PrintRecord[]>([]);
   const [previewLabel, setPreviewLabel] = useState<string>('');
 
-  // 获取当前操作员
-  const currentOperator = currentUser.name;
+  // 获取当前操作员（从Store获取，后备从localStorage读取）
+  const storeUsers = useUserStore((s) => s.users);
+  const currentOperator = storeUsers.length > 0 ? storeUsers[0]?.name : (localStorage.getItem('username') || '系统管理员');
 
   // 单位转换函数（英文→中文）
   const unitMap: Record<string, string> = {

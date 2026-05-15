@@ -1,21 +1,34 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VoidModalProps {
-  voidReason: string;
+  /** 作废原因（ApplicationTab 传入 reason，兼容旧版 voidReason） */
+  voidReason?: string;
+  reason?: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
+  /** ApplicationTab 传入 onConfirm，兼容旧版 onSubmit */
+  onSubmit?: () => void;
+  onConfirm?: () => void;
+  /** ApplicationTab 传入 onClose，兼容旧版 onCancel */
+  onCancel?: () => void;
+  onClose?: () => void;
   recordCode?: string;
 }
 
 export const VoidModal: React.FC<VoidModalProps> = ({
   voidReason,
+  reason,
   onChange,
   onSubmit,
+  onConfirm,
   onCancel,
+  onClose,
   recordCode,
 }) => {
+  const actualReason = reason ?? voidReason ?? '';
+  const handleCancel = onCancel || onClose || (() => {});
+  const handleSubmit = onSubmit || onConfirm || (() => {});
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
@@ -40,7 +53,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               作废原因 <span className="text-red-500">*</span>
             </label>
             <textarea
-              value={voidReason}
+              value={actualReason}
               onChange={(e) => onChange(e.target.value)}
               placeholder="请输入作废原因"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -48,18 +61,12 @@ export const VoidModal: React.FC<VoidModalProps> = ({
             />
           </div>
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 bg-gray-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={handleCancel}>
               取消
-            </button>
-            <button
-              onClick={onSubmit}
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
-            >
+            </Button>
+            <Button variant="warning" onClick={handleSubmit}>
               确认申请
-            </button>
+            </Button>
           </div>
         </div>
       </div>

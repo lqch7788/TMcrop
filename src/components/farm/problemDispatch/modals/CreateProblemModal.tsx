@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { cropTypes } from '../../../../data/mockData';
-import { useGreenhouseStore } from '../../../../stores';
+import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface CreateProblemModalProps {
   isOpen: boolean;
@@ -32,12 +31,22 @@ export function CreateProblemModal({
 }: CreateProblemModalProps) {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
 
   useEffect(() => {
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [greenhouses.length, loadGreenhouses]);
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [greenhouses.length, loadGreenhouses, dictionaries.length, loadDictionaries]);
+
+  // 作物类型选项（从字典获取）
+  const cropTypeOptions = useMemo(() => {
+    return getDictItems('crop_category').map(d => ({ value: d.dictLabel, label: d.dictLabel }));
+  }, [dictionaries]);
 
   const handleGreenhouseChange = (greenhouseId: string) => {
     const greenhouse = greenhouses.find(g => g.id === greenhouseId);
@@ -67,7 +76,7 @@ export function CreateProblemModal({
             <Select
               value={formData.cropName}
               onChange={(e) => onFormChange('cropName', e.target.value)}
-              options={cropTypes.map(c => ({ value: c.name, label: c.name }))}
+              options={cropTypeOptions}
             />
           </FormField>
 

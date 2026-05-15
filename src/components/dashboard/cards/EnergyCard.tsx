@@ -1,7 +1,29 @@
+import { useEffect } from 'react';
 import { Zap } from 'lucide-react';
-import { energyConsumption } from '../../../data/mockData';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
+
+/** 能耗数据（后续迁移到独立指标 API /api/summary/indicators） */
+const defaultEnergy = {
+  water: 120,
+  electricity: 380,
+  gas: 25,
+  waterTrend: 10,
+  electricityTrend: -5,
+  gasTrend: 0,
+  date: '2024-03-15',
+};
 
 export function EnergyCard() {
+  const dashboardStats = useDashboardStore((s) => s.dashboardStats);
+  const fetchDashboardStats = useDashboardStore((s) => s.fetchDashboardStats);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  // 能耗数据暂使用默认值，后续迁移到 /api/summary/indicators
+  const energyConsumption = defaultEnergy;
+
   const getTrendIcon = (trend: number) => {
     if (trend > 0) return <span className="text-red-500">↑{trend}%</span>;
     if (trend < 0) return <span className="text-emerald-500">↓{Math.abs(trend)}%</span>;

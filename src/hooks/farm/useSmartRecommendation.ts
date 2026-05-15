@@ -8,8 +8,9 @@ import { format, subDays, addDays } from 'date-fns';
 import { useEnvAlert } from './useEnvAlert';
 import { usePestAlert } from './usePestAlert';
 import { useWorkerMatch } from './useWorkerMatch';
-import { taskDispatchTasks, cropStages } from '../../data/farmMockData';
-import { cropBatches, greenhouses } from '../../data/mockData';
+import { useFarmTaskStore } from '../../stores/farmTaskStore';
+import { useProductionPlanStore } from '../../stores/useProductionPlanStore';
+import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import {
   SmartRecommendation,
   EnvAlert,
@@ -141,8 +142,9 @@ export function useSmartRecommendation() {
   const greenhouseCropMap = useMemo(() => {
     const map = new Map<string, GreenhouseCrop>();
 
-    // 从 cropBatches 获取温室作物信息
-    cropBatches.forEach(batch => {
+    // 从 useProductionPlanStore 获取温室作物信息
+    const plans = useProductionPlanStore.getState().plans;
+    plans.forEach(batch => {
       if (!map.has(batch.greenhouseId)) {
         map.set(batch.greenhouseId, {
           greenhouseId: batch.greenhouseId,
@@ -160,13 +162,15 @@ export function useSmartRecommendation() {
 
   // 获取任务历史
   const taskHistory = useMemo((): TaskHistory[] => {
-    return taskDispatchTasks.map(task => ({
+    // 从 useFarmTaskStore 获取任务历史
+    const storeTasks = useFarmTaskStore.getState().tasks;
+    return storeTasks.map(task => ({
       id: task.id,
-      taskCode: task.id,
+      taskCode: task.taskCode || task.id,
       type: task.type,
-      field: task.field,
-      assigneeId: task.assignee?.id || '',
-      assigneeName: task.assignee?.name || '',
+      field: task.field || '',
+      assigneeId: task.assigneeId || '',
+      assigneeName: task.assigneeName || '',
       status: task.status,
       planEnd: task.planEnd || task.dueDate,
       completedAt: task.completedAt,
@@ -383,8 +387,9 @@ export function useSmartRecommendation() {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
 
-    // 遍历所有温室和作物批次
-    cropBatches.forEach(batch => {
+    // 遍历所有温室和作物批次（从 useProductionPlanStore 获取）
+    const plans = useProductionPlanStore.getState().plans;
+    plans.forEach(batch => {
       const greenhouseInfo = greenhouseCropMap.get(batch.greenhouseId);
       if (!greenhouseInfo) return;
 
@@ -478,7 +483,7 @@ export function useSmartRecommendation() {
     });
 
     return results;
-  }, [cropBatches, greenhouseCropMap, hasActiveTask, getLastTaskDate, findBestMatch, findAlternativeMatches]);
+  }, [greenhouseCropMap, hasActiveTask, getLastTaskDate, findBestMatch, findAlternativeMatches]);
 
   /**
    * 生成例行任务推荐
@@ -497,7 +502,9 @@ export function useSmartRecommendation() {
     // 如果今天没有灌溉任务，生成灌溉推荐
     const hasTodayIrrigation = todayTasks.some(t => t.type === 'irrigation');
     if (!hasTodayIrrigation) {
-      greenhouses.forEach(gh => {
+      // 从 useGreenhouseStore 获取温室列表
+      const storeGreenhouses = useGreenhouseStore.getState().greenhouses;
+      storeGreenhouses.forEach(gh => {
         if (hasActiveTask(gh.name, 'irrigation')) return;
 
         const workerMatch = findBestMatch({ type: 'irrigation', field: gh.name });
@@ -552,7 +559,7 @@ export function useSmartRecommendation() {
     }
 
     return results;
-  }, [greenhouses, greenhouseCropMap, taskHistory, hasActiveTask, findBestMatch]);
+  }, [greenhouseCropMap, taskHistory, hasActiveTask, findBestMatch]);
 
   /**
    * 生成演示用推荐数据（固定10条）

@@ -4,7 +4,6 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { warehouses as defaultWarehouses } from '../data/mockData';
 
 // 仓库数据结构
 export interface Warehouse {
@@ -32,10 +31,10 @@ function getStoredWarehouses(): Warehouse[] {
       return JSON.parse(stored);
     } catch (error) {
       console.error('仓库数据解析失败:', error);
-      return defaultWarehouses;
+      return [];
     }
   }
-  return defaultWarehouses;
+  return [];
 }
 
 /**
@@ -50,10 +49,7 @@ function saveWarehousesToStorage(warehouses: Warehouse[]): void {
  */
 export function initWarehouses(): Warehouse[] {
   const data = getStoredWarehouses();
-  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
-    saveWarehousesToStorage(defaultWarehouses);
-  }
-  return data.length > 0 ? data : defaultWarehouses;
+  return data;
 }
 
 /**
@@ -99,12 +95,12 @@ export async function saveWarehouses(warehouses: Warehouse[]): Promise<void> {
  * 获取默认仓库数据
  */
 export function getDefaultWarehouses(): Warehouse[] {
-  return defaultWarehouses;
+  return [];
 }
 
 /**
  * 重置仓库数据
  */
 export function resetWarehouses(): void {
-  saveWarehousesToStorage(defaultWarehouses);
+  saveWarehousesToStorage([]);
 }

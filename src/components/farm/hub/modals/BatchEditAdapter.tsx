@@ -3,12 +3,12 @@
  * 将任务ID数组转换为 BatchEditModal 所需的接口
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
-import { taskDispatchFields, taskDispatchStaff } from '../../../../data/farmMockData';
+import { taskDispatchFields } from '../../../../data/farmMockData';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { cropBatches } from '../../../../data/mockData';
+import { useProductionPlanStore, useWorkerStore } from '../../../../stores';
 
 // 转换 fields 格式
 const fields = taskDispatchFields.map(f => ({
@@ -25,18 +25,22 @@ const taskTypes = FARM_OPERATION_TYPES.map(t => ({
   label: t.label,
 }));
 
-// 批次选项
-const batchCodes = cropBatches.map(b => ({
-  value: b.batchCode,
-  label: b.batchCode,
-}));
+// 获取批次选项（从Store读取）
+function getBatchCodes() {
+  return useProductionPlanStore.getState().plans.map(b => ({
+    value: b.batchCode,
+    label: b.batchCode,
+  }));
+}
 
-// 员工选项（转换为 BatchEditModal 所需的格式）
-const staff = taskDispatchStaff.map(s => ({
-  id: s.id,
-  name: s.name,
-  status: s.status,
-}));
+// 获取员工选项（从Store读取）
+function getStaff() {
+  return useWorkerStore.getState().workers.map(s => ({
+    id: s.id,
+    name: s.name,
+    status: s.status,
+  }));
+}
 
 interface BatchEditAdapterProps {
   taskIds: string[];
@@ -55,6 +59,10 @@ export function BatchEditAdapter({
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [editedTasks, setEditedTasks] = useState<Record<string, Partial<Task>>>({});
   const [editedTaskIds, setEditedTaskIds] = useState<string[]>([]);
+
+  // 从Store获取批次和员工选项（响应式）
+  const batchCodes = useMemo(() => getBatchCodes(), []);
+  const staff = useMemo(() => getStaff(), []);
 
   // 直接用 taskIds 获取选中的任务（不依赖索引）
   const selectedTasks = taskIds

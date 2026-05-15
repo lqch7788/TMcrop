@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bell, CheckCircle, AlertTriangle, ClipboardList, Info, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
-import { messages } from '../../data/mockData';
+import { useAnnouncementStore, type ApiAnnouncement } from '../../stores/useAnnouncementStore';
 
 export interface Message {
-  id: number;
+  id: number | string;
   type: string;
   title: string;
   content: string;
@@ -12,8 +12,35 @@ export interface Message {
   isRead: boolean;
 }
 
+/** 将 API 公告数据转换为消息展示格式 */
+function announcementToMessage(a: ApiAnnouncement): Message {
+  return {
+    id: a.id,
+    type: 'notice',
+    title: a.title,
+    content: a.content || '',
+    sendTime: a.create_time || a.date || '',
+    isRead: a.status === '已发布',
+  };
+}
+
 export function MessagesPage() {
   const [filter, setFilter] = useState('all');
+
+  // 从 Zustand Store 获取公告数据
+  const announcements = useAnnouncementStore((s) => s.announcements);
+  const isLoading = useAnnouncementStore((s) => s.isLoading);
+  const fetchAnnouncements = useAnnouncementStore((s) => s.fetchAnnouncements);
+
+  // 组件挂载时从 API 获取公告
+  useEffect(() => {
+    if (announcements.length === 0) {
+      fetchAnnouncements();
+    }
+  }, []);
+
+  // 将公告转为消息列表（当前仅包含公告类型，后续可扩展任务/审批/告警）
+  const messages = useMemo<Message[]>(() => announcements.map(announcementToMessage), [announcements]);
 
   const getIcon = (type: string) => {
     switch (type) {
