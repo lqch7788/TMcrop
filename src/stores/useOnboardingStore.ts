@@ -201,16 +201,12 @@ export const useOnboardingStore = create<OnboardingState>()(
             data: { records: any[]; pagination: any } | any[];
           }>(url);
 
-          // 容错：onboarding API 返回 {data: {records: [...]}} 格式
+          // enhancedApiClient 已提取 .data，response 为实际数据（数组或 {records: [...]} 对象）
           let data: any[] = [];
-          if (response?.data) {
-            if (Array.isArray(response.data)) {
-              data = response.data;
-            } else if ((response.data as any)?.records) {
-              data = (response.data as any).records;
-            } else if ((response as any)?.data?.records) {
-              data = (response as any).data.records;
-            }
+          if (Array.isArray(response)) {
+            data = response;
+          } else if ((response as any)?.records) {
+            data = (response as any).records;
           }
 
           const normalized = (Array.isArray(data) ? data : []).map(normalize);
@@ -230,7 +226,7 @@ export const useOnboardingStore = create<OnboardingState>()(
             data: { id: string; oid: string; name: string };
           }>('/onboarding', data, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `OB${Date.now()}`;
+          const newId = (response as any)?.id || `OB${Date.now()}`;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
 
           set((state) => ({ items: [newItem, ...state.items] }));

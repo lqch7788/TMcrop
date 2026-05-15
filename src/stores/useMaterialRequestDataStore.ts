@@ -84,7 +84,11 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   }
 
   result.id = result.id ?? `MR${Date.now()}`;
-  result.materials = result.materials || [];
+  // 确保 JSON 字段被正确解析（后端可能返回字符串）
+  if (typeof result.materials === 'string') {
+    try { result.materials = JSON.parse(result.materials); } catch { result.materials = []; }
+  }
+  if (!Array.isArray(result.materials)) result.materials = [];
   return result as unknown as MaterialReceivingRecord;
 }
 
@@ -130,11 +134,11 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       loadItems: async (params) => {
         set({ isLoading: true, error: null });
         try {
+          // enhancedApiClient 已自动提取 .data，resp 直接就是数组
           const resp = await enhancedApiClient.get<any>('/material-requests', {
             useCache: true, cacheStrategy: 'network-first', params,
           });
-          let list = resp?.data || (Array.isArray(resp) ? resp : []);
-          if (!Array.isArray(list)) list = [];
+          const list = Array.isArray(resp) ? resp : [];
 
           const mapped = list.map((r: Record<string, unknown>) => normalize(r));
           set({ items: mapped, isLoading: false });

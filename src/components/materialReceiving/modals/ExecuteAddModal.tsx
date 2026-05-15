@@ -10,6 +10,7 @@ interface ExecuteAddModalProps {
     applicant: string;
     warehouseLocation: string;
     reviewer: string;
+    operator: string;
     productionBatchCode: string;
     materials: ExecuteMaterialItem[];
   };
@@ -110,11 +111,22 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
+          <label className="block text-sm font-medium text-blue-700 mb-1">审核人</label>
           <input
             type="text"
             value={addForm.reviewer}
             onChange={(e) => onAddFormChange('reviewer', e.target.value)}
+            placeholder="请输入审核人"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
+          <input
+            type="text"
+            value={addForm.operator}
+            onChange={(e) => onAddFormChange('operator', e.target.value)}
+            placeholder="请输入操作人"
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

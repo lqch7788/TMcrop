@@ -93,7 +93,8 @@ export const useSupplierStore = create<SupplierState>()(
           const resp = await enhancedApiClient.get<any>('/suppliers?limit=200', {
             useCache: true, cacheStrategy: 'network-first',
           });
-          const list = resp?.data || resp || [];
+          // enhancedApiClient 已提取 .data，resp 即为实际数据数组
+          const list = Array.isArray(resp) ? resp : [];
           const mapped = (Array.isArray(list) ? list : []).map(fromBackendFields);
           set({ items: mapped, isLoading: false });
         } catch (error) {

@@ -3,13 +3,12 @@
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
+  useStatisticsStore,
   getSingleMonthTableData,
-  getSingleMonthTotal,
   getYearTotalQuantity,
   getYearTotalAmount,
-  categorySummaryData,
   getMonthDetails,
-} from '../../../../data/materialReceivingData';
+} from '@/stores';
 import type { SortConfig, MonthSummary, MonthDetail } from '../types/statisticsTab.types';
 
 interface MonthlyTableProps {
@@ -68,6 +67,20 @@ export function MonthlyTable({
   onCancelExport,
   onExportModeChange,
 }: MonthlyTableProps) {
+  const categoryTrend = useStatisticsStore((s) => s.categoryTrend);
+  const categorySummary = useStatisticsStore((s) => s.categorySummary);
+
+  // 单月总计（替代旧的 getSingleMonthTotal mock 函数）
+  const singleMonthTotal = monthFilter !== 'all'
+    ? (() => {
+        const details = getSingleMonthTableData(yearFilter, monthFilter, categoryTrend, categorySummary);
+        return {
+          totalQty: details.reduce((s, d) => s + d.quantity, 0),
+          totalAmt: details.reduce((s, d) => s + d.amount, 0),
+        };
+      })()
+    : { totalQty: 0, totalAmt: 0 };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -134,7 +147,7 @@ export function MonthlyTable({
             {/* 单月视图：直接显示7分类 */}
             {monthFilter !== 'all' && (
               <>
-                {getSingleMonthTableData(yearFilter, monthFilter).map((row, idx) => (
+                {getSingleMonthTableData(yearFilter, monthFilter, categoryTrend, categorySummary).map((row, idx) => (
                   <tr key={idx} className="hover:bg-blue-100 transition-colors">
                     {exportMode && (
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -151,7 +164,7 @@ export function MonthlyTable({
                     <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{row.quantity.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600 whitespace-nowrap">¥{row.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">-</td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">{getCategoryStats(row.quantity, getSingleMonthTotal(yearFilter, monthFilter).totalQty)}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">{getCategoryStats(row.quantity, singleMonthTotal.totalQty)}</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">-</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">-</td>
                   </tr>
@@ -161,8 +174,8 @@ export function MonthlyTable({
                   {exportMode && <td className="px-4 py-3"></td>}
                   <td className="px-4 py-3 text-sm text-emerald-700 whitespace-nowrap">当月合计</td>
                   <td className="px-4 py-3 text-sm text-emerald-600">-</td>
-                  <td className="px-4 py-3 text-sm text-right text-emerald-700">{getSingleMonthTotal(yearFilter, monthFilter).totalQty.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm text-right text-emerald-700">¥{getSingleMonthTotal(yearFilter, monthFilter).totalAmt.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-sm text-right text-emerald-700">{singleMonthTotal.totalQty.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-sm text-right text-emerald-700">¥{singleMonthTotal.totalAmt.toLocaleString()}</td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">100%</td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
@@ -229,7 +242,7 @@ export function MonthlyTable({
                     {/* 展开的7分类明细 */}
                     {expandedMonths.has(monthRow.month) && (
                       <>
-                        {getMonthDetails(monthRow.month).map((detail: MonthDetail, idx: number) => (
+                        {getMonthDetails(monthRow.month, categoryTrend, categorySummary).map((detail: MonthDetail, idx: number) => (
                           <tr key={`${monthRow.month}-${idx}`} className="hover:bg-emerald-50/50">
                             <td className="px-4 py-3 pl-10 text-sm text-gray-400 whitespace-nowrap">
                               └ {detail.monthName}
@@ -238,7 +251,7 @@ export function MonthlyTable({
                               <div className="flex items-center gap-2">
                                 <span
                                   className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: (categorySummaryData.find(c => c.key === detail.categoryKey) as any)?.solid || '#999' }}
+                                  style={{ backgroundColor: (categorySummary.find(c => c.key === detail.categoryKey) as any)?.solid || '#999' }}
                                 />
                                 {detail.categoryName}
                               </div>
@@ -267,8 +280,8 @@ export function MonthlyTable({
                   {exportMode && <td className="px-4 py-3"></td>}
                   <td className="px-4 py-3 whitespace-nowrap">年度合计</td>
                   <td className="px-4 py-3">-</td>
-                  <td className="px-4 py-3 text-right">{getYearTotalQuantity(yearFilter).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">¥{getYearTotalAmount(yearFilter).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">{getYearTotalQuantity(yearFilter, categoryTrend).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">¥{getYearTotalAmount(yearFilter, categoryTrend, categorySummary).toLocaleString()}</td>
                   <td className="px-4 py-3 text-center">-</td>
                   <td className="px-4 py-3 text-center">100%</td>
                   <td className="px-4 py-3 text-center">-</td>

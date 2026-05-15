@@ -180,12 +180,9 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
             meta?: { total: number };
           }>(url);
 
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
-          const normalized = (Array.isArray(data) ? data : []).map(normalize);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] API获取失败，使用本地缓存:', error);

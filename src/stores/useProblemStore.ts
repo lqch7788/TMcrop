@@ -112,7 +112,8 @@ export const useProblemStore = create<ProblemState>()(
           const query = params.toString();
           const url = `/problems${query ? `?${query}` : ''}`;
           const response = await enhancedApiClient.get<{ success: boolean; data: ProblemData[] }>(url);
-          const data = Array.isArray(response?.data) ? response.data : [];
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
           set({ problems: data.map(normalize), isLoading: false });
         } catch (error) {
           console.warn('[ProblemStore] API获取失败:', error);
@@ -125,7 +126,7 @@ export const useProblemStore = create<ProblemState>()(
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: number } }>(
             '/problems', problem, { priority: 0 }
           );
-          const newId = (response as any)?.data?.id || Date.now();
+          const newId = (response as any)?.id || Date.now();
           const newProblem = { ...problem, id: newId } as ProblemData;
           set((state) => ({ problems: [newProblem, ...state.problems] }));
           return newProblem;

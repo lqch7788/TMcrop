@@ -163,14 +163,12 @@ export const useDashboardStore = create<DashboardState>()(
 
           const response = await enhancedApiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta?: Record<string, unknown> }>(url);
 
-          if (response && response.success && Array.isArray(response.data)) {
-            const normalized = response.data.map((item) =>
-              normalizeWithMap(item, BATCH_FIELD_MAP)
-            ) as unknown as BatchStatItem[];
-            set({ batchStats: normalized, isLoading: false });
-          } else {
-            set({ isLoading: false });
-          }
+          // enhancedApiClient 已自动提取 .data，response 直接就是数组
+          const list = Array.isArray(response) ? response : [];
+          const normalized = list.map((item) =>
+            normalizeWithMap(item as Record<string, unknown>, BATCH_FIELD_MAP)
+          ) as unknown as BatchStatItem[];
+          set({ batchStats: normalized, isLoading: false });
         } catch (error) {
           console.warn('[DashboardStore] 获取批次统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });

@@ -27,7 +27,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
 
   // 导出模式状态
   const [executeExportMode, setExecuteExportMode] = useState(false);
-  const [executeSelectedRows, setExecuteSelectedRows] = useState<number[]>([]);
+  const [executeSelectedRows, setExecuteSelectedRows] = useState<(string | number)[]>([]);
   const [executeShowExportTypeModal, setExecuteShowExportTypeModal] = useState(false);
   const [executeExportFileType, setExecuteExportFileType] = useState('xlsx');
 
@@ -63,6 +63,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     applicant: '',
     warehouseLocation: '',
     reviewer: '',
+    operator: '',
     productionBatchCode: '',
     executeStatus: '',
     materials: [] as ExecuteMaterialItem[]
@@ -73,8 +74,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     code: '',
     date: new Date().toISOString().split('T')[0],
     applicant: '',
-    warehouseLocation: '仓库A区',
-    reviewer: '王志刚',
+    warehouseLocation: '',
+    reviewer: '',
+    operator: '',
     productionBatchCode: '',
     materials: [] as ExecuteMaterialItem[]
   });
@@ -132,7 +134,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, [executeSelectedRows, executeFilteredData]);
 
   // 领料出库页面选择单行
-  const handleExecuteSelectRow = useCallback((id: number) => {
+  const handleExecuteSelectRow = useCallback((id: string | number) => {
     if (executeSelectedRows.includes(id)) {
       setExecuteSelectedRows(executeSelectedRows.filter(rowId => rowId !== id));
     } else {
@@ -285,7 +287,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       date: new Date().toISOString().split('T')[0],
       applicant: '',
       warehouseLocation: '仓库A区',
-      reviewer: '王志刚',
+      reviewer: '',
+      operator: '',
       productionBatchCode: '',
       materials: []
     });
@@ -353,6 +356,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       applicant: item.applicant,
       warehouseLocation: item.warehouseLocation,
       reviewer: item.reviewer,
+      operator: item.operator || '',
       productionBatchCode: item.productionBatchCode,
       executeStatus: item.executeStatus,
       materials: item.materials
@@ -361,7 +365,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, []);
 
   // 领料出库页面删除
-  const handleExecuteDeleteClick = useCallback((id: number) => {
+  const handleExecuteDeleteClick = useCallback((id: string | number) => {
     setExecuteDeletingId(id);
     setExecuteShowDeleteConfirm(true);
   }, []);
@@ -375,9 +379,20 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, [executeDeletingId, executeStore]);
 
   const handleExecuteSaveEdit = useCallback(() => {
+    if (!executeSelectedRecord) return;
+    executeStore.updateItem(executeSelectedRecord.id, {
+      date: executeEditForm.date,
+      applicant: executeEditForm.applicant,
+      warehouseLocation: executeEditForm.warehouseLocation,
+      reviewer: executeEditForm.reviewer,
+      operator: executeEditForm.operator,
+      productionBatchCode: executeEditForm.productionBatchCode,
+      executeStatus: executeEditForm.executeStatus,
+      materials: executeEditForm.materials,
+    } as any);
     setExecuteShowEditModal(false);
     alert('保存成功');
-  }, []);
+  }, [executeSelectedRecord, executeEditForm, executeStore]);
 
   const handleExecuteSaveAdd = useCallback(() => {
     if (executeMaterialPool.length === 0) {
@@ -396,7 +411,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       applicant: executeAddForm.applicant || sourceApp?.applicant || '',
       warehouseLocation: executeAddForm.warehouseLocation,
       reviewer: executeAddForm.reviewer || sourceApp?.reviewer || '',
-      operator: executeAddForm.reviewer,
+      operator: executeAddForm.operator || '',
       productionBatchCode: executeAddForm.productionBatchCode || sourceApp?.productionBatchCode || '',
       sourceApplicationCodes: sourceAppCodes,
       executeStatus: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? '部分出库' : '已出库' as string,
@@ -417,7 +432,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       date: new Date().toISOString().split('T')[0],
       applicant: '',
       warehouseLocation: '仓库A区',
-      reviewer: '王志刚',
+      reviewer: '',
+      operator: '',
       productionBatchCode: '',
       materials: []
     });

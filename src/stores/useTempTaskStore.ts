@@ -151,11 +151,9 @@ export const useTempTaskStore = create<TempTaskState>()(
           const query = params.toString();
           const url = `/temp-tasks${query ? `?${query}` : ''}`;
           const response = await enhancedApiClient.get<{ success: boolean; data: TempTaskData[]; meta?: { total: number } }>(url);
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-          const normalized = (Array.isArray(data) ? data : []).map(normalizeTask);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalizeTask);
           set({ tasks: normalized, isLoading: false });
         } catch (error) {
           console.warn('[TempTaskStore] API获取失败，使用本地数据:', error);
@@ -169,7 +167,7 @@ export const useTempTaskStore = create<TempTaskState>()(
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
             '/temp-tasks', body, { priority: 0 }
           );
-          const newId = (response as any)?.data?.id || `TT${Date.now()}`;
+          const newId = (response as any)?.id || `TT${Date.now()}`;
           const newTask = normalizeTask({ ...task, id: newId } as Record<string, unknown>);
           set((state) => ({ tasks: [newTask, ...state.tasks] }));
           return newTask;

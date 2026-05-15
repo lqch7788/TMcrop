@@ -24,7 +24,6 @@ interface ApplicationTableProps {
   batchEditMode: 'edit' | 'delete' | null;
   onBatchEditModeChange: (value: 'edit' | 'delete' | null) => void;
   onShowEditWarning: () => void;
-  onShowDeleteWarning: () => void;
   // 选中行
   selectedRows: number[];
   onSelectAll: () => void;
@@ -62,7 +61,6 @@ export function ApplicationTable({
   batchEditMode,
   onBatchEditModeChange,
   onShowEditWarning,
-  onShowDeleteWarning,
   onSelectAll,
   onSelectRow,
   expandedRows,
@@ -134,7 +132,7 @@ export function ApplicationTable({
                 <Edit className="w-4 h-4" />
                 编辑
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange('delete'); onShowDeleteWarning(); }}>
+              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange('delete'); }}>
                 <Trash2 className="w-4 h-4" />
                 删除
               </Button>

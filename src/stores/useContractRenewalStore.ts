@@ -140,12 +140,9 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
             meta?: { total: number };
           }>(url);
 
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
-          const normalized = (Array.isArray(data) ? data : []).map(normalize);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[ContractRenewalStore] API获取失败，使用本地缓存:', error);
@@ -162,7 +159,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
             data: { id: string };
           }>('/contract-renewal', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `CR${Date.now()}`;
+          const newId = (response as any)?.id || `CR${Date.now()}`;
           const newItem = normalize({ ...data, id: newId, status: 'pending', status_label: '待审批' } as Record<string, unknown>);
 
           set((state) => ({ items: [newItem, ...state.items] }));

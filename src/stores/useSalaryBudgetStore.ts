@@ -141,12 +141,9 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
             meta?: { total: number };
           }>(url);
 
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
-          const normalized = (Array.isArray(data) ? data : []).map(normalize);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[SalaryBudgetStore] API获取失败，使用本地缓存:', error);
@@ -163,8 +160,8 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
             data: { id: string; budget_code: string };
           }>('/salary-budget', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `SB${Date.now()}`;
-          const newCode = (response as any)?.data?.budget_code || `SB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-TMP`;
+          const newId = (response as any)?.id || `SB${Date.now()}`;
+          const newCode = (response as any)?.budget_code || `SB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-TMP`;
 
           const grandTotal = (data.totalBaseSalary || 0) + (data.totalOvertimePay || 0) + (data.totalBonus || 0);
           const newItem = normalize({

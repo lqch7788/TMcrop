@@ -17,6 +17,7 @@ interface ExecuteAddModalProps {
     applicant: string;
     warehouseLocation: string;
     reviewer: string;
+    operator: string;
     productionBatchCode: string;
     materials: ExecuteMaterialItem[];
   };
@@ -26,6 +27,7 @@ interface ExecuteAddModalProps {
     applicant: string;
     warehouseLocation: string;
     reviewer: string;
+    operator: string;
     productionBatchCode: string;
     materials: ExecuteMaterialItem[];
   }>>;
@@ -121,6 +123,7 @@ export function ExecuteAddModal({
           value={addForm.applicant}
           onChange={(value) => onFormChange({ ...addForm, applicant: value })}
           placeholder="选择申领人"
+          valueField="name"
         />
       </div>
       <div>
@@ -143,6 +146,16 @@ export function ExecuteAddModal({
           value={addForm.reviewer}
           onChange={(value) => onFormChange({ ...addForm, reviewer: value })}
           placeholder="选择审核人"
+          valueField="name"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
+        <UserSelect
+          value={addForm.operator}
+          onChange={(value) => onFormChange({ ...addForm, operator: value })}
+          placeholder="选择操作人"
+          valueField="name"
         />
       </div>
       <div>
@@ -183,13 +196,14 @@ export function ExecuteAddModal({
               // 自动填充表单字段
               const app = applicationItems.find(a => a.code === e.target.value);
               if (app) {
-                onFormChange({
-                  ...addForm,
-                  applicant: app.applicant,
-                  warehouseLocation: app.warehouseLocation,
-                  reviewer: app.reviewer,
-                  productionBatchCode: app.productionBatchCode,
-                });
+                // 自动填充领料单信息（仅填充有值的字段，不覆盖已填内容）
+                const updates: Record<string, string> = {};
+                if (app.applicant && !addForm.applicant) updates.applicant = app.applicant;
+                if (app.warehouseLocation && !addForm.warehouseLocation) updates.warehouseLocation = app.warehouseLocation;
+                if (app.productionBatchCode && !addForm.productionBatchCode) updates.productionBatchCode = app.productionBatchCode;
+                if (Object.keys(updates).length > 0) {
+                  onFormChange({ ...addForm, ...updates });
+                }
               }
             }
           }}

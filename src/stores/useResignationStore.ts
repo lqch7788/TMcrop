@@ -148,12 +148,9 @@ export const useResignationStore = create<ResignationState>()(
             meta?: { total: number };
           }>(url);
 
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
-          const normalized = (Array.isArray(data) ? data : []).map(normalize);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[ResignationStore] API 获取失败，使用本地缓存:', error);
@@ -170,7 +167,7 @@ export const useResignationStore = create<ResignationState>()(
             data: { id: string; resignation_code: string };
           }>('/resignation', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `RSG${Date.now()}`;
+          const newId = (response as any)?.id || `RSG${Date.now()}`;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
 
           set((state) => ({ items: [newItem, ...state.items] }));

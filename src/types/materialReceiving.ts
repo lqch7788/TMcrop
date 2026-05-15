@@ -49,7 +49,7 @@ export interface ExecuteMaterialItem {
 
 // 领料出库单类型
 export interface MaterialExecuteRecord {
-  id: number;
+  id: string | number;
   code: string;
   date: string;
   applicant: string;
