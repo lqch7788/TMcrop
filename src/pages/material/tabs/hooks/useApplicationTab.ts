@@ -1,15 +1,14 @@
 // useApplicationTab Hook
 // 提取 ApplicationTab 的所有状态和业务逻辑
 // V1.2 升级：数据从 Zustand Store 获取，CRUD 通过 API 操作
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 
 import { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';
 import { Approval, ApprovalType, ApprovalStatus } from '@/types/approval';
 import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
-import { getUsers, type User } from '@/services/authorityService';
-import { useMaterialRequestDataStore } from '@/stores';
+import { useMaterialRequestDataStore, useUserStore } from '@/stores';
 
 // 默认新增表单初始状态
 const getDefaultAddForm = () => ({
@@ -48,25 +47,22 @@ export function useApplicationTab(): UseApplicationTabReturn {
   useEffect(() => { loadItems(); }, [loadItems]);
 
   // ============================================
-  // 用户ID到名称的映射（用于解决申请人/审核人显示ID而非中文名的问题）
+  // 用户ID到名称的映射（使用 useUserStore 替代直接调用 authorityService）
   // ============================================
-  const [userMap, setUserMap] = useState<Record<string, string>>({});
+  const userStoreUsers = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
 
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const users = await getUsers();
-        const map: Record<string, string> = {};
-        users.forEach((u: User) => {
-          map[u.oid] = u.name;
-        });
-        setUserMap(map);
-      } catch (error) {
-        console.error('加载用户列表失败:', error);
-      }
-    };
-    loadUsers();
-  }, []);
+    if (userStoreUsers.length === 0) loadUsers();
+  }, [loadUsers, userStoreUsers.length]);
+
+  const userMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    userStoreUsers.forEach((u) => {
+      map[u.oid] = u.name;
+    });
+    return map;
+  }, [userStoreUsers]);
 
   // ============================================
   // 搜索状态

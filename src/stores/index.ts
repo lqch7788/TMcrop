@@ -90,6 +90,10 @@ export { useApprovalStore } from './useApprovalStore';
 
 export { useMaterialRequestDataStore } from './useMaterialRequestDataStore';
 
+export { useExecuteDataStore } from './useExecuteDataStore';
+export { useStatisticsStore, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getSingleMonthTableData, getMonthCategoryData, getMonthSummary } from './useStatisticsStore';
+export type { MaterialStatItem, MonthlyStatItem, CategorySummaryItem, CategoryTrendItem, MonthSummaryRow, MonthDetailRow } from './useStatisticsStore';
+
 export { useNotificationStore, type Notification, type NotificationVariant } from './useNotificationStore';
 
 // SettingsDataProvider 迁移到 Zustand
@@ -134,6 +138,12 @@ export type { InspectionData } from './useInspectionDataStore';
 
 export { useProblemStore } from './useProblemStore';
 export type { ProblemData } from './useProblemStore';
+
+export { useEquipmentStore } from './useEquipmentStore';
+export type { Equipment } from './useEquipmentStore';
+
+export { useInfrastructureStore } from './useInfrastructureStore';
+export type { Infrastructure } from './useInfrastructureStore';
 
 export { useSupplierCodeRuleStore } from './useSupplierCodeRuleStore';
 

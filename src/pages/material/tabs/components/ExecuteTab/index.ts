@@ -8,3 +8,4 @@ export { ExecuteWarningModal } from './ExecuteTabModals/WarningModal';
 export { ExecuteDeleteConfirmModal } from './ExecuteTabModals/DeleteConfirmModal';
 export { ExportTypeModal } from './ExecuteTabModals/ExportTypeModal';
 export { ExecuteBatchEditModal } from './ExecuteTabModals/BatchEditModal';
+export { ExecuteAddModal } from './ExecuteTabModals/AddModal';

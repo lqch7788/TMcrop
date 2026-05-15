@@ -1,6 +1,5 @@
 // ExecuteTab 组件
 // 领料出库页面
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useExecuteTab } from './hooks/useExecuteTab';
 import {
@@ -11,8 +10,9 @@ import {
   ExecuteDeleteConfirmModal,
   ExportTypeModal,
   ExecuteBatchEditModal,
+  ExecuteAddModal,
 } from './components/ExecuteTab';
-import { materialExecuteDetails } from '@/data/materialReceivingData';
+import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import type { MaterialReceivingRecord } from '@/types/materialReceiving';
 
 // Props接口定义
@@ -138,6 +138,9 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     handleExecuteAddMaterialChange,
   } = useExecuteTab(materialData);
 
+  // 获取 store 实例（用于批量编辑等场景读取数据）
+  const executeStore = useExecuteDataStore();
+
   return (
     <>
       {/* 搜索区域 */}
@@ -193,23 +196,36 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       />
 
       {/* 新增领料出库弹窗 */}
-      {executeShowAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-emerald-600">
-              <h3 className="text-lg font-semibold text-white">新增领料出库</h3>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(85vh-80px)]">
-              <p className="text-sm text-gray-600">新增功能开发中...</p>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <Button variant="outline" onClick={handleExecuteCancelAdd}>
-                取消
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExecuteAddModal
+        isOpen={executeShowAddModal}
+        addForm={executeAddForm}
+        onFormChange={setExecuteAddForm}
+        materialPool={executeMaterialPool}
+        onAddToMaterialPool={handleAddToMaterialPool}
+        onRemoveFromMaterialPool={handleRemoveFromMaterialPool}
+        onUpdateMaterialPoolQuantity={handleUpdateMaterialPoolQuantity}
+        selectedApplicationCode={executeSelectedApplicationCode}
+        onSelectApplicationCode={setExecuteSelectedApplicationCode}
+        selectedMaterialIndices={executeSelectedMaterialIndices}
+        onToggleMaterialIndex={(idx) => {
+          const newSet = new Set(executeSelectedMaterialIndices);
+          if (newSet.has(idx)) {
+            newSet.delete(idx);
+          } else {
+            newSet.add(idx);
+          }
+          setExecuteSelectedMaterialIndices(newSet);
+        }}
+        materialActualQuantities={executeMaterialActualQuantities}
+        onMaterialActualQuantityChange={(idx, qty) => {
+          setExecuteMaterialActualQuantities({ ...executeMaterialActualQuantities, [idx]: qty });
+        }}
+        onAddMaterial={handleExecuteAddAddMaterial}
+        onRemoveMaterial={handleExecuteAddRemoveMaterial}
+        onMaterialChange={handleExecuteAddMaterialChange}
+        onClose={handleExecuteCancelAdd}
+        onSave={handleExecuteSaveAdd}
+      />
 
       {/* 编辑领料出库弹窗 */}
       {executeShowEditModal && executeSelectedRecord && (
@@ -302,7 +318,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         selectedRows={executeSelectedRows}
         batchEditedRecords={executeBatchEditedRecords}
         currentBatchEditIndex={executeCurrentBatchEditIndex}
-        recordsList={materialExecuteDetails.filter(r => executeSelectedRows.includes(r.id))}
+        recordsList={executeStore.items.filter(r => executeSelectedRows.includes(r.id))}
         onClose={() => { setExecuteShowBatchEditModal(false); setExecuteBatchEditedRecords({}); setExecuteCurrentBatchEditIndex(0); }}
         onRecordChange={(idx) => setExecuteCurrentBatchEditIndex(idx)}
         onSaveAll={() => {

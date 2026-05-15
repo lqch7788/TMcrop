@@ -1,9 +1,9 @@
 // useExecuteTab Hook
 // 领料出库页面的状态管理和业务逻辑
-import { useState, useMemo, useCallback } from 'react';
-import * as XLSX from 'xlsx';
-import { MaterialReceivingRecord, ExecuteMaterialItem } from '@/types/materialReceiving';
-import { materialReceivingDetails, materialExecuteDetails } from '@/data/materialReceivingData';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { MaterialReceivingRecord, ExecuteMaterialItem, MaterialExecuteRecord } from '@/types/materialReceiving';
+import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
+import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -11,6 +11,11 @@ import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } f
  * 管理领料出库页面的所有状态和业务逻辑
  */
 export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): UseExecuteTabReturn {
+  // 领料出库 Zustand Store
+  const executeStore = useExecuteDataStore();
+  // 领料申请单 Store（用于物料池选择来源申请单）
+  const materialRequestStore = useMaterialRequestDataStore();
+
   // 搜索状态
   const [executeSearchCode, setExecuteSearchCode] = useState('');
   const [executeSearchApplicant, setExecuteSearchApplicant] = useState('');
@@ -31,7 +36,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeShowEditModal, setExecuteShowEditModal] = useState(false);
   const [executeShowDeleteConfirm, setExecuteShowDeleteConfirm] = useState(false);
   const [executeShowAddModal, setExecuteShowAddModal] = useState(false);
-  const [executeSelectedRecord, setExecuteSelectedRecord] = useState<typeof materialExecuteDetails[0] | null>(null);
+  const [executeSelectedRecord, setExecuteSelectedRecord] = useState<MaterialExecuteRecord | null>(null);
   const [executeDeletingId, setExecuteDeletingId] = useState<number | null>(null);
 
   // 展开行状态
@@ -43,7 +48,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeShowBatchDeleteConfirm, setExecuteShowBatchDeleteConfirm] = useState(false);
   const [executeShowEditWarning, setExecuteShowEditWarning] = useState(false);
   const [executeShowDeleteWarning, setExecuteShowDeleteWarning] = useState(false);
-  const [executeBatchEditedRecords, setExecuteBatchEditedRecords] = useState<Record<number, typeof materialExecuteDetails[0]>>({});
+  const [executeBatchEditedRecords, setExecuteBatchEditedRecords] = useState<Record<number, MaterialExecuteRecord>>({});
   const [executeCurrentBatchEditIndex, setExecuteCurrentBatchEditIndex] = useState(0);
 
   // 物料池状态
@@ -74,9 +79,15 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     materials: [] as ExecuteMaterialItem[]
   });
 
-  // 领料出库页面过滤后的数据
+  // 挂载时从 API 加载出库数据
+  useEffect(() => {
+    executeStore.fetchItems();
+    materialRequestStore.loadItems();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 领料出库页面过滤后的数据（从 Zustand Store 读取）
   const executeFilteredData = useMemo(() => {
-    return materialExecuteDetails.filter(item => {
+    return executeStore.items.filter(item => {
       if (executeSearchCode && !item.code.toLowerCase().includes(executeSearchCode.toLowerCase())) return false;
       if (executeSearchApplicant && !item.applicant.toLowerCase().includes(executeSearchApplicant.toLowerCase())) return false;
       if (executeSearchBatchCode && !item.productionBatchCode.toLowerCase().includes(executeSearchBatchCode.toLowerCase())) return false;
@@ -84,7 +95,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       if (executeStatusFilter !== 'all' && item.executeStatus !== executeStatusFilter) return false;
       return true;
     });
-  }, [executeSearchCode, executeSearchApplicant, executeSearchBatchCode, executeSearchWarehouse, executeStatusFilter]);
+  }, [executeStore.items, executeSearchCode, executeSearchApplicant, executeSearchBatchCode, executeSearchWarehouse, executeStatusFilter]);
 
   const executeTotalPages = Math.ceil(executeFilteredData.length / executePageSize);
 
@@ -135,7 +146,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, []);
 
   const confirmExecuteExport = useCallback(async () => {
-    const exportData = materialExecuteDetails.filter(item => executeSelectedRows.includes(item.id));
+    const exportData = executeStore.items.filter(item => executeSelectedRows.includes(item.id));
     const headers = ['出库单号', '日期', '申领人', '仓库地点', '审核人', '操作人', '生产批次号', '执行状态'];
     const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'operator', 'productionBatchCode', 'executeStatus'];
     const materialHeaders = ['来源领料单号', '物料编码', '物料名称', '批次号', '规格', '单位', '申请数量', '实际库存', '本次实发', '单价(元)', '仓库货位', '备注'];
@@ -261,14 +272,14 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, []);
 
   // 领料出库页面查看详情
-  const handleExecuteView = useCallback((item: typeof materialExecuteDetails[0]) => {
+  const handleExecuteView = useCallback((item: MaterialExecuteRecord) => {
     setExecuteSelectedRecord(item);
     setExecuteShowDetailModal(true);
   }, []);
 
   // 领料出库页面新增
   const handleExecuteAdd = useCallback(() => {
-    const newCode = 'CK' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + String(materialExecuteDetails.length + 1).padStart(3, '0');
+    const newCode = executeStore.generateCode();
     setExecuteAddForm({
       code: newCode,
       date: new Date().toISOString().split('T')[0],
@@ -283,7 +294,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteMaterialActualQuantities({});
     setExecuteMaterialPool([]);
     setExecuteShowAddModal(true);
-  }, []);
+  }, [executeStore]);
 
   // 添加选中物料到物料池
   const handleAddToMaterialPool = useCallback(() => {
@@ -291,7 +302,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       alert('请先选择领料单并勾选要出库的物料');
       return;
     }
-    const selectedApp = materialReceivingDetails.find(app => app.code === executeSelectedApplicationCode);
+    const selectedApp = materialRequestStore.items.find(app => app.code === executeSelectedApplicationCode);
     if (!selectedApp) return;
 
     const newMaterials: ExecuteMaterialItem[] = Array.from(executeSelectedMaterialIndices).map(idx => {
@@ -316,7 +327,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteSelectedMaterialIndices(new Set());
     setExecuteMaterialActualQuantities({});
     setExecuteSelectedApplicationCode('');
-  }, [executeSelectedApplicationCode, executeSelectedMaterialIndices, executeMaterialActualQuantities, executeMaterialPool]);
+  }, [executeSelectedApplicationCode, executeSelectedMaterialIndices, executeMaterialActualQuantities, executeMaterialPool, materialRequestStore.items]);
 
   // 从物料池移除物料
   const handleRemoveFromMaterialPool = useCallback((index: number) => {
@@ -335,7 +346,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, [executeMaterialPool]);
 
   // 领料出库页面编辑
-  const handleExecuteEdit = useCallback((item: typeof materialExecuteDetails[0]) => {
+  const handleExecuteEdit = useCallback((item: MaterialExecuteRecord) => {
     setExecuteSelectedRecord(item);
     setExecuteEditForm({
       date: item.date,
@@ -356,9 +367,12 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   }, []);
 
   const confirmExecuteDelete = useCallback(() => {
+    if (executeDeletingId !== null) {
+      executeStore.deleteItem(executeDeletingId);
+    }
     setExecuteShowDeleteConfirm(false);
     setExecuteDeletingId(null);
-  }, []);
+  }, [executeDeletingId, executeStore]);
 
   const handleExecuteSaveEdit = useCallback(() => {
     setExecuteShowEditModal(false);
@@ -373,22 +387,25 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
 
     const sourceAppCodes = [...new Set(executeMaterialPool.map(m => m.applicationCode))];
     const firstMaterial = executeMaterialPool[0];
-    const sourceApp = materialReceivingDetails.find(app => app.code === firstMaterial.applicationCode);
+    const sourceApp = materialRequestStore.items.find(app => app.code === firstMaterial.applicationCode);
 
     const newRecord = {
-      id: materialExecuteDetails.length + 1,
-      code: executeAddForm.code || `CK${new Date().toISOString().split('T')[0].replace(/-/g, '')}${String(materialExecuteDetails.length + 1).padStart(3, '0')}`,
+      id: Date.now(),
+      code: executeAddForm.code || executeStore.generateCode(),
       date: executeAddForm.date,
-      applicant: sourceApp?.applicant || '',
+      applicant: executeAddForm.applicant || sourceApp?.applicant || '',
       warehouseLocation: executeAddForm.warehouseLocation,
-      reviewer: sourceApp?.reviewer || '',
+      reviewer: executeAddForm.reviewer || sourceApp?.reviewer || '',
       operator: executeAddForm.reviewer,
-      productionBatchCode: sourceApp?.productionBatchCode || '',
+      productionBatchCode: executeAddForm.productionBatchCode || sourceApp?.productionBatchCode || '',
       sourceApplicationCodes: sourceAppCodes,
-      executeStatus: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? '部分出库' : '已出库',
-      executeStatusClass: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? 'partial' : 'completed',
+      executeStatus: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? '部分出库' : '已出库' as string,
+      executeStatusClass: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? 'partial' : 'completed' as string,
       materials: executeMaterialPool
     };
+
+    // 保存到 Zustand Store → API → IndexedDB → localStorage（三级降级）
+    executeStore.createItem(newRecord);
 
     setExecuteShowAddModal(false);
     setExecuteSelectedApplicationCode('');
@@ -405,7 +422,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       materials: []
     });
     alert('新增成功');
-  }, [executeMaterialPool, executeAddForm]);
+  }, [executeMaterialPool, executeAddForm, executeStore, materialRequestStore.items]);
 
   const handleExecuteCancelAdd = useCallback(() => {
     setExecuteShowAddModal(false);

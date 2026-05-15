@@ -6,10 +6,27 @@
 import {
   Leaf, Droplets, Scissors, Bug, Edit, Trees, ShoppingBasket,
 } from 'lucide-react';
-import {
-  TASK_STATUS_MAP,
-  TASK_PRIORITY_MAP,
-} from '../../../data/farmMockData';
+
+// ========== 任务状态映射（从 farmMockData 迁出，内联定义） ==========
+const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-100' },
+  pending: { label: '待接受', color: 'text-gray-600', bg: 'bg-gray-100' },
+  accepted: { label: '已接受', color: 'text-blue-600', bg: 'bg-blue-100' },
+  in_progress: { label: '处理中', color: 'text-blue-600', bg: 'bg-blue-100' },
+  waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-100' },
+  completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-100' },
+  rejected: { label: '返工中', color: 'text-red-600', bg: 'bg-red-100' },
+  failed: { label: '任务失败', color: 'text-purple-600', bg: 'bg-purple-100' },
+  cancelled: { label: '已取消', color: 'text-gray-500', bg: 'bg-gray-50' },
+  abandoned: { label: '已放弃', color: 'text-red-400', bg: 'bg-red-50' },
+};
+
+// ========== 优先级映射（从 farmMockData 迁出，内联定义） ==========
+const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
+  urgent: { label: '紧急', color: 'text-red-500' },
+  high: { label: '高', color: 'text-orange-500' },
+  normal: { label: '普通', color: 'text-gray-500' },
+};
 
 // ========== 任务类型定义 ==========
 export const TASK_TYPES = [
