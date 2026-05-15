@@ -23,15 +23,15 @@ interface ExecuteTabTableProps {
   // 导出模式状态
   exportMode: boolean;
   batchEditMode: 'edit' | 'delete' | null;
-  selectedRows: number[];
+  selectedRows: (string | number)[];
 
   // 回调函数
   onSelectAll: () => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string | number) => void;
   onToggleExpand: (id: number) => void;
   onView: (item: any) => void;
   onEdit: (item: any) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string | number) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 
@@ -225,6 +225,14 @@ export function ExecuteTabTable({
                         title="查看"
                       >
                         <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(item.id)}
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
                   </td>

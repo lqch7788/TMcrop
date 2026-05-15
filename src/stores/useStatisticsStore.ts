@@ -152,21 +152,26 @@ interface StatisticsState {
 
 // ==================== 第五步：获取月份汇总和明细（工具函数）============
 
+/**
+ * 注：金额按分类汇总的 proportion 分摊到各月。
+ * 后端 category_summary 已提供每分类的实际金额（amount，单位万元），
+ * 此处按各月数量占比分摊，避免硬编码单价。
+ */
+
 /** 获取月份汇总数据 */
-export function getMonthSummaries(year: string, trend: CategoryTrendItem[]): MonthSummaryRow[] {
+export function getMonthSummaries(year: string, trend: CategoryTrendItem[], categories: CategorySummaryItem[]): MonthSummaryRow[] {
+  const yearTotalAmount = categories.reduce((s, c) => s + c.amount, 0);
+  const yearTotal = trend.filter(d => d.month.startsWith(year)).reduce((s, d) => s + d.total, 0);
   return trend
     .filter(d => d.month.startsWith(year))
     .map(data => {
       const totalQty = data.total;
-      const totalAmt = totalQty * 30;
-      const yearTotal = trend
-        .filter(d => d.month.startsWith(year))
-        .reduce((s, d) => s + d.total, 0);
+      const totalAmt = yearTotal > 0 ? (totalQty / yearTotal) * yearTotalAmount : 0;
       return {
         month: data.month,
         monthName: `${parseInt(data.month.split('-')[1])}月`,
         totalQuantity: totalQty,
-        totalAmount: totalAmt,
+        totalAmount: Math.round(totalAmt * 100) / 100,
         percentage: yearTotal > 0 ? (totalQty / yearTotal) * 100 : 0,
       };
     });
@@ -187,13 +192,14 @@ export function getMonthDetails(month: string, trend: CategoryTrendItem[], categ
   const totalQty = monthData.total;
   return categories.map(cat => {
     const qty = (monthData as Record<string, number>)[cat.key] || 0;
+    const catAmount = cat.value > 0 ? (qty / cat.value) * cat.amount : 0;
     return {
       month,
       monthName: `${parseInt(month.split('-')[1])}月`,
       categoryKey: cat.key,
       categoryName: cat.name,
       quantity: qty,
-      amount: qty * 30,
+      amount: Math.round(catAmount * 100) / 100,
       percentage: totalQty > 0 ? (qty / totalQty) * 100 : 0,
     };
   });
@@ -214,9 +220,9 @@ export function getYearTotalQuantity(year: string, trend: CategoryTrendItem[]): 
   return trend.filter(d => d.month.startsWith(year)).reduce((s, d) => s + d.total, 0);
 }
 
-/** 年度总金额 */
-export function getYearTotalAmount(year: string, trend: CategoryTrendItem[]): number {
-  return getYearTotalQuantity(year, trend) * 30;
+/** 年度总金额（万元）- 使用后端 category_summary 的实际金额 */
+export function getYearTotalAmount(_year: string, _trend: CategoryTrendItem[], categories: CategorySummaryItem[]): number {
+  return categories.reduce((s, c) => s + c.amount, 0);
 }
 
 /** 单月明细 */
@@ -224,13 +230,14 @@ export function getSingleMonthTableData(year: string, month: string, trend: Cate
   return getMonthDetails(`${year}-${month}`, trend, categories);
 }
 
-/** 月份分类柱状图数据 */
+/** 月份分类柱状图数据 - 金额按分类总量比例分摊 */
 export function getMonthCategoryData(month: string, trend: CategoryTrendItem[], categories: CategorySummaryItem[]) {
   const monthData = trend.find(d => d.month === month);
   if (!monthData) return [];
   return categories.map(cat => {
     const value = (monthData as Record<string, number>)[cat.key] || 0;
-    return { ...cat, value, amount: Math.round(value * 30), month: month.replace(/^\d{4}-/, '') + '月' };
+    const amount = cat.value > 0 ? Math.round((value / cat.value) * cat.amount * 100) / 100 : 0;
+    return { ...cat, value, amount, month: month.replace(/^\d{4}-/, '') + '月' };
   });
 }
 
@@ -258,17 +265,14 @@ export const useStatisticsStore = create<StatisticsState>()(
       fetchStatistics: async () => {
         set({ isLoading: true, error: null });
         try {
-          const resp = await enhancedApiClient.get<{
-            success: boolean;
-            data: {
-              material_statistics: Record<string, unknown>[];
-              monthly_statistics: Record<string, unknown>[];
-              category_summary: CategorySummaryItem[];
-              category_trend: CategoryTrendItem[];
-            };
+          // enhancedApiClient 已自动提取 .data，resp 直接就是数据体
+          const data = await enhancedApiClient.get<{
+            material_statistics: Record<string, unknown>[];
+            monthly_statistics: Record<string, unknown>[];
+            category_summary: CategorySummaryItem[];
+            category_trend: CategoryTrendItem[];
           }>('/material-statistics', { useCache: true, cacheStrategy: 'stale-while-revalidate' });
 
-          const data = resp?.data;
           if (data) {
             set({
               materialStatistics: (data.material_statistics || []).map(normalizeMaterialStat),

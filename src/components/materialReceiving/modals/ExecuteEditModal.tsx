@@ -11,6 +11,7 @@ interface ExecuteEditModalProps {
     applicant: string;
     warehouseLocation: string;
     reviewer: string;
+    operator: string;
     productionBatchCode: string;
     executeStatus: string;
     materials: ExecuteMaterialItem[];
@@ -89,6 +90,15 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="text"
             value={editForm.reviewer}
             onChange={(e) => onEditFormChange('reviewer', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
+          <input
+            type="text"
+            value={editForm.operator}
+            onChange={(e) => onEditFormChange('operator', e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

@@ -385,7 +385,8 @@ export const useOvertimeStore = create<OvertimeState>()(
             data: { id: string };
           }>('/overtime', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `OT${Date.now()}`;
+          // enhancedApiClient 已自动提取 .data，response 直接就是 { id }
+          const newId = (response as any)?.id || `OT${Date.now()}`;
           const newItem = normalize({
             ...data,
             id: newId,

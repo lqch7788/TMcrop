@@ -160,13 +160,9 @@ export const useRecruitmentStore = create<RecruitmentState>()(
             meta?: { total: number };
           }>(url);
 
-          // 容错：支持嵌套 {success, data} 和直接返回数组两种格式
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
-
-          const normalized = (Array.isArray(data) ? data : []).map(normalize);
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
+          const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[RecruitmentStore] API 获取失败，使用本地缓存:', error);
@@ -183,7 +179,7 @@ export const useRecruitmentStore = create<RecruitmentState>()(
             data: { id: string; recruitment_code: string };
           }>('/recruitment', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `REC${Date.now()}`;
+          const newId = (response as any)?.id || `REC${Date.now()}`;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
 
           set((state) => ({ items: [newItem, ...state.items] }));

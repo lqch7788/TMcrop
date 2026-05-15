@@ -1,7 +1,7 @@
 // MonthlyDashboard 组件 - 月度仪表盘图表
 // 包含环形图、堆叠柱状图、单独月份分组柱状图、分类汇总卡片
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { categorySummaryData, categoryTrendData, getMonthCategoryData, getMonthSummary } from '../../../../data/materialReceivingData';
+import { useStatisticsStore, getMonthCategoryData, getMonthSummary } from '@/stores';
 
 interface MonthlyDashboardProps {
   /** 选中的月份 */
@@ -11,12 +11,31 @@ interface MonthlyDashboardProps {
 }
 
 export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashboardProps) {
+  const categorySummaryData = useStatisticsStore((s) => s.categorySummary);
+  const categoryTrendData = useStatisticsStore((s) => s.categoryTrend);
+  const materialStatistics = useStatisticsStore((s) => s.materialStatistics);
+
+  // 动态计算年度总数量和总金额
+  const yearTotal = categorySummaryData.reduce((sum, c) => sum + c.value, 0);
+  const yearAmount = categorySummaryData.reduce((sum, c) => sum + c.amount, 0);
+  // 根据选中的月份计算当月总计
+  const monthTotal = selectedMonth !== 'all'
+    ? categoryTrendData.find(d => d.month === selectedMonth)?.total || 0
+    : yearTotal;
+
+  // 动态年份和月份列表
+  const currentYear = new Date().getFullYear();
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const m = String(i + 1).padStart(2, '0');
+    return { value: `${currentYear}-${m}`, label: `${i + 1}月` };
+  });
+
   return (
     /* 仪表盘主体 - 左侧环形图 + 右侧堆叠柱状图 */
     <div className="grid grid-cols-12 gap-6 mb-6">
       {/* 左侧：环形图 */}
       <div className="col-span-3 bg-white/50 rounded-xl p-4 border border-gray-100">
-        <h5 className="font-semibold text-gray-700 mb-4 text-center">2025年领料分类占比</h5>
+        <h5 className="font-semibold text-gray-700 mb-4 text-center">{currentYear}年领料分类占比</h5>
         <div className="h-64 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -50,7 +69,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
           {/* 环形图中心 */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold text-gray-800">
-              {selectedMonth === 'all' ? '29,450' : '2,450'}
+              {(selectedMonth === 'all' ? yearTotal : monthTotal).toLocaleString()}
             </div>
             <div className="text-xs text-gray-500">
               {selectedMonth === 'all' ? '年度总计' : '当月总计'}
@@ -76,7 +95,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
         <div className="flex items-center justify-between mb-4">
           <h5 className="font-semibold text-gray-700">
             月度用量趋势（按物料分类）
-            {selectedMonth !== 'all' && <span className="ml-2 text-cyan-600">- {selectedMonth.replace('2025-','')}月 各分类详情</span>}
+            {selectedMonth !== 'all' && <span className="ml-2 text-cyan-600">- {selectedMonth.replace(/^\d{4}-/, '')}月 各分类详情</span>}
           </h5>
           <select
             value={selectedMonth}
@@ -84,18 +103,9 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
             className="h-8 px-3 bg-white/60 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
           >
             <option value="all">全部月份</option>
-            <option value="2025-01">1月</option>
-            <option value="2025-02">2月</option>
-            <option value="2025-03">3月</option>
-            <option value="2025-04">4月</option>
-            <option value="2025-05">5月</option>
-            <option value="2025-06">6月</option>
-            <option value="2025-07">7月</option>
-            <option value="2025-08">8月</option>
-            <option value="2025-09">9月</option>
-            <option value="2025-10">10月</option>
-            <option value="2025-11">11月</option>
-            <option value="2025-12">12月</option>
+            {monthOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
@@ -130,7 +140,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
                 <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  tickFormatter={(v) => v.replace('2025-','')+'月'}
+                  tickFormatter={(v) => v.replace(/^\d{4}-/, '')+'月'}
                   tick={{ fontSize: 11, fill: '#64748B' }}
                 />
                 <YAxis tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, Math.ceil(Math.max(...categoryTrendData.map(d => d.total)) * 1.2 / 100) * 100]} />
@@ -172,16 +182,16 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-gray-600">选中月份：</span>
-                  <span className="font-bold text-gray-800 ml-2">{selectedMonth.replace('2025-', '')}月</span>
+                  <span className="font-bold text-gray-800 ml-2">{selectedMonth.replace(/^\d{4}-/, '')}月</span>
                 </div>
                 <div className="flex items-center gap-6">
                   <div>
                     <span className="text-gray-500 text-sm">总用量：</span>
-                    <span className="font-bold text-cyan-600 ml-1">{getMonthSummary(selectedMonth).totalQuantity.toLocaleString()} 件</span>
+                    <span className="font-bold text-cyan-600 ml-1">{getMonthSummary(selectedMonth, categoryTrendData, categorySummaryData).totalQuantity.toLocaleString()} 件</span>
                   </div>
                   <div>
                     <span className="text-gray-500 text-sm">总金额：</span>
-                    <span className="font-bold text-purple-600 ml-1">¥{(getMonthSummary(selectedMonth).totalAmount / 10000).toFixed(1)} 万元</span>
+                    <span className="font-bold text-purple-600 ml-1">¥{(getMonthSummary(selectedMonth, categoryTrendData, categorySummaryData).totalAmount / 10000).toFixed(1)} 万元</span>
                   </div>
                 </div>
               </div>
@@ -190,7 +200,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
             {/* 7分类竖向柱状图 */}
             <div className="h-[480px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={getMonthCategoryData(selectedMonth)}>
+                <ComposedChart data={getMonthCategoryData(selectedMonth, categoryTrendData, categorySummaryData)}>
                   <defs>
                     <linearGradient id="grad-production-single" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#06B6D4"/><stop offset="100%" stopColor="#0891B2" stopOpacity={0.8}/>
@@ -258,7 +268,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
                       fill: '#374151'
                     }}
                   >
-                    {getMonthCategoryData(selectedMonth).map((entry, index) => (
+                    {getMonthCategoryData(selectedMonth, categoryTrendData, categorySummaryData).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.solid} />
                     ))}
                   </Bar>
@@ -277,6 +287,12 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
  * 显示各物料分类的汇总信息
  */
 export function CategorySummaryCards() {
+  const categorySummaryData = useStatisticsStore((s) => s.categorySummary);
+
+  // 动态计算合计
+  const yearTotal = categorySummaryData.reduce((sum, c) => sum + c.value, 0);
+  const yearAmount = categorySummaryData.reduce((sum, c) => sum + c.amount, 0);
+
   return (
     /* 底部：分类汇总卡片 */
     <div className="grid grid-cols-8 gap-3">
@@ -294,9 +310,9 @@ export function CategorySummaryCards() {
       {/* 合计卡片 */}
       <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-3 text-white">
         <div className="text-xs opacity-80 mb-1">年度合计</div>
-        <div className="text-xl font-bold">29,450</div>
+        <div className="text-xl font-bold">{yearTotal.toLocaleString()}</div>
         <div className="text-sm">件</div>
-        <div className="text-xs opacity-80 mt-1">¥89.5万</div>
+        <div className="text-xs opacity-80 mt-1">¥{yearAmount.toFixed(1)}万</div>
       </div>
     </div>
   );

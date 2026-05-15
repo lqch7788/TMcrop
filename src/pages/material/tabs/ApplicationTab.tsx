@@ -14,7 +14,7 @@ import { DeleteConfirm } from '../../../components/materialReceiving/modals/Dele
 import { VoidModal } from '../../../components/materialReceiving/modals/VoidModal';
 import { BatchEditModal } from '../../../components/materialReceiving/modals/BatchEditModal';
 import { EditWarningModal } from '../../../components/materialReceiving/modals/EditWarningModal';
-import { DeleteWarningModal } from '../../../components/materialReceiving/modals/DeleteWarningModal';
+
 import { BatchDeleteConfirmModal } from '../../../components/materialReceiving/modals/BatchDeleteConfirmModal';
 
 // ============================================
@@ -61,7 +61,6 @@ export default function ApplicationTab() {
         batchEditMode={hook.batchEditMode}
         onBatchEditModeChange={hook.setBatchEditMode}
         onShowEditWarning={() => hook.setShowEditWarning(true)}
-        onShowDeleteWarning={() => hook.setShowDeleteWarning(true)}
         onSelectAll={hook.handleSelectAll}
         onSelectRow={hook.handleSelectRow}
         expandedRows={hook.expandedRows}
@@ -137,15 +136,6 @@ export default function ApplicationTab() {
           isOpen={hook.showEditAlert}
           message={hook.editAlertMessage}
           onClose={() => hook.setShowEditAlert(false)}
-        />
-      )}
-
-      {/* 删除提醒弹窗 */}
-      {hook.showDeleteWarning && (
-        <DeleteWarningModal
-          show={hook.showDeleteWarning}
-          onCancel={() => { hook.setShowDeleteWarning(false); hook.setBatchEditMode(null); }}
-          onConfirm={() => { hook.setShowDeleteWarning(false); }}
         />
       )}
 

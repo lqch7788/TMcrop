@@ -15,22 +15,26 @@ const router = Router();
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const rows = db.exec('SELECT * FROM material_executes ORDER BY date DESC, create_time DESC');
-    const columns = rows.length > 0 ? rows[0].columns : [];
-    const items = rows.map(row => {
-      const item: Record<string, unknown> = {};
-      row.values.forEach((val, i) => {
-        item[columns[i]] = val;
-      });
-      // 解析 JSON 字段
-      if (item.source_application_codes) {
-        item.source_application_codes = JSON.parse(item.source_application_codes as string);
-      }
-      if (item.materials) {
-        item.materials = JSON.parse(item.materials as string);
-      }
-      return item;
-    });
+    const results = db.exec('SELECT * FROM material_executes ORDER BY date DESC, create_time DESC');
+    const resultSet = results.length > 0 ? results[0] : null;
+    const columns: string[] = resultSet ? resultSet.columns : [];
+    // values 是二维数组 [[行1_val1, 行1_val2, ...], [行2_val1, ...]]
+    const items = resultSet
+      ? resultSet.values.map((rowValues: any[]) => {
+          const item: Record<string, unknown> = {};
+          rowValues.forEach((val, i) => { item[columns[i]] = val; });
+          // 解析 JSON 字段
+          if (item.source_application_codes) {
+            try { item.source_application_codes = JSON.parse(item.source_application_codes as string); }
+            catch { item.source_application_codes = []; }
+          }
+          if (item.materials) {
+            try { item.materials = JSON.parse(item.materials as string); }
+            catch { item.materials = []; }
+          }
+          return item;
+        })
+      : [];
     res.json({ success: true, data: items });
   } catch (error) {
     console.error('获取出库单列表失败:', error);

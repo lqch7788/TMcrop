@@ -1,5 +1,6 @@
 // ExecuteTab 组件
 // 领料出库页面
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExecuteTab } from './hooks/useExecuteTab';
 import {
@@ -81,12 +82,6 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     setExecuteShowBatchDeleteConfirm,
     executeShowEditWarning,
     setExecuteShowEditWarning,
-    executeShowDeleteWarning,
-    setExecuteShowDeleteWarning,
-    executeBatchEditedRecords,
-    setExecuteBatchEditedRecords,
-    executeCurrentBatchEditIndex,
-    setExecuteCurrentBatchEditIndex,
 
     // 物料池状态
     executeSelectedApplicationCode,
@@ -181,7 +176,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onCancelExport={handleExecuteCancelExport}
         onExportConfirm={confirmExecuteExport}
         onBatchEditClick={() => { setExecuteBatchEditMode('edit'); setExecuteShowEditWarning(true); }}
-        onBatchDeleteClick={() => { setExecuteBatchEditMode('delete'); setExecuteShowDeleteWarning(true); }}
+        onBatchDeleteClick={() => { setExecuteBatchEditMode('delete'); }}
         onBatchEditConfirm={() => { setExecuteShowBatchEditModal(true); }}
         onBatchDeleteConfirm={() => { setExecuteShowBatchDeleteConfirm(true); }}
         onBatchCancel={() => { setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
@@ -231,11 +226,225 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       {executeShowEditModal && executeSelectedRecord && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-blue-600">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
               <h3 className="text-lg font-semibold text-white">编辑领料出库</h3>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(85vh-80px)]">
-              <p className="text-sm text-gray-600">编辑功能开发中...</p>
+              {/* 基本信息 */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">出库单号</label>
+                  <input
+                    type="text"
+                    value={executeSelectedRecord.code}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">日期</label>
+                  <input
+                    type="date"
+                    value={executeEditForm.date}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">申领人</label>
+                  <input
+                    type="text"
+                    value={executeEditForm.applicant}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, applicant: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">库存地点</label>
+                  <select
+                    value={executeEditForm.warehouseLocation}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, warehouseLocation: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="仓库A区">仓库A区</option>
+                    <option value="仓库B区">仓库B区</option>
+                    <option value="仓库C区">仓库C区</option>
+                    <option value="仓库D区">仓库D区</option>
+                    <option value="仓库E区">仓库E区</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">审核人</label>
+                  <input
+                    type="text"
+                    value={executeEditForm.reviewer}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, reviewer: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
+                  <input
+                    type="text"
+                    value={executeEditForm.operator}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, operator: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">生产批次号</label>
+                  <input
+                    type="text"
+                    value={executeEditForm.productionBatchCode}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, productionBatchCode: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">执行状态</label>
+                  <select
+                    value={executeEditForm.executeStatus}
+                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, executeStatus: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="已出库">已出库</option>
+                    <option value="部分出库">部分出库</option>
+                    <option value="待出库">待出库</option>
+                    <option value="已取消">已取消</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 物料明细 */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-700">物料明细</h4>
+                  <Button size="sm" variant="secondary" onClick={handleExecuteEditAddMaterial}>
+                    <Plus className="w-3 h-3" /> 添加物料
+                  </Button>
+                </div>
+                {executeEditForm.materials.length > 0 ? (
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm min-w-[1200px]">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-2 py-2 text-left text-xs font-semibold w-10">操作</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">来源单号</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">物料编码</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">物料名称</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">批次号</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">规格</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">单位</th>
+                          <th className="px-2 py-2 text-right text-xs font-semibold">申领数量</th>
+                          <th className="px-2 py-2 text-right text-xs font-semibold">实际库存</th>
+                          <th className="px-2 py-2 text-right text-xs font-semibold">本次实发</th>
+                          <th className="px-2 py-2 text-left text-xs font-semibold">备注</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {executeEditForm.materials.map((mat, idx) => (
+                          <tr key={idx}>
+                            <td className="px-2 py-1 text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleExecuteEditRemoveMaterial(idx)}
+                                title="删除"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              </Button>
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.applicationCode || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'applicationCode', e.target.value)}
+                                className="w-24 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.materialCode || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialCode', e.target.value)}
+                                className="w-24 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.materialName || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialName', e.target.value)}
+                                className="w-20 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.batchNo || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'batchNo', e.target.value)}
+                                className="w-18 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.spec || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'spec', e.target.value)}
+                                className="w-16 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.unit || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'unit', e.target.value)}
+                                className="w-12 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                value={mat.requestedQuantity || 0}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
+                                className="w-16 h-7 px-1.5 border border-gray-200 rounded text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                value={mat.stockQuantity || 0}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
+                                className="w-16 h-7 px-1.5 border border-gray-200 rounded text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                value={mat.actualQuantity || 0}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
+                                className="w-16 h-7 px-1.5 border border-gray-200 rounded text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.remark || ''}
+                                onChange={(e) => handleExecuteEditMaterialChange(idx, 'remark', e.target.value)}
+                                className="w-20 h-7 px-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
+                    暂无物料明细
+                  </div>
+                )}
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <Button variant="outline" onClick={handleExecuteCancelEdit}>
@@ -291,20 +500,13 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onConfirm={() => { setExecuteShowEditWarning(false); }}
       />
 
-      {/* 删除警告弹窗 */}
-      <ExecuteWarningModal
-        show={executeShowDeleteWarning}
-        type="delete"
-        onCancel={() => { setExecuteShowDeleteWarning(false); setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
-        onConfirm={() => { setExecuteShowDeleteWarning(false); }}
-      />
-
       {/* 批量删除确认弹窗 */}
       <ExecuteDeleteConfirmModal
         show={executeShowBatchDeleteConfirm}
         count={executeSelectedRows.length}
         onCancel={() => setExecuteShowBatchDeleteConfirm(false)}
         onConfirm={() => {
+          executeStore.deleteItems(executeSelectedRows);
           setExecuteShowBatchDeleteConfirm(false);
           setExecuteSelectedRows([]);
           setExecuteBatchEditMode(null);
@@ -316,18 +518,17 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       <ExecuteBatchEditModal
         show={executeShowBatchEditModal}
         selectedRows={executeSelectedRows}
-        batchEditedRecords={executeBatchEditedRecords}
-        currentBatchEditIndex={executeCurrentBatchEditIndex}
         recordsList={executeStore.items.filter(r => executeSelectedRows.includes(r.id))}
-        onClose={() => { setExecuteShowBatchEditModal(false); setExecuteBatchEditedRecords({}); setExecuteCurrentBatchEditIndex(0); }}
-        onRecordChange={(idx) => setExecuteCurrentBatchEditIndex(idx)}
-        onSaveAll={() => {
+        onClose={() => { setExecuteShowBatchEditModal(false); }}
+        onSaveAll={async (editedRecords) => {
+          // 持久化所有编辑到数据库
+          for (const [id, updates] of Object.entries(editedRecords)) {
+            await executeStore.updateItem(id, updates as any);
+          }
           setExecuteShowBatchEditModal(false);
-          setExecuteBatchEditedRecords({});
-          setExecuteCurrentBatchEditIndex(0);
           setExecuteBatchEditMode(null);
           setExecuteSelectedRows([]);
-          alert('批量编辑成功');
+          alert(`批量编辑成功，已保存 ${Object.keys(editedRecords).length} 条记录`);
         }}
       />
     </>

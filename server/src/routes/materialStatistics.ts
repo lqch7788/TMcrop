@@ -53,15 +53,19 @@ function getCategoryKey(name: string): string {
 router.get('/', (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const rows = db.exec('SELECT * FROM material_requests ORDER BY apply_date ASC');
-    const columns = rows.length > 0 ? rows[0].columns : [];
-    const records = rows.map(row => {
-      const item: Record<string, unknown> = {};
-      row.values.forEach((val, i) => { item[columns[i]] = val; });
-      try { item.materials = JSON.parse(item.materials as string || '[]'); }
-      catch { item.materials = []; }
-      return item;
-    });
+    const results = db.exec('SELECT * FROM material_requests ORDER BY apply_date ASC');
+    const resultSet = results.length > 0 ? results[0] : null;
+    const columns: string[] = resultSet ? resultSet.columns : [];
+    // values 是二维数组 [[行1_val1, 行1_val2, ...], [行2_val1, ...]]
+    const records = resultSet
+      ? resultSet.values.map((rowValues: any[]) => {
+          const item: Record<string, unknown> = {};
+          rowValues.forEach((val, i) => { item[columns[i]] = val; });
+          try { item.materials = JSON.parse(item.materials as string || '[]'); }
+          catch { item.materials = []; }
+          return item;
+        })
+      : [];
 
     // ------ 1. 物料级别统计 ------
     const materialMap = new Map<string, any>();
@@ -87,7 +91,7 @@ router.get('/', (_req: Request, res: Response) => {
             requisition_department: (rec as any).department_name || '',
             usage_area: (rec as any).plant_area || '',
             requisitioner: (rec as any).applicant_name || '',
-            requisition_time: (rec as any).apply_date || '',
+            requisition_time: String((rec as any).apply_date || ''),
             requisition_count: 0,
             total_quantity: 0,
             actual_quantity: 0,
@@ -107,7 +111,7 @@ router.get('/', (_req: Request, res: Response) => {
     // ------ 2. 月度统计（按部门）------
     const monthlyMap = new Map<string, any>();
     for (const rec of records) {
-      const applyDate = (rec as any).apply_date || '';
+      const applyDate = String((rec as any).apply_date || '');
       if (!applyDate) continue;
       const parts = applyDate.split('-');
       const year = parts[0];
@@ -124,7 +128,7 @@ router.get('/', (_req: Request, res: Response) => {
           year, month,
           department: dept,
           requisition_count: 1,
-          material_types: new Set(mats.map((m: any) => m.materialCode || m.code)).size,
+          material_types: new Set(mats.map((m: any) => m.materialCode || m.code)),
           total_quantity: totalQty,
           actual_quantity: actualQty,
           difference_rate: totalQty > 0 ? ((actualQty - totalQty) / totalQty * 100) : 0,
@@ -135,7 +139,7 @@ router.get('/', (_req: Request, res: Response) => {
         const mats = (rec.materials as any[]) || [];
         const matTypes = new Set(mats.map((m: any) => m.materialCode || m.code));
         entry.requisition_count += 1;
-        entry.material_types = new Set([...entry.material_types, ...matTypes]).size;
+        entry.material_types = new Set([...entry.material_types, ...matTypes]);
         entry.total_quantity += mats.reduce((s: number, m: any) => s + Number(m.requestedQuantity || m.quantity || 0), 0);
         entry.actual_quantity += mats.reduce((s: number, m: any) => s + Number(m.actualQuantity || m.requestedQuantity || m.quantity || 0), 0);
         entry.total_amount += mats.reduce((s: number, m: any) => s + Number(m.unitPrice || 0) * Number(m.requestedQuantity || m.quantity || 0), 0);
@@ -143,7 +147,7 @@ router.get('/', (_req: Request, res: Response) => {
       }
     }
     const monthlyStatistics = Array.from(monthlyMap.values()).map((e: any) => {
-      e.material_types = Number(e.material_types) || 0;
+      e.material_types = e.material_types instanceof Set ? e.material_types.size : Number(e.material_types) || 0;
       e.difference_rate = Math.round(e.difference_rate * 10) / 10;
       return e;
     });
@@ -171,7 +175,7 @@ router.get('/', (_req: Request, res: Response) => {
     // ------ 4. 分类趋势（月度堆叠柱状图）------
     const trendMap = new Map<string, Record<string, number>>();
     for (const rec of records) {
-      const applyDate = (rec as any).apply_date || '';
+      const applyDate = String((rec as any).apply_date || '');
       if (!applyDate) continue;
       const ym = applyDate.substring(0, 7); // YYYY-MM
       if (!trendMap.has(ym)) {

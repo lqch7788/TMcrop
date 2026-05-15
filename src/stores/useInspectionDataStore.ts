@@ -117,7 +117,8 @@ export const useInspectionDataStore = create<InspectionDataState>()(
           const query = params.toString();
           const url = `/inspections${query ? `?${query}` : ''}`;
           const response = await enhancedApiClient.get<{ success: boolean; data: InspectionData[] }>(url);
-          const data = Array.isArray(response?.data) ? response.data : [];
+          // enhancedApiClient 已提取 .data，response 即为实际数据数组
+          const data = Array.isArray(response) ? response : [];
           set({ records: data.map(normalize), isLoading: false });
         } catch (error) {
           console.warn('[InspectionDataStore] API获取失败:', error);
@@ -130,7 +131,7 @@ export const useInspectionDataStore = create<InspectionDataState>()(
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
             '/inspections', record, { priority: 0 }
           );
-          const newId = (response as any)?.data?.id || `INS${Date.now()}`;
+          const newId = (response as any)?.id || `INS${Date.now()}`;
           const newRecord = { ...record, id: newId } as InspectionData;
           set((state) => ({ records: [newRecord, ...state.records] }));
           return newRecord;

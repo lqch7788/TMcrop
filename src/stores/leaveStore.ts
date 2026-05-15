@@ -212,7 +212,8 @@ export const useLeaveStore = create<LeaveState>()(
             data: { id: string };
           }>('/leave', body, { offlineQueue: true, priority: 0 });
 
-          const newId = (response as any)?.data?.id || `LV${Date.now()}`;
+          // enhancedApiClient 已自动提取 .data，response 直接就是 { id }
+          const newId = (response as any)?.id || `LV${Date.now()}`;
           const newItem = normalize({
             ...data,
             id: newId,

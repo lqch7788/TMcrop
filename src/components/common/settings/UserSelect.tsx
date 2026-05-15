@@ -16,6 +16,8 @@ interface UserSelectProps {
   roleFilter?: string[];
   /** 是否只显示活跃用户 */
   activeOnly?: boolean;
+  /** 选项值字段：'oid'=用户ID, 'name'=用户姓名，默认 'oid' */
+  valueField?: 'oid' | 'name';
 }
 
 export function UserSelect({
@@ -25,6 +27,7 @@ export function UserSelect({
   allowClear = true,
   disabled = false,
   activeOnly = true,
+  valueField = 'oid',
 }: UserSelectProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,7 +70,7 @@ export function UserSelect({
     >
       <option value="">{loading ? '加载中...' : placeholder}</option>
       {filteredUsers.map((user) => (
-        <option key={user.oid} value={user.oid}>
+        <option key={user.oid} value={valueField === 'name' ? user.name : user.oid}>
           {user.name}
         </option>
       ))}
@@ -135,7 +138,7 @@ export function UserMultiSelect({
       className="w-full min-h-[100px] px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
       {filteredUsers.map((user) => (
-        <option key={user.oid} value={user.oid}>
+        <option key={user.oid} value={valueField === 'name' ? user.name : user.oid}>
           {user.name}
         </option>
       ))}

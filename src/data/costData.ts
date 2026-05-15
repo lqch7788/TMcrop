@@ -121,8 +121,8 @@ export const getMonthlyAvgCost = (): number => {
 // ============================================
 
 // 1. 根据筛选条件过滤记录
-export function filterCostRecords(filters: CostFilters): MaterialReceivingRecord[] {
-  return materialReceivingDetails.filter(record => {
+export function filterCostRecords(data: MaterialReceivingRecord[], filters: CostFilters): MaterialReceivingRecord[] {
+  return data.filter(record => {
     // 日期筛选
     if (record.date < filters.dateRange.start || record.date > filters.dateRange.end) {
       return false;

@@ -23,6 +23,7 @@ import {
   getFilteredMaterialDetails,
   getBatchMaterialDetails,
 } from '../../../data/costData';
+import { useMaterialRequestDataStore } from '../../../stores/useMaterialRequestDataStore';
 
 // 成本Tab组件接口
 interface CostTabProps {
@@ -50,6 +51,9 @@ const getInitialCostFilters = (): CostFilters => {
  * 包含成本概览和分类对比两个子Tab
  */
 const CostTab = memo(function CostTab() {
+  // 从 Store 获取物料申请数据（替代 mock 数据源）
+  const items = useMaterialRequestDataStore((s) => s.items);
+
   // 成本核算页面状态
   const [costActiveTab, setCostActiveTab] = useState<'overview' | 'comparison'>('overview');
   const [costDetailModalOpen, setCostDetailModalOpen] = useState(false);
@@ -82,7 +86,7 @@ const CostTab = memo(function CostTab() {
         <div className="space-y-4">
           {/* 动态计算KPI */}
           {(() => {
-            const filteredRecords = filterCostRecords(costFilters);
+            const filteredRecords = filterCostRecords(items, costFilters);
             const totalCost = calcCostTotal(filteredRecords);
             const monthlyCost = calcMonthlyCost(filteredRecords);
             const batchData = aggregateByBatch(filteredRecords);
@@ -102,7 +106,7 @@ const CostTab = memo(function CostTab() {
             {/* 成本构成饼图 */}
             <div className="col-span-1">
               {(() => {
-                const filteredRecords = filterCostRecords(costFilters);
+                const filteredRecords = filterCostRecords(items, costFilters);
                 const categoryData = aggregateByCategory(filteredRecords);
                 const pieData = categoryData.map(cat => ({
                   name: cat.category,
@@ -117,7 +121,7 @@ const CostTab = memo(function CostTab() {
             {/* 成本趋势图 */}
             <div className="col-span-2">
               {(() => {
-                const filteredRecords = filterCostRecords(costFilters);
+                const filteredRecords = filterCostRecords(items, costFilters);
                 const monthData = aggregateByMonth(filteredRecords);
                 const trendData = monthData.map(m => ({
                   month: m.month,
@@ -134,7 +138,7 @@ const CostTab = memo(function CostTab() {
       {costActiveTab === 'comparison' && (
         <div className="space-y-4">
           {(() => {
-            const filteredRecords = filterCostRecords(costFilters);
+            const filteredRecords = filterCostRecords(items, costFilters);
             const categoryData = aggregateByCategory(filteredRecords);
             const deptData = aggregateByDepartment(filteredRecords);
             const batchData = aggregateByBatch(filteredRecords);

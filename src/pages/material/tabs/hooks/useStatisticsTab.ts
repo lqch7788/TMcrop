@@ -20,6 +20,7 @@ import type {
   MonthStats,
   ExportTarget,
   ExportFileType,
+  MonthSummary,
 } from '../types/statisticsTab.types';
 import type { MonthDetailRow } from '@/stores/useStatisticsStore';
 
@@ -94,6 +95,7 @@ export function useStatisticsTab() {
       return true;
     });
   }, [
+    materialStatisticsData,
     statDateRange,
     statDepartmentFilter,
     statCategoryFilter,
@@ -119,7 +121,7 @@ export function useStatisticsTab() {
   // ============================================
   // 月度汇总表格专用筛选状态
   // ============================================
-  const [statYearFilter, setStatYearFilter] = useState<string>('2025');
+  const [statYearFilter, setStatYearFilter] = useState<string>(String(new Date().getFullYear()));
   const [statMonthFilter, setStatMonthFilter] = useState<string>('all');
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'month', direction: 'asc' });
@@ -202,7 +204,7 @@ export function useStatisticsTab() {
     setStatBatchFilter('');
     setStatComparisonPeriod('none');
     setStatCurrentPage(1);
-    setStatYearFilter('2026');
+    setStatYearFilter(String(new Date().getFullYear()));
     setStatMonthFilter('all');
     setStatMaterialSearch('');
     setStatSupplierFilter([]);
@@ -240,8 +242,8 @@ export function useStatisticsTab() {
     }));
   };
 
-  const getSortedMonthSummaries = (): MonthSummary[] => {
-    const data = getMonthSummaries(statYearFilter, categoryTrend);
+  const getSortedMonthSummaries = () => {
+    const data = getMonthSummaries(statYearFilter, categoryTrend, categorySummary);
     const key = sortConfig.key;
     const sorted = [...data].sort((a, b) => {
       if (a[key as keyof typeof a] < b[key as keyof typeof b]) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -387,7 +389,7 @@ export function useStatisticsTab() {
     const headers = ['月份', '物料分类', '领料数量', '领料金额', '排名', '占比', '环比变化', '同比变化'];
     const allMonthSummaries = getSortedMonthSummaries();
     const yearTotalQty = getYearTotalQuantity(statYearFilter, categoryTrend);
-    const yearTotalAmt = getYearTotalAmount(statYearFilter, categoryTrend);
+    const yearTotalAmt = getYearTotalAmount(statYearFilter, categoryTrend, categorySummary);
     const selectedData = statMonthFilter === 'all'
       ? statSelectedRows.map(idx => allMonthSummaries[idx]).filter(Boolean)
       : getSingleMonthTableData(statYearFilter, statMonthFilter, categoryTrend, categorySummary).filter((_, idx) => statSelectedRows.includes(idx));
@@ -462,7 +464,7 @@ export function useStatisticsTab() {
       csvContent += headers.map(h => escapeCSV(h)).join(',') + '\n';
       selectedData.forEach((row: MonthSummary) => {
         csvContent += `${escapeCSV(row.monthName)},合计,${escapeCSV(row.totalQuantity.toString())},${escapeCSV(row.totalAmount.toString())},${escapeCSV(getMonthRank(row.month, 'qty').toString())},${escapeCSV(getMonthPercent(row.totalQuantity))},${escapeCSV(getMonthQoQ(row.month))},${escapeCSV(getMonthYoY(row.month))}\n`;
-        getMonthDetails(row.month).forEach((detail: any) => {
+        getMonthDetails(row.month, categoryTrend, categorySummary).forEach((detail: any) => {
           csvContent += `,,${escapeCSV(detail.categoryName)},${escapeCSV(detail.quantity.toString())},${escapeCSV(detail.amount.toString())},,${escapeCSV(getCategoryPercent(detail.quantity, row.totalQuantity))},,\n`;
         });
       });
@@ -488,7 +490,7 @@ export function useStatisticsTab() {
         tableContent += `<td style="padding:8px;border:1px solid #ccc;text-align:center;">${getMonthQoQ(row.month)}</td>`;
         tableContent += `<td style="padding:8px;border:1px solid #ccc;text-align:center;">${getMonthYoY(row.month)}</td>`;
         tableContent += `</tr>`;
-        getMonthDetails(row.month).forEach((detail: any) => {
+        getMonthDetails(row.month, categoryTrend, categorySummary).forEach((detail: any) => {
           tableContent += `<tr>`;
           tableContent += `<td style="padding:8px;border:1px solid #ccc;"></td>`;
           tableContent += `<td style="padding:8px;border:1px solid #ccc;">${detail.categoryName}</td>`;
@@ -531,7 +533,7 @@ export function useStatisticsTab() {
         tableContent += `<td style="padding:8px;border:1px solid #000;text-align:center;">${getMonthQoQ(row.month)}</td>`;
         tableContent += `<td style="padding:8px;border:1px solid #000;text-align:center;">${getMonthYoY(row.month)}</td>`;
         tableContent += `</tr>`;
-        getMonthDetails(row.month).forEach((detail: any) => {
+        getMonthDetails(row.month, categoryTrend, categorySummary).forEach((detail: any) => {
           tableContent += `<tr>`;
           tableContent += `<td style="padding:8px;border:1px solid #000;"></td>`;
           tableContent += `<td style="padding:8px;border:1px solid #000;">${detail.categoryName}</td>`;

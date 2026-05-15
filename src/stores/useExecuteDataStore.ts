@@ -47,8 +47,15 @@ function normalize(db: Record<string, unknown>): MaterialExecuteRecord {
   result.id = result.id ?? `CK${Date.now()}`;
   result.executeStatus = result.executeStatus || '已出库';
   result.executeStatusClass = result.executeStatusClass || 'completed';
-  result.sourceApplicationCodes = result.sourceApplicationCodes || [];
-  result.materials = result.materials || [];
+  // 确保 JSON 字段被正确解析（后端可能返回字符串）
+  if (typeof result.sourceApplicationCodes === 'string') {
+    try { result.sourceApplicationCodes = JSON.parse(result.sourceApplicationCodes); } catch { result.sourceApplicationCodes = []; }
+  }
+  if (!Array.isArray(result.sourceApplicationCodes)) result.sourceApplicationCodes = [];
+  if (typeof result.materials === 'string') {
+    try { result.materials = JSON.parse(result.materials); } catch { result.materials = []; }
+  }
+  if (!Array.isArray(result.materials)) result.materials = [];
   return result as unknown as MaterialExecuteRecord;
 }
 
@@ -95,20 +102,12 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
       fetchItems: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await enhancedApiClient.get<{
-            success: boolean; data: Record<string, unknown>[]
-          }>('/material-executes');
+          // enhancedApiClient 已自动提取 .data，response 直接就是数组
+          const list = await enhancedApiClient.get<Record<string, unknown>[]>('/material-executes');
 
-          let data = response?.data || [];
-          if (!Array.isArray(data)) data = [];
-
-          if (data.length > 0) {
-            const normalized = data.map(normalize);
-            set({ items: normalized, isLoading: false });
-          } else {
-            // API 返回空数据时保留 mock 初始数据
-            set({ isLoading: false });
-          }
+          const data = Array.isArray(list) ? list : [];
+          const normalized = data.map(normalize);
+          set({ items: normalized, isLoading: false });
         } catch (error) {
           console.warn('[ExecuteStore] API获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
@@ -124,7 +123,8 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
             success: boolean; data: { id: string | number; code: string }
           }>('/material-executes', body, { offlineQueue: true });
 
-          const newId = (response as any)?.data?.id || body.id;
+          // enhancedApiClient 已自动提取 .data，response 直接就是 { id, code }
+          const newId = (response as any)?.id || body.id;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
 
           set((state) => ({ items: [newItem, ...state.items] }));

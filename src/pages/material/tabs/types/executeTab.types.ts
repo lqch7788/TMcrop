@@ -31,6 +31,7 @@ export interface ExecuteEditFormState {
   applicant: string;
   warehouseLocation: string;
   reviewer: string;
+  operator: string;
   productionBatchCode: string;
   executeStatus: string;
   materials: ExecuteMaterialItem[];
@@ -43,6 +44,7 @@ export interface ExecuteAddFormState {
   applicant: string;
   warehouseLocation: string;
   reviewer: string;
+  operator: string;
   productionBatchCode: string;
   materials: ExecuteMaterialItem[];
 }
@@ -81,8 +83,8 @@ export interface UseExecuteTabReturn {
   // 导出模式状态
   executeExportMode: boolean;
   setExecuteExportMode: (mode: boolean) => void;
-  executeSelectedRows: number[];
-  setExecuteSelectedRows: (rows: number[]) => void;
+  executeSelectedRows: (string | number)[];
+  setExecuteSelectedRows: (rows: (string | number)[]) => void;
   executeShowExportTypeModal: boolean;
   setExecuteShowExportTypeModal: (show: boolean) => void;
   executeExportFileType: string;
@@ -147,7 +149,7 @@ export interface UseExecuteTabReturn {
   // 处理函数
   handleExecuteReset: () => void;
   handleExecuteSelectAll: () => void;
-  handleExecuteSelectRow: (id: number) => void;
+  handleExecuteSelectRow: (id: string | number) => void;
   handleExecuteExportClick: () => void;
   confirmExecuteExport: () => Promise<void>;
   handleExecuteCancelExport: () => void;
@@ -157,7 +159,7 @@ export interface UseExecuteTabReturn {
   handleRemoveFromMaterialPool: (index: number) => void;
   handleUpdateMaterialPoolQuantity: (index: number, actualQuantity: number) => void;
   handleExecuteEdit: (item: any) => void;
-  handleExecuteDeleteClick: (id: number) => void;
+  handleExecuteDeleteClick: (id: string | number) => void;
   confirmExecuteDelete: () => void;
   handleExecuteSaveEdit: () => void;
   handleExecuteSaveAdd: () => void;
