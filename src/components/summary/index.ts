@@ -16,5 +16,25 @@ export { ReportTabs } from './ReportTabs';
 export { ReportCharts } from './ReportCharts';
 export { DataResetButton } from './DataResetButton';
 
+// V1.0 新版组件
+export { KpiCard } from './KpiCard';
+export type { KpiCardProps } from './KpiCard';
+export { KpiCardGrid } from './KpiCardGrid';
+export type { KpiCardGridProps } from './KpiCardGrid';
+export { DetailDrawer } from './DetailDrawer';
+export type { DetailDrawerProps } from './DetailDrawer';
+export { AlertCard } from './AlertCard';
+export type { AlertCardProps } from './AlertCard';
+export { SummaryDateFilter } from './SummaryDateFilter';
+export type { SummaryDateFilterProps } from './SummaryDateFilter';
+
 // Hooks
 export { useExport } from './useExport';
+
+// 共享图表组件（V1.0）
+export { GaugeChart } from './GaugeChart';
+export type { GaugeChartProps } from './GaugeChart';
+export { TrendChart } from './TrendChart';
+export type { TrendChartProps, BarSeriesConfig, LineSeriesConfig } from './TrendChart';
+export { DistributionPie } from './DistributionPie';
+export type { DistributionPieProps, PieDataItem } from './DistributionPie';

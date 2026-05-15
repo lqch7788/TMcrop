@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { Sidebar } from './components/layout/Sidebar';
@@ -10,6 +10,7 @@ import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { autoInitializeData } from './utils/dataInitializer';
 import { syncManager } from './services/syncManager';
+import { useAuthStore } from './stores';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -21,7 +22,7 @@ import EnvironmentMonitor from './pages/EnvironmentMonitor';
 import Harvest from './pages/Harvest';
 import ProduceInventory from './pages/ProduceInventory';
 import ProduceCodeRule from './pages/ProduceCodeRule';
-import Reports from './pages/Reports';
+// Reports 已迁移至 /summary/overview（生产汇总表 V1.0）
 import Approvals from './pages/Approvals';
 import MaterialApproval from './pages/MaterialApproval';
 import ProductionApproval from './pages/ProductionApproval';
@@ -33,6 +34,14 @@ import Settings from './pages/Settings';
 import SystemConfig from './pages/SystemConfig';
 import DictionaryManagement from './pages/DictionaryManagement';
 import UserPermission from './pages/UserPermission';
+// 组织与权限管理（新）
+import {
+  OrganizationManagement,
+  RoleManagement,
+  AuthorityConfiguration,
+  UserManagement,
+  UserAuthorityConfig,
+} from './pages/authority';
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
 import ApprovalLevelConfig from './pages/ApprovalLevelConfig';
 import NotificationSettings from './pages/NotificationSettings';
@@ -56,9 +65,9 @@ import PurchasePlan from './pages/PurchasePlan';
 import WorkerAttendance from './pages/WorkerAttendance';
 import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
-import DailyProblemSummary from './pages/DailyProblemSummary';
+// DailyProblemSummary 已迁移至 /summary/problems（生产汇总表 V1.0）
 import DailyWorkSummary from './pages/farm/DailyWorkSummary';
-import PlanSummary from './pages/PlanSummary';
+// PlanSummary 已迁移至 /summary/batch（生产汇总表 V1.0）
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
 import MaterialCategory from './pages/MaterialCategory';
@@ -121,6 +130,16 @@ const Order = lazy(() => import('./pages/crop/Order'));
 const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const SyncDataPage = lazy(() => import('./pages/sync/SyncDataPage'));
+
+// 生产汇总表 V1.0 - 8页面重构
+const SummaryOverview = lazy(() => import('./pages/summary/SummaryOverview'));
+const YieldAnalysis = lazy(() => import('./pages/summary/YieldAnalysis'));
+const CostAnalysis = lazy(() => import('./pages/summary/CostAnalysis'));
+const LaborAnalysis = lazy(() => import('./pages/summary/LaborAnalysis'));
+const BatchSummary = lazy(() => import('./pages/summary/BatchSummary'));
+const ChainTraceability = lazy(() => import('./pages/summary/ChainTraceability'));
+const ProblemSummary = lazy(() => import('./pages/summary/ProblemSummary'));
+const SummaryIndicators = lazy(() => import('./pages/summary/SummaryIndicators'));
 
 // 加载中占位组件
 function PageLoader() {
@@ -203,6 +222,12 @@ function AppContent() {
             <Route path="system-config" element={<SystemConfig />} />
             <Route path="dictionary" element={<DictionaryManagement />} />
             <Route path="user-permission" element={<UserPermission />} />
+            {/* 组织与权限管理（新） */}
+            <Route path="organizations" element={<OrganizationManagement />} />
+            <Route path="roles" element={<RoleManagement />} />
+            <Route path="authority-config" element={<AuthorityConfiguration />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="user-authority" element={<UserAuthorityConfig />} />
             <Route path="approval-workflow" element={<ApprovalWorkflowConfig />} />
             <Route path="approval-level-config" element={<ApprovalLevelConfig />} />
             <Route path="notification" element={<NotificationSettings />} />
@@ -268,8 +293,10 @@ function AppContent() {
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/team" element={<Team />} />
-          <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
-          <Route path="/plan-summary" element={<PlanSummary />} />
+          {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}
+          <Route path="/daily-problem-summary" element={<Navigate to="/summary/problems" replace />} />
+          <Route path="/plan-summary" element={<Navigate to="/summary/batch" replace />} />
+          <Route path="/reports" element={<Navigate to="/summary/overview" replace />} />
           <Route path="/worker-attendance" element={<WorkerAttendance />} />
           <Route path="/work-log" element={<WorkLog />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />
@@ -313,7 +340,16 @@ function AppContent() {
           <Route path="/alert-info" element={<AlertInfo />} />
           <Route path="/indicators" element={<Indicators />} />
           <Route path="/announcement" element={<Announcement />} />
-          <Route path="/reports" element={<Reports />} />
+
+          {/* 生产汇总表 V1.0 - 8页面重构 */}
+          <Route path="/summary/overview" element={<SummaryOverview />} />
+          <Route path="/summary/yield" element={<YieldAnalysis />} />
+          <Route path="/summary/cost" element={<CostAnalysis />} />
+          <Route path="/summary/labor" element={<LaborAnalysis />} />
+          <Route path="/summary/batch" element={<BatchSummary />} />
+          <Route path="/summary/chain" element={<ChainTraceability />} />
+          <Route path="/summary/problems" element={<ProblemSummary />} />
+          <Route path="/summary/indicators" element={<SummaryIndicators />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />
@@ -337,6 +373,11 @@ function App() {
   // 应用启动时自动初始化作物管理模拟数据
   useEffect(() => {
     autoInitializeData().catch(console.error);
+  }, []);
+
+  // 应用启动时恢复登录状态（token持久化验证）
+  useEffect(() => {
+    useAuthStore.getState().verifyToken();
   }, []);
 
   // 启动同步管理器（SYNC模式）

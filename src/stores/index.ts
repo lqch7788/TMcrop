@@ -85,6 +85,8 @@ export { useMaterialReturnStore } from './useMaterialReturnStore';
 export { useSettingsStore } from './useSettingsStore';
 
 export { useOrganizationStore } from './useOrganizationStore';
+export { useAuthStore } from './useAuthStore';
+export type { CurrentUser, RoleSummary, AuthorityEntry, MyPermissionsResponse } from './useAuthStore';
 
 export { useApprovalStore } from './useApprovalStore';
 
@@ -226,3 +228,10 @@ export type { WorkLog, WorkLogFilters } from './useWorkLogStore';
 // ==================== Dashboard 总览 Store ====================
 export { useDashboardStore } from './useDashboardStore';
 export type { BatchStatItem, DashboardStats, AlertsBreakdown } from './useDashboardStore';
+
+// ==================== 生产汇总数据 Store ====================
+export { useSummaryDataStore } from './useSummaryDataStore';
+export type {
+  SummaryOverview, YieldStatItem, CostDetailItem, CostSummary,
+  LaborStatItem, ProblemDailyItem, ProductionIndicator, IndicatorsRaw,
+} from './useSummaryDataStore';

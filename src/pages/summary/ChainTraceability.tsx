@@ -1,0 +1,440 @@
+/**
+ * 全链条追溯页面 - 从种源到采收入库完整追溯链
+ * 数据源：useSummaryDataStore.batchItems（Zustand Store）
+ * 架构：Component → Store → enhancedApiClient → Backend API（单向不可逆）
+ */
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Link,
+  Layers,
+  Sprout,
+  Leaf,
+  Package,
+  Warehouse,
+  ArrowRight,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  ClipboardList,
+} from 'lucide-react';
+import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
+import { useSummaryDataStore, type BatchStatItem } from '../../stores/useSummaryDataStore';
+
+// ========== 常量 ==========
+
+/** 6个追溯环节 */
+const CHAIN_STAGES = [
+  { key: 'plan', label: '生产计划', icon: <ClipboardList className="w-5 h-5" />, color: 'from-blue-500 to-blue-700', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+  { key: 'seed', label: '种源管理', icon: <Sprout className="w-5 h-5" />, color: 'from-emerald-500 to-emerald-700', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700' },
+  { key: 'seedling', label: '育苗管理', icon: <Sprout className="w-5 h-5" />, color: 'from-teal-500 to-teal-700', bgColor: 'bg-teal-50', textColor: 'text-teal-700' },
+  { key: 'planting', label: '种植管理', icon: <Leaf className="w-5 h-5" />, color: 'from-green-500 to-green-700', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+  { key: 'harvest', label: '采收入库', icon: <Package className="w-5 h-5" />, color: 'from-amber-500 to-amber-700', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
+  { key: 'inventory', label: '库存管理', icon: <Warehouse className="w-5 h-5" />, color: 'from-purple-500 to-purple-700', bgColor: 'bg-purple-50', textColor: 'text-purple-700' },
+];
+
+/** 状态映射 */
+const STATUS_STYLE: Record<string, string> = {
+  planning: 'bg-gray-100 text-gray-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  completed: 'bg-emerald-100 text-emerald-700',
+  overdue: 'bg-red-100 text-red-700',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  planning: '规划中',
+  in_progress: '进行中',
+  completed: '已完成',
+  overdue: '已逾期',
+};
+
+/** 确定批次处于哪个追溯环节 */
+function getBatchStage(batch: BatchStatItem): string {
+  if (batch.status === 'planning') return 'plan';
+  if (batch.status === 'completed') return 'inventory';
+  if (batch.actualQuantity > 0) return 'harvest';
+  if (batch.completedTaskCount > 0) return 'planting';
+  return 'plan';
+}
+
+/** 计算环节统计 */
+function computeStageStats(batches: BatchStatItem[]) {
+  return CHAIN_STAGES.map((stage) => {
+    const stageBatches = batches.filter((b) => getBatchStage(b) === stage.key);
+    return {
+      ...stage,
+      count: stageBatches.length,
+      batches: stageBatches,
+    };
+  });
+}
+
+// ========== 子组件 ==========
+
+/** Sankey 流程示意（纯CSS实现） */
+function SankeyFlow({ stages }: { stages: ReturnType<typeof computeStageStats> }) {
+  const maxCount = Math.max(...stages.map((s) => s.count), 1);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-x-auto">
+      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Link className="w-5 h-5 text-teal-600" />
+        全链条流程示意
+      </h3>
+      <div className="flex items-start gap-0 min-w-[900px] py-4">
+        {stages.map((stage, idx) => (
+          <div key={stage.key} className="flex items-start flex-1">
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${stage.color} flex items-center justify-center shadow-lg mb-2`}>
+                <div className="text-white text-center">
+                  <div className="flex justify-center mb-1">{stage.icon}</div>
+                  <p className="text-xs font-semibold">{stage.label}</p>
+                </div>
+              </div>
+              <div className={`text-center ${stage.textColor}`}>
+                <p className="text-lg font-bold">{stage.count}</p>
+                <p className="text-xs">批次</p>
+              </div>
+              <div className="w-full px-2 mt-1">
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${stage.color}`}
+                    style={{ width: `${(stage.count / maxCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            {idx < stages.length - 1 && (
+              <div className="flex items-center pt-10 flex-shrink-0">
+                <ArrowRight className="w-5 h-5 text-gray-300" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 环节详情面板 */
+function StageDetailPanel({
+  stage,
+  onViewBatch,
+}: {
+  stage: ReturnType<typeof computeStageStats>[0];
+  onViewBatch: (batch: BatchStatItem) => void;
+}) {
+  return (
+    <div className={`rounded-xl border p-5 border-opacity-30`} style={{ backgroundColor: stage.bgColor.includes('blue') ? '#eff6ff' : stage.bgColor.includes('emerald') ? '#ecfdf5' : stage.bgColor.includes('teal') ? '#f0fdfa' : stage.bgColor.includes('green') ? '#f0fdf4' : stage.bgColor.includes('amber') ? '#fffbeb' : '#faf5ff' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
+          <div className="text-white">{stage.icon}</div>
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">{stage.label}</h3>
+          <p className="text-xs text-gray-500">{stage.count} 个批次</p>
+        </div>
+      </div>
+      {stage.batches.length === 0 ? (
+        <p className="text-sm text-gray-400 py-3 text-center">暂无该环节批次</p>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {stage.batches.map((batch) => (
+            <button
+              key={batch.id}
+              className="w-full flex items-center justify-between bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow text-left"
+              onClick={() => onViewBatch(batch)}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-800 truncate">{batch.batchName || batch.batchCode}</p>
+                <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                  <span>{batch.cropName}</span>
+                  <span>|</span>
+                  <span>{batch.greenhouse}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[batch.status] || 'bg-gray-100 text-gray-700'}`}>
+                  {STATUS_LABEL[batch.status] || batch.status}
+                </span>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ========== 主页面组件 ==========
+
+export default function ChainTraceability() {
+  const batchItems = useSummaryDataStore((s) => s.batchItems);
+  const isLoading = useSummaryDataStore((s) => s.isLoading);
+  const error = useSummaryDataStore((s) => s.error);
+  const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
+
+  const [selectedBatch, setSelectedBatch] = useState<BatchStatItem | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    fetchBatchStats({});
+  }, [fetchBatchStats]);
+
+  // 计算环节统计
+  const stageStats = useMemo(() => computeStageStats(batchItems), [batchItems]);
+
+  // 整体统计
+  const totalBatches = batchItems.length;
+  const completedBatches = batchItems.filter((b) => b.status === 'completed').length;
+  const inProgressBatches = batchItems.filter((b) => b.status === 'in_progress').length;
+
+  const handleViewBatch = (batch: BatchStatItem) => {
+    setSelectedBatch(batch);
+    setDrawerOpen(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        icon={<Link className="w-6 h-6 text-white" />}
+        title="全链条追溯"
+        description="从种源→育苗→种植→采收入库完整追溯链，6环节批次追踪"
+      />
+
+      {/* 概览KPI */}
+      <KpiCardGrid columns={4}>
+        <KpiCard
+          icon={<Layers className="w-5 h-5 text-white" />}
+          label="追踪批次数"
+          value={totalBatches}
+          colorScheme="teal"
+        />
+        <KpiCard
+          icon={<CheckCircle2 className="w-5 h-5 text-white" />}
+          label="已完成"
+          value={completedBatches}
+          colorScheme="emerald"
+        />
+        <KpiCard
+          icon={<Clock className="w-5 h-5 text-white" />}
+          label="进行中"
+          value={inProgressBatches}
+          colorScheme="blue"
+        />
+        <KpiCard
+          icon={<Link className="w-5 h-5 text-white" />}
+          label="追溯环节"
+          value={6}
+          colorScheme="purple"
+        />
+      </KpiCardGrid>
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm">数据加载失败：{error}</span>
+        </div>
+      )}
+
+      {/* Sankey 流程示意 */}
+      {isLoading ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
+        </div>
+      ) : (
+        <SankeyFlow stages={stageStats} />
+      )}
+
+      {/* 6环节详情面板 */}
+      {!isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {stageStats.map((stage) => (
+            <StageDetailPanel
+              key={stage.key}
+              stage={stage}
+              onViewBatch={handleViewBatch}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 全批次追溯列表 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">全批次追溯列表</h3>
+          <p className="text-xs text-gray-400 mt-1">所有批次按环节归类，点击查看批次详情</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前环节</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">完成率</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {batchItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                    {isLoading ? '加载中...' : '暂无批次数据'}
+                  </td>
+                </tr>
+              ) : (
+                batchItems.map((batch) => {
+                  const stage = CHAIN_STAGES.find((s) => s.key === getBatchStage(batch));
+                  return (
+                    <tr
+                      key={batch.id}
+                      className="hover:bg-teal-50/50 transition-colors cursor-pointer"
+                      onClick={() => handleViewBatch(batch)}
+                    >
+                      <td className="px-4 py-2.5 text-sm text-gray-900 font-medium whitespace-nowrap">{batch.batchCode}</td>
+                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.batchName}</td>
+                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.cropName}</td>
+                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.greenhouse}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {stage && (
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${stage.bgColor} ${stage.textColor}`}>
+                            <span className="scale-75">{stage.icon}</span>
+                            {stage.label}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[batch.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {STATUS_LABEL[batch.status] || batch.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[50px]">
+                            <div
+                              className={`h-full rounded-full ${batch.completionRate >= 100 ? 'bg-emerald-500' : batch.completionRate >= 50 ? 'bg-teal-500' : 'bg-amber-500'}`}
+                              style={{ width: `${Math.min(batch.completionRate || 0, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500 w-9 text-right">{(batch.completionRate || 0).toFixed(0)}%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="text-xs text-teal-600 font-medium cursor-pointer hover:text-teal-800">追溯详情</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 批次详情抽屉 */}
+      <DetailDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={`批次追溯 - ${selectedBatch?.batchCode || ''}`}
+        width={480}
+      >
+        {selectedBatch && (
+          <div className="space-y-4">
+            {/* 当前环节 */}
+            {(() => {
+              const stage = CHAIN_STAGES.find((s) => s.key === getBatchStage(selectedBatch));
+              return stage ? (
+                <div className={`rounded-xl p-4 border`} style={{ backgroundColor: stage.bgColor.includes('blue') ? '#eff6ff' : '#f0fdfa' }}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
+                      <div className="text-white">{stage.icon}</div>
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${stage.textColor}`}>当前环节：{stage.label}</p>
+                      <p className="text-xs opacity-70 mt-0.5">点击对应环节卡片可跳转到该模块</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            {/* 基本信息 */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">基本信息</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-400">批次编号：</span><span className="text-gray-900 font-medium">{selectedBatch.batchCode}</span></div>
+                <div><span className="text-gray-400">批次名称：</span><span className="text-gray-900">{selectedBatch.batchName}</span></div>
+                <div><span className="text-gray-400">作物品种：</span><span className="text-gray-900">{selectedBatch.cropName}</span></div>
+                <div><span className="text-gray-400">温室：</span><span className="text-gray-900">{selectedBatch.greenhouse}</span></div>
+                <div><span className="text-gray-400">种植面积：</span><span className="text-gray-900">{selectedBatch.plantingArea || '-'}</span></div>
+                <div>
+                  <span className="text-gray-400">状态：</span>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[selectedBatch.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {STATUS_LABEL[selectedBatch.status] || selectedBatch.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 产量进度 */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">产量进度</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-400">目标产量：</span><span className="text-gray-900 font-medium">{selectedBatch.targetYield?.toLocaleString()} kg</span></div>
+                <div><span className="text-gray-400">实际产量：</span><span className="text-gray-900 font-medium">{selectedBatch.actualQuantity?.toLocaleString()} kg</span></div>
+              </div>
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span>完成率</span>
+                  <span>{(selectedBatch.completionRate || 0).toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-teal-500"
+                    style={{ width: `${Math.min(selectedBatch.completionRate || 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 时间节点 */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">时间节点</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-400">种植日期：</span><span className="text-gray-900">{selectedBatch.plantingDate || '-'}</span></div>
+                <div><span className="text-gray-400">预计采收：</span><span className="text-gray-900">{selectedBatch.expectedHarvestDate || '-'}</span></div>
+                <div><span className="text-gray-400">实际采收：</span><span className="text-gray-900">{selectedBatch.actualHarvestDate || '-'}</span></div>
+              </div>
+            </div>
+
+            {/* 任务统计 */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">任务统计</h3>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="text-center p-3 bg-teal-50 rounded-lg">
+                  <p className="text-lg font-bold text-teal-700">{selectedBatch.taskCount || 0}</p>
+                  <p className="text-xs text-teal-500">总任务</p>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                  <p className="text-lg font-bold text-emerald-700">{selectedBatch.completedTaskCount || 0}</p>
+                  <p className="text-xs text-emerald-500">已完成</p>
+                </div>
+                <div className="text-center p-3 bg-amber-50 rounded-lg">
+                  <p className="text-lg font-bold text-amber-700">{selectedBatch.pendingTaskCount || 0}</p>
+                  <p className="text-xs text-amber-500">待处理</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+    </div>
+  );
+}

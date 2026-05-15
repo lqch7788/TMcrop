@@ -9,7 +9,8 @@ import {
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
-  Leaf, Flower2, Trees, CheckCircle
+  Leaf, Flower2, Trees, CheckCircle,
+  DollarSign, Layers, Link as LinkIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -54,11 +55,16 @@ const laborSubItems = [
   { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
 ];
 
-// 生产汇总表（问题分派、每日工单汇总已移出到农事管理）
+// 生产汇总表 V1.0 - 8页面重构
 const summarySubItems = [
-  { icon: AlertTriangle, label: '每日问题汇总表', path: '/daily-problem-summary' },
-  { icon: FileText, label: '生产计划汇总表', path: '/plan-summary' },
-  { icon: BarChart3, label: '生产报表', path: '/reports' },
+  { icon: LayoutDashboard, label: '汇总看板', path: '/summary/overview' },
+  { icon: TrendingUp, label: '产量分析', path: '/summary/yield' },
+  { icon: DollarSign, label: '成本分析', path: '/summary/cost' },
+  { icon: Users, label: '人工分析', path: '/summary/labor' },
+  { icon: Layers, label: '批次汇总', path: '/summary/batch' },
+  { icon: LinkIcon, label: '全链条追溯', path: '/summary/chain' },
+  { icon: AlertTriangle, label: '问题汇总', path: '/summary/problems' },
+  { icon: Gauge, label: '指标看板', path: '/summary/indicators' },
 ];
 
 const approvalSubItems = [

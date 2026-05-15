@@ -291,3 +291,44 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 通过
 **涉及文件：** 13 个文件修改，约 500+ 行变更
+
+### 2026-05-15 会话
+
+**完成的工作：**
+
+1. **编写《种植管理系统完整架构说明V1.0》**
+   - 文件：`public/种植管理系统完整架构说明V1.0.md`（1330行，约59KB）
+   - 完整覆盖：项目概述、技术栈、整体架构、前端架构、后端架构、数据库架构（50+表）、UI组件系统（63+组件）、Zustand状态管理（73个Store）、数据流与缓存策略（三级降级）、API接口规范（50个路由模块）、安全架构、开发规范与约定、目录结构参考
+   - 基于实际代码状态编写（非计划文档），包含完整的数据流图和架构图
+   - 附录含73个Store速查表和50个API路由速查表
+   - 综合了9份参考文档 + 实际代码库探索结果
+
+### 2026-05-15 会话 (第二阶段) — 生产汇总表模块全面重构
+
+**完成的工作：**
+
+1. **Phase 1 - 基础设施搭建**
+   - 创建 `src/stores/useSummaryDataStore.ts`（655行）— 核心 Zustand Store，7种数据类型 + fetchAll/invalidateAll/isCacheStale
+   - 创建 `src/components/summary/` 下 6 个新组件：KpiCard、KpiCardGrid、AlertCard、SummaryDateFilter、DetailDrawer、constants.ts
+   - 更新 `src/App.tsx`：8条新路由 + 3条旧路由重定向
+   - 更新 `src/components/layout/Sidebar.tsx`：8项 summarySubItems
+
+2. **Phase 2-3 - 8个页面全部实现**
+   - `SummaryOverview.tsx`（615行）：6 KPI卡片 + BarChart产量趋势 + PieChart成本构成 + Top5批次进度 + 温室快照 + 生产预警
+   - `YieldAnalysis.tsx`：4 KPI + groupBy切换(month/crop/greenhouse/quality) + BarChart双Y轴 + 横向BarChart排名 + 质量PieChart
+   - `CostAnalysis.tsx`（515行）：环形PieChart + 堆叠AreaChart趋势 + 成本明细表
+   - `LaborAnalysis.tsx`（524行）：LineChart双Y轴 + BarChart Top15 + groupBy切换(month/worker/greenhouse/task)
+   - `BatchSummary.tsx`（609行）：纯CSS甘特图 + 状态筛选 + DetailDrawer
+   - `ChainTraceability.tsx`：纯CSS Sankey流程图(6节点) + 阶段统计 + 全链条批列表 + DetailDrawer
+   - `ProblemSummary.tsx`：ComposedChart趋势 + PieChart优先级 + 高优先级预警
+   - `SummaryIndicators.tsx`：SVG仪表盘 + TrafficLight + RadarChart + 环形进度图
+
+3. **Phase 4 - 修复与清理**
+   - 修复 2 个 CRITICAL 架构违规（YieldAnalysis/ChainTraceability 直接调用 enhancedApiClient/useProductionChainStats）
+   - 修复 7 个 HIGH/MEDIUM 问题（KpiCardGrid columns类型、SummaryOverview假告警、totalCost fallback、ProblemSummary endDate、SummaryIndicators periodMode/COLORS.*Light、Sidebar Link重复声明）
+   - 修复 Dashboard `loadTasks is not a function` 运行时错误（→ `fetchTasks`）
+
+**架构铁律：** 组件 → Zustand Store → enhancedApiClient → Backend API。组件绝不直接读写 localStorage 或调用 fetch/axios。
+
+**涉及文件：** 20+ 文件新增/修改，约 5000+ 行代码
+**构建状态：** ✅ 通过
