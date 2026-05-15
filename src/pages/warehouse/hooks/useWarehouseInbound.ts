@@ -47,11 +47,9 @@ export function useWarehouseInbound() {
     deleteItems: storeDeleteItems,
   } = useInboundStore();
 
-  // 初始化加载数据
+  // 初始化加载数据（始终从 API 拉取最新数据，避免 persist 缓存过期）
   useEffect(() => {
-    if (inboundRecords.length === 0) {
-      loadItems();
-    }
+    loadItems();
   }, []);
 
   // 刷新数据
