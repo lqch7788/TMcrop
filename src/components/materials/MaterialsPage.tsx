@@ -5,7 +5,11 @@ import MaterialsHeader from './MaterialsHeader';
 import MaterialsFilters from './MaterialsFilters';
 import MaterialsTable from './MaterialsTable';
 import AddInboundModal from './AddInboundModal';
-import { warehouseMaterials as mockWarehouseMaterials, inboundRecords as mockInboundRecords, categoryConfig, bigCategories } from './mockData';
+// 旧版组件，已不再使用，保留占位数据避免编译错误
+const mockWarehouseMaterials: any[] = [];
+const mockInboundRecords: any[] = [];
+const categoryConfig: Record<string, any> = {};
+const bigCategories: any[] = [];
 import { NewInboundForm } from './types';
 
 // 默认的新增表单

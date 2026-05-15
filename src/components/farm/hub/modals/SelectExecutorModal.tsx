@@ -7,7 +7,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
-import { taskDispatchStaff } from '../../../../data/farmMockData';
+import { useWorkerStore } from '../../../../stores';
 import { AIRecommendationPanel } from '../../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch } from '../../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../../hooks/useComprehensiveDispatch';
@@ -32,6 +32,26 @@ export function SelectExecutorModal({
   onConfirm,
   onClose,
 }: SelectExecutorModalProps) {
+  // 从Store获取员工列表（替换原 taskDispatchStaff mock数据）
+  const workers = useWorkerStore((s) => s.workers);
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  const taskDispatchStaff = useMemo(() => workers.map(w => ({
+    id: w.id,
+    name: w.name,
+    status: w.status,
+    role: w.position || 'worker',
+    skills: [] as string[],
+    workZone: w.department || '',
+    workLoad: 0,
+  })), [workers]);
+
+  // 加载员工数据
+  useEffect(() => {
+    if (workers.length === 0) {
+      loadWorkers();
+    }
+  }, [workers.length, loadWorkers]);
+
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   // 分派模式：ai_assisted 或 manual
   const [dispatchMode, setDispatchMode] = useState<'ai_assisted' | 'manual'>('ai_assisted');

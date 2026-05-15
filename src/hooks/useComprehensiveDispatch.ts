@@ -10,7 +10,7 @@ import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { useEnvironmentData } from './useEnvironmentData';
-import { workers as mockWorkers } from '../data/mockData';
+import { useWorkerStore } from '../stores/useWorkerStore';
 import type { Task, TempTask } from './useTasks';
 import type { AttendanceEntry } from './usePersistentAttendance';
 import type { DispatchConfig, ConfidenceLevel, SuggestedAction, EnhancedRecommendation } from '../types/dispatch';
@@ -729,8 +729,9 @@ export function useComprehensiveDispatch() {
 
   // 3. 构建员工综合状态
   const workers = useMemo((): WorkerComprehensiveStatus[] => {
-    // 从mockWorkers获取基础信息
-    return mockWorkers.map(w => {
+    // 从 useWorkerStore 获取工人基础信息
+    const storeWorkers = useWorkerStore.getState().workers;
+    return storeWorkers.map(w => {
       // 计算今日已用工时（从考勤记录）
       const today = new Date().toISOString().split('T')[0];
       const todayRecords = attendanceRecords.filter(
@@ -761,13 +762,17 @@ export function useComprehensiveDispatch() {
       return {
         id: w.id,
         name: w.name,
-        workerType: w.workerType || '正式工',
-        workZone: w.workZone || 'A区',
+        // Worker类型无 workerType 字段，统一默认'正式工'
+        workerType: '正式工',
+        // Worker类型用 workArea 映射到 workZone
+        workZone: w.workArea || 'A区',
         skills: w.skillTags || [],
         currentLoad: Math.min(100, taskLoad),
         availableHoursToday: Math.max(0, 8 - usedHours), // 假设每天工作8小时
-        recentPerformance: w.recentPerformance || 85,
-        distance: w.distance || { 'A区': 1, 'B区': 2, 'C区': 3 },
+        // Worker类型无 recentPerformance 字段，使用默认值
+        recentPerformance: 85,
+        // Worker类型无 distance 字段，使用默认区域距离
+        distance: { 'A区': 1, 'B区': 2, 'C区': 3 },
         batchFamiliarity,
         attendanceStatus: usedHours > 0 ? 'working' : 'off',
       };

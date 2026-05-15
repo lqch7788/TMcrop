@@ -1,7 +1,30 @@
+import { useEffect, useMemo } from 'react';
 import { Package } from 'lucide-react';
-import { inventoryAlerts } from '../../../data/mockData';
+import { useWarehouseMaterialStore } from '../../../stores/useWarehouseMaterialStore';
 
 export function InventoryAlertCard() {
+  const items = useWarehouseMaterialStore((s) => s.items);
+  const loadItems = useWarehouseMaterialStore((s) => s.loadItems);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  // 统计库存不足的物料数量（当前库存 < 最低安全库存）
+  const inventoryAlerts = useMemo(() => {
+    const lowStockItems = items.filter(
+      (item) => item.quantity < item.minStock
+    );
+    return {
+      lowStockCount: lowStockItems.length,
+      materials: lowStockItems.map((item) => ({
+        name: item.name,
+        stock: item.quantity,
+        safeStock: item.minStock,
+      })),
+    };
+  }, [items]);
+
   return (
     <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">

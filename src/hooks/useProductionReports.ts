@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReportStatCard } from '../types/views';
-import { cropBatches, tasks } from '../data/mockData';
+import { useProductionPlanStore } from '../stores/useProductionPlanStore';
+import { useFarmTaskStore } from '../stores/farmTaskStore';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import {
   getProductionOverview,
@@ -105,8 +106,9 @@ export function useProductionReports() {
 
   // 回退到本地数据
   const fallbackToLocalData = useCallback(() => {
-    // 产量统计数据
-    const activeBatches = cropBatches.filter(b => b.status === 'in_progress' || b.status === 'completed');
+    // 产量统计数据（从 useProductionPlanStore 获取）
+    const plans = useProductionPlanStore.getState().plans;
+    const activeBatches = plans.filter(b => b.status === 'in_progress' || b.status === 'completed');
     const byCrop = activeBatches.reduce((acc, batch) => {
       if (!acc[batch.cropName]) {
         acc[batch.cropName] = { yield: 0, count: 0 };
@@ -184,8 +186,9 @@ export function useProductionReports() {
   // 作物产量占比
   const cropYieldData = useMemo((): CropYieldRow[] => {
     if (!yieldStats || yieldStats.length === 0) {
-      // 回退到 mockData
-      const activeBatches = cropBatches.filter(b => b.status === 'in_progress' || b.status === 'completed');
+      // 回退到 store 数据
+      const plans = useProductionPlanStore.getState().plans;
+      const activeBatches = plans.filter(b => b.status === 'in_progress' || b.status === 'completed');
       const byCrop = activeBatches.reduce((acc, batch) => {
         if (!acc[batch.cropName]) {
           acc[batch.cropName] = 0;
@@ -341,15 +344,17 @@ export function useProductionReports() {
       ];
     }
 
-    // 回退到 mockData
-    const totalBatches = cropBatches.length;
-    const totalYield = cropBatches.reduce((sum, b) => sum + b.actualYield, 0);
-    const avgCompletion = cropBatches.length > 0
-      ? (cropBatches.reduce((sum, b) => {
-          const batchTasks = tasks.filter(t => t.batchId === b.id);
-          const completed = batchTasks.filter(t => t.status === 'completed').length;
+    // 回退到 store 数据
+    const plans = useProductionPlanStore.getState().plans;
+    const allTasks = useFarmTaskStore.getState().tasks;
+    const totalBatches = plans.length;
+    const totalYield = plans.reduce((sum, b) => sum + b.actualYield, 0);
+    const avgCompletion = plans.length > 0
+      ? (plans.reduce((sum, b) => {
+          const batchTasks = allTasks.filter((t: any) => t.batchId === b.id);
+          const completed = batchTasks.filter((t: any) => t.status === 'completed').length;
           return sum + (batchTasks.length > 0 ? (completed / batchTasks.length) * 100 : 0);
-        }, 0) / cropBatches.length).toFixed(1)
+        }, 0) / plans.length).toFixed(1)
       : '0';
 
     return [

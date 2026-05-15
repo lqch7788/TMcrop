@@ -1,5 +1,5 @@
-// 物料管理筛选器组件
-import { categoryConfig } from './mockData';
+// 物料管理筛选器组件（旧版，已不再使用）
+const categoryConfig: Record<string, any> = {};
 
 interface MaterialsFiltersProps {
   code: string;

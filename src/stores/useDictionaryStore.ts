@@ -42,7 +42,7 @@ export const useDictionaryStore = create<DictionaryStore>()(
         set({ loading: true, error: null });
         try {
           const data = await getDictionaries();
-          console.log('[DictionaryStore] 加载字典数据:', data.length, '条');
+          // 字典数据加载成功
           set({ dictionaries: data, loading: false, lastFetch: now });
         } catch (error) {
           console.error('[DictionaryStore] 加载字典失败:', error);

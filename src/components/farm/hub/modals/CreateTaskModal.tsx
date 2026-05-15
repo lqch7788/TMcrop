@@ -9,9 +9,8 @@ import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from '
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
-import { cropBatches } from '../../../../data/mockData';
 import { taskDispatchFields } from '../../../../data/farmMockData';
-import { useUserStore } from '../../../../stores';
+import { useUserStore, useProductionPlanStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
@@ -137,12 +136,25 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
   const tasksHook = useTasks();
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
+  const storePlans = useProductionPlanStore((state) => state.plans);
+  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   useEffect(() => {
     if (users.length === 0) {
       loadUsers();
     }
-  }, [users.length, loadUsers]);
+    if (storePlans.length === 0) {
+      fetchPlans();
+    }
+  }, [users.length, loadUsers, storePlans.length, fetchPlans]);
+
+  // 从Store计算生产批次列表（保持与原 cropBatches 变量兼容）
+  const cropBatches = useMemo(() => storePlans.map(p => ({
+    id: p.id,
+    batchCode: p.batchCode,
+    cropName: (p as any).cropName || (p as any).cropTypeName || '',
+    batchStatus: (p as any).batchStatus || (p as any).status,
+  })), [storePlans]);
 
   // 新建任务状态
   const [createStep, setCreateStep] = useState(1);
@@ -155,11 +167,11 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
   const [showCropDropdown, setShowCropDropdown] = useState(false);
   const [showTaskTypeDropdown, setShowTaskTypeDropdown] = useState(false);
 
-  // 从 cropBatches 提取唯一作物列表
+  // 从生产计划提取唯一作物列表
   const uniqueCrops = useMemo(() => {
     const crops = cropBatches.map(b => b.cropName).filter(Boolean);
     return [...new Set(crops)] as string[];
-  }, []);
+  }, [cropBatches]);
 
   // 处理函数
   const handleNextStep = () => {

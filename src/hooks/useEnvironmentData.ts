@@ -15,7 +15,7 @@ import type {
   SensorAlertLevel,
 } from '../types/environment';
 import { DEFAULT_ALERT_RULES, WEATHER_IMPACT_RULES } from '../types/environment';
-import { cropBatches } from '../data/mockData';
+import { useProductionPlanStore } from '../stores/useProductionPlanStore';
 
 // ============================================
 // 模拟数据生成
@@ -323,7 +323,8 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
     setAlerts(generateAlerts(sensorData, DEFAULT_ALERT_RULES));
 
     // 生成环境告警触发的任务（土壤湿度低于40%时生成灌溉任务）
-    setAlertTriggeredTasks(generateAlertTriggeredTasks(sensorData, cropBatches));
+    const plans = useProductionPlanStore.getState().plans;
+    setAlertTriggeredTasks(generateAlertTriggeredTasks(sensorData, plans));
   }, []);
 
   // 模拟实时更新传感器数据（每30秒更新一次）
@@ -342,7 +343,8 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
       setSensors(newSensors);
       setAlerts(generateAlerts(newSensors, alertRules));
       // 更新环境告警触发的任务
-      setAlertTriggeredTasks(generateAlertTriggeredTasks(newSensors, cropBatches));
+      const plans = useProductionPlanStore.getState().plans;
+      setAlertTriggeredTasks(generateAlertTriggeredTasks(newSensors, plans));
     }, 30000);
 
     return () => clearInterval(interval);

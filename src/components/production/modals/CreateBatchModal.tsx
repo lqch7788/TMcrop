@@ -1,6 +1,6 @@
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
-import { CropBatch, Greenhouse, CropType, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
+import { CropBatch, Greenhouse, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState } from 'react';
 import { Upload, Leaf } from 'lucide-react';
@@ -32,8 +32,6 @@ interface CreateBatchModalProps {
   };
   errors: Record<string, string>;
   greenhouses: Greenhouse[];
-  cropTypes: CropType[];
-  plantingModes: { id: string; name: string; description: string }[];
   onFormChange: (field: string, value: any) => void;
   onGenerateCode: () => void;
 }
@@ -46,8 +44,6 @@ export function CreateBatchModal({
   formData,
   errors,
   greenhouses,
-  cropTypes,
-  plantingModes,
   onFormChange,
   onGenerateCode,
 }: CreateBatchModalProps) {

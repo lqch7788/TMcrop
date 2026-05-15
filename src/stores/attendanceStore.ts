@@ -329,7 +329,7 @@ export const useAttendanceStore = create<AttendanceState>()(
           isLoading: false,
         });
 
-        console.log('[AttendanceStore] 已初始化种子数据:', mockAttendance.length, '条考勤记录');
+        // 种子数据初始化完成
       },
     }),
     {

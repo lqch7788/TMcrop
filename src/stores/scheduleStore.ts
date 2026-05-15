@@ -439,7 +439,7 @@ export const useScheduleStore = create<ScheduleState>()(
           isLoading: false,
         });
 
-        console.log('[ScheduleStore] 已初始化种子数据:', mockSchedules.length, '条排班记录');
+        // 种子数据初始化完成
       },
     }),
     {

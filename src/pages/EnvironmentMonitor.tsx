@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search, Plus, Eye, AlertTriangle, Thermometer, Droplets, Sun, Wind,
   MapPin, Calendar, User, Camera, Filter, X, Gauge, CloudRain, Compass, ChevronLeft, ChevronRight, CloudSnow, CloudSun, Cloud, RefreshCw
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { iotSensors, greenhouses, cropBatches } from '../data/mockData';
+import { useIotStore, useProductionPlanStore } from '@/stores';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/button';
 
@@ -60,6 +60,18 @@ export default function EnvironmentMonitor() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedGreenhouse, setSelectedGreenhouse] = useState<string>('');
 
+  // Zustand Store: IoT设备数据 + 生产计划数据
+  const devices = useIotStore((s) => s.devices);
+  const fetchDevices = useIotStore((s) => s.fetchDevices);
+  const plans = useProductionPlanStore((s) => s.plans);
+  const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    fetchDevices();
+    fetchPlans();
+  }, [fetchDevices, fetchPlans]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'normal':
@@ -90,17 +102,17 @@ export default function EnvironmentMonitor() {
   };
 
   // Get unique greenhouse list for filter
-  const greenhouseList = Array.from(new Set(iotSensors.map(s => s.greenhouseId)))
+  const greenhouseList = Array.from(new Set(devices.map(s => s.greenhouseId)))
     .map(id => {
-      const sensor = iotSensors.find(s => s.greenhouseId === id);
+      const sensor = devices.find(s => s.greenhouseId === id);
       return { id, name: sensor?.greenhouseName || '' };
     })
     .filter(gh => gh.name);
 
   // Filter sensors by selected region
   const filteredSensors = selectedRegion
-    ? iotSensors.filter(s => s.greenhouseId === selectedRegion)
-    : iotSensors;
+    ? devices.filter(s => s.greenhouseId === selectedRegion)
+    : devices;
 
   // Group sensors by greenhouse
   const greenhouseEnvData = Array.from(new Set(filteredSensors.map(s => s.greenhouseId)))
@@ -142,7 +154,7 @@ export default function EnvironmentMonitor() {
 
   // Get crop info for a greenhouse
   const getCropInfo = (greenhouseId: string) => {
-    return cropBatches.find(b => b.greenhouseId === greenhouseId && b.status === 'in_progress');
+    return plans.find(b => b.greenhouseId === greenhouseId && b.status === 'in_progress');
   };
 
   // Handle detail button click

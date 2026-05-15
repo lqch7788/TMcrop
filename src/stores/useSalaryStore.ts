@@ -159,7 +159,7 @@ export const useSalaryStore = create<SalaryState>()(
       _initSeedData: () => {
         const seed = generateSeedData();
         set({ records: seed, isLoading: false });
-        console.log('[SalaryStore] 已初始化种子数据:', seed.length, '条工资记录');
+        // 种子数据初始化完成
       },
     }),
     {

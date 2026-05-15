@@ -3,7 +3,8 @@ import {
   Plus, FileText, Edit, Trash2, Download, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { cropTypes, plantingModes } from '../../data/mockData';
+import { getAllVarieties } from '../../services/cropVarietyService';
+import { getDictItems } from '../../stores/useDictionaryStore';
 import { useGreenhouseStore, useProductionPlanStore } from '../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
@@ -183,7 +184,10 @@ export default function ProductionPage() {
     if (!validateForm()) return;
 
     const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
-    const crop = cropTypes.find(c => c.name === formData.cropName);
+    // 从作物品种库获取作物类别
+    const cropVariety = getAllVarieties().find(v =>
+      v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
+    );
     const today = new Date().toISOString().slice(0, 10);
 
     // 构造符合后端期望的字段格式 (camelCase)
@@ -236,7 +240,7 @@ export default function ProductionPage() {
         id: apiData.id,
         batchCode: formData.batchCode,
         cropName: formData.cropName,
-        cropType: crop?.category || '',
+        cropType: cropVariety?.typeName || '',
         variety: formData.variety,
         greenhouseId: formData.greenhouseId,
         greenhouseName: greenhouse?.name || '',
@@ -272,7 +276,10 @@ export default function ProductionPage() {
     if (!validateForm()) return;
 
     const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
-    const crop = cropTypes.find(c => c.name === formData.cropName);
+    // 从作物品种库获取作物类别
+    const cropVariety2 = getAllVarieties().find(v =>
+      v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
+    );
     const today = new Date().toISOString().slice(0, 10);
 
     // 构造符合后端期望的字段格式 (camelCase)
@@ -357,7 +364,7 @@ export default function ProductionPage() {
         id: apiData.id,
         batchCode: formData.batchCode,
         cropName: formData.cropName,
-        cropType: crop?.category || '',
+        cropType: cropVariety2?.typeName || '',
         variety: formData.variety,
         greenhouseId: formData.greenhouseId,
         greenhouseName: greenhouse?.name || '',
@@ -1018,8 +1025,6 @@ export default function ProductionPage() {
         formData={formData}
         errors={errors}
         greenhouses={greenhouses}
-        cropTypes={cropTypes}
-        plantingModes={plantingModes}
         onFormChange={handleFormChange}
         onGenerateCode={generateBatchCode}
       />
@@ -1046,8 +1051,6 @@ export default function ProductionPage() {
         selectedRows={selectedRows}
         batches={batches}
         greenhouses={greenhouses}
-        cropTypes={cropTypes}
-        plantingModes={plantingModes}
         editedBatchCodes={editedBatchCodes}
         editedBatches={editedBatches}
         selectedBatchCode={selectedBatchCode}

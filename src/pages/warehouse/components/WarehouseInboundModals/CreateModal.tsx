@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Search } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
-import { currentUser } from '@/data/mockData';
+import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { useWarehouseMaterialStore } from '@/stores/useWarehouseMaterialStore';
 
@@ -26,6 +26,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   onGenerateCode,
   existingCodes,
 }) => {
+  // 获取当前用户信息（从 Zustand Store）
+  const currentUserName = useUserStore(state => state.users[0]?.name) || localStorage.getItem('username') || '系统管理员';
   // 获取当天日期字符串
   const today = new Date().toISOString().split('T')[0];
 
@@ -80,7 +82,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
     code: '',
     inboundDate: today,
     supplier: '',
-    operator: currentUser.name,
+    operator: currentUserName,
     status: 'completed' as 'completed' | 'pending',
   });
 
@@ -371,7 +373,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       code: '',
       inboundDate: today,
       supplier: '',
-      operator: currentUser.name,
+      operator: currentUserName,
       status: 'completed',
     });
     setMaterials([]);

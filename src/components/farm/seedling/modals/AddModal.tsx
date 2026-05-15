@@ -14,8 +14,7 @@ import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
-import { useDictionaryStore, getDictItems } from '../../../../stores';
-import { cropBatches, currentUser } from '../../../../data/mockData';
+import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
@@ -168,13 +167,31 @@ export function AddModal({
     setFormData({ ...formData, seedlingCode: code });
   };
 
+  // 从Store获取生产计划和当前用户
+  const storePlans = useProductionPlanStore((s) => s.plans);
+  const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
+  const storeUsers = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
+
+  useEffect(() => {
+    if (storePlans.length === 0) fetchPlans();
+    if (storeUsers.length === 0) loadUsers();
+  }, [storePlans.length, fetchPlans, storeUsers.length, loadUsers]);
+
+  // 当前用户（从Store获取，后备从localStorage读取）
+  const currentUser = useMemo(() => ({
+    id: storeUsers[0]?.oid || localStorage.getItem('userOid') || 'U013',
+    name: storeUsers[0]?.name || localStorage.getItem('username') || '未知用户',
+    department: storeUsers[0]?.orgOid || '生产部',
+  }), [storeUsers]);
+
   // 筛选可用的生产计划批次（已发布和执行中，且只显示育苗计划类型）
   const availableProductionPlans = useMemo(() => {
-    return cropBatches.filter(batch =>
-      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress') &&
+    return storePlans.filter((batch: any) =>
+      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress' || batch.status === 'published' || batch.status === 'in_progress') &&
       batch.planType === PlanType.SEEDLING
     );
-  }, []);
+  }, [storePlans]);
 
   // 来源类型映射（枚举值 -> 中文）
   const sourceTypeLabels: Record<string, string> = {

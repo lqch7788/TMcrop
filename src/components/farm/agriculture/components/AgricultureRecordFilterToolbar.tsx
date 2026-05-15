@@ -2,11 +2,11 @@
  * 农事操作记录筛选工具栏组件
  */
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { SOURCE_CONFIG, type FarmOperationRecord } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { greenhouseOptions, operatorOptions } from '../../../../data/farmMockData';
+import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
 import { Button } from '@/components/ui/button';
 
 // 来源类型选项
@@ -55,6 +55,27 @@ export function AgricultureRecordFilterToolbar({
   onAdd,
   canCreate = true,
 }: AgricultureRecordFilterToolbarProps) {
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
+  const workers = useWorkerStore((s) => s.workers);
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+
+  useEffect(() => {
+    if (greenhouses.length === 0) loadGreenhouses();
+    if (workers.length === 0) loadWorkers();
+  }, [greenhouses.length, loadGreenhouses, workers.length, loadWorkers]);
+
+  // 温室选项
+  const greenhouseOptions = useMemo(() =>
+    greenhouses.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.name })),
+    [greenhouses]
+  );
+
+  // 操作人员选项
+  const operatorOptions = useMemo(() =>
+    workers.filter(w => w.status === 'active').map(w => ({ value: w.id, label: w.name })),
+    [workers]
+  );
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">

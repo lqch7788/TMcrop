@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { taskDispatchStaff } from '../../data/farmMockData';
+import { useWorkerStore } from '../../stores/useWorkerStore';
 import { Worker } from '../../types';
 import {
   WorkerSkillMatch,
@@ -49,15 +49,20 @@ export function useWorkerMatch() {
   const loadWorkers = useCallback(() => {
     setIsLoading(true);
     try {
-      // 从 farmMockData 导入员工数据
-      const workerData: WorkerData[] = taskDispatchStaff.map(staff => ({
-        id: staff.id,
-        name: staff.name,
-        role: staff.role,
-        status: staff.status,
-        skills: staff.skills || [],
-        workZone: staff.workZone,
-        workLoad: staff.workLoad || 0,
+      // 从 useWorkerStore 获取员工数据，映射到 WorkerData 格式
+      const storeWorkers = useWorkerStore.getState().workers;
+      const workerData: WorkerData[] = storeWorkers.map(w => ({
+        id: w.id,
+        name: w.name,
+        // Worker.position 映射到 role
+        role: w.position,
+        // Worker.status 映射：'在职'→'available', '离职'/'退休'→'off'
+        status: w.status === '在职' ? 'available' : 'off',
+        skills: w.skillTags || [],
+        // Worker.workArea 映射到 workZone
+        workZone: w.workArea,
+        // Worker类型无 workLoad 字段，默认0
+        workLoad: 0,
       }));
       setWorkers(workerData);
     } finally {

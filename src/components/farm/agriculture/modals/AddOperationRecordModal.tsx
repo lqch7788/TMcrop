@@ -3,12 +3,30 @@
  * 支持手动录入操作记录
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Modal } from '../../../ui/Modal';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { greenhouseOptions, operatorOptions, materialOptions, workloadUnitOptions } from '../../../../data/farmMockData';
+import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
+
+// 物料选项（静态配置，非动态数据）
+const materialOptions = [
+  '番茄苗', '黄瓜苗', '草莓苗', '生根剂',
+  '水溶肥', '有机肥', '复合肥', '多菌灵',
+  '吡虫啉', '周转箱', '滴灌带', '钾肥',
+  '氮肥', '磷肥', '微生物菌剂', '其他'
+];
+
+// 工作量单位选项（静态配置）
+const workloadUnitOptions = [
+  { value: '株', label: '株' },
+  { value: '㎡', label: '平方米' },
+  { value: 'kg', label: '公斤' },
+  { value: '米', label: '米' },
+  { value: '袋', label: '袋' },
+  { value: '亩', label: '亩' },
+];
 
 interface AddOperationRecordModalProps {
   isOpen: boolean;
@@ -17,6 +35,27 @@ interface AddOperationRecordModalProps {
 
 export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordModalProps) {
   const { addRecord } = useOperationRecords();
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
+  const workers = useWorkerStore((s) => s.workers);
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+
+  useEffect(() => {
+    if (greenhouses.length === 0) loadGreenhouses();
+    if (workers.length === 0) loadWorkers();
+  }, [greenhouses.length, loadGreenhouses, workers.length, loadWorkers]);
+
+  // 温室选项（从Store获取）
+  const greenhouseOptions = useMemo(() =>
+    greenhouses.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.name })),
+    [greenhouses]
+  );
+
+  // 操作人员选项（从Store获取）
+  const operatorOptions = useMemo(() =>
+    workers.filter(w => w.status === 'active').map(w => ({ value: w.id, label: w.name })),
+    [workers]
+  );
 
   // 表单状态
   const [formData, setFormData] = useState({

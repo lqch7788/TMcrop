@@ -1,21 +1,15 @@
 import { X, Upload } from 'lucide-react';
-import { CropBatch, Greenhouse, CropType } from '../../../types';
+import { CropBatch, Greenhouse } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS } from '../constants';
 import { Button } from '@/components/ui/button';
-
-interface PlantingMode {
-  id: string;
-  name: string;
-  description: string;
-}
+import { getAllVarieties } from '../../../services/cropVarietyService';
+import { getDictItems } from '../../../stores/useDictionaryStore';
 
 interface BatchEditModalProps {
   isOpen: boolean;
   selectedRows: number[];
   batches: CropBatch[];
   greenhouses: Greenhouse[];
-  cropTypes: CropType[];
-  plantingModes: PlantingMode[];
   editedBatchCodes: string[];
   editedBatches: Record<string, Partial<CropBatch>>;
   selectedBatchCode: string;
@@ -33,8 +27,6 @@ export function BatchEditModal({
   selectedRows,
   batches,
   greenhouses,
-  cropTypes,
-  plantingModes,
   editedBatchCodes,
   editedBatches,
   selectedBatchCode,
@@ -47,6 +39,19 @@ export function BatchEditModal({
   onConfirmNext,
 }: BatchEditModalProps) {
   if (!isOpen) return null;
+
+  // 从作物品种库获取作物类型列表（去重）
+  const allVarieties = getAllVarieties();
+  const cropTypeOptions = Array.from(
+    new Map(allVarieties.map(v => [v.varietyName, v])).values()
+  ).map(v => ({ name: v.varietyName, typeName: v.typeName, varieties: [v.subVariety1Name || v.varietyName].filter(Boolean) }));
+
+  // 从字典获取种植模式选项
+  const plantingModeOptions = getDictItems('planting_mode').map(d => ({
+    id: d.dictCode,
+    name: d.dictLabel,
+    description: d.dictLabel,
+  }));
 
   const selectedBatches = selectedRows.map(id => batches.find(b => b.id === id)).filter(Boolean) as CropBatch[];
   const currentBatch = selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) : null;
@@ -64,7 +69,7 @@ export function BatchEditModal({
   };
 
   const handleCropChange = (cropName: string) => {
-    const crop = cropTypes.find(c => c.name === cropName);
+    const crop = cropTypeOptions.find(c => c.name === cropName);
     handleFieldChange('cropName', cropName);
     if (crop) {
       handleFieldChange('variety', crop.varieties[0]);
@@ -147,7 +152,7 @@ export function BatchEditModal({
                     onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
                     className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                   >
-                    {plantingModes.map(m => (
+                    {plantingModeOptions.map(m => (
                       <option key={m.id} value={m.name}>{m.name}</option>
                     ))}
                   </select>
@@ -161,7 +166,7 @@ export function BatchEditModal({
                     onChange={(e) => handleCropChange(e.target.value)}
                     className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                   >
-                    {cropTypes.map(c => (
+                    {cropTypeOptions.map(c => (
                       <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
@@ -175,7 +180,7 @@ export function BatchEditModal({
                     onChange={(e) => handleFieldChange('variety', e.target.value)}
                     className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
                   >
-                    {(cropTypes.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
+                    {(cropTypeOptions.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
                       <option key={v} value={v}>{v}</option>
                     ))}
                   </select>

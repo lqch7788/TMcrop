@@ -1,12 +1,16 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DeleteConfirmProps {
   onConfirm: () => void;
-  onCancel: () => void;
+  /** ApplicationTab 传入 onClose，兼容旧版 onCancel */
+  onCancel?: () => void;
+  onClose?: () => void;
 }
 
-export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCancel }) => {
+export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCancel, onClose }) => {
+  const handleCancel = onCancel || onClose || (() => {});
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
@@ -27,18 +31,12 @@ export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCance
           </div>
           <p className="text-sm text-gray-600 mb-6">确定要删除这条领料记录吗？</p>
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 bg-gray-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={handleCancel}>
               取消
-            </button>
-            <button
-              onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-            >
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
               确认删除
-            </button>
+            </Button>
           </div>
         </div>
       </div>

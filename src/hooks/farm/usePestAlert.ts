@@ -5,8 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
-import { farmInspectionRecords } from '../../data/farmMockData';
-import { cropBatches } from '../../data/mockData';
+import { useInspectionDataStore, useProductionPlanStore } from '@/stores';
 import {
   PestAlert,
   PestAlertRule,
@@ -79,7 +78,7 @@ export function usePestAlert(daysBack: number = 7) {
   const greenhouseCropMap = useMemo(() => {
     const map = new Map<string, GreenhouseCrop>();
 
-    cropBatches.forEach(batch => {
+    useProductionPlanStore.getState().plans.forEach((batch) => {
       if (!map.has(batch.greenhouseId)) {
         map.set(batch.greenhouseId, {
           greenhouseId: batch.greenhouseId,
@@ -98,8 +97,8 @@ export function usePestAlert(daysBack: number = 7) {
   const loadInspections = useCallback(() => {
     setIsLoading(true);
     try {
-      // 使用 farmMockData 中的巡田记录
-      const inspectionData: InspectionRecordData[] = farmInspectionRecords.map(record => ({
+      // 从 InspectionDataStore 获取巡田记录
+      const inspectionData: InspectionRecordData[] = useInspectionDataStore.getState().records.map((record) => ({
         id: record.id,
         recordCode: record.recordCode,
         inspectorId: record.inspectorId,

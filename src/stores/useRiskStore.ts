@@ -142,7 +142,6 @@ export const useRiskStore = create<RiskState>()(
         const { alerts } = get();
         if (alerts.length === 0) {
           set({ alerts: MOCK_ALERTS });
-          console.log('[RiskStore] 已初始化种子数据:', MOCK_ALERTS.length, '条预警记录');
         }
       },
 

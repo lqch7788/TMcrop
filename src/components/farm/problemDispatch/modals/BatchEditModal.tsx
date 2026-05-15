@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
-import { cropTypes } from '../../../../data/mockData';
-import { useGreenhouseStore } from '../../../../stores';
+import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -33,12 +32,22 @@ export function BatchEditModal({
 }: BatchEditModalProps) {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
 
   useEffect(() => {
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [greenhouses.length, loadGreenhouses]);
+    if (dictionaries.length === 0) {
+      loadDictionaries();
+    }
+  }, [greenhouses.length, loadGreenhouses, dictionaries.length, loadDictionaries]);
+
+  // 作物类型选项（从字典获取）
+  const cropTypeOptions = useMemo(() => {
+    return getDictItems('crop_category').map(d => ({ value: d.dictLabel, label: d.dictLabel }));
+  }, [dictionaries]);
 
   const selectedProblems = selectedRows.map(id => problems.find(p => p.id === id)).filter(Boolean) as ProblemEntry[];
   const currentProblem = selectedProblemId ? problems.find(p => p.id === selectedProblemId) : null;
@@ -123,7 +132,7 @@ export function BatchEditModal({
               <Select
                 value={editedData.cropName ?? currentProblem.cropName}
                 onChange={(e) => handleFieldChange('cropName', e.target.value)}
-                options={cropTypes.map(c => ({ value: c.name, label: c.name }))}
+                options={cropTypeOptions}
               />
             </FormField>
 

@@ -87,18 +87,18 @@ export function ApplicationTable({
         {exportMode ? (
           /* 导出模式 */
           <div className="flex gap-2">
-            <Button onClick={onExportClick}>
+            <Button size="sm" onClick={onExportClick}>
               <Download className="w-4 h-4" />
               确认导出
             </Button>
-            <Button variant="secondary" onClick={onCancelExport}>
+            <Button variant="secondary" size="sm" onClick={onCancelExport}>
               取消
             </Button>
           </div>
         ) : batchEditMode ? (
           /* 批量编辑模式 */
           <div className="flex gap-2">
-            <Button onClick={() => {
+            <Button variant="blue" size="sm" onClick={() => {
               if (selectedRows.length === 0) {
                 alert('请先选择要编辑的记录');
                 onBatchEditModeChange(false);
@@ -108,31 +108,31 @@ export function ApplicationTable({
             }}>
               确认编辑
             </Button>
-            <Button variant="destructive" onClick={onShowBatchDeleteConfirm}>
+            <Button variant="destructive" size="sm" onClick={onShowBatchDeleteConfirm}>
               确认删除
             </Button>
-            <Button variant="secondary" onClick={onBatchCancel}>
+            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
               取消
             </Button>
           </div>
         ) : (
           /* 默认模式 */
           <div className="flex gap-2">
-            <Button onClick={onAddModalOpen}>
+            <Button size="sm" onClick={onAddModalOpen}>
               <Plus className="w-4 h-4" />
               新增
             </Button>
             <>
-              <Button onClick={() => { onBatchEditModeChange(true); onShowEditWarning(); }}>
+              <Button variant="blue" size="sm" onClick={() => { onBatchEditModeChange(true); onShowEditWarning(); }}>
                 <Edit className="w-4 h-4" />
                 编辑
               </Button>
-              <Button variant="destructive" onClick={() => { onBatchEditModeChange(true); onShowDeleteWarning(); }}>
+              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange(true); onShowDeleteWarning(); }}>
                 <Trash2 className="w-4 h-4" />
                 删除
               </Button>
             </>
-            <Button onClick={() => onExportModeChange(true)}>
+            <Button size="sm" onClick={() => onExportModeChange(true)}>
               <Download className="w-4 h-4" />
               导出
             </Button>

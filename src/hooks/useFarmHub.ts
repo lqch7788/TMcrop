@@ -32,9 +32,7 @@ const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
   problemStatus: 'all',
 };
 
-// 导入初始任务数据（用于空状态时显示）
-import { taskDispatchTasks } from '../data/farmMockData';
-import { tempTasks as mockTempTasks, inspectionFeedbackTasks as mockInspectionFeedbackTasks, inspectionRecords as mockInspectionRecords } from '../data/mockData';
+// 巡查记录数据来源已迁移到 useInspectionDataStore（Zustand Store）
 
 // ============================================
 // 类型定义
@@ -197,10 +195,16 @@ function normalizeInspectionRecord(record: InspectionRecord): InspectionRecord {
 }
 
 /**
- * 巡检记录默认初始化数据（带类型守卫）
+ * 巡检记录默认初始化数据（从 useInspectionDataStore 获取持久化数据）
  */
 function getInitialInspections(): InspectionRecord[] {
-  return mockInspectionRecords.map(normalizeInspectionRecord);
+  try {
+    const storeRecords = useInspectionDataStore.getState().records;
+    if (storeRecords && storeRecords.length > 0) {
+      return storeRecords.map(normalizeInspectionRecord);
+    }
+  } catch { /* store 未初始化或数据为空，返回空数组 */ }
+  return [];
 }
 
 // ============================================

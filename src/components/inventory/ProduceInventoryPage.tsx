@@ -5,7 +5,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { produceInventory } from '../../data/mockData';
 import { useWarehouseStore } from '../../stores';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Select, Modal } from '../ui/Modal';
@@ -575,16 +574,10 @@ export default function ProduceInventoryPage() {
           status: stock.status === 'IN_STOCK' ? 'in_stock' : stock.status === 'LOW_STOCK' ? 'low_stock' : 'in_stock',
         }));
 
-        if (mappedData.length > 0) {
-          setInventoryData(mappedData);
-        } else {
-          // API 返回空数据，使用 mock 数据
-          setInventoryData(produceInventory);
-        }
+        setInventoryData(mappedData);
       } catch (error) {
-        console.error('加载库存数据失败，使用 mock 数据:', error);
-        // API 调用失败，回退到 mock 数据
-        setInventoryData(produceInventory);
+        console.error('加载库存数据失败:', error);
+        setInventoryData([]);
       } finally {
         setIsLoading(false);
       }
@@ -1259,7 +1252,7 @@ export default function ProduceInventoryPage() {
         onAdd={(newData) => {
           const newRecord: ProduceInventory = {
             ...newData,
-            id: `PI${String(produceInventory.length + 1).padStart(3, '0')}`,
+            id: `PI${String(inventoryData.length + 1).padStart(3, '0')}`,
           };
           // 实际应用中这里会调用API，现在只做模拟
           console.log('新增库存记录:', newRecord);

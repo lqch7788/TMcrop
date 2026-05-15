@@ -27,7 +27,6 @@ import {
   GreenhouseDetailModal,
   BaseDetailModal,
 } from './Dashboard/components';
-import { cropBatches } from '../data/mockData';
 import { Button } from '../components/ui/button';
 
 export default function Dashboard() {
@@ -44,6 +43,7 @@ export default function Dashboard() {
     greenhouseEnvData,
     totalGreenhousePages,
     paginatedGreenhouseData,
+    mappedBatches,
     greenhouseList,
     filteredYieldStats,
     filteredCostAnalysis,
@@ -183,7 +183,7 @@ export default function Dashboard() {
           <TodayTasksTable tasks={todayTasks} />
 
           {/* 活跃种植批次 */}
-          <ActiveBatchesTable batches={cropBatches} />
+          <ActiveBatchesTable batches={mappedBatches} />
         </div>
 
         {/* Right Column - 右侧列 */}

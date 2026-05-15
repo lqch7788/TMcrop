@@ -1,108 +1,66 @@
 /**
  * IoT设备监控路由
- *
- * Phase 5: IoT监控模块
- *
- * 提供IoT设备数据的CRUD API
+ * 从 iot_sensors 表读取数据，种子数据来自前端 mockData
  */
 
 import { Router, Request, Response } from 'express';
+import { getDatabase } from '../db';
+import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
-// 模拟IoT设备数据
-interface DeviceData {
-  id: string;
-  device_code: string;
-  device_name: string;
-  device_type: string;
-  greenhouse_id?: string;
-  greenhouse_name?: string;
-  status: 'online' | 'offline' | 'warning' | 'error';
-  temperature?: number;
-  humidity?: number;
-  light_intensity?: number;
-  co2_concentration?: number;
-  soil_moisture?: number;
-  last_report_time?: string;
-  create_time: string;
-  update_time: string;
-}
-
-// 模拟数据存储
-const mockDevices: DeviceData[] = [
-  {
-    id: 'DEV001',
-    device_code: 'TH-001',
-    device_name: '温度传感器-A区1号温室',
-    device_type: 'temperature',
-    greenhouse_id: 'GH001',
-    greenhouse_name: 'A区1号温室',
-    status: 'online',
-    temperature: 25.5,
-    humidity: 65,
-    last_report_time: new Date().toISOString(),
-    create_time: new Date().toISOString(),
-    update_time: new Date().toISOString(),
-  },
-  {
-    id: 'DEV002',
-    device_code: 'TH-002',
-    device_name: '温度传感器-A区2号温室',
-    device_type: 'temperature',
-    greenhouse_id: 'GH002',
-    greenhouse_name: 'A区2号温室',
-    status: 'online',
-    temperature: 24.8,
-    humidity: 68,
-    last_report_time: new Date().toISOString(),
-    create_time: new Date().toISOString(),
-    update_time: new Date().toISOString(),
-  },
-  {
-    id: 'DEV003',
-    device_code: ' irrigation-001',
-    device_name: '智能灌溉控制器-1号地块',
-    device_type: 'irrigation',
-    status: 'online',
-    soil_moisture: 45,
-    last_report_time: new Date().toISOString(),
-    create_time: new Date().toISOString(),
-    update_time: new Date().toISOString(),
-  },
-];
-
 /**
- * 获取设备列表
+ * 获取传感器列表
  * GET /api/iot/devices
  */
 router.get('/devices', (req: Request, res: Response) => {
   try {
     const { greenhouse_id, device_type, status, page = '1', limit = '100' } = req.query;
-    let filtered = [...mockDevices];
+    const db = getDatabase();
+
+    let sql = 'SELECT * FROM iot_sensors WHERE 1=1';
+    const params: any[] = [];
 
     if (greenhouse_id) {
-      filtered = filtered.filter(d => d.greenhouse_id === greenhouse_id);
+      sql += ' AND greenhouse_id = ?';
+      params.push(greenhouse_id);
     }
     if (device_type) {
-      filtered = filtered.filter(d => d.device_type === device_type);
+      sql += ' AND type = ?';
+      params.push(device_type);
     }
     if (status) {
-      filtered = filtered.filter(d => d.status === status);
+      sql += ' AND status = ?';
+      params.push(status);
     }
 
+    sql += ' ORDER BY greenhouse_id, type';
+
     const offset = (Number(page) - 1) * Number(limit);
-    const paginated = filtered.slice(offset, offset + Number(limit));
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(Number(limit), offset);
+
+    // 查询总数
+    let countSql = 'SELECT COUNT(*) as total FROM iot_sensors WHERE 1=1';
+    const countParams: any[] = [];
+    if (greenhouse_id) { countSql += ' AND greenhouse_id = ?'; countParams.push(greenhouse_id); }
+    if (device_type) { countSql += ' AND type = ?'; countParams.push(device_type); }
+    if (status) { countSql += ' AND status = ?'; countParams.push(status); }
+
+    const countStmt = db.prepare(countSql);
+    countStmt.bind(countParams);
+    let total = 0;
+    if (countStmt.step()) {
+      total = countStmt.getAsObject().total as number;
+    }
+    countStmt.free();
+
+    const items = queryToObjects(db, sql, params);
 
     res.json({
       success: true,
-      data: paginated,
-      meta: {
-        total: filtered.length,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(filtered.length / Number(limit)),
-      },
+      data: items,
+      meta: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
     });
   } catch (error) {
     console.error('获取设备列表失败:', error);
@@ -111,91 +69,110 @@ router.get('/devices', (req: Request, res: Response) => {
 });
 
 /**
- * 获取单个设备
+ * 获取单个传感器
  * GET /api/iot/devices/:id
  */
 router.get('/devices/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const device = mockDevices.find(d => d.id === id);
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM iot_sensors WHERE id = ?');
+    stmt.bind([id]);
+    let device: any = null;
+    if (stmt.step()) {
+      device = stmt.getAsObject();
+    }
+    stmt.free();
 
     if (!device) {
-      res.status(404).json({ success: false, error: '设备不存在' });
-      return;
+      return res.status(404).json({ success: false, error: '传感器不存在' });
     }
 
     res.json({ success: true, data: device });
   } catch (error) {
-    console.error('获取设备详情失败:', error);
-    res.status(500).json({ success: false, error: '获取设备详情失败' });
+    console.error('获取传感器详情失败:', error);
+    res.status(500).json({ success: false, error: '获取传感器详情失败' });
   }
 });
 
 /**
- * 获取设备最新数据
+ * 获取传感器最新数据
  * GET /api/iot/devices/:id/latest
  */
 router.get('/devices/:id/latest', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const device = mockDevices.find(d => d.id === id);
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM iot_sensors WHERE id = ?');
+    stmt.bind([id]);
+    let device: any = null;
+    if (stmt.step()) {
+      device = stmt.getAsObject();
+    }
+    stmt.free();
 
     if (!device) {
-      res.status(404).json({ success: false, error: '设备不存在' });
-      return;
+      return res.status(404).json({ success: false, error: '传感器不存在' });
     }
 
     res.json({
       success: true,
       data: {
         device_id: device.id,
-        device_code: device.device_code,
+        device_code: device.sensor_id,
         status: device.status,
-        temperature: device.temperature,
-        humidity: device.humidity,
-        light_intensity: device.light_intensity,
-        co2_concentration: device.co2_concentration,
-        soil_moisture: device.soil_moisture,
-        last_report_time: device.last_report_time,
+        type: device.type,
+        type_name: device.type_name,
+        value: device.value,
+        unit: device.unit,
+        last_report_time: device.last_update,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
-    console.error('获取设备最新数据失败:', error);
-    res.status(500).json({ success: false, error: '获取设备最新数据失败' });
+    console.error('获取传感器最新数据失败:', error);
+    res.status(500).json({ success: false, error: '获取传感器最新数据失败' });
   }
 });
 
 /**
- * 获取环境数据趋势
+ * 获取环境数据趋势（基于传感器聚合）
  * GET /api/iot/environment
  */
 router.get('/environment', (req: Request, res: Response) => {
   try {
-    const { greenhouse_id, start_date, end_date, data_type = 'temperature', interval = 'hour' } = req.query;
+    const { greenhouse_id, data_type = 'temperature' } = req.query;
+    const db = getDatabase();
 
-    // 模拟环境数据
-    const now = new Date();
-    const dataPoints = [];
-    for (let i = 24; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      dataPoints.push({
-        timestamp: time.toISOString(),
-        value: 20 + Math.random() * 10,
-        unit: data_type === 'temperature' ? '°C' : data_type === 'humidity' ? '%' : 'lux',
-      });
+    let sql = 'SELECT * FROM iot_sensors WHERE 1=1';
+    const params: any[] = [];
+
+    if (greenhouse_id) {
+      sql += ' AND greenhouse_id = ?';
+      params.push(greenhouse_id);
     }
+
+    // 按类型筛选
+    if (data_type === 'temperature') {
+      sql += ' AND type IN (?, ?)';
+      params.push('air_temp', 'soil_temp');
+    } else if (data_type === 'humidity') {
+      sql += ' AND type IN (?, ?)';
+      params.push('air_humidity', 'soil_moisture');
+    } else if (data_type === 'light') {
+      sql += ' AND type = ?';
+      params.push('light');
+    } else if (data_type === 'co2') {
+      sql += ' AND type = ?';
+      params.push('co2');
+    }
+
+    const items = queryToObjects(db, sql, params);
 
     res.json({
       success: true,
-      data: dataPoints,
-      meta: {
-        greenhouse_id,
-        data_type,
-        interval,
-        start_date,
-        end_date,
-      },
+      data: items,
+      meta: { greenhouse_id, data_type },
     });
   } catch (error) {
     console.error('获取环境数据失败:', error);

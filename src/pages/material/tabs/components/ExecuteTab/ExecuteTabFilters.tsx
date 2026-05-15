@@ -119,7 +119,7 @@ export function ExecuteTabFilters({
         </div>
 
         {/* 重置按钮 */}
-        <Button variant="secondary" onClick={onReset}>
+        <Button variant="secondary" size="sm" onClick={onReset}>
           重置
         </Button>
       </div>

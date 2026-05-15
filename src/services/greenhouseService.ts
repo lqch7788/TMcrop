@@ -4,7 +4,6 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { greenhouses as defaultGreenhouses } from '../data/mockData';
 
 // 温室大棚数据结构
 export interface Greenhouse {
@@ -31,10 +30,10 @@ function getStoredGreenhouses(): Greenhouse[] {
       return JSON.parse(stored);
     } catch (error) {
       console.error('温室数据解析失败:', error);
-      return defaultGreenhouses;
+      return [];
     }
   }
-  return defaultGreenhouses;
+  return [];
 }
 
 /**
@@ -49,10 +48,7 @@ function saveGreenhousesToStorage(greenhouses: Greenhouse[]): void {
  */
 export function initGreenhouses(): Greenhouse[] {
   const data = getStoredGreenhouses();
-  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
-    saveGreenhousesToStorage(defaultGreenhouses);
-  }
-  return data.length > 0 ? data : defaultGreenhouses;
+  return data;
 }
 
 /**
@@ -106,12 +102,12 @@ export async function saveGreenhouses(greenhouses: Greenhouse[]): Promise<void> 
  * 获取默认温室数据
  */
 export function getDefaultGreenhouses(): Greenhouse[] {
-  return defaultGreenhouses;
+  return [];
 }
 
 /**
  * 重置温室数据
  */
 export function resetGreenhouses(): void {
-  saveGreenhousesToStorage(defaultGreenhouses);
+  saveGreenhousesToStorage([]);
 }

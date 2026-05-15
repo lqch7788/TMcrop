@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw
 } from 'lucide-react';
-import { messages } from '../../data/mockData';
+import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
 
 const styles = `
   @keyframes bellRing {
@@ -25,7 +25,28 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isBellRinging, setIsBellRinging] = useState(false);
 
-  const unreadCount = messages.filter(m => !m.isRead).length;
+  // 从 Zustand Store 获取公告数据
+  const announcements = useAnnouncementStore((s) => s.announcements);
+  const fetchAnnouncements = useAnnouncementStore((s) => s.fetchAnnouncements);
+
+  // 组件挂载时获取公告
+  useEffect(() => {
+    if (announcements.length === 0) {
+      fetchAnnouncements();
+    }
+  }, []);
+
+  // 将API公告转为消息提醒格式（最新5条）
+  const recentNotices = announcements.slice(0, 5).map(a => ({
+    id: a.id,
+    title: a.title,
+    content: a.content || '',
+    sendTime: a.create_time || a.date || '',
+    type: a.type || 'notice',
+    isRead: a.status === '已发布',
+  }));
+
+  const unreadCount = announcements.filter(a => a.status !== '已发布').length;
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -95,7 +116,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <h3 className="font-semibold text-gray-900">消息通知</h3>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {messages.slice(0, 5).map((msg) => (
+                  {recentNotices.map((msg) => (
                     <Link
                       key={msg.id}
                       to="/messages"

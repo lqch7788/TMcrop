@@ -7,7 +7,6 @@
 import { apiClient } from './apiClient';
 import { dataRouter } from './dataRouter';
 import { unifiedCache } from './unifiedCache';
-import { materialReceivingDetails } from '../data/materialReceivingData';
 import type { MaterialItem } from '../types/materialReceiving';
 
 // 缓存键名
@@ -75,9 +74,9 @@ export async function getMaterialRequests(params?: {
       if (cached) {
         return { data: cached, total: cached.length };
       }
-      // 降级到 mock 数据（作为备用）
-      console.log('[物料申请] 使用Mock数据作为降级');
-      return { data: materialReceivingDetails as unknown as MaterialRequestRecord[], total: materialReceivingDetails.length };
+      // 无缓存数据时返回空
+      console.log('[物料申请] 缓存为空，返回空列表');
+      return { data: [], total: 0 };
     }
   });
 
@@ -97,12 +96,8 @@ export async function getMaterialRequestById(id: string): Promise<MaterialReques
     if (cached) {
       return cached.find(item => item.id === id || item.requestCode === id) || null;
     }
-    // 降级到 mock 数据
-    return materialReceivingDetails.find(item =>
-      item.code === id ||
-      item.id.toString() === id ||
-      (item as any).requestCode === id
-    ) as unknown as MaterialRequestRecord || null;
+    // 缓存中也无数据
+    return null;
   }
 }
 

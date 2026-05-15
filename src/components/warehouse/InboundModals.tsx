@@ -1,7 +1,7 @@
 import { X, Package, Plus, Trash2, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { InboundRecord, InboundMaterial } from './MaterialInboundTab';
-import { currentUser } from '../../data/mockData';
+import { useUserStore } from '../../stores/useUserStore';
 import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun } from 'docx';
 import { Button } from '../ui/button';
@@ -1273,13 +1273,15 @@ interface InboundAddModalProps {
 }
 
 export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, existingCodes }: InboundAddModalProps) {
+  // 获取当前用户信息（从 Zustand Store）
+  const currentUserName = useUserStore(state => state.users[0]?.name) || localStorage.getItem('username') || '系统管理员';
   // 获取当天日期字符串
   const today = new Date().toISOString().split('T')[0];
   const [formData, setFormData] = useState({
     code: '',
     inboundDate: today,
     supplier: '',
-    operator: currentUser.name, // 默认当前登录用户
+    operator: currentUserName, // 默认当前登录用户
   });
   const [materials, setMaterials] = useState<InboundMaterial[]>([]);
   const [codeError, setCodeError] = useState('');
@@ -1484,7 +1486,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
       code: '',
       inboundDate: today,
       supplier: '',
-      operator: currentUser.name,
+      operator: currentUserName,
     });
     setMaterials([]);
     onClose();

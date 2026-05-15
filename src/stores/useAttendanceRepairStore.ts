@@ -155,7 +155,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
           if (localItems.length === 0) {
             const seedData = generateMockRepairData();
             set({ items: seedData, isLoading: false });
-            console.log('[AttendanceRepairStore] 已初始化种子数据:', seedData.length, '条补录记录');
+            // 种子数据初始化完成
           } else {
             set({ isLoading: false });
           }

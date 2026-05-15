@@ -4,7 +4,6 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { departments as defaultDepartments } from '../data/mockData';
 
 // 部门数据结构
 export interface Department {
@@ -31,10 +30,10 @@ function getStoredDepartments(): Department[] {
       return JSON.parse(stored);
     } catch (error) {
       console.error('部门数据解析失败:', error);
-      return defaultDepartments;
+      return [];
     }
   }
-  return defaultDepartments;
+  return [];
 }
 
 /**
@@ -49,10 +48,7 @@ function saveDepartmentsToStorage(departments: Department[]): void {
  */
 export function initDepartments(): Department[] {
   const data = getStoredDepartments();
-  if (data.length === 0 && localStorage.getItem(STORAGE_KEY) === null) {
-    saveDepartmentsToStorage(defaultDepartments);
-  }
-  return data.length > 0 ? data : defaultDepartments;
+  return data;
 }
 
 /**
@@ -98,12 +94,12 @@ export async function saveDepartments(departments: Department[]): Promise<void> 
  * 获取默认部门数据
  */
 export function getDefaultDepartments(): Department[] {
-  return defaultDepartments;
+  return [];
 }
 
 /**
  * 重置部门数据
  */
 export function resetDepartments(): void {
-  saveDepartmentsToStorage(defaultDepartments);
+  saveDepartmentsToStorage([]);
 }

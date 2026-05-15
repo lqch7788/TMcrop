@@ -1,7 +1,38 @@
+import { useEffect, useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { productionProgress } from '../../../data/mockData';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
 
 export function ProductionProgressCard() {
+  const batchStats = useDashboardStore((s) => s.batchStats);
+  const fetchBatchStats = useDashboardStore((s) => s.fetchBatchStats);
+
+  useEffect(() => {
+    fetchBatchStats({ limit: '50' });
+  }, [fetchBatchStats]);
+
+  // 从批次统计数据中计算生产进度（采收期批次和剩余天数）
+  const productionProgress = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 筛选即将进入采收期的批次（status 为 in_progress 或 planted）
+    const nearHarvest = batchStats
+      .filter((b) => b.expectedHarvestDate && (b.status === 'in_progress' || b.status === 'planted'))
+      .map((b) => {
+        const harvestDate = new Date(b.expectedHarvestDate);
+        const daysLeft = Math.max(0, Math.ceil((harvestDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+        return { name: b.cropName, daysLeft };
+      })
+      .filter((b) => b.daysLeft <= 30) // 30天内采收
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 5);
+
+    return {
+      harvestReady: nearHarvest.length,
+      batches: nearHarvest,
+    };
+  }, [batchStats]);
+
   return (
     <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">

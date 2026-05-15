@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
-import { cropBatches } from '../../../data/mockData';
-import { useUserStore, useGreenhouseStore, useHarvestStore } from '../../../stores';
-import { warehouseOptions } from '../../../data/farmMockData';
+import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import {
@@ -51,6 +49,12 @@ export default function HarvestPage() {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
+  // 生产计划和仓库Store
+  const plans = useProductionPlanStore((s) => s.plans);
+  const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
+  const warehouses = useWarehouseStore((s) => s.warehouses);
+  const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
+
   useEffect(() => {
     if (users.length === 0) {
       loadUsers();
@@ -58,7 +62,35 @@ export default function HarvestPage() {
     if (greenhouses.length === 0) {
       loadGreenhouses();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses]);
+    if (plans.length === 0) {
+      fetchPlans();
+    }
+    if (warehouses.length === 0) {
+      loadWarehouses();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, plans.length, fetchPlans, warehouses.length, loadWarehouses]);
+
+  // 从Store计算 equivalent options
+  const cropBatches = plans.map(p => ({
+    id: p.id,
+    batchCode: p.batchCode,
+    batchStatus: p.batchStatus || p.status,
+    planType: p.planType,
+    planTypeName: p.planTypeName,
+    cropName: p.cropName || p.cropTypeName,
+    variety: p.variety,
+    plantingMode: p.plantingMode,
+    targetYield: p.targetYield,
+    cropId: p.cropId,
+    varietyId: p.varietyId,
+    productionPlanId: p.productionPlanId,
+    productionPlanCode: p.productionPlanCode,
+    instanceId: p.instanceId,
+  }));
+
+  const warehouseOptions = warehouses
+    .filter(w => w.status === 'active')
+    .map(w => ({ value: w.id, label: w.name, name: w.name }));
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();

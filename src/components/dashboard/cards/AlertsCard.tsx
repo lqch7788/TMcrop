@@ -1,7 +1,15 @@
+import { useEffect } from 'react';
 import { AlertTriangle, Thermometer, Activity, Eye, Sprout } from 'lucide-react';
-import { alertsBreakdown } from '../../../data/mockData';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
 
 export function AlertsCard() {
+  const alertsBreakdown = useDashboardStore((s) => s.alertsBreakdown);
+  const fetchDashboardStats = useDashboardStore((s) => s.fetchDashboardStats);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
   return (
     <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
       <div className="flex items-center justify-between mb-3">

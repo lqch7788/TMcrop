@@ -151,7 +151,7 @@ export const usePieceworkStore = create<PieceworkState>()(
       _initSeedData: () => {
         const seed = generateSeedData();
         set({ records: seed, isLoading: false });
-        console.log('[PieceworkStore] 已初始化种子数据:', seed.length, '条计件记录');
+        // 种子数据初始化完成
       },
     }),
     {
