@@ -19,7 +19,7 @@ export function useDashboard() {
   const fetchDashboardStats = useDashboardStore((s) => s.fetchDashboardStats);
   // 替换 mockData: tasks → useFarmTaskStore, devices → useIotStore
   const tasks = useFarmTaskStore((s) => s.tasks);
-  const loadTasks = useFarmTaskStore((s) => s.loadTasks);
+  const fetchTasks = useFarmTaskStore((s) => s.fetchTasks);
   const devices = useIotStore((s) => s.devices);
   const fetchDevices = useIotStore((s) => s.fetchDevices);
 
@@ -27,9 +27,9 @@ export function useDashboard() {
   useEffect(() => {
     fetchDashboardStats();
     fetchBatchStats({ limit: '100' });
-    if (tasks.length === 0) loadTasks();
+    if (tasks.length === 0) fetchTasks();
     if (devices.length === 0) fetchDevices();
-  }, [fetchDashboardStats, fetchBatchStats, tasks.length, loadTasks, devices.length, fetchDevices]);
+  }, [fetchDashboardStats, fetchBatchStats, tasks.length, fetchTasks, devices.length, fetchDevices]);
 
   // ==================== 状态定义 ====================
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'iot'>('overview');

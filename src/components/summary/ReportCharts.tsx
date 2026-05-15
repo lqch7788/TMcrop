@@ -56,7 +56,8 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={[
+                  // TODO: 数据应从 Zustand Store (如 useYieldStore) 获取，而非硬编码
+                  data={yieldStats && yieldStats.length > 0 ? yieldStats : [
                     { name: '番茄', value: 4500 },
                     { name: '黄瓜', value: 3200 },
                     { name: '草莓', value: 2100 },
