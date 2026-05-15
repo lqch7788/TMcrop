@@ -121,7 +121,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   // 批量编辑模式状态
   // ============================================
-  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [batchEditMode, setBatchEditMode] = useState<'edit' | 'delete' | null>(null);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [showEditWarning, setShowEditWarning] = useState(false);
@@ -460,7 +460,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     // 关闭弹窗、退出批量模式、清空选中
     setShowBatchDeleteConfirm(false);
     setShowDeleteWarning(false);
-    setBatchEditMode(false);
+    setBatchEditMode(null);
     setSelectedRows([]);
   };
 

@@ -1,16 +1,17 @@
 /**
  * 工人考勤 - 页面容器组件
  * 负责组合所有子组件，提供统一的页面结构
+ * 排班对比：读取排班数据，展示计划出勤 vs 实际打卡对比
  */
-import { useState, useEffect } from 'react';
-import { Users, Edit, Trash2, Download, Upload } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Users, Edit, Trash2, Download, Upload, CalendarDays, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { useWorkerAttendance } from './hooks/useWorkerAttendance';
 import { WorkerAttendanceFilters } from './WorkerAttendanceFilters';
 import { WorkerAttendanceTable } from './WorkerAttendanceTable';
 import { WorkerAttendanceExport } from './WorkerAttendanceExport';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal, DetailModal } from './modals';
 import { AttendanceRecord } from './types';
-import { useDepartmentStore, useAttendanceStore } from '../../../stores';
+import { useDepartmentStore, useAttendanceStore, useScheduleStore } from '../../../stores';
 
 // 编辑记录的类型
 type EditedRecordsMap = Record<string, Partial<AttendanceRecord>>;
@@ -78,6 +79,35 @@ export function WorkerAttendancePage() {
 
   // 转换为页面需要的格式（包含"全部"选项）
   const departmentOptions = ['全部', ...departments.map(d => d.name)];
+
+  // ========== 排班对比数据（从农事管理模块读取排班，只读对比） ==========
+  const scheduleStore = useScheduleStore();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    if (scheduleStore.schedules.length === 0) {
+      scheduleStore.fetchSchedules();
+    }
+  }, []);
+
+  // 计算今日排班 vs 考勤对比
+  const scheduleComparison = useMemo(() => {
+    const todaySchedules = scheduleStore.schedules.filter(s => s.date === todayStr);
+    const scheduledIds = new Set(todaySchedules.map(s => s.staffId));
+    const todayAttendance = attendanceData.filter(r => r.date === todayStr);
+    const checkedInIds = new Set(todayAttendance.filter(r => r.checkIn).map(r => r.workerId));
+
+    // 在班人数（有排班的）
+    const scheduledCount = scheduledIds.size;
+    // 已打卡人数
+    const checkedInCount = todayAttendance.filter(r => r.checkIn).length;
+    // 排班但未打卡（缺勤）
+    const absentCount = [...scheduledIds].filter(id => !checkedInIds.has(id)).length;
+    // 未排班但打卡（临时到岗）
+    const unscheduledCount = todayAttendance.filter(r => r.checkIn && !scheduledIds.has(r.workerId)).length;
+
+    return { scheduledCount, checkedInCount, absentCount, unscheduledCount };
+  }, [scheduleStore.schedules, attendanceData, todayStr]);
 
   // Batch Edit handlers
   const handleBatchEditClick = () => {
@@ -210,6 +240,49 @@ export function WorkerAttendancePage() {
           <div>
             <h1 className="text-lg font-bold text-gray-900">工人考勤</h1>
             <p className="text-xs text-gray-500">工人考勤记录管理</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 今日排班对比卡片（数据来自农事管理-排班调度） */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarDays className="w-4 h-4 text-blue-500" />
+          <span className="text-sm font-medium text-gray-700">今日排班对比（{todayStr}）</span>
+          <span className="text-xs text-gray-400">数据来源：农事管理 → 排班调度</span>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-blue-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-blue-600" />
+              <span className="text-xs text-blue-600 font-medium">计划在班</span>
+            </div>
+            <div className="text-2xl font-bold text-blue-700 mt-1">{scheduleComparison.scheduledCount}</div>
+            <div className="text-xs text-blue-500">人</div>
+          </div>
+          <div className="bg-emerald-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs text-emerald-600 font-medium">已打卡</span>
+            </div>
+            <div className="text-2xl font-bold text-emerald-700 mt-1">{scheduleComparison.checkedInCount}</div>
+            <div className="text-xs text-emerald-500">人</div>
+          </div>
+          <div className="bg-red-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-red-600" />
+              <span className="text-xs text-red-600 font-medium">排班缺勤</span>
+            </div>
+            <div className="text-2xl font-bold text-red-700 mt-1">{scheduleComparison.absentCount}</div>
+            <div className="text-xs text-red-500">人（在班未打卡）</div>
+          </div>
+          <div className="bg-amber-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span className="text-xs text-amber-600 font-medium">临时到岗</span>
+            </div>
+            <div className="text-2xl font-bold text-amber-700 mt-1">{scheduleComparison.unscheduledCount}</div>
+            <div className="text-xs text-amber-500">人（未排班打卡）</div>
           </div>
         </div>
       </div>

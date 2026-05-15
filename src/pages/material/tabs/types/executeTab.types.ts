@@ -107,8 +107,8 @@ export interface UseExecuteTabReturn {
   toggleExecuteExpandRow: (id: number) => void;
 
   // 批量编辑模式状态
-  executeBatchEditMode: boolean;
-  setExecuteBatchEditMode: (mode: boolean) => void;
+  executeBatchEditMode: 'edit' | 'delete' | null;
+  setExecuteBatchEditMode: (mode: 'edit' | 'delete' | null) => void;
   executeShowBatchEditModal: boolean;
   setExecuteShowBatchEditModal: (show: boolean) => void;
   executeShowBatchDeleteConfirm: boolean;

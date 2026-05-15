@@ -100,7 +100,7 @@ export interface VoidState {
 
 /** 批量编辑状态 */
 export interface BatchEditState {
-  batchEditMode: boolean;
+  batchEditMode: 'edit' | 'delete' | null;
   batchEditedRecords: Record<number, MaterialReceivingRecord>;
   currentBatchEditIndex: number;
 }
@@ -182,8 +182,8 @@ export interface UseApplicationTabReturn {
   setVoidReason: (value: string) => void;
 
   // 批量编辑状态
-  batchEditMode: boolean;
-  setBatchEditMode: (value: boolean) => void;
+  batchEditMode: 'edit' | 'delete' | null;
+  setBatchEditMode: (value: 'edit' | 'delete' | null) => void;
   batchEditedRecords: Record<number, MaterialReceivingRecord>;
   setBatchEditedRecords: (value: Record<number, MaterialReceivingRecord>) => void;
   currentBatchEditIndex: number;

@@ -177,11 +177,11 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onExportClick={handleExecuteExportClick}
         onCancelExport={handleExecuteCancelExport}
         onExportConfirm={confirmExecuteExport}
-        onBatchEditClick={() => { setExecuteBatchEditMode(true); setExecuteShowEditWarning(true); }}
-        onBatchDeleteClick={() => { setExecuteBatchEditMode(true); setExecuteShowDeleteWarning(true); }}
+        onBatchEditClick={() => { setExecuteBatchEditMode('edit'); setExecuteShowEditWarning(true); }}
+        onBatchDeleteClick={() => { setExecuteBatchEditMode('delete'); setExecuteShowDeleteWarning(true); }}
         onBatchEditConfirm={() => { setExecuteShowBatchEditModal(true); }}
         onBatchDeleteConfirm={() => { setExecuteShowBatchDeleteConfirm(true); }}
-        onBatchCancel={() => { setExecuteBatchEditMode(false); setExecuteSelectedRows([]); }}
+        onBatchCancel={() => { setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
         onAdd={handleExecuteAdd}
       />
 
@@ -271,7 +271,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       <ExecuteWarningModal
         show={executeShowEditWarning}
         type="edit"
-        onCancel={() => { setExecuteShowEditWarning(false); setExecuteBatchEditMode(false); setExecuteSelectedRows([]); }}
+        onCancel={() => { setExecuteShowEditWarning(false); setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
         onConfirm={() => { setExecuteShowEditWarning(false); }}
       />
 
@@ -279,7 +279,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       <ExecuteWarningModal
         show={executeShowDeleteWarning}
         type="delete"
-        onCancel={() => { setExecuteShowDeleteWarning(false); setExecuteBatchEditMode(false); setExecuteSelectedRows([]); }}
+        onCancel={() => { setExecuteShowDeleteWarning(false); setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
         onConfirm={() => { setExecuteShowDeleteWarning(false); }}
       />
 
@@ -291,7 +291,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onConfirm={() => {
           setExecuteShowBatchDeleteConfirm(false);
           setExecuteSelectedRows([]);
-          setExecuteBatchEditMode(false);
+          setExecuteBatchEditMode(null);
           alert(`已删除 ${executeSelectedRows.length} 项领料出库记录`);
         }}
       />
@@ -309,7 +309,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
           setExecuteShowBatchEditModal(false);
           setExecuteBatchEditedRecords({});
           setExecuteCurrentBatchEditIndex(0);
-          setExecuteBatchEditMode(false);
+          setExecuteBatchEditMode(null);
           setExecuteSelectedRows([]);
           alert('批量编辑成功');
         }}

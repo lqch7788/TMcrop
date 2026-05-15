@@ -21,8 +21,8 @@ interface ApplicationTableProps {
   onExportClick: () => void;
   onCancelExport: () => void;
   // 批量编辑
-  batchEditMode: boolean;
-  onBatchEditModeChange: (value: boolean) => void;
+  batchEditMode: 'edit' | 'delete' | null;
+  onBatchEditModeChange: (value: 'edit' | 'delete' | null) => void;
   onShowEditWarning: () => void;
   onShowDeleteWarning: () => void;
   // 选中行
@@ -95,19 +95,26 @@ export function ApplicationTable({
               取消
             </Button>
           </div>
-        ) : batchEditMode ? (
+        ) : batchEditMode === 'edit' ? (
           /* 批量编辑模式 */
           <div className="flex gap-2">
             <Button variant="blue" size="sm" onClick={() => {
               if (selectedRows.length === 0) {
                 alert('请先选择要编辑的记录');
-                onBatchEditModeChange(false);
+                onBatchCancel();
               } else {
                 onShowBatchEditModal();
               }
             }}>
               确认编辑
             </Button>
+            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
+              取消
+            </Button>
+          </div>
+        ) : batchEditMode === 'delete' ? (
+          /* 批量删除模式 */
+          <div className="flex gap-2">
             <Button variant="destructive" size="sm" onClick={onShowBatchDeleteConfirm}>
               确认删除
             </Button>
@@ -123,11 +130,11 @@ export function ApplicationTable({
               新增
             </Button>
             <>
-              <Button variant="blue" size="sm" onClick={() => { onBatchEditModeChange(true); onShowEditWarning(); }}>
+              <Button variant="blue" size="sm" onClick={() => { onBatchEditModeChange('edit'); onShowEditWarning(); }}>
                 <Edit className="w-4 h-4" />
                 编辑
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange(true); onShowDeleteWarning(); }}>
+              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange('delete'); onShowDeleteWarning(); }}>
                 <Trash2 className="w-4 h-4" />
                 删除
               </Button>

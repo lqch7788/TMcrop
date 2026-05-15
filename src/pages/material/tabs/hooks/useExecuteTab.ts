@@ -38,7 +38,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeExpandedRows, setExecuteExpandedRows] = useState<Set<number>>(new Set());
 
   // 批量编辑模式状态
-  const [executeBatchEditMode, setExecuteBatchEditMode] = useState(false);
+  const [executeBatchEditMode, setExecuteBatchEditMode] = useState<'edit' | 'delete' | null>(null);
   const [executeShowBatchEditModal, setExecuteShowBatchEditModal] = useState(false);
   const [executeShowBatchDeleteConfirm, setExecuteShowBatchDeleteConfirm] = useState(false);
   const [executeShowEditWarning, setExecuteShowEditWarning] = useState(false);

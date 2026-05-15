@@ -261,11 +261,13 @@ function AppContent() {
           <Route path="/labor/analytics" element={<AnalyticsPage />} />
           <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
 
-          {/* 农事管理 - 任务中心(从人工管理移入)、问题分派(从生产汇总表移入)、每日工单汇总(从生产汇总表移入) */}
+          {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
           <Route path="/task-center" element={<TaskCenterPage />} />
           <Route path="/farm-hub" element={<FarmTaskHub />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/team" element={<Team />} />
           <Route path="/daily-problem-summary" element={<DailyProblemSummary />} />
           <Route path="/plan-summary" element={<PlanSummary />} />
           <Route path="/worker-attendance" element={<WorkerAttendance />} />
@@ -281,9 +283,7 @@ function AppContent() {
           <Route path="/temp-task" element={<TempTask />} />
           <Route path="/personnel/staff" element={<StaffManagementPage />} />
           <Route path="/leave" element={<Leave />} />
-          <Route path="/schedule" element={<Schedule />} />
           <Route path="/temp-worker" element={<TempWorker />} />
-          <Route path="/team" element={<Team />} />
           <Route path="/salary" element={<Salary />} />
           <Route path="/recruitment" element={<Recruitment />} />
           <Route path="/overtime" element={<Overtime />} />
