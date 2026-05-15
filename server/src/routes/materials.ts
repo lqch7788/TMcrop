@@ -63,10 +63,14 @@ router.post('/', (req: Request, res: Response) => {
 router.get('/inbound', (req: Request, res: Response) => {
   try {
     const records = materialsDb.getAllInboundRecords();
-    // 解析 materials JSON 字段
+    // 解析 materials JSON 字段，并兼容旧字段名 materialCode→code, materialName→name
     const parsedRecords = records.map(record => ({
       ...record,
-      materials: record.materials ? JSON.parse(record.materials) : []
+      materials: record.materials ? JSON.parse(record.materials).map((m: any) => ({
+        ...m,
+        code: m.code || m.materialCode || '',
+        name: m.name || m.materialName || '',
+      })) : []
     }));
     res.json(parsedRecords);
   } catch (error) {
@@ -93,11 +97,15 @@ router.post('/inbound', (req: Request, res: Response) => {
     if (record.status === 'completed' && record.materials?.length > 0) {
       materialsDb.syncInboundToMaterials(record.materials);
     }
-    // 返回完整记录（含解析后的 materials 数组）
+    // 返回完整记录（含解析后的 materials 数组，兼容旧字段名）
     const created = materialsDb.getInboundRecordById(id);
     res.status(201).json({
       ...created,
-      materials: created?.materials ? JSON.parse(created.materials) : []
+      materials: created?.materials ? JSON.parse(created.materials).map((m: any) => ({
+        ...m,
+        code: m.code || m.materialCode || '',
+        name: m.name || m.materialName || '',
+      })) : []
     });
   } catch (error) {
     console.error('创建入库记录失败:', error);
@@ -117,7 +125,11 @@ router.get('/inbound/:id', (req: Request, res: Response) => {
     }
     res.json({
       ...record,
-      materials: record.materials ? JSON.parse(record.materials) : []
+      materials: record.materials ? JSON.parse(record.materials).map((m: any) => ({
+        ...m,
+        code: m.code || m.materialCode || '',
+        name: m.name || m.materialName || '',
+      })) : []
     });
   } catch (error) {
     console.error('获取入库记录详情失败:', error);
@@ -149,11 +161,15 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     } else {
       materialsDb.updateInboundRecord(id, updates);
     }
-    // 返回更新后的完整记录
+    // 返回更新后的完整记录（兼容旧字段名）
     const updated = materialsDb.getInboundRecordById(id);
     res.json({
       ...updated,
-      materials: updated?.materials ? JSON.parse(updated.materials) : []
+      materials: updated?.materials ? JSON.parse(updated.materials).map((m: any) => ({
+        ...m,
+        code: m.code || m.materialCode || '',
+        name: m.name || m.materialName || '',
+      })) : []
     });
   } catch (error) {
     console.error('更新入库记录失败:', error);
