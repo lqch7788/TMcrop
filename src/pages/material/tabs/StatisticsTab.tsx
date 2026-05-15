@@ -1,6 +1,7 @@
 // StatisticsTab 组件 - 领料统计页面主组件
 // 负责组合所有子组件，呈现完整的统计页面功能
 import { Calendar, BarChart2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // 导入hook
 import { useStatisticsTab } from './hooks/useStatisticsTab';
@@ -44,9 +45,10 @@ export default function StatisticsTab() {
       {/* Tab切换 - 子Tab（统计页面内部） */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 pt-4 pb-0 mb-4">
         <div className="flex gap-6 border-b border-gray-200">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => { hook.setStatActiveTab('monthly'); hook.setStatCurrentPage(1); }}
-            className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-all relative ${
+            className={`pb-3 text-sm font-semibold ${
               hook.statActiveTab === 'monthly'
                 ? 'text-emerald-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -57,10 +59,11 @@ export default function StatisticsTab() {
             {hook.statActiveTab === 'monthly' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => { hook.setStatActiveTab('material'); hook.setStatCurrentPage(1); }}
-            className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-all relative ${
+            className={`pb-3 text-sm font-semibold ${
               hook.statActiveTab === 'material'
                 ? 'text-emerald-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -71,7 +74,7 @@ export default function StatisticsTab() {
             {hook.statActiveTab === 'material' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
             )}
-          </button>
+          </Button>
         </div>
 
         <div className="px-6 pt-6 pb-0">
