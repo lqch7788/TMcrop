@@ -1,16 +1,16 @@
 // useStatisticsTab Hook
 // 提取 StatisticsTab 的所有状态和筛选逻辑
-import { useState, useMemo } from 'react';
+// V2.0: 数据从 useStatisticsStore 获取（替代 mock 数据）
+import { useState, useMemo, useEffect } from 'react';
 import {
-  materialStatisticsData,
-  monthlyStatisticsData,
+  useStatisticsStore,
   getMonthSummaries,
   getYearTotalQuantity,
   getYearTotalAmount,
   getSingleMonthTableData,
-  getSingleMonthTotal,
   getMonthDetails,
-} from '../../../../data/materialReceivingData';
+  type MaterialStatItem,
+} from '@/stores';
 import type {
   StatActiveTab,
   QuickFilterPeriod,
@@ -20,14 +20,24 @@ import type {
   MonthStats,
   ExportTarget,
   ExportFileType,
-  MaterialStatItem,
-  MonthSummary,
 } from '../types/statisticsTab.types';
+import type { MonthDetailRow } from '@/stores/useStatisticsStore';
 
 // 默认日期范围常量
 const DEFAULT_DATE_RANGE: DateRange = { start: '2026-01-01', end: '2026-12-31' };
 
 export function useStatisticsTab() {
+  // ============================================
+  // 从 Store 获取统计数据（V2.0 架构）
+  // ============================================
+  const materialStatisticsData = useStatisticsStore((s) => s.materialStatistics);
+  const monthlyStatisticsData = useStatisticsStore((s) => s.monthlyStatistics);
+  const categorySummary = useStatisticsStore((s) => s.categorySummary);
+  const categoryTrend = useStatisticsStore((s) => s.categoryTrend);
+  const fetchStatistics = useStatisticsStore((s) => s.fetchStatistics);
+
+  useEffect(() => { fetchStatistics(); }, [fetchStatistics]);
+
   // ============================================
   // 主Tab状态
   // ============================================
@@ -231,7 +241,7 @@ export function useStatisticsTab() {
   };
 
   const getSortedMonthSummaries = (): MonthSummary[] => {
-    const data = getMonthSummaries(statYearFilter);
+    const data = getMonthSummaries(statYearFilter, categoryTrend);
     const key = sortConfig.key;
     const sorted = [...data].sort((a, b) => {
       if (a[key as keyof typeof a] < b[key as keyof typeof b]) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -246,7 +256,7 @@ export function useStatisticsTab() {
   // ============================================
   const getMonthStats = (month: string): MonthStats => {
     const allMonthSummaries = getSortedMonthSummaries();
-    const yearTotalQty = getYearTotalQuantity(statYearFilter);
+    const yearTotalQty = getYearTotalQuantity(statYearFilter, categoryTrend);
     const sortedByQty = [...allMonthSummaries].sort((a, b) => b.totalQuantity - a.totalQuantity);
     const rank = sortedByQty.findIndex(m => m.month === month) + 1;
     const currentData = allMonthSummaries.find(m => m.month === month);
@@ -285,7 +295,7 @@ export function useStatisticsTab() {
   // ============================================
   const getAllMonthKeys = (): number[] => {
     if (statMonthFilter !== 'all') {
-      return getSingleMonthTableData(statYearFilter, statMonthFilter).map((_, idx) => idx);
+      return getSingleMonthTableData(statYearFilter, statMonthFilter, categoryTrend, categorySummary).map((_, idx) => idx);
     }
     return getSortedMonthSummaries().map((_, idx) => idx);
   };
@@ -376,11 +386,11 @@ export function useStatisticsTab() {
 
     const headers = ['月份', '物料分类', '领料数量', '领料金额', '排名', '占比', '环比变化', '同比变化'];
     const allMonthSummaries = getSortedMonthSummaries();
-    const yearTotalQty = getYearTotalQuantity(statYearFilter);
-    const yearTotalAmt = getYearTotalAmount(statYearFilter);
+    const yearTotalQty = getYearTotalQuantity(statYearFilter, categoryTrend);
+    const yearTotalAmt = getYearTotalAmount(statYearFilter, categoryTrend);
     const selectedData = statMonthFilter === 'all'
       ? statSelectedRows.map(idx => allMonthSummaries[idx]).filter(Boolean)
-      : getSingleMonthTableData(statYearFilter, statMonthFilter).filter((_, idx) => statSelectedRows.includes(idx));
+      : getSingleMonthTableData(statYearFilter, statMonthFilter, categoryTrend, categorySummary).filter((_, idx) => statSelectedRows.includes(idx));
 
     const sortedByQty = [...allMonthSummaries].sort((a, b) => b.totalQuantity - a.totalQuantity);
     const sortedByAmt = [...allMonthSummaries].sort((a, b) => b.totalAmount - a.totalAmount);

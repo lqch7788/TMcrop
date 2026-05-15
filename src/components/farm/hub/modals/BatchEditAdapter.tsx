@@ -6,18 +6,8 @@
 import React, { useState, useMemo } from 'react';
 import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
-import { taskDispatchFields } from '../../../../data/farmMockData';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { useProductionPlanStore, useWorkerStore } from '../../../../stores';
-
-// 转换 fields 格式
-const fields = taskDispatchFields.map(f => ({
-  id: f.id,
-  name: f.name,
-  type: f.type,
-  crop: f.crop,
-  area: f.area,
-}));
+import { useProductionPlanStore, useWorkerStore, useGreenhouseStore } from '../../../../stores';
 
 // 任务类型选项
 const taskTypes = FARM_OPERATION_TYPES.map(t => ({
@@ -63,6 +53,18 @@ export function BatchEditAdapter({
   // 从Store获取批次和员工选项（响应式）
   const batchCodes = useMemo(() => getBatchCodes(), []);
   const staff = useMemo(() => getStaff(), []);
+
+  // 任务区域字段（从温室 Store 动态计算，替换硬编码 farmMockData.taskDispatchFields）
+  const fields = useMemo(() => {
+    const greenhouses = useGreenhouseStore.getState().greenhouses;
+    return greenhouses.map(g => ({
+      id: Number(g.id) || 0,
+      name: g.name,
+      type: g.greenhouseType || '',
+      crop: g.crop || '',
+      area: g.area || 0,
+    }));
+  }, []);
 
   // 直接用 taskIds 获取选中的任务（不依赖索引）
   const selectedTasks = taskIds

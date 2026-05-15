@@ -1,12 +1,108 @@
 /**
  * 物料申请数据 Zustand Store
- * 数据流：enhancedApiClient → Store → 页面组件
- * 三级降级：API → IndexedDB → localStorage
+ *
+ * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 数据流：Store → 组件 (组件不直接读写 localStorage)
+ *
+ * 对接后端: /api/material-requests
+ * 参考样板: useTempTaskStore.ts (FIELD_MAP + normalize/denormalize 模式)
  */
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import type { MaterialReceivingRecord, MaterialItem } from '../types/materialReceiving';
+
+// ==================== 第一步：字段映射表 ====================
+
+/** 后端(snake_case) → 前端(camelCase) 字段名映射 */
+const FIELD_MAP: Record<string, string> = {
+  id: 'id',
+  request_code: 'code',
+  request_title: 'title',
+  request_type: 'requestType',
+  department_id: 'departmentId',
+  department_name: 'department',
+  applicant_id: 'applicantId',
+  applicant_name: 'applicant',
+  apply_date: 'date',
+  expected_date: 'expectedDate',
+  warehouse_id: 'warehouseId',
+  warehouse_name: 'warehouseLocation',
+  plant_area: 'plantArea',
+  production_batch_code: 'productionBatchCode',
+  total_amount: 'totalAmount',
+  priority: 'priority',
+  status: 'rawStatus',
+  approval_status: 'approvalStatus',
+  remarks: 'remarks',
+  attachments: 'attachments',
+  materials: 'materials',
+  create_by: 'createBy',
+  create_time: 'createTime',
+  update_time: 'updateTime',
+};
+
+// ==================== 第二步：规范化函数 ====================
+
+/** 后端数据 → 前端数据 */
+function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
+  const result: Record<string, unknown> = { ...db };
+  for (const [snake, camel] of Object.entries(FIELD_MAP)) {
+    if (snake in result && !(camel in result)) {
+      result[camel] = result[snake];
+    }
+  }
+  // 别名兼容（后端可能用不同字段名）
+  result.code = result.code || db.requestCode || db.code;
+  result.date = result.date || db.applyDate || db.date || '';
+  result.applicant = result.applicant || db.applicantName || db.applicant || '';
+  result.department = result.department || db.departmentName || db.department || '';
+  result.warehouseLocation = result.warehouseLocation || db.warehouseName || db.warehouseLocation || '';
+
+  // 状态字段派生
+  const approvalStatus = result.approvalStatus || (db as any).approval_status || '';
+  const rawStatus = result.rawStatus || (db as any).status || '';
+  if (approvalStatus === 'approved') {
+    result.status = '已审批';
+    result.statusClass = 'approved';
+  } else if (approvalStatus === 'rejected') {
+    result.status = '已拒绝';
+    result.statusClass = 'rejected';
+  } else if (approvalStatus === 'pending') {
+    result.status = '待审批';
+    result.statusClass = 'pending';
+  } else if (rawStatus === 'voided' || rawStatus === '已作废') {
+    result.status = '已作废';
+    result.statusClass = 'voided';
+  } else if (rawStatus === 'cancelled' || rawStatus === '已取消') {
+    result.status = '已取消';
+    result.statusClass = 'cancelled';
+  } else {
+    result.status = result.status || '待审批';
+    result.statusClass = result.statusClass || 'pending';
+  }
+
+  result.id = result.id ?? `MR${Date.now()}`;
+  result.materials = result.materials || [];
+  return result as unknown as MaterialReceivingRecord;
+}
+
+/** 前端数据 → 后端数据 */
+function denormalize(data: Partial<MaterialReceivingRecord>): Record<string, unknown> {
+  const reverse: Record<string, string> = {};
+  for (const [snake, camel] of Object.entries(FIELD_MAP)) {
+    reverse[camel] = snake;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const backendKey = reverse[key] || key;
+    result[backendKey] = value;
+  }
+  return result;
+}
+
+// ==================== 第三步：Store 接口 ====================
 
 interface MaterialRequestDataState {
   items: MaterialReceivingRecord[];
@@ -21,11 +117,7 @@ interface MaterialRequestDataState {
   refresh: () => Promise<void>;
 }
 
-/** 生成领料单号 */
-function generateCode(): string {
-  const d = new Date();
-  return `LL${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(Date.now() % 10000).padStart(4, '0')}`;
-}
+// ==================== 第四步：创建 Store ====================
 
 export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
   persist(
@@ -34,107 +126,129 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       isLoading: false,
       error: null,
 
+      // ---------- 查询 ----------
       loadItems: async (params) => {
         set({ isLoading: true, error: null });
         try {
           const resp = await enhancedApiClient.get<any>('/material-requests', {
             useCache: true, cacheStrategy: 'network-first', params,
           });
-          const list = resp?.data || (Array.isArray(resp) ? resp : []);
-          const mapped: MaterialReceivingRecord[] = list.map((r: any) => ({
-            id: r.id || r.requestCode,
-            code: r.requestCode || r.code || r.id,
-            date: r.applyDate || r.date || '',
-            applicant: r.applicantName || r.applicant || '',
-            department: r.departmentName || r.department || '',
-            warehouseLocation: r.warehouseName || r.warehouseLocation || '',
-            plantArea: r.plantArea || '',
-            reviewer: r.reviewer || '',
-            productionBatchCode: r.productionBatchCode || '',
-            status: r.approvalStatus === 'approved' ? '已审批' : r.approvalStatus === 'rejected' ? '已拒绝' : r.approvalStatus === 'pending' ? '待审批' : r.status || '待审批',
-            statusClass: r.approvalStatus === 'approved' ? 'approved' : r.approvalStatus === 'rejected' ? 'rejected' : 'pending',
-            materials: (r.materials || []) as MaterialItem[],
-          }));
+          let list = resp?.data || (Array.isArray(resp) ? resp : []);
+          if (!Array.isArray(list)) list = [];
+
+          const mapped = list.map((r: Record<string, unknown>) => normalize(r));
           set({ items: mapped, isLoading: false });
         } catch (error) {
-          console.error('[useMaterialRequestDataStore] 获取物料申请失败:', error);
+          console.error('[MaterialRequestStore] 获取物料申请失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
 
+      // ---------- 创建（乐观更新）----------
       addItem: async (item) => {
         try {
-          const code = generateCode();
-          const result = await enhancedApiClient.post<any>('/material-requests', {
-            request_code: code,
-            request_type: '领料申请',
-            applicant_name: item.applicant || '',
-            department_name: item.department || '',
-            warehouse_name: item.warehouseLocation || '',
-            apply_date: item.date || new Date().toISOString().split('T')[0],
-            plant_area: item.plantArea || '',
-            production_batch_code: item.productionBatchCode || '',
-            status: 'draft',
-            approval_status: 'pending',
-            materials: item.materials || [],
-          }, { offlineQueue: true, useCache: true });
+          const body = denormalize(item);
+          // 确保后端认识的字段名
+          body.request_code = body.request_code || item.code || `MR${Date.now()}`;
+          body.request_type = body.request_type || '领料申请';
+          body.applicant_name = body.applicant_name || item.applicant || '';
+          body.department_name = body.department_name || item.department || '';
+          body.warehouse_name = body.warehouse_name || item.warehouseLocation || '';
+          body.apply_date = body.apply_date || item.date || new Date().toISOString().split('T')[0];
+          body.status = 'draft';
+          body.approval_status = 'pending';
+          body.materials = JSON.stringify(body.materials || item.materials || []);
 
-          const newItem: MaterialReceivingRecord = {
+          const result = await enhancedApiClient.post<any>('/material-requests', body, {
+            offlineQueue: true, useCache: true,
+          });
+
+          const newItem = normalize({
             id: result?.data?.id || result?.id || `MR${Date.now()}`,
-            code: result?.data?.request_code || code,
-            date: item.date || new Date().toISOString().split('T')[0],
-            applicant: item.applicant || '',
-            department: item.department || '',
-            warehouseLocation: item.warehouseLocation || '',
-            plantArea: item.plantArea || '',
-            reviewer: item.reviewer || '',
-            productionBatchCode: item.productionBatchCode || '',
-            status: '待审批',
-            statusClass: 'pending',
-            materials: (item.materials || []) as MaterialItem[],
-          };
+            request_code: result?.data?.request_code || body.request_code,
+            apply_date: body.apply_date,
+            applicant_name: body.applicant_name,
+            department_name: body.department_name,
+            warehouse_name: body.warehouse_name,
+            plant_area: body.plant_area || item.plantArea || '',
+            production_batch_code: body.production_batch_code || item.productionBatchCode || '',
+            approval_status: 'pending',
+            status: 'draft',
+            materials: item.materials || [],
+          } as Record<string, unknown>);
+
           set((s) => ({ items: [newItem, ...s.items] }));
           return newItem;
         } catch (error) {
-          console.error('[useMaterialRequestDataStore] 添加物料申请失败:', error);
-          return null;
+          console.error('[MaterialRequestStore] 添加物料申请失败:', error);
+          // 乐观更新：即使 API 失败也在本地创建
+          const newItem = normalize({
+            id: `MR${Date.now()}`,
+            request_code: item.code || `MR${Date.now()}`,
+            apply_date: item.date || new Date().toISOString().split('T')[0],
+            applicant_name: item.applicant || '',
+            department_name: item.department || '',
+            warehouse_name: item.warehouseLocation || '',
+            plant_area: item.plantArea || '',
+            production_batch_code: item.productionBatchCode || '',
+            approval_status: 'pending',
+            materials: item.materials || [],
+          } as Record<string, unknown>);
+          set((s) => ({ items: [newItem, ...s.items] }));
+          return newItem;
         }
       },
 
+      // ---------- 更新（乐观更新）----------
       updateItem: async (id, updates) => {
+        const body = denormalize(updates);
+
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.id === id || (i as any).code === id ? { ...i, ...updates } : i
+          ),
+        }));
+
         try {
-          await enhancedApiClient.put(`/material-requests/${id}`, updates, { offlineQueue: true });
-          set((s) => ({ items: s.items.map((i) => i.id === id || i.code === id ? { ...i, ...updates } : i) }));
+          await enhancedApiClient.put(`/material-requests/${id}`, body, { offlineQueue: true });
           return true;
         } catch (error) {
-          console.error('[useMaterialRequestDataStore] 更新物料申请失败:', error);
+          console.error('[MaterialRequestStore] 更新物料申请失败:', error);
           return false;
         }
       },
 
+      // ---------- 删除单个（乐观更新）----------
       deleteItem: async (id) => {
+        set((s) => ({
+          items: s.items.filter((i) => i.id !== id && (i as any).code !== id),
+        }));
+
         try {
           await enhancedApiClient.delete(`/material-requests/${id}`, { offlineQueue: true });
-          set((s) => ({ items: s.items.filter((i) => i.id !== id && i.code !== id) }));
           return true;
         } catch (error) {
-          console.error('[useMaterialRequestDataStore] 删除物料申请失败:', error);
+          console.error('[MaterialRequestStore] 删除物料申请失败:', error);
           return false;
         }
       },
 
+      // ---------- 批量删除（乐观更新）----------
       deleteItems: async (ids) => {
+        set((s) => ({
+          items: s.items.filter((i) => !ids.includes(i.id) && !ids.includes((i as any).code)),
+        }));
+
         try {
           const results = await Promise.all(
             ids.map((id) =>
-              enhancedApiClient.delete(`/material-requests/${id}`, { offlineQueue: true }).then(() => true).catch(() => false)
+              enhancedApiClient.delete(`/material-requests/${id}`, { offlineQueue: true })
+                .then(() => true)
+                .catch(() => false)
             )
           );
-          const allSuccess = results.every(Boolean);
-          if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id) && !ids.includes(i.code)) }));
-          return allSuccess;
-        } catch (error) {
-          console.error('[useMaterialRequestDataStore] 批量删除物料申请失败:', error);
+          return results.every(Boolean);
+        } catch {
           return false;
         }
       },
@@ -143,6 +257,10 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         await get().loadItems();
       },
     }),
-    { name: 'material-request-data-storage', partialize: (s) => ({ items: s.items }) }
+    {
+      name: 'material-request-data-storage',
+      version: 2,
+      partialize: (state) => ({ items: state.items }),
+    }
   )
 );

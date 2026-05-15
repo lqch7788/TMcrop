@@ -789,6 +789,27 @@ export function initializeDatabase() {
     )
   `);
 
+  // ==================== 领料出库表 ====================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_executes (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      date TEXT,
+      applicant TEXT,
+      warehouse_location TEXT,
+      reviewer TEXT,
+      operator TEXT,
+      production_batch_code TEXT,
+      source_application_codes TEXT,
+      execute_status TEXT DEFAULT '已出库',
+      execute_status_class TEXT DEFAULT 'completed',
+      materials TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // 为已有表添加新列（如果列不存在则添加）
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN production_plan_code TEXT`);

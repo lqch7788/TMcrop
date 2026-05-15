@@ -15,7 +15,7 @@ import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { BatchEditModal } from './modals/BatchEditModal';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
-import { equipmentRecords, infrastructureRecords, inspectionRecords as initialRecords, iotSensors } from '../../../data/mockData';
+import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructureStore } from '../../../stores';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
@@ -141,6 +141,13 @@ export function InspectionTab({
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+  // IoT/设备/设施 Store
+  const devices = useIotStore((state) => state.devices);
+  const fetchDevices = useIotStore((state) => state.fetchDevices);
+  const equipment = useEquipmentStore((state) => state.equipment);
+  const fetchEquipment = useEquipmentStore((state) => state.fetchEquipment);
+  const infrastructures = useInfrastructureStore((state) => state.infrastructures);
+  const fetchInfrastructures = useInfrastructureStore((state) => state.fetchInfrastructures);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -155,7 +162,16 @@ export function InspectionTab({
     if (dictionaries.length === 0) {
       loadDictionaries();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, storePlans.length, fetchPlans, dictionaries.length, loadDictionaries]);
+    if (devices.length === 0) {
+      fetchDevices();
+    }
+    if (equipment.length === 0) {
+      fetchEquipment();
+    }
+    if (infrastructures.length === 0) {
+      fetchInfrastructures();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, storePlans.length, fetchPlans, dictionaries.length, loadDictionaries, devices.length, fetchDevices, equipment.length, fetchEquipment, infrastructures.length, fetchInfrastructures]);
 
   // 从Store计算生产批次和作物类型
   const cropBatches = useMemo(() => storePlans.map(p => ({
@@ -272,17 +288,17 @@ export function InspectionTab({
 
   // QR扫描成功处理
   const handleQRScanSuccess = useCallback((data: QRData) => {
-    // 获取该温室的传感器数据用于自动填充环境参数
-    const sensors = iotSensors.filter(s => s.greenhouseId === data.code);
+    // 获取该温室的传感器数据用于自动填充环境参数（从 IoT Store 获取）
+    const currentDevices = useIotStore.getState().devices.filter(d => d.greenhouseId === data.code);
     const envParams = {
-      airTemperature: sensors.find(s => s.type === 'air_temp')?.value || 0,
-      airHumidity: sensors.find(s => s.type === 'air_humidity')?.value || 0,
-      soilTemperature: sensors.find(s => s.type === 'soil_temp')?.value || 0,
-      soilMoisture: sensors.find(s => s.type === 'soil_moisture')?.value || 0,
-      lightIntensity: sensors.find(s => s.type === 'light')?.value || 0,
-      co2Concentration: sensors.find(s => s.type === 'co2')?.value || 0,
-      soilEc: sensors.find(s => s.type === 'soil_ec')?.value || 0,
-      soilPh: sensors.find(s => s.type === 'soil_ph')?.value || 0,
+      airTemperature: currentDevices.find(d => d.type === 'air_temp')?.value || 0,
+      airHumidity: currentDevices.find(d => d.type === 'air_humidity')?.value || 0,
+      soilTemperature: currentDevices.find(d => d.type === 'soil_temp')?.value || 0,
+      soilMoisture: currentDevices.find(d => d.type === 'soil_moisture')?.value || 0,
+      lightIntensity: currentDevices.find(d => d.type === 'light')?.value || 0,
+      co2Concentration: currentDevices.find(d => d.type === 'co2')?.value || 0,
+      soilEc: currentDevices.find(d => d.type === 'soil_ec')?.value || 0,
+      soilPh: currentDevices.find(d => d.type === 'soil_ph')?.value || 0,
     };
 
     if (data.type === 'farm') {
@@ -299,11 +315,11 @@ export function InspectionTab({
         ...envParams,
       }));
     } else if (data.type === 'equipment') {
-      const equipment = equipmentRecords.find(e => e.id === data.code);
+      const eq = useEquipmentStore.getState().equipment.find(e => e.id === data.code);
       setNewRecord(prev => ({
         ...prev,
         inspectionType: 'equipment',
-        greenhouseId: equipment?.greenhouseId || '',
+        greenhouseId: eq?.greenhouseId || '',
         equipmentId: data.code,
         equipmentName: data.name,
         infrastructureId: '',
@@ -311,11 +327,11 @@ export function InspectionTab({
         ...envParams,
       }));
     } else if (data.type === 'infrastructure') {
-      const infrastructure = infrastructureRecords.find(i => i.id === data.code);
+      const infra = useInfrastructureStore.getState().infrastructures.find(i => i.id === data.code);
       setNewRecord(prev => ({
         ...prev,
         inspectionType: 'infrastructure',
-        greenhouseId: infrastructure?.greenhouseId || '',
+        greenhouseId: infra?.greenhouseId || '',
         equipmentId: '',
         equipmentName: '',
         infrastructureId: data.code,
@@ -542,13 +558,13 @@ export function InspectionTab({
       greenhouseName = selectedGreenhouse?.name || '';
       cropName = newRecord.cropName;
     } else if (newRecord.inspectionType === 'equipment') {
-      const selectedEquipment = equipmentRecords.find(e => e.id === newRecord.equipmentId);
+      const selectedEquipment = useEquipmentStore.getState().equipment.find(e => e.id === newRecord.equipmentId);
       greenhouseId = selectedEquipment?.greenhouseId || '';
       greenhouseName = selectedEquipment?.location || '';
       equipmentId = newRecord.equipmentId;
       equipmentName = selectedEquipment?.name || '';
     } else if (newRecord.inspectionType === 'infrastructure') {
-      const selectedInfrastructure = infrastructureRecords.find(i => i.id === newRecord.infrastructureId);
+      const selectedInfrastructure = useInfrastructureStore.getState().infrastructures.find(i => i.id === newRecord.infrastructureId);
       greenhouseId = selectedInfrastructure?.greenhouseId || '';
       greenhouseName = selectedInfrastructure?.location || '';
       infrastructureId = newRecord.infrastructureId;
@@ -914,8 +930,8 @@ export function InspectionTab({
         users={users}
         cropTypes={cropTypes}
         cropBatches={cropBatches}
-        equipmentRecords={equipmentRecords}
-        infrastructureRecords={infrastructureRecords}
+        equipmentRecords={equipment}
+        infrastructureRecords={infrastructures}
         onOpenQRScanner={handleOpenQRScanner}
       />
 
@@ -944,8 +960,8 @@ export function InspectionTab({
         onConfirm={handleConfirmBatchEdit}
         greenhouses={greenhouses}
         users={users}
-        equipmentRecords={equipmentRecords}
-        infrastructureRecords={infrastructureRecords}
+        equipmentRecords={equipment}
+        infrastructureRecords={infrastructures}
       />
 
       {/* 删除确认弹窗 */}

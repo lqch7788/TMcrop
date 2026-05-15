@@ -9,8 +9,7 @@ import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from '
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
-import { taskDispatchFields } from '../../../../data/farmMockData';
-import { useUserStore, useProductionPlanStore, useTeamManageStore } from '../../../../stores';
+import { useUserStore, useProductionPlanStore, useTeamManageStore, useGreenhouseStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
@@ -145,6 +144,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
   // 班组数据（来自农事管理-班组分配）
   const teams = useTeamManageStore((state) => state.teams);
   const teamFetchData = useTeamManageStore((state) => state.fetchData);
+  // 温室数据（替换硬编码 taskDispatchFields）
+  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -156,7 +158,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
     if (teams.length === 0) {
       teamFetchData();
     }
-  }, [users.length, loadUsers, storePlans.length, fetchPlans, teams.length, teamFetchData]);
+    if (greenhouses.length === 0) {
+      loadGreenhouses();
+    }
+  }, [users.length, loadUsers, storePlans.length, fetchPlans, teams.length, teamFetchData, greenhouses.length, loadGreenhouses]);
 
   // 从Store计算生产批次列表（保持与原 cropBatches 变量兼容）
   const cropBatches = useMemo(() => storePlans.map(p => ({
@@ -165,6 +170,15 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
     cropName: (p as any).cropName || (p as any).cropTypeName || '',
     batchStatus: (p as any).batchStatus || (p as any).status,
   })), [storePlans]);
+
+  // 任务区域字段列表（从温室 Store 动态计算，替换硬编码 farmMockData.taskDispatchFields）
+  const taskDispatchFields = useMemo(() => greenhouses.map(g => ({
+    id: Number(g.id) || 0,
+    name: g.name,
+    type: g.greenhouseType || '',
+    crop: g.crop || '',
+    area: g.area || 0,
+  })), [greenhouses]);
 
   // 新建任务状态
   const [createStep, setCreateStep] = useState(1);

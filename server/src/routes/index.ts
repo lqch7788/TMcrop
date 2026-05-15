@@ -34,6 +34,8 @@ import techSolutionRouter from './techSolution';
 import summaryRouter from './summary';
 import materialCostRouter from './materialCost';
 import materialReturnRouter from './materialReturn';
+import materialExecuteRouter from './materialExecute';
+import materialStatisticsRouter from './materialStatistics';
 import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 import announcementRouter from './announcement';
@@ -165,6 +167,8 @@ router.use('/summary', requireAuth, summaryRouter);
 // 成本管理路由（物料成本 + 能源成本）- 需要认证
 router.use('/material-costs', requireAuth, materialCostRouter);
 router.use('/material-returns', requireAuth, materialReturnRouter);
+router.use('/material-executes', requireAuth, materialExecuteRouter);
+router.use('/material-statistics', requireAuth, materialStatisticsRouter);
 
 // 性能监控路由 - 需要认证
 router.use('/monitoring', requireAuth, monitoringRouter);

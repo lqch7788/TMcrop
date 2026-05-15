@@ -5,7 +5,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { taskDispatchFields } from '../../../../data/farmMockData';
 import { Button } from '@/components/ui/button';
 
 // 导入行类型
