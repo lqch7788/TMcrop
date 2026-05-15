@@ -691,6 +691,26 @@ router.get('/overview', (req: Request, res: Response) => {
     const activeBatchSql = `SELECT COUNT(*) as count FROM production_plans WHERE status IN ('planning', 'planted', 'in_progress')`;
     const activeBatch = queryToObjects(db, activeBatchSql, []);
 
+    // 总批次数（所有生产计划，含已完成/已归档等）
+    const totalBatchesSql = `SELECT COUNT(*) as count FROM production_plans`;
+    const totalBatches = queryToObjects(db, totalBatchesSql, []);
+
+    // 本月物料成本
+    const monthMaterialCostSql = `
+      SELECT COALESCE(SUM(total_amount), 0) as material_cost
+      FROM material_costs
+      WHERE cost_date >= ? AND cost_date <= ?
+    `;
+    const monthMaterialCost = queryToObjects(db, monthMaterialCostSql, [monthStartStr, monthEndStr]);
+
+    // 本月能源成本
+    const monthEnergyCostSql = `
+      SELECT COALESCE(SUM(total_amount), 0) as energy_cost
+      FROM energy_costs
+      WHERE cost_date >= ? AND cost_date <= ?
+    `;
+    const monthEnergyCost = queryToObjects(db, monthEnergyCostSql, [monthStartStr, monthEndStr]);
+
     const data = {
       yield: {
         month_harvest_count: monthHarvest[0]?.harvest_count || 0,
@@ -718,8 +738,12 @@ router.get('/overview', (req: Request, res: Response) => {
           : 0
       },
       batch: {
-        active_count: activeBatch[0]?.count || 0
-      }
+        active_count: activeBatch[0]?.count || 0,
+        total_batches: totalBatches[0]?.count || 0
+      },
+      total_cost: (monthLabor[0]?.total_labor_cost || 0)
+        + (monthMaterialCost[0]?.material_cost || 0)
+        + (monthEnergyCost[0]?.energy_cost || 0)
     };
 
     res.json({ success: true, data });

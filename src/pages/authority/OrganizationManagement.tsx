@@ -19,18 +19,16 @@ import {
   X,
   Save,
 } from 'lucide-react';
-import { useAuthSettings } from '../../contexts/AuthSettingsContext';
-import { Organization } from '../types/authority';
+import { useOrganizationStore } from '@/stores';
+import type { Organization } from '@/types/authority';
 
 export default function OrganizationManagement() {
-  const {
-    organizations,
-    loadOrganizations,
-    saveOrganization,
-    deleteOrganization,
-    loading,
-    error,
-  } = useAuthSettings();
+  const organizations = useOrganizationStore((s) => s.organizations);
+  const loadOrganizations = useOrganizationStore((s) => s.loadOrganizations);
+  const saveOrganization = useOrganizationStore((s) => s.saveOrganization);
+  const deleteOrganization = useOrganizationStore((s) => s.deleteOrganization);
+  const loading = useOrganizationStore((s) => s.loading);
+  const error = useOrganizationStore((s) => s.error);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOids, setExpandedOids] = useState<Set<string>>(new Set());

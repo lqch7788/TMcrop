@@ -323,3 +323,38 @@ export async function saveRoleDataAuthority(
     isAuthorize,
   });
 }
+
+// ============================================
+// 用户特殊权限管理
+// ============================================
+
+/**
+ * 获取用户特殊权限覆盖
+ */
+export async function getUserAuthority(
+  userOid: string
+): Promise<{ processOid: string; actionOid: string; value: number }[]> {
+  return apiClient.get<{ processOid: string; actionOid: string; value: number }[]>(
+    '/authority/users/' + userOid + '/authority'
+  );
+}
+
+/**
+ * 保存用户特殊权限覆盖
+ */
+export async function saveUserAuthority(
+  userOid: string,
+  authorities: { processOid: string; actionOid: string; value: number }[]
+): Promise<{ success: boolean }> {
+  return apiClient.post('/authority/users/' + userOid + '/authority', { authorities });
+}
+
+/**
+ * 为用户分配角色
+ */
+export async function assignUserRoles(
+  userOid: string,
+  roleOids: string[]
+): Promise<{ success: boolean }> {
+  return apiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
+}

@@ -320,7 +320,18 @@ class EnhancedApiClient {
       'Content-Type': 'application/json',
     };
 
-    const token = localStorage.getItem('token');
+    // 优先从状态管理读取最新token，其次从localStorage
+    let token: string | null = null;
+    try {
+      // 延迟导入避免循环依赖
+      const { useAuthStore } = await import('../stores/useAuthStore');
+      token = useAuthStore.getState().token;
+    } catch {
+      // 导入失败则尝试从localStorage读取
+    }
+    if (!token) {
+      token = localStorage.getItem('token');
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

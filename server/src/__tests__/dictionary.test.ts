@@ -14,7 +14,7 @@ describe('Dictionary API Utils', () => {
 
     it('应该处理空分类', () => {
       const category = undefined;
-      const sql = 'SELECT * FROM dictionaries WHERE status = ?';
+      let sql = 'SELECT * FROM dictionaries WHERE status = ?';
       const bindings: string[] = ['active'];
 
       if (category) {

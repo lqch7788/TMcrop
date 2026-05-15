@@ -131,7 +131,7 @@ describe('Logger Utils', () => {
         token: 'abc123',
       };
 
-      const filtered = { ...logData };
+      const filtered: Record<string, string> = { ...logData };
       sensitiveKeys.forEach((key) => {
         if (key in filtered) {
           filtered[key] = '***';

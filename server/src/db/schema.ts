@@ -1166,24 +1166,47 @@ export function initializeDatabase() {
     )
   `);
 
-  // ========== V6.0 Phase 4: 用户与权限表 ==========
+  // ========== V6.0 Phase 4: 用户与权限表（完整 RBAC 体系）==========
 
-  // 角色表
+  // 组织表（树形组织架构，root 为根节点）
   db.run(`
-    CREATE TABLE IF NOT EXISTS roles (
+    CREATE TABLE IF NOT EXISTS organizations (
       id TEXT PRIMARY KEY,
       oid TEXT UNIQUE NOT NULL,
-      role_code TEXT NOT NULL,
-      role_name TEXT NOT NULL,
+      name TEXT NOT NULL,
+      parent_oid TEXT,
+      aid TEXT,
+      org_type TEXT DEFAULT 'department',
+      org_relationship TEXT,
       description TEXT,
-      is_system INTEGER DEFAULT 0,
+      address TEXT,
+      contact_person TEXT,
+      contact_phone TEXT,
+      sort_order INTEGER DEFAULT 0,
       status TEXT DEFAULT 'active',
       created_at TEXT,
       updated_at TEXT
     )
   `);
 
-  // 权限表
+  // 角色表（关联组织 org_oid，is_system=1 为系统保护角色不可删除）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS roles (
+      id TEXT PRIMARY KEY,
+      oid TEXT UNIQUE NOT NULL,
+      role_code TEXT NOT NULL,
+      role_name TEXT NOT NULL,
+      org_oid TEXT,
+      description TEXT,
+      is_system INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 权限表（权限项定义）
   db.run(`
     CREATE TABLE IF NOT EXISTS permissions (
       id TEXT PRIMARY KEY,
@@ -1221,7 +1244,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 用户角色关联表
+  // 用户-角色关联表
   db.run(`
     CREATE TABLE IF NOT EXISTS user_roles (
       id TEXT PRIMARY KEY,
@@ -1232,7 +1255,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 角色权限关联表
+  // 角色-权限关联表（旧版）
   db.run(`
     CREATE TABLE IF NOT EXISTS role_permissions (
       id TEXT PRIMARY KEY,
@@ -1243,16 +1266,19 @@ export function initializeDatabase() {
     )
   `);
 
-  // 工序表（用于权限系统）
+  // 工序/菜单表（树形结构，route 绑定前端路由，is_hidden 控制菜单显隐）
   db.run(`
     CREATE TABLE IF NOT EXISTS processes (
       id TEXT PRIMARY KEY,
       oid TEXT UNIQUE NOT NULL,
       process_code TEXT NOT NULL,
       process_name TEXT NOT NULL,
+      parent_oid TEXT,
+      route TEXT,
+      icon TEXT,
       category TEXT,
       app_type INTEGER DEFAULT 0,
-      parent_oid TEXT,
+      is_hidden INTEGER DEFAULT 0,
       description TEXT,
       sort_order INTEGER DEFAULT 0,
       status TEXT DEFAULT 'active',
@@ -1261,14 +1287,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 为 processes 表添加 parent_oid 列（如果不存在）
-  try {
-    db.run(`ALTER TABLE processes ADD COLUMN parent_oid TEXT`);
-  } catch (e) {
-    // 列可能已存在，忽略错误
-  }
-
-  // 动作表（用于权限系统）
+  // 动作表（权限动作定义：view/create/edit/delete/export/approve 等）
   db.run(`
     CREATE TABLE IF NOT EXISTS actions (
       id TEXT PRIMARY KEY,
@@ -1284,7 +1303,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 角色权限关联表（authority 系统用）
+  // 角色-工序-动作 权限矩阵表（value: 0=无权限, 1=有权限）
   db.run(`
     CREATE TABLE IF NOT EXISTS roles_authority (
       id TEXT PRIMARY KEY,
@@ -1295,6 +1314,48 @@ export function initializeDatabase() {
       created_at TEXT,
       updated_at TEXT,
       UNIQUE(role_oid, process_oid, action_oid)
+    )
+  `);
+
+  // 角色-组织 数据权限表（控制角色可访问哪些组织的数据）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS roles_data_authority (
+      id TEXT PRIMARY KEY,
+      role_oid TEXT NOT NULL,
+      org_oid TEXT NOT NULL,
+      created_at TEXT,
+      UNIQUE(role_oid, org_oid)
+    )
+  `);
+
+  // 用户特殊权限覆盖表（在角色权限基础上对单用户做增强/限制）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users_authority (
+      id TEXT PRIMARY KEY,
+      user_oid TEXT NOT NULL,
+      process_oid TEXT NOT NULL,
+      action_oid TEXT NOT NULL,
+      value INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(user_oid, process_oid, action_oid)
+    )
+  `);
+
+  // 项目/APP 配置表（多应用隔离，定义各应用使用的表名）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      project_name TEXT UNIQUE NOT NULL,
+      project_label TEXT,
+      process_table TEXT DEFAULT 'processes',
+      action_table TEXT DEFAULT 'actions',
+      role_authority_table TEXT DEFAULT 'roles_authority',
+      user_authority_table TEXT DEFAULT 'users_authority',
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
     )
   `);
 
