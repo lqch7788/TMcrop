@@ -202,6 +202,7 @@ export interface UseApplicationTabReturn {
   setAddForm: React.Dispatch<React.SetStateAction<AddFormState>>;
 
   // 过滤后的数据
+  materialData: MaterialReceivingRecord[];
   filteredData: MaterialReceivingRecord[];
   totalPages: number;
 
@@ -219,6 +220,7 @@ export interface UseApplicationTabReturn {
   handleEditMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
   handleDeleteClick: (id: number) => void;
   confirmDelete: () => void;
+  handleBatchDelete: () => void;
   handleSaveEdit: () => void;
   handleVoidApply: () => void;
   submitVoidApply: () => void;
