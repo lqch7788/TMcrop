@@ -1567,7 +1567,7 @@ function seedCropOrders() {
 
   // 检查是否已有数据，如果有则跳过（保留用户创建的订单）
   const existingCount = db.exec('SELECT COUNT(*) as count FROM crop_orders');
-  const count = existingCount[0]?.values[0]?.[0] || 0;
+  const count = Number(existingCount[0]?.values[0]?.[0] || 0);
   if (count > 0) {
     console.log(`[seedData] crop_orders 表已有 ${count} 条数据，跳过种子数据导入`);
     return;
@@ -2606,9 +2606,9 @@ function seedUsersAndRoles() {
     username: '陆启闯',
     password_hash: bcrypt.hashSync('123456', 10),  // 密码已哈希存储
     real_name: '陆启闯',
-    org_oid: 'ORG_DEFAULT',
-    org_name: '默认组织',
-    department_oid: 'DEPT_ADMIN',
+    org_oid: 'ORG001',
+    org_name: '宁波帮帮忙公司',
+    department_oid: 'ORG001',
     department_name: '管理层',
     position: '系统管理员',
     email: 'admin@tmcloud.com',
@@ -2627,17 +2627,263 @@ function seedUsersAndRoles() {
     adminUser.email, adminUser.phone, adminUser.status, now, now
   ]);
 
+  // ========== 经理用户：张俊生 ==========
+  const managerUser = {
+    id: 'user-manager',
+    oid: 'USER_MANAGER_001',
+    username: '张俊生',
+    password_hash: bcrypt.hashSync('123456', 10),
+    real_name: '张俊生',
+    org_oid: 'ORG002',
+    org_name: '生产部',
+    department_oid: 'ORG002',
+    department_name: '生产部',
+    position: '生产经理',
+    email: 'zhangjs@tmcloud.com',
+    phone: '13800138001',
+    status: 'active'
+  };
+
+  db.run(`
+    INSERT OR REPLACE INTO users
+    (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    managerUser.id, managerUser.oid, managerUser.username, managerUser.password_hash,
+    managerUser.real_name, managerUser.org_oid, managerUser.org_name,
+    managerUser.department_oid, managerUser.department_name, managerUser.position,
+    managerUser.email, managerUser.phone, managerUser.status, now, now
+  ]);
+
+  // ========== 普通用户：王建国 ==========
+  const regularUser = {
+    id: 'user-regular',
+    oid: 'USER_REGULAR_001',
+    username: '王建国',
+    password_hash: bcrypt.hashSync('123456', 10),
+    real_name: '王建国',
+    org_oid: 'ORG002',
+    org_name: '生产部',
+    department_oid: 'ORG002',
+    department_name: '生产部',
+    position: '农艺师',
+    email: 'wangjg@tmcloud.com',
+    phone: '13800138002',
+    status: 'active'
+  };
+
+  db.run(`
+    INSERT OR REPLACE INTO users
+    (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    regularUser.id, regularUser.oid, regularUser.username, regularUser.password_hash,
+    regularUser.real_name, regularUser.org_oid, regularUser.org_name,
+    regularUser.department_oid, regularUser.department_name, regularUser.position,
+    regularUser.email, regularUser.phone, regularUser.status, now, now
+  ]);
+
   // ========== 用户角色关联 ==========
-  // 陆启闯 关联 管理员角色
+  // 陆启闯 关联 管理员角色（含所有权限）
   db.run(`
     INSERT OR REPLACE INTO user_roles
     (id, user_oid, role_oid, created_at)
     VALUES (?, 'USER_ADMIN_001', 'ROLE_ADMIN', ?)
   `, ['ur-admin-001', now]);
 
+  // 张俊生 关联 管理员角色（含编辑权限，无删除）
+  db.run(`
+    INSERT OR REPLACE INTO user_roles
+    (id, user_oid, role_oid, created_at)
+    VALUES (?, 'USER_MANAGER_001', 'ROLE_MANAGER', ?)
+  `, ['ur-manager-001', now]);
+
+  // 王建国 关联 普通用户角色（仅查看）
+  db.run(`
+    INSERT OR REPLACE INTO user_roles
+    (id, user_oid, role_oid, created_at)
+    VALUES (?, 'USER_REGULAR_001', 'ROLE_USER', ?)
+  `, ['ur-user-001', now]);
+
   console.log(`已导入 ${roles.length} 个角色`);
   console.log(`已导入 ${permissions.length} 个权限`);
-  console.log('已导入管理员用户：陆启闯');
+  console.log('已导入3个用户：陆启闯(管理员)、张俊生(经理)、王建国(普通用户)');
+}
+
+/**
+ * 导入 RBAC 权限系统种子数据
+ * 工序树、动作定义、角色权限矩阵、组织树
+ */
+function seedAuthorityData() {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+
+  // ========== 组织数据 ==========
+  // 使用固定 OID 避免重复创建
+  const orgs = [
+    { id: 'org-root', oid: 'ORG001', parent_oid: null, name: '宁波帮帮忙公司', org_type: 'company', sort_number: 1, status: 'active', description: '总公司' },
+    { id: 'org-prod', oid: 'ORG002', parent_oid: 'ORG001', name: '生产部', org_type: 'department', sort_number: 2, status: 'active', description: '生产管理部门' },
+    { id: 'org-tech', oid: 'ORG003', parent_oid: 'ORG001', name: '技术部', org_type: 'department', sort_number: 3, status: 'active', description: '技术研发部门' },
+    { id: 'org-logistics', oid: 'ORG004', parent_oid: 'ORG001', name: '后勤部', org_type: 'department', sort_number: 4, status: 'active', description: '后勤保障部门' },
+    { id: 'org-finance', oid: 'ORG005', parent_oid: 'ORG001', name: '财务部', org_type: 'department', sort_number: 5, status: 'active', description: '财务管理部门' },
+  ];
+
+  for (const org of orgs) {
+    db.run(`
+      INSERT OR REPLACE INTO organizations (id, oid, parent_oid, aid, name, org_type, sort_order, status, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [org.id, org.oid, org.parent_oid, org.oid, org.name, org.org_type, org.sort_number, org.status, org.description, now, now]);
+  }
+
+  // ========== 动作定义 ==========
+  const actions = [
+    { id: 'act-view', oid: 'ACT001', code: 'view', name: '查看', category: 'common', sort_number: 1 },
+    { id: 'act-create', oid: 'ACT002', code: 'create', name: '新增', category: 'common', sort_number: 2 },
+    { id: 'act-edit', oid: 'ACT003', code: 'edit', name: '编辑', category: 'common', sort_number: 3 },
+    { id: 'act-delete', oid: 'ACT004', code: 'delete', name: '删除', category: 'common', sort_number: 4 },
+    { id: 'act-export', oid: 'ACT005', code: 'export', name: '导出', category: 'common', sort_number: 5 },
+    { id: 'act-approve', oid: 'ACT006', code: 'approve', name: '审核', category: 'common', sort_number: 6 },
+  ];
+
+  for (const action of actions) {
+    db.run(`
+      INSERT OR REPLACE INTO actions (id, oid, action_code, action_name, category, sort_order, sort_number, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [action.id, action.oid, action.code, action.name, action.category, action.sort_number, action.sort_number, now, now]);
+  }
+
+  // ========== 工序树（菜单树）==========
+  // 与 V1.1 Sidebar 菜单结构一一对应
+  const processes = [
+    // 一级菜单
+    { id: 'proc-park', oid: 'PROC_PARK', parent_oid: null, code: 'park-archive', name: '园区导览', route: '/park-archive', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-dashboard', oid: 'PROC_DASHBOARD', parent_oid: null, code: 'dashboard', name: '基地总览', route: '/dashboard', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-indicators', oid: 'PROC_INDICATORS', parent_oid: null, code: 'indicators', name: '指标数据', route: '/indicators', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-announcement', oid: 'PROC_ANNOUNCE', parent_oid: null, code: 'announcement', name: '公告管理', route: '/announcement', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-production', oid: 'PROC_PRODUCTION', parent_oid: null, code: 'production', name: '计划管理', route: '/production', app_type: 0, is_hidden: 0, sort_number: 5 },
+    { id: 'proc-crop', oid: 'PROC_CROP', parent_oid: null, code: 'crop', name: '作物管理', route: '/crop/seed-source', app_type: 0, is_hidden: 0, sort_number: 6 },
+    { id: 'proc-farm', oid: 'PROC_FARM', parent_oid: null, code: 'farm', name: '农事管理', route: '/farm-hub', app_type: 0, is_hidden: 0, sort_number: 7 },
+    { id: 'proc-materials', oid: 'PROC_MATERIALS', parent_oid: null, code: 'materials', name: '库存管理', route: '/warehouse-overview', app_type: 0, is_hidden: 0, sort_number: 8 },
+    { id: 'proc-labor', oid: 'PROC_LABOR', parent_oid: null, code: 'labor', name: '人工管理', route: '/labor/attendance', app_type: 0, is_hidden: 0, sort_number: 9 },
+    { id: 'proc-summary', oid: 'PROC_SUMMARY', parent_oid: null, code: 'summary', name: '生产汇总表', route: '/summary/overview', app_type: 0, is_hidden: 0, sort_number: 10 },
+    { id: 'proc-workflow', oid: 'PROC_WORKFLOW', parent_oid: null, code: 'workflow', name: '审批中心', route: '/approvals', app_type: 0, is_hidden: 0, sort_number: 11 },
+    { id: 'proc-settings', oid: 'PROC_SETTINGS', parent_oid: null, code: 'settings', name: '系统设置', route: '/settings', app_type: 0, is_hidden: 0, sort_number: 12 },
+
+    // 计划管理子菜单
+    { id: 'proc-order', oid: 'PROC_ORDER', parent_oid: 'PROC_PRODUCTION', code: 'order', name: '订单管理', route: '/crop/order', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-plan', oid: 'PROC_PLAN', parent_oid: 'PROC_PRODUCTION', code: 'plan', name: '生产计划', route: '/production', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-tech', oid: 'PROC_TECH', parent_oid: 'PROC_PRODUCTION', code: 'tech-solution', name: '技术方案', route: '/tech-solution', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-purchase', oid: 'PROC_PURCHASE', parent_oid: 'PROC_PRODUCTION', code: 'purchase-plan', name: '采购计划', route: '/purchase-plan', app_type: 0, is_hidden: 0, sort_number: 4 },
+
+    // 作物管理子菜单
+    { id: 'proc-seed-source', oid: 'PROC_SEED_SOURCE', parent_oid: 'PROC_CROP', code: 'seed-source', name: '种源管理', route: '/crop/seed-source', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-seedling', oid: 'PROC_SEEDLING', parent_oid: 'PROC_CROP', code: 'seedling', name: '育苗管理', route: '/crop/seedling', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-planting', oid: 'PROC_PLANTING', parent_oid: 'PROC_CROP', code: 'planting', name: '种植管理', route: '/crop/planting', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-crop-harvest', oid: 'PROC_CROP_HARVEST', parent_oid: 'PROC_CROP', code: 'crop-harvest', name: '采收入库', route: '/crop/harvest', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-crop-inventory', oid: 'PROC_CROP_INVENTORY', parent_oid: 'PROC_CROP', code: 'crop-inventory', name: '作物库存', route: '/crop-inventory', app_type: 0, is_hidden: 0, sort_number: 5 },
+    { id: 'proc-crop-instance', oid: 'PROC_CROP_INSTANCE', parent_oid: 'PROC_CROP', code: 'crop-instance', name: '实例追溯', route: '/crop/instance', app_type: 0, is_hidden: 0, sort_number: 6 },
+
+    // 农事管理子菜单
+    { id: 'proc-farm-hub', oid: 'PROC_FARM_HUB', parent_oid: 'PROC_FARM', code: 'farm-hub', name: '农事任务中心', route: '/farm-hub', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-task-center', oid: 'PROC_TASK_CENTER', parent_oid: 'PROC_FARM', code: 'task-center', name: '任务中心', route: '/task-center', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-schedule', oid: 'PROC_SCHEDULE', parent_oid: 'PROC_FARM', code: 'schedule', name: '排班调度', route: '/schedule', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-team', oid: 'PROC_TEAM', parent_oid: 'PROC_FARM', code: 'team', name: '班组分配', route: '/team', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-daily-summary', oid: 'PROC_DAILY_SUMMARY', parent_oid: 'PROC_FARM', code: 'daily-summary', name: '每日工单汇总', route: '/daily-work-summary', app_type: 0, is_hidden: 0, sort_number: 5 },
+
+    // 库存管理子菜单
+    { id: 'proc-warehouse-overview', oid: 'PROC_WH_OVERVIEW', parent_oid: 'PROC_MATERIALS', code: 'warehouse-overview', name: '库存总览', route: '/warehouse-overview', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-warehouse-inbound', oid: 'PROC_WH_INBOUND', parent_oid: 'PROC_MATERIALS', code: 'warehouse-inbound', name: '物料入库', route: '/warehouse-inbound', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-supplier', oid: 'PROC_SUPPLIER', parent_oid: 'PROC_MATERIALS', code: 'supplier', name: '供应商管理', route: '/supplier-management', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-material-receiving', oid: 'PROC_MAT_RECEIVING', parent_oid: 'PROC_MATERIALS', code: 'material-receiving', name: '生产领料', route: '/material-receiving', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-material-return', oid: 'PROC_MAT_RETURN', parent_oid: 'PROC_MATERIALS', code: 'material-return', name: '生产退料', route: '/material-return', app_type: 0, is_hidden: 0, sort_number: 5 },
+
+    // 人工管理子菜单
+    { id: 'proc-labor-attendance', oid: 'PROC_LABOR_ATTEND', parent_oid: 'PROC_LABOR', code: 'labor-attendance', name: '考勤管理', route: '/labor/attendance', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-labor-personnel', oid: 'PROC_LABOR_PERSONNEL', parent_oid: 'PROC_LABOR', code: 'labor-personnel', name: '人事管理', route: '/labor/personnel', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-labor-compensation', oid: 'PROC_LABOR_COMP', parent_oid: 'PROC_LABOR', code: 'labor-compensation', name: '薪酬管理', route: '/labor/compensation', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-labor-analytics', oid: 'PROC_LABOR_ANALYTICS', parent_oid: 'PROC_LABOR', code: 'labor-analytics', name: '运营分析', route: '/labor/analytics', app_type: 0, is_hidden: 0, sort_number: 4 },
+
+    // 生产汇总表子菜单
+    { id: 'proc-summary-overview', oid: 'PROC_SUM_OVERVIEW', parent_oid: 'PROC_SUMMARY', code: 'summary-overview', name: '汇总看板', route: '/summary/overview', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-summary-yield', oid: 'PROC_SUM_YIELD', parent_oid: 'PROC_SUMMARY', code: 'summary-yield', name: '产量分析', route: '/summary/yield', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-summary-cost', oid: 'PROC_SUM_COST', parent_oid: 'PROC_SUMMARY', code: 'summary-cost', name: '成本分析', route: '/summary/cost', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-summary-labor', oid: 'PROC_SUM_LABOR', parent_oid: 'PROC_SUMMARY', code: 'summary-labor', name: '人工分析', route: '/summary/labor', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-summary-batch', oid: 'PROC_SUM_BATCH', parent_oid: 'PROC_SUMMARY', code: 'summary-batch', name: '批次汇总', route: '/summary/batch', app_type: 0, is_hidden: 0, sort_number: 5 },
+    { id: 'proc-summary-chain', oid: 'PROC_SUM_CHAIN', parent_oid: 'PROC_SUMMARY', code: 'summary-chain', name: '全链条追溯', route: '/summary/chain', app_type: 0, is_hidden: 0, sort_number: 6 },
+    { id: 'proc-summary-problems', oid: 'PROC_SUM_PROBLEMS', parent_oid: 'PROC_SUMMARY', code: 'summary-problems', name: '问题汇总', route: '/summary/problems', app_type: 0, is_hidden: 0, sort_number: 7 },
+    { id: 'proc-summary-indicators', oid: 'PROC_SUM_INDICATORS', parent_oid: 'PROC_SUMMARY', code: 'summary-indicators', name: '指标看板', route: '/summary/indicators', app_type: 0, is_hidden: 0, sort_number: 8 },
+
+    // 审批中心子菜单
+    { id: 'proc-approval-center', oid: 'PROC_APPROVAL_CENTER', parent_oid: 'PROC_WORKFLOW', code: 'approval-center', name: '审批中心', route: '/approvals', app_type: 0, is_hidden: 0, sort_number: 1 },
+    { id: 'proc-approval-material', oid: 'PROC_APPROVAL_MAT', parent_oid: 'PROC_WORKFLOW', code: 'approval-material', name: '物料审批', route: '/material-approval', app_type: 0, is_hidden: 0, sort_number: 2 },
+    { id: 'proc-approval-production', oid: 'PROC_APPROVAL_PROD', parent_oid: 'PROC_WORKFLOW', code: 'approval-production', name: '生产审批', route: '/production-approval', app_type: 0, is_hidden: 0, sort_number: 3 },
+    { id: 'proc-approval-farm', oid: 'PROC_APPROVAL_FARM', parent_oid: 'PROC_WORKFLOW', code: 'approval-farm', name: '农事审批', route: '/farm-approval', app_type: 0, is_hidden: 0, sort_number: 4 },
+    { id: 'proc-approval-indicator', oid: 'PROC_APPROVAL_IND', parent_oid: 'PROC_WORKFLOW', code: 'approval-indicator', name: '指标预算审批', route: '/indicator-budget-approval', app_type: 0, is_hidden: 0, sort_number: 5 },
+    { id: 'proc-my-applications', oid: 'PROC_MY_APPLICATIONS', parent_oid: 'PROC_WORKFLOW', code: 'my-applications', name: '我的申请', route: '/my-applications', app_type: 0, is_hidden: 0, sort_number: 6 },
+    { id: 'proc-hr-approval', oid: 'PROC_HR_APPROVAL', parent_oid: 'PROC_WORKFLOW', code: 'hr-approval', name: '人事审批', route: '/hr-approval', app_type: 0, is_hidden: 0, sort_number: 7 },
+  ];
+
+  for (const proc of processes) {
+    db.run(`
+      INSERT OR REPLACE INTO processes (id, oid, process_code, process_name, parent_oid, route, app_type, is_hidden, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [proc.id, proc.oid, proc.code, proc.name, proc.parent_oid, proc.route, proc.app_type, proc.is_hidden, proc.sort_number, now, now]);
+  }
+
+  // ========== 角色权限矩阵 ==========
+  // ROLE_ADMIN: 所有工序 × 全部动作
+  const allProcessOids = processes.map(p => p.oid);
+  const allActionOids = actions.map(a => a.oid);
+
+  for (const processOid of allProcessOids) {
+    for (const actionOid of allActionOids) {
+      db.run(`
+        INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 1, ?, ?)
+      `, [`ra-admin-${processOid}-${actionOid}`, 'ROLE_ADMIN', processOid, actionOid, now, now]);
+    }
+  }
+
+  // ROLE_MANAGER: 查看所有 + 新增/编辑/审核（无删除）
+  const managerActionOids = ['ACT001', 'ACT002', 'ACT003', 'ACT005', 'ACT006']; // view, create, edit, export, approve
+  for (const processOid of allProcessOids) {
+    for (const actionOid of managerActionOids) {
+      db.run(`
+        INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 1, ?, ?)
+      `, [`ra-manager-${processOid}-${actionOid}`, 'ROLE_MANAGER', processOid, actionOid, now, now]);
+    }
+  }
+
+  // ROLE_USER: 仅查看所有
+  for (const processOid of allProcessOids) {
+    db.run(`
+      INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 1, ?, ?)
+    `, [`ra-user-${processOid}-view`, 'ROLE_USER', processOid, 'ACT001', now, now]);
+  }
+
+  // ========== 角色数据权限 ==========
+  // ROLE_ADMIN: 可看所有组织数据
+  for (const org of orgs) {
+    db.run(`
+      INSERT OR REPLACE INTO roles_data_authority (id, role_oid, org_oid, created_at)
+      VALUES (?, ?, ?, ?)
+    `, [`rda-admin-${org.oid}`, 'ROLE_ADMIN', org.oid, now]);
+  }
+
+  // ROLE_MANAGER: 可看生产部+技术部
+  ['ORG002', 'ORG003'].forEach(orgOid => {
+    db.run(`
+      INSERT OR REPLACE INTO roles_data_authority (id, role_oid, org_oid, created_at)
+      VALUES (?, ?, ?, ?)
+    `, [`rda-manager-${orgOid}`, 'ROLE_MANAGER', orgOid, now]);
+  });
+
+  console.log(`已导入 ${orgs.length} 个组织`);
+  console.log(`已导入 ${actions.length} 个动作`);
+  console.log(`已导入 ${processes.length} 个工序`);
+  console.log(`已导入 ${allProcessOids.length * allActionOids.length} 条管理员角色权限`);
 }
 
 /**
@@ -3810,6 +4056,7 @@ export function exportDatabase() {
   seedZones();
   seedSystemConfigs();
   seedUsersAndRoles();
+  seedAuthorityData();
   seedAllBusinessData();
   seedMaterialCosts();
   seedEnergyCosts();

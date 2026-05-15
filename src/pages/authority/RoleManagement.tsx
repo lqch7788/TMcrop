@@ -18,11 +18,17 @@ import {
   Save,
   Users,
 } from 'lucide-react';
-import { useAuthSettings } from '../../contexts/AuthSettingsContext';
+import { useOrganizationStore } from '@/stores';
 import { Role } from '../types/authority';
 
 export default function RoleManagement() {
-  const { roles, loadRoles, saveRole, deleteRole, loading, error, organizations } = useAuthSettings();
+  const roles = useOrganizationStore((s) => s.roles);
+  const loadRoles = useOrganizationStore((s) => s.loadRoles);
+  const saveRole = useOrganizationStore((s) => s.saveRole);
+  const deleteRole = useOrganizationStore((s) => s.deleteRole);
+  const loading = useOrganizationStore((s) => s.loading);
+  const error = useOrganizationStore((s) => s.error);
+  const organizations = useOrganizationStore((s) => s.organizations);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);

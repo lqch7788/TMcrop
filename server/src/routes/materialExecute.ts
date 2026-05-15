@@ -137,7 +137,7 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     const fields = Object.keys(clean).map(k => `${k} = ?`).join(', ');
-    const values = [...Object.values(clean), now, id];
+    const values: any[] = [...Object.values(clean), now, id];
 
     if (fields.length > 0) {
       db.run(`UPDATE material_executes SET ${fields}, update_time = ? WHERE id = ?`, values);

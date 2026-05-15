@@ -36,57 +36,26 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
-  // 2. 创建 organizations 表（完整结构匹配 authority.ts 的 INSERT/UPDATE 语句）
-  try {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS organizations (
-        id TEXT PRIMARY KEY,
-        oid TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        parent_oid TEXT,
-        aid TEXT,
-        description TEXT,
-        address TEXT,
-        contactor TEXT,
-        contactor_phone TEXT,
-        contactor_mobile TEXT,
-        contactor_email TEXT,
-        org_type TEXT DEFAULT 'department',
-        sort_order INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'active',
-        created_at TEXT,
-        updated_at TEXT
-      )
-    `);
-    console.log('✓ organizations 表创建成功');
-  } catch (e: any) {
-    if (e.message.includes('already exists')) {
-      // 表已存在，尝试添加缺失的列
-      const columnsToAdd = [
-        { name: 'parent_oid', sql: 'ALTER TABLE organizations ADD COLUMN parent_oid TEXT' },
-        { name: 'aid', sql: 'ALTER TABLE organizations ADD COLUMN aid TEXT' },
-        { name: 'description', sql: 'ALTER TABLE organizations ADD COLUMN description TEXT' },
-        { name: 'address', sql: 'ALTER TABLE organizations ADD COLUMN address TEXT' },
-        { name: 'contactor', sql: 'ALTER TABLE organizations ADD COLUMN contactor TEXT' },
-        { name: 'contactor_phone', sql: 'ALTER TABLE organizations ADD COLUMN contactor_phone TEXT' },
-        { name: 'contactor_mobile', sql: 'ALTER TABLE organizations ADD COLUMN contactor_mobile TEXT' },
-        { name: 'contactor_email', sql: 'ALTER TABLE organizations ADD COLUMN contactor_email TEXT' },
-        { name: 'org_type', sql: "ALTER TABLE organizations ADD COLUMN org_type TEXT DEFAULT 'department'" },
-        { name: 'sort_order', sql: 'ALTER TABLE organizations ADD COLUMN sort_order INTEGER DEFAULT 0' },
-      ];
-      for (const col of columnsToAdd) {
-        try {
-          db.run(col.sql);
-          console.log(`✓ organizations 表添加 ${col.name} 列`);
-        } catch (addErr: any) {
-          if (!addErr.message.includes('duplicate column')) {
-            // console.log(`• organizations.${col.name}:`, addErr.message);
-          }
-        }
+  // 2. organizations 表已在 schema.ts 中创建，此处补充缺失列
+  const orgColumnsToAdd = [
+    { name: 'parent_oid', sql: 'ALTER TABLE organizations ADD COLUMN parent_oid TEXT' },
+    { name: 'aid', sql: 'ALTER TABLE organizations ADD COLUMN aid TEXT' },
+    { name: 'org_type', sql: "ALTER TABLE organizations ADD COLUMN org_type TEXT DEFAULT 'department'" },
+    { name: 'org_relationship', sql: 'ALTER TABLE organizations ADD COLUMN org_relationship TEXT' },
+    { name: 'description', sql: 'ALTER TABLE organizations ADD COLUMN description TEXT' },
+    { name: 'address', sql: 'ALTER TABLE organizations ADD COLUMN address TEXT' },
+    { name: 'contact_person', sql: 'ALTER TABLE organizations ADD COLUMN contact_person TEXT' },
+    { name: 'contact_phone', sql: 'ALTER TABLE organizations ADD COLUMN contact_phone TEXT' },
+    { name: 'sort_order', sql: 'ALTER TABLE organizations ADD COLUMN sort_order INTEGER DEFAULT 0' },
+  ];
+  for (const col of orgColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ organizations 表添加 ${col.name} 列`);
+    } catch (addErr: any) {
+      if (!addErr.message.includes('duplicate column')) {
+        // 列已存在或表未创建（由 schema.ts 负责）
       }
-      console.log('• organizations 表已存在，已补充缺失列');
-    } else {
-      console.log('• organizations:', e.message);
     }
   }
 
@@ -371,6 +340,90 @@ export async function fixMissingSchema(): Promise<void> {
     } else {
       console.log('• approval_nodes:', e.message);
     }
+  }
+
+  // 10. RBAC 权限系统列补建 — roles 表添加 org_oid
+  try {
+    db.run(`ALTER TABLE roles ADD COLUMN org_oid TEXT`);
+    console.log('✓ roles 表添加 org_oid 列');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      console.log('• roles.org_oid:', e.message);
+    }
+  }
+
+  // 11. RBAC — processes 表添加 route/icon/is_hidden 列
+  const processColumns = [
+    { name: 'route', sql: 'ALTER TABLE processes ADD COLUMN route TEXT' },
+    { name: 'icon', sql: 'ALTER TABLE processes ADD COLUMN icon TEXT' },
+    { name: 'is_hidden', sql: 'ALTER TABLE processes ADD COLUMN is_hidden INTEGER DEFAULT 0' },
+  ];
+  for (const col of processColumns) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ processes 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        console.log(`• processes.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 12. 创建 roles_data_authority 表（角色-组织数据权限，schema.ts 负责优先创建）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS roles_data_authority (
+        id TEXT PRIMARY KEY,
+        role_oid TEXT NOT NULL,
+        org_oid TEXT NOT NULL,
+        created_at TEXT,
+        UNIQUE(role_oid, org_oid)
+      )
+    `);
+    console.log('✓ roles_data_authority 表创建成功');
+  } catch (e: any) {
+    console.log('• roles_data_authority:', e.message);
+  }
+
+  // 13. 创建 users_authority 表（用户特殊权限覆盖）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users_authority (
+        id TEXT PRIMARY KEY,
+        user_oid TEXT NOT NULL,
+        process_oid TEXT NOT NULL,
+        action_oid TEXT NOT NULL,
+        value INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(user_oid, process_oid, action_oid)
+      )
+    `);
+    console.log('✓ users_authority 表创建成功');
+  } catch (e: any) {
+    console.log('• users_authority:', e.message);
+  }
+
+  // 14. 创建 projects 表（多项目/APP 配置）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        project_name TEXT UNIQUE NOT NULL,
+        project_label TEXT,
+        process_table TEXT DEFAULT 'processes',
+        action_table TEXT DEFAULT 'actions',
+        role_authority_table TEXT DEFAULT 'roles_authority',
+        user_authority_table TEXT DEFAULT 'users_authority',
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    console.log('✓ projects 表创建成功');
+  } catch (e: any) {
+    console.log('• projects:', e.message);
   }
 
   saveDatabase();

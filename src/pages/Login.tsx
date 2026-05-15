@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, Cloud } from 'lucide-react';
-import { useUserStore } from '../stores';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../stores';
 import { Button } from '../components/ui/button';
 
 export default function Login() {
   const navigate = useNavigate();
-  const users = useUserStore((state) => state.users);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberPassword, setRememberPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setError('');
@@ -21,52 +21,21 @@ export default function Login() {
       return;
     }
 
+    setLoading(true);
     try {
-      // 调用后端API验证用户名和密码
-      const response = await fetch('/api/authority/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const result = await useAuthStore.getState().login(username, password);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || '登录失败');
-        return;
+      if (result.success) {
+        // 登录成功，跳转到基地总览页面
+        navigate('/dashboard');
+      } else {
+        setError(result.error || '登录失败');
       }
-
-      // 登录成功，存储用户信息
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', data.user.username);
-      localStorage.setItem('userId', data.user.oid);
-      localStorage.setItem('realName', data.user.real_name);
-      localStorage.setItem('department', data.user.department_name || '');
-
-      // 存储JWT token（如果后端返回了）
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-
-      // 存储用户角色信息
-      localStorage.setItem('userRoles', JSON.stringify(data.roles));
-      
-      // 检查是否是管理员
-      const isAdmin = data.roles.some((roleOid: string) => {
-        const roleOidLower = roleOid?.toLowerCase() || '';
-        return roleOid === 'ROLE001' ||
-               roleOid === 'ROLE_ADMIN' ||
-               roleOidLower.includes('admin');
-      });
-      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-
-      // 跳转到基地总览页面
-      navigate('/dashboard');
     } catch (e) {
       console.error('登录请求失败:', e);
       setError('网络错误，请稍后重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -186,9 +155,10 @@ export default function Login() {
           {/* 登录按钮 */}
           <Button
             onClick={handleLogin}
+            disabled={loading}
             className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
           >
-            登 录
+            {loading ? '登录中...' : '登 录'}
           </Button>
 
           {/* 底部版权信息 */}

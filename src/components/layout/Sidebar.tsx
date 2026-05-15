@@ -12,6 +12,7 @@ import {
   Leaf, Flower2, Trees, CheckCircle,
   DollarSign, Layers, Link as LinkIcon
 } from 'lucide-react';
+import { useAuthStore } from '@/stores';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -107,6 +108,21 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
   const [approvalExpanded, setApprovalExpanded] = useState(true);
   const [farmExpanded, setFarmExpanded] = useState(true);
 
+  // 权限检查 — admin 跳过过滤，非 admin 按权限过滤
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const authorities = useAuthStore((s) => s.authorities);
+  const canAccessProcess = useAuthStore((s) => s.canAccessProcess);
+  const canAccess = (route: string) => isAdmin || canAccessProcess(route);
+
+  // admin 显示全部子菜单；非 admin 按权限过滤（依赖 authorities 数组引用变化触发重算）
+  const filteredCropSubItems = isAdmin ? cropSubItems : cropSubItems.filter(s => canAccessProcess(s.path));
+  const filteredProductionSubItems = isAdmin ? productionSubItems : productionSubItems.filter(s => canAccessProcess(s.path));
+  const filteredFarmSubItems = isAdmin ? farmSubItems : farmSubItems.filter(s => canAccessProcess(s.path));
+  const filteredMaterialsSubItems = isAdmin ? materialsSubItems : materialsSubItems.filter(s => canAccessProcess(s.path));
+  const filteredLaborSubItems = isAdmin ? laborSubItems : laborSubItems.filter(s => canAccessProcess(s.path));
+  const filteredSummarySubItems = isAdmin ? summarySubItems : summarySubItems.filter(s => canAccessProcess(s.path));
+  const filteredApprovalSubItems = isAdmin ? approvalSubItems : approvalSubItems.filter(s => canAccessProcess(s.path));
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
@@ -149,6 +165,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
         <nav className="flex-1 min-h-0 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           <ul className={`space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
             {/* 园区导览 */}
+            {canAccess('/park-archive') && (
             <li>
               <Link
                 to="/park-archive"
@@ -168,8 +185,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                 )}
               </Link>
             </li>
+            )}
 
             {/* 基地总览 */}
+            {canAccess('/dashboard') && (
             <li>
               <Link
                 to="/dashboard"
@@ -189,8 +208,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                 )}
               </Link>
             </li>
+            )}
 
             {/* 指标数据 */}
+            {canAccess('/indicators') && (
             <li>
               <Link
                 to="/indicators"
@@ -210,8 +231,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                 )}
               </Link>
             </li>
+            )}
 
             {/* 公告管理 */}
+            {canAccess('/announcement') && (
             <li>
               <Link
                 to="/announcement"
@@ -231,17 +254,19 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                 )}
               </Link>
             </li>
+            )}
 
             {menuItems.map((item) => (
               <li key={item.path}>
                 {item.label === '作物管理' ? (
+                  filteredCropSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setCropExpanded(!cropExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || cropSubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredCropSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -257,7 +282,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {cropExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {cropSubItems.map((subItem) => (
+                        {filteredCropSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -278,14 +303,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '库存管理' ? (
+                  filteredMaterialsSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setMaterialsExpanded(!materialsExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || materialsSubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredMaterialsSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -301,7 +328,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {materialsExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {materialsSubItems.map((subItem) => (
+                        {filteredMaterialsSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -322,7 +349,9 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '人工管理' ? (
+                  filteredLaborSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setLaborExpanded(!laborExpanded)}
@@ -345,7 +374,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {laborExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {laborSubItems.map((subItem) => (
+                        {filteredLaborSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -366,14 +395,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '生产汇总表' ? (
+                  filteredSummarySubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setSummaryExpanded(!summaryExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || summarySubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredSummarySubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -389,7 +420,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {summaryExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {summarySubItems.map((subItem) => (
+                        {filteredSummarySubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -410,14 +441,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '计划管理' ? (
+                  filteredProductionSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setProductionExpanded(!productionExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || productionSubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredProductionSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -433,7 +466,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {productionExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {productionSubItems.map((subItem) => (
+                        {filteredProductionSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -454,14 +487,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '农事管理' ? (
+                  filteredFarmSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setFarmExpanded(!farmExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || farmSubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredFarmSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -477,7 +512,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {farmExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {farmSubItems.map((subItem) => (
+                        {filteredFarmSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -498,14 +533,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : item.label === '审批中心' ? (
+                  filteredApprovalSubItems.length > 0 && (
                   <>
                     <button
                       onClick={() => setApprovalExpanded(!approvalExpanded)}
                       className={`
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                        ${isActive(item.path) || approvalSubItems.some(sub => isActive(sub.path))
+                        ${isActive(item.path) || filteredApprovalSubItems.some(sub => isActive(sub.path))
                           ? 'bg-blue-100 text-blue-700 font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
@@ -521,7 +558,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     </button>
                     {approvalExpanded && !collapsed && (
                       <ul className="mt-1 ml-4 space-y-1">
-                        {approvalSubItems.map((subItem) => (
+                        {filteredApprovalSubItems.map((subItem) => (
                           <li key={subItem.path}>
                             <Link
                               to={subItem.path}
@@ -542,6 +579,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       </ul>
                     )}
                   </>
+                  )
                 ) : (
                   <Link
                     to={item.path}

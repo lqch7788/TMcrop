@@ -173,7 +173,7 @@ router.get('/', (_req: Request, res: Response) => {
     });
 
     // ------ 4. 分类趋势（月度堆叠柱状图）------
-    const trendMap = new Map<string, Record<string, number>>();
+    const trendMap = new Map<string, Record<string, any>>();
     for (const rec of records) {
       const applyDate = String((rec as any).apply_date || '');
       if (!applyDate) continue;

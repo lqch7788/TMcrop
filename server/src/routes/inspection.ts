@@ -183,7 +183,7 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.values(updates);
+    const values: any[] = Object.values(updates);
     values.push(now, id);
 
     db.run(`UPDATE inspections SET ${fields}, update_time = ? WHERE id = ?`, values);
