@@ -167,7 +167,8 @@
       "Bash(grep -E \"^D:\\\\\\\\TMcrop\\\\\\\\yuanxingtu\\\\\\\\V1\\\\.1\\\\\\\\src\\\\\\\\hooks\\\\\\\\\")",
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(echo \"EXIT CODE: $?\")",
-      "Bash(\"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\node_modules\\\\.bin\\\\tsc\" --noEmit)"
+      "Bash(\"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\node_modules\\\\.bin\\\\tsc\" --noEmit)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
