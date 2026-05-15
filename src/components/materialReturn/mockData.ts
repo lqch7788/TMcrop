@@ -1,8 +1,8 @@
 import { ReturnRecord } from './types';
-import { currentUser as globalCurrentUser } from '../../data/mockData';
+import { users } from '../../data/farm/farmData';
 
-// 重新导出全局currentUser供本模块使用
-export const currentUser = globalCurrentUser;
+// 当前登录用户（默认用户 U013）
+export const currentUser = users.find(u => u.id === 'U013') || users[0];
 
 export const mockReturns: ReturnRecord[] = [
   { id: 1, code: 'TL20240301001', date: '2024-03-05', type: '生产退料', applicant: '李建国', department: '生产部', warehouseLocation: 'A区-01', status: '已完成', statusClass: 'completed', remark: '', operator: '郭靖', reviewer: '黄药师', reviewDate: '2024-03-05', rejectReason: '', materials: [

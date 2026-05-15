@@ -6,17 +6,14 @@
  * 用于localStorage和mockData双轨制
  */
 
-import {
-  seedSources,
-  seedlings,
-  plantings,
-  harvests,
-  cropOrders,
-  cropInstances,
-  suppliers,
-  farmTasks,
-  produceInventories,
-} from '../../data/mockData';
+import { seedSources, seedlings, plantings, suppliers } from '../../data/cropData';
+import { farmTasks } from '../../data/farmMockData';
+import { harvestRecords as harvests } from '../../data/farm/farmData';
+import { produceInventory as produceInventories } from '../../data/warehouse/warehouseData';
+
+// cropOrders / cropInstances 无对应源数据，初始化为空数组
+const cropOrders: any[] = [];
+const cropInstances: any[] = [];
 import { SeedSource } from '../../types/crop';
 import { Seedling } from '../../types/crop';
 import { Planting } from '../../types/crop';

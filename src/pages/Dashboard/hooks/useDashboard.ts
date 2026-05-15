@@ -1,13 +1,9 @@
 // Dashboard 页面状态和逻辑 Hook
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  tasks,
-  iotSensors,
-  messages,
-  yieldStats,
-  costAnalysis,
-} from '../../../data/mockData';
+import { useFarmTaskStore, useIotStore } from '../../../stores';
+import { messages } from '../../../data/approval/approvalData';
+import { yieldStats, costAnalysis } from '../../../data/farm/farmData';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
 import type {
   SelectedDetailType,
@@ -21,12 +17,19 @@ export function useDashboard() {
   const batchStats = useDashboardStore((s) => s.batchStats);
   const fetchBatchStats = useDashboardStore((s) => s.fetchBatchStats);
   const fetchDashboardStats = useDashboardStore((s) => s.fetchDashboardStats);
+  // 替换 mockData: tasks → useFarmTaskStore, devices → useIotStore
+  const tasks = useFarmTaskStore((s) => s.tasks);
+  const loadTasks = useFarmTaskStore((s) => s.loadTasks);
+  const devices = useIotStore((s) => s.devices);
+  const fetchDevices = useIotStore((s) => s.fetchDevices);
 
   // 组件挂载时获取数据
   useEffect(() => {
     fetchDashboardStats();
     fetchBatchStats({ limit: '100' });
-  }, [fetchDashboardStats, fetchBatchStats]);
+    if (tasks.length === 0) loadTasks();
+    if (devices.length === 0) fetchDevices();
+  }, [fetchDashboardStats, fetchBatchStats, tasks.length, loadTasks, devices.length, fetchDevices]);
 
   // ==================== 状态定义 ====================
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'iot'>('overview');
@@ -80,7 +83,7 @@ export function useDashboard() {
   const todayTasks = useMemo(() => tasks.filter(t => t.status !== 'completed'), []);
 
   // 关键传感器
-  const criticalSensors = useMemo(() => iotSensors.filter(s => s.status !== 'normal'), []);
+  const criticalSensors = useMemo(() => devices.filter(s => s.status !== 'normal'), []);
 
   // 预警消息
   const alertMessages = useMemo(() => messages.filter(m => m.type === 'alert'), []);
@@ -88,16 +91,16 @@ export function useDashboard() {
   // 按区域筛选传感器
   const filteredSensors = useMemo(() =>
     selectedRegion
-      ? iotSensors.filter(s => s.greenhouseId === selectedRegion)
-      : iotSensors,
+      ? devices.filter(s => s.greenhouseId === selectedRegion)
+      : devices,
     [selectedRegion]
   );
 
   // 温室下拉列表
   const greenhouseList = useMemo(() =>
-    Array.from(new Set(iotSensors.map(s => s.greenhouseId)))
+    Array.from(new Set(devices.map(s => s.greenhouseId)))
       .map(ghId => {
-        const sensor = iotSensors.find(s => s.greenhouseId === ghId);
+        const sensor = devices.find(s => s.greenhouseId === ghId);
         return { id: ghId, name: sensor?.greenhouseName || '' };
       }),
     []
@@ -169,13 +172,13 @@ export function useDashboard() {
 
   // 获取传感器数据
   const getDetailSensorData = (greenhouseId: string) => {
-    return iotSensors.filter(s => s.greenhouseId === greenhouseId);
+    return devices.filter(s => s.greenhouseId === greenhouseId);
   };
 
   // 获取作物信息（使用 batchStats 从 store 获取数据）
   const getCropInfo = (greenhouseId: string) => {
     // 先从传感器数据找到温室名称
-    const sensor = iotSensors.find(s => s.greenhouseId === greenhouseId);
+    const sensor = devices.find(s => s.greenhouseId === greenhouseId);
     const greenhouseName = sensor?.greenhouseName || '';
     return batchStats.find(b => b.greenhouse === greenhouseName && b.status === 'in_progress');
   };
