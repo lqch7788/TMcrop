@@ -24,6 +24,38 @@ import {
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
 import { getTaskStatus } from '../../components/summary/constants';
 
+// ========== 批次状态中文映射 ==========
+
+/** 批次状态 → 中文标签 */
+const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  planning: '规划中',
+  published: '已发布',
+  in_progress: '进行中',
+  completed: '已完成',
+  overdue: '已逾期',
+};
+
+/** 批次状态 → Tailwind 颜色 */
+const STATUS_COLOR: Record<string, string> = {
+  draft: 'text-gray-400',
+  planning: 'text-gray-500',
+  published: 'text-blue-400',
+  in_progress: 'text-blue-500',
+  completed: 'text-emerald-500',
+  overdue: 'text-red-500',
+};
+
+/** 批次状态 → Badge 样式 */
+const STATUS_BADGE: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-500',
+  planning: 'bg-gray-100 text-gray-600',
+  published: 'bg-blue-50 text-blue-500',
+  in_progress: 'bg-blue-50 text-blue-600',
+  completed: 'bg-emerald-50 text-emerald-600',
+  overdue: 'bg-red-50 text-red-600',
+};
+
 // ========== 产量趋势柱状图 ==========
 
 /** 产量趋势简易柱状图 - 使用 yieldItems 按月展示 */
@@ -149,12 +181,8 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <span>{batch.greenhouse || '-'}</span>
             <span>|</span>
-            <span className={
-              batch.status === '进行中' ? 'text-blue-500' :
-              batch.status === '已完成' ? 'text-emerald-500' :
-              'text-gray-400'
-            }>
-              {batch.status || '-'}
+            <span className={STATUS_COLOR[batch.status] || 'text-gray-400'}>
+              {STATUS_LABEL[batch.status] || batch.status || '-'}
             </span>
           </div>
         </div>
@@ -199,8 +227,8 @@ function GreenhouseSnapshotCard({ batch }: { batch: import('../../stores/useSumm
       </div>
       {/* 底部指标 */}
       <div className="flex items-center justify-between text-xs">
-        <span className={batch.status === '进行中' ? 'text-blue-500' : 'text-emerald-500'}>
-          {batch.status || '-'}
+        <span className={STATUS_COLOR[batch.status] || 'text-gray-400'}>
+          {STATUS_LABEL[batch.status] || batch.status || '-'}
         </span>
         <span className="text-gray-400">{batch.completionRate}%</span>
       </div>
@@ -586,11 +614,9 @@ export default function SummaryOverview() {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      batch.status === '已完成' ? 'bg-emerald-50 text-emerald-600' :
-                      batch.status === '进行中' ? 'bg-blue-50 text-blue-600' :
-                      'bg-gray-100 text-gray-500'
+                      STATUS_BADGE[batch.status] || 'bg-gray-100 text-gray-500'
                     }`}>
-                      {batch.status || '-'}
+                      {STATUS_LABEL[batch.status] || batch.status || '-'}
                     </span>
                     <ChevronRight className="w-4 h-4 text-gray-300" />
                   </div>

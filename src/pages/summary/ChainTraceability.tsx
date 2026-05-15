@@ -36,14 +36,18 @@ const CHAIN_STAGES = [
 
 /** 状态映射 */
 const STATUS_STYLE: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600',
   planning: 'bg-gray-100 text-gray-700',
+  published: 'bg-blue-100 text-blue-600',
   in_progress: 'bg-blue-100 text-blue-700',
   completed: 'bg-emerald-100 text-emerald-700',
   overdue: 'bg-red-100 text-red-700',
 };
 
 const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
   planning: '规划中',
+  published: '已发布',
   in_progress: '进行中',
   completed: '已完成',
   overdue: '已逾期',
@@ -51,7 +55,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 /** 确定批次处于哪个追溯环节 */
 function getBatchStage(batch: BatchStatItem): string {
-  if (batch.status === 'planning') return 'plan';
+  if (batch.status === 'draft' || batch.status === 'planning' || batch.status === 'published') return 'plan';
   if (batch.status === 'completed') return 'inventory';
   if (batch.actualQuantity > 0) return 'harvest';
   if (batch.completedTaskCount > 0) return 'planting';

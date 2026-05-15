@@ -22,6 +22,8 @@ import type { BatchStatItem } from '../../stores';
 
 const STATUS_FILTER_OPTIONS = [
   { value: '', label: '全部状态' },
+  { value: 'draft', label: '草稿' },
+  { value: 'published', label: '已发布' },
   { value: 'planning', label: '规划中' },
   { value: 'in_progress', label: '进行中' },
   { value: 'completed', label: '已完成' },
@@ -31,14 +33,18 @@ const STATUS_FILTER_OPTIONS = [
 // ========== 状态 Badge 样式映射 ==========
 
 const STATUS_BADGE: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600',
   planning: 'bg-gray-100 text-gray-700',
+  published: 'bg-blue-100 text-blue-600',
   in_progress: 'bg-purple-100 text-purple-700',
   completed: 'bg-emerald-100 text-emerald-700',
   overdue: 'bg-red-100 text-red-700',
 };
 
 const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
   planning: '规划中',
+  published: '已发布',
   in_progress: '进行中',
   completed: '已完成',
   overdue: '已逾期',
@@ -47,7 +53,9 @@ const STATUS_LABEL: Record<string, string> = {
 // ========== 甘特图颜色映射 ==========
 
 const GANTT_COLORS: Record<string, { bg: string; isAnimated?: boolean }> = {
+  draft: { bg: 'bg-gray-300' },
   planning: { bg: 'bg-gray-400' },
+  published: { bg: 'bg-blue-400' },
   in_progress: { bg: 'bg-purple-500' },
   completed: { bg: 'bg-emerald-500' },
   overdue: { bg: 'bg-red-500', isAnimated: true },
