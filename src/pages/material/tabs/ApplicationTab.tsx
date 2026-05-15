@@ -168,9 +168,9 @@ export default function ApplicationTab() {
       {/* 批量删除确认弹窗 */}
       {hook.showBatchDeleteConfirm && (
         <BatchDeleteConfirmModal
-          isOpen={hook.showBatchDeleteConfirm}
+          show={hook.showBatchDeleteConfirm}
           count={hook.selectedRows.length}
-          onClose={() => hook.setShowBatchDeleteConfirm(false)}
+          onCancel={() => hook.setShowBatchDeleteConfirm(false)}
           onConfirm={hook.handleBatchDelete}
         />
       )}
