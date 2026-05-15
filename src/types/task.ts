@@ -219,6 +219,8 @@ export interface Task {
   greenhouseId?: string;
   greenhouseName?: string;
   cropName?: string;
+  teamId?: string;           // 关联班组ID（来自农事管理-班组分配）
+  teamName?: string;         // 关联班组名称
 
   // 必填反馈项
   feedbackRequirements: FeedbackRequirement[];

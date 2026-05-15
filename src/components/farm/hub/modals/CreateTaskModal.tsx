@@ -10,7 +10,7 @@ import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
 import { taskDispatchFields } from '../../../../data/farmMockData';
-import { useUserStore, useProductionPlanStore } from '../../../../stores';
+import { useUserStore, useProductionPlanStore, useTeamManageStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
@@ -81,6 +81,8 @@ interface NewTaskState {
   cropRemarks: string;
   areaRemarks: string;
   assignee: string;
+  teamId: string;       // 关联班组ID（来自农事管理-班组分配）
+  teamName: string;     // 关联班组名称
   planStart: string;
   planEnd: string;
   sopContent: string;
@@ -114,6 +116,8 @@ const initialNewTask: NewTaskState = {
   cropRemarks: '',
   areaRemarks: '',
   assignee: '',
+  teamId: '',
+  teamName: '',
   planStart: '',
   planEnd: '',
   sopContent: '',
@@ -138,6 +142,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
   const loadUsers = useUserStore((state) => state.loadUsers);
   const storePlans = useProductionPlanStore((state) => state.plans);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
+  // 班组数据（来自农事管理-班组分配）
+  const teams = useTeamManageStore((state) => state.teams);
+  const teamFetchData = useTeamManageStore((state) => state.fetchData);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -146,7 +153,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
     if (storePlans.length === 0) {
       fetchPlans();
     }
-  }, [users.length, loadUsers, storePlans.length, fetchPlans]);
+    if (teams.length === 0) {
+      teamFetchData();
+    }
+  }, [users.length, loadUsers, storePlans.length, fetchPlans, teams.length, teamFetchData]);
 
   // 从Store计算生产批次列表（保持与原 cropBatches 变量兼容）
   const cropBatches = useMemo(() => storePlans.map(p => ({
@@ -252,6 +262,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
       batchCode: newTask.batchCode,
       greenhouseId: greenhouseId,
       greenhouseName: fieldValue,
+      teamId: newTask.teamId || '',
+      teamName: newTask.teamName || '',
       cropName: cropValue,
       priority: (newTask.priority as 'urgent' | 'high' | 'normal') || 'normal',
       assigneeId: finalAssigneeId,
@@ -1088,6 +1100,34 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
                 <option value="high">高</option>
                 <option value="urgent">紧急</option>
               </select>
+            </div>
+            {/* 班组选择（数据来自农事管理-班组分配，选择后自动提示该班组成员） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
+              </label>
+              <select
+                value={newTask.teamId || ''}
+                onChange={(e) => {
+                  const selectedTeam = teams.find(t => t.id === e.target.value);
+                  setNewTask({
+                    ...newTask,
+                    teamId: e.target.value,
+                    teamName: selectedTeam?.name || '',
+                  });
+                }}
+                className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
+              >
+                <option value="">不关联班组（直接选人）</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</option>
+                ))}
+              </select>
+              {newTask.teamId && (
+                <p className="text-xs text-blue-600 mt-1">
+                  已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
+                </p>
+              )}
             </div>
             {/* 执行人选择 */}
             <div>

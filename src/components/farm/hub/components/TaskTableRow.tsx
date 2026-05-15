@@ -27,6 +27,8 @@ interface TaskTableRowTask {
   assignee?: string;
   assigneeName?: string;
   assigneeId?: string;
+  teamId?: string;        // 关联班组ID
+  teamName?: string;      // 关联班组名称
   progress?: number;
   priority?: string;
   timeout?: {
@@ -216,6 +218,17 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
       {/* 执行人 */}
       <td className="px-3 py-3 whitespace-nowrap">
         <span className="text-sm text-gray-600">{task.assigneeName || task.assignee || '-'}</span>
+      </td>
+
+      {/* 班组（数据来自农事管理-班组分配） */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        {task.teamName ? (
+          <span className="inline-flex px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-600 font-medium">
+            {task.teamName}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )}
       </td>
 
       {/* 进度 */}

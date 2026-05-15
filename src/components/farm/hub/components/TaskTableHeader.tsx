@@ -48,6 +48,7 @@ export function TaskTableHeader({
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">关联生产批次</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">班组</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">优先级</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>

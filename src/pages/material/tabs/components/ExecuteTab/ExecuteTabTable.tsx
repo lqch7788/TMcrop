@@ -22,7 +22,7 @@ interface ExecuteTabTableProps {
 
   // 导出模式状态
   exportMode: boolean;
-  batchEditMode: boolean;
+  batchEditMode: 'edit' | 'delete' | null;
   selectedRows: number[];
 
   // 回调函数
@@ -101,43 +101,45 @@ export function ExecuteTabTable({
               取消
             </Button>
           </div>
+        ) : batchEditMode === 'edit' ? (
+          /* 批量编辑模式 */
+          <div className="flex gap-2">
+            <Button variant="blue" size="sm" onClick={onBatchEditConfirm}>
+              确认编辑
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
+              取消
+            </Button>
+          </div>
+        ) : batchEditMode === 'delete' ? (
+          /* 批量删除模式 */
+          <div className="flex gap-2">
+            <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
+              确认删除
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
+              取消
+            </Button>
+          </div>
         ) : (
+          /* 默认模式 */
           <div className="flex gap-2">
             <Button size="sm" onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
             </Button>
-            {!batchEditMode && (
-              <>
-                <Button variant="blue" size="sm" onClick={onBatchEditClick}>
-                  <Edit className="w-4 h-4" />
-                  编辑
-                </Button>
-                <Button variant="destructive" size="sm" onClick={onBatchDeleteClick}>
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              </>
-            )}
-            {batchEditMode && (
-              <div className="flex gap-2">
-                <Button variant="blue" size="sm" onClick={onBatchEditConfirm}>
-                  确认编辑
-                </Button>
-                <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
-                  确认删除
-                </Button>
-                <Button variant="secondary" size="sm" onClick={onBatchCancel}>
-                  取消
-                </Button>
-              </div>
-            )}
-            {!batchEditMode && (
-              <Button size="sm" onClick={() => onExportClick()}>
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-            )}
+            <Button variant="blue" size="sm" onClick={onBatchEditClick}>
+              <Edit className="w-4 h-4" />
+              编辑
+            </Button>
+            <Button variant="destructive" size="sm" onClick={onBatchDeleteClick}>
+              <Trash2 className="w-4 h-4" />
+              删除
+            </Button>
+            <Button size="sm" onClick={() => onExportClick()}>
+              <Download className="w-4 h-4" />
+              导出
+            </Button>
           </div>
         )}
       </div>

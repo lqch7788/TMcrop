@@ -6,7 +6,7 @@ import {
   Users, MapPin, Target, ScrollText,
   Wifi, Thermometer, Activity, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
-  Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Megaphone, MoreHorizontal, Map, Send,
+  Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map, Send,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
   Leaf, Flower2, Trees, CheckCircle
@@ -80,11 +80,13 @@ const materialsSubItems = [
   { icon: ArrowLeftRight, label: '生产退料', path: '/material-return' },
 ];
 
-// 农事管理子菜单（扩充：任务中心、问题分派、每日工单汇总从其他模块移入，采收入库移出到库存管理）
+// 农事管理子菜单（排班调度、班组分配从人工管理模块移入，与任务派发形成生产劳动力闭环）
 // 注意：农事任务派发、巡查记录、问题分派已统一到农事任务中心，临时任务派发保留独立入口
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
+  { icon: CalendarDays, label: '排班调度', path: '/schedule' },
+  { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
 ];
 

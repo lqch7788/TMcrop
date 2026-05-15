@@ -69,20 +69,10 @@ const DEFAULT_SHIFT_CONFIGS: ShiftConfig[] = [
   { name: '弹性', startTime: '09:00', endTime: '18:00', color: 'bg-purple-500' },
 ];
 
-// 保留原有的MOCK_STAFF作为种子数据（金庸武侠人物）
-const MOCK_STAFF: Staff[] = [
-  { id: 'S001', name: '郭靖', workZone: 'A区' },
-  { id: 'S002', name: '黄蓉', workZone: 'B区' },
-  { id: 'S003', name: '杨过', workZone: 'A区' },
-  { id: 'S004', name: '小龙女', workZone: 'C区' },
-  { id: 'S005', name: '萧峰', workZone: 'B区' },
-  { id: 'S006', name: '段誉', workZone: 'A区' },
-  { id: 'S007', name: '虚竹', workZone: 'C区' },
-  { id: 'S008', name: '任盈盈', workZone: 'B区' },
-];
+// 生成模拟排班数据（基于真实工人列表，无工人时返回空数组）
+function generateMockSchedule(staffList: Staff[]): ScheduleRecord[] {
+  if (staffList.length === 0) return [];
 
-// 生成模拟排班数据（保留原有逻辑作为种子数据）
-function generateMockSchedule(): ScheduleRecord[] {
   const records: ScheduleRecord[] = [];
   const today = new Date();
   const shifts: ShiftType[] = ['早班', '中班', '晚班', '全天', '弹性'];
@@ -93,8 +83,8 @@ function generateMockSchedule(): ScheduleRecord[] {
       date.setDate(today.getDate() + weekOffset * 7 + dayOffset);
       const dateStr = date.toISOString().split('T')[0];
 
-      const staffCount = 2 + Math.floor(Math.random() * 3);
-      const selectedStaff = [...MOCK_STAFF].sort(() => Math.random() - 0.5).slice(0, staffCount);
+      const staffCount = Math.min(2 + Math.floor(Math.random() * 3), staffList.length);
+      const selectedStaff = [...staffList].sort(() => Math.random() - 0.5).slice(0, staffCount);
 
       selectedStaff.forEach((staff, idx) => {
         const shift = shifts[Math.floor(Math.random() * shifts.length)];
@@ -173,6 +163,7 @@ interface ScheduleState {
   // Actions - 数据获取
   fetchSchedules: () => Promise<void>;
   fetchSchedulesByDate: (date: string) => Promise<ScheduleRecord[]>;
+  loadStaffFromWorkers: () => Promise<void>;
 
   // Actions - 增删改
   addSchedule: (record: Omit<ScheduleRecord, 'id'>) => Promise<ScheduleRecord | null>;
@@ -204,10 +195,10 @@ interface ScheduleState {
 export const useScheduleStore = create<ScheduleState>()(
   persist(
     (set, get) => ({
-      // 初始状态
+      // 初始状态（staffList 从 useWorkerStore 动态加载，不再硬编码）
       schedules: [],
       shiftConfigs: DEFAULT_SHIFT_CONFIGS,
-      staffList: MOCK_STAFF,
+      staffList: [],
       swapRequests: [],
       selectedDate: new Date().toISOString().split('T')[0],
       viewMode: 'week',
@@ -220,6 +211,9 @@ export const useScheduleStore = create<ScheduleState>()(
 
       fetchSchedules: async () => {
         set({ isLoading: true, error: null });
+
+        // 先从真实工人库加载工人列表
+        await get().loadStaffFromWorkers();
 
         try {
           // 尝试从API获取
@@ -236,7 +230,7 @@ export const useScheduleStore = create<ScheduleState>()(
           // API返回空或失败，使用本地数据
           const localSchedules = get().schedules;
           if (localSchedules.length === 0) {
-            // 首次使用，初始化种子数据
+            // 首次使用，初始化种子数据（使用真实工人列表）
             get()._initializeSeedData();
           } else {
             set({ isLoading: false });
@@ -430,7 +424,8 @@ export const useScheduleStore = create<ScheduleState>()(
       // ========== 内部方法 ==========
 
       _initializeSeedData: () => {
-        const mockSchedules = generateMockSchedule();
+        const { staffList } = get();
+        const mockSchedules = generateMockSchedule(staffList);
         const mockSwapRequests = generateMockSwapRequests();
 
         set({
@@ -438,8 +433,31 @@ export const useScheduleStore = create<ScheduleState>()(
           swapRequests: mockSwapRequests,
           isLoading: false,
         });
+      },
 
-        // 种子数据初始化完成
+      // 从 useWorkerStore 加载真实工人列表，映射为排班 Staff 格式
+      loadStaffFromWorkers: async () => {
+        try {
+          const { useWorkerStore } = await import('./useWorkerStore');
+          let workers = useWorkerStore.getState().workers;
+
+          // 如果工人数据尚未加载，主动触发加载
+          if (!workers || workers.length === 0) {
+            await useWorkerStore.getState().loadWorkers();
+            workers = useWorkerStore.getState().workers;
+          }
+
+          if (workers && workers.length > 0) {
+            const staffList: Staff[] = workers.map((w: any) => ({
+              id: w.id || w.workerId || '',
+              name: w.name || '',
+              workZone: w.department || w.workArea || '',
+            }));
+            set({ staffList });
+          }
+        } catch (e) {
+          console.warn('[ScheduleStore] 加载工人列表失败:', e);
+        }
       },
     }),
     {

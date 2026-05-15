@@ -72,7 +72,7 @@ export default function ApplicationTab() {
         onAddModalOpen={() => hook.setShowAddModal(true)}
         onShowBatchEditModal={() => hook.setShowBatchEditModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
-        onBatchCancel={() => { hook.setBatchEditMode(false); hook.setSelectedRows([]); }}
+        onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}
       />
 
       {/* 查看详情弹窗 */}
@@ -144,7 +144,7 @@ export default function ApplicationTab() {
       {hook.showDeleteWarning && (
         <DeleteWarningModal
           show={hook.showDeleteWarning}
-          onCancel={() => { hook.setShowDeleteWarning(false); hook.setBatchEditMode(false); }}
+          onCancel={() => { hook.setShowDeleteWarning(false); hook.setBatchEditMode(null); }}
           onConfirm={() => { hook.setShowDeleteWarning(false); }}
         />
       )}
@@ -159,7 +159,7 @@ export default function ApplicationTab() {
           onSaveAll={async () => {
             // 批量编辑保存：刷新数据后关闭
             hook.setShowBatchEditModal(false);
-            hook.setBatchEditMode(false);
+            hook.setBatchEditMode(null);
             hook.setSelectedRows([]);
           }}
         />
