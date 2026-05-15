@@ -143,8 +143,9 @@ export default function ApplicationTab() {
       {/* 删除提醒弹窗 */}
       {hook.showDeleteWarning && (
         <DeleteWarningModal
-          isOpen={hook.showDeleteWarning}
-          onClose={() => { hook.setShowDeleteWarning(false); hook.setBatchEditMode(false); }}
+          show={hook.showDeleteWarning}
+          onCancel={() => { hook.setShowDeleteWarning(false); hook.setBatchEditMode(false); }}
+          onConfirm={() => { hook.setShowDeleteWarning(false); }}
         />
       )}
 
@@ -155,8 +156,8 @@ export default function ApplicationTab() {
           selectedRows={hook.selectedRows}
           recordsList={hook.materialData}
           onClose={() => hook.setShowBatchEditModal(false)}
-          onSave={(updatedRecords) => {
-            hook.setMaterialData(prev => prev.map(r => updatedRecords[r.id] || r));
+          onSaveAll={async () => {
+            // 批量编辑保存：刷新数据后关闭
             hook.setShowBatchEditModal(false);
             hook.setBatchEditMode(false);
             hook.setSelectedRows([]);
@@ -170,12 +171,7 @@ export default function ApplicationTab() {
           isOpen={hook.showBatchDeleteConfirm}
           count={hook.selectedRows.length}
           onClose={() => hook.setShowBatchDeleteConfirm(false)}
-          onConfirm={() => {
-            hook.setMaterialData(prev => prev.filter(r => !hook.selectedRows.includes(r.id)));
-            hook.setShowBatchDeleteConfirm(false);
-            hook.setBatchEditMode(false);
-            hook.setSelectedRows([]);
-          }}
+          onConfirm={hook.handleBatchDelete}
         />
       )}
 

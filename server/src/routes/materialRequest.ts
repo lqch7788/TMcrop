@@ -315,9 +315,9 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '物料申请不存在' });
     }
 
-    // 只允许删除草稿或已拒绝的申请
-    if (request.status !== 'draft' && request.approval_status !== 'rejected') {
-      return res.status(400).json({ success: false, error: '只允许删除草稿或已拒绝的物料申请' });
+    // 允许删除待审批、草稿、已拒绝、已作废状态的申请
+    if (request.status === 'approved' || request.status === '已审批' || request.status === '已完成') {
+      return res.status(400).json({ success: false, error: '已审批或已完成的物料申请不允许删除，请先作废' });
     }
 
     db.run('DELETE FROM material_requests WHERE id = ?', [id]);

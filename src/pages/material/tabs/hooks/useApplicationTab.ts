@@ -429,7 +429,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   // ============================================
-  // 删除确认
+  // 删除确认（单条删除）
   // ============================================
   const handleDeleteClick = (id: number) => {
     setDeletingId(id);
@@ -444,6 +444,24 @@ export function useApplicationTab(): UseApplicationTabReturn {
     }
     setShowDeleteConfirm(false);
     setDeletingId(null);
+  };
+
+  // ============================================
+  // 批量删除（勾选后确认删除多条记录）
+  // ============================================
+  const handleBatchDelete = async () => {
+    if (selectedRows.length === 0) return;
+    // 逐条调用 API 删除
+    for (const id of selectedRows) {
+      await storeDeleteItem(id);
+    }
+    // 重新加载数据
+    await loadItems();
+    // 关闭弹窗、退出批量模式、清空选中
+    setShowBatchDeleteConfirm(false);
+    setShowDeleteWarning(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
   };
 
   // ============================================
@@ -740,6 +758,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setAddForm,
 
     // 过滤后的数据
+    materialData,
     filteredData,
     totalPages,
 
@@ -757,6 +776,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     handleEditMaterialChange,
     handleDeleteClick,
     confirmDelete,
+    handleBatchDelete,
     handleSaveEdit,
     handleVoidApply,
     submitVoidApply,
