@@ -61,28 +61,78 @@ function EmptyView({ onRetry }: { onRetry: () => void }) {
 }
 
 // ========== 页面主组件 ==========
+/** 计算日期范围（按月/季度/年） */
+function getDateRange(mode: 'month' | 'quarter' | 'year'): { start: string; end: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  switch (mode) {
+    case 'month': {
+      const lastDay = new Date(year, month, 0).getDate();
+      return {
+        start: `${year}-${String(month).padStart(2, '0')}-01`,
+        end: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+      };
+    }
+    case 'quarter': {
+      const q = Math.floor((month - 1) / 3);
+      const qStartMonth = q * 3 + 1;
+      const qEndMonth = q * 3 + 3;
+      const lastDay = new Date(year, qEndMonth, 0).getDate();
+      return {
+        start: `${year}-${String(qStartMonth).padStart(2, '0')}-01`,
+        end: `${year}-${String(qEndMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+      };
+    }
+    case 'year':
+    default:
+      return {
+        start: `${year}-01-01`,
+        end: `${year}-12-31`,
+      };
+  }
+}
+
+// ========== 页面主组件 ==========
+
 export default function ProblemSummary() {
   // Store 数据
   const { problemItems, isLoading, error, fetchProblems } = useSummaryDataStore();
 
-  // 日期筛选状态
+  // 日期筛选状态（初始化为本年度范围）
+  const initRange = getDateRange('year');
   const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(initRange.start);
+  const [endDate, setEndDate] = useState(initRange.end);
 
-  // 挂载时获取数据
+  // 挂载时 + 筛选模式/日期变更时获取数据
   useEffect(() => {
-    fetchProblems();
-  }, []);
+    if (filterMode === 'custom') return;
+    const range = getDateRange(filterMode);
+    setStartDate(range.start);
+    setEndDate(range.end);
+    fetchProblems({ startDate: range.start, endDate: range.end });
+  }, [filterMode]);
 
-  // 日期筛选变更时重新获取
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchProblems({ startDate, endDate });
-    } else if (startDate) {
-      fetchProblems({ startDate });
+  // 自定义日期变更时重新获取
+  const handleDateChange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+    if (start && end) {
+      fetchProblems({ startDate: start, endDate: end });
     }
-  }, [startDate, endDate]);
+  };
+
+  // 筛选模式切换
+  const handleModeChange = (mode: 'month' | 'quarter' | 'year' | 'custom') => {
+    setFilterMode(mode);
+    if (mode === 'custom') return;
+    const range = getDateRange(mode);
+    setStartDate(range.start);
+    setEndDate(range.end);
+    fetchProblems({ startDate: range.start, endDate: range.end });
+  };
 
   // ========== 派生数据 ==========
 
@@ -179,13 +229,10 @@ export default function ProblemSummary() {
       <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <SummaryDateFilter
           mode={filterMode}
-          onModeChange={setFilterMode}
+          onModeChange={handleModeChange}
           startDate={startDate}
           endDate={endDate}
-          onDateChange={(start, end) => {
-            setStartDate(start);
-            setEndDate(end);
-          }}
+          onDateChange={handleDateChange}
         />
         <div className="text-sm text-gray-500">
           共 <span className="font-semibold text-gray-700">{problemItems.length}</span> 条日汇总记录
