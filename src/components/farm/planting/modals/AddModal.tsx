@@ -6,12 +6,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
-import { addPlanting } from '../../../../services/apiPlantingService';
 import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
-import { useProductionPlanStore } from '../../../../stores';
+import { useProductionPlanStore, usePlantingStore } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
 
@@ -120,7 +119,7 @@ export function AddModal({
     const rootName = area?.parent || '';
 
     try {
-      await addPlanting({
+      await usePlantingStore.getState().addItem({
         plantCode,
         sourceType: formData.sourceType as SourceType,
         sourceId: formData.sourceId,

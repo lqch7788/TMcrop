@@ -8,13 +8,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
-import { addSeedling } from '../../../../services/apiSeedlingService';
 import { generateSeedlingCodeByDate } from '../../../../services/seedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
-import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore } from '../../../../stores';
+import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore, useSeedlingStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
@@ -298,7 +297,7 @@ export function AddModal({
     // 保存育苗数据
     let addedSeedling;
     try {
-      addedSeedling = await addSeedling(seedlingData);
+      addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
     } catch (error) {
       console.error('保存育苗记录失败:', error);
       alert('保存失败，请重试');

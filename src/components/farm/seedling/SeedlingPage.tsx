@@ -15,10 +15,8 @@ import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
-import * as seedlingService from '../../../services/apiSeedlingService';
-import * as seedSourceService from '../../../services/apiSeedSourceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
@@ -120,12 +118,12 @@ export default function SeedlingPage() {
     return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
 
-  // 加载种源数据
+  // 加载种源数据（通过 Store）
   useEffect(() => {
     const loadSeedSources = async () => {
       try {
-        const data = await seedSourceService.getSeedSources();
-        setSeedSources(data);
+        await useSeedSourceStore.getState().loadItems();
+        setSeedSources(useSeedSourceStore.getState().items);
       } catch (error) {
         console.error('获取种源数据失败:', error);
       }

@@ -18,6 +18,7 @@ interface PlantingState {
   updateItem: (id: string, updates: Partial<Planting>) => Promise<Planting | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
+  harvestPlanting: (id: string, harvestDate: string, harvestCount?: number) => Promise<boolean>;
 }
 
 export const usePlantingStore = create<PlantingState>()(
@@ -78,6 +79,25 @@ export const usePlantingStore = create<PlantingState>()(
           return result;
         } catch (error) {
           console.error('[usePlantingStore] 批量删除种植失败:', error);
+          return false;
+        }
+      },
+
+      harvestPlanting: async (id, harvestDate, harvestCount) => {
+        try {
+          const result = await plantingService.harvestPlanting(id, harvestDate, harvestCount);
+          if (result) {
+            set((s) => ({
+              items: s.items.map((i) =>
+                i.id === id
+                  ? { ...i, harvestDate, harvestQuantity: harvestCount, status: 'harvested' as const }
+                  : i
+              ),
+            }));
+          }
+          return result;
+        } catch (error) {
+          console.error('[usePlantingStore] 采收种植失败:', error);
           return false;
         }
       },

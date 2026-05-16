@@ -7,7 +7,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
-import { updatePlanting } from '../../../../services/apiPlantingService';
+import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface EditModalProps {
@@ -41,7 +41,7 @@ export function EditModal({
 
   const handleSubmit = async () => {
     try {
-      await updatePlanting(record.id, {
+      await usePlantingStore.getState().updateItem(String(record.id), {
         cropCode: formData.selectedCropCode,
         cropName: formData.cropName,
         cropVariety: formData.cropVariety,

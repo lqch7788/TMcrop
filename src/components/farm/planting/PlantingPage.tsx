@@ -17,7 +17,6 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaryStore, getDictItems, usePlantingStore } from '../../../stores';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
-import * as plantingService from '../../../services/apiPlantingService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';

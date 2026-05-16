@@ -332,3 +332,37 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **涉及文件：** 20+ 文件新增/修改，约 5000+ 行代码
 **构建状态：** ✅ 通过
+
+### 2026-05-16 会话 — 作物管理模块架构违规修复 (Phase 2-4)
+
+**完成的工作：**
+
+1. **Phase 2 - UI组件导入路径修复**
+   - `BatchEditModal.tsx`：Modal/FormField 改为从 `@/components/ui` 导入，Input/Select 保留从 Modal.tsx 导入（原生包装器）
+
+2. **Phase 3 - 组件绕过Store直接调API修复（核心）**
+   - **HarvestPage.tsx**：`harvestService.addHarvestRecord/updateHarvestRecord` → `useHarvestStore.addItem/updateItem`
+   - **SeedSource AddModal**：`addSeedSource/updateSeedSource` → `useSeedSourceStore.getState().addItem/updateItem`
+   - **SeedSource EditModal**：`updateSeedSource` → `useSeedSourceStore.getState().updateItem`
+   - **Seedling AddModal**：`addSeedling` → `useSeedlingStore.getState().addItem`
+   - **Seedling EditModal**：`updateSeedling` → `useSeedlingStore.getState().updateItem`
+   - **Seedling DailyRecordModal**：`addDailyRecord` → `useSeedlingStore.getState().addDailyRecord`
+   - **Seedling TransplantModal**：`addPlanting` → `usePlantingStore.getState().addItem`；`increasePlantedCount` → `useSeedlingStore.getState().increasePlantedCount`
+   - **Planting AddModal**：`addPlanting` → `usePlantingStore.getState().addItem`
+   - **Planting EditModal**：`updatePlanting` → `usePlantingStore.getState().updateItem`
+   - **Planting HarvestModal**：`harvestPlanting` → `usePlantingStore.getState().harvestPlanting`
+   - **SeedlingPage.tsx**：`seedSourceService.getSeedSources()` → `useSeedSourceStore.getState().loadItems()`
+   - **PlantingPage.tsx**：移除未使用的 `plantingService` 导入
+
+3. **Store 方法增强**
+   - `usePlantingStore`：新增 `harvestPlanting(id, harvestDate, harvestCount)` 方法
+   - `useSeedlingStore`：新增 `addDailyRecord(seedlingId, record)` 和 `increasePlantedCount(id, count)` 方法
+
+4. **Phase 4 - PrintLabelModal 评估**
+   - 育苗 PrintLabelModal 已改为导入 `apiSeedlingService`，但因同步/异步不兼容回退
+   - 种源/种植 PrintLabelModal 缺少后端 print 端点，暂保留 localStorage 服务
+   - 打印功能是自包含操作，不影响数据完整性
+
+**构建状态：** ✅ 前端 + 后端均通过
+**API 验证：** ✅ GET/POST/DELETE 全部正常
+**涉及文件：** 14 个文件修改

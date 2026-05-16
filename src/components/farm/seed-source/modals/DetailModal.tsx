@@ -4,9 +4,10 @@
 
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
+import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';
+import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -21,27 +22,9 @@ export function DetailModal({
 }: DetailModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'trace'>('info');
 
-  // 状态映射
-  const statusMap = {
-    [StockStatus.SUFFICIENT]: { label: '充足', color: 'text-green-600 bg-green-50' },
-    [StockStatus.LOW]: { label: '不足', color: 'text-amber-600 bg-amber-50' },
-    [StockStatus.DEPLETED]: { label: '耗尽', color: 'text-red-600 bg-red-50' }
-  };
+  const formatUnit = (unit: string) => UNIT_MAP[unit] || unit || '';
 
-  // 单位转换函数（英文→中文）
-  const unitMap: Record<string, string> = {
-    'bag': '袋', 'plant': '株', 'grain': '粒', 'kg': '千克', 'g': '克', 'ton': '吨', 'mu': '亩',
-    '个': '个', '袋': '袋', '株': '株', '粒': '粒', '千克': '千克', '克': '克', '吨': '吨', '亩': '亩',
-  };
-  const formatUnit = (unit: string) => unitMap[unit] || unit || '';
-
-  // 类型映射
-  const sourceTypeMap = {
-    [SourceType.SEED]: '种子',
-    [SourceType.SEEDLING]: '种苗'
-  };
-
-  const status = statusMap[record.status] || statusMap[StockStatus.SUFFICIENT];
+  const status = STOCK_STATUS_MAP[record.status] || STOCK_STATUS_MAP['sufficient'];
 
   return (
     <UnifiedModal
@@ -105,7 +88,7 @@ export function DetailModal({
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">种源类型：</span>
-              <span className="text-sm text-gray-900">{sourceTypeMap[record.sourceType]}</span>
+              <span className="text-sm text-gray-900">{SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}</span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">供应商：</span>

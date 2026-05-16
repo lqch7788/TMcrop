@@ -877,11 +877,20 @@ export default function ProduceInventoryPage() {
     }
   };
 
-  const handleConfirmDelete = () => {
-    // 执行删除
+  const handleConfirmDelete = async () => {
+    // 执行删除：先更新本地状态，再同步后端API
     setInventoryData(prev => prev.filter(item => !selectedRows.includes(item.id)));
     setShowDeleteModal(false);
     setDeleteMode(false);
+
+    // 异步删除后端数据
+    try {
+      await inventoryService.deleteInventoryBatch(selectedRows);
+      console.log(`删除 ${selectedRows.length} 条库存记录成功`);
+    } catch (error) {
+      console.error('删除库存记录失败:', error);
+      alert(`删除失败: ${error instanceof Error ? error.message : error}`);
+    }
     setSelectedRows([]);
   };
 

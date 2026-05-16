@@ -10,6 +10,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, LabelPrintType, PrintRecord } from '../../../../types/crop';
 import { getPrintRecords, printLabel, generateAllLabelNumbers, generateLabelNumber } from '../../../../services/seedSourceService';
 import { useUserStore } from '../../../../stores';
+import { UNIT_MAP } from '../../../../constants/cropConstants';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -30,9 +31,13 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const currentOperator = storeUsers.length > 0 ? storeUsers[0]?.name : (localStorage.getItem('username') || '系统管理员');
 
   // 单位转换函数（英文→中文）
+  // 基于共享常量扩展，额外映射：grain→粒, ton→吨, mu→亩 + 中文自引用兜底
   const unitMap: Record<string, string> = {
-    'bag': '袋', 'plant': '株', 'grain': '粒', 'kg': '千克', 'g': '克', 'ton': '吨', 'mu': '亩',
-    '个': '个', '袋': '袋', '株': '株', '粒': '粒', '千克': '千克', '克': '克', '吨': '吨', '亩': '亩',
+    ...UNIT_MAP,
+    'grain': '粒',   // 粒（种子计数单位）
+    'ton': '吨',     // 吨（额外英文别名）
+    'mu': '亩',      // 亩（面积单位）
+    '千克': '千克', '吨': '吨', '亩': '亩',  // 中文自引用兜底
   };
   const formatUnit = (unit: string) => unitMap[unit] || unit || '';
 

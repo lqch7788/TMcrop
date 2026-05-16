@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, History } from 'lucide-react';
 import TraceChain from '../../trace/TraceChain';
+import { QUALITY_GRADE_MAP } from '../../../../constants/cropConstants';
 
 interface HarvestRecord {
   id: number;
@@ -41,15 +42,14 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
 
   if (!isOpen || !record) return null;
 
+  // 品质等级徽章（使用共享常量 QUALITY_GRADE_MAP）
   const getGradeBadge = (grade: string) => {
-    switch (grade) {
-      case 'A': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">A级</span>;
-      case 'B': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">B级</span>;
-      case 'C': return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">C级</span>;
-      default: return null;
-    }
+    const info = QUALITY_GRADE_MAP[grade];
+    if (!info) return null;
+    return <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full`}>{info.label}</span>;
   };
 
+  // TODO: status badges 颜色与共享常量 HARVEST_STATUS_MAP 不同（blue vs emerald），暂保留本地定义
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'harvested': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已采收</span>;

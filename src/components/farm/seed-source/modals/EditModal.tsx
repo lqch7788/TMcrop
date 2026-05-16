@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
-import { updateSeedSource } from '../../../../services/apiSeedSourceService';
+import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
@@ -132,7 +132,7 @@ export function EditModal({
     }
 
     try {
-      await updateSeedSource(record.id, {
+      await useSeedSourceStore.getState().updateItem(String(record.id), {
         sourceType: formData.sourceType,
         sourceOrigin: formData.sourceOrigin,
         cropCategory: formData.cropCategory,

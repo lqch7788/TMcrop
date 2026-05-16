@@ -7,6 +7,7 @@ import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, Chev
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
+import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
 
 // 操作模式类型
 type PlantingOperationMode = 'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export';
@@ -208,6 +209,7 @@ export function PlantingTable({
   // 判断是否需要显示复选框列（仅在导出模式下显示）
   const showCheckbox = exportMode;
 
+  // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
   const statusMap = {
     [PlantingStatus.PLANTED]: { label: '已定植', color: 'text-blue-600 bg-blue-50' },
     [PlantingStatus.GROWING]: { label: '生长期', color: 'text-amber-600 bg-amber-50' },

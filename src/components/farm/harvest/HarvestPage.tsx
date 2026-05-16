@@ -9,7 +9,7 @@ import {
   produceCategories,
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
-import * as harvestService from '../../../services/apiHarvestService';
+import { generateHarvestCode as genHarvestCode } from '../../../services/apiHarvestService';
 import * as cropInstanceService from '../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import { inbound as inventoryInbound } from '../../../services/inventoryService';
@@ -118,7 +118,7 @@ export default function HarvestPage() {
   });
 
   // 从 Zustand Store 获取采收数据
-  const { items: harvestRecords, isLoading: loading, loadItems, deleteItem, deleteItems } = useHarvestStore();
+  const { items: harvestRecords, isLoading: loading, loadItems, deleteItem, deleteItems, addItem, updateItem } = useHarvestStore();
 
   // 初始化数据（从 Store 加载）
   useEffect(() => {
@@ -375,7 +375,7 @@ export default function HarvestPage() {
 
         // 同步到后端API
         try {
-          await harvestService.updateHarvestRecord(id, updatedRecord);
+          await updateItem(String(id), updatedRecord);
           updatedRecords[index] = updatedRecord;
         } catch (error) {
           console.error(`更新记录 ${id} 失败:`, error);
@@ -572,7 +572,7 @@ export default function HarvestPage() {
 
     for (const product of productRecords) {
       // 生成采收单号
-      const harvestCode = newRecord.harvestCode || await harvestService.generateHarvestCode();
+      const harvestCode = newRecord.harvestCode || await genHarvestCode();
 
       const record = {
         harvestCode,
@@ -597,8 +597,8 @@ export default function HarvestPage() {
         quality: 'good' as const,
       };
 
-      // 使用 apiHarvestService 添加记录
-      const createdRecord = await harvestService.addHarvestRecord(record);
+      // 使用 Store 添加记录（架构：组件 → Store → API）
+      const createdRecord = await addItem(record);
 
       // 同步到库存中心（V3.0统一库存）
       inventoryInbound({
