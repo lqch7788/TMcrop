@@ -284,7 +284,29 @@ export function createIndexes() {
   // notifications 表不存在，跳过该索引
   // db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_receiver ON notifications(receiver_id, is_read, create_time)`);
 
-  console.log('索引创建完成！共创建 43 个索引');
+  // ========== 29. V10.0 新表索引 ==========
+  // 施肥记录表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_code ON fertilizer_records(fertilizer_code)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_greenhouse ON fertilizer_records(greenhouse_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_time ON fertilizer_records(fertilize_time)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_source ON fertilizer_records(data_source)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_crop ON fertilizer_records(crop_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_type ON fertilizer_records(fertilizer_type)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fertilizer_task ON fertilizer_records(farm_task_id)`);
+
+  // 行政区划表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_region_parent ON region_data(parent_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_region_level ON region_data(level)`);
+
+  // 种植标签表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_plant_labels_planting ON plant_labels(planting_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_plant_labels_number ON plant_labels(label_number)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_label_resume_label ON plant_label_resume(label_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_label_resume_type ON plant_label_resume(operation_type)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_plant_marks_parent ON plant_marks(parent_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_plant_marks_aid ON plant_marks(mark_aid)`);
+
+  console.log('索引创建完成！共创建 70 个索引');
 }
 
 // 导出索引信息查询函数

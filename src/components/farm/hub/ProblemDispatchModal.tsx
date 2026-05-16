@@ -82,13 +82,13 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
     }
   }, [problemId, storeProblems]);
 
-  const availableWorkers = workers.filter(w => w.id !== problem?.handlerId);
+  const availableWorkers = users.filter((w: User) => w.id !== problem?.handlerId);
 
   const handleSubmit = async () => {
     if (!problem || !selectedWorkerId) return;
     setIsSubmitting(true);
     try {
-      const selectedWorker = workers.find(w => w.id === selectedWorkerId);
+      const selectedWorker = users.find((w: User) => w.id === selectedWorkerId);
 
       // 通过 Zustand Store 更新问题（乐观更新 + API 写入）
       await updateProblemInStore(problemId, {

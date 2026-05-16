@@ -106,6 +106,12 @@ export function useProblemDispatch() {
     []
   );
 
+  // 确保员工数据已加载（Store 内部有 5 分钟缓存，不会重复请求）
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  useEffect(() => {
+    loadWorkers();
+  }, [loadWorkers]);
+
   // 待分派问题（状态为"待处理"且未关联任务）
   const pendingProblems = useMemo(
     () => problems.filter(p => p.status === '待处理' && !p.sourceTaskId),
@@ -488,17 +494,19 @@ export function useProblemDispatch() {
     return problem?.flowRecords || [];
   }, [problems]);
 
-  // 获取员工列表（陆启闯排在第一位）
+  // 获取员工列表（陆启闯排在第一位）— 响应式订阅 Store 变化
+  const storeWorkers = useWorkerStore((s) => s.workers);
   const workerList = useMemo(() => {
-    const storeWorkers = useWorkerStore.getState().workers;
-    const filtered = storeWorkers.filter(w => w.status === '在职').map(w => ({
-      id: w.id,
-      workerId: w.workerId,
-      name: w.name,
-      position: w.position,
-      skillTags: w.skillTags,
-      status: w.status,
-    }));
+    const filtered = storeWorkers
+      .filter(w => w.status === 'active')
+      .map(w => ({
+        id: w.id,
+        workerId: w.workerId,
+        name: w.name,
+        position: w.position,
+        skillTags: w.skillTags || [],
+        status: w.status,
+      }));
     // 陆启闯排在第一位
     const luzhuchuangIndex = filtered.findIndex(w => w.name === '陆启闯');
     if (luzhuchuangIndex > 0) {
@@ -506,7 +514,7 @@ export function useProblemDispatch() {
       filtered.unshift(luzhuchuang);
     }
     return filtered;
-  }, []);
+  }, [storeWorkers]);
 
   return {
     // 问题统计

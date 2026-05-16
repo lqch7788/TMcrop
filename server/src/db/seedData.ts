@@ -4042,6 +4042,62 @@ function seedEnergyCosts() {
 }
 
 /**
+ * V10.0: 导入施肥管理相关种子数据
+ * 包括 fertilizer_type 字典 和 plant_marks 标记
+ */
+function seedFertilizerAndMarks() {
+  const db = getDatabase();
+
+  // === fertilizer_type 字典分类 ===
+  try {
+    db.run(`INSERT OR IGNORE INTO dictionary_categories (category_code, category_name, description, sort_order) VALUES (?, ?, ?, ?)`,
+      ['fertilizer_type', '肥料类型', '施肥管理中肥料类型分类', 90]);
+  } catch (e) { /* 已存在 */ }
+
+  // === fertilizer_type 字典项 ===
+  const fertilizerTypes = [
+    { id: 'fert-001', category: 'fertilizer_type', code: 'organic', name: '有机肥', sort: 1 },
+    { id: 'fert-002', category: 'fertilizer_type', code: 'inorganic', name: '无机肥', sort: 2 },
+    { id: 'fert-003', category: 'fertilizer_type', code: 'compound', name: '复合肥', sort: 3 },
+    { id: 'fert-004', category: 'fertilizer_type', code: 'microbial', name: '微生物肥', sort: 4 },
+    { id: 'fert-005', category: 'fertilizer_type', code: 'foliar', name: '叶面肥', sort: 5 },
+    { id: 'fert-006', category: 'fertilizer_type', code: 'water_soluble', name: '水溶肥', sort: 6 },
+    { id: 'fert-007', category: 'fertilizer_type', code: 'slow_release', name: '缓释肥', sort: 7 },
+    { id: 'fert-008', category: 'fertilizer_type', code: 'other_fert', name: '其他', sort: 8 },
+  ];
+
+  for (const ft of fertilizerTypes) {
+    db.run(
+      `INSERT OR IGNORE INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,
+      [ft.id, ft.category, ft.code, ft.name, ft.name, ft.sort]
+    );
+  }
+
+  // === plant_marks 标记种子数据 ===
+  const existingMarks = db.exec('SELECT COUNT(*) FROM plant_marks');
+  if ((existingMarks[0]?.values[0]?.[0] ?? 0) === 0) {
+    const marks = [
+      { id: 1, name: '正常', color: '#22c55e', icon: 'CheckCircle', parent_id: 0, mark_aid: 'normal', is_use: 1, sort_order: 1 },
+      { id: 2, name: '关注', color: '#f59e0b', icon: 'AlertTriangle', parent_id: 0, mark_aid: 'normal', is_use: 1, sort_order: 2 },
+      { id: 3, name: '问题', color: '#ef4444', icon: 'AlertCircle', parent_id: 0, mark_aid: 'normal', is_use: 1, sort_order: 3 },
+      { id: 4, name: '已采收', color: '#3b82f6', icon: 'PackageCheck', parent_id: 0, mark_aid: 'harvest', is_use: 1, sort_order: 4 },
+      { id: 5, name: '废弃', color: '#9ca3af', icon: 'Trash2', parent_id: 0, mark_aid: 'disuse', is_use: 0, sort_order: 5 },
+      { id: 6, name: '已移除', color: '#6b7280', icon: 'XCircle', parent_id: 0, mark_aid: 'removed', is_use: 0, sort_order: 6 },
+    ];
+
+    for (const mark of marks) {
+      db.run(
+        `INSERT INTO plant_marks (id, name, color, icon, parent_id, mark_aid, is_use, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [mark.id, mark.name, mark.color, mark.icon, mark.parent_id, mark.mark_aid, mark.is_use, mark.sort_order]
+      );
+    }
+    console.log(`已导入 ${marks.length} 条种植标记数据`);
+  }
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
@@ -4068,6 +4124,7 @@ export function exportDatabase() {
   seedAllBusinessData();
   seedMaterialCosts();
   seedEnergyCosts();
+  seedFertilizerAndMarks();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');
