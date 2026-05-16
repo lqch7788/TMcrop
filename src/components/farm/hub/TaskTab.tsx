@@ -131,12 +131,6 @@ export function TaskTab({
   // 过滤后的任务
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
-      // ========== 特殊状态过滤：pending状态且没有执行人的任务始终隐藏 ==========
-      // pending状态表示等待分派执行人，如果没有执行人则说明还没分派
-      // 无论什么筛选条件，这类任务都应对所有人隐藏
-      if (task.status === 'pending' && !task.assigneeId) {
-        return false;
-      }
 
       // 状态筛选
       if (filters.status !== 'all' && task.status !== filters.status) {

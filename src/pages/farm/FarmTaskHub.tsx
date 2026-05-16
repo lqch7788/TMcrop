@@ -624,6 +624,7 @@ export function FarmTaskHub() {
           hub.refresh();
           hub.forceRefresh();
         }}
+        tasksHook={tasksHook}
       />
 
       {/* 撤回任务弹窗 */}

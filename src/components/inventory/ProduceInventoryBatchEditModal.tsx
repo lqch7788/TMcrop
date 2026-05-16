@@ -6,6 +6,27 @@
 import React from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { ProduceInventory } from '../../types/inventory';
+import { getAllVarieties } from '../../services/cropVarietyService';
+
+/** 与表格一致的11位作物编码生成函数 */
+function generateCropCode(cropName: string, variety: string): string {
+  const allVarieties = getAllVarieties();
+  const exactMatch = allVarieties.find(v => {
+    const varietyMatch = v.subVariety1Name === variety || v.varietyName === variety;
+    const cropMatch = v.varietyName === cropName || v.typeName === cropName || v.categoryName === cropName;
+    return varietyMatch && cropMatch;
+  });
+  if (exactMatch?.cropCode?.length >= 9) return exactMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  const subMatch = allVarieties.find(v => v.subVariety1Name === variety);
+  if (subMatch?.cropCode?.length >= 9) return subMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  const varietyMatch2 = allVarieties.find(v => v.varietyName === variety);
+  if (varietyMatch2?.cropCode?.length >= 9) return varietyMatch2.cropCode.padEnd(11, '0').substring(0, 11);
+  const cropMatch = allVarieties.find(v => v.varietyName === cropName);
+  if (cropMatch?.cropCode?.length >= 9) return cropMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  const typeMatch = allVarieties.find(v => v.typeName === cropName);
+  if (typeMatch?.cropCode?.length >= 9) return typeMatch.cropCode.padEnd(11, '0').substring(0, 11);
+  return 'OT0000000000';
+}
 
 interface ProduceInventoryBatchEditModalProps {
   isOpen: boolean;
@@ -101,7 +122,7 @@ export function ProduceInventoryBatchEditModal({
         >
           {selectedItems.map((item, idx) => (
             <option key={item.id} value={item.id}>
-              {item.productCode} - {item.cropName} {batchEditedItems[item.id] && <span className="bg-green-100 text-green-700">✅ 已编辑</span>}
+              {generateCropCode(item.cropName, item.variety)} - {item.cropName} {batchEditedItems[item.id] && '✅ 已编辑'}
             </option>
           ))}
         </select>
@@ -113,7 +134,7 @@ export function ProduceInventoryBatchEditModal({
         <div className="grid grid-cols-4 gap-3">
           <div className="bg-white rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">产品编码</div>
-            <div className="text-sm font-medium text-gray-900">{currentEditedData.productCode || '-'}</div>
+            <div className="text-sm font-medium text-gray-900">{generateCropCode(currentItem?.cropName || currentEditedData.cropName || '', currentItem?.variety || currentEditedData.variety || '') || '-'}</div>
           </div>
           <div className="bg-white rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">产品名称</div>

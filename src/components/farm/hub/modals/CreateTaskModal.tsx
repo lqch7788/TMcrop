@@ -11,6 +11,7 @@ import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/c
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
 import { useUserStore, useProductionPlanStore, useTeamManageStore, useGreenhouseStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
+import type { UseTasksReturn } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
 
@@ -104,6 +105,7 @@ interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;  // 回调通知主组件刷新
+  tasksHook: UseTasksReturn; // 从父组件共享 useTasks 实例，确保与任务列表数据同步
 }
 
 const initialNewTask: NewTaskState = {
@@ -135,8 +137,7 @@ const initialNewTask: NewTaskState = {
   workHoursPerDay: 8,
 };
 
-export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalProps) {
-  const tasksHook = useTasks();
+export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: CreateTaskModalProps) {
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
   const storePlans = useProductionPlanStore((state) => state.plans);

@@ -102,7 +102,15 @@ export function MyTasksPage() {
         estimatedHours: t.estimatedHours || 0,
         dueDate: t.dueDate || '',
         startDate: t.startDate || '',
-        requiredFeedback: t.requiredFeedback || [],
+        requiredFeedback: t.requiredFeedback || (() => {
+          // 兼容两种格式：后端返回 string[]（如 ['gps', 'photo_before']），
+          // 种子数据返回 object[]（如 [{type:'gps', ...}]）
+          const fq = t.feedbackRequirements;
+          if (Array.isArray(fq)) {
+            return fq.map((f: unknown) => typeof f === 'string' ? f : (f as { type?: string }).type || '');
+          }
+          return [];
+        })(),
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
         // 任务配置
@@ -162,7 +170,14 @@ export function MyTasksPage() {
         estimatedHours: t.estimatedHours || 0,
         dueDate: t.dueDate || '',
         startDate: t.startTime || '',
-        requiredFeedback: t.feedbackRequirements || [],
+        requiredFeedback: (() => {
+          // 兼容两种格式：后端返回 string[]，种子数据返回 object[]
+          const fq = t.feedbackRequirements;
+          if (Array.isArray(fq)) {
+            return fq.map((f: unknown) => typeof f === 'string' ? f : (f as { type?: string }).type || '');
+          }
+          return [];
+        })(),
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
         typeConfig: t.typeConfig || {},
