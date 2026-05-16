@@ -82,6 +82,17 @@ export const usePlantingStore = create<PlantingState>()(
         }
       },
     }),
-    { name: 'planting-storage', partialize: (s) => ({ items: s.items }) }
+    {
+      name: 'planting-storage',
+      version: 2,
+      partialize: (state) => ({ items: state.items }),
+      merge: (persisted: unknown, current) => {
+        const state = current as PlantingState;
+        if (persisted && typeof persisted === 'object' && Array.isArray((persisted as Record<string, unknown>).items)) {
+          return { ...state, items: (persisted as Record<string, unknown>).items as Planting[] };
+        }
+        return state;
+      },
+    }
   )
 );

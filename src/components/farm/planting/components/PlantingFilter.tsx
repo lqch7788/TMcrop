@@ -2,8 +2,8 @@
  * 种植筛选工具栏组件
  */
 
-import React, { useState } from 'react';
-import { Search, RotateCcw, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import React from 'react';
+import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
 
@@ -12,7 +12,7 @@ interface PlantingFilterProps {
   onChange: (filters: PlantingFilters) => void;
   onSearch: () => void;
   onReset: () => void;
-  onAdd?: () => void;  // 新增回调
+  onAdd?: () => void;
   cropNames: Array<{ value: string; label: string }>;
   areas: Array<{ value: string; label: string; parent?: string }>;
   statusOptions: Array<{ value: string; label: string }>;
@@ -28,9 +28,6 @@ export function PlantingFilter({
   areas,
   statusOptions
 }: PlantingFilterProps) {
-  // More展开状态
-  const [showMore, setShowMore] = useState(false);
-
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
@@ -73,6 +70,17 @@ export function PlantingFilter({
           />
         </div>
 
+        {/* 定植日期 */}
+        <div className="min-w-[150px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
+          <input
+            type="date"
+            value={filters.transplantDate}
+            onChange={(e) => onChange({ ...filters, transplantDate: e.target.value })}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
         {/* 种植区域/大棚位置 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">大棚位置</label>
@@ -110,22 +118,6 @@ export function PlantingFilter({
               新增
             </Button>
           )}
-          <Button
-            variant="blue"
-            onClick={() => setShowMore(!showMore)}
-          >
-            {showMore ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                收起
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                More
-              </>
-            )}
-          </Button>
           <Button variant="secondary" onClick={onReset}>
             <RotateCcw className="w-4 h-4" />
             重置
@@ -136,58 +128,6 @@ export function PlantingFilter({
           </Button>
         </div>
       </div>
-
-      {/* 展开的更多筛选条件 */}
-      {showMore && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex flex-wrap gap-4 items-end">
-            {/* 定植日期 */}
-            <div className="min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
-              <input
-                type="date"
-                value={filters.transplantDate}
-                onChange={(e) => onChange({ ...filters, transplantDate: e.target.value })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 开始日期 */}
-            <div className="min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 结束日期 */}
-            <div className="min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 记录人员 */}
-            <div className="flex-1 min-w-[120px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">记录人员</label>
-              <input
-                type="text"
-                value={filters.createBy}
-                onChange={(e) => onChange({ ...filters, createBy: e.target.value })}
-                placeholder="请输入记录人员"
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

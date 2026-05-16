@@ -82,6 +82,17 @@ export const useHarvestStore = create<HarvestState>()(
         }
       },
     }),
-    { name: 'harvest-storage', partialize: (s) => ({ items: s.items }) }
+    {
+      name: 'harvest-storage',
+      version: 2,
+      partialize: (state) => ({ items: state.items }),
+      merge: (persisted: unknown, current) => {
+        const state = current as HarvestState;
+        if (persisted && typeof persisted === 'object' && Array.isArray((persisted as Record<string, unknown>).items)) {
+          return { ...state, items: (persisted as Record<string, unknown>).items as HarvestRecord[] };
+        }
+        return state;
+      },
+    }
   )
 );
