@@ -1,0 +1,195 @@
+/**
+ * 种植移入/移出操作弹窗
+ * 管理植株在不同区域之间的移动
+ */
+import React, { useState, useEffect } from 'react';
+import { X, AlertCircle } from 'lucide-react';
+import {
+  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  DatePicker, TextArea, Input
+} from '../../../ui';
+
+// ========== 表单数据接口 ==========
+export interface MoveFormData {
+  /** 操作类型 */
+  operationType: 'move_in' | 'move_out';
+  /** 标签编号 */
+  labelNumber: string;
+  /** 目标区域 */
+  targetArea: string;
+  /** 操作日期 */
+  operationDate: string;
+  /** 备注 */
+  remarks: string;
+}
+
+// ========== 组件属性 ==========
+interface PlantingMoveModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  /** 可选区域列表 */
+  areaOptions: Array<{ value: string; label: string }>;
+  /** 编辑模式下的初始数据（可选） */
+  initialData?: Partial<MoveFormData>;
+  /** 提交回调 */
+  onSubmit: (data: MoveFormData) => void;
+  /** 是否已采收（已采收植株不能移动） */
+  isHarvested?: boolean;
+}
+
+const defaultForm: MoveFormData = {
+  operationType: 'move_in',
+  labelNumber: '',
+  targetArea: '',
+  operationDate: new Date().toISOString().split('T')[0],
+  remarks: ''
+};
+
+export default function PlantingMoveModal({
+  isOpen,
+  onClose,
+  areaOptions,
+  initialData,
+  onSubmit,
+  isHarvested = false
+}: PlantingMoveModalProps) {
+  const [form, setForm] = useState<MoveFormData>(defaultForm);
+
+  // 弹窗打开时重置表单
+  useEffect(() => {
+    if (isOpen) {
+      setForm(initialData ? { ...defaultForm, ...initialData } : { ...defaultForm });
+    }
+  }, [isOpen, initialData]);
+
+  const handleChange = <K extends keyof MoveFormData>(field: K, value: MoveFormData[K]) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!form.labelNumber.trim()) {
+      alert('请输入标签编号');
+      return;
+    }
+    if (!form.targetArea) {
+      alert('请选择目标区域');
+      return;
+    }
+    onSubmit(form);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+        {/* 标题栏 */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 rounded-t-xl">
+          <h3 className="text-lg font-semibold text-white">移入/移出操作</h3>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-orange-700 p-1.5 rounded transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 业务规则提示 - 已采收植株不能移动 */}
+        {isHarvested && (
+          <div className="mx-4 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>已采收植株不能移动，请先取消采收状态</span>
+          </div>
+        )}
+
+        {/* 表单内容 */}
+        <div className="p-4 space-y-4">
+          {/* 操作类型 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">操作类型 *</label>
+            <Select
+              value={form.operationType}
+              onValueChange={(v) => handleChange('operationType', v as 'move_in' | 'move_out')}
+              disabled={isHarvested}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="move_in">移入</SelectItem>
+                <SelectItem value="move_out">移出</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 标签编号 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">标签编号 *</label>
+            <Input
+              value={form.labelNumber}
+              onChange={(e) => handleChange('labelNumber', (e.target as HTMLInputElement).value)}
+              placeholder="请输入或扫描标签二维码ID"
+              disabled={isHarvested}
+            />
+          </div>
+
+          {/* 目标区域 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {form.operationType === 'move_in' ? '移入目标区域' : '移出目标区域'} *
+            </label>
+            <Select
+              value={form.targetArea}
+              onValueChange={(v) => handleChange('targetArea', v)}
+              disabled={isHarvested}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择区域" />
+              </SelectTrigger>
+              <SelectContent>
+                {areaOptions.map((area) => (
+                  <SelectItem key={area.value} value={area.value}>
+                    {area.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 操作日期 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">操作日期</label>
+            <DatePicker
+              value={form.operationDate}
+              onChange={(date) => handleChange('operationDate', date)}
+              disabled={isHarvested}
+            />
+          </div>
+
+          {/* 备注 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <TextArea
+              value={form.remarks}
+              onChange={(e) => handleChange('remarks', (e.target as HTMLTextAreaElement).value)}
+              placeholder="备注信息（可选）"
+              rows={3}
+              disabled={isHarvested}
+            />
+          </div>
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={isHarvested}>
+            提交
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

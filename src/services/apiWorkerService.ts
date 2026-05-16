@@ -13,6 +13,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 缓存5分钟
 
 // MOCK数据作为API失败时的降级方案
 const FALLBACK_WORKERS: Worker[] = [
+  { id: 'U001', workerId: 'U001', name: '陆启闯', gender: '男', phone: '13811112222', position: '管理员', department: '管理部', status: 'active' },
   { id: 'S001', workerId: 'S001', name: '郭靖', gender: '男', phone: '13800001001', position: '农艺师', department: '生产部', status: 'active' },
   { id: 'S002', workerId: 'S002', name: '杨过', gender: '男', phone: '13800001002', position: '技术员', department: '生产部', status: 'active' },
   { id: 'S003', workerId: 'S003', name: '张无忌', gender: '男', phone: '13800001003', position: '管理员', department: '生产部', status: 'active' },
@@ -38,6 +39,13 @@ export async function getWorkers(forceRefresh: boolean = false): Promise<Worker[
 
   try {
     const workers = await getAllWorkers();
+    // API 成功但返回空数据时，使用降级数据
+    if (!workers || workers.length === 0) {
+      console.warn('员工API返回空数据，使用降级员工列表');
+      cachedWorkers = FALLBACK_WORKERS;
+      cacheTime = now;
+      return FALLBACK_WORKERS;
+    }
     cachedWorkers = workers;
     cacheTime = now;
     return workers;
@@ -63,6 +71,13 @@ export async function getWorkerList(forceRefresh: boolean = false): Promise<Work
 
   try {
     const workers = await getActiveWorkers();
+    // API 成功但返回空数据时（数据库无员工记录），使用降级数据
+    if (!workers || workers.length === 0) {
+      console.warn('员工API返回空数据，使用降级员工列表');
+      cachedWorkers = FALLBACK_WORKERS;
+      cacheTime = now;
+      return FALLBACK_WORKERS;
+    }
     cachedWorkers = workers;
     cacheTime = now;
     return workers;

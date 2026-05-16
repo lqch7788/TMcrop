@@ -21,6 +21,7 @@ interface TempTaskFormModalProps {
     estimatedHours: number;
     assigneeId: string;
     assigneeName: string;
+    planStart: string;
     dueDate: string;
     description: string;
     notes: string;
@@ -388,12 +389,12 @@ export function TempTaskFormModal({
 
         {/* 第四行：计划开始时间、截止时间、优先级 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField label="计划开始时间" error={errors.dueDate}>
+          <FormField label="计划开始时间">
             <Input
               type="datetime-local"
               step="3600"
-              value={formData.dueDate}
-              onChange={(e) => onChange('dueDate', e.target.value)}
+              value={formData.planStart}
+              onChange={(e) => onChange('planStart', e.target.value)}
             />
           </FormField>
 

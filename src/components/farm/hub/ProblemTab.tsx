@@ -21,13 +21,6 @@ import {
   AlertTriangle, List, X, Clock, User, MapPin, Package, Camera, Mic, Sparkles, UserPlus,
   CheckCircle, Plus, Trash2, Download
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
@@ -149,7 +142,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
   // ========== 分派表单状态 ==========
   const [dispatchMode, setDispatchMode] = useState<'ai_assisted' | 'manual'>('ai_assisted');
-  const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
+  const [selectedWorkers, setSelectedWorkers] = useState<{ id: string; name: string }[]>([]);
   const [expectedCompletion, setExpectedCompletion] = useState<'today' | 'tomorrow' | '3days' | 'week' | 'custom'>('3days');
   const [customDueDate, setCustomDueDate] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<'high' | 'medium' | 'low'>('medium');
@@ -331,24 +324,26 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     }
   };
 
-  // ========== 处理单选分派 ==========
+  // ========== 处理分派（支持多选执行人） ==========
   const handleDispatch = () => {
-    if (!dispatchModal.problem || !selectedWorker) return;
+    if (!dispatchModal.problem || selectedWorkers.length === 0) return;
 
-    dispatchProblem(
-      dispatchModal.problem.id,
-      selectedWorker.id,
-      selectedWorker.name,
-      defaultInspector?.id || 'U001',
-      defaultInspector?.name || '系统管理员',
-      calculateDueDate(),
-      requiredFeedback,
-      selectedPriority
-    );
+    selectedWorkers.forEach(worker => {
+      dispatchProblem(
+        dispatchModal.problem!.id,
+        worker.id,
+        worker.name,
+        defaultInspector?.id || 'U001',
+        defaultInspector?.name || '系统管理员',
+        calculateDueDate(),
+        requiredFeedback,
+        selectedPriority
+      );
+    });
 
     // 重置状态
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-    setSelectedWorker(null);
+    setSelectedWorkers([]);
     setExpectedCompletion('3days');
     setCustomDueDate('');
     setSelectedPriority('medium');
@@ -356,30 +351,32 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     onProblemDispatched?.();
   };
 
-  // ========== 处理批量分派 ==========
+  // ========== 处理批量分派（支持多选执行人） ==========
   const handleBatchDispatch = () => {
-    if (selectedProblems.length === 0 || !selectedWorker) return;
+    if (selectedProblems.length === 0 || selectedWorkers.length === 0) return;
 
     selectedProblems.forEach(problemId => {
       const problem = pendingProblems.find(p => p.id === problemId);
       if (problem) {
-        dispatchProblem(
-          problem.id,
-          selectedWorker.id,
-          selectedWorker.name,
-          'U001',
-          '系统管理员',
-          calculateDueDate(),
-          requiredFeedback,
-          selectedPriority
-        );
+        selectedWorkers.forEach(worker => {
+          dispatchProblem(
+            problem.id,
+            worker.id,
+            worker.name,
+            'U001',
+            '系统管理员',
+            calculateDueDate(),
+            requiredFeedback,
+            selectedPriority
+          );
+        });
       }
     });
 
     // 重置状态
     setSelectedProblems([]);
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-    setSelectedWorker(null);
+    setSelectedWorkers([]);
     setExpectedCompletion('3days');
     setCustomDueDate('');
     setSelectedPriority('medium');
@@ -603,7 +600,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       isOpen={dispatchModal.isOpen}
       onClose={() => {
         setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-        setSelectedWorker(null);
+        setSelectedWorkers([]);
         setExpectedCompletion('3days');
         setCustomDueDate('');
         setSelectedPriority('medium');
@@ -618,7 +615,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             variant="secondary"
             onClick={() => {
               setDispatchModal({ isOpen: false, problem: null, batchMode: false });
-              setSelectedWorker(null);
+              setSelectedWorkers([]);
               setExpectedCompletion('3days');
               setCustomDueDate('');
               setSelectedPriority('medium');
@@ -628,9 +625,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             取消
           </Button>
           <Button
-            variant={selectedWorker ? 'blue' : 'secondary'}
+            variant={selectedWorkers.length > 0 ? 'blue' : 'secondary'}
             onClick={dispatchModal.batchMode ? handleBatchDispatch : handleDispatch}
-            disabled={!selectedWorker}
+            disabled={selectedWorkers.length === 0}
           >
             确认分派
           </Button>
@@ -713,39 +710,49 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               onWorkerSelect={(workerId, score) => {
                 const worker = workerList.find(w => w.id === workerId);
                 if (worker) {
-                  setSelectedWorker({ id: worker.id, name: worker.name });
+                  setSelectedWorkers([{ id: worker.id, name: worker.name }]);
                 }
               }}
               onManualSelect={() => setDispatchMode('manual')}
               config={{ ...DEFAULT_AI_RECOMMEND_CONFIG, defaultSelectTop: true }}
-              selectedWorkerId={selectedWorker?.id}
+              selectedWorkerId={selectedWorkers[0]?.id}
             />
           )}
 
-          {/* 手动模式 */}
+          {/* 手动模式 — 多选 checkbox 列表 */}
           {(dispatchMode === 'manual' || (dispatchModal.batchMode && dispatchMode === 'ai_assisted')) && (
-            <Select
-              value={selectedWorker?.id || ''}
-              onValueChange={(value) => {
-                const worker = workerList.find(w => w.id === value);
-                if (worker) {
-                  setSelectedWorker({ id: worker.id, name: worker.name });
-                }
-              }}
-            >
-              <SelectTrigger className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg text-base focus:border-blue-500">
-                <SelectValue placeholder="请选择执行人..." />
-              </SelectTrigger>
-              <SelectContent>
-                {workerList.map(worker => (
-                  <SelectItem key={worker.id} value={worker.id} className="text-base py-3">
-                    <div className="flex items-center justify-between w-full">
-                      <div>
-                        <div className="font-medium">{worker.name}</div>
-                        <div className="text-sm text-gray-500">{worker.position}</div>
+            <div className="border-2 border-gray-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              {workerList.length === 0 ? (
+                <div className="p-6 text-center text-gray-400 text-sm">暂无可用执行人</div>
+              ) : (
+                workerList.map(worker => {
+                  const isChecked = selectedWorkers.some(w => w.id === worker.id);
+                  const handleToggle = () => {
+                    if (isChecked) {
+                      setSelectedWorkers(selectedWorkers.filter(w => w.id !== worker.id));
+                    } else {
+                      setSelectedWorkers([...selectedWorkers, { id: worker.id, name: worker.name }]);
+                    }
+                  };
+                  return (
+                    <label
+                      key={worker.id}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+                        isChecked ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={handleToggle}
+                        className="w-4 h-4 text-blue-600 rounded accent-blue-600 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-900">{worker.name}</span>
+                        <span className="text-sm text-gray-500">（{worker.position}）</span>
                       </div>
-                      <div className="flex gap-1 ml-4">
-                        {worker.skillTags.slice(0, 2).map(tag => (
+                      <div className="flex gap-1 flex-shrink-0">
+                        {(worker.skillTags || []).slice(0, 2).map(tag => (
                           <span
                             key={tag}
                             className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
@@ -754,16 +761,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                           </span>
                         ))}
                       </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    </label>
+                  );
+                })
+              )}
+            </div>
           )}
 
-          {selectedWorker && (
+          {selectedWorkers.length > 0 && (
             <div className="mt-2 text-sm text-emerald-600 font-medium">
-              已选择：{selectedWorker.name}
+              已选择 {selectedWorkers.length} 人：{selectedWorkers.map(w => w.name).join('、')}
             </div>
           )}
         </div>

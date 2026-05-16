@@ -370,6 +370,12 @@ interface SummaryDataState {
   fetchAll: () => Promise<void>;
   invalidateAll: () => void;
   isCacheStale: (key: string, maxAgeMs: number) => boolean;
+  // V10.0 多维度对比分析
+  comparisonData: Record<string, any> | null;
+  fetchComparisonStats: (params: {
+    mainParam?: string; compareParam1?: string; compareParam2?: string;
+    startDate?: string; endDate?: string; sampling?: string;
+  }) => Promise<void>;
 }
 
 // ========== Store 实现 ==========
@@ -393,6 +399,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       error: null,
       lastFetchTimestamps: {},
       schemaVersion: 1,
+      comparisonData: null,
 
       /**
        * 获取生产报表概览
@@ -681,6 +688,24 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           error: null,
           lastFetchTimestamps: {},
         });
+      },
+
+      /** V10.0 多维度对比统计 */
+      fetchComparisonStats: async (params = {}) => {
+        set({ isLoading: true });
+        try {
+          const query = new URLSearchParams();
+          if (params.mainParam) query.set('main_param', params.mainParam);
+          if (params.compareParam1) query.set('compare_param1', params.compareParam1);
+          if (params.compareParam2) query.set('compare_param2', params.compareParam2);
+          if (params.startDate) query.set('start_date', params.startDate);
+          if (params.endDate) query.set('end_date', params.endDate);
+          if (params.sampling) query.set('sampling', params.sampling);
+          const response = await enhancedApiClient.get<any>(`/summary/comparison-stats?${query.toString()}`);
+          set({ comparisonData: response.data ?? response, isLoading: false });
+        } catch (err) {
+          set({ error: (err as Error).message, isLoading: false });
+        }
       },
 
       /**

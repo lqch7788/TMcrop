@@ -879,6 +879,10 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+  // ========== V10.0: 种植模块补充字段 ==========
+  try { db.run(`ALTER TABLE plantings ADD COLUMN soil_ph REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE plantings ADD COLUMN soil_ec REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE plantings ADD COLUMN attrition_rate REAL DEFAULT 0`); } catch (e) {}
 
   // 为采收记录表添加关联字段
   try {
@@ -921,6 +925,7 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE suppliers ADD COLUMN organization TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN supplier_attribute TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN create_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN area TEXT DEFAULT ''`); } catch (e) {}
 
   // 为农事任务表添加创建者ID关联（如果还没有的话）
   try {
@@ -2106,6 +2111,97 @@ export function initializeDatabase() {
       remark TEXT,
       create_time TEXT,
       update_time TEXT
+    )
+  `);
+
+  // ========== V10.0: 施肥管理模块 ==========
+  // 施肥记录表 — 手动记录 + IoT自动记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS fertilizer_records (
+      id TEXT PRIMARY KEY,
+      fertilizer_code TEXT NOT NULL UNIQUE,
+      farm_task_id TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT,
+      planting_id TEXT,
+      planting_code TEXT,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT NOT NULL,
+      area_name TEXT,
+      crop_name TEXT NOT NULL,
+      crop_variety TEXT,
+      fertilizer_name TEXT NOT NULL,
+      fertilizer_type TEXT NOT NULL,
+      dilution_ratio TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 0,
+      unit_price REAL DEFAULT 0,
+      total_cost REAL DEFAULT 0,
+      fertilize_time TEXT NOT NULL,
+      operator_id TEXT,
+      operator_name TEXT,
+      data_source TEXT NOT NULL DEFAULT 'manual',
+      iot_device_id TEXT,
+      iot_record_id TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'completed',
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V10.0: 行政区划字典表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS region_data (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      parent_id INTEGER,
+      level TEXT NOT NULL CHECK(level IN ('country', 'province', 'city', 'area'))
+    )
+  `);
+
+  // ========== V10.0: 种植标签管理 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS plant_labels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label_number TEXT NOT NULL,
+      planting_id TEXT NOT NULL,
+      seedling_id TEXT,
+      move_in_area_id INTEGER,
+      move_in_area_name TEXT,
+      move_in_date TEXT,
+      move_out_area_id INTEGER,
+      move_out_area_name TEXT,
+      move_out_date TEXT,
+      create_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS plant_label_resume (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label_id INTEGER NOT NULL,
+      operation_type TEXT NOT NULL,
+      from_area_name TEXT,
+      to_area_name TEXT,
+      mark_id INTEGER,
+      mark_name TEXT,
+      mark_color TEXT,
+      operation_date TEXT NOT NULL,
+      operator_name TEXT,
+      create_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS plant_marks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      color TEXT,
+      icon TEXT,
+      parent_id INTEGER DEFAULT 0,
+      mark_aid TEXT,
+      is_use INTEGER DEFAULT 1,
+      sort_order INTEGER DEFAULT 0
     )
   `);
 

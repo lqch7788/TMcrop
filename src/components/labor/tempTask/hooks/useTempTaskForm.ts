@@ -11,6 +11,7 @@ interface TempTaskFormData {
   estimatedHours: number;
   assigneeId: string;
   assigneeName: string;
+  planStart: string;
   dueDate: string;
   description: string;
   notes: string;
@@ -71,6 +72,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
     estimatedHours: initialData?.estimatedHours || 1,
     assigneeId: initialData?.assigneeId || '',
     assigneeName: initialData?.assigneeName || '待分配',
+    planStart: (initialData as any)?.planStart || getDefaultStartTime(),
     dueDate: initialData?.dueDate || getDefaultStartTime(),
     description: initialData?.description || '',
     notes: initialData?.notes || '',
@@ -132,6 +134,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
       estimatedHours: formData.estimatedHours,
       assigneeId: formData.assigneeId,
       assigneeName: formData.assigneeName,
+      planStart: formData.planStart,
       dueDate: formData.dueDate,
       description: formData.description,
       notes: formData.notes,
@@ -157,6 +160,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
       estimatedHours: 1,
       assigneeId: '',
       assigneeName: '待分配',
+      planStart: getDefaultStartTime(),
       dueDate: getDefaultStartTime(),
       description: '',
       notes: '',

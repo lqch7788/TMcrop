@@ -1,10 +1,12 @@
 // 供应商新增弹窗组件 - 参照物料入库 InboundAddModal 样式
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Supplier, NewSupplierData } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../ui/button';
-import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
+import { Cascader } from '../ui/Cascader';
+import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
+import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 
 interface SupplierAddModalProps {
   isOpen: boolean;
@@ -33,6 +35,52 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
   // 从Store获取分类数据（与编码规则页同步）
   const categories = useSupplierCodeRuleStore((s) => s.categories);
+
+  // 区域级联选择 - 四级懒加载
+  const fetchProvinces = useRegionStore((s) => s.fetchProvinces);
+  const getChildren = useRegionStore((s) => s.getChildren);
+  const provinces = useRegionStore((s) => s.provinces);
+
+  // 跟踪级联选择路径节点
+  const [regionPathNodes, setRegionPathNodes] = useState<CascaderValueNode[]>([]);
+
+  // 加载省份列表
+  useEffect(() => {
+    fetchProvinces();
+  }, [fetchProvinces]);
+
+  // 将 RegionNode 转为 CascaderOption
+  const provincesOptions: CascaderOption[] = useMemo(
+    () =>
+      provinces.map((n) => ({
+        label: n.name,
+        value: String(n.id),
+      })),
+    [provinces]
+  );
+
+  // 懒加载回调
+  const handleLoadRegionChildren = useCallback(
+    async (parentId: number): Promise<CascaderOption[]> => {
+      const children = await getChildren(parentId);
+      return children.map((n) => ({
+        label: n.name,
+        value: String(n.id),
+      }));
+    },
+    [getChildren]
+  );
+
+  // 级联选择变化回调
+  const handleRegionChange = useCallback(
+    (nodes: CascaderValueNode[]) => {
+      setRegionPathNodes(nodes);
+      const province = nodes[0]?.name || '';
+      const city = nodes.slice(1).map((n) => n.name).join(' ');
+      setForm((prev) => ({ ...prev, province, city }));
+    },
+    []
+  );
 
   const [form, setForm] = useState<NewSupplierData>({
     organization: '',
@@ -132,6 +180,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
     };
     onAdd(newSupplier);
     // 重置表单
+    setRegionPathNodes([]);
     setForm({
       organization: '', code: '', name: '', supplierType: '', supplierAttribute: '',
       contact: '', mobilePhone: '', workPhone: '', fax: '', country: '中国',
@@ -320,25 +369,18 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               />
             </div>
 
-            {/* 省份 */}
+            {/* 区域选择（四级级联：省份→城市→区县） */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">省份</label>
-              <input
-                type="text"
-                value={form.province}
-                onChange={(e) => handleChange('province', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
-              />
-            </div>
-
-            {/* 城市 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">城市</label>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+              <label className="block text-xs font-medium text-gray-700 mb-1">省/市/区</label>
+              <Cascader
+                options={provincesOptions}
+                lazy
+                maxLevel={4}
+                onLoadChildren={handleLoadRegionChildren}
+                onChangeNodes={handleRegionChange}
+                valueNodes={regionPathNodes.length > 0 ? regionPathNodes : undefined}
+                placeholder="请选择省/市/区"
+                className="w-full"
               />
             </div>
 

@@ -235,3 +235,10 @@ export type {
   SummaryOverview, YieldStatItem, CostDetailItem, CostSummary,
   LaborStatItem, ProblemDailyItem, ProductionIndicator, IndicatorsRaw,
 } from './useSummaryDataStore';
+
+// V10.0 新增
+export { useFertilizerStore } from './useFertilizerStore';
+export type { FertilizerData } from './useFertilizerStore';
+
+export { useRegionStore } from './useRegionStore';
+export type { RegionNode } from './useRegionStore';

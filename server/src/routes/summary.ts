@@ -968,4 +968,72 @@ router.get('/chain-overview', (_req: Request, res: Response) => {
   }
 });
 
+/** GET /api/summary/comparison-stats — V10.0 多维度对比统计 */
+router.get('/comparison-stats', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const {
+      main_param, compare_param1, compare_param2,
+      start_date, end_date, sampling = 'month',
+    } = req.query as Record<string, string>;
+
+    // 参数到表的映射
+    const paramTableMap: Record<string, { table: string; field: string; dateField: string; groupField: string }> = {
+      yield: { table: 'harvest_records', field: 'harvest_quantity', dateField: 'harvest_date', groupField: "strftime('%Y-%m', harvest_date)" },
+      fertilizer_total: { table: 'fertilizer_records', field: 'quantity', dateField: 'fertilize_time', groupField: "strftime('%Y-%m', fertilize_time)" },
+      fertilizer_cost: { table: 'fertilizer_records', field: 'total_cost', dateField: 'fertilize_time', groupField: "strftime('%Y-%m', fertilize_time)" },
+      work_hours: { table: 'labor_records', field: 'work_hours', dateField: 'work_date', groupField: "strftime('%Y-%m', work_date)" },
+      worker_count: { table: 'labor_records', field: 'worker_id', dateField: 'work_date', groupField: "strftime('%Y-%m', work_date)" },
+    };
+
+    // 根据 sampling 重新计算 groupField
+    function getGroupField(config: { table: string; field: string; dateField: string; groupField: string }, sampling: string): string {
+      switch (sampling) {
+        case 'day': return `date(${config.dateField})`;
+        case 'year': return `strftime('%Y', ${config.dateField})`;
+        default: return config.groupField; // month default
+      }
+    }
+
+    const results: any = {};
+
+    const fetchParam = (paramKey: string, label: string) => {
+      const config = paramTableMap[paramKey];
+      if (!config) return null;
+
+      const conditions: string[] = [];
+      const params: any[] = [];
+      if (start_date) { conditions.push(`${config.dateField} >= ?`); params.push(start_date); }
+      if (end_date) { conditions.push(`${config.dateField} <= ?`); params.push(`${end_date} 23:59:59`); }
+
+      // 根据采样粒度动态生成 groupField
+      const groupField = getGroupField(config, sampling);
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const aggFunc = paramKey === 'worker_count' ? 'COUNT(DISTINCT worker_id)' : `SUM(${config.field})`;
+
+      const data = queryToObjects(db,
+        `SELECT ${groupField} as label, ${aggFunc} as value
+         FROM ${config.table} ${whereClause}
+         GROUP BY ${groupField} ORDER BY label`,
+        params
+      );
+
+      return {
+        key: paramKey,
+        label,
+        data,
+      };
+    };
+
+    if (main_param) results.main = fetchParam(main_param, '主参数');
+    if (compare_param1) results.compare1 = fetchParam(compare_param1, '对比参数1');
+    if (compare_param2) results.compare2 = fetchParam(compare_param2, '对比参数2');
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 export default router;

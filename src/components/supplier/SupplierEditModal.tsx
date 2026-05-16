@@ -1,9 +1,11 @@
 // 供应商编辑弹窗组件
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Supplier, EditFormData } from './types';
 import { getSupplierTypeName } from './data';
 import { UnifiedModal } from '../ui/UnifiedModal';
-import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
+import { Cascader } from '../ui/Cascader';
+import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
+import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -30,6 +32,52 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
 
   // 从Store获取分类数据（与编码规则页同步）
   const categories = useSupplierCodeRuleStore((s) => s.categories);
+
+  // 区域级联选择 - 四级懒加载
+  const fetchProvinces = useRegionStore((s) => s.fetchProvinces);
+  const getChildren = useRegionStore((s) => s.getChildren);
+  const provinces = useRegionStore((s) => s.provinces);
+
+  // 跟踪级联选择路径节点
+  const [regionPathNodes, setRegionPathNodes] = useState<CascaderValueNode[]>([]);
+
+  // 加载省份列表
+  useEffect(() => {
+    fetchProvinces();
+  }, [fetchProvinces]);
+
+  // 将 RegionNode 转为 CascaderOption
+  const provincesOptions: CascaderOption[] = useMemo(
+    () =>
+      provinces.map((n) => ({
+        label: n.name,
+        value: String(n.id),
+      })),
+    [provinces]
+  );
+
+  // 懒加载回调
+  const handleLoadRegionChildren = useCallback(
+    async (parentId: number): Promise<CascaderOption[]> => {
+      const children = await getChildren(parentId);
+      return children.map((n) => ({
+        label: n.name,
+        value: String(n.id),
+      }));
+    },
+    [getChildren]
+  );
+
+  // 级联选择变化回调
+  const handleRegionChange = useCallback(
+    (nodes: CascaderValueNode[]) => {
+      setRegionPathNodes(nodes);
+      const province = nodes[0]?.name || '';
+      const city = nodes.slice(1).map((n) => n.name).join(' ');
+      setForm((prev) => ({ ...prev, province, city }));
+    },
+    []
+  );
 
   const [form, setForm] = useState<EditFormData>({
     name: '',
@@ -240,25 +288,18 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
               />
             </div>
 
-            {/* 省份 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">省份</label>
-              <input
-                type="text"
-                value={form.province}
-                onChange={(e) => handleChange('province', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* 城市 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">城市</label>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {/* 区域选择（四级级联：省份→城市→区县） */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">省/市/区</label>
+              <Cascader
+                options={provincesOptions}
+                lazy
+                maxLevel={4}
+                onLoadChildren={handleLoadRegionChildren}
+                onChangeNodes={handleRegionChange}
+                valueNodes={regionPathNodes.length > 0 ? regionPathNodes : undefined}
+                placeholder="请选择省/市/区"
+                className="w-full"
               />
             </div>
 
