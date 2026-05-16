@@ -213,12 +213,8 @@ function getInitialInspections(): InspectionRecord[] {
 // useTasks 返回类型
 type UseTasksReturn = ReturnType<typeof useTasks>;
 
-// 可选的外部 tasksHook，用于与 FarmTaskHub 共享同一数据源
-export function useFarmHub(externalTasksHook?: UseTasksReturn): UseFarmHubReturn {
-  // 如果传入了外部的 tasksHook，则使用它；否则创建内部实例
-  // 这样可以确保 FarmTaskHub 和 useFarmHub 使用同一个数据源
-  const internalTasksHook = useTasks();
-  const tasksHook = externalTasksHook || internalTasksHook;
+// 外部 tasksHook 为必传参数，确保与 FarmTaskHub 共享同一数据源，避免重复API调用
+export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   const { tasks: useTasksData } = tasksHook;
 
   // 其他数据使用独立状态

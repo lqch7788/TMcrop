@@ -549,15 +549,21 @@ export function FarmTaskHub() {
           taskId={detailTaskId}
           onClose={() => setDetailTaskId(null)}
           onVerify={handleTaskVerify}
+          tasks={tasksHook.tasks}
+          getTaskRecordsByTaskId={tasksHook.getTaskRecordsByTaskId}
         />
       )}
 
-      {/* 验收弹窗 - 使用功能完整的 TaskAcceptanceModal */}
+      {/* 验收弹窗 - 数据全部从父组件注入，复用 useTasks 实例 */}
       {verifyTaskId && (
         <TaskAcceptanceAdapter
           taskId={verifyTaskId}
           onClose={() => setVerifyTaskId(null)}
           onVerified={handleVerified}
+          tasks={tasksHook.tasks}
+          getTaskRecordsByTaskId={tasksHook.getTaskRecordsByTaskId}
+          onAcceptCompletion={tasksHook.acceptCompletion}
+          onRejectForRework={tasksHook.rejectForRework}
         />
       )}
 

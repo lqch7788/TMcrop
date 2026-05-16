@@ -5,20 +5,22 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Task, useTasks } from '../../../hooks/useTasks';
-import { useFarmTaskStore } from '@/stores';
-import { Modal } from '@/components/ui/Modal';
+import { type Task } from '../../../hooks/useTasks';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
-import { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
+import type { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
 
 interface TaskDetailModalProps {
   taskId: string;
   onClose: () => void;
   onVerify?: (taskId: string) => void;
+  /** 从父组件传入的完整任务列表（复用 useTasks 数据源） */
+  tasks: Task[];
+  /** 从父组件传入的任务记录获取函数（复用 useTasks 实例） */
+  getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
 }
 
 interface TaskRecord {
@@ -45,28 +47,20 @@ interface TaskRecord {
   };
 }
 
-export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalProps) {
-  const { getTaskRecordsByTaskId } = useTasks();
+export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecordsByTaskId }: TaskDetailModalProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
 
   // 加载任务数据和记录
   useEffect(() => {
-    try {
-      // 加载任务数据 (来自 FarmTaskStore)
-      const farmTasks = useFarmTaskStore.getState().tasks;
-      const foundTask = farmTasks.find((t: any) => t.id === taskId);
-      if (foundTask) {
-        setTask(foundTask as Task);
-      }
+    // 从父组件传入的 tasks 中查找（复用 useTasks 数据源，不再读 useFarmTaskStore）
+    const foundTask = tasks.find((t) => t.id === taskId) || null;
+    setTask(foundTask);
 
-      // 加载任务记录
-      const taskRecords = getTaskRecordsByTaskId(taskId);
-      setRecords(taskRecords);
-    } catch (error) {
-      // 加载数据失败，无需额外处理
-    }
-  }, [taskId, getTaskRecordsByTaskId]);
+    // 加载任务记录
+    const taskRecords = getTaskRecordsByTaskId(taskId);
+    setRecords(taskRecords);
+  }, [taskId, tasks, getTaskRecordsByTaskId]);
 
   // 状态映射 - 放在条件返回之前，因为 hooks 必须在条件返回之前
   const statusMap = STATUS_MAP;
@@ -278,7 +272,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
                     </thead>
                     <tbody>
                       {task.materials.map((m, i) => (
-                        <tr key={i} className="border-b border-gray-100 last:border-0">
+                        <tr key={`mat-${m.name}-${i}`} className="border-b border-gray-100 last:border-0">
                           <td className="py-2 text-gray-900">{m.name}</td>
                           <td className="py-2 text-gray-900 text-right">{m.qty}</td>
                           <td className="py-2 text-gray-500 text-right">{m.unit}</td>
@@ -306,7 +300,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
                       </thead>
                       <tbody>
                         {task.tools.map((t, i) => (
-                          <tr key={i} className="border-b border-gray-100 last:border-0">
+                          <tr key={`tool-${t.name}-${i}`} className="border-b border-gray-100 last:border-0">
                             <td className="py-2 text-gray-900">{t.name}</td>
                             <td className="py-2 text-gray-900 text-right">{t.qty}</td>
                             <td className="py-2 text-gray-500 text-right">{t.unit}</td>
@@ -513,7 +507,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
                                 <div className="flex gap-2 flex-wrap">
                                   {record.feedback.images.map((img, i) => (
                                     <div
-                                      key={i}
+                                      key={`img-${record.id}-${i}`}
                                       className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center"
                                     >
                                       <Camera className="w-6 h-6 text-gray-400" />
@@ -540,7 +534,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify }: TaskDetailModalPr
                                 <div className="text-sm text-gray-600">
                                   <span className="font-medium">物料使用：</span>
                                   {record.feedback.materials.map((m, mi) => (
-                                    <span key={mi} className="ml-1">
+                                    <span key={`fbmat-${record.id}-${mi}`} className="ml-1">
                                       {m.name}({m.qty}{m.unit})
                                     </span>
                                   ))}

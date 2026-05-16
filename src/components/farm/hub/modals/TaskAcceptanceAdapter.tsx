@@ -1,28 +1,37 @@
 /**
  * 任务验收弹窗适配器
  * 将 FarmTaskHub 的调用方式适配到 TaskAcceptanceModal
+ *
+ * 数据来源：全部通过 props 从父组件注入，不创建独立的 useTasks/useFarmTaskStore 实例
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TaskAcceptanceModal } from './TaskAcceptanceModal';
 import { Task, TaskRecord } from '../../../../types/task';
-import { useTasks } from '../../../../hooks/useTasks';
-import { STORAGE_KEYS } from '../../../../hooks/useLocalStorage';
-import { useFarmTaskStore } from '@/stores';
 
 interface TaskAcceptanceAdapterProps {
   taskId: string | null;
   onClose: () => void;
   onVerified: () => void;
+  /** 从父组件传入的完整任务列表（复用 useTasks 实例的数据） */
+  tasks: Task[];
+  /** 从父组件传入的任务记录获取函数 */
+  getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
+  /** 验收通过 */
+  onAcceptCompletion: (taskId: string, comments?: string) => void;
+  /** 驳回返工 */
+  onRejectForRework: (taskId: string, reason: string) => void;
 }
 
 export function TaskAcceptanceAdapter({
   taskId,
   onClose,
   onVerified,
+  tasks,
+  getTaskRecordsByTaskId,
+  onAcceptCompletion,
+  onRejectForRework,
 }: TaskAcceptanceAdapterProps) {
-  const tasksHook = useTasks();
-  const { tasks: storeTasks } = useFarmTaskStore();
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
 
@@ -33,37 +42,27 @@ export function TaskAcceptanceAdapter({
       return;
     }
 
-    // 查找任务 (来自 FarmTaskStore)
-    const foundTask = storeTasks.find((t: any) => t.id === taskId);
+    // 从父组件传入的 tasks 中查找
+    const foundTask = tasks.find((t) => t.id === taskId);
     if (foundTask) {
-      setTask(foundTask as Task);
+      setTask(foundTask);
     }
+    // 加载任务记录
+    const taskRecords = getTaskRecordsByTaskId(taskId);
+    setRecords(taskRecords);
+  }, [taskId, tasks, getTaskRecordsByTaskId]);
 
-    // 获取任务记录
-    const storedRecords = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-    if (storedRecords) {
-      try {
-        const parsed = JSON.parse(storedRecords);
-        const allRecords: TaskRecord[] = Array.isArray(parsed) ? parsed : (parsed.data || []);
-        const taskRecords = allRecords.filter((r: TaskRecord) => r.taskId === taskId);
-        setRecords(taskRecords);
-      } catch {
-        setRecords([]);
-      }
-    }
-  }, [taskId, storeTasks]);
-
-  const handleAccept = (comments?: string) => {
+  const handleAccept = useCallback((comments?: string) => {
     if (!task) return;
-    tasksHook.acceptCompletion(task.id, comments);
+    onAcceptCompletion(task.id, comments);
     onVerified();
-  };
+  }, [task, onAcceptCompletion, onVerified]);
 
-  const handleReject = (reason: string) => {
+  const handleReject = useCallback((reason: string) => {
     if (!task) return;
-    tasksHook.rejectForRework(task.id, reason);
+    onRejectForRework(task.id, reason);
     onVerified();
-  };
+  }, [task, onRejectForRework, onVerified]);
 
   if (!taskId || !task) {
     return null;
