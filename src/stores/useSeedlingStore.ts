@@ -98,7 +98,15 @@ export const useSeedlingStore = create<SeedlingState>()(
   }),
   {
     name: 'seedling-storage',
+    version: 2,  // 版本升级：清除旧格式缓存，避免非数组数据导致 filter 报错
     partialize: (state) => ({ items: state.items }),
+    merge: (persisted: unknown, current) => {
+      const state = current as SeedlingState;
+      if (persisted && typeof persisted === 'object' && Array.isArray((persisted as Record<string, unknown>).items)) {
+        return { ...state, items: (persisted as Record<string, unknown>).items as Seedling[] };
+      }
+      return state;
+    },
   }
 )
 );
