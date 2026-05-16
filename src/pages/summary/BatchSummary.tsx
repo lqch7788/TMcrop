@@ -91,7 +91,9 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export default function BatchSummary() {
+interface BatchSummaryProps { hideHeader?: boolean; }
+
+export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
   // ========== Store ==========
   const batchItems = useSummaryDataStore((s) => s.batchItems);
   const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
@@ -192,45 +194,51 @@ export default function BatchSummary() {
   return (
     <div className="space-y-6">
       {/* 页面标题 - purple 主题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
-            <Layers className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">批次汇总</h1>
-            <p className="text-gray-500">种植批次全生命周期数据汇总与状态跟踪</p>
+      {!hideHeader && (
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+              <Layers className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">批次汇总</h1>
+              <p className="text-gray-500">种植批次全生命周期数据汇总与状态跟踪</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* KPI 指标卡片 */}
-      <KpiCardGrid columns={4}>
+      <KpiCardGrid columns={4} compact>
         <KpiCard
-          icon={<Layers className="w-5 h-5 text-white" />}
+          icon={<Layers className="w-4 h-4 text-white" />}
           label="总批次"
           value={kpiCounts.total}
           colorScheme="slate"
+          compact
         />
         <KpiCard
-          icon={<Activity className="w-5 h-5 text-white" />}
+          icon={<Activity className="w-4 h-4 text-white" />}
           label="进行中"
           value={kpiCounts.inProgress}
           trend={kpiCounts.total > 0 ? Math.round((kpiCounts.inProgress / kpiCounts.total) * 100) : 0}
           colorScheme="purple"
+          compact
         />
         <KpiCard
-          icon={<CheckCircle className="w-5 h-5 text-white" />}
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
           label="已完成"
           value={kpiCounts.completed}
           trend={kpiCounts.total > 0 ? Math.round((kpiCounts.completed / kpiCounts.total) * 100) : 0}
           colorScheme="emerald"
+          compact
         />
         <KpiCard
-          icon={<AlertTriangle className="w-5 h-5 text-white" />}
+          icon={<AlertTriangle className="w-4 h-4 text-white" />}
           label="逾期"
           value={kpiCounts.overdue}
           colorScheme="red"
+          compact
         />
       </KpiCardGrid>
 
@@ -352,7 +360,7 @@ export default function BatchSummary() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</th>
@@ -367,7 +375,7 @@ export default function BatchSummary() {
                 <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-300">
               {filteredBatches.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="px-4 py-12 text-center text-gray-400">

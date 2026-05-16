@@ -429,8 +429,8 @@ export type CropInstanceStatus =
  */
 export interface CropInstance {
   id: string;                    // 唯一ID
-  instanceCode: string;           // 实例编码 = 品种编码(9位) + 年月日(6位) + 流水号(3位)
-                                  // 示例: PD0301000100240426001 (红果番茄 2024年4月26日 第001批)
+  instanceCode: string;           // 实例编码 = 品种编码(11位) + 年月日(6位) + 流水号(3位)
+                                  // 示例: PD030100400240426001 (红果番茄 2024年4月26日 第001批)
   orderId?: string;              // 关联的订单ID（可选）
   orderCode?: string;            // 关联的订单编号（可选）
 

@@ -4,11 +4,9 @@
  * 行内按钮逻辑：查看详情/打印/图片 → 直接执行
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
-import * as cropVarietyService from '../../../../services/apiCropVarietyService';
-import { CropVariety } from '../../../../types/crop';
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -102,53 +100,24 @@ export function SeedSourceTable({
   canExport = true,
   canPrint = true,
 }: SeedSourceTableProps) {
-  // 品种数据缓存（用于显示正确的品种路径）
-  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
-
-  // 加载品种数据
-  useEffect(() => {
-    const loadVarieties = async () => {
-      const varieties = await cropVarietyService.getAllVarieties();
-      const cache = new Map<string, CropVariety>();
-      varieties.forEach(v => {
-        // 缓存最细分品种（subVariety1Name 优先）
-        const key = v.subVariety1Name || v.varietyName;
-        if (key && !cache.has(key)) {
-          cache.set(key, v);
-        }
-        // 也按 varietyName 缓存
-        if (v.varietyName && !cache.has(v.varietyName)) {
-          cache.set(v.varietyName, v);
-        }
-      });
-      setVarietyCache(cache);
-    };
-    loadVarieties();
-  }, []);
-
-  // 根据品种名称获取品种路径
-  const getVarietyPath = (varietyName: string): string => {
-    const variety = varietyCache.get(varietyName);
-    if (!variety) return varietyName || '';
+  // 根据记录存储的字段构建品种完整路径（不依赖品种缓存，避免缓存冲突）
+  const getVarietyPath = (record: SeedSource): string => {
     const parts: string[] = [];
-    if (variety.categoryName) parts.push(variety.categoryName);
-    if (variety.typeName) parts.push(variety.typeName);
-    if (variety.varietyName) parts.push(variety.varietyName);
-    if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
-    return parts.join('-');
+    if (record.cropCategory) parts.push(record.cropCategory);
+    if (record.typeName) parts.push(record.typeName);
+    if (record.varietyName) parts.push(record.varietyName);
+    if (record.cropVariety && record.cropVariety !== record.varietyName) parts.push(record.cropVariety);
+    return parts.join(' > ');
   };
 
-  // 根据品种名称获取标准作物编码
-  const getStandardCropCode = (varietyName: string): string => {
-    const variety = varietyCache.get(varietyName);
-    return variety?.cropCode || '';
+  // 获取标准作物编码（直接使用记录存储的 cropCode）
+  const getStandardCropCode = (record: SeedSource): string => {
+    return record.cropCode || '';
   };
 
-  // 根据品种名称获取作物品种（最细分）
-  const getCropVarietyName = (varietyName: string): string => {
-    const variety = varietyCache.get(varietyName);
-    if (!variety) return varietyName || '';
-    return variety.subVariety1Name || variety.varietyName || '';
+  // 获取作物品种名称（最细分：子品种 > 品种 > 作物名）
+  const getCropVarietyName = (record: SeedSource): string => {
+    return record.cropVariety || record.cropName || '';
   };
 
   // 计算分页
@@ -463,11 +432,11 @@ export function SeedSourceTable({
                     ) : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="font-mono text-orange-600">{getStandardCropCode(record.varietyName) || record.cropCode || '-'}</span>
+                    <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record.varietyName)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record)}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {getVarietyPath(record.varietyName)}
+                    {getVarietyPath(record)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {sourceTypeMap[record.sourceType] || record.sourceType}

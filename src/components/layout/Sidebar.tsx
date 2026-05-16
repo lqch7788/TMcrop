@@ -56,14 +56,11 @@ const laborSubItems = [
   { icon: TrendingUp, label: '运营分析', path: '/labor/analytics' },
 ];
 
-// 生产汇总表 V1.0 - 8页面重构
+// 生产汇总表 V1.1 - 5页面（TAB合并）
 const summarySubItems = [
   { icon: LayoutDashboard, label: '汇总看板', path: '/summary/overview' },
-  { icon: TrendingUp, label: '产量分析', path: '/summary/yield' },
-  { icon: DollarSign, label: '成本分析', path: '/summary/cost' },
-  { icon: Users, label: '人工分析', path: '/summary/labor' },
-  { icon: Layers, label: '批次汇总', path: '/summary/batch' },
-  { icon: LinkIcon, label: '全链条追溯', path: '/summary/chain' },
+  { icon: TrendingUp, label: '经营分析', path: '/summary/business-analysis' },
+  { icon: Layers, label: '批次管理', path: '/summary/batch-management' },
   { icon: AlertTriangle, label: '问题汇总', path: '/summary/problems' },
   { icon: Gauge, label: '指标看板', path: '/summary/indicators' },
 ];

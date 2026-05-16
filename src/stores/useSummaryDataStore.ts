@@ -98,6 +98,35 @@ export interface LaborStatItem {
   avgDailyHours?: number;
 }
 
+/** 全链条追溯环节记录项 */
+export interface ChainStageItem {
+  id: string;
+  code: string;
+  name?: string;
+  cropName?: string;
+  variety?: string;
+  greenhouse?: string;
+  quantity?: number;
+  status?: string;
+  supplierName?: string;
+  unit?: string;
+  survivalRate?: number;
+  unitPrice?: number;
+  totalAmount?: number;
+  qualityGrade?: string;
+  warehouseName?: string;
+  [key: string]: unknown;
+}
+
+/** 全链条追溯阶段统计 */
+export interface ChainStageStat {
+  key: string;
+  label: string;
+  count: number;
+  detail?: Record<string, unknown> | Array<Record<string, unknown>>;
+  items?: ChainStageItem[];
+}
+
 /** 批次汇总统计项（queryToObjects返回驼峰命名） */
 export interface BatchStatItem {
   id: number;
@@ -122,6 +151,12 @@ export interface BatchStatItem {
   totalWorkHours: number;
   laborCost: number;
   remainingYield: number;
+  /** 是否有种源数据（全链条追溯） */
+  hasSeedSource?: number;
+  /** 是否有育苗数据（全链条追溯） */
+  hasSeedling?: number;
+  /** 是否有种植数据（全链条追溯） */
+  hasPlanting?: number;
 }
 
 /** 问题每日汇总项（来自 /api/problems/daily-summary） */
@@ -315,6 +350,7 @@ interface SummaryDataState {
   laborItems: LaborStatItem[];
   laborGroupBy: string;
   batchItems: BatchStatItem[];
+  chainStages: ChainStageStat[];
   problemItems: ProblemDailyItem[];
   indicators: ProductionIndicator[];
   indicatorsRaw: IndicatorsRaw | null;
@@ -328,6 +364,7 @@ interface SummaryDataState {
   fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchLaborStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchBatchStats: (params?: { cropName?: string; status?: string; greenhouse?: string }) => Promise<void>;
+  fetchChainOverview: () => Promise<void>;
   fetchProblems: (params?: { startDate?: string; endDate?: string; greenhouse?: string }) => Promise<void>;
   fetchIndicators: (params?: { period?: string }) => Promise<void>;
   fetchAll: () => Promise<void>;
@@ -348,6 +385,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       laborItems: [],
       laborGroupBy: 'month',
       batchItems: [],
+      chainStages: [],
       problemItems: [],
       indicators: [],
       indicatorsRaw: null,
@@ -523,6 +561,26 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       },
 
       /**
+       * 获取全链条追溯概览（6环节独立统计）
+       * GET /api/summary/chain-overview
+       */
+      fetchChainOverview: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const data = await enhancedApiClient.get<{ stages: ChainStageStat[] }>('/summary/chain-overview');
+          const stages = data?.stages || [];
+          set({
+            chainStages: stages,
+            isLoading: false,
+            lastFetchTimestamps: { ...get().lastFetchTimestamps, chainOverview: Date.now() },
+          });
+        } catch (error) {
+          console.warn('[SummaryDataStore] 获取全链条概览失败:', error);
+          set({ error: (error as Error).message, isLoading: false });
+        }
+      },
+
+      /**
        * 获取问题每日汇总
        * GET /api/problems/daily-summary?date={}&greenhouse_name={}
        * 后端返回蛇形命名，前端做字段映射
@@ -592,6 +650,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             get().fetchCostStats(),
             get().fetchLaborStats(),
             get().fetchBatchStats(),
+            get().fetchChainOverview(),
             get().fetchProblems(),
             get().fetchIndicators(),
           ]);
@@ -615,6 +674,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           laborItems: [],
           laborGroupBy: 'month',
           batchItems: [],
+          chainStages: [],
           problemItems: [],
           indicators: [],
           indicatorsRaw: null,
@@ -645,6 +705,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
         laborItems: state.laborItems,
         laborGroupBy: state.laborGroupBy,
         batchItems: state.batchItems,
+        chainStages: state.chainStages,
         problemItems: state.problemItems,
         indicators: state.indicators,
         indicatorsRaw: state.indicatorsRaw,

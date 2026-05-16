@@ -42,7 +42,7 @@ const defaultData: TechSolution[] = [
     code: 'T202601001',
     title: '番茄春季高产栽培技术方案',
     crop: '番茄',
-    cropCode: 'PD030102001',
+    cropCode: 'PD030100400',  // 蔬菜类-茄果类-番茄-红果番茄
     plantingMode: '水培',
     stage: '生长全周期',
     version: 'V2.1',
@@ -68,7 +68,7 @@ const defaultData: TechSolution[] = [
     code: 'T202601002',
     title: '黄瓜设施栽培技术方案',
     crop: '黄瓜',
-    cropCode: 'PD030301001',
+    cropCode: 'PD020100100',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
     plantingMode: '土培',
     stage: '设施栽培',
     version: 'V1.5',
@@ -120,7 +120,7 @@ const defaultData: TechSolution[] = [
     code: 'T202602002',
     title: '辣椒越夏栽培技术方案',
     crop: '辣椒',
-    cropCode: 'PD030104001',
+    cropCode: 'PD030400700',  // 蔬菜类-茄果类-辣椒-青椒
     plantingMode: '土培',
     stage: '越夏管理',
     version: 'V1.2',

@@ -29,7 +29,7 @@ export const seedSources: SeedSource[] = [
     cropCategory: '茄果类',
     cropName: '番茄',
     cropVariety: '红果番茄',
-    cropCode: 'PD0301001',  // 作物编码：蔬菜类-茄果类-番茄-001
+    cropCode: 'PD030100400',  // 作物编码：蔬菜类-茄果类-番茄-001
     supplierId: 'SUP001',
     supplierName: '金色稻种有限公司',
     purchaseDate: '2026-01-15',
@@ -55,7 +55,7 @@ export const seedSources: SeedSource[] = [
     cropCategory: '叶菜类',
     cropName: '生菜',
     cropVariety: '大叶生菜',
-    cropCode: 'PD0102001',  // 作物编码：蔬菜类-叶菜类-生菜-001
+    cropCode: 'PD010200700',  // 作物编码：蔬菜类-叶菜类-生菜-001
     supplierId: 'SUP002',
     supplierName: '丰收种业公司',
     purchaseDate: '2026-02-01',
@@ -81,7 +81,7 @@ export const seedSources: SeedSource[] = [
     cropCategory: '瓜类',
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
-    cropCode: 'PD0201001',  // 作物编码：蔬菜类-瓜菜类-黄瓜-001
+    cropCode: 'PD020100100',  // 作物编码：蔬菜类-瓜菜类-黄瓜-001
     supplierId: 'SUP001',
     supplierName: '金色稻种有限公司',
     purchaseDate: '2026-02-15',
@@ -107,7 +107,7 @@ export const seedSources: SeedSource[] = [
     cropCategory: '茄果类',
     cropName: '茄子',
     cropVariety: '紫长茄子',
-    cropCode: 'PD0303001',  // 作物编码：蔬菜类-茄果类-茄子-001
+    cropCode: 'PD030300100',  // 作物编码：蔬菜类-茄果类-茄子-001
     supplierId: 'SUP003',
     supplierName: '绿野种苗公司',
     purchaseDate: '2026-03-01',
@@ -136,7 +136,7 @@ export const seedlings: Seedling[] = [
     seedlingCode: 'YM20260201-001',
     sourceId: 'SS001',
     sourceCode: 'ZZ20260115-001',
-    cropCode: 'PD0301004001',  // 蔬菜类-茄果类-番茄-红果番茄
+    cropCode: 'PD030100400',  // 蔬菜类-茄果类-番茄-红果番茄
     cropName: '番茄',
     cropVariety: '红果番茄',
     seedlingType: '穴盘育苗',
@@ -186,7 +186,7 @@ export const seedlings: Seedling[] = [
     seedlingCode: 'YM20260301-001',
     sourceId: 'SS002',
     sourceCode: 'ZZ20260201-001',
-    cropCode: 'PD0102005001',  // 蔬菜类-叶菜类-生菜-大叶生菜
+    cropCode: 'PD010200700',  // 蔬菜类-叶菜类-生菜-大叶生菜
     cropName: '生菜',
     cropVariety: '大叶生菜',
     seedlingType: '直播育苗',
@@ -215,7 +215,7 @@ export const seedlings: Seedling[] = [
     seedlingCode: 'YM20260310-001',
     sourceId: 'SS003',
     sourceCode: 'ZZ20260215-001',
-    cropCode: 'PD0201001001',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
+    cropCode: 'PD020100100',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
     seedlingType: '穴盘育苗',

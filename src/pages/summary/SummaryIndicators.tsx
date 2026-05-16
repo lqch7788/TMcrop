@@ -481,12 +481,12 @@ export default function SummaryIndicators() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-2 text-gray-500 font-medium">指标名称</th>
-                    <th className="text-left py-3 px-2 text-gray-500 font-medium">目标值</th>
-                    <th className="text-left py-3 px-2 text-gray-500 font-medium">实际值</th>
-                    <th className="text-center py-3 px-2 text-gray-500 font-medium">达成率</th>
-                    <th className="text-center py-3 px-2 text-gray-500 font-medium">评分</th>
+                  <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">指标名称</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">目标值</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">实际值</th>
+                    <th className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">达成率</th>
+                    <th className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">评分</th>
                   </tr>
                 </thead>
                 <tbody>

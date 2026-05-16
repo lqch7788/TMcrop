@@ -50,7 +50,7 @@ const defaultData: SeedSource[] = [
     varietyName: '生菜',
     cropName: '大叶生菜',
     cropVariety: '生菜',
-    cropCode: 'PD010299900',  // 蔬菜类-叶菜类-生菜-999其他生菜-00
+    cropCode: 'PD010200700',  // 蔬菜类-叶菜类-生菜-999其他生菜-00
     supplierId: 'SUP002',
     supplierName: '丰收种业公司',
     purchaseDate: '2026-02-01',
@@ -135,7 +135,7 @@ const defaultData: SeedSource[] = [
     varietyName: '空心菜',
     cropName: '大叶空心菜',
     cropVariety: '空心菜',
-    cropCode: 'PD010399900',  // 蔬菜类-叶菜类-空心菜-999其他-00
+    cropCode: 'PD011300100',  // 蔬菜类-叶菜类-空心菜-999其他-00
     supplierId: '',
     supplierName: '',
     purchaseDate: '2026-03-10',
@@ -163,7 +163,7 @@ const defaultData: SeedSource[] = [
     varietyName: '西瓜',
     cropName: '黑美人西瓜',
     cropVariety: '西瓜',
-    cropCode: 'PD0601001001',  // 蔬菜类-瓜类水果-西瓜-001黑美人-00
+    cropCode: 'FR060100100',  // 蔬菜类-瓜类水果-西瓜-001黑美人-00
     supplierId: '',
     supplierName: '农业科学院',
     purchaseDate: '2026-03-15',
@@ -191,7 +191,7 @@ const defaultData: SeedSource[] = [
     varietyName: '生菜',
     cropName: '奶油生菜',
     cropVariety: '生菜',
-    cropCode: 'PD010299901',  // 蔬菜类-叶菜类-生菜-999其他-01
+    cropCode: 'PD010200800',  // 蔬菜类-叶菜类-生菜-999其他-01
     supplierId: '',
     supplierName: '省农业厅',
     purchaseDate: '2026-03-20',

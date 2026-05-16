@@ -3,7 +3,7 @@
  * 功能：为待派工任务选择执行人（支持AI推荐和手动选择）
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';

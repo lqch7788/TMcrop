@@ -140,9 +140,14 @@ router.get('/batch-stats', (req: Request, res: Response) => {
         COUNT(DISTINCT CASE WHEN ft.status = 'in_progress' THEN ft.id END) as inProgressTaskCount,
         COALESCE(SUM(lr.work_hours), 0) as totalWorkHours,
         COALESCE(SUM(lr.total_amount), 0) as laborCost,
-        pp.planned_quantity - COALESCE(SUM(hr.harvest_quantity), 0) as remainingYield
+        pp.planned_quantity - COALESCE(SUM(hr.harvest_quantity), 0) as remainingYield,
+        -- 全链条追溯阶段标记：标识批次在各环节是否有数据
+        CASE WHEN COUNT(DISTINCT ss.id) > 0 THEN 1 ELSE 0 END as hasSeedSource,
+        CASE WHEN COUNT(DISTINCT s.id) > 0 THEN 1 ELSE 0 END as hasSeedling,
+        CASE WHEN COUNT(DISTINCT pl.id) > 0 THEN 1 ELSE 0 END as hasPlanting
       FROM production_plans pp
-      LEFT JOIN seedlings s ON s.production_plan_code = pp.plan_code
+      LEFT JOIN seed_sources ss ON ss.production_plan_code = pp.plan_code
+      LEFT JOIN seedlings s ON s.source_id = ss.id
       LEFT JOIN plantings pl ON pl.source_id = s.id
       LEFT JOIN harvest_records hr ON hr.source_id = pl.id OR (hr.greenhouse_name = pp.greenhouse_name AND hr.crop_name = pp.crop_name)
       LEFT JOIN farm_tasks ft ON ft.greenhouse_name = pp.greenhouse_name AND ft.source_type = 'planting' AND ft.source_id = pl.id
@@ -154,7 +159,7 @@ router.get('/batch-stats', (req: Request, res: Response) => {
     const sql = addPagination(`${baseSql} GROUP BY pp.id ORDER BY pp.create_time DESC`, pagination.page, pagination.limit, params);
 
     // 获取总数
-    const countSql = `SELECT COUNT(DISTINCT pp.id) as total FROM production_plans pp LEFT JOIN seedlings s ON s.production_plan_code = pp.plan_code ${whereClause}`;
+    const countSql = `SELECT COUNT(DISTINCT pp.id) as total FROM production_plans pp LEFT JOIN seed_sources ss ON ss.production_plan_code = pp.plan_code LEFT JOIN seedlings s ON s.source_id = ss.id ${whereClause}`;
     const countResult = queryToObjects(db, countSql, countParams);
     const total = countResult[0]?.total || 0;
 
@@ -217,7 +222,9 @@ router.get('/yield-stats', (req: Request, res: Response) => {
         SELECT
           hr.greenhouse_name as name,
           SUM(hr.harvest_quantity) as value,
-          COUNT(*) as count
+          COUNT(*) as count,
+          AVG(hr.unit_price) as avg_price,
+          SUM(hr.total_amount) as total_amount
         FROM harvest_records hr
         WHERE hr.status = 'completed' AND hr.harvest_quantity > 0
       `;
@@ -227,7 +234,9 @@ router.get('/yield-stats', (req: Request, res: Response) => {
         SELECT
           hr.quality_grade as name,
           SUM(hr.harvest_quantity) as value,
-          COUNT(*) as count
+          COUNT(*) as count,
+          AVG(hr.unit_price) as avg_price,
+          SUM(hr.total_amount) as total_amount
         FROM harvest_records hr
         WHERE hr.status = 'completed' AND hr.harvest_quantity > 0
       `;
@@ -275,13 +284,15 @@ router.get('/yield-stats', (req: Request, res: Response) => {
     }
 
     // 添加分页
+    const filterParamCount = params.length;
     const paginatedSql = addPagination(sql, pagination.page, pagination.limit, params);
 
     const items = queryToObjects(db, paginatedSql, params);
 
+    const countParams = params.slice(0, filterParamCount);
     // 获取总数
     const countSql = sql.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(*) as total FROM').split('GROUP BY')[0] + 'GROUP BY ' + sql.split('GROUP BY')[1].split('ORDER BY')[0];
-    const countResult = queryToObjects(db, countSql, params);
+    const countResult = queryToObjects(db, countSql, countParams);
     const total = countResult.length;
 
     res.json({
@@ -295,8 +306,8 @@ router.get('/yield-stats', (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('获取产量统计失败:', error);
-    res.status(500).json({ success: false, error: '获取产量统计失败' });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ success: false, error: `获取产量统计失败: ${errMsg}` });
   }
 });
 
@@ -857,6 +868,103 @@ router.get('/indicators', (req: Request, res: Response) => {
   } catch (error) {
     console.error('获取生产指标失败:', error);
     res.status(500).json({ success: false, error: '获取生产指标失败' });
+  }
+});
+
+/**
+ * 全链条追溯概览 — 6环节数据独立统计
+ * GET /api/summary/chain-overview
+ * 生产计划→种源→育苗→种植→采收→库存，各环节独立取数
+ */
+router.get('/chain-overview', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    // 生产计划 — 按状态统计
+    const planStats = queryToObjects(db, `
+      SELECT status, COUNT(*) as count FROM production_plans GROUP BY status
+    `);
+    const planTotal = planStats.reduce((s: number, r: any) => s + Number(r.count), 0);
+
+    // 种源管理 — 列表+总数
+    const seedItems = queryToObjects(db, `
+      SELECT id, source_code as code, source_name as name, crop_name as cropName,
+             crop_variety as variety, supplier_name as supplierName,
+             quantity, unit, status, purchase_date as purchaseDate
+      FROM seed_sources ORDER BY create_time DESC LIMIT 20
+    `);
+    const seedCount = seedItems.length;
+
+    // 育苗管理 — 列表+总数+按状态分组
+    const seedlingItems = queryToObjects(db, `
+      SELECT id, seedling_code as code, crop_name as cropName, crop_variety as variety,
+             greenhouse_name as greenhouse, seedling_quantity as quantity,
+             survival_quantity as survivalQuantity, survival_rate as survivalRate,
+             status, seedling_date as seedlingDate
+      FROM seedlings ORDER BY create_time DESC LIMIT 20
+    `);
+    const seedlingStats = queryToObjects(db, `
+      SELECT status, COUNT(*) as count FROM seedlings GROUP BY status
+    `);
+    const seedlingTotal = seedlingStats.reduce((s: number, r: any) => s + Number(r.count), 0);
+
+    // 种植管理 — 列表+总数+按状态分组
+    const plantingItems = queryToObjects(db, `
+      SELECT id, planting_code as code, crop_name as cropName, crop_variety as variety,
+             greenhouse_name as greenhouse, area_name as area,
+             planting_quantity as quantity, growth_status as status,
+             planting_date as plantingDate,
+             expected_harvest_date as expectedHarvestDate
+      FROM plantings ORDER BY create_time DESC LIMIT 20
+    `);
+    const plantingStats = queryToObjects(db, `
+      SELECT status, COUNT(*) as count FROM plantings GROUP BY status
+    `);
+    const plantingTotal = plantingStats.reduce((s: number, r: any) => s + Number(r.count), 0);
+
+    // 采收入库 — 记录列表+总量
+    const harvestItems = queryToObjects(db, `
+      SELECT id, harvest_code as code, crop_name as cropName, crop_variety as variety,
+             greenhouse_name as greenhouse, harvest_quantity as quantity,
+             unit_price as unitPrice, total_amount as totalAmount,
+             quality_grade as qualityGrade, harvest_date as harvestDate, status
+      FROM harvest_records ORDER BY harvest_date DESC LIMIT 20
+    `);
+    const harvestStats = queryToObjects(db, `
+      SELECT COUNT(*) as count,
+             COALESCE(SUM(harvest_quantity), 0) as totalQuantity
+      FROM harvest_records
+    `)[0];
+
+    // 库存管理 — 物品列表+总量
+    const inventoryItems = queryToObjects(db, `
+      SELECT id, code, name, category, specification as spec, unit, quantity,
+             price as unitPrice, (quantity * CAST(price AS REAL)) as totalAmount,
+             location as warehouseName, dataStatus as status
+      FROM materials WHERE quantity > 0 ORDER BY lastUpdateTime DESC LIMIT 20
+    `);
+    const inventoryStats = queryToObjects(db, `
+      SELECT COUNT(*) as itemCount,
+             COALESCE(SUM(quantity), 0) as totalQuantity
+      FROM materials WHERE quantity > 0
+    `)[0];
+
+    res.json({
+      success: true,
+      data: {
+        stages: [
+          { key: 'plan', label: '生产计划', count: planTotal, detail: planStats, items: [] },
+          { key: 'seed', label: '种源管理', count: Number(seedCount), detail: { total: Number(seedCount) }, items: seedItems },
+          { key: 'seedling', label: '育苗管理', count: seedlingTotal, detail: seedlingStats, items: seedlingItems },
+          { key: 'planting', label: '种植管理', count: plantingTotal, detail: plantingStats, items: plantingItems },
+          { key: 'harvest', label: '采收入库', count: Number(harvestStats?.count || 0), detail: { ...harvestStats }, items: harvestItems },
+          { key: 'inventory', label: '库存管理', count: Number(inventoryStats?.itemCount || 0), detail: { ...inventoryStats }, items: inventoryItems },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('获取全链条概览失败:', error);
+    res.status(500).json({ success: false, error: '获取全链条概览失败' });
   }
 });
 

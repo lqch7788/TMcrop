@@ -1870,6 +1870,35 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== 员工表（人工管理模块核心表）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS employees (
+      id TEXT PRIMARY KEY,
+      employee_code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      gender TEXT,
+      phone TEXT,
+      id_card TEXT,
+      position_id TEXT,
+      position_name TEXT,
+      department_id TEXT,
+      department_name TEXT,
+      employee_type TEXT,
+      hire_date TEXT,
+      status TEXT DEFAULT 'active',
+      skills TEXT,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT,
+      leave_date TEXT,
+      leave_reason TEXT,
+      resigned_at TEXT,
+      transferred_at TEXT,
+      approval_code TEXT
+    )
+  `);
+
   // ========== V9.0: 排班管理表 ==========
   // 排班表 - 用于存储员工排班信息
   db.run(`

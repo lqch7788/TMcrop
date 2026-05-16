@@ -411,8 +411,8 @@ export function SeedlingTable({
             {showCheckbox && <col className="w-12" />}
             <col className="w-44" />
             <col className="w-36" />
-            <col className="w-36" />
             <col className="w-52" />
+            <col className="w-36" />
             <col className="w-28" />
             <col className="w-52" />
             <col className="w-28" />
@@ -432,8 +432,8 @@ export function SeedlingTable({
               )}
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">育苗批号</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联生产计划</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">场地</th>
@@ -487,10 +487,10 @@ export function SeedlingTable({
                       </span>
                     ) : '-'}
                   </td>
+                  <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.sourceCode}</td>
                   <td className="px-3 py-2 text-sm">
                     <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{record.sourceCode}</td>
                   <td className="px-3 py-2 text-sm text-gray-900 truncate" title={record.cropVariety || record.cropName}>
                     {/* 作物品种列：从品种库获取最细化名称 */}
                     {getCropVarietyName(record)}
