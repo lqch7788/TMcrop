@@ -101,7 +101,16 @@ export const useSeedSourceStore = create<SeedSourceState>()(
   }),
   {
     name: 'seed-source-storage',
+    version: 2,  // 版本升级：清除旧格式缓存，避免非数组数据导致 filter 报错
     partialize: (state) => ({ items: state.items }),
+    merge: (persisted: unknown, current) => {
+      const state = current as SeedSourceState;
+      // 防御性检查：确保 items 是数组
+      if (persisted && typeof persisted === 'object' && Array.isArray((persisted as Record<string, unknown>).items)) {
+        return { ...state, items: (persisted as Record<string, unknown>).items as SeedSource[] };
+      }
+      return state;
+    },
   }
 )
 );
