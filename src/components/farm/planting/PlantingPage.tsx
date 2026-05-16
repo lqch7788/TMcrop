@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine } from 'lucide-react';
+import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
@@ -15,7 +15,11 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, usePlantingStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore } from '../../../stores';
+import type { PlantLabel, PlantMark } from '../../../stores/usePlantLabelStore';
+import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
+import PlantingMoveModal from './modals/PlantingMoveModal';
+import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
@@ -63,6 +67,13 @@ export default function PlantingPage() {
   // 从 Zustand Store 获取种植数据
   const { items: plantings, isLoading: loading, loadItems, deleteItem, deleteItems } = usePlantingStore();
 
+  // 从标签 Store 获取标签/标记数据
+  const {
+    labels: plantLabels, resumeMap, marks,
+    loadLabels, loadMarks, loadResumesForLabels,
+    submitMove, submitMark
+  } = usePlantLabelStore();
+
   // 作物品种数据（从品种库服务获取）
   const cropVarietyOptions = useMemo(() => {
     cropVarietyService.initVarieties();
@@ -103,6 +114,12 @@ export default function PlantingPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Planting | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
+
+  // 标签/标记/移动弹窗状态
+  const [labelDetailOpen, setLabelDetailOpen] = useState(false);
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [markModalOpen, setMarkModalOpen] = useState(false);
+  const [currentLabelPlanting, setCurrentLabelPlanting] = useState<Planting | null>(null);
 
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
@@ -213,6 +230,60 @@ export default function PlantingPage() {
     } else {
       alert('结束失败');
     }
+  };
+
+  // 标签详情 - 加载该种植的标签并打开弹窗
+  const handleLabelDetail = async (record: Planting) => {
+    setCurrentLabelPlanting(record);
+    await loadLabels(record.id);
+    // 从 store 读取最新状态（避免闭包陷阱）
+    const freshLabels = usePlantLabelStore.getState().labels;
+    const labelIds = freshLabels.map(l => l.id);
+    if (labelIds.length > 0) {
+      await loadResumesForLabels(labelIds);
+    }
+    setLabelDetailOpen(true);
+  };
+
+  // 移入/移出 - 打开弹窗
+  const handleMove = (record: Planting) => {
+    setCurrentRecord(record);
+    setMoveModalOpen(true);
+  };
+
+  // 标记管理 - 加载标签和标记后打开弹窗
+  const handleMark = async (record: Planting) => {
+    setCurrentLabelPlanting(record);
+    await loadLabels(record.id);
+    await loadMarks();
+    setMarkModalOpen(true);
+  };
+
+  const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; labelNumber: string; targetArea: string; operationDate: string; remarks: string }) => {
+    // 从 store 读取最新标签列表（避免闭包陷阱）
+    const freshLabels = usePlantLabelStore.getState().labels;
+    const label = freshLabels.find(l => l.label_number === data.labelNumber);
+    if (!label) {
+      alert('未找到对应标签，请检查标签编号');
+      return false;
+    }
+    const ok = await submitMove(label.id, data);
+    if (ok) {
+      alert('移动操作成功');
+    } else {
+      alert('移动操作失败');
+    }
+    return ok;
+  };
+
+  const handleMarkSubmit = async (markId: number, labelIds: number[]) => {
+    const ok = await submitMark(markId, labelIds);
+    if (ok) {
+      alert('标记分配成功');
+    } else {
+      alert('标记分配失败');
+    }
+    return ok;
   };
 
   const handleSearch = () => {
@@ -425,6 +496,9 @@ export default function PlantingPage() {
         onImageClick={handleImageClick}
         onEnd={handleEnd}
         onAdd={() => setAddModalOpen(true)}
+        onLabelDetail={handleLabelDetail}
+        onMove={handleMove}
+        onMark={handleMark}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
@@ -503,6 +577,54 @@ export default function PlantingPage() {
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
         selectedCount={selectedRows.length}
+      />
+
+      {/* 标签详情弹窗 */}
+      <PlantingLabelDetailModal
+        isOpen={labelDetailOpen}
+        onClose={() => setLabelDetailOpen(false)}
+        labels={plantLabels.map(l => ({
+          id: l.id,
+          labelNumber: l.label_number,
+          plantingId: parseInt(l.planting_id, 10) || 0,
+          moveInAreaName: l.move_in_area_name || '',
+          moveInDate: l.move_in_date || '',
+          moveOutAreaName: l.move_out_area_name || '',
+          moveOutDate: l.move_out_date || '',
+        }))}
+        resumeMap={resumeMap}
+      />
+
+      {/* 移入/移出弹窗 */}
+      {currentRecord && (
+        <PlantingMoveModal
+          isOpen={moveModalOpen}
+          onClose={() => setMoveModalOpen(false)}
+          areaOptions={areas}
+          isHarvested={currentRecord.isHarvest}
+          onSubmit={handleMoveSubmit}
+        />
+      )}
+
+      {/* 标记管理弹窗 */}
+      <PlantingMarkModal
+        isOpen={markModalOpen}
+        onClose={() => setMarkModalOpen(false)}
+        marks={marks.map(m => ({
+          id: m.id,
+          name: m.name,
+          color: m.color,
+          icon: m.icon,
+          parentId: m.parent_id,
+          markAid: m.mark_aid,
+          isUse: m.is_use,
+          sortOrder: m.sort_order,
+        }))}
+        labels={plantLabels.map(l => ({
+          id: l.id,
+          labelNumber: l.label_number,
+        }))}
+        onSubmit={handleMarkSubmit}
       />
     </div>
   );

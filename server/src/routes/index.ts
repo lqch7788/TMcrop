@@ -53,6 +53,7 @@ import contractRenewalRouter from './contractRenewal';
 import salaryBudgetRouter from './salaryBudget';
 import fertilizerRouter from './fertilizer';
 import regionRouter from './region';
+import plantLabelRouter from './plantLabel';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -222,6 +223,9 @@ router.use('/fertilizer', requireAuth, fertilizerRouter);
 
 // 行政区划路由 - V10.0
 router.use('/region', requireAuth, regionRouter);
+
+// 种植标签管理路由 - V10.0 (plant_labels + plant_marks)
+router.use('/plant-labels', requireAuth, plantLabelRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

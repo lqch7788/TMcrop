@@ -139,14 +139,14 @@ export default function PlantingMarkModal({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const markId = Number(selectedMarkKey);
     if (!markId || checkedLabelIds.size === 0) {
       if (!markId) alert('请先选择一个标记');
       else alert('请至少选择一个标签');
       return;
     }
-    onSubmit(markId, Array.from(checkedLabelIds));
+    await onSubmit(markId, Array.from(checkedLabelIds));
     onClose();
   };
 

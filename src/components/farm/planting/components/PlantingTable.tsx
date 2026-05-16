@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle, Tag, MoveRight, Bookmark } from 'lucide-react';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -41,6 +41,10 @@ interface PlantingTableProps {
   printMode?: boolean;
   onPrintModeChange?: (mode: boolean) => void;
   onConfirmPrint?: (records: Planting[]) => void;
+  // 标签/移动/标记回调
+  onLabelDetail?: (record: Planting) => void;
+  onMove?: (record: Planting) => void;
+  onMark?: (record: Planting) => void;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -78,6 +82,9 @@ export function PlantingTable({
   canDelete = true,
   canExport = true,
   canPrint = true,
+  onLabelDetail,
+  onMove,
+  onMark,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -362,7 +369,7 @@ export function PlantingTable({
       },
       {
         title: '操作',
-        width: 180,
+        width: 280,
         render: (_: unknown, record: Planting) => (
           <div className="flex gap-1">
             <button
@@ -418,6 +425,33 @@ export function PlantingTable({
             >
               <XCircle className="w-4 h-4" />
             </button>
+            {onLabelDetail && (
+              <button
+                onClick={() => onLabelDetail(record)}
+                className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                title="标签详情"
+              >
+                <Tag className="w-4 h-4" />
+              </button>
+            )}
+            {onMove && !record.isHarvest && (
+              <button
+                onClick={() => onMove(record)}
+                className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded"
+                title="移入/移出"
+              >
+                <MoveRight className="w-4 h-4" />
+              </button>
+            )}
+            {onMark && (
+              <button
+                onClick={() => onMark(record)}
+                className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
+                title="标记管理"
+              >
+                <Bookmark className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )
       }
@@ -575,7 +609,7 @@ export function PlantingTable({
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-380px)]">
-        <table className="w-full min-w-[1400px]">
+        <table className="w-full min-w-[1600px]">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <tr>
               {columns.map((col, index) => (

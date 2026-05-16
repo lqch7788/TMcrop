@@ -66,7 +66,7 @@ export default function PlantingMoveModal({
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.labelNumber.trim()) {
       alert('请输入标签编号');
       return;
@@ -75,7 +75,7 @@ export default function PlantingMoveModal({
       alert('请选择目标区域');
       return;
     }
-    onSubmit(form);
+    await onSubmit(form);
     onClose();
   };
 
