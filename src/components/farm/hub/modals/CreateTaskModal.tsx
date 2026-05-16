@@ -845,7 +845,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
                   <p className="text-sm text-gray-400 text-center py-2">暂无所需物资</p>
                 ) : (
                   newTask.materials.map((m, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={`mat-${i}`} className="flex items-center gap-2">
                       <input
                         type="text"
                         value={m.name}
@@ -923,7 +923,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }: CreateTaskModalP
                   <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
                 ) : (
                   newTask.tools.map((t, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={`tool-${i}`} className="flex items-center gap-2">
                       <input
                         type="text"
                         value={t.name}
