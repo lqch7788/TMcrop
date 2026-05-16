@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useDragResize } from './useDragResize';
 import {
   Shield,
   Plus,
@@ -39,6 +39,10 @@ export default function RoleManagement() {
   useEffect(() => {
     loadRoles();
   }, [loadRoles]);
+
+  // 弹窗拖拽/缩放
+  const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 500, initialHeight: 460 });
+  useEffect(() => { if (showModal) resetPosition(); }, [showModal]);
 
   // 过滤角色
   const filteredRoles = roles.filter(
@@ -102,69 +106,42 @@ export default function RoleManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-white" />
+    <div className="space-y-4">
+      {/* 工具栏 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+            <Shield className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">角色管理</h1>
-            <p className="text-gray-500">管理系统角色和权限配置</p>
-          </div>
+          <span className="text-sm font-semibold text-gray-900">角色管理</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">管理系统角色和权限配置</span>
         </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{roles.length}</p>
-              <p className="text-xs text-gray-500">角色总数</p>
-            </div>
+        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{roles.length} 个角色</span>
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-40 h-8 pl-8 pr-3 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-        </div>
-      </div>
-
-      {/* 操作栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="搜索角色名称或编码..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => loadRoles()}
-              className="h-10 px-4 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              刷新
-            </button>
-            <button
-              onClick={handleAdd}
-              className="h-10 px-4 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              新增角色
-            </button>
-          </div>
+          <button
+            onClick={() => loadRoles()}
+            className="h-8 px-3 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            刷新
+          </button>
+          <button
+            onClick={handleAdd}
+            className="h-8 px-3 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            新增角色
+          </button>
         </div>
       </div>
 
@@ -178,7 +155,7 @@ export default function RoleManagement() {
       {/* 角色列表 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-purple-500 to-pink-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               <th className="text-left py-3 px-4 text-sm font-semibold">角色编码</th>
               <th className="text-left py-3 px-4 text-sm font-semibold">角色名称</th>
@@ -204,7 +181,7 @@ export default function RoleManagement() {
               </tr>
             ) : (
               paginatedRoles.map((role) => (
-                <tr key={role.oid} className="hover:bg-gray-50">
+                <tr key={role.oid} className="hover:bg-blue-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{role.aid}</td>
                   <td className="px-4 py-3 text-sm text-gray-900">{role.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">
@@ -271,7 +248,7 @@ export default function RoleManagement() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-9 h-9 rounded-lg text-sm font-medium ${
                       currentPage === page
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
@@ -293,21 +270,33 @@ export default function RoleManagement() {
 
       {/* 弹窗 */}
       {showModal && editingRole && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowModal(false)}>
+          <div
+            className="absolute bg-white rounded-xl shadow-xl"
+            style={{
+              width: size.width,
+              left: `calc(50% - ${size.width / 2}px + ${position.x}px)`,
+              top: `calc(50% - ${size.height / 2}px + ${position.y}px)`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resizeHandles}
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl p-4 flex items-center justify-between cursor-move select-none"
+              onMouseDown={startDrag}
+            >
+              <h3 className="text-white font-semibold">
                 {editingRole.oid ? '编辑角色' : '新增角色'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="text-white/70 hover:text-white"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   角色编码 <span className="text-red-500">*</span>
@@ -316,7 +305,7 @@ export default function RoleManagement() {
                   type="text"
                   value={editingRole.aid || ''}
                   onChange={(e) => setEditingRole({ ...editingRole, aid: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="如：ROLE001"
                 />
               </div>
@@ -329,7 +318,7 @@ export default function RoleManagement() {
                   type="text"
                   value={editingRole.name || ''}
                   onChange={(e) => setEditingRole({ ...editingRole, name: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="请输入角色名称"
                 />
               </div>
@@ -339,7 +328,7 @@ export default function RoleManagement() {
                 <select
                   value={editingRole.orgOid || ''}
                   onChange={(e) => setEditingRole({ ...editingRole, orgOid: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">请选择组织</option>
                   {organizations.map((org) => (
@@ -358,7 +347,7 @@ export default function RoleManagement() {
                     setEditingRole({ ...editingRole, description: e.target.value })
                   }
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="请输入角色描述"
                 />
               </div>
@@ -371,7 +360,7 @@ export default function RoleManagement() {
                   onChange={(e) =>
                     setEditingRole({ ...editingRole, sortNumber: parseInt(e.target.value) || 0 })
                   }
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -386,7 +375,7 @@ export default function RoleManagement() {
               <button
                 onClick={handleSave}
                 disabled={!editingRole.aid || !editingRole.name || loading}
-                className="h-10 px-4 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 保存

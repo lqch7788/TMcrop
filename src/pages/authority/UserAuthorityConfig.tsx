@@ -110,12 +110,19 @@ export default function UserAuthorityConfig() {
       const next = new Map(prev);
       if (!next.has(processOid)) next.set(processOid, new Map());
       const current = getAuthValue(processOid, actionCode);
-      // 循环: 无权限 → 强制允许 → 强制拒绝 → 无权限
-      let newVal: number;
-      if (current.val === 0) newVal = 1; // 强制允许
-      else if (current.val === 1 || current.val === 2) newVal = 0; // 强制拒绝
-      else newVal = -1; // 清除(恢复角色权限)
-      next.get(processOid)!.set(actionCode, newVal);
+      // 三态循环: 原始权限 → 强制允许(1) → 强制拒绝(0) → 清除(恢复原始)
+      if (current.source === 'local') {
+        if (current.val === 1) {
+          next.get(processOid)!.set(actionCode, 0); // 允许 → 拒绝
+        } else {
+          // 拒绝(val=0) → 清除，恢复原始权限
+          next.get(processOid)!.delete(actionCode);
+          if (next.get(processOid)!.size === 0) next.delete(processOid);
+        }
+      } else {
+        // 原始状态(角色/无权限/用户覆盖) → 强制允许
+        next.get(processOid)!.set(actionCode, 1);
+      }
       return next;
     });
     setHasChanges(true);
@@ -164,36 +171,30 @@ export default function UserAuthorityConfig() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-gradient-to-r from-violet-500 via-violet-600 to-violet-500 rounded-xl p-5 text-white shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <UserCog className="w-5 h-5" />
+      {/* 工具栏 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+            <UserCog className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold">用户特殊权限配置</h1>
-            <p className="text-sm text-white/70">对单个用户进行权限增强或限制，覆盖角色权限</p>
-          </div>
+          <span className="text-sm font-semibold text-gray-900">用户特殊权限配置</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">对单个用户进行权限增强或限制，覆盖角色权限</span>
         </div>
-      </div>
-
-      {/* 用户选择 */}
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">选择用户：</label>
-          <div className="relative flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-gray-300" />
+        <div className="flex items-center gap-2 ml-auto">
+          <label className="text-xs font-medium text-gray-600 whitespace-nowrap">选择用户:</label>
+          <div className="relative">
+            <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-300" />
             <input
-              type="text" placeholder="搜索用户..."
+              type="text" placeholder="搜索..."
               value={searchUserTerm}
               onChange={(e) => setSearchUserTerm(e.target.value)}
-              className="w-full h-9 pl-8 pr-2 border border-gray-200 rounded text-sm"
+              className="w-36 h-8 pl-7 pr-2 border border-gray-200 rounded text-xs"
             />
           </div>
           <select
             value={selectedUserOid}
             onChange={(e) => setSelectedUserOid(e.target.value)}
-            className="h-9 px-2 border border-gray-200 rounded text-sm flex-1 max-w-xs"
+            className="h-8 px-2 border border-gray-200 rounded text-xs max-w-[160px]"
           >
             <option value="">-- 请选择用户 --</option>
             {filteredUsers.map((u) => (
@@ -203,8 +204,8 @@ export default function UserAuthorityConfig() {
             ))}
           </select>
           {selectedUser && (
-            <span className="text-sm text-gray-500">
-              组织: {selectedUser.org_oid} | 状态: {selectedUser.status}
+            <span className="text-xs text-gray-400 whitespace-nowrap">
+              组织:{selectedUser.org_oid} | {selectedUser.status}
             </span>
           )}
         </div>
@@ -219,13 +220,13 @@ export default function UserAuthorityConfig() {
                 工序-动作权限配置
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                灰色=无权限 | 蓝色=角色继承 | 绿色=用户特殊允许 | 红色=用户特殊拒绝 | 点击切换
+                灰=无权限 | 蓝=角色继承 | 点击循环: 角色→允许→拒绝→恢复角色
               </p>
             </div>
             <div className="flex items-center gap-2">
               {hasChanges && (
                 <button onClick={saveChanges}
-                  className="h-7 px-3 text-xs bg-violet-500 text-white rounded hover:bg-violet-600 flex items-center gap-1">
+                  className="h-7 px-3 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1">
                   <Save className="w-3 h-3" /> 保存更改
                 </button>
               )}
@@ -238,10 +239,10 @@ export default function UserAuthorityConfig() {
           <div className="overflow-x-auto max-h-96">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b sticky top-0">
-                  <th className="text-left py-2 px-3 font-medium text-gray-600 w-48">工序</th>
+                <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-b sticky top-0">
+                  <th className="text-left py-2 px-3 font-medium text-white w-48">工序</th>
                   {ACTION_LIST.map((act) => (
-                    <th key={act.code} className="text-center py-2 px-2 font-medium text-gray-600 w-20">
+                    <th key={act.code} className="text-center py-2 px-2 font-medium text-white w-20">
                       <span className={`text-xs px-1.5 py-0.5 rounded ${act.color}`}>{act.name}</span>
                     </th>
                   ))}
@@ -249,7 +250,7 @@ export default function UserAuthorityConfig() {
               </thead>
               <tbody>
                 {allProcesses.map((proc) => (
-                  <tr key={proc.oid} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <tr key={proc.oid} className="border-b border-gray-100 hover:bg-blue-50">
                     <td className="py-1.5 px-3 text-gray-700">
                       <div>{proc.process_name}</div>
                       <div className="text-xs text-gray-400 font-mono">{proc.process_code}</div>
@@ -265,8 +266,8 @@ export default function UserAuthorityConfig() {
                         bg = val === 2 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500';
                         label = val === 2 ? '允许' : '拒绝';
                       } else if (source === 'local') {
-                        bg = val === 1 ? 'bg-emerald-200 text-emerald-700' : val === 0 ? 'bg-red-200 text-red-700' : 'bg-gray-100 text-gray-400';
-                        label = val === 1 ? '允许' : val === 0 ? '拒绝' : '清除';
+                        bg = val === 1 ? 'bg-emerald-200 text-emerald-700' : 'bg-red-200 text-red-700';
+                        label = val === 1 ? '允许' : '拒绝';
                       }
                       return (
                         <td key={act.code} className="text-center py-1.5 px-1">
