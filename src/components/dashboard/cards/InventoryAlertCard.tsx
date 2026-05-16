@@ -11,8 +11,9 @@ export function InventoryAlertCard() {
   }, [loadItems]);
 
   // 统计库存不足的物料数量（当前库存 < 最低安全库存）
+  const safeItems = Array.isArray(items) ? items : [];
   const inventoryAlerts = useMemo(() => {
-    const lowStockItems = items.filter(
+    const lowStockItems = safeItems.filter(
       (item) => item.quantity < item.minStock
     );
     return {
@@ -23,7 +24,7 @@ export function InventoryAlertCard() {
         safeStock: item.minStock,
       })),
     };
-  }, [items]);
+  }, [safeItems]);
 
   return (
     <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">

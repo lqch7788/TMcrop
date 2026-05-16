@@ -11,11 +11,12 @@ export function EquipmentStatusCard() {
   }, [loadDevices]);
 
   // 根据设备 status 字段统计各类设备数量
+  const safeDevices = Array.isArray(devices) ? devices : [];
   const equipmentStats = useMemo(() => ({
-    autoMode: devices.filter(d => d.status === 'normal' || d.status === 'active' || d.status === 'running').length,
-    manualMode: devices.filter(d => d.status === 'manual' || d.status === 'standby').length,
-    faults: devices.filter(d => d.status === 'fault' || d.status === 'error' || d.status === 'faulty' || d.status === 'repair').length,
-    offlineSensors: devices.filter(d => d.status === 'offline' || d.status === 'inactive' || d.status === 'disabled').length,
+    autoMode: safeDevices.filter(d => d.status === 'normal' || d.status === 'active' || d.status === 'running').length,
+    manualMode: safeDevices.filter(d => d.status === 'manual' || d.status === 'standby').length,
+    faults: safeDevices.filter(d => d.status === 'fault' || d.status === 'error' || d.status === 'faulty' || d.status === 'repair').length,
+    offlineSensors: safeDevices.filter(d => d.status === 'offline' || d.status === 'inactive' || d.status === 'disabled').length,
   }), [devices]);
 
   return (
