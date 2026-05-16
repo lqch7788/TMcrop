@@ -5,8 +5,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
-import { addDailyRecord } from '../../../../services/apiSeedlingService';
-import { useDictionaryStore, getDictItems } from '../../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../../stores';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -55,23 +54,20 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       return;
     }
 
-    // 调用服务添加每日记录
+    // 通过 Store 添加每日记录（架构：组件 → Store → API）
     try {
-      await addDailyRecord(record.id, {
+      await useSeedlingStore.getState().addDailyRecord(String(record.id), {
         recordDate: formData.recordDate,
         temperature: formData.temperature,
         humidity: formData.humidity,
         watering: formData.watering,
         abnormality: formData.abnormality || undefined,
-        // 数量变化字段
         survivalCountChange: formData.survivalCountChange,
         plantedCountChange: formData.plantedCountChange,
         lossCountChange: formData.lossCountChange,
         remarks: formData.remarks || undefined,
-        // 水质参数（新增）
         phValue: formData.phValue,
         ecValue: formData.ecValue,
-        // 操作人员（新增）
         operator: formData.operator || undefined
       });
     } catch (error) {

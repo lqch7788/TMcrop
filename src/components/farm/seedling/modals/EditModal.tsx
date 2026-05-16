@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedSource } from '../../../../types/crop';
-import { updateSeedling } from '../../../../services/apiSeedlingService';
+import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -97,7 +97,7 @@ export function EditModal({
     const lossRate = initialCount > 0 ? Math.round((lossCount / initialCount) * 100) : 0;
 
     try {
-      await updateSeedling(record.id, {
+      await useSeedlingStore.getState().updateItem(String(record.id), {
         sourceId: formData.sourceId,
         sourceCode,
         cropName: formData.cropName,
@@ -116,7 +116,6 @@ export function EditModal({
         lossCount,
         lossRate,
         remarks: formData.remarks,
-        // 新增缺失字段
         qualityGrade: formData.qualityGrade,
         isFinished: formData.isFinished,
         chargePerson: formData.chargePerson,

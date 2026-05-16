@@ -7,6 +7,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';
+import { SEEDLING_STATUS_MAP, TRANSPLANT_STATUS_MAP } from '../../../../constants/cropConstants';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function DetailModal({
 }: DetailModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'trace'>('info');
 
+  // TODO: 颜色值与共享常量 SEEDLING_STATUS_MAP 不同，暂保留本地定义
   const statusMap = {
     [SeedlingStatus.IN_PROGRESS]: { label: '进行中', color: 'text-amber-600 bg-amber-50' },
     [SeedlingStatus.TRANSPLANT_READY]: { label: '待定植', color: 'text-blue-600 bg-blue-50' },
@@ -30,7 +32,7 @@ export function DetailModal({
 
   const status = statusMap[record.status] || statusMap[SeedlingStatus.IN_PROGRESS];
 
-  // 获取栽种记录状态名称
+  // TODO: "库存" 与共享常量 TRANSPLANT_STATUS_MAP 的 "库存中" 字面不同，暂保留本地定义
   const getTransplantStatusLabel = (s?: TransplantRecordStatus) => {
     if (!s) return '-';
     switch (s) {

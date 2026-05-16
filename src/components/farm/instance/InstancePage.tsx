@@ -7,6 +7,7 @@ import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle, Barcod
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '@/types/crop';
 import { Button } from '@/components/ui/button';
+import { CROP_INSTANCE_STATUS_MAP, SOURCE_ORIGIN_MAP } from '@/constants/cropConstants';
 
 export default function InstancePage() {
   const [searchCode, setSearchCode] = useState('');
@@ -42,7 +43,7 @@ export default function InstancePage() {
     setTraceChain(chain);
   }, []);
 
-  // 获取状态标签
+  // TODO: status badges 颜色与共享常量 CROP_INSTANCE_STATUS_MAP 不同（purple vs indigo），暂保留本地定义
   const getStatusBadge = (status: CropInstanceStatus) => {
     switch (status) {
       case 'seedling':
@@ -62,20 +63,9 @@ export default function InstancePage() {
     }
   };
 
-  // 获取来源类型标签
+  // 获取来源类型标签（使用共享常量 SOURCE_ORIGIN_MAP）
   const getSourceBadge = (source: SourceOrigin) => {
-    const sourceMap: Record<SourceOrigin, string> = {
-      'internal_seed': '内部种源',
-      'external_purchase': '外部采购',
-      'tissue_culture': '组培苗',
-      'grafting': '嫁接苗',
-      'seedling_split': '分株繁殖',
-      'cutting': '扦插繁殖',
-      'direct_seedling': '直接育苗',
-      'direct_planting': '直接种植',
-      'external_harvest': '外购入库',
-    };
-    return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">{sourceMap[source] || source}</span>;
+    return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">{SOURCE_ORIGIN_MAP[source] || source}</span>;
   };
 
   return (

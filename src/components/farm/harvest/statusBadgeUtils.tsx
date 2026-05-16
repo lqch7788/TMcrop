@@ -3,6 +3,9 @@
  * 提供状态和等级的徽章渲染逻辑
  */
 
+// TODO: 以下映射与共享常量 QUALITY_GRADE_MAP / HARVEST_STATUS_MAP 值不同（使用内联 hex 颜色 + 含 'harvesting'/'completed' 状态）
+// 暂保留本地定义，后续可通过重构统一使用共享常量
+
 // 等级颜色映射
 const gradeColors: Record<string, string> = {
   'A': '#52C41A', // 绿色

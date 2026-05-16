@@ -10,7 +10,7 @@ import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
 import { SourceType, StockStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
-import { addSeedSource, updateSeedSource, generateSeedCode } from '../../../../services/apiSeedSourceService';
+import { generateSeedCode } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/cropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import * as supplierService from '../../../../services/supplierService';
@@ -19,6 +19,7 @@ import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { useUserStore } from '../../../../stores/useUserStore';
 import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
+import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -204,7 +205,7 @@ export function AddModal({
     // 创建种源记录（添加 await 确保数据保存完成）
     let newSeedSource;
     try {
-      newSeedSource = await addSeedSource({
+      newSeedSource = await useSeedSourceStore.getState().addItem({
       seedCode: seedCode,
       sourceOrigin: formData.sourceOrigin,
       cropCategory: formData.cropCategory,
@@ -252,7 +253,7 @@ export function AddModal({
           sourceDescription: `种源入库-${supplierName || '未知供应商'}`,
         }
       );
-      updateSeedSource(newSeedSource.id, { instanceId: instance.id });
+      useSeedSourceStore.getState().updateItem(String(newSeedSource.id), { instanceId: instance.id });
     } catch (error) {
       console.error('创建作物实例失败:', error);
     }

@@ -5,8 +5,8 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
-import { increasePlantedCount } from '../../../../services/apiSeedlingService';
-import { addPlanting } from '../../../../services/apiPlantingService';
+import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
+import { usePlantingStore } from '../../../../stores/usePlantingStore';
 
 interface TransplantModalProps {
   isOpen: boolean;
@@ -57,7 +57,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
 
     try {
       // 创建种植记录
-      await addPlanting({
+      await usePlantingStore.getState().addItem({
         plantCode,
         sourceType: SourceType.SEEDLING,
         sourceId: record.id,
@@ -83,8 +83,8 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
         createBy: localStorage.getItem('username') || '陆启闯'
       });
 
-      // 更新育苗的已定植数量
-      await increasePlantedCount(record.id, formData.transplantCount);
+      // 更新育苗的已定植数量（通过 Store）
+      await useSeedlingStore.getState().increasePlantedCount(String(record.id), formData.transplantCount);
     } catch (error) {
       console.error('定植操作失败:', error);
       alert('定植操作失败，请重试');

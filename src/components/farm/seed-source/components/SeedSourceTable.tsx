@@ -7,31 +7,14 @@
 import React from 'react';
 import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
+import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
 
-// 单位转换函数（英文→中文）
-const unitMap: Record<string, string> = {
-  'bag': '袋',
-  'plant': '株',
-  'grain': '粒',
-  'kg': '千克',
-  'g': '克',
-  'ton': '吨',
-  'mu': '亩',
-  '个': '个',
-  '袋': '袋',
-  '株': '株',
-  '粒': '粒',
-  '千克': '千克',
-  '克': '克',
-  '吨': '吨',
-  '亩': '亩',
-};
-
+// 单位格式化函数（优先使用常量映射，兜底返回原值）
 function formatUnit(unit: string): string {
-  return unitMap[unit] || unit || '';
+  return UNIT_MAP[unit] || unit || '';
 }
 
 interface SeedSourceTableProps {
@@ -128,42 +111,6 @@ export function SeedSourceTable({
 
   // 判断是否需要显示复选框列
   const showCheckbox = operationMode !== 'normal' || exportMode || printMode;
-
-  // 状态映射
-  const statusMap = {
-    [StockStatus.SUFFICIENT]: { label: '充足', color: 'text-green-600 bg-green-50' },
-    [StockStatus.LOW]: { label: '不足', color: 'text-amber-600 bg-amber-50' },
-    [StockStatus.DEPLETED]: { label: '耗尽', color: 'text-red-600 bg-red-50' }
-  };
-
-  // 类型映射
-  const sourceTypeMap = {
-    [SourceType.SEED]: '种子',
-    [SourceType.SEEDLING]: '种苗/实生苗',
-    [SourceType.CUTTING]: '扦插苗',
-    [SourceType.GRAFTING]: '嫁接苗',
-    [SourceType.TISSUE_CULTURE]: '组培苗',
-    [SourceType.SPLIT]: '分株苗',
-    [SourceType.BULB]: '种球/球根',
-    [SourceType.OTHER]: '其他'
-  };
-
-  // 来源途径映射 - 与数据库字典保持一致
-  const sourceOriginMap: Record<string, string> = {
-    'internal_seed': '内部种源',
-    'self_produced': '自产自繁',
-    'commissioned': '委托培育',
-    'external_purchase': '外部采购',
-    'gift': '政府/机构赠送',
-    'tissue_culture': '组培苗',
-    'grafting': '嫁接苗',
-    'seedling_split': '分株繁殖',
-    'cutting': '扦插繁殖',
-    'direct_seedling': '直播育苗',
-    'direct_planting': '直接定植',
-    'external_harvest': '外部采收',
-    'other': '其他'
-  };
 
   // 获取选中的第一条记录
   const getFirstSelectedRecord = () => {
@@ -439,10 +386,10 @@ export function SeedSourceTable({
                     {getVarietyPath(record)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {sourceTypeMap[record.sourceType] || record.sourceType}
+                    {SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {sourceOriginMap[record.sourceOrigin] || record.sourceOrigin || '-'}
+                    {SOURCE_ORIGIN_MAP[record.sourceOrigin] || record.sourceOrigin || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
@@ -468,8 +415,8 @@ export function SeedSourceTable({
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
-                      {statusMap[record.status]?.label || record.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[record.status]?.color || ''}`}>
+                      {STOCK_STATUS_MAP[record.status]?.label || record.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

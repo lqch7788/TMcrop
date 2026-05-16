@@ -5,6 +5,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GRADE_OPTIONS } from '../../../../constants/cropConstants';
 
 interface HarvestFilterToolbarProps {
   // 筛选状态
@@ -89,7 +90,7 @@ export function HarvestFilterToolbar({
           />
         </div>
 
-        {/* 品质等级 */}
+        {/* 品质等级（使用共享常量 GRADE_OPTIONS） */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">品质等级</label>
           <select
@@ -98,9 +99,9 @@ export function HarvestFilterToolbar({
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           >
             <option value="">全部</option>
-            <option value="A">A级</option>
-            <option value="B">B级</option>
-            <option value="C">C级</option>
+            {GRADE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
@@ -119,7 +120,7 @@ export function HarvestFilterToolbar({
           </select>
         </div>
 
-        {/* 状态 */}
+        {/* TODO: 状态选项含 'harvesting' 不在共享常量 HARVEST_STATUS_MAP 中，暂保留本地列表 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
           <select

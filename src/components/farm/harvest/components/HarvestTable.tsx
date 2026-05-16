@@ -8,6 +8,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { HarvestRecord } from '../../../../types/crop';
 import { getStatusBadge, getGradeBadge } from '../statusBadgeUtils.tsx';
 import { Button } from '@/components/ui/button';
+import { INBOUND_TYPE_MAP, SUPPLEMENTARY_STATUS_MAP } from '../../../../constants/cropConstants';
 
 // 产品明细行组件
 interface ProductRowProps {
@@ -120,23 +121,16 @@ export function HarvestTableRow({
           {record.harvestCode}
         </td>
         <td className="px-4 py-3 text-sm whitespace-nowrap">
-          {record.inboundType === 'seed_source' && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">种源入库</span>
-          )}
-          {record.inboundType === 'seedling' && (
-            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">育苗成活</span>
-          )}
-          {record.inboundType === 'planting_harvest' && (
-            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">种植采收</span>
-          )}
-          {!record.inboundType && (
+          {record.inboundType && INBOUND_TYPE_MAP[record.inboundType] ? (
+            <span className={`px-2 py-0.5 ${INBOUND_TYPE_MAP[record.inboundType].bg} ${INBOUND_TYPE_MAP[record.inboundType].text} rounded text-xs`}>
+              {INBOUND_TYPE_MAP[record.inboundType].label}
+            </span>
+          ) : (
             <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">-</span>
           )}
           {record.isSupplementary && (
             <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
-              {record.supplementaryStatus === 'pending' ? '待审核' :
-               record.supplementaryStatus === 'approved' ? '已通过' :
-               record.supplementaryStatus === 'rejected' ? '已驳回' : '补录'}
+              {SUPPLEMENTARY_STATUS_MAP[record.supplementaryStatus] || '补录'}
             </span>
           )}
         </td>

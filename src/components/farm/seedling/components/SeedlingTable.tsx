@@ -9,6 +9,7 @@ import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, Ch
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
+import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -211,7 +212,7 @@ export function SeedlingTable({
   // 判断是否需要显示复选框列
   const showCheckbox = operationMode !== 'normal' || exportMode || printMode;
 
-  // 状态映射
+  // TODO: 颜色值与共享常量 SEEDLING_STATUS_MAP 不同（amber/blue/green vs blue/amber/emerald），暂保留本地定义
   const statusMap = {
     [SeedlingStatus.IN_PROGRESS]: { label: '进行中', color: 'text-amber-600 bg-amber-50' },
     [SeedlingStatus.TRANSPLANT_READY]: { label: '待定植', color: 'text-blue-600 bg-blue-50' },

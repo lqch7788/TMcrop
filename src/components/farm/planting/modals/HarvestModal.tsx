@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
-import { harvestPlanting } from '../../../../services/apiPlantingService';
+import { usePlantingStore } from '../../../../stores/usePlantingStore';
 
 interface HarvestModalProps {
   isOpen: boolean;
@@ -30,7 +30,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
 
     try {
       // 调用采收服务
-      await harvestPlanting(record.id, formData.harvestDate, harvestCount);
+      await usePlantingStore.getState().harvestPlanting(String(record.id), formData.harvestDate, harvestCount);
     } catch (error) {
       console.error('采收登记失败:', error);
       alert('采收登记失败，请重试');

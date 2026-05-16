@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { Modal, FormField } from '@/components/ui';
+import { Input, Select } from '../../../ui/Modal';
 import { useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface HarvestRecord {

@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Seedling } from '../types/crop';
+import { Seedling, DailyRecord } from '../types/crop';
 import * as seedlingService from '../services/apiSeedlingService';
 import { enhancedApiClient } from '../lib/apiClient';
 
@@ -19,6 +19,8 @@ interface SeedlingState {
   updateItem: (id: string, updates: Partial<Seedling>) => Promise<Seedling | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
+  addDailyRecord: (seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>) => Promise<DailyRecord | null>;
+  increasePlantedCount: (id: string, count: number) => Promise<boolean>;
 }
 
 export const useSeedlingStore = create<SeedlingState>()(
@@ -92,6 +94,33 @@ export const useSeedlingStore = create<SeedlingState>()(
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 批量删除育苗失败:', error);
+        return false;
+      }
+    },
+
+    addDailyRecord: async (seedlingId, record) => {
+      try {
+        const result = await seedlingService.addDailyRecord(seedlingId, record);
+        return result;
+      } catch (error) {
+        console.error('[useSeedlingStore] 添加每日记录失败:', error);
+        return null;
+      }
+    },
+
+    increasePlantedCount: async (id, count) => {
+      try {
+        const result = await seedlingService.increasePlantedCount(id, count);
+        if (result) {
+          set((s) => ({
+            items: s.items.map((i) =>
+              i.id === id ? { ...i, plantedCount: (i.plantedCount || 0) + count } : i
+            ),
+          }));
+        }
+        return result;
+      } catch (error) {
+        console.error('[useSeedlingStore] 增加定植数量失败:', error);
         return false;
       }
     },

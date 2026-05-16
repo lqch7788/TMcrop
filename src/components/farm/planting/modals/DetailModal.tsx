@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
+import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DetailModalProps {
@@ -20,6 +21,7 @@ export function DetailModal({
 }: DetailModalProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
+  // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
   const statusMap = {
     [PlantingStatus.PLANTED]: { label: '已定植', color: 'text-blue-600 bg-blue-50' },
     [PlantingStatus.GROWING]: { label: '生长期', color: 'text-amber-600 bg-amber-50' },
