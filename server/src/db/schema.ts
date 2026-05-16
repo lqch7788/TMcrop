@@ -1009,6 +1009,18 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+  // 数据改造：补齐前端通过API传递但后端未落库的关键字段
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN crop TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN estimated_hours INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN estimated_days INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN type_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN materials TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN tools TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN rework_history TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN deadline_extensions TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN type_config TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN sop_content TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN description TEXT`); } catch (e) {}
 
   // 创建任务操作记录表
   db.run(`

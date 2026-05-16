@@ -216,10 +216,10 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         }));
 
         try {
-          // 尝试调用API
+          // 尝试调用API（包含 taskCode，确保后端使用 NS 前缀而非 TK 默认值）
           const savedTask = await enhancedApiClient.post<Task>(
             '/farm-tasks',
-            task,
+            { ...task, taskCode },
             { offlineQueue: true }
           );
 

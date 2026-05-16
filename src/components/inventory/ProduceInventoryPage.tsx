@@ -124,59 +124,59 @@ function AlertPanel({ alerts }: { alerts: AlertInfo[] }) {
   }, [alerts]);
 
   return (
-    <div className="grid grid-cols-5 gap-4 mb-6">
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
+    <div className="grid grid-cols-5 gap-3 mb-6">
+      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alertCounts.total}</div>
-            <div className="text-sm text-gray-500">预警总数</div>
+            <div className="text-lg font-bold text-gray-900">{alertCounts.total}</div>
+            <div className="text-xs text-gray-500">预警总数</div>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-            <Clock className="w-5 h-5 text-amber-600" />
+      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+            <Clock className="w-4 h-4 text-amber-600" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alertCounts.storageTime}</div>
-            <div className="text-sm text-gray-500">存储时间预警</div>
+            <div className="text-lg font-bold text-gray-900">{alertCounts.storageTime}</div>
+            <div className="text-xs text-gray-500">存储时间预警</div>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-            <TrendingDown className="w-5 h-5 text-blue-600" />
+      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+            <TrendingDown className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alertCounts.lowStock}</div>
-            <div className="text-sm text-gray-500">库存不足预警</div>
+            <div className="text-lg font-bold text-gray-900">{alertCounts.lowStock}</div>
+            <div className="text-xs text-gray-500">库存不足预警</div>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-purple-600" />
+      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4 text-purple-600" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alertCounts.highStock}</div>
-            <div className="text-sm text-gray-500">库存过多预警</div>
+            <div className="text-lg font-bold text-gray-900">{alertCounts.highStock}</div>
+            <div className="text-xs text-gray-500">库存过多预警</div>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-            <AlertCircle className="w-5 h-5 text-orange-600" />
+      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+            <AlertCircle className="w-4 h-4 text-orange-600" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alertCounts.expiration}</div>
-            <div className="text-sm text-gray-500">保质期预警</div>
+            <div className="text-lg font-bold text-gray-900">{alertCounts.expiration}</div>
+            <div className="text-xs text-gray-500">保质期预警</div>
           </div>
         </div>
       </div>
@@ -543,35 +543,38 @@ export default function ProduceInventoryPage() {
         });
 
         // 将库存数据转换为 ProduceInventory 格式
-        const mappedData: ProduceInventory[] = stocks.map((stock, index) => ({
-          id: stock.instanceId || `PI${String(index + 1).padStart(3, '0')}`,
-          productCode: stock.businessId || stock.instanceId || '',
-          cropName: stock.cropName || '',
-          variety: stock.varietyName || '',
-          grade: 'A' as const, // 默认A级
-          quantity: stock.currentQuantity,
+        const mappedData: ProduceInventory[] = stocks.map((stock: any, index) => ({
+          id: stock.id || `PI${String(index + 1).padStart(3, '0')}`,
+          productCode: stock.productCode || stock.product_code || '',
+          cropName: stock.cropName || stock.crop_name || '',
+          variety: stock.variety || '',
+          grade: (stock.grade || 'A') as 'A' | 'B' | 'C',
+          quantity: stock.quantity || 0,
           unit: stock.unit || 'kg',
-          warehouseId: stock.baseId || '',
-          warehouseName: stock.baseName || '',
-          storageLocation: stock.instanceId || '',
-          storageDate: stock.inboundDate ? new Date(stock.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          expirationDate: stock.expiryDate || '',
-          batchCode: stock.productionPlanCode || '',
-          greenhouseName: '',
-          plantingMode: '',
-          alertSettings: {
-            enableStorageTimeAlert: false,
-            storageTimeThreshold: 0,
-            enableQuantityAlert: false,
-            minQuantityThreshold: 0,
-            maxQuantityThreshold: 0,
-            minStock: 0,
-            maxStock: 0,
-            expirationDays: 0,
-          },
+          warehouseId: stock.warehouseId || stock.warehouse_id || '',
+          warehouseName: stock.warehouseName || stock.warehouse_name || '',
+          storageLocation: stock.storageLocation || stock.storage_location || '',
+          harvestDate: stock.harvestDate || stock.harvest_date || '',
+          storageDate: stock.storageDate || stock.storage_date || new Date().toISOString().split('T')[0],
+          expirationDate: stock.expirationDate || stock.expiration_date || '',
+          batchCode: stock.batchCode || stock.batch_code || '',
+          greenhouseName: stock.greenhouseName || stock.greenhouse_name || '',
+          plantingMode: stock.plantingMode || stock.planting_mode || '',
+          alertSettings: (() => {
+            const raw = stock.alertSettings || stock.alert_settings;
+            if (typeof raw === 'string') {
+              try { return JSON.parse(raw); } catch { /* ignore */ }
+            }
+            if (typeof raw === 'object' && raw !== null) return raw;
+            return {
+              enableStorageTimeAlert: false, storageTimeThreshold: 0,
+              enableQuantityAlert: false, minQuantityThreshold: 0, maxQuantityThreshold: 0,
+              minStock: 0, maxStock: 0, expirationDays: 0,
+            };
+          })(),
           inboundRecords: [],
           outboundRecords: [],
-          status: stock.status === 'IN_STOCK' ? 'in_stock' : stock.status === 'LOW_STOCK' ? 'low_stock' : 'in_stock',
+          status: (stock.status === 'active' ? 'in_stock' : stock.status === 'low_stock' ? 'low_stock' : 'in_stock') as InventoryStatus,
         }));
 
         setInventoryData(mappedData);
@@ -745,13 +748,8 @@ export default function ProduceInventoryPage() {
   };
 
   const handleBatchEdit = () => {
-    if (selectedRows.length === 0) {
-      setBatchEditMode(true);
-    } else {
-      setShowBatchEditModal(true);
-      setCurrentBatchEditIndex(0);
-      setBatchEditedItems({});
-    }
+    setSelectedRows([]);
+    setBatchEditMode(true);
   };
 
   const handleDelete = () => {
@@ -812,14 +810,60 @@ export default function ProduceInventoryPage() {
     }));
   };
 
-  const handleBatchSaveAll = () => {
-    // 保存所有编辑的项
-    setInventoryData(prev => prev.map(item => {
+  const handleBatchSaveAll = async () => {
+    // 保存所有编辑的项 → 先更新本地状态，再同步到后端API
+    const updatedItems = inventoryData.map(item => {
       if (batchEditedItems[item.id]) {
         return { ...item, ...batchEditedItems[item.id] };
       }
       return item;
-    }));
+    });
+    setInventoryData(updatedItems);
+
+    // 异步持久化到后端（直接使用 fetch 避免 enhancedApiClient 离线队列干扰）
+    const token = localStorage.getItem('token');
+    const savePromises = Object.keys(batchEditedItems).map(async (itemId) => {
+      const item = updatedItems.find(i => i.id === itemId);
+      const edits = batchEditedItems[itemId];
+      if (!item) return;
+      const merged = { ...item, ...edits };
+      const body: Record<string, any> = {};
+      if (edits.productCode !== undefined) body.product_code = merged.productCode;
+      if (edits.cropName !== undefined) body.crop_name = merged.cropName;
+      if (edits.variety !== undefined) body.variety = merged.variety;
+      if (edits.quantity !== undefined) body.quantity = merged.quantity;
+      if (edits.unit !== undefined) body.unit = merged.unit;
+      if (edits.grade !== undefined) body.grade = merged.grade;
+      if (edits.warehouseName !== undefined) body.warehouse_name = merged.warehouseName;
+      if (edits.storageLocation !== undefined) body.storage_location = merged.storageLocation;
+      if (edits.harvestDate !== undefined) body.harvest_date = merged.harvestDate;
+      if (edits.storageDate !== undefined) body.storage_date = merged.storageDate;
+      if (edits.batchCode !== undefined) body.batch_code = merged.batchCode;
+      if (edits.greenhouseName !== undefined) body.greenhouse_name = merged.greenhouseName;
+      if (edits.plantingMode !== undefined) body.planting_mode = merged.plantingMode;
+      if (edits.expirationDate !== undefined) body.expiration_date = merged.expirationDate;
+      if (edits.status !== undefined) body.status = merged.status;
+      if (edits.alertSettings !== undefined) body.alert_settings = JSON.stringify(merged.alertSettings);
+
+      if (Object.keys(body).length === 0) return;
+
+      try {
+        const res = await fetch(`/api/inventory/${itemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+      } catch (error: any) {
+        console.error(`保存库存 ${itemId} 失败:`, error);
+        alert(`保存库存 ${itemId} 失败: ${error.message || error}`);
+      }
+    });
+    await Promise.all(savePromises);
+
     setShowBatchEditModal(false);
     setBatchEditedItems({});
     setCurrentBatchEditIndex(0);
@@ -1220,7 +1264,7 @@ export default function ProduceInventoryPage() {
         inventoryData={inventoryData}
         batchEditedItems={batchEditedItems}
         currentEditIndex={currentBatchEditIndex}
-        onClose={() => { setShowBatchEditModal(false); setBatchEditedItems({}); setCurrentBatchEditIndex(0); }}
+        onClose={() => { setShowBatchEditModal(false); setBatchEditedItems({}); setCurrentBatchEditIndex(0); setSelectedRows([]); }}
         onItemSelect={handleBatchItemSelect}
         onFieldChange={handleBatchFieldChange}
         onSaveAll={handleBatchSaveAll}

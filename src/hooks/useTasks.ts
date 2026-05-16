@@ -80,6 +80,15 @@ export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: stri
 
 /** 将 useFarmTaskStore 的 StoreTask 转换为本地 Task 格式 */
 function convertStoreFarmTaskToTask(t: StoreTask): Task {
+  // 提取原始 requiredFeedback 字符串数组（用于 MyTasksPage TaskFeedbackModal 判定）
+  const rawFeedbackList: string[] = (t.feedbackRequirements || t.requiredFeedback || []).map((f: unknown) => {
+    if (typeof f === 'string') return f;
+    if (typeof f === 'object' && f !== null && 'type' in (f as Record<string, unknown>)) {
+      return (f as Record<string, string>).type;
+    }
+    return '';
+  }).filter(Boolean);
+
   const defaultFeedback = (t.feedbackRequirements || t.requiredFeedback || []).map((f: unknown) => {
     if (typeof f === 'string') {
       const feedbackMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
@@ -122,6 +131,7 @@ function convertStoreFarmTaskToTask(t: StoreTask): Task {
     estimatedDays: t.estimatedDays || 0,
     estimatedHours: t.estimatedHours || 0,
     feedbackRequirements: defaultFeedback,
+    requiredFeedback: rawFeedbackList, // 保留字符串数组格式，供 MyTasksPage TaskFeedbackModal 使用
     materials: t.materials || [],
     tools: t.tools || [],
     sopContent: t.sopContent || '',

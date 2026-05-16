@@ -45,24 +45,24 @@ export interface StatsCardProps {
  */
 export function StatsCard({ stats, className = '' }: StatsCardProps) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
       {stats.map((stat, index) => (
         <div
           key={index}
-          className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+          className="bg-white rounded-lg p-3 shadow-sm border border-gray-100"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* 图标容器 */}
-            <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-              <stat.icon className="w-5 h-5 text-white" />
+            <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center`}>
+              <stat.icon className="w-4 h-4 text-white" />
             </div>
             {/* 数值和标签 */}
             <div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-lg font-bold text-gray-900">
                 {stat.value}
                 {stat.unit || ''}
               </p>
-              <p className="text-sm text-gray-500">{stat.label}</p>
+              <p className="text-xs text-gray-500">{stat.label}</p>
             </div>
           </div>
         </div>

@@ -75,8 +75,8 @@ function transformTaskFields(item: any): any {
     taskCode: item.taskCode || item.id || '',
     title: item.taskTitle || item.title || '',
     type: item.taskType || '',
-    typeName: item.taskType || '',
-    description: item.taskContent || '',
+    typeName: item.typeName || item.taskType || '',
+    description: item.description || item.taskContent || '',
     // 状态
     status: item.status || 'pending',
     statusLabel: getTaskStatusLabel(item.status || 'pending'),
@@ -118,6 +118,10 @@ function transformTaskFields(item: any): any {
     reworkHistory: parseJsonField(item.reworkHistory, []),
     // 延期
     deadlineExtensions: parseJsonField(item.deadlineExtensions, []),
+    // 类型配置
+    typeConfig: parseJsonField(item.typeConfig, {}),
+    // SOP内容
+    sopContent: item.sopContent || '',
     // 版本
     version: item.version || 1,
     // 时间戳
@@ -227,7 +231,7 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    // 支持前端发送的驼峰命名和后端的下划线命名
+    // 支持前端发送的驼峰命名和后端的下划线命名（完整字段映射，确保数据不丢失）
     const {
       id,
       task_code, taskCode,
@@ -236,6 +240,8 @@ router.post('/', (req: Request, res: Response) => {
       task_content, taskContent,
       assignee_id, assigneeId,
       assignee_name, assigneeName,
+      assigner_id, assignerId,
+      assigner_name, assignerName,
       greenhouse_id, greenhouseId,
       greenhouse_name, greenhouseName,
       area_name, areaName,
@@ -248,27 +254,43 @@ router.post('/', (req: Request, res: Response) => {
       progress,
       crop,
       estimated_hours, estimatedHours,
+      estimated_days, estimatedDays,
       remarks,
       materials,
       tools,
       batch_id, batchId,
       batch_code, batchCode,
+      // 数据改造新增字段（落库保存）
+      type_name, typeName,
+      source_type, sourceType,
+      dispatch_mode, dispatchMode,
+      feedback_requirements, feedbackRequirements, requiredFeedback,
+      rework_history, reworkHistory,
+      deadline_extensions, deadlineExtensions,
+      type_config, typeConfig,
+      sop_content, sopContent,
+      description,
     } = req.body;
 
-    const newId = id || task_code || taskCode || `TK${Date.now()}`;
+    const newId = id || task_code || taskCode || `NS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now() % 1000).padStart(3, '0')}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
     db.run(`
       INSERT INTO farm_tasks (
         id, task_code, task_title, task_type, task_content,
-        assignee_id, assignee_name,
+        assignee_id, assignee_name, assigner_id, assigner_name,
         greenhouse_id, greenhouse_name, area_name,
         plan_date, plan_time, priority, status, create_by, create_time, update_time,
-        due_date, progress, crop, estimated_hours, remarks,
-        batch_id, batch_code
+        due_date, progress, crop, estimated_hours, estimated_days, remarks,
+        materials, tools,
+        batch_id, batch_code,
+        type_name, source_type, dispatch_mode,
+        feedback_requirements,
+        rework_history, deadline_extensions,
+        type_config, sop_content, description
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -277,6 +299,8 @@ router.post('/', (req: Request, res: Response) => {
       task_content || taskContent || '',
       assignee_id || assigneeId || '',
       assignee_name || assigneeName || '',
+      assigner_id || assignerId || '',
+      assigner_name || assignerName || '',
       greenhouse_id || greenhouseId || '',
       greenhouse_name || greenhouseName || '',
       area_name || areaName || '',
@@ -290,9 +314,25 @@ router.post('/', (req: Request, res: Response) => {
       progress || 0,
       crop || '',
       estimated_hours || estimatedHours || 0,
+      estimated_days || estimatedDays || 0,
       remarks || '',
+      // JSON 字段序列化为字符串存储
+      Array.isArray(materials) ? JSON.stringify(materials) : (materials || ''),
+      Array.isArray(tools) ? JSON.stringify(tools) : (tools || ''),
       batch_id || batchId || newId,
       batch_code || batchCode || `PC-${newId}`,
+      // 数据改造新增字段
+      type_name || typeName || '',
+      source_type || sourceType || 'dispatch',
+      dispatch_mode || dispatchMode || 'farm',
+      Array.isArray(feedback_requirements || feedbackRequirements || requiredFeedback)
+        ? JSON.stringify(feedback_requirements || feedbackRequirements || requiredFeedback)
+        : (feedback_requirements || feedbackRequirements || requiredFeedback || '[]'),
+      Array.isArray(rework_history || reworkHistory) ? JSON.stringify(rework_history || reworkHistory) : (rework_history || reworkHistory || '[]'),
+      Array.isArray(deadline_extensions || deadlineExtensions) ? JSON.stringify(deadline_extensions || deadlineExtensions) : (deadline_extensions || deadlineExtensions || '[]'),
+      type_config || typeConfig ? (typeof (type_config || typeConfig) === 'object' ? JSON.stringify(type_config || typeConfig) : (type_config || typeConfig)) : '{}',
+      sop_content || sopContent || '',
+      description || '',
     ]);
 
     saveDatabase();
@@ -311,6 +351,8 @@ const FIELD_NAME_MAP: Record<string, string> = {
   taskContent: 'task_content',
   assigneeId: 'assignee_id',
   assigneeName: 'assignee_name',
+  assignerId: 'assigner_id',
+  assignerName: 'assigner_name',
   greenhouseId: 'greenhouse_id',
   greenhouseName: 'greenhouse_name',
   areaName: 'area_name',
@@ -324,17 +366,27 @@ const FIELD_NAME_MAP: Record<string, string> = {
   batchCode: 'batch_code',
   sourceType: 'source_type',
   sourceId: 'source_id',
-  assignerId: 'assigner_id',
-  assignerName: 'assigner_name',
   acceptedAt: 'accepted_at',
   completedAt: 'completed_at',
   reworkCount: 'rework_count',
+  reworkHistory: 'rework_history',
+  deadlineExtensions: 'deadline_extensions',
   dispatchMode: 'dispatch_mode',
   feedbackRequirements: 'feedback_requirements',
   requiredFeedback: 'feedback_requirements',
+  typeConfig: 'type_config',
+  typeName: 'type_name',
+  sopContent: 'sop_content',
+  description: 'description',
+  materials: 'materials',
+  tools: 'tools',
   createTime: 'create_time',
   updateTime: 'update_time',
+  crop: 'crop',
   cropName: 'crop',
+  title: 'task_title',
+  planStart: 'plan_date',
+  planEnd: 'plan_date',
 };
 
 /**

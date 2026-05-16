@@ -6,6 +6,53 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 
+/** 前端驼峰字段 → 数据库蛇形列名映射（白名单） */
+const FIELD_MAP: Record<string, string> = {
+  harvestCode: 'harvest_code',
+  sourceId: 'source_id',
+  sourceName: 'source_name',
+  cropName: 'crop_name',
+  cropVariety: 'crop_variety',
+  greenhouseName: 'greenhouse_name',
+  harvestDate: 'harvest_date',
+  harvestQuantity: 'harvest_quantity',
+  unit: 'unit',
+  unitPrice: 'unit_price',
+  totalAmount: 'total_amount',
+  grade: 'quality_grade',
+  quality: 'quality_grade',
+  buyerId: 'buyer_id',
+  buyerName: 'buyer_name',
+  salesChannel: 'sales_channel',
+  status: 'status',
+  remarks: 'remarks',
+  createBy: 'create_by',
+  warehouseId: 'warehouse_id',
+  auditorId: 'auditor_id',
+  batchCode: 'batch_code',
+  batchId: 'batch_id',
+  variety: 'crop_variety',
+  plantingMode: 'planting_mode',
+  targetYield: 'target_yield',
+  harvestArea: 'harvest_area',
+  harvesterIds: 'harvester_ids',
+  relatedTaskId: 'related_task_id',
+  relatedTaskCode: 'related_task_code',
+};
+
+/** 将前端驼峰数据转换为数据库蛇形字段（只保留白名单内字段） */
+function toSnakeFields(data: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key === 'id') continue;
+    const dbCol = FIELD_MAP[key];
+    if (dbCol) {
+      result[dbCol] = value;
+    }
+  }
+  return result;
+}
+
 /**
  * 采收记录查询参数
  */
@@ -217,13 +264,14 @@ export class HarvestRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    const fields = Object.keys(data).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    const mapped = toSnakeFields(data as Record<string, any>);
 
+    const fields = Object.keys(mapped).map(k => `${k} = ?`).join(', ');
     if (fields.length === 0) {
       throw new Error('没有需要更新的字段');
     }
 
-    const values: any[] = Object.keys(data).filter(k => k !== 'id').map(k => data[k as keyof HarvestRecord]);
+    const values: any[] = Object.values(mapped);
     values.push(now, id);
 
     db.run(`UPDATE harvest_records SET ${fields}, update_time = ? WHERE id = ?`, values);
@@ -250,12 +298,15 @@ export class HarvestRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    // 驼峰转蛇形 + 白名单过滤
+    const mapped = toSnakeFields(updates as Record<string, any>);
+
+    const fields = Object.keys(mapped).map(k => `${k} = ?`).join(', ');
     if (fields.length === 0) {
       throw new Error('没有需要更新的字段');
     }
 
-    const values: any[] = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k as keyof HarvestRecord]);
+    const values: any[] = Object.values(mapped);
     values.push(now);
 
     const placeholders = ids.map(() => '?').join(',');

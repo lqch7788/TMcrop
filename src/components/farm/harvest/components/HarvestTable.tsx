@@ -241,22 +241,25 @@ export function HarvestTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-300">
-          {paginatedRecords.map((record, idx) => (
-            <HarvestTableRow
-              key={record.id}
-              record={record}
-              idx={idx}
-              expandedRows={expandedRows}
-              selectedRows={selectedRows}
-              exportMode={exportMode}
-              batchEditMode={batchEditMode}
-              batchDeleteMode={batchDeleteMode}
-              onToggleExpand={() => onToggleRow(idx)}
-              onSelectRow={() => onSelectRow(idx)}
-              onViewDetail={() => onViewDetail(record)}
-              generateProductCode={generateProductCode}
-            />
-          ))}
+          {paginatedRecords.map((record, idx) => {
+            const globalIdx = (currentPage - 1) * pageSize + idx;
+            return (
+              <HarvestTableRow
+                key={record.id}
+                record={record}
+                idx={globalIdx}
+                expandedRows={expandedRows}
+                selectedRows={selectedRows}
+                exportMode={exportMode}
+                batchEditMode={batchEditMode}
+                batchDeleteMode={batchDeleteMode}
+                onToggleExpand={() => onToggleRow(globalIdx)}
+                onSelectRow={() => onSelectRow(globalIdx)}
+                onViewDetail={() => onViewDetail(record)}
+                generateProductCode={generateProductCode}
+              />
+            );
+          })}
         </tbody>
       </table>
     </div>
