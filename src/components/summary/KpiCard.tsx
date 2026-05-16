@@ -28,14 +28,47 @@ export interface KpiCardProps {
   colorScheme?: 'emerald' | 'amber' | 'red' | 'blue' | 'purple' | 'slate';
   /** 点击跳转到详情页 */
   onClick?: () => void;
+  /** 紧凑模式，缩小内边距和字体 */
+  compact?: boolean;
 }
 
-export function KpiCard({ icon, label, value, trend, colorScheme = 'emerald', onClick }: KpiCardProps) {
+export function KpiCard({ icon, label, value, trend, colorScheme = 'emerald', onClick, compact }: KpiCardProps) {
   const colors = COLOR_SCHEMES[colorScheme] || COLOR_SCHEMES.emerald;
 
+  // 紧凑模式：横向布局（图标-文字-趋势）
+  if (compact) {
+    return (
+      <div
+        className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-3 ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg ${colors.iconBg} flex items-center justify-center shadow-sm flex-shrink-0`}>
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-gray-900 truncate">{value}</p>
+            <p className="text-[11px] text-gray-500">{label}</p>
+          </div>
+          {trend !== undefined && (
+            <div className={`flex items-center gap-0.5 text-xs flex-shrink-0 ${trend >= 0 ? colors.trendUp : 'text-red-600'}`}>
+              {trend >= 0 ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              <span>{Math.abs(trend)}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 标准模式：纵向布局（上图标 + 下文字）
   return (
     <div
-      className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-5 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       {/* 顶部：图标 + 数值 */}

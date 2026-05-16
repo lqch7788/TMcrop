@@ -97,30 +97,6 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM problems WHERE id = ?');
-    stmt.bind([id]);
-    let item: any = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
-
-    if (!item || Object.keys(item).length === 0) {
-      return res.status(404).json({ success: false, error: '问题记录不存在' });
-    }
-
-    // 添加状态标签
-    item.statusLabel = getStatusLabel(item.status || 'pending');
-
-    res.json({ success: true, data: item });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '获取问题详情失败' });
-  }
-});
 
 router.post('/', (req: Request, res: Response) => {
   try {
@@ -373,6 +349,30 @@ router.get('/summary-overview', (req: Request, res: Response) => {
     console.error('获取问题统计概览失败:', error);
     res.status(500).json({ success: false, error: '获取问题统计概览失败' });
   }
+router.get('/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM problems WHERE id = ?');
+    stmt.bind([id]);
+    let item: any = null;
+    if (stmt.step()) {
+      item = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!item || Object.keys(item).length === 0) {
+      return res.status(404).json({ success: false, error: '问题记录不存在' });
+    }
+
+    // 添加状态标签
+    item.statusLabel = getStatusLabel(item.status || 'pending');
+
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '获取问题详情失败' });
+  }
+});
 });
 
 export default router;

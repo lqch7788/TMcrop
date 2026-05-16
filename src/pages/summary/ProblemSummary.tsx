@@ -240,37 +240,42 @@ export default function ProblemSummary() {
       </div>
 
       {/* KPI 指标卡片（5列） */}
-      <KpiCardGrid columns={5}>
+      <KpiCardGrid columns={5} compact>
         <KpiCard
-          icon={<BarChart3 className="w-5 h-5 text-white" />}
+          icon={<BarChart3 className="w-4 h-4 text-white" />}
           label="总问题数"
           value={kpiData.total}
           colorScheme="slate"
+          compact
         />
         <KpiCard
-          icon={<AlertOctagon className="w-5 h-5 text-white" />}
+          icon={<AlertOctagon className="w-4 h-4 text-white" />}
           label="待处理"
           value={kpiData.pending}
           colorScheme="red"
+          compact
         />
         <KpiCard
-          icon={<Clock className="w-5 h-5 text-white" />}
+          icon={<Clock className="w-4 h-4 text-white" />}
           label="处理中"
           value={kpiData.inProgress}
           colorScheme="amber"
+          compact
         />
         <KpiCard
-          icon={<CheckCircle className="w-5 h-5 text-white" />}
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
           label="已处理"
           value={kpiData.resolved}
           colorScheme="emerald"
           trend={overallResolutionRate}
+          compact
         />
         <KpiCard
-          icon={<AlertTriangle className="w-5 h-5 text-white" />}
+          icon={<AlertTriangle className="w-4 h-4 text-white" />}
           label="高优先级"
           value={kpiData.highPriority}
           colorScheme="red"
+          compact
         />
       </KpiCardGrid>
 

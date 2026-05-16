@@ -7,6 +7,8 @@ export interface KpiCardGridProps {
   children: React.ReactNode;
   /** 每行列数，默认 6 */
   columns?: 2 | 3 | 4 | 5 | 6;
+  /** 紧凑模式，缩小间距 */
+  compact?: boolean;
 }
 
 /** columns 到 CSS 类名的映射 */
@@ -18,11 +20,11 @@ const GRID_COLS: Record<number, string> = {
   6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6',
 };
 
-export function KpiCardGrid({ children, columns = 6 }: KpiCardGridProps) {
+export function KpiCardGrid({ children, columns = 6, compact }: KpiCardGridProps) {
   const colClass = GRID_COLS[columns] || GRID_COLS[6];
 
   return (
-    <div className={`grid ${colClass} gap-4`}>
+    <div className={`grid ${colClass} ${compact ? 'gap-2' : 'gap-4'}`}>
       {children}
     </div>
   );

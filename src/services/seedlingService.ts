@@ -15,7 +15,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260201-001',
     sourceId: 'SS001',
     sourceCode: 'ZZ20260115-001',
-    cropCode: 'PD0301004001',  // 蔬菜类-茄果类-番茄-红果番茄
+    cropCode: 'PD030100400',  // 蔬菜类-茄果类-番茄-红果番茄
     cropName: '番茄',
     cropVariety: '红果番茄',
     seedlingType: '穴盘育苗',
@@ -65,7 +65,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260301-001',
     sourceId: 'SS002',
     sourceCode: 'ZZ20260201-001',
-    cropCode: 'PD0102005001',  // 蔬菜类-叶菜类-生菜-大叶生菜
+    cropCode: 'PD010200700',  // 蔬菜类-叶菜类-生菜-大叶生菜
     cropName: '生菜',
     cropVariety: '大叶生菜',
     seedlingType: '直播育苗',
@@ -94,7 +94,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260310-001',
     sourceId: 'SS003',
     sourceCode: 'ZZ20260215-001',
-    cropCode: 'PD0201001001',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
+    cropCode: 'PD020100100',  // 蔬菜类-瓜菜类-黄瓜-水果黄瓜
     cropName: '黄瓜',
     cropVariety: '水果黄瓜',
     seedlingType: '穴盘育苗',
@@ -123,7 +123,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260420-001',
     sourceId: '',  // 不关联种源
     sourceCode: '',
-    cropCode: 'FR0101001001',  // 水果类-浆果类-草莓-红颜草莓
+    cropCode: 'FR010100100',  // 水果类-浆果类-草莓-红颜草莓
     cropName: '红颜草莓',
     cropVariety: '红颜草莓',
     seedlingType: '扦插育苗',  // 扩繁育苗方式
@@ -157,7 +157,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260422-001',
     sourceId: '',  // 不关联种源
     sourceCode: '',
-    cropCode: 'FR0201001001',  // 水果类-核果类-桃子-水蜜桃
+    cropCode: 'FR020100100',  // 水果类-核果类-桃子-水蜜桃
     cropName: '桃子',
     cropVariety: '水蜜桃',
     seedlingType: '嫁接育苗',
@@ -186,7 +186,7 @@ const defaultData: Seedling[] = [
     seedlingCode: 'YM20260425-001',
     sourceId: '',  // 不关联种源
     sourceCode: '',
-    cropCode: 'PD0302001001',  // 蔬菜类-茄果类-小番茄-千禧小番茄
+    cropCode: 'PD030200100',  // 蔬菜类-茄果类-小番茄-千禧小番茄
     cropName: '小番茄',
     cropVariety: '千禧小番茄',
     seedlingType: '穴盘育苗',

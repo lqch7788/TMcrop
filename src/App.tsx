@@ -131,15 +131,18 @@ const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const SyncDataPage = lazy(() => import('./pages/sync/SyncDataPage'));
 
-// 生产汇总表 V1.0 - 8页面重构
+// 生产汇总表 V1.0 - 8页面重构 → V1.1 合并为5页面
 const SummaryOverview = lazy(() => import('./pages/summary/SummaryOverview'));
+const BusinessAnalysis = lazy(() => import('./pages/summary/BusinessAnalysis'));
+const BatchManagement = lazy(() => import('./pages/summary/BatchManagement'));
+const ProblemSummary = lazy(() => import('./pages/summary/ProblemSummary'));
+const SummaryIndicators = lazy(() => import('./pages/summary/SummaryIndicators'));
+// 旧页面保留（TAB内子页面直接访问 + 重定向）
 const YieldAnalysis = lazy(() => import('./pages/summary/YieldAnalysis'));
 const CostAnalysis = lazy(() => import('./pages/summary/CostAnalysis'));
 const LaborAnalysis = lazy(() => import('./pages/summary/LaborAnalysis'));
 const BatchSummary = lazy(() => import('./pages/summary/BatchSummary'));
 const ChainTraceability = lazy(() => import('./pages/summary/ChainTraceability'));
-const ProblemSummary = lazy(() => import('./pages/summary/ProblemSummary'));
-const SummaryIndicators = lazy(() => import('./pages/summary/SummaryIndicators'));
 
 // 加载中占位组件
 function PageLoader() {
@@ -341,15 +344,18 @@ function AppContent() {
           <Route path="/indicators" element={<Indicators />} />
           <Route path="/announcement" element={<Announcement />} />
 
-          {/* 生产汇总表 V1.0 - 8页面重构 */}
+          {/* 生产汇总表 V1.1 - 5页面（TAB合并） */}
           <Route path="/summary/overview" element={<SummaryOverview />} />
-          <Route path="/summary/yield" element={<YieldAnalysis />} />
-          <Route path="/summary/cost" element={<CostAnalysis />} />
-          <Route path="/summary/labor" element={<LaborAnalysis />} />
-          <Route path="/summary/batch" element={<BatchSummary />} />
-          <Route path="/summary/chain" element={<ChainTraceability />} />
+          <Route path="/summary/business-analysis" element={<BusinessAnalysis />} />
+          <Route path="/summary/batch-management" element={<BatchManagement />} />
           <Route path="/summary/problems" element={<ProblemSummary />} />
           <Route path="/summary/indicators" element={<SummaryIndicators />} />
+          {/* 旧路由重定向到合并页（保留书签兼容） */}
+          <Route path="/summary/yield" element={<Navigate to="/summary/business-analysis" replace />} />
+          <Route path="/summary/cost" element={<Navigate to="/summary/business-analysis" replace />} />
+          <Route path="/summary/labor" element={<Navigate to="/summary/business-analysis" replace />} />
+          <Route path="/summary/batch" element={<Navigate to="/summary/batch-management" replace />} />
+          <Route path="/summary/chain" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />

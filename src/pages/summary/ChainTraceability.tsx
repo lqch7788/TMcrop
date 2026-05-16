@@ -20,7 +20,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
-import { useSummaryDataStore, type BatchStatItem } from '../../stores/useSummaryDataStore';
+import { useSummaryDataStore, type BatchStatItem, type ChainStageStat } from '../../stores/useSummaryDataStore';
 
 // ========== 常量 ==========
 
@@ -53,12 +53,13 @@ const STATUS_LABEL: Record<string, string> = {
   overdue: '已逾期',
 };
 
-/** 确定批次处于哪个追溯环节 */
+/** 确定批次处于哪个追溯环节（按种源→育苗→种植→采收→库存 优先级由后往前判断） */
 function getBatchStage(batch: BatchStatItem): string {
-  if (batch.status === 'draft' || batch.status === 'planning' || batch.status === 'published') return 'plan';
   if (batch.status === 'completed') return 'inventory';
   if (batch.actualQuantity > 0) return 'harvest';
-  if (batch.completedTaskCount > 0) return 'planting';
+  if (batch.hasPlanting) return 'planting';
+  if (batch.hasSeedling) return 'seedling';
+  if (batch.hasSeedSource) return 'seed';
   return 'plan';
 }
 
@@ -126,9 +127,12 @@ function StageDetailPanel({
   stage,
   onViewBatch,
 }: {
-  stage: ReturnType<typeof computeStageStats>[0];
+  stage: ReturnType<typeof computeStageStats>[0] & { items?: ChainStageStat['items'] };
   onViewBatch: (batch: BatchStatItem) => void;
 }) {
+  const items = stage.items || [];
+  const hasContent = stage.batches.length > 0 || items.length > 0;
+
   return (
     <div className={`rounded-xl border p-5 border-opacity-30`} style={{ backgroundColor: stage.bgColor.includes('blue') ? '#eff6ff' : stage.bgColor.includes('emerald') ? '#ecfdf5' : stage.bgColor.includes('teal') ? '#f0fdfa' : stage.bgColor.includes('green') ? '#f0fdf4' : stage.bgColor.includes('amber') ? '#fffbeb' : '#faf5ff' }}>
       <div className="flex items-center gap-2 mb-3">
@@ -137,13 +141,14 @@ function StageDetailPanel({
         </div>
         <div>
           <h3 className="font-semibold text-gray-900">{stage.label}</h3>
-          <p className="text-xs text-gray-500">{stage.count} 个批次</p>
+          <p className="text-xs text-gray-500">{stage.count} 条记录</p>
         </div>
       </div>
-      {stage.batches.length === 0 ? (
-        <p className="text-sm text-gray-400 py-3 text-center">暂无该环节批次</p>
+      {!hasContent ? (
+        <p className="text-sm text-gray-400 py-3 text-center">暂无该环节记录</p>
       ) : (
         <div className="space-y-2 max-h-64 overflow-y-auto">
+          {/* 批次卡片（生产计划阶段） */}
           {stage.batches.map((batch) => (
             <button
               key={batch.id}
@@ -166,6 +171,33 @@ function StageDetailPanel({
               </div>
             </button>
           ))}
+          {/* 环节记录卡片（种源/育苗/种植/采收/库存） */}
+          {items.map((item) => (
+            <div
+              key={item.id || item.code}
+              className="w-full bg-white rounded-lg p-3 shadow-sm text-left"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{item.name || item.code}</p>
+                <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+                  {item.cropName && <span>{item.cropName}</span>}
+                  {item.cropName && item.variety && <span>|</span>}
+                  {item.variety && <span>{item.variety}</span>}
+                  {item.greenhouse && <><span>|</span><span>{item.greenhouse}</span></>}
+                  {item.supplierName && <><span>|</span><span>{item.supplierName}</span></>}
+                  {item.quantity != null && <><span>|</span><span>{item.quantity}{item.unit || ''}</span></>}
+                  {item.totalAmount != null && <><span>|</span><span className="text-amber-600 font-medium">¥{Number(item.totalAmount).toLocaleString()}</span></>}
+                </div>
+              </div>
+              {item.status && (
+                <div className="mt-1.5">
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {STATUS_LABEL[item.status] || item.status}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -174,21 +206,40 @@ function StageDetailPanel({
 
 // ========== 主页面组件 ==========
 
-export default function ChainTraceability() {
+interface ChainTraceabilityProps { hideHeader?: boolean; }
+
+export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps) {
   const batchItems = useSummaryDataStore((s) => s.batchItems);
+  const chainStages = useSummaryDataStore((s) => s.chainStages);
   const isLoading = useSummaryDataStore((s) => s.isLoading);
   const error = useSummaryDataStore((s) => s.error);
   const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
+  const fetchChainOverview = useSummaryDataStore((s) => s.fetchChainOverview);
 
   const [selectedBatch, setSelectedBatch] = useState<BatchStatItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchBatchStats({});
-  }, [fetchBatchStats]);
+    fetchChainOverview();
+  }, [fetchBatchStats, fetchChainOverview]);
 
-  // 计算环节统计
-  const stageStats = useMemo(() => computeStageStats(batchItems), [batchItems]);
+  // 环节统计：优先使用API返回的独立统计数据，fallback到批次分类
+  const stageStats = useMemo(() => {
+    if (chainStages.length > 0) {
+      return CHAIN_STAGES.map((stage) => {
+        const apiStage = chainStages.find((s) => s.key === stage.key);
+        const stageBatches = batchItems.filter((b) => getBatchStage(b) === stage.key);
+        return {
+          ...stage,
+          count: apiStage ? apiStage.count : stageBatches.length,
+          batches: stageBatches,
+          items: apiStage?.items || [],
+        };
+      });
+    }
+    return computeStageStats(batchItems);
+  }, [chainStages, batchItems]);
 
   // 整体统计
   const totalBatches = batchItems.length;
@@ -202,37 +253,43 @@ export default function ChainTraceability() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={<Link className="w-6 h-6 text-white" />}
-        title="全链条追溯"
-        description="从种源→育苗→种植→采收入库完整追溯链，6环节批次追踪"
-      />
+      {!hideHeader && (
+        <PageHeader
+          icon={<Link className="w-6 h-6 text-white" />}
+          title="全链条追溯"
+          description="从种源→育苗→种植→采收入库完整追溯链，6环节批次追踪"
+        />
+      )}
 
       {/* 概览KPI */}
-      <KpiCardGrid columns={4}>
+      <KpiCardGrid columns={4} compact>
         <KpiCard
-          icon={<Layers className="w-5 h-5 text-white" />}
+          icon={<Layers className="w-4 h-4 text-white" />}
           label="追踪批次数"
           value={totalBatches}
           colorScheme="teal"
+          compact
         />
         <KpiCard
-          icon={<CheckCircle2 className="w-5 h-5 text-white" />}
+          icon={<CheckCircle2 className="w-4 h-4 text-white" />}
           label="已完成"
           value={completedBatches}
           colorScheme="emerald"
+          compact
         />
         <KpiCard
-          icon={<Clock className="w-5 h-5 text-white" />}
+          icon={<Clock className="w-4 h-4 text-white" />}
           label="进行中"
           value={inProgressBatches}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<Link className="w-5 h-5 text-white" />}
+          icon={<Link className="w-4 h-4 text-white" />}
           label="追溯环节"
           value={6}
           colorScheme="purple"
+          compact
         />
       </KpiCardGrid>
 
@@ -274,7 +331,7 @@ export default function ChainTraceability() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</th>
@@ -286,7 +343,7 @@ export default function ChainTraceability() {
                 <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-300">
               {batchItems.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-gray-400">

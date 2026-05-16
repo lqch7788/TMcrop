@@ -28,14 +28,14 @@ function seedCropVarieties() {
   const cropVarieties = [
     {
       id: 'CV001',
-      crop_code: 'PD03010100100',  // 蔬菜类-叶菜类-生菜-红生菜
-      category_code: '03',
+      crop_code: 'PD010200600',  // 蔬菜类-叶菜类-生菜-红生菜 (PD+01+02+006+00)
+      category_code: 'PD',
       category_name: '蔬菜类',
       type_code: '01',
       type_name: '叶菜类',
-      variety_code: '01',
+      variety_code: '02',
       variety_name: '生菜',
-      sub_variety1_code: '001',
+      sub_variety1_code: '006',
       sub_variety1_name: '红生菜',
       detail_variety_code: '00',
       status: 'active',
@@ -44,14 +44,14 @@ function seedCropVarieties() {
     },
     {
       id: 'CV002',
-      crop_code: 'PD03010100200',  // 蔬菜类-叶菜类-生菜-大叶菠菜
-      category_code: '03',
+      crop_code: 'PD010100300',  // 蔬菜类-叶菜类-菠菜-大叶菠菜 (PD+01+01+003+00)
+      category_code: 'PD',
       category_name: '蔬菜类',
       type_code: '01',
       type_name: '叶菜类',
       variety_code: '01',
-      variety_name: '生菜',
-      sub_variety1_code: '002',
+      variety_name: '菠菜',
+      sub_variety1_code: '003',
       sub_variety1_name: '大叶菠菜',
       detail_variety_code: '00',
       status: 'active',
@@ -60,14 +60,14 @@ function seedCropVarieties() {
     },
     {
       id: 'CV003',
-      crop_code: 'PD03030200100',  // 蔬菜类-茄果类-番茄-大番茄
-      category_code: '03',
+      crop_code: 'PD030100600',  // 蔬菜类-茄果类-番茄-大番茄 (PD+03+01+006+00)
+      category_code: 'PD',
       category_name: '蔬菜类',
       type_code: '03',
       type_name: '茄果类',
-      variety_code: '02',
+      variety_code: '01',
       variety_name: '番茄',
-      sub_variety1_code: '001',
+      sub_variety1_code: '006',
       sub_variety1_name: '大番茄',
       detail_variety_code: '00',
       status: 'active',
@@ -76,14 +76,14 @@ function seedCropVarieties() {
     },
     {
       id: 'CV004',
-      crop_code: 'PD03030400200',  // 蔬菜类-茄果类-辣椒-青椒
-      category_code: '03',
+      crop_code: 'PD030400700',  // 蔬菜类-茄果类-辣椒-青椒 (PD+03+04+007+00)
+      category_code: 'PD',
       category_name: '蔬菜类',
       type_code: '03',
       type_name: '茄果类',
       variety_code: '04',
       variety_name: '辣椒',
-      sub_variety1_code: '002',
+      sub_variety1_code: '007',
       sub_variety1_name: '青椒',
       detail_variety_code: '00',
       status: 'active',
@@ -92,8 +92,8 @@ function seedCropVarieties() {
     },
     {
       id: 'CV005',
-      crop_code: 'FR01010100100',  // 水果类-浆果类-草莓-红颜
-      category_code: '01',
+      crop_code: 'FR010100100',  // 水果类-浆果类-草莓-红颜 (FR+01+01+001+00)
+      category_code: 'FR',
       category_name: '水果类',
       type_code: '01',
       type_name: '浆果类',
@@ -284,7 +284,7 @@ function seedSeedSources() {
       variety_name: '番茄',
       crop_name: '红果番茄',
       crop_variety: '番茄',
-      crop_code: 'PD030102001',
+      crop_code: 'PD030100400',
       supplier_id: 'SUP001',
       supplier_name: '金色稻种有限公司',
       quantity: 50,
@@ -311,7 +311,7 @@ function seedSeedSources() {
       variety_name: '生菜',
       crop_name: '大叶生菜',
       crop_variety: '生菜',
-      crop_code: 'PD030201001',
+      crop_code: 'PD010200700',
       supplier_id: 'SUP002',
       supplier_name: '丰收种业公司',
       quantity: 30,
@@ -338,7 +338,7 @@ function seedSeedSources() {
       variety_name: '黄瓜',
       crop_name: '水果黄瓜',
       crop_variety: '黄瓜',
-      crop_code: 'PD030301001',
+      crop_code: 'PD020100100',
       supplier_id: 'SUP001',
       supplier_name: '金色稻种有限公司',
       quantity: 40,
@@ -365,7 +365,7 @@ function seedSeedSources() {
       variety_name: '茄子',
       crop_name: '紫长茄子',
       crop_variety: '茄子',
-      crop_code: 'PD030103001',
+      crop_code: 'PD030300100',
       supplier_id: 'SUP003',
       supplier_name: '绿野种苗公司',
       quantity: 20,
@@ -392,7 +392,7 @@ function seedSeedSources() {
       variety_name: '空心菜',
       crop_name: '大叶空心菜',
       crop_variety: '空心菜',
-      crop_code: 'PD030202001',
+      crop_code: 'PD011300100',
       supplier_id: '',
       supplier_name: '基地自繁',
       quantity: 100,
@@ -414,12 +414,12 @@ function seedSeedSources() {
       source_name: '黑美人西瓜嫁接苗',
       source_type: 'grafting',
       source_origin: 'commissioned',
-      crop_category: '蔬菜类',
-      type_name: '瓜菜类',
+      crop_category: '水果类',
+      type_name: '瓜类水果',
       variety_name: '西瓜',
       crop_name: '黑美人西瓜',
       crop_variety: '西瓜',
-      crop_code: 'PD030302001',
+      crop_code: 'FR060100100',
       supplier_id: '',
       supplier_name: '委托培育',
       quantity: 50,
@@ -446,7 +446,7 @@ function seedSeedSources() {
       variety_name: '生菜',
       crop_name: '奶油生菜',
       crop_variety: '生菜',
-      crop_code: 'PD030202002',
+      crop_code: 'PD010200800',
       supplier_id: '',
       supplier_name: '省农业厅赠送',
       quantity: 200,
@@ -855,6 +855,14 @@ function seedProductionPlans() {
  */
 function seedSeedlings() {
   const db = getDatabase();
+
+  // 检查是否已有数据，避免每次重启覆盖用户增删改的数据
+  const existing = db.exec('SELECT COUNT(*) FROM seedlings');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`育苗数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
 
   const seedlings = [
     {

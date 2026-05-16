@@ -28,12 +28,12 @@ const STORAGE_KEYS = {
 // ============================================
 
 const VARIETIES = [
-  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '番茄', cropName: '红果番茄', cropCode: 'PD0301004001' },
-  { cropCategory: '蔬菜类', typeName: '瓜菜类', varietyName: '黄瓜', cropName: '水果黄瓜', cropCode: 'PD0201001001' },
-  { cropCategory: '蔬菜类', typeName: '叶菜类', varietyName: '生菜', cropName: '散叶生菜', cropCode: 'PD0102001001' },
-  { cropCategory: '水果类', typeName: '草莓类', varietyName: '草莓', cropName: '红颜草莓', cropCode: 'FR0101001001' },
-  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '茄子', cropName: '紫长茄子', cropCode: 'PD0303001001' },
-  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '辣椒', cropName: '红尖椒', cropCode: 'PD0304006001' },
+  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '番茄', cropName: '红果番茄', cropCode: 'PD030100400' },
+  { cropCategory: '蔬菜类', typeName: '瓜菜类', varietyName: '黄瓜', cropName: '水果黄瓜', cropCode: 'PD020100100' },
+  { cropCategory: '蔬菜类', typeName: '叶菜类', varietyName: '生菜', cropName: '散叶生菜', cropCode: 'PD010200100' },
+  { cropCategory: '水果类', typeName: '草莓类', varietyName: '草莓', cropName: '红颜草莓', cropCode: 'FR010100100' },
+  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '茄子', cropName: '紫长茄子', cropCode: 'PD030300100' },
+  { cropCategory: '蔬菜类', typeName: '茄果类', varietyName: '辣椒', cropName: '红尖椒', cropCode: 'PD030400600' },
 ];
 
 const SITES = [

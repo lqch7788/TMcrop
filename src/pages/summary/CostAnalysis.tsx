@@ -291,17 +291,17 @@ function CostDetailTable({ items, summary }: { items: CostDetailItem[]; summary:
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/50">
-                        <th className="text-left px-6 py-2 text-xs font-medium text-gray-500">成本类型</th>
-                        <th className="text-left px-6 py-2 text-xs font-medium text-gray-500">月份</th>
-                        <th className="text-right px-6 py-2 text-xs font-medium text-gray-500">金额</th>
+                      <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                        <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">成本类型</th>
+                        <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">月份</th>
+                        <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">金额</th>
                         {meta.key === 'labor' && (
                           <>
-                            <th className="text-right px-6 py-2 text-xs font-medium text-gray-500">工时(h)</th>
-                            <th className="text-right px-6 py-2 text-xs font-medium text-gray-500">人数</th>
+                            <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">工时(h)</th>
+                            <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">人数</th>
                           </>
                         )}
-                        <th className="text-right px-6 py-2 text-xs font-medium text-gray-500">记录数</th>
+                        <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">记录数</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -358,7 +358,9 @@ function CostDetailTable({ items, summary }: { items: CostDetailItem[]; summary:
 
 // ========== 主页面组件 ==========
 
-export default function CostAnalysis() {
+interface CostAnalysisProps { hideHeader?: boolean; }
+
+export default function CostAnalysis({ hideHeader }: CostAnalysisProps) {
   // 从 Store 获取数据
   const costDetailItems = useSummaryDataStore((s) => s.costDetailItems);
   const costSummary = useSummaryDataStore((s) => s.costSummary);
@@ -427,11 +429,13 @@ export default function CostAnalysis() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <PageHeader
-        icon={<DollarSign className="w-6 h-6 text-white" />}
-        title="成本分析"
-        description="种植成本明细、分类占比与亩均成本趋势"
-      />
+      {!hideHeader && (
+        <PageHeader
+          icon={<DollarSign className="w-6 h-6 text-white" />}
+          title="成本分析"
+          description="种植成本明细、分类占比与亩均成本趋势"
+        />
+      )}
 
       {/* 日期筛选器 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
@@ -459,31 +463,35 @@ export default function CostAnalysis() {
       )}
 
       {/* KPI 指标卡片 */}
-      <KpiCardGrid columns={4}>
+      <KpiCardGrid columns={4} compact>
         <KpiCard
-          icon={<DollarSign className="w-5 h-5 text-white" />}
+          icon={<DollarSign className="w-4 h-4 text-white" />}
           label="总成本"
           value={costSummary ? formatMoney(costSummary.totalCost) : '--'}
           colorScheme="amber"
           trend={showTrend ? -3.2 : undefined}
+          compact
         />
         <KpiCard
-          icon={<Users className="w-5 h-5 text-white" />}
+          icon={<Users className="w-4 h-4 text-white" />}
           label="人工成本"
           value={costSummary ? formatMoney(costSummary.totalLaborCost) : '--'}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<Package className="w-5 h-5 text-white" />}
+          icon={<Package className="w-4 h-4 text-white" />}
           label="物料成本"
           value={costSummary ? formatMoney(costSummary.totalMaterialCost) : '--'}
           colorScheme="amber"
+          compact
         />
         <KpiCard
-          icon={<TrendingUp className="w-5 h-5 text-white" />}
+          icon={<TrendingUp className="w-4 h-4 text-white" />}
           label="总工时"
           value={costSummary ? `${costSummary.totalWorkHours.toFixed(1)}h` : '--'}
           colorScheme="amber"
+          compact
         />
       </KpiCardGrid>
 

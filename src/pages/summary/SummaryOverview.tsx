@@ -456,7 +456,7 @@ export default function SummaryOverview() {
         title="汇总看板"
         description="生产汇总表总览，展示所有核心 KPI 指标和趋势"
       />
-      <div className="flex justify-end">
+      <div className="flex justify-start">
         <SummaryDateFilter
           mode={filterMode}
           onModeChange={handleModeChange}
@@ -467,49 +467,55 @@ export default function SummaryOverview() {
       </div>
 
       {/* 6 个核心 KPI 卡片 */}
-      <KpiCardGrid columns={6}>
+      <KpiCardGrid columns={6} compact>
         <KpiCard
-          icon={<Sprout className="w-5 h-5 text-white" />}
+          icon={<Sprout className="w-4 h-4 text-white" />}
           label="活跃批次"
           value={activeBatches}
           colorScheme="purple"
           onClick={() => navigate('/summary/batch')}
+          compact
         />
         <KpiCard
-          icon={<TrendingUp className="w-5 h-5 text-white" />}
+          icon={<TrendingUp className="w-4 h-4 text-white" />}
           label="月产量 (kg)"
           value={monthYield.toLocaleString()}
           colorScheme="emerald"
           onClick={() => navigate('/summary/yield')}
+          compact
         />
         <KpiCard
-          icon={<DollarSign className="w-5 h-5 text-white" />}
+          icon={<DollarSign className="w-4 h-4 text-white" />}
           label={`月产值 (元)`}
           value={`¥${monthAmount.toLocaleString()}`}
           colorScheme="emerald"
           onClick={() => navigate('/summary/yield')}
+          compact
         />
         <KpiCard
-          icon={<CheckCircle2 className="w-5 h-5 text-white" />}
+          icon={<CheckCircle2 className="w-4 h-4 text-white" />}
           label="任务完成率"
           value={`${completionRate}%`}
           trend={completionRate >= 50 ? completionRate - 50 : completionRate - 50}
           colorScheme="blue"
           onClick={() => navigate('/summary/indicators')}
+          compact
         />
         <KpiCard
-          icon={<Clock className="w-5 h-5 text-white" />}
+          icon={<Clock className="w-4 h-4 text-white" />}
           label="总工时 (h)"
           value={totalHours.toLocaleString()}
           colorScheme="blue"
           onClick={() => navigate('/summary/labor')}
+          compact
         />
         <KpiCard
-          icon={<DollarSign className="w-5 h-5 text-white" />}
+          icon={<DollarSign className="w-4 h-4 text-white" />}
           label={`总成本 (元)`}
           value={`¥${totalCost.toLocaleString()}`}
           colorScheme="amber"
           onClick={() => navigate('/summary/cost')}
+          compact
         />
       </KpiCardGrid>
 

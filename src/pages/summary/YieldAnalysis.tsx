@@ -199,7 +199,7 @@ function QualityPieChart({ items }: { items: YieldStatItem[] }) {
       .map((item) => ({
         name: item.name,
         value: Number(item.value),
-        fill: QUALITY_COLORS[item.name] || '#94a3b8',
+        fill: QUALITY_COLORS[item.name] || "#94a3b8",
       }));
   }, [items]);
 
@@ -219,6 +219,55 @@ function QualityPieChart({ items }: { items: YieldStatItem[] }) {
 
   const total = pieData.reduce((sum, d) => sum + d.value, 0);
 
+  /** 自定义饼图标签（折弯线 + 始终显示） */
+  const renderCustomLabel = ({
+    cx, cy, midAngle, outerRadius, percent, name,
+  }: {
+    cx: number; cy: number; midAngle: number; outerRadius: number; percent: number; name: string;
+  }) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 30;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const edgeX = cx + (outerRadius + 8) * Math.cos(-midAngle * RADIAN);
+    const edgeY = cy + (outerRadius + 8) * Math.sin(-midAngle * RADIAN);
+    const textAnchor = x > cx ? "start" : "end";
+    const lineEndX = x > cx ? x + 40 : x - 40;
+    const entry = pieData.find((d) => d.name === name);
+    const displayValue = entry ? formatWeight(entry.value) : "";
+    const displayPct = `${(percent * 100).toFixed(1)}%`;
+
+    return (
+      <g>
+        <polyline
+          points={`${edgeX},${edgeY} ${x},${y} ${lineEndX},${y}`}
+          stroke="#94a3b8"
+          strokeWidth={1}
+          fill="none"
+        />
+        <text
+          x={lineEndX + (x > cx ? 4 : -4)}
+          y={y - 6}
+          textAnchor={textAnchor}
+          fill="#334155"
+          fontSize={12}
+          fontWeight={600}
+        >
+          {name || "未知"}
+        </text>
+        <text
+          x={lineEndX + (x > cx ? 4 : -4)}
+          y={y + 10}
+          textAnchor={textAnchor}
+          fill="#64748b"
+          fontSize={11}
+        >
+          {displayValue} ({displayPct})
+        </text>
+      </g>
+    );
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <h3 className="font-semibold text-gray-900 mb-1">质量等级分布</h3>
@@ -230,42 +279,24 @@ function QualityPieChart({ items }: { items: YieldStatItem[] }) {
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={55}
-              outerRadius={85}
+              innerRadius={50}
+              outerRadius={80}
               paddingAngle={3}
               dataKey="value"
               stroke="none"
+              label={renderCustomLabel}
+              labelLine={false}
             >
               {pieData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(12px)',
-                borderRadius: '12px',
-                border: '1px solid rgba(0,0,0,0.08)',
-              }}
-              formatter={(value: number, name: string) => [
-                `${formatWeight(value)} (${((value / total) * 100).toFixed(1)}%)`,
-                name,
-              ]}
-            />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-xs text-gray-400">总产量</p>
-          <p className="text-lg font-bold text-gray-800">{formatWeight(total)}</p>
+          <p className="text-[11px] text-gray-400">总产量</p>
+          <p className="text-base font-bold text-gray-800">{formatWeight(total)}</p>
         </div>
-      </div>
-      <div className="flex justify-center gap-5 mt-2">
-        {pieData.map((entry) => (
-          <div key={entry.name} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
-            <span className="text-xs text-gray-500">{entry.name}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -300,7 +331,7 @@ function YieldDetailTable({ items }: { items: YieldStatItem[] }) {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">名称</th>
               <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产量(kg)</th>
@@ -309,7 +340,7 @@ function YieldDetailTable({ items }: { items: YieldStatItem[] }) {
               <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产值</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {sortedItems.map((item, idx) => (
               <tr key={`${item.name}-${idx}`} className="hover:bg-emerald-50/50 transition-colors">
                 <td className="px-4 py-2.5 text-sm text-gray-800 font-medium">{item.name || '-'}</td>
@@ -347,7 +378,9 @@ function YieldDetailTable({ items }: { items: YieldStatItem[] }) {
 
 // ========== 主页面组件 ==========
 
-export default function YieldAnalysis() {
+interface YieldAnalysisProps { hideHeader?: boolean; }
+
+export default function YieldAnalysis({ hideHeader }: YieldAnalysisProps) {
   const yieldItems = useSummaryDataStore((s) => s.yieldItems);
   const yieldGroupBy = useSummaryDataStore((s) => s.yieldGroupBy);
   const isLoading = useSummaryDataStore((s) => s.isLoading);
@@ -436,12 +469,14 @@ export default function YieldAnalysis() {
   const avgPrice = totalYield > 0 ? totalAmount / totalYield : 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={<TrendingUp className="w-6 h-6 text-white" />}
-        title="产量分析"
-        description="产量趋势、同比环比、品种排名与批次对比"
-      />
+    <div className="space-y-4">
+      {!hideHeader && (
+        <PageHeader
+          icon={<TrendingUp className="w-6 h-6 text-white" />}
+          title="产量分析"
+          description="产量趋势、同比环比、品种排名与批次对比"
+        />
+      )}
 
       {/* 筛选栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
@@ -492,31 +527,35 @@ export default function YieldAnalysis() {
         </div>
       )}
 
-      {/* KPI 卡片 */}
-      <KpiCardGrid columns={4}>
+      {/* KPI 卡片（紧凑模式） */}
+      <KpiCardGrid columns={4} compact>
         <KpiCard
-          icon={<Package className="w-5 h-5 text-white" />}
+          icon={<Package className="w-4 h-4 text-white" />}
           label="总产量"
           value={formatWeight(totalYield)}
           colorScheme="emerald"
+          compact
         />
         <KpiCard
-          icon={<BarChart3 className="w-5 h-5 text-white" />}
+          icon={<BarChart3 className="w-4 h-4 text-white" />}
           label="采收次数"
           value={totalCount.toLocaleString()}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<DollarSign className="w-5 h-5 text-white" />}
+          icon={<DollarSign className="w-4 h-4 text-white" />}
           label="平均单价"
           value={avgPrice > 0 ? `${formatMoney(avgPrice)}/kg` : '--'}
           colorScheme="amber"
+          compact
         />
         <KpiCard
-          icon={<TrendingUp className="w-5 h-5 text-white" />}
+          icon={<TrendingUp className="w-4 h-4 text-white" />}
           label="总产值"
           value={formatMoney(totalAmount)}
           colorScheme="emerald"
+          compact
         />
       </KpiCardGrid>
 
@@ -526,13 +565,15 @@ export default function YieldAnalysis() {
         <YieldRankingChart items={yieldItems} groupBy={groupBy} />
       </div>
 
-      {/* 质量分布饼图（仅质量分组时显示） */}
-      {groupBy === 'quality' && (
-        <QualityPieChart items={yieldItems} />
+      {/* 质量分布饼图 + 产量明细表（质量模式并排） */}
+      {groupBy === 'quality' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <QualityPieChart items={yieldItems} />
+          <YieldDetailTable items={yieldItems} />
+        </div>
+      ) : (
+        <YieldDetailTable items={yieldItems} />
       )}
-
-      {/* 产量明细表 */}
-      <YieldDetailTable items={yieldItems} />
     </div>
   );
 }

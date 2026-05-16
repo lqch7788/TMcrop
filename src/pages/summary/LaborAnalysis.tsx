@@ -246,14 +246,14 @@ function LaborDetailTable({ items }: { items: LaborStatItem[] }) {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50">
-              <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">名称</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">工时(h)</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">金额</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">工人数</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">出勤次数</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">任务数</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500">日均工时</th>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">名称</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">工时(h)</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">金额</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">工人数</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">出勤次数</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">任务数</th>
+              <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">日均工时</th>
             </tr>
           </thead>
           <tbody>
@@ -305,7 +305,9 @@ function LaborDetailTable({ items }: { items: LaborStatItem[] }) {
 
 // ========== 主页面组件 ==========
 
-export default function LaborAnalysis() {
+interface LaborAnalysisProps { hideHeader?: boolean; }
+
+export default function LaborAnalysis({ hideHeader }: LaborAnalysisProps) {
   // 从 Store 获取数据
   const laborItems = useSummaryDataStore((s) => s.laborItems);
   const isLoading = useSummaryDataStore((s) => s.isLoading);
@@ -422,11 +424,13 @@ export default function LaborAnalysis() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <PageHeader
-        icon={<Users className="w-6 h-6 text-white" />}
-        title="人工分析"
-        description="人工工时统计、效率分析与工种占比"
-      />
+      {!hideHeader && (
+        <PageHeader
+          icon={<Users className="w-6 h-6 text-white" />}
+          title="人工分析"
+          description="人工工时统计、效率分析与工种占比"
+        />
+      )}
 
       {/* 筛选栏：日期筛选 + 分组切换 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
@@ -483,30 +487,34 @@ export default function LaborAnalysis() {
       )}
 
       {/* KPI 指标卡片 */}
-      <KpiCardGrid columns={4}>
+      <KpiCardGrid columns={4} compact>
         <KpiCard
-          icon={<Clock className="w-5 h-5 text-white" />}
+          icon={<Clock className="w-4 h-4 text-white" />}
           label="总工时"
           value={formatHours(totalHours)}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<TrendingUp className="w-5 h-5 text-white" />}
+          icon={<TrendingUp className="w-4 h-4 text-white" />}
           label="日均工时"
           value={`${avgDailyHours.toFixed(1)}h`}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<UserCheck className="w-5 h-5 text-white" />}
+          icon={<UserCheck className="w-4 h-4 text-white" />}
           label="人均工时"
           value={avgHoursPerWorker > 0 ? `${avgHoursPerWorker.toFixed(1)}h` : '--'}
           colorScheme="blue"
+          compact
         />
         <KpiCard
-          icon={<DollarSign className="w-5 h-5 text-white" />}
+          icon={<DollarSign className="w-4 h-4 text-white" />}
           label="平均时薪"
           value={avgHourlyRate > 0 ? formatMoney(avgHourlyRate) + '/h' : '--'}
           colorScheme="amber"
+          compact
         />
       </KpiCardGrid>
 

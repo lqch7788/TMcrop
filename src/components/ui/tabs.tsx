@@ -117,8 +117,8 @@ export interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
   selectedValue?: string
 }
 
-const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
-  ({ className, value, selectedValue, children, ...props }, ref) => {
+const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps & { onValueChange?: (value: string) => void }>(
+  ({ className, value, selectedValue, onValueChange, children, ...props }, ref) => {
     const isSelected = selectedValue === value
 
     if (!isSelected) return null
