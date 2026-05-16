@@ -121,6 +121,8 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     pictures: pictures,
     remarks: item.remarks || '',
     status: status,
+    productionPlanId: item.productionPlanId || '',
+    productionPlanCode: item.productionPlanCode || '',
     createBy: item.createBy || '',
     createTime: item.createTime ? item.createTime.split('T')[0] : '',
     updateTime: item.updateTime || '',

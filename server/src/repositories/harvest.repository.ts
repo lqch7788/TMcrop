@@ -76,29 +76,38 @@ export class HarvestRepository {
     const db = getDatabase();
     const { crop_name, status, page = 1, limit = 50 } = query;
 
-    let sql = 'SELECT * FROM harvest_records WHERE 1=1';
+    let baseSql = `SELECT h.*,
+      COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
+      COALESCE(w.name, '') AS warehouse_name,
+      COALESCE(u.real_name, '') AS auditor
+    FROM harvest_records h
+    LEFT JOIN warehouses w ON h.warehouse_id = w.id
+    LEFT JOIN users u ON h.auditor_id = u.id
+    WHERE 1=1`;
     const params: any[] = [];
 
     if (crop_name) {
-      sql += ' AND crop_name LIKE ?';
+      baseSql += ' AND h.crop_name LIKE ?';
       params.push(`%${crop_name}%`);
     }
 
     if (status) {
-      sql += ' AND status = ?';
+      baseSql += ' AND h.status = ?';
       params.push(status);
     }
 
-    const countSql = sql;
-    sql += ' ORDER BY create_time DESC';
+    const countSql = `SELECT COUNT(*) FROM harvest_records h WHERE 1=1`
+      + (crop_name ? ' AND h.crop_name LIKE ?' : '')
+      + (status ? ' AND h.status = ?' : '');
 
     const total = execCount(db, countSql, params);
 
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ? OFFSET ?`;
+    baseSql += ' ORDER BY h.create_time DESC';
+    baseSql += ` LIMIT ? OFFSET ?`;
     params.push(Number(limit), offset);
 
-    const items = queryToObjects<HarvestRecord>(db, sql, params);
+    const items = queryToObjects<HarvestRecord>(db, baseSql, params);
 
     return { data: items, total };
   }
@@ -110,7 +119,15 @@ export class HarvestRepository {
    */
   async findById(id: string): Promise<HarvestRecord | undefined> {
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM harvest_records WHERE id = ?');
+    const sql = `SELECT h.*,
+      COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
+      COALESCE(w.name, '') AS warehouse_name,
+      COALESCE(u.real_name, '') AS auditor
+    FROM harvest_records h
+    LEFT JOIN warehouses w ON h.warehouse_id = w.id
+    LEFT JOIN users u ON h.auditor_id = u.id
+    WHERE h.id = ?`;
+    const stmt = db.prepare(sql);
     stmt.bind([id]);
 
     let item: HarvestRecord | null = null;
@@ -129,7 +146,14 @@ export class HarvestRepository {
    */
   async findByBatchCode(batchCode: string): Promise<HarvestRecord[]> {
     const db = getDatabase();
-    const sql = 'SELECT * FROM harvest_records WHERE source_id = ? OR source_name = ? ORDER BY harvest_date DESC, create_time DESC';
+    const sql = `SELECT h.*,
+      COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
+      COALESCE(w.name, '') AS warehouse_name,
+      COALESCE(u.real_name, '') AS auditor
+    FROM harvest_records h
+    LEFT JOIN warehouses w ON h.warehouse_id = w.id
+    LEFT JOIN users u ON h.auditor_id = u.id
+    WHERE h.source_id = ? OR h.source_name = ? ORDER BY h.harvest_date DESC, h.create_time DESC`;
     return queryToObjects<HarvestRecord>(db, sql, [batchCode, batchCode]);
   }
 
@@ -143,7 +167,14 @@ export class HarvestRepository {
 
     const db = getDatabase();
     const placeholders = ids.map(() => '?').join(',');
-    const sql = `SELECT * FROM harvest_records WHERE id IN (${placeholders}) ORDER BY create_time DESC`;
+    const sql = `SELECT h.*,
+      COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
+      COALESCE(w.name, '') AS warehouse_name,
+      COALESCE(u.real_name, '') AS auditor
+    FROM harvest_records h
+    LEFT JOIN warehouses w ON h.warehouse_id = w.id
+    LEFT JOIN users u ON h.auditor_id = u.id
+    WHERE h.id IN (${placeholders}) ORDER BY h.create_time DESC`;
     return queryToObjects<HarvestRecord>(db, sql, ids);
   }
 
@@ -387,31 +418,38 @@ export class HarvestRepository {
   async export(startDate?: string, endDate?: string, cropName?: string, greenhouseName?: string, status?: string): Promise<HarvestRecord[]> {
     const db = getDatabase();
 
-    let sql = 'SELECT * FROM harvest_records WHERE 1=1';
+    let sql = `SELECT h.*,
+      COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
+      COALESCE(w.name, '') AS warehouse_name,
+      COALESCE(u.real_name, '') AS auditor
+    FROM harvest_records h
+    LEFT JOIN warehouses w ON h.warehouse_id = w.id
+    LEFT JOIN users u ON h.auditor_id = u.id
+    WHERE 1=1`;
     const params: any[] = [];
 
     if (startDate) {
-      sql += ' AND harvest_date >= ?';
+      sql += ' AND h.harvest_date >= ?';
       params.push(startDate);
     }
     if (endDate) {
-      sql += ' AND harvest_date <= ?';
+      sql += ' AND h.harvest_date <= ?';
       params.push(endDate);
     }
     if (cropName) {
-      sql += ' AND crop_name LIKE ?';
+      sql += ' AND h.crop_name LIKE ?';
       params.push(`%${cropName}%`);
     }
     if (greenhouseName) {
-      sql += ' AND greenhouse_name LIKE ?';
+      sql += ' AND h.greenhouse_name LIKE ?';
       params.push(`%${greenhouseName}%`);
     }
     if (status) {
-      sql += ' AND status = ?';
+      sql += ' AND h.status = ?';
       params.push(status);
     }
 
-    sql += ' ORDER BY harvest_date DESC, create_time DESC';
+    sql += ' ORDER BY h.harvest_date DESC, h.create_time DESC';
 
     return queryToObjects<HarvestRecord>(db, sql, params);
   }

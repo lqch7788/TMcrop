@@ -14,20 +14,21 @@ router.get('/', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 使用 SQL 别名将数据库字段映射到前端期望的字段名
+    // LEFT JOIN seedlings + production_plans 获取关联生产计划（育苗→计划链路）
     let baseSql = `SELECT
-      id,
-      planting_code AS plantCode,
-      source_type AS sourceType,
-      source_id AS sourceId,
-      source_name AS sourceCode,
+      p.id,
+      p.planting_code AS plantCode,
+      p.source_type AS sourceType,
+      p.source_id AS sourceId,
+      p.source_name AS sourceCode,
       '' AS cropCode,
-      crop_name AS cropName,
-      crop_variety AS cropVariety,
+      p.crop_name AS cropName,
+      p.crop_variety AS cropVariety,
       '' AS areaId,
-      area_name AS areaName,
+      p.area_name AS areaName,
       '' AS rootName,
-      planting_quantity AS plantingCount,
-      planting_date AS plantingDate,
+      p.planting_quantity AS plantingCount,
+      p.planting_date AS plantingDate,
       0 AS soilPH,
       0 AS soilEC,
       0 AS transplantCount,
@@ -38,38 +39,44 @@ router.get('/', (req: Request, res: Response) => {
       0 AS printCount,
       '' AS traceabilityCode,
       '[]' AS pictures,
-      greenhouse_name AS greenhouseName,
-      planted_quantity AS plantedQuantity,
-      survival_quantity AS survivalQuantity,
-      survival_rate AS survivalRate,
-      growth_status AS growthStatus,
-      expected_harvest_date AS expectedHarvestDate,
-      actual_harvest_date AS actualHarvestDate,
-      harvest_quantity AS harvestQuantity,
-      status,
-      remarks,
-      '' AS productionPlanId,
-      '' AS productionPlanCode,
-      create_by AS createBy,
-      create_time AS createTime,
-      update_time AS updateTime
-    FROM plantings WHERE 1=1`;
+      p.greenhouse_name AS greenhouseName,
+      p.planted_quantity AS plantedQuantity,
+      p.survival_quantity AS survivalQuantity,
+      p.survival_rate AS survivalRate,
+      p.growth_status AS growthStatus,
+      p.expected_harvest_date AS expectedHarvestDate,
+      p.actual_harvest_date AS actualHarvestDate,
+      p.harvest_quantity AS harvestQuantity,
+      p.status,
+      p.remarks,
+      COALESCE(pp.id, '') AS productionPlanId,
+      COALESCE(pp.plan_code, '') AS productionPlanCode,
+      p.create_by AS createBy,
+      p.create_time AS createTime,
+      p.update_time AS updateTime
+    FROM plantings p
+    LEFT JOIN seedlings s ON p.source_id = s.id
+    LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code
+    WHERE 1=1`;
     const params: any[] = [];
 
     if (crop_name) {
-      baseSql += ' AND crop_name LIKE ?';
+      baseSql += ' AND p.crop_name LIKE ?';
       params.push(`%${crop_name}%`);
     }
 
     if (status) {
-      baseSql += ' AND status = ?';
+      baseSql += ' AND p.status = ?';
       params.push(status);
     }
 
-    // 保存原始SQL用于count查询
-    const countSql = baseSql;
+    // COUNT 查询用同样的 JOIN 和 WHERE 条件
+    const countSql = `SELECT COUNT(*) FROM plantings p
+    LEFT JOIN seedlings s ON p.source_id = s.id
+    LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code
+    WHERE 1=1` + (crop_name ? ' AND p.crop_name LIKE ?' : '') + (status ? ' AND p.status = ?' : '');
 
-    baseSql += ' ORDER BY create_time DESC';
+    baseSql += ' ORDER BY p.create_time DESC';
 
     // 获取总数
     const total = execCount(db, countSql, params);
@@ -84,6 +91,7 @@ router.get('/', (req: Request, res: Response) => {
 
     res.json({ success: true, data: items, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
+    console.error('获取种植记录失败:', error);
     res.status(500).json({ success: false, error: '获取种植记录失败' });
   }
 });
