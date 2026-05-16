@@ -5,11 +5,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 const settingsSections = [
   { icon: SettingsCog, label: '系统配置', path: '/settings/system-config', desc: '系统参数和全局配置' },
   { icon: BookOpen, label: '数据字典', path: '/settings/dictionary', desc: '管理所有枚举值和状态' },
-  { icon: Building2, label: '组织管理', path: '/settings/organizations', desc: '组织架构树形管理' },
-  { icon: Shield, label: '角色管理', path: '/settings/roles', desc: '角色定义与组织关联' },
-  { icon: Shield, label: '权限配置', path: '/settings/authority-config', desc: '工序菜单与角色权限矩阵' },
-  { icon: Users, label: '用户管理', path: '/settings/users', desc: '用户账号与角色分配' },
-  { icon: Shield, label: '用户权限(旧)', path: '/settings/user-permission', desc: '旧版权限管理(临时保留)' },
+  { icon: Shield, label: '用户权限管理', path: '/settings/user-permission', desc: '组织架构 · 角色定义 · 权限矩阵 · 用户管理 · 权限覆盖' },
   { icon: GitBranch, label: '审批流程', path: '/settings/approval-workflow', desc: '审批流程配置' },
   { icon: Shield, label: '分级审批', path: '/settings/approval-level-config', desc: '金额阈值和审批级别配置' },
   { icon: Bell, label: '通知设置', path: '/settings/notification', desc: '消息通知渠道和规则' },

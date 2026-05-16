@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDragResize } from './useDragResize';
 import {
   Shield, Plus, Trash2, Save, RefreshCw, Check, X, ChevronRight, ChevronDown,
   Key, FolderTree, Settings, Search, Building2,
@@ -52,6 +53,10 @@ export default function AuthorityConfiguration() {
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [editingProcess, setEditingProcess] = useState<Partial<Process> | null>(null);
   const [processForm, setProcessForm] = useState({ name: '', code: '', route: '', description: '', parentOid: '' });
+
+  // 弹窗拖拽/缩放
+  const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 550, initialHeight: 420 });
+  useEffect(() => { if (showProcessModal) resetPosition(); }, [showProcessModal]);
 
   // 权限矩阵状态
   const [roleAuthorities, setRoleAuthorities] = useState<RoleAuthorityItem[]>([]);
@@ -260,7 +265,7 @@ export default function AuthorityConfiguration() {
     return (
       <div key={node.oid}>
         <div
-          className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded group"
+          className="flex items-center gap-2 py-1.5 px-2 hover:bg-blue-50 rounded"
           style={{ paddingLeft: depth * 20 + 8 }}
         >
           {hasChildren ? (
@@ -271,22 +276,19 @@ export default function AuthorityConfiguration() {
             <span className="w-4" />
           )}
           <FolderTree className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-sm text-gray-700 flex-1">{node.process_name}</span>
-          <span className="text-xs text-gray-400 font-mono">{node.process_code}</span>
-          {(node as Record<string, unknown>).route && (
-            <span className="text-xs text-blue-500 font-mono hidden group-hover:inline">
-              {(node as Record<string, unknown>).route as string}
-            </span>
-          )}
-          <div className="hidden group-hover:flex items-center gap-1">
-            <button onClick={() => openProcessAdd(node.oid)} className="p-0.5 text-gray-400 hover:text-green-600">
-              <Plus className="w-3 h-3" />
+          <span className="text-sm text-gray-700 flex-1">
+            {node.process_name}
+            <span className="text-xs text-gray-400 font-mono ml-1">（{node.process_code}）</span>
+          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => openProcessAdd(node.oid)} className="p-1 text-gray-400 hover:text-green-600" title="新增子工序">
+              <Plus className="w-4 h-4" />
             </button>
-            <button onClick={() => openProcessEdit(node)} className="p-0.5 text-gray-400 hover:text-blue-600">
-              <Settings className="w-3 h-3" />
+            <button onClick={() => openProcessEdit(node)} className="p-1 text-gray-400 hover:text-blue-600" title="编辑">
+              <Settings className="w-4 h-4" />
             </button>
-            <button onClick={() => handleProcessDelete(node.oid)} className="p-0.5 text-gray-400 hover:text-red-600">
-              <Trash2 className="w-3 h-3" />
+            <button onClick={() => handleProcessDelete(node.oid)} className="p-1 text-gray-400 hover:text-red-600" title="删除">
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -322,11 +324,11 @@ export default function AuthorityConfiguration() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="text-left py-2 px-3 font-medium text-gray-600 w-48">工序名称</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-600 w-32">编码</th>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-b">
+              <th className="text-left py-2 px-3 font-medium text-white w-48">工序名称</th>
+              <th className="text-left py-2 px-3 font-medium text-white w-32">编码</th>
               {ACTION_LIST.map((act) => (
-                <th key={act.code} className="text-center py-2 px-2 font-medium text-gray-600 w-16">
+                <th key={act.code} className="text-center py-2 px-2 font-medium text-white w-16">
                   <span className={`text-xs px-1.5 py-0.5 rounded ${act.color}`}>{act.name}</span>
                 </th>
               ))}
@@ -334,7 +336,7 @@ export default function AuthorityConfiguration() {
           </thead>
           <tbody>
             {flatList.map((proc) => (
-              <tr key={proc.oid} className="border-b border-gray-50 hover:bg-gray-50/50">
+              <tr key={proc.oid} className="border-b border-gray-100 hover:bg-blue-50">
                 <td className="py-1.5 px-3 text-gray-700">{proc.process_name}</td>
                 <td className="py-1.5 px-3 text-xs text-gray-400 font-mono">{proc.process_code}</td>
                 {ACTION_LIST.map((act) => {
@@ -366,37 +368,33 @@ export default function AuthorityConfiguration() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-500 rounded-xl p-5 text-white shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <Shield className="w-5 h-5" />
+      {/* 工具栏：标题 + 内部Tab */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+            <Shield className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold">权限配置</h1>
-            <p className="text-sm text-white/70">工序管理 · 角色权限矩阵 · 数据权限</p>
-          </div>
+          <span className="text-sm font-semibold text-gray-900">权限配置</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">工序管理 · 角色权限矩阵 · 数据权限</span>
         </div>
-      </div>
-
-      {/* Tab 切换 */}
-      <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm w-fit">
-        <button
-          onClick={() => setActiveTab('authority')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'authority' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Key className="w-3.5 h-3.5 inline mr-1" /> 角色权限配置
-        </button>
-        <button
-          onClick={() => setActiveTab('processes')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'processes' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <FolderTree className="w-3.5 h-3.5 inline mr-1" /> 工序与菜单管理
-        </button>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('authority')}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              activeTab === 'authority' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Key className="w-3 h-3 inline mr-1" /> 角色权限配置
+          </button>
+          <button
+            onClick={() => setActiveTab('processes')}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FolderTree className="w-3 h-3 inline mr-1" /> 工序与菜单管理
+          </button>
+        </div>
       </div>
 
       {activeTab === 'processes' ? (
@@ -528,7 +526,7 @@ export default function AuthorityConfiguration() {
                   全部取消
                 </button>
                 {hasChanges && (
-                  <button onClick={saveAuthority} className="h-7 px-3 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 flex items-center gap-1">
+                  <button onClick={saveAuthority} className="h-7 px-3 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1">
                     <Save className="w-3 h-3" /> 保存
                   </button>
                 )}
@@ -546,19 +544,28 @@ export default function AuthorityConfiguration() {
 
       {/* ========== 工序编辑弹窗 ========== */}
       {showProcessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+        <div className="fixed inset-0 z-50 bg-black/30"
           onClick={() => setShowProcessModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
+          <div className="absolute bg-white rounded-xl shadow-2xl"
+            style={{
+              width: size.width,
+              left: `calc(50% - ${size.width / 2}px + ${position.x}px)`,
+              top: `calc(50% - ${size.height / 2}px + ${position.y}px)`,
+            }}
             onClick={(e) => e.stopPropagation()}>
+            {resizeHandles}
             {/* 标题栏 */}
-            <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-500 rounded-t-xl p-4 flex items-center justify-between">
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl p-4 flex items-center justify-between cursor-move select-none"
+              onMouseDown={startDrag}
+            >
               <h3 className="text-white font-semibold">{editingProcess ? '编辑工序' : '新增工序'}</h3>
               <button onClick={() => setShowProcessModal(false)} className="text-white/70 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
             {/* 表单 */}
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">工序名称 *</label>
@@ -589,7 +596,7 @@ export default function AuthorityConfiguration() {
                 取消
               </button>
               <button onClick={handleProcessSave}
-                className="h-8 px-4 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600">
+                className="h-8 px-4 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
                 保存
               </button>
             </div>

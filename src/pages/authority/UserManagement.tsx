@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDragResize } from './useDragResize';
 import {
   Users, Plus, Pencil, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
 } from 'lucide-react';
@@ -50,6 +51,14 @@ export default function UserManagement() {
 
   // 删除确认
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // 弹窗拖拽/缩放
+  const d1 = useDragResize({ initialWidth: 550, initialHeight: 520 });
+  const d2 = useDragResize({ initialWidth: 400, initialHeight: 250 });
+  const d3 = useDragResize({ initialWidth: 400, initialHeight: 220 });
+  useEffect(() => { if (showUserModal) d1.resetPosition(); }, [showUserModal]);
+  useEffect(() => { if (showPasswordModal) d2.resetPosition(); }, [showPasswordModal]);
+  useEffect(() => { if (deleteTarget) d3.resetPosition(); }, [deleteTarget]);
 
   // 初始加载
   useEffect(() => {
@@ -186,48 +195,38 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 rounded-xl p-5 text-white shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5" />
+      {/* 工具栏 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold">用户管理</h1>
-            <p className="text-sm text-white/70">管理系统用户账号、角色分配与状态</p>
-          </div>
+          <span className="text-sm font-semibold text-gray-900">用户管理</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">管理系统用户账号、角色分配与状态</span>
         </div>
-      </div>
-
-      {/* 筛选栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-end gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <label className="block text-xs text-gray-500 mb-1">搜索</label>
-            <Search className="w-3.5 h-3.5 absolute left-2 top-8 text-gray-300" />
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="relative">
+            <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-300" />
             <input
-              type="text" placeholder="搜索用户名或姓名..."
+              type="text" placeholder="搜索..."
               value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full h-9 pl-8 pr-2 border border-gray-200 rounded text-sm"
+              className="w-36 h-8 pl-7 pr-2 border border-gray-200 rounded text-xs"
             />
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">状态</label>
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="h-9 px-2 border border-gray-200 rounded text-sm">
-              <option value="all">全部</option>
-              <option value="active">启用</option>
-              <option value="inactive">禁用</option>
-            </select>
-          </div>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="h-8 px-2 border border-gray-200 rounded text-xs">
+            <option value="all">全部</option>
+            <option value="active">启用</option>
+            <option value="inactive">禁用</option>
+          </select>
           <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
-            className="h-9 px-3 text-sm text-gray-500 hover:text-gray-700">
+            className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700">
             重置
           </button>
-          <div className="flex-1" />
-          <Button size="sm" onClick={openAddModal}>
+          <button onClick={openAddModal}
+            className="h-8 px-3 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 flex items-center gap-1">
             <Plus className="w-3.5 h-3.5" /> 新增用户
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -235,18 +234,18 @@ export default function UserManagement() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="text-left py-2.5 px-4 font-medium text-gray-600">用户名</th>
-              <th className="text-left py-2.5 px-4 font-medium text-gray-600">姓名</th>
-              <th className="text-left py-2.5 px-4 font-medium text-gray-600">所属组织</th>
-              <th className="text-left py-2.5 px-4 font-medium text-gray-600">邮箱/电话</th>
-              <th className="text-center py-2.5 px-4 font-medium text-gray-600 w-20">状态</th>
-              <th className="text-right py-2.5 px-4 font-medium text-gray-600 w-36">操作</th>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-b">
+              <th className="text-left py-2.5 px-4 font-medium text-white">用户名</th>
+              <th className="text-left py-2.5 px-4 font-medium text-white">姓名</th>
+              <th className="text-left py-2.5 px-4 font-medium text-white">所属组织</th>
+              <th className="text-left py-2.5 px-4 font-medium text-white">邮箱/电话</th>
+              <th className="text-center py-2.5 px-4 font-medium text-white w-20">状态</th>
+              <th className="text-right py-2.5 px-4 font-medium text-white w-36">操作</th>
             </tr>
           </thead>
           <tbody>
             {pagedUsers.map((user) => (
-              <tr key={user.oid} className="border-b border-gray-50 hover:bg-gray-50/50">
+              <tr key={user.oid} className="border-b border-gray-100 hover:bg-blue-50">
                 <td className="py-2 px-4 text-gray-700 font-medium">{user.username || user.aid}</td>
                 <td className="py-2 px-4 text-gray-700">{user.real_name || user.name}</td>
                 <td className="py-2 px-4 text-gray-500">{getOrgName(user.org_oid || user.orgOid || '')}</td>
@@ -289,7 +288,7 @@ export default function UserManagement() {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-2 border-t bg-gray-50/50">
+          <div className="flex items-center justify-between px-4 py-2 border-t bg-blue-50/30">
             <span className="text-xs text-gray-500">共 {filteredUsers.length} 名用户</span>
             <div className="flex items-center gap-1">
               <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}
@@ -304,14 +303,23 @@ export default function UserManagement() {
 
       {/* ========== 新增/编辑弹窗 ========== */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowUserModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowUserModal(false)}>
+          <div className="absolute bg-white rounded-xl shadow-2xl"
+            style={{
+              width: d1.size.width,
+              left: `calc(50% - ${d1.size.width / 2}px + ${d1.position.x}px)`,
+              top: `calc(50% - ${d1.size.height / 2}px + ${d1.position.y}px)`,
+            }}
             onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 rounded-t-xl p-4 flex items-center justify-between sticky top-0 z-10">
+            {d1.resizeHandles}
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl p-4 flex items-center justify-between cursor-move select-none"
+              onMouseDown={d1.startDrag}
+            >
               <h3 className="text-white font-semibold">{editingUser ? '编辑用户' : '新增用户'}</h3>
               <button onClick={() => setShowUserModal(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">用户名 *</label>
@@ -357,7 +365,7 @@ export default function UserManagement() {
                 <label className="block text-xs text-gray-500 mb-1">角色分配</label>
                 <div className="max-h-32 overflow-y-auto border border-gray-200 rounded p-2 space-y-1">
                   {roles.map((role) => (
-                    <label key={role.oid} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 py-0.5 px-1 rounded">
+                    <label key={role.oid} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-blue-50 py-0.5 px-1 rounded">
                       <input
                         type="checkbox"
                         checked={userRoleOids.includes(role.oid)}
@@ -387,9 +395,19 @@ export default function UserManagement() {
 
       {/* ========== 修改密码弹窗 ========== */}
       {showPasswordModal && passwordUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowPasswordModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 rounded-t-xl p-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowPasswordModal(false)}>
+          <div className="absolute bg-white rounded-xl shadow-2xl"
+            style={{
+              width: d2.size.width,
+              left: `calc(50% - ${d2.size.width / 2}px + ${d2.position.x}px)`,
+              top: `calc(50% - ${d2.size.height / 2}px + ${d2.position.y}px)`,
+            }}
+            onClick={(e) => e.stopPropagation()}>
+            {d2.resizeHandles}
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl p-4 flex items-center justify-between cursor-move select-none"
+              onMouseDown={d2.startDrag}
+            >
               <h3 className="text-white font-semibold">修改密码 - {passwordUser.real_name || passwordUser.name}</h3>
               <button onClick={() => setShowPasswordModal(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
@@ -408,9 +426,19 @@ export default function UserManagement() {
 
       {/* ========== 删除确认弹窗 ========== */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-red-500 via-red-600 to-red-500 rounded-t-xl p-4">
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setDeleteTarget(null)}>
+          <div className="absolute bg-white rounded-xl shadow-2xl"
+            style={{
+              width: d3.size.width,
+              left: `calc(50% - ${d3.size.width / 2}px + ${d3.position.x}px)`,
+              top: `calc(50% - ${d3.size.height / 2}px + ${d3.position.y}px)`,
+            }}
+            onClick={(e) => e.stopPropagation()}>
+            {d3.resizeHandles}
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl p-4 cursor-move select-none"
+              onMouseDown={d3.startDrag}
+            >
               <h3 className="text-white font-semibold">确认删除用户</h3>
             </div>
             <div className="p-5">

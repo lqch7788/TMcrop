@@ -33,14 +33,14 @@ import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import SystemConfig from './pages/SystemConfig';
 import DictionaryManagement from './pages/DictionaryManagement';
-import UserPermission from './pages/UserPermission';
-// 组织与权限管理（新）
+// 组织与权限管理 — 统一入口 UserPermissionHub 内含5个TAB
 import {
   OrganizationManagement,
   RoleManagement,
   AuthorityConfiguration,
   UserManagement,
   UserAuthorityConfig,
+  UserPermissionHub,
 } from './pages/authority';
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
 import ApprovalLevelConfig from './pages/ApprovalLevelConfig';
@@ -221,7 +221,7 @@ function AppContent() {
           <Route path="/settings" element={<Settings />}>
             <Route path="system-config" element={<SystemConfig />} />
             <Route path="dictionary" element={<DictionaryManagement />} />
-            <Route path="user-permission" element={<UserPermission />} />
+            <Route path="user-permission" element={<UserPermissionHub />} />
             {/* 组织与权限管理（新） */}
             <Route path="organizations" element={<OrganizationManagement />} />
             <Route path="roles" element={<RoleManagement />} />

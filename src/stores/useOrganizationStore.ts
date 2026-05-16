@@ -92,9 +92,10 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveOrganization: async (org) => {
     try {
       set({ loading: true, error: null });
+      const orgExists = get().organizations.find((o) => o.oid === org.oid);
       await authorityService.saveOrganizations({
-        inserted: org.oid ? [] : [org],
-        updated: org.oid ? [org] : [],
+        inserted: orgExists ? [] : [org],
+        updated: orgExists ? [org] : [],
         deleted: [],
       });
       await get().loadOrganizations();
@@ -139,9 +140,10 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveRole: async (role) => {
     try {
       set({ loading: true, error: null });
+      const roleExists = get().roles.find((r) => r.oid === role.oid);
       await authorityService.saveRoles({
-        inserted: role.oid ? [] : [role],
-        updated: role.oid ? [role] : [],
+        inserted: roleExists ? [] : [role],
+        updated: roleExists ? [role] : [],
         deleted: [],
       });
       await get().loadRoles();
@@ -186,9 +188,10 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveUser: async (user) => {
     try {
       set({ loading: true, error: null });
+      const existing = get().users.find((u) => u.oid === user.oid);
       await authorityService.saveUsers({
-        inserted: user.oid ? [] : [user],
-        updated: user.oid ? [user] : [],
+        inserted: existing ? [] : [user],
+        updated: existing ? [user] : [],
         deleted: [],
       });
       await get().loadUsers();
@@ -250,9 +253,10 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveProcess: async (process) => {
     try {
       set({ loading: true, error: null });
+      const procExists = get().processes.find((p) => p.oid === process.oid);
       await authorityService.saveProcesses({
-        inserted: process.oid ? [] : [process],
-        updated: process.oid ? [process] : [],
+        inserted: procExists ? [] : [process],
+        updated: procExists ? [process] : [],
         deleted: [],
       });
       await get().loadProcesses();
