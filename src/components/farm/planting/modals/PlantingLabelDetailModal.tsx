@@ -3,13 +3,13 @@
  * 展示标签列表和标签履历两个标签页
  */
 import React, { useState, useMemo } from 'react';
-import { X, Search, MoveRight, Tag, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, Search, Tag } from 'lucide-react';
 import {
   Modal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Badge, Tabs, TabsList, TabsTrigger, TabsContent,
-  Timeline, Pagination, Input
+  LabelResumeTimeline, Pagination, Input
 } from '../../../ui';
-import type { TimelineItem } from '../../../ui/Timeline';
+import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 
 // ========== 数据接口 ==========
 export interface PlantLabel {
@@ -35,13 +35,6 @@ export interface PlantLabelResume {
   operationDate: string;
   operatorName?: string;
 }
-
-// ========== 操作类型中文映射 ==========
-const OPERATION_LABELS: Record<string, string> = {
-  move_in: '移入',
-  move_out: '移出',
-  mark: '标记'
-};
 
 const PAGE_SIZE = 20;
 
@@ -244,45 +237,25 @@ export default function PlantingLabelDetailModal({
                     ) : null;
                   })()}
 
-                  <Timeline
-                    items={paginatedResumes.map((r): TimelineItem => ({
-                      title: OPERATION_LABELS[r.operationType] || r.operationType,
-                      description: (
-                        <div className="text-sm space-y-1">
-                          {r.operationType === 'move_in' && (
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <ArrowRight className="w-3 h-3" />
-                              <span>移入至: {r.toAreaName || '-'}</span>
-                            </div>
-                          )}
-                          {r.operationType === 'move_out' && (
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <ArrowLeft className="w-3 h-3" />
-                              <span>从 {r.fromAreaName || '-'} 移出至 {r.toAreaName || '-'}</span>
-                            </div>
-                          )}
-                          {r.operationType === 'mark' && (
-                            <div className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              <Badge
-                                variant={r.markColor === 'red' ? 'destructive' :
-                                         r.markColor === 'yellow' ? 'warning' :
-                                         r.markColor === 'blue' ? 'info' : 'success'}
-                              >
-                                {r.markName || '-'}
-                              </Badge>
-                            </div>
-                          )}
-                          {r.operatorName && (
-                            <div className="text-xs text-gray-400">
-                              操作人: {r.operatorName}
-                            </div>
-                          )}
-                        </div>
-                      ),
-                      status: 'completed',
-                      time: r.operationDate
+                  <LabelResumeTimeline
+                    entries={paginatedResumes.map((r): LabelResumeEntry => ({
+                      id: r.id,
+                      operationType: r.operationType,
+                      fromAreaName: r.fromAreaName,
+                      toAreaName: r.toAreaName,
+                      operationDate: r.operationDate,
+                      markName: r.markName,
+                      markColor: r.markColor,
+                      operatorName: r.operatorName,
                     }))}
+                    currentLabel={(() => {
+                      const sel = labels.find((l) => l.id === selectedLabelId);
+                      return sel?.labelNumber;
+                    })()}
+                    currentMark={(() => {
+                      const sel = labels.find((l) => l.id === selectedLabelId);
+                      return sel?.markName ? { name: sel.markName, color: sel.markColor || '#9ca3af' } : undefined;
+                    })()}
                   />
 
                   {/* 履历分页 */}

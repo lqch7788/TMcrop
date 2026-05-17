@@ -15,6 +15,7 @@ import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
+import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
 import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
@@ -144,6 +145,8 @@ export default function SeedlingPage() {
   const [transplantModalOpen, setTransplantModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [labelManageOpen, setLabelManageOpen] = useState(false);
+  const [labelManageRecord, setLabelManageRecord] = useState<Seedling | null>(null);
   const [currentRecord, setCurrentRecord] = useState<Seedling | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
 
@@ -228,6 +231,11 @@ export default function SeedlingPage() {
   const handlePrint = (record: Seedling) => {
     setCurrentRecord(record);
     setPrintModalOpen(true);
+  };
+
+  const handleLabelManage = (record: Seedling) => {
+    setLabelManageRecord(record);
+    setLabelManageOpen(true);
   };
 
   const handleImageClick = (images: string[]) => {
@@ -507,6 +515,7 @@ export default function SeedlingPage() {
         onDailyRecord={handleDailyRecord}
         onTransplant={handleTransplant}
         onPrint={handlePrint}
+        onLabelManage={handleLabelManage}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
         onEnd={handleEnd}
@@ -591,6 +600,15 @@ export default function SeedlingPage() {
         onClose={() => setLightboxOpen(false)}
         images={currentImages}
       />
+
+      {labelManageRecord && (
+        <SeedlingLabelManageModal
+          isOpen={labelManageOpen}
+          onClose={() => { setLabelManageOpen(false); setLabelManageRecord(null); }}
+          seedlingId={labelManageRecord.id}
+          seedlingCode={labelManageRecord.seedlingCode}
+        />
+      )}
 
       {/* 导出格式选择弹窗 */}
       <ExportFormatModal

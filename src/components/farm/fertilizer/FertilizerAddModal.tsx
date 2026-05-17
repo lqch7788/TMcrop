@@ -9,6 +9,7 @@ import { UnifiedModal } from '../../ui/UnifiedModal';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import { useFertilizerStore } from '@/stores';
+import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 
 interface FertilizerAddModalProps {
@@ -73,6 +74,11 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   // 提交表单
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim()) return; // 基本校验
+    // 方案5.1: 施肥日期不能大于当前时间
+    if (form.fertilizeTime && !validateDateNotFuture(form.fertilizeTime)) {
+      alert('施肥日期不能大于当前时间');
+      return;
+    }
     setSubmitting(true);
     await store.createItem({
       fertilizerCode: form.fertilizerCode,

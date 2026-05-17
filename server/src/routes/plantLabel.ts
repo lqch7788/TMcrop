@@ -103,6 +103,59 @@ router.delete('/marks/:id', (req: Request, res: Response) => {
 
 // ==================== 标签 (plant_labels) ====================
 
+/** POST /api/plant-labels/generate-batch — 批量生成标签（育苗/种植标签打印） */
+router.post('/generate-batch', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { seedling_id, planting_id, count, crop_name, area_name, start_date } = req.body;
+
+    if (!count || count <= 0) {
+      res.status(400).json({ success: false, error: 'count 必须大于 0' });
+      return;
+    }
+
+    // 获取当前已打印的标签数量（按育苗或种植ID统计）
+    let existingCount = 0;
+    if (seedling_id) {
+      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE seedling_id = ?', [String(seedling_id)]);
+      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
+    } else if (planting_id) {
+      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE planting_id = ?', [String(planting_id)]);
+      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
+    }
+
+    const labels: any[] = [];
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    for (let i = 0; i < count; i++) {
+      const seq = existingCount + i + 1;
+      const labelNumber = `${crop_name || 'LABEL'}-${String(seq).padStart(6, '0')}`;
+
+      db.run(
+        `INSERT INTO plant_labels (label_number, planting_id, seedling_id, move_in_area_name, move_in_date, create_time)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [labelNumber, planting_id || null, seedling_id || null, area_name || null, start_date || null, now]
+      );
+
+      labels.push({
+        labelNumber,
+        qrContent: labelNumber,
+        cropName: crop_name || '',
+        areaName: area_name || '',
+        startDate: start_date || '',
+        seq,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      data: { labels, totalPrinted: existingCount + count },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 /** GET /api/plant-labels — 标签列表（支持按 planting_id 筛选） */
 router.get('/', (req: Request, res: Response) => {
   try {

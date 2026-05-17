@@ -89,6 +89,7 @@ const materialsSubItems = [
 // 注意：农事任务派发、巡查记录、问题分派已统一到农事任务中心，临时任务派发保留独立入口
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
+  { icon: Send, label: '任务派发', path: '/task-dispatch' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },

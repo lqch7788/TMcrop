@@ -258,6 +258,25 @@ router.delete('/batch', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 检查种植记录是否可删除（是否被标签引用）
+ * GET /api/plantings/:id/check-deletable
+ */
+router.get('/:id/check-deletable', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const cntResult = db.exec(
+      'SELECT COUNT(*) as cnt FROM plant_labels WHERE planting_id = ? AND move_in_area_name IS NOT NULL',
+      [id]
+    );
+    const labelCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
+    res.json({ success: true, data: { deletable: labelCount === 0, labelCount } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '检查删除失败' });
+  }
+});
+
 router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;

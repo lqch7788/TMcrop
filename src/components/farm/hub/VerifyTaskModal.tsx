@@ -4,20 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Task, TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
-import { STORAGE_KEYS } from '../../../hooks/useLocalStorage';
+import { Task } from '../../../hooks/useTasks';
 import { useFarmTaskStore } from '@/stores';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface VerifyTaskModalProps {
-  taskId: string;
-  onClose: () => void;
-  onVerified: () => void;
-}
-
 interface TaskRecord {
   id: string;
+  taskId?: string;
   actionTime: string;
   operatorName: string;
   action: string;
@@ -25,7 +19,19 @@ interface TaskRecord {
   progress?: number;
 }
 
-export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModalProps) {
+interface VerifyTaskModalProps {
+  taskId: string;
+  onClose: () => void;
+  onVerified: () => void;
+  // V2.0: 任务数据从外部传入（避免直接读 localStorage）
+  tasks?: any[];
+  getTaskRecordsByTaskId?: (taskId: string) => TaskRecord[];
+  // 验收回调
+  onAcceptCompletion?: (taskId: string, feedback: string) => void;
+  onRejectForRework?: (taskId: string, feedback: string) => void;
+}
+
+export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRecordsByTaskId, onAcceptCompletion, onRejectForRework }: VerifyTaskModalProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
   const [verifyResult, setVerifyResult] = useState<'pass' | 'reject' | null>(null);
@@ -34,54 +40,44 @@ export function VerifyTaskModal({ taskId, onClose, onVerified }: VerifyTaskModal
 
   useEffect(() => {
     try {
-      // 加载任务数据 (来自 FarmTaskStore)
-      const farmTasks = useFarmTaskStore.getState().tasks;
-      const foundTask = farmTasks.find((t: any) => t.id === taskId);
+      // 加载任务数据（优先从外部传入的 tasks，否则从 FarmTaskStore）
+      const foundTask = (tasks || useFarmTaskStore.getState().tasks).find((t: any) => t.id === taskId);
       if (foundTask) setTask(foundTask as Task);
 
-      const storedRecords = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-      if (storedRecords) {
-        const parsed = JSON.parse(storedRecords);
-        const taskRecords = Array.isArray(parsed) ? parsed : [];
-        setRecords(taskRecords.filter((r: TaskRecord) => r.taskId === taskId));
+      // V2.0: 从外部传入的方法获取记录（替代 localStorage）
+      if (getTaskRecordsByTaskId) {
+        setRecords(getTaskRecordsByTaskId(taskId));
       }
     } catch (error) {
       // 加载数据失败，无需额外处理
     }
-  }, [taskId]);
+  }, [taskId, tasks, getTaskRecordsByTaskId]);
 
   const handleSubmit = async () => {
     if (!task || !verifyResult) return;
     setIsSubmitting(true);
     try {
-      const now = new Date().toISOString();
-
-      // 通过 FarmTaskStore 更新任务状态
+      // V2.0: 通过回调函数处理验收逻辑（替代直接的 localStorage 读写）
       if (verifyResult === 'pass') {
-        await useFarmTaskStore.getState().updateTask(taskId, {
-          status: 'completed' as any,
-          completedAt: now,
-          verifyFeedback: feedback,
-        } as any);
+        if (onAcceptCompletion) {
+          onAcceptCompletion(taskId, feedback);
+        } else {
+          await useFarmTaskStore.getState().updateTask(taskId, {
+            status: 'completed' as any,
+            completedAt: new Date().toISOString(),
+            verifyFeedback: feedback,
+          } as any);
+        }
       } else {
-        await useFarmTaskStore.getState().updateTask(taskId, {
-          status: 'in_progress' as any,
-          verifyFeedback: feedback,
-        } as any);
+        if (onRejectForRework) {
+          onRejectForRework(taskId, feedback);
+        } else {
+          await useFarmTaskStore.getState().updateTask(taskId, {
+            status: 'in_progress' as any,
+            verifyFeedback: feedback,
+          } as any);
+        }
       }
-
-      const record: TaskRecord = {
-        id: `record-${Date.now()}`,
-        taskId: task.id,
-        actionTime: now,
-        operatorName: '当前用户',
-        action: verifyResult === 'pass' ? 'verify' : 'reject',
-        content: verifyResult === 'pass' ? '验收通过' : `验收驳回: ${feedback}`,
-      };
-      const storedRecords = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-      const recordsData = storedRecords ? JSON.parse(storedRecords) : [];
-      recordsData.unshift(record);
-      localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(recordsData));
 
       onVerified();
     } catch (error) {

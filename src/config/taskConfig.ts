@@ -136,6 +136,7 @@ export const REWORK_CONFIG = {
 // ============================================
 export const STORAGE_CONFIG = {
   maxRecordsPerTask: 100,     // 每个任务最多100条记录
+  maxRecords: 500,            // 操作记录总数上限（超出时修剪旧记录）
   archiveAfterDays: 90,       // 90天后归档
   warnThreshold: 0.8,        // 80%时警告
   criticalThreshold: 0.95,     // 95%时清理旧数据

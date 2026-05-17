@@ -121,6 +121,9 @@ interface FarmTaskState {
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
+  // Actions - 数据迁移（保留原始ID）
+  importLegacyTasks: (tasks: Task[]) => void;
+
   // Actions - 状态更新（快捷方法）
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
 
@@ -223,10 +226,11 @@ export const useFarmTaskStore = create<FarmTaskState>()(
             { offlineQueue: true }
           );
 
-          // API成功，用真实ID替换临时ID
+          // API成功，用API返回的真实ID替换临时ID
+          const realId = savedTask.id || savedTask.taskCode || tempId;
           set(state => ({
             tasks: state.tasks.map(t =>
-              t.id === tempId ? { ...savedTask, id: tempId } : t
+              t.id === tempId ? { ...savedTask, id: realId, taskCode: savedTask.taskCode || taskCode } : t
             ),
           }));
 
@@ -282,6 +286,33 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
       updateTaskStatus: async (id, status) => {
         await get().updateTask(id, { status });
+      },
+
+      // ========== 数据迁移：从旧 localStorage 导入原始任务 ==========
+
+      importLegacyTasks: (legacyTasks) => {
+        const existingIds = new Set(get().tasks.map(t => t.id));
+        const existingCodes = new Set(get().tasks.map(t => t.taskCode));
+
+        // 过滤出不在当前 store 中的任务（保留原始ID和taskCode）
+        const newTasks = legacyTasks.filter(
+          t => !existingIds.has(t.id) && !existingCodes.has(t.taskCode)
+        );
+
+        if (newTasks.length === 0) return;
+
+        console.log(`[FarmTaskStore] 从旧 localStorage 中迁移 ${newTasks.length} 条任务数据`);
+
+        // 直接写入 store 状态（保留原始ID/taskCode/状态）
+        set(state => ({
+          tasks: [...newTasks, ...state.tasks],
+        }));
+
+        // 异步同步到后端 API
+        newTasks.forEach(task => {
+          enhancedApiClient.post('/farm-tasks', task, { offlineQueue: true })
+            .catch(() => console.warn('[FarmTaskStore] 迁移任务同步API失败:', task.id));
+        });
       },
 
       // ========== 筛选 ==========

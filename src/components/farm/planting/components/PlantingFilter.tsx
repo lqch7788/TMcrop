@@ -144,6 +144,47 @@ export function PlantingFilter({
             <option value="true">已采收</option>
           </select>
         </div>
+      </div>
+
+      {/* 第二行：方案3.3 组织筛选 + 定植数量范围 */}
+      <div className="flex flex-wrap gap-4 items-end mt-3">
+        {/* 组织 */}
+        <div className="min-w-[140px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">组织</label>
+          <input
+            type="text"
+            value={filters.orgName || ''}
+            onChange={(e) => onChange({ ...filters, orgName: e.target.value })}
+            placeholder="输入组织名称"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        {/* 定植数量最小值 */}
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≥</label>
+          <input
+            type="number"
+            value={filters.countMin || ''}
+            onChange={(e) => onChange({ ...filters, countMin: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="最小值"
+            min="0"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        {/* 定植数量最大值 */}
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≤</label>
+          <input
+            type="number"
+            value={filters.countMax || ''}
+            onChange={(e) => onChange({ ...filters, countMax: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="最大值"
+            min="0"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
 
         {/* 按钮行 */}
         <div className="flex gap-2 ml-auto">

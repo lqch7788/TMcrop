@@ -110,8 +110,8 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
                 <span className="text-lg font-mono font-bold text-emerald-700">{record.harvestCode}</span>
               </div>
               <div>
-                <span className="text-xs text-emerald-600 block font-medium">采收日期</span>
-                <span className="text-sm font-medium text-gray-900">{record.harvestDate}</span>
+                <span className="text-xs text-emerald-600 block font-medium">采收时间</span>
+                <span className="text-sm font-medium text-gray-900">{record.harvestDate?.replace('T', ' ') || '-'}</span>
               </div>
               <div>
                 <span className="text-xs text-emerald-600 block font-medium">品质等级</span>

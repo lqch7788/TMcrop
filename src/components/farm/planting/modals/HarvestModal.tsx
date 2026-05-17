@@ -1,11 +1,13 @@
 /**
  * 采收登记弹窗
+ * 方案3.1: 是否采收触发日期自动填充 + 不可修改警告
  */
 
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
+import { validateDateNotFuture } from '../../../../lib/validators';
 
 interface HarvestModalProps {
   isOpen: boolean;
@@ -15,13 +17,34 @@ interface HarvestModalProps {
 }
 
 export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModalProps) {
+  const [isHarvest, setIsHarvest] = useState<'yes' | 'no'>('yes');
   const [formData, setFormData] = useState({
     harvestDate: new Date().toISOString().split('T')[0],
     harvestYield: record.plantingCount,
     remarks: ''
   });
 
+  // 是否采收切换：选"是"自动填充日期，选"否"清空
+  const handleIsHarvestChange = (value: 'yes' | 'no') => {
+    setIsHarvest(value);
+    if (value === 'yes') {
+      if (!formData.harvestDate) {
+        setFormData(prev => ({ ...prev, harvestDate: new Date().toISOString().split('T')[0] }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, harvestDate: '' }));
+    }
+  };
+
   const handleSubmit = async () => {
+    if (isHarvest !== 'yes') return;
+
+    // 验证日期不能超过今天
+    if (formData.harvestDate && !validateDateNotFuture(formData.harvestDate)) {
+      alert('采收日期不能超过今天');
+      return;
+    }
+
     // 计算损耗率
     const harvestCount = formData.harvestYield;
     const attritionRate = record.plantingCount > 0
@@ -50,6 +73,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="确认采收"
+      submitDisabled={isHarvest === 'no'}
       cancelText="取消"
     >
       <div className="space-y-6">
@@ -88,14 +112,33 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">采收信息</h4>
           <div className="grid grid-cols-2 gap-4">
+            {/* 是否采收 */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">是否采收</label>
+              <select
+                value={isHarvest}
+                onChange={(e) => handleIsHarvestChange(e.target.value as 'yes' | 'no')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="yes">是 — 确认采收此批次</option>
+                <option value="no">否 — 暂时不采收</option>
+              </select>
+              {isHarvest === 'yes' && (
+                <p className="mt-1 text-xs text-amber-600">⚠ 选择"已采收"后，该记录将不可修改</p>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">采收日期</label>
               <input
                 type="date"
                 value={formData.harvestDate}
                 onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                disabled={isHarvest === 'no'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
+              {isHarvest === 'no' && (
+                <p className="mt-1 text-xs text-gray-400">选择"是"后将自动填充当天日期</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">采收产量</label>

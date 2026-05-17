@@ -131,7 +131,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     orderId: undefined,
     orderCode: undefined,
     orgName: undefined,
-    seedlingTaskTime: undefined,
+    seedlingTaskTime: item.workHours || item.work_hours || undefined,
     planType: undefined,
     targetSurvivalRate: undefined,
     targetSurvivalCount: item.targetSurvivalCount,

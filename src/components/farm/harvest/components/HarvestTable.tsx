@@ -89,7 +89,7 @@ export function HarvestTableRow({
   const isExpanded = expandedRows.has(idx);
   const isSelected = selectedRows.includes(idx);
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
-  const colSpan = showCheckbox ? 11 : 10;
+  const colSpan = showCheckbox ? 13 : 12;
 
   return (
     <React.Fragment key={record.id}>
@@ -134,7 +134,7 @@ export function HarvestTableRow({
             </span>
           )}
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate}</td>
+        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate?.replace('T', ' ') || '-'}</td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</td>
         <td className="px-4 py-3 whitespace-nowrap">
@@ -143,6 +143,12 @@ export function HarvestTableRow({
               <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
             ))}
           </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">
+          {record.unitPrice ? `${record.unitPrice.toFixed(2)}` : '-'}
+        </td>
+        <td className="px-4 py-3 text-sm text-emerald-600 font-medium text-right whitespace-nowrap">
+          {record.totalAmount ? `${record.totalAmount.toFixed(2)}` : '-'}
         </td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</td>
         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor || '-'}</td>
@@ -225,10 +231,12 @@ export function HarvestTable({
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收单号</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库类型</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收日期</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收时间</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库仓库</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收人员</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">单价(元/kg)</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">收入(元)</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">产品数量</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人员</th>
             <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
