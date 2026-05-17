@@ -131,7 +131,7 @@ export function TempTaskTable({
       return task.status !== 'completed' && task.status !== 'cancelled';
     }
     if (batchDeleteMode) {
-      return task.status === 'pending';
+      return true;
     }
     return true;
   };
@@ -362,7 +362,7 @@ export function TempTaskTable({
             <span className="text-sm text-gray-500">
               已选择 {selectedRows.length} 项
               {batchEditMode && '（进行中/已完成状态不可编辑）'}
-              {batchDeleteMode && '（仅待执行状态可删除）'}
+              {batchDeleteMode && '（所有状态均可删除）'}
             </span>
           </div>
         </div>
