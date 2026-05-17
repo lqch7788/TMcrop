@@ -40,19 +40,6 @@ export function TaskFilterTabs({
           </span>
         </button>
         <button
-          onClick={() => onFilterChange('problem')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-            taskFilter === 'problem'
-              ? 'border-orange-500 text-orange-600 bg-orange-50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          巡查反馈处理
-          <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
-            {taskCounts.problem}
-          </span>
-        </button>
-        <button
           onClick={() => onFilterChange('production')}
           className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
             taskFilter === 'production'
@@ -76,6 +63,19 @@ export function TaskFilterTabs({
           临时任务处理
           <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
             {taskCounts.temp}
+          </span>
+        </button>
+        <button
+          onClick={() => onFilterChange('problem')}
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            taskFilter === 'problem'
+              ? 'border-orange-500 text-orange-600 bg-orange-50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          巡查反馈处理
+          <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
+            {taskCounts.problem}
           </span>
         </button>
       </div>

@@ -426,6 +426,23 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• projects:', e.message);
   }
 
+  // V10.0: IoT设备白名单表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS iot_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT NOT NULL UNIQUE,
+        device_name TEXT NOT NULL,
+        api_key TEXT NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ iot_devices 表创建成功');
+  } catch (e: any) {
+    console.log('• iot_devices:', e.message);
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

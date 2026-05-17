@@ -946,7 +946,7 @@ export function useTasks(): UseTasksReturn {
     );
   }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
 
-  // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 in_progress
+  // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress
   const acceptTask = useCallback((id: string) => {
     setTasks(prev => {
       const updated = prev.map(task => {
@@ -956,7 +956,7 @@ export function useTasks(): UseTasksReturn {
         const nowStr = now.toISOString().split('T')[0];
         const timeStr = now.toTimeString().slice(0, 5);
 
-        const record = createTaskRecord({ ...task, status: 'in_progress' }, 'accept', 'pending');
+        const record = createTaskRecord({ ...task, status: 'accepted' }, 'accept', 'pending');
 
         saveTaskRecords([record, ...taskRecords]);
 
@@ -982,7 +982,7 @@ export function useTasks(): UseTasksReturn {
 
         return {
           ...task,
-          status: 'in_progress',
+          status: 'accepted',
           acceptedAt: now.toISOString(),
           startTime: nowStr,
           updatedAt: now.toISOString(),
@@ -995,7 +995,7 @@ export function useTasks(): UseTasksReturn {
       return updated;
     });
 
-    // API异步同步：接受任务 → 开始执行
+    // API异步同步：接受任务
     syncToApi(
       () => enhancedApiClient.post(`/farm-tasks/${id}/accept`),
       `acceptTask(${id})`
