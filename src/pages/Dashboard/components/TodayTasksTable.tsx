@@ -17,42 +17,56 @@ interface TodayTasksTableProps {
   tasks: Task[];
 }
 
-// 优先级颜色
+// 优先级颜色映射
 function getPriorityColor(priority: string): string {
   switch (priority) {
-    case 'high': return 'text-red-600 bg-red-50';
-    case 'medium': return 'text-yellow-600 bg-yellow-50';
-    case 'low': return 'text-gray-600 bg-gray-50';
+    case 'urgent': return 'text-red-600 bg-red-50';
+    case 'high': return 'text-orange-600 bg-orange-50';
+    case 'normal': return 'text-blue-600 bg-blue-50';
     default: return 'text-gray-600 bg-gray-50';
   }
 }
 
-// 状态颜色
+// 状态颜色映射
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'pending': return 'text-gray-600 bg-gray-100';
-    case 'in_progress': return 'text-blue-600 bg-blue-100';
+    case 'draft': return 'text-gray-500 bg-gray-100';
+    case 'pending': return 'text-yellow-600 bg-yellow-50';
+    case 'accepted': return 'text-blue-600 bg-blue-100';
+    case 'in_progress': return 'text-indigo-600 bg-indigo-50';
+    case 'waiting_acceptance': return 'text-orange-600 bg-orange-50';
     case 'completed': return 'text-emerald-600 bg-emerald-100';
+    case 'rejected': return 'text-red-600 bg-red-50';
+    case 'failed': return 'text-red-700 bg-red-100';
+    case 'cancelled': return 'text-gray-400 bg-gray-100';
+    case 'abandoned': return 'text-gray-400 bg-gray-100';
     default: return 'text-gray-600 bg-gray-100';
   }
 }
 
-// 状态文本
+// 状态文本映射（后端值 → 中文）
 function getStatusText(status: string): string {
   switch (status) {
+    case 'draft': return '草稿';
     case 'pending': return '待执行';
+    case 'accepted': return '已接受';
     case 'in_progress': return '进行中';
+    case 'waiting_acceptance': return '待验收';
     case 'completed': return '已完成';
+    case 'rejected': return '已驳回';
+    case 'failed': return '失败';
+    case 'cancelled': return '已取消';
+    case 'abandoned': return '已废弃';
     default: return status;
   }
 }
 
-// 优先级文本
+// 优先级文本映射（后端值 → 中文）
 function getPriorityText(priority: string): string {
   switch (priority) {
-    case 'high': return '紧急';
-    case 'medium': return '重要';
-    case 'low': return '一般';
+    case 'urgent': return '紧急';
+    case 'high': return '高';
+    case 'normal': return '普通';
     default: return priority;
   }
 }

@@ -4,7 +4,7 @@
  * 样式与 TaskDispatchPage 统一
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { useReminder } from '../../hooks/useReminder';
@@ -126,10 +126,17 @@ export function FarmTaskHub() {
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
   // 员工列表（用于批量派发/重派选择执行人，从 TaskDispatchPage 合并）
   const workers = useWorkerStore((s) => s.workers);
-  const staffOptions = useMemo(() => workers.map(w => ({
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  const staffOptions = useMemo(() => Array.isArray(workers) ? workers.map(w => ({
     value: w.id || w.name,
     label: w.name,
-  })), [workers]);
+  })) : [], [workers]);
+
+  // 组件挂载时加载员工数据
+  useEffect(() => {
+    if (workers.length === 0) loadWorkers();
+  }, [workers.length, loadWorkers]);
+
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
   // 任务区域字段列表（从温室 Store 动态计算）
