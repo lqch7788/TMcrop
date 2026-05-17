@@ -695,7 +695,7 @@ export function useTasks(): UseTasksReturn {
     const finalAssigneeId = taskData.assigneeId ||
       (finalAssigneeName ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}` : '');
 
-    // 准备 Store 需要的任务数据
+    // 准备 Store 需要的任务数据（完整字段映射，确保数据不丢失）
     const apiTaskData = {
       title: taskData.title || '',
       type: taskData.type || '',
@@ -722,6 +722,18 @@ export function useTasks(): UseTasksReturn {
       greenhouseId: (taskData as Task).greenhouseId,
       greenhouseName: (taskData as Task).greenhouseName,
       cropName: (taskData as Task).cropName,
+      // 补充 CreateTaskModal 传入但之前缺失的字段
+      batchId: (taskData as Task).batchId || '',
+      batchCode: (taskData as Task).batchCode || '',
+      description: (taskData as Task).description || '',
+      remarks: (taskData as Task).remarks || '',
+      field: (taskData as Task).field || '',
+      assignee: (taskData as Task).assignee || '',
+      crop: (taskData as Task).crop || '',
+      teamId: (taskData as any).teamId || '',
+      teamName: (taskData as any).teamName || '',
+      toolsRemarks: (taskData as any).toolsRemarks || '',
+      requiredFeedback: (taskData as any).requiredFeedback || [],
     };
 
     // 使用 farmTaskStore 的 addTask（乐观本地更新 + API 同步 + 离线队列）

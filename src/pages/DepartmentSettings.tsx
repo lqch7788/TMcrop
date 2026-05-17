@@ -1,28 +1,194 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Target, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDepartmentStore } from '../stores';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Modal } from '../components/ui/modal';
+import { Label } from '../components/ui/label';
+import { Select } from '../components/ui/select';
+import type { Department } from '../services/apiBasicDataService';
 
-// 部门列表数据结构
-interface DepartmentData {
-  id: number;
-  code: string;
-  name: string;
-  parent: string;
-  manager: string;
-  staffCount: number;
-  description: string;
-  establishDate: string;
-  status: string;
-  statusClass: string;
+// 新增/编辑部门弹窗
+function DepartmentModal({
+  open,
+  onClose,
+  onSave,
+  editItem,
+  departmentOptions,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (item: Partial<Department>) => void;
+  editItem?: Department | null;
+  departmentOptions: Department[];
+}) {
+  const [form, setForm] = useState({
+    code: '',
+    name: '',
+    parentOid: '',
+    managerId: '',
+    managerName: '',
+    sortNumber: 0,
+    description: '',
+    status: 'active',
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editItem) {
+      setForm({
+        code: editItem.code || '',
+        name: editItem.name || '',
+        parentOid: editItem.parentOid || '',
+        managerId: editItem.managerId || '',
+        managerName: editItem.managerName || '',
+        sortNumber: editItem.sortNumber || 0,
+        description: editItem.description || '',
+        status: editItem.status || 'active',
+      });
+    } else {
+      setForm({ code: '', name: '', parentOid: '', managerId: '', managerName: '', sortNumber: 0, description: '', status: 'active' });
+    }
+  }, [editItem, open]);
+
+  const handleSubmit = async () => {
+    if (!form.code.trim() || !form.name.trim()) return;
+    setSaving(true);
+    try {
+      await onSave(form);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 过滤掉自身作为父部门选项
+  const parentOptions = departmentOptions.filter((d) => d.id !== editItem?.id && d.oid !== editItem?.oid);
+
+  return (
+    <Modal open={open} onClose={onClose} title={editItem ? '编辑部门' : '新增部门'}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>部门编码 *</Label>
+            <Input
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              placeholder="如: DEPT_TECH"
+            />
+          </div>
+          <div>
+            <Label>部门名称 *</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="如: 技术部"
+            />
+          </div>
+          <div>
+            <Label>上级部门</Label>
+            <Select
+              value={form.parentOid}
+              onChange={(e) => setForm((f) => ({ ...f, parentOid: e.target.value || '' }))}
+            >
+              <option value="">-- 无（顶级部门）--</option>
+              {parentOptions.map((d) => (
+                <option key={d.oid || d.id} value={d.oid}>
+                  {d.code} {d.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>部门负责人</Label>
+            <Input
+              value={form.managerName}
+              onChange={(e) => setForm((f) => ({ ...f, managerName: e.target.value }))}
+              placeholder="负责人姓名"
+            />
+          </div>
+          <div>
+            <Label>排序号</Label>
+            <Input
+              type="number"
+              value={form.sortNumber}
+              onChange={(e) => setForm((f) => ({ ...f, sortNumber: Number(e.target.value) || 0 }))}
+            />
+          </div>
+          <div>
+            <Label>状态</Label>
+            <Select
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value || 'active' }))}
+            >
+              <option value="active">启用</option>
+              <option value="inactive">停用</option>
+            </Select>
+          </div>
+        </div>
+        <div>
+          <Label>职能描述</Label>
+          <Input
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder="部门职能描述..."
+          />
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button onClick={handleSubmit} disabled={saving}>
+            {saving ? '保存中...' : '保存'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// 删除确认弹窗
+function DeleteConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  itemName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemName: string;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title="确认删除">
+      <div className="space-y-4">
+        <p className="text-gray-600">
+          确定要删除部门 <span className="font-semibold text-gray-900">{itemName}</span> 吗？如果存在子部门，请先删除子部门。
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 export default function DepartmentSettings() {
   const departments = useDepartmentStore((state) => state.departments);
   const loading = useDepartmentStore((state) => state.loading);
   const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
+  const addDepartment = useDepartmentStore((state) => state.addDepartment);
+  const updateDepartment = useDepartmentStore((state) => state.updateDepartment);
+  const removeDepartment = useDepartmentStore((state) => state.removeDepartment);
+
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [searchText, setSearchText] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Department | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
+
+  const pageSize = 10;
 
   useEffect(() => {
     if (departments.length === 0 && !loading) {
@@ -30,30 +196,45 @@ export default function DepartmentSettings() {
     }
   }, [departments.length, loading, loadDepartments]);
 
-  // 将API数据转换为页面需要的格式
-  const departmentList: DepartmentData[] = departments.map((dept, index) => ({
-    id: index + 1,
-    code: dept.oid || `D${String(index + 1).padStart(3, '0')}`,
-    name: dept.name,
-    parent: '-',
-    manager: dept.managerName || '-',
-    staffCount: 0,
-    description: '-',
-    establishDate: '-',
-    status: dept.status === 'active' ? '正常' : '停用',
-    statusClass: dept.status === 'active' ? 'normal' : 'inactive',
-  }));
+  // 搜索过滤
+  const filtered = searchText
+    ? departments.filter((d) =>
+        d.code?.includes(searchText) ||
+        d.name?.includes(searchText) ||
+        d.managerName?.includes(searchText)
+      )
+    : departments;
 
-  const totalPages = Math.ceil(departmentList.length / pageSize);
-  const paginatedDepartments = departmentList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // 分页状态重置
-  useEffect(() => {
+  const activeCount = departments.filter((d) => d.status === 'active').length;
+
+  const handleAdd = async (form: Partial<Department>) => {
+    await addDepartment(form);
     setCurrentPage(1);
-  }, [departments.length]);
+  };
+
+  const handleEdit = async (form: Partial<Department>) => {
+    if (!editItem) return;
+    // 使用 oid 或 id 作为标识
+    const id = editItem.id || editItem.oid;
+    await updateDepartment(id, form);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id || deleteTarget.oid;
+    await removeDepartment(id);
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+    const newTotal = Math.ceil((filtered.length - 1) / pageSize);
+    if (currentPage > newTotal && newTotal > 0) setCurrentPage(newTotal);
+  };
 
   return (
     <div className="space-y-6">
+      {/* 头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -69,6 +250,7 @@ export default function DepartmentSettings() {
         </div>
       </div>
 
+      {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
@@ -84,36 +266,56 @@ export default function DepartmentSettings() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
+              <span className="text-green-600 text-lg font-bold">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{departments.filter(d => d.status === '正常').length}</p>
-              <p className="text-xs text-gray-500">正常</p>
+              <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
+              <p className="text-xs text-gray-500">启用中</p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <span className="text-amber-600 text-lg">!</span>
+            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
+              <span className="text-gray-600 text-lg">○</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{departments.reduce((sum, d) => sum + d.staffCount, 0)}</p>
-              <p className="text-xs text-gray-500">员工总数</p>
+              <p className="text-2xl font-bold text-gray-900">{departments.length - activeCount}</p>
+              <p className="text-xs text-gray-500">停用</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* 工具栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex justify-end">
-          <button className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2">
+        <div className="flex justify-between items-center">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              className="pl-10"
+              placeholder="搜索部门编码/名称/负责人..."
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <Button
+            variant="default"
+            onClick={() => {
+              setEditItem(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4" />
             新增部门
-          </button>
+          </Button>
         </div>
       </div>
 
+      {/* 表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">部门列表</h3>
@@ -122,85 +324,134 @@ export default function DepartmentSettings() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门编码</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门名称</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">上级部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门负责人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门人数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职能描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">成立日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">排序</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedDepartments.map((dept) => (
-                <tr key={dept.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{dept.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{dept.parent}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{dept.manager}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{dept.staffCount}人</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{dept.description}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{dept.establishDate}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      dept.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {dept.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-gray-400">加载中...</td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                    {searchText ? '没有匹配的部门' : '暂无部门数据'}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginated.map((dept) => (
+                  <tr key={dept.id || dept.oid} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {(dept as any).parentName || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.managerName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.sortNumber || 0}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                          dept.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {dept.status === 'active' ? '启用' : '停用'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="编辑"
+                          onClick={() => {
+                            setEditItem(dept);
+                            setModalOpen(true);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          title="删除"
+                          onClick={() => {
+                            setDeleteTarget(dept);
+                            setDeleteModalOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {/* 分页组件 */}
+        {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
-            共 {departments.length} 条记录，第 {currentPage}/{totalPages} 页
+            共 {filtered.length} 条记录，第 {filtered.length === 0 ? 0 : currentPage}/{totalPages || 1} 页
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
+            </Button>
+            {[...Array(Math.min(totalPages, 5))].map((_, i) => (
+              <Button
                 key={i + 1}
+                size="sm"
+                variant={currentPage === i + 1 ? 'default' : 'ghost'}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
               >
                 {i + 1}
-              </button>
+              </Button>
             ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* 新增/编辑弹窗 */}
+      <DepartmentModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={editItem ? handleEdit : handleAdd}
+        editItem={editItem}
+        departmentOptions={departments}
+      />
+
+      {/* 删除确认弹窗 */}
+      <DeleteConfirmModal
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDelete}
+        itemName={deleteTarget ? `${deleteTarget.code} ${deleteTarget.name}` : ''}
+      />
     </div>
   );
 }

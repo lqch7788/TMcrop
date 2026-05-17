@@ -131,6 +131,10 @@ function transformTaskFields(item: any): any {
     completedAt: item.completedAt || '',
     // 备注
     remarks: item.remarks || '',
+    toolsRemarks: item.toolsRemarks || item.tools_remarks || '',
+    // 班组
+    teamId: item.teamId || item.team_id || '',
+    teamName: item.teamName || item.team_name || '',
     // 物资工具（JSON字段）
     materials: parseJsonField(item.materials, []),
     tools: parseJsonField(item.tools, []),
@@ -270,6 +274,10 @@ router.post('/', (req: Request, res: Response) => {
       type_config, typeConfig,
       sop_content, sopContent,
       description,
+      // 班组与工具备注
+      team_id, teamId,
+      team_name, teamName,
+      tools_remarks, toolsRemarks,
     } = req.body;
 
     const newId = id || task_code || taskCode || `NS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now() % 1000).padStart(3, '0')}`;
@@ -288,9 +296,10 @@ router.post('/', (req: Request, res: Response) => {
         type_name, source_type, dispatch_mode,
         feedback_requirements,
         rework_history, deadline_extensions,
-        type_config, sop_content, description
+        type_config, sop_content, description,
+        team_id, team_name, tools_remarks
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -333,10 +342,26 @@ router.post('/', (req: Request, res: Response) => {
       type_config || typeConfig ? (typeof (type_config || typeConfig) === 'object' ? JSON.stringify(type_config || typeConfig) : (type_config || typeConfig)) : '{}',
       sop_content || sopContent || '',
       description || '',
+      team_id || teamId || "",
+      team_name || teamName || "",
+      tools_remarks || toolsRemarks || "",
     ]);
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId } });
+
+    // 查询刚创建的完整记录，返回给前端（避免Store乐观更新被空数据覆盖）
+    const created = db.exec('SELECT * FROM farm_tasks WHERE id = ?', [newId]);
+    if (created && created.length > 0 && created[0].values && created[0].values.length > 0) {
+      const row = created[0];
+      const columns = row.columns;
+      const values = row.values[0];
+      const obj: any = {};
+      columns.forEach((col: string, i: number) => { obj[col] = values[i]; });
+      const transformed = transformTaskFields(obj);
+      res.status(201).json({ success: true, data: transformed });
+    } else {
+      res.status(201).json({ success: true, data: { id: newId } });
+    }
   } catch (error) {
     console.error('创建农事任务失败:', error);
     res.status(500).json({ success: false, error: '创建农事任务失败' });
@@ -387,6 +412,12 @@ const FIELD_NAME_MAP: Record<string, string> = {
   title: 'task_title',
   planStart: 'plan_date',
   planEnd: 'plan_date',
+  teamId: 'team_id',
+  teamName: 'team_name',
+  team_id: 'team_id',
+  team_name: 'team_name',
+  toolsRemarks: 'tools_remarks',
+  tools_remarks: 'tools_remarks',
 };
 
 /**

@@ -213,8 +213,8 @@ export function PlantingTable({
   const endIndex = Math.min(startIndex + pagination.pageSize, data.length);
   const currentData = data.slice(startIndex, endIndex);
 
-  // 判断是否需要显示复选框列（仅在导出模式下显示）
-  const showCheckbox = exportMode;
+  // 判断是否需要显示复选框列（导出模式、打印模式、非正常操作模式）
+  const showCheckbox = exportMode || printMode;
 
   // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
   const statusMap = {
@@ -609,6 +609,14 @@ export function PlantingTable({
             /* 打印模式 */
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
+              {onExportSelectAll && (
+                <button
+                  onClick={onExportSelectAll}
+                  className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  {selectedRows.length === data.length ? '全不选' : '全选'}
+                </button>
+              )}
               <button
                 onClick={confirmPrint}
                 disabled={selectedRows.length === 0}
@@ -700,8 +708,8 @@ export function PlantingTable({
 
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        {/* 导出模式下显示选择状态 */}
-        {exportMode && (
+        {/* 导出/打印模式下显示选择状态 */}
+        {(exportMode || printMode) && (
           <div className="flex items-center gap-4">
             {onExportSelectAll && (
               <button

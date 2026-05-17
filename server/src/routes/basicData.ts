@@ -17,10 +17,12 @@ router.get('/departments', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT id, oid, code, name, manager_id, manager_name, parent_oid, sort_number, status, created_at
-      FROM departments
-      WHERE status = 'active'
-      ORDER BY sort_number
+      SELECT d.id, d.oid, d.code, d.name, d.manager_id, d.manager_name, d.parent_oid, d.sort_number, d.description, d.status, d.created_at,
+             p.name as parent_name
+      FROM departments d
+      LEFT JOIN departments p ON d.parent_oid = p.oid
+      WHERE d.status = 'active'
+      ORDER BY d.sort_number
     `);
 
     if (result.length === 0) {
@@ -42,6 +44,86 @@ router.get('/departments', (req, res) => {
   } catch (error) {
     console.error('获取部门数据失败:', error);
     res.status(500).json({ success: false, error: '获取部门数据失败' });
+  }
+});
+
+/**
+ * 创建部门
+ * POST /api/basic-data/departments
+ */
+router.post('/departments', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { name, code, parentOid, managerId, managerName, sortNumber, description } = req.body;
+
+    if (!name || !code) {
+      return res.status(400).json({ success: false, error: '部门名称和编码不能为空' });
+    }
+
+    const oid = `DEPT${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [oid, oid, name, code, parentOid || '', managerId || '', managerName || '', sortNumber || 0, description || '', now, now]);
+
+    res.status(201).json({ success: true, message: '部门创建成功', data: { id: oid, oid, name, code } });
+  } catch (error) {
+    console.error('创建部门失败:', error);
+    res.status(500).json({ success: false, error: '创建部门失败' });
+  }
+});
+
+/**
+ * 更新部门
+ * PUT /api/basic-data/departments/:id
+ */
+router.put('/departments/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { name, code, parentOid, managerId, managerName, sortNumber, description, status } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE departments
+      SET name = COALESCE(?, name),
+          code = COALESCE(?, code),
+          parent_oid = COALESCE(?, parent_oid),
+          manager_id = COALESCE(?, manager_id),
+          manager_name = COALESCE(?, manager_name),
+          sort_number = COALESCE(?, sort_number),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [name, code, parentOid, managerId, managerName, sortNumber, description, status, now, id]);
+
+    res.json({ success: true, message: '部门更新成功' });
+  } catch (error) {
+    console.error('更新部门失败:', error);
+    res.status(500).json({ success: false, error: '更新部门失败' });
+  }
+});
+
+/**
+ * 删除部门（软删除）
+ * DELETE /api/basic-data/departments/:id
+ */
+router.delete('/departments/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE departments SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '部门删除成功' });
+  } catch (error) {
+    console.error('删除部门失败:', error);
+    res.status(500).json({ success: false, error: '删除部门失败' });
   }
 });
 
@@ -1470,6 +1552,379 @@ router.delete('/system-configs/:id', (req, res) => {
   } catch (error) {
     console.error('删除系统配置失败:', error);
     res.status(500).json({ success: false, error: '删除系统配置失败' });
+  }
+});
+
+/**
+ * 获取所有工序定义
+ * GET /api/basic-data/process-definitions
+ */
+router.get('/process-definitions', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, process_code, process_name, process_type, unit, default_price, default_bonus, description, status, created_at, updated_at
+      FROM process_definitions
+      WHERE status = 'active'
+      ORDER BY process_code
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取工序定义失败:', error);
+    res.status(500).json({ success: false, error: '获取工序定义失败' });
+  }
+});
+
+/**
+ * 创建工序定义
+ * POST /api/basic-data/process-definitions
+ */
+router.post('/process-definitions', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { processCode, processName, processType, unit, defaultPrice, defaultBonus, description } = req.body;
+
+    if (!processCode || !processName) {
+      return res.status(400).json({ success: false, error: '工序编码和名称不能为空' });
+    }
+
+    const oid = `PD${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO process_definitions (oid, process_code, process_name, process_type, unit, default_price, default_bonus, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [oid, processCode, processName, processType || '', unit || '亩', defaultPrice || 0, defaultBonus || 0, description || '', now, now]);
+
+    res.json({ success: true, message: '工序定义创建成功', data: { oid, processCode, processName } });
+  } catch (error) {
+    console.error('创建工序定义失败:', error);
+    res.status(500).json({ success: false, error: '创建工序定义失败' });
+  }
+});
+
+/**
+ * 更新工序定义
+ * PUT /api/basic-data/process-definitions/:id
+ */
+router.put('/process-definitions/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { processCode, processName, processType, unit, defaultPrice, defaultBonus, description, status } = req.body;
+
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE process_definitions
+      SET process_code = COALESCE(?, process_code),
+          process_name = COALESCE(?, process_name),
+          process_type = COALESCE(?, process_type),
+          unit = COALESCE(?, unit),
+          default_price = COALESCE(?, default_price),
+          default_bonus = COALESCE(?, default_bonus),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [processCode, processName, processType, unit, defaultPrice, defaultBonus, description, status, now, id]);
+
+    res.json({ success: true, message: '工序定义更新成功' });
+  } catch (error) {
+    console.error('更新工序定义失败:', error);
+    res.status(500).json({ success: false, error: '更新工序定义失败' });
+  }
+});
+
+/**
+ * 删除工序定义（软删除）
+ * DELETE /api/basic-data/process-definitions/:id
+ */
+router.delete('/process-definitions/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE process_definitions SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '工序定义删除成功' });
+  } catch (error) {
+    console.error('删除工序定义失败:', error);
+    res.status(500).json({ success: false, error: '删除工序定义失败' });
+  }
+});
+
+// ============================================
+// 分级审批 — 审批级别配置 API
+// ============================================
+
+/**
+ * 获取所有审批级别配置
+ * GET /api/basic-data/approval-level-configs
+ */
+router.get('/approval-level-configs', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, level_code, level_name, description, approver_count, require_multi_approver, approver_roles, sort_order, status, created_at, updated_at
+      FROM approval_level_configs
+      WHERE status = 'active'
+      ORDER BY sort_order
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        let val = row[i];
+        // 解析 JSON 字段
+        if (col === 'approver_roles' && val) {
+          try { val = JSON.parse(val); } catch (e) { /* keep as string */ }
+        }
+        obj[camelCol] = val;
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取审批级别配置失败:', error);
+    res.status(500).json({ success: false, error: '获取审批级别配置失败' });
+  }
+});
+
+/**
+ * 更新审批级别配置
+ * PUT /api/basic-data/approval-level-configs/:id
+ */
+router.put('/approval-level-configs/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { levelName, description, approverCount, requireMultiApprover, approverRoles, status } = req.body;
+    const now = new Date().toISOString();
+
+    const rolesJson = approverRoles ? JSON.stringify(approverRoles) : undefined;
+
+    db.run(`
+      UPDATE approval_level_configs
+      SET level_name = COALESCE(?, level_name),
+          description = COALESCE(?, description),
+          approver_count = COALESCE(?, approver_count),
+          require_multi_approver = COALESCE(?, require_multi_approver),
+          approver_roles = COALESCE(?, approver_roles),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [levelName, description, approverCount, requireMultiApprover, rolesJson, status, now, id]);
+
+    res.json({ success: true, message: '审批级别配置更新成功' });
+  } catch (error) {
+    console.error('更新审批级别配置失败:', error);
+    res.status(500).json({ success: false, error: '更新审批级别配置失败' });
+  }
+});
+
+// ============================================
+// 分级审批 — 审批金额阈值 API
+// ============================================
+
+/**
+ * 获取所有金额阈值配置
+ * GET /api/basic-data/approval-amount-thresholds
+ */
+router.get('/approval-amount-thresholds', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, max_amount, level_code, sort_order, status, created_at, updated_at
+      FROM approval_amount_thresholds
+      WHERE status = 'active'
+      ORDER BY sort_order
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取金额阈值失败:', error);
+    res.status(500).json({ success: false, error: '获取金额阈值失败' });
+  }
+});
+
+/**
+ * 创建金额阈值
+ * POST /api/basic-data/approval-amount-thresholds
+ */
+router.post('/approval-amount-thresholds', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { maxAmount, levelCode, sortOrder } = req.body;
+
+    if (!maxAmount || !levelCode) {
+      return res.status(400).json({ success: false, error: '金额上限和审批级别不能为空' });
+    }
+
+    const oid = `AAT${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO approval_amount_thresholds (oid, max_amount, level_code, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'active', ?, ?)
+    `, [oid, maxAmount, levelCode, sortOrder || 0, now, now]);
+
+    res.json({ success: true, message: '金额阈值创建成功', data: { oid, maxAmount, levelCode } });
+  } catch (error) {
+    console.error('创建金额阈值失败:', error);
+    res.status(500).json({ success: false, error: '创建金额阈值失败' });
+  }
+});
+
+/**
+ * 更新金额阈值
+ * PUT /api/basic-data/approval-amount-thresholds/:id
+ */
+router.put('/approval-amount-thresholds/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { maxAmount, levelCode, sortOrder, status } = req.body;
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE approval_amount_thresholds
+      SET max_amount = COALESCE(?, max_amount),
+          level_code = COALESCE(?, level_code),
+          sort_order = COALESCE(?, sort_order),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [maxAmount, levelCode, sortOrder, status, now, id]);
+
+    res.json({ success: true, message: '金额阈值更新成功' });
+  } catch (error) {
+    console.error('更新金额阈值失败:', error);
+    res.status(500).json({ success: false, error: '更新金额阈值失败' });
+  }
+});
+
+/**
+ * 删除金额阈值（软删除）
+ * DELETE /api/basic-data/approval-amount-thresholds/:id
+ */
+router.delete('/approval-amount-thresholds/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+    db.run(`UPDATE approval_amount_thresholds SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+    res.json({ success: true, message: '金额阈值删除成功' });
+  } catch (error) {
+    console.error('删除金额阈值失败:', error);
+    res.status(500).json({ success: false, error: '删除金额阈值失败' });
+  }
+});
+
+// ============================================
+// 分级审批 — 审批类型规则 API
+// ============================================
+
+/**
+ * 获取所有审批类型规则
+ * GET /api/basic-data/approval-type-rules
+ */
+router.get('/approval-type-rules', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, approval_type, force_exempt, force_strict, forced_level, batch_approval_supported, custom_approver_count, remark, status, created_at, updated_at
+      FROM approval_type_rules
+      WHERE status = 'active'
+      ORDER BY id
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取审批类型规则失败:', error);
+    res.status(500).json({ success: false, error: '获取审批类型规则失败' });
+  }
+});
+
+/**
+ * 更新审批类型规则
+ * PUT /api/basic-data/approval-type-rules/:id
+ */
+router.put('/approval-type-rules/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { forceExempt, forceStrict, forcedLevel, batchApprovalSupported, customApproverCount, remark, status } = req.body;
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE approval_type_rules
+      SET force_exempt = COALESCE(?, force_exempt),
+          force_strict = COALESCE(?, force_strict),
+          forced_level = COALESCE(?, forced_level),
+          batch_approval_supported = COALESCE(?, batch_approval_supported),
+          custom_approver_count = COALESCE(?, custom_approver_count),
+          remark = COALESCE(?, remark),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [forceExempt, forceStrict, forcedLevel, batchApprovalSupported, customApproverCount, remark, status, now, id]);
+
+    res.json({ success: true, message: '审批类型规则更新成功' });
+  } catch (error) {
+    console.error('更新审批类型规则失败:', error);
+    res.status(500).json({ success: false, error: '更新审批类型规则失败' });
   }
 });
 
