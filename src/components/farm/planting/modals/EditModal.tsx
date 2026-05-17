@@ -36,6 +36,7 @@ export function EditModal({
     plantingDate: record.plantingDate,
     soilPH: record.soilPH,
     soilEC: record.soilEC,
+    attritionRate: record.attritionRate ?? 0,
     remarks: record.remarks || ''
   });
 
@@ -50,6 +51,7 @@ export function EditModal({
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,
         soilEC: formData.soilEC,
+        attritionRate: formData.attritionRate,
         remarks: formData.remarks
       });
       onSuccess?.();
@@ -122,6 +124,20 @@ export function EditModal({
             type="date"
             value={formData.plantingDate}
             onChange={(e) => setFormData({ ...formData, plantingDate: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
+        {/* 损耗率(%) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">损耗率(%)</label>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            max="100"
+            value={formData.attritionRate ?? ''}
+            onChange={(e) => setFormData({ ...formData, attritionRate: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

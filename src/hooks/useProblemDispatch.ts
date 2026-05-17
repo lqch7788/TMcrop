@@ -1,14 +1,43 @@
 /**
  * 问题分派 Hook
  * 用于将问题分派给员工处理，并创建关联任务
+ * V2.0: 数据层从 localStorage (usePersistentProblems) 迁移到 API (useProblemStore)
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { usePersistentProblems, type ProblemEntry } from './usePersistentProblems';
+import { useProblemStore, type ProblemData } from '../stores/useProblemStore';
 import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
 import { useTasks } from './useTasks';
 import type { Task } from '../types';
 import { useWorkerStore } from '../stores/useWorkerStore';
+
+// ========== 状态映射（中文 ↔ 英文） ==========
+
+const STATUS_EN_TO_CN: Record<string, string> = {
+  'pending': '待处理',
+  'in_progress': '处理中',
+  'waiting_acceptance': '待验收',
+  'completed': '已处理',
+};
+
+const STATUS_CN = {
+  PENDING: '待处理',
+  IN_PROGRESS: '处理中',
+  WAITING_ACCEPTANCE: '待验收',
+  COMPLETED: '已处理',
+} as const;
+
+const STATUS_EN = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  WAITING_ACCEPTANCE: 'waiting_acceptance',
+  COMPLETED: 'completed',
+} as const;
+
+/** 检查问题状态是否为指定中文状态 */
+const isStatus = (p: ProblemData, cn: string): boolean => {
+  return p.status === cn || p.statusLabel === cn || p.status === STATUS_EN_TO_CN[cn];
+};
 
 // 问题类型到任务类型的映射
 const PROBLEM_TYPE_MAP: Record<string, Task['type']> = {
@@ -20,7 +49,7 @@ const PROBLEM_TYPE_MAP: Record<string, Task['type']> = {
 };
 
 // 问题严重程度到任务优先级的映射
-const SEVERITY_PRIORITY_MAP: Record<ProblemEntry['issueSeverity'], Task['priority']> = {
+const SEVERITY_PRIORITY_MAP: Record<string, Task['priority']> = {
   '严重': 'high',
   '中等': 'medium',
   '轻微': 'low',
@@ -42,7 +71,7 @@ export interface ProblemFlowRecord {
   problemId: number;
   operatorId: string;
   operatorName: string;
-  action: 'report' | 'dispatch' | 'accept' | 'reject' | 'start' | 'submit' | 'approve' | 'complete' | 'comment' | 'progress';
+  action: 'report' | 'dispatch' | 'accept' | 'reject' | 'start' | 'submit' | 'approve' | 'complete' | 'comment' | 'progress' | 'reject_acceptance';
   fromStatus: string;
   toStatus: string;
   comment?: string;
@@ -61,7 +90,6 @@ export interface ProblemFlowRecord {
 // 计算下一个任务序号（基于日期+序号）
 const getNextTaskSeq = (tasks: Task[], prefix: string): string => {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  // 找出今天已存在的任务序号
   const todaySeqs = tasks
     .filter(t => t.id.startsWith(`${prefix}-${today}`))
     .map(t => {
@@ -87,7 +115,7 @@ const generateTaskCode = (tasks: Task[]) => {
 };
 
 // 计算截止日期（根据严重程度）
-const calculateDueDate = (severity: ProblemEntry['issueSeverity']): string => {
+const calculateDueDate = (severity: string): string => {
   const days = severity === '严重' ? 1 : severity === '中等' ? 3 : 7;
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -95,10 +123,20 @@ const calculateDueDate = (severity: ProblemEntry['issueSeverity']): string => {
 };
 
 /**
- * 问题分派 Hook
+ * 问题分派 Hook (V2.0 — API 数据层)
  */
 export function useProblemDispatch() {
-  const { problems, updateProblem } = usePersistentProblems();
+  // V2.0: 使用 API-backed Zustand Store 替代 localStorage
+  const storeProblems = useProblemStore((s) => s.problems);
+  const fetchProblems = useProblemStore((s) => s.fetchProblems);
+  const updateProblemInStore = useProblemStore((s) => s.updateProblem);
+  const createProblemInStore = useProblemStore((s) => s.createProblem);
+
+  // 初始化加载 API 数据
+  useEffect(() => {
+    fetchProblems();
+  }, [fetchProblems]);
+
   // 使用 useTasks 来统一管理任务（确保任务状态同步）
   const { tasks, createTask, updateTask, updateTaskStatus } = useTasks();
   const [dispatchRecords, setDispatchRecords] = useLocalStorage<DispatchRecord[]>(
@@ -106,28 +144,41 @@ export function useProblemDispatch() {
     []
   );
 
-  // 确保员工数据已加载（Store 内部有 5 分钟缓存，不会重复请求）
+  // 确保员工数据已加载
   const loadWorkers = useWorkerStore((s) => s.loadWorkers);
   useEffect(() => {
     loadWorkers();
   }, [loadWorkers]);
 
+  // 辅助：从 ProblemData 获取问题描述文本
+  const getIssueText = (p: ProblemData): string => p.issueText || p.description || p.title || '';
+  // 辅助：获取问题严重程度
+  const getIssueSeverity = (p: ProblemData): string => p.issueSeverity || '中等';
+  // 辅助：获取 flowRecords（数组）
+  const getFlowRecords = (p: ProblemData): ProblemFlowRecord[] => p.flowRecords || [];
+
   // 待分派问题（状态为"待处理"且未关联任务）
   const pendingProblems = useMemo(
-    () => problems.filter(p => p.status === '待处理' && !p.sourceTaskId),
-    [problems]
+    () => storeProblems.filter(p => isStatus(p, STATUS_CN.PENDING) && !p.sourceTaskId),
+    [storeProblems]
   );
 
   // 已分派问题（状态为"处理中"或已关联任务）
   const dispatchedProblems = useMemo(
-    () => problems.filter(p => p.status === '处理中' || (p.status === '待处理' && p.sourceTaskId)),
-    [problems]
+    () => storeProblems.filter(p => isStatus(p, STATUS_CN.IN_PROGRESS) || (isStatus(p, STATUS_CN.PENDING) && p.sourceTaskId)),
+    [storeProblems]
+  );
+
+  // 待验收问题
+  const waitingAcceptanceProblems = useMemo(
+    () => storeProblems.filter(p => isStatus(p, STATUS_CN.WAITING_ACCEPTANCE)),
+    [storeProblems]
   );
 
   // 已处理问题
   const handledProblems = useMemo(
-    () => problems.filter(p => p.status === '已处理'),
-    [problems]
+    () => storeProblems.filter(p => isStatus(p, STATUS_CN.COMPLETED)),
+    [storeProblems]
   );
 
   // 获取问题关联的任务
@@ -139,8 +190,6 @@ export function useProblemDispatch() {
   );
 
   // 分派问题给员工
-  // expectedCompletion: 分派人员设置的期望完成时间，格式为 YYYY-MM-DD
-  // requiredFeedback: 必填反馈要求列表，如 ['gps', 'photo_before', 'photo_after', 'material', 'voice']
   const dispatchProblem = useCallback((
     problemId: number,
     assigneeId: string,
@@ -151,71 +200,75 @@ export function useProblemDispatch() {
     requiredFeedback?: string[],
     customPriority?: 'high' | 'medium' | 'low'
   ): Task | null => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return null;
 
+    const issueText = getIssueText(problem);
+    const severity = getIssueSeverity(problem);
+
     // 判断问题类型
-    const getProblemType = (issueText: string): Task['type'] => {
-      if (issueText.includes('虫') || issueText.includes('蚜')) return 'spraying';
-      if (issueText.includes('病') || issueText.includes('斑') || issueText.includes('灰霉')) return 'spraying';
-      if (issueText.includes('水') || issueText.includes('旱')) return 'irrigation';
-      if (issueText.includes('肥')) return 'fertilization';
+    const getProblemType = (text: string): Task['type'] => {
+      if (text.includes('虫') || text.includes('蚜')) return 'spraying';
+      if (text.includes('病') || text.includes('斑') || text.includes('灰霉')) return 'spraying';
+      if (text.includes('水') || text.includes('旱')) return 'irrigation';
+      if (text.includes('肥')) return 'fertilization';
       return 'scouting';
     };
 
-    // 确定优先级：优先使用自定义优先级，否则根据问题严重程度自动映射
-    const priority: Task['priority'] = customPriority || SEVERITY_PRIORITY_MAP[problem.issueSeverity];
+    // 确定优先级
+    const priority: Task['priority'] = customPriority || SEVERITY_PRIORITY_MAP[severity] || 'medium';
 
-    // 通过 useTasks.createTask 创建任务（统一任务管理，新任务自动添加到列表前面）
+    // 通过 useTasks.createTask 创建任务
     const newTask = createTask({
-      title: `【问题处理】${problem.issueText.slice(0, 30)}`,
-      type: getProblemType(problem.issueText),
+      title: `【问题处理】${issueText.slice(0, 30)}`,
+      type: getProblemType(issueText),
       typeName: '问题处理',
       priority,
       status: 'pending',
       batchId: '',
       batchCode: '',
-      greenhouseId: problem.greenhouseId,
-      greenhouseName: problem.greenhouseName,
+      greenhouseId: problem.greenhouseId || '',
+      greenhouseName: problem.greenhouseName || '',
       mode: 'glass' as 'glass' | 'solar',
       assigneeId,
       assigneeName,
       assignerId: dispatcherId,
       assignerName: dispatcherName,
-      dueDate: expectedCompletion || calculateDueDate(problem.issueSeverity),
+      dueDate: expectedCompletion || calculateDueDate(severity),
       workDuration: 0,
       requiredMaterials: [],
-      description: `问题描述：${problem.issueText}\n严重程度：${problem.issueSeverity}\n巡检时间：${problem.checkDate} ${problem.checkTime}\n温室：${problem.greenhouseName}\n作物：${problem.cropName}`,
+      description: `问题描述：${issueText}\n严重程度：${severity}\n巡查时间：${problem.checkDate || ''} ${problem.checkTime || ''}\n温室：${problem.greenhouseName || ''}\n作物：${problem.cropName || ''}`,
       actualWorkload: 0,
       sourceProblemId: problemId,
       requiredFeedback: requiredFeedback || [],
-      // 保留原始巡查单号（用于追踪问题处理全过程）
-      sourceId: problem.sourceId,
-      sourceCode: problem.sourceId,
-      // 派发模式标记（问题处理模式）
+      sourceId: problem.sourceId || '',
+      sourceCode: problem.sourceId || '',
       dispatchMode: 'problem' as 'farm' | 'tempTask' | 'smart' | 'problem',
     });
 
-    // 创建流转记录
+    // 创建流转记录（中文标签用于UI展示）
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId: dispatcherId,
       operatorName: dispatcherName,
       action: 'dispatch',
-      fromStatus: '待处理',
-      toStatus: '处理中',
+      fromStatus: STATUS_CN.PENDING,
+      toStatus: STATUS_CN.IN_PROGRESS,
       comment: `分派给 ${assigneeName} 处理`,
       actionTime: new Date().toISOString(),
     };
 
-    // 更新问题状态并添加流转记录
-    updateProblem(problemId, {
-      status: '处理中',
+    // 通过 API Store 更新问题
+    const currentFlowRecords = getFlowRecords(problem);
+    updateProblemInStore(problemId, {
+      status: STATUS_EN.IN_PROGRESS,
       handler: assigneeName,
+      handleDate: '',
+      handleResult: '',
       sourceTaskId: newTask.id,
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
-      expectedCompletion,
+      flowRecords: [...currentFlowRecords, flowRecord] as any,
+      expectedCompletion: expectedCompletion || '',
     });
 
     // 记录分派历史
@@ -229,7 +282,7 @@ export function useProblemDispatch() {
     }]);
 
     return newTask;
-  }, [problems, updateProblem, createTask, setDispatchRecords]);
+  }, [storeProblems, updateProblemInStore, createTask, setDispatchRecords]);
 
   // 批量分派问题
   const batchDispatchProblems = useCallback((
@@ -261,17 +314,17 @@ export function useProblemDispatch() {
     return createdTasks;
   }, [dispatchProblem]);
 
-  // 更新问题处理结果（任务完成时调用）
+  // 更新问题处理结果
   const updateProblemResult = useCallback((
     problemId: number,
     handleResult: string
   ) => {
-    updateProblem(problemId, {
-      status: '已处理',
+    updateProblemInStore(problemId, {
+      status: STATUS_EN.COMPLETED,
       handleDate: new Date().toISOString().slice(0, 10),
       handleResult,
     });
-  }, [updateProblem]);
+  }, [updateProblemInStore]);
 
   // 接单问题
   const acceptProblem = useCallback((
@@ -279,27 +332,28 @@ export function useProblemDispatch() {
     operatorId: string,
     operatorName: string
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'accept',
-      fromStatus: problem.status,
-      toStatus: problem.status,
+      fromStatus: currentStatusCn,
+      toStatus: currentStatusCn,
       comment: '已接单，开始处理',
       actionTime: new Date().toISOString(),
     };
 
-    updateProblem(problemId, {
+    updateProblemInStore(problemId, {
       acceptedBy: operatorName,
       acceptedTime: new Date().toISOString(),
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
+      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
-  }, [problems, updateProblem]);
+  }, [storeProblems, updateProblemInStore]);
 
   // 拒绝问题
   const rejectProblem = useCallback((
@@ -308,34 +362,34 @@ export function useProblemDispatch() {
     operatorName: string,
     reason: string
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'reject',
-      fromStatus: problem.status,
-      toStatus: '待处理',
+      fromStatus: currentStatusCn,
+      toStatus: STATUS_CN.PENDING,
       comment: `拒绝原因：${reason}`,
       actionTime: new Date().toISOString(),
     };
 
-    updateProblem(problemId, {
-      status: '待处理',
+    updateProblemInStore(problemId, {
+      status: STATUS_EN.PENDING,
       rejectedBy: operatorName,
       rejectedReason: reason,
       rejectedTime: new Date().toISOString(),
-      handler: undefined,
-      sourceTaskId: undefined,
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
+      handler: '',
+      sourceTaskId: '',
+      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
-  }, [problems, updateProblem]);
+  }, [storeProblems, updateProblemInStore]);
 
-  // 提交反馈（问题处理完成，提交待验收）
-  // feedback: 包含文字结果和完整反馈数据（位置、照片、语音等）
+  // 提交反馈
   const submitProblemFeedback = useCallback((
     problemId: number,
     operatorId: string,
@@ -346,32 +400,32 @@ export function useProblemDispatch() {
       feedbackData?: ProblemFlowRecord['feedbackData'];
     }
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'submit',
-      fromStatus: problem.status,
-      toStatus: '待验收',
+      fromStatus: currentStatusCn,
+      toStatus: STATUS_CN.WAITING_ACCEPTANCE,
       comment: feedback.resultText || '处理完成，提交验收',
       actionTime: new Date().toISOString(),
       feedbackData: feedback.feedbackData,
     };
 
-    updateProblem(problemId, {
-      status: '待验收',
+    updateProblemInStore(problemId, {
+      status: STATUS_EN.WAITING_ACCEPTANCE,
       handleResult: feedback.resultText,
       handleDate: new Date().toISOString().slice(0, 10),
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
+      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
-  }, [problems, updateProblem]);
+  }, [storeProblems, updateProblemInStore]);
 
-  // 记录进度（每次提交进度时调用）
-  // feedbackData: 包含位置、照片、语音等反馈数据
+  // 记录进度
   const addProgressRecord = useCallback((
     problemId: number,
     operatorId: string,
@@ -380,121 +434,118 @@ export function useProblemDispatch() {
     comment?: string,
     feedbackData?: ProblemFlowRecord['feedbackData']
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'progress',
-      fromStatus: problem.status,
-      toStatus: '处理中',
+      fromStatus: currentStatusCn,
+      toStatus: STATUS_CN.IN_PROGRESS,
       comment: comment || `提交进度：${progress}%`,
       actionTime: new Date().toISOString(),
       feedbackData,
     };
 
-    updateProblem(problemId, {
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
+    updateProblemInStore(problemId, {
+      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
-  }, [problems, updateProblem]);
+  }, [storeProblems, updateProblemInStore]);
 
-  // 验收完成（问题关闭）
+  // 验收完成
   const approveProblemCompletion = useCallback((
     problemId: number,
     operatorId: string,
     operatorName: string,
     comment?: string
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'approve',
-      fromStatus: problem.status,
-      toStatus: '已处理',
+      fromStatus: currentStatusCn,
+      toStatus: STATUS_CN.COMPLETED,
       comment: comment || '验收通过，问题关闭',
       actionTime: new Date().toISOString(),
     };
 
-    updateProblem(problemId, {
-      status: '已处理',
+    updateProblemInStore(problemId, {
+      status: STATUS_EN.COMPLETED,
       completionTime: new Date().toISOString(),
-      flowRecords: [...(problem.flowRecords || []), flowRecord],
+      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
 
-    // 同步更新关联任务的状态为已完成
+    // 同步更新关联任务
     if (problem.sourceTaskId) {
       updateTaskStatus(problem.sourceTaskId, 'completed');
     }
-  }, [problems, updateProblem, updateTaskStatus]);
+  }, [storeProblems, updateProblemInStore, updateTaskStatus]);
 
-  // 验收返工（退回处理）
-  // 第一次返工：保持原执行人，执行人继续处理
-  // 第二次返工：退回问题分派页面，由分派员重新分派
+  // 验收返工
   const rejectAcceptance = useCallback((
     problemId: number,
     operatorId: string,
     operatorName: string,
     reason: string
   ) => {
-    const problem = problems.find(p => p.id === problemId);
+    const problem = storeProblems.find(p => p.id === problemId);
     if (!problem) return;
 
     const newReworkCount = (problem.reworkCount || 0) + 1;
-    const shouldReassign = newReworkCount >= 2;  // 第二次返工需要重新分派
+    const shouldReassign = newReworkCount >= 2;
 
+    const currentStatusCn = problem.statusLabel || STATUS_EN_TO_CN[problem.status || ''] || problem.status || '';
     const flowRecord: ProblemFlowRecord = {
       id: `FR-${Date.now()}`,
       problemId,
       operatorId,
       operatorName,
       action: 'reject_acceptance',
-      fromStatus: problem.status,
-      toStatus: shouldReassign ? '待处理' : problem.status,  // 第一次返工保持原状态
+      fromStatus: currentStatusCn,
+      toStatus: shouldReassign ? STATUS_CN.PENDING : currentStatusCn,
       comment: `返工原因：${reason}${shouldReassign ? '【已超限，退回重新分派】' : ''}`,
       actionTime: new Date().toISOString(),
     };
 
     if (shouldReassign) {
-      // 第二次返工：清除handler和sourceTaskId，问题进入待分派列表
-      updateProblem(problemId, {
-        status: '待处理',
-        handler: undefined,
-        sourceTaskId: undefined,
+      updateProblemInStore(problemId, {
+        status: STATUS_EN.PENDING,
+        handler: '',
+        sourceTaskId: '',
         reworkCount: newReworkCount,
-        flowRecords: [...(problem.flowRecords || []), flowRecord],
+        flowRecords: [...getFlowRecords(problem), flowRecord] as any,
       });
-      // 任务状态变为已拒绝（原执行人被退回，任务不再属于他）
       if (problem.sourceTaskId) {
         updateTaskStatus(problem.sourceTaskId, 'rejected');
       }
     } else {
-      // 第一次返工：保持原执行人，增加返工计数
-      updateProblem(problemId, {
+      updateProblemInStore(problemId, {
         reworkCount: newReworkCount,
-        flowRecords: [...(problem.flowRecords || []), flowRecord],
+        flowRecords: [...getFlowRecords(problem), flowRecord] as any,
       });
-      // 任务状态变为进行中，执行人继续处理（不改变handler）
       if (problem.sourceTaskId) {
         updateTaskStatus(problem.sourceTaskId, 'in_progress');
       }
     }
-  }, [problems, updateProblem, updateTaskStatus]);
+  }, [storeProblems, updateProblemInStore, updateTaskStatus]);
 
-  // 获取问题的流转记录
+  // 获取问题流转记录
   const getProblemFlowRecords = useCallback((problemId: number): ProblemFlowRecord[] => {
-    const problem = problems.find(p => p.id === problemId);
-    return problem?.flowRecords || [];
-  }, [problems]);
+    const problem = storeProblems.find(p => p.id === problemId);
+    return getFlowRecords(problem);
+  }, [storeProblems]);
 
-  // 获取员工列表（陆启闯排在第一位）— 响应式订阅 Store 变化
+  // 获取员工列表
   const storeWorkers = useWorkerStore((s) => s.workers);
   const workerList = useMemo(() => {
     const filtered = storeWorkers
@@ -507,7 +558,6 @@ export function useProblemDispatch() {
         skillTags: w.skillTags || [],
         status: w.status,
       }));
-    // 陆启闯排在第一位
     const luzhuchuangIndex = filtered.findIndex(w => w.name === '陆启闯');
     if (luzhuchuangIndex > 0) {
       const luzhuchuang = filtered.splice(luzhuchuangIndex, 1)[0];
@@ -520,8 +570,13 @@ export function useProblemDispatch() {
     // 问题统计
     pendingProblems,
     dispatchedProblems,
+    waitingAcceptanceProblems,
     handledProblems,
-    totalCount: problems.length,
+    totalCount: storeProblems.length,
+
+    // Store 操作方法（供组件直接调用）
+    createProblem: createProblemInStore,
+    fetchProblems,
 
     // 分派操作
     dispatchProblem,

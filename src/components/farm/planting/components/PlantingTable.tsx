@@ -322,6 +322,36 @@ export function PlantingTable({
         width: 120
       },
       {
+        title: '土壤PH',
+        dataIndex: 'soilPH',
+        width: 90,
+        render: (value: number) => (
+          <span className={`font-mono ${value != null && value > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+            {value != null && value > 0 ? value.toFixed(1) : '-'}
+          </span>
+        )
+      },
+      {
+        title: '土壤EC',
+        dataIndex: 'soilEC',
+        width: 90,
+        render: (value: number) => (
+          <span className={`font-mono ${value != null && value > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+            {value != null && value > 0 ? value.toFixed(1) : '-'}
+          </span>
+        )
+      },
+      {
+        title: '损耗率',
+        dataIndex: 'attritionRate',
+        width: 85,
+        render: (value: number) => (
+          <span className={value != null && value > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+            {value != null && value > 0 ? `${value.toFixed(1)}%` : '-'}
+          </span>
+        )
+      },
+      {
         title: '已采收',
         dataIndex: 'harvestQuantity',
         width: 100,
@@ -609,7 +639,7 @@ export function PlantingTable({
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-380px)]">
-        <table className="w-full min-w-[1600px]">
+        <table className="w-full min-w-[1900px]">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <tr>
               {columns.map((col, index) => (

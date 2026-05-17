@@ -128,6 +128,38 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
+/** GET /api/plant-labels/query-by-label — 按标签编号/名称/区域查询植株信息 */
+router.get('/query-by-label', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { label_code, area_name, plant_name, planting_id, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (label_code) { conditions.push('label_code LIKE ?'); params.push(`%${label_code}%`); }
+    if (area_name) {
+      conditions.push('(move_in_area_name LIKE ? OR move_out_area_name LIKE ?)');
+      params.push(`%${area_name}%`, `%${area_name}%`);
+    }
+    if (plant_name) { conditions.push('plant_name LIKE ?'); params.push(`%${plant_name}%`); }
+    if (planting_id) { conditions.push('planting_id = ?'); params.push(planting_id); }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const total = db.exec(`SELECT COUNT(*) as cnt FROM plant_labels ${whereClause}`, params)[0]?.values[0]?.[0] ?? 0;
+    const offset = (pageNum - 1) * limitNum;
+    const items = queryToObjects(db,
+      `SELECT * FROM plant_labels ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [...params, limitNum, offset]
+    );
+
+    res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 // ==================== 标签履历 (plant_label_resume) ====================
 
 /** GET /api/plant-labels/:id/resumes — 获取标签履历 */

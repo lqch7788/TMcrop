@@ -58,6 +58,64 @@ export interface ProblemData {
   resolvedAt?: string;
   assigned_at?: string;
   assignedAt?: string;
+  reporter_id?: string;
+  reporter_name?: string;
+  assignee_id?: string;
+  assignee_name?: string;
+  priority?: string;
+  // 巡查问题流转闭环字段
+  crop_name?: string;
+  cropName?: string;
+  inspector_id?: string;
+  inspectorId?: string;
+  inspector_name?: string;
+  inspectorName?: string;
+  check_date?: string;
+  checkDate?: string;
+  check_time?: string;
+  checkTime?: string;
+  weather?: string;
+  temperature?: number;
+  humidity?: number;
+  crop_status?: string;
+  cropStatus?: string;
+  plant_height?: number;
+  leaf_count?: number;
+  issue_text?: string;
+  issueText?: string;
+  issue_severity?: string;
+  issueSeverity?: string;
+  handler?: string;
+  handle_date?: string;
+  handleDate?: string;
+  source_task_id?: string;
+  sourceTaskId?: string;
+  flow_records?: string;
+  flowRecords?: any[];
+  rework_count?: number;
+  reworkCount?: number;
+  accepted_by?: string;
+  acceptedBy?: string;
+  accepted_time?: string;
+  acceptedTime?: string;
+  rejected_by?: string;
+  rejectedBy?: string;
+  rejected_reason?: string;
+  rejectedReason?: string;
+  rejected_time?: string;
+  rejectedTime?: string;
+  completion_time?: string;
+  completionTime?: string;
+  expected_completion?: string;
+  expectedCompletion?: string;
+  remarks?: string;
+  images?: string;
+  source_module?: string;
+  sourceModule?: string;
+  source_detail?: string;
+  sourceDetail?: string;
+  // 状态标签（API返回）
+  statusLabel?: string;
 }
 
 function normalize(db: Record<string, unknown>): ProblemData {
@@ -70,6 +128,24 @@ function normalize(db: Record<string, unknown>): ProblemData {
     handler_id: 'handlerId', handler_name: 'handlerName',
     handle_result: 'handleResult', create_time: 'createdAt', update_time: 'updatedAt',
     resolve_time: 'resolvedAt', assigned_at: 'assignedAt',
+    reporter_id: 'reporterId', reporter_name: 'reporterName',
+    assignee_id: 'assigneeId', assignee_name: 'assigneeName',
+    // 巡查流转闭环字段
+    crop_name: 'cropName',
+    inspector_id: 'inspectorId', inspector_name: 'inspectorName',
+    check_date: 'checkDate', check_time: 'checkTime',
+    crop_status: 'cropStatus',
+    plant_height: 'plantHeight', leaf_count: 'leafCount',
+    issue_text: 'issueText', issue_severity: 'issueSeverity',
+    handle_date: 'handleDate',
+    source_task_id: 'sourceTaskId',
+    flow_records: 'flowRecords',
+    rework_count: 'reworkCount',
+    accepted_by: 'acceptedBy', accepted_time: 'acceptedTime',
+    rejected_by: 'rejectedBy', rejected_reason: 'rejectedReason', rejected_time: 'rejectedTime',
+    completion_time: 'completionTime',
+    expected_completion: 'expectedCompletion',
+    source_module: 'sourceModule', source_detail: 'sourceDetail',
   };
   const r: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(db)) {
@@ -78,6 +154,15 @@ function normalize(db: Record<string, unknown>): ProblemData {
   r.title = r.title || r.problem_title || '';
   r.status = r.status || 'pending';
   r.createdAt = r.createdAt || r.create_time || new Date().toISOString();
+  // flowRecords JSON 解析
+  if (typeof r.flowRecords === 'string' && r.flowRecords) {
+    try { r.flowRecords = JSON.parse(r.flowRecords as string); } catch { r.flowRecords = []; }
+  }
+  if (!r.flowRecords) r.flowRecords = [];
+  // images JSON 解析
+  if (typeof r.images === 'string' && r.images) {
+    try { r.images = JSON.parse(r.images as string); } catch { r.images = []; }
+  }
   return r as ProblemData;
 }
 

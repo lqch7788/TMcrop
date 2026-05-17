@@ -6,6 +6,8 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { iotAuth } from '../middleware/iotAuth';
+import { iotIngestSchema } from '../validation/iotIngest';
 
 const router = Router();
 
@@ -173,19 +175,18 @@ router.get('/stats', (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/fertilizer/iot-ingest — IoT数据接入(先于:id注册) */
-router.post('/iot-ingest', (req: Request, res: Response) => {
+/** POST /api/fertilizer/iot-ingest — IoT数据接入 (IoT设备认证 + Zod校验) */
+router.post('/iot-ingest', iotAuth, (req: Request, res: Response) => {
   try {
+    // Zod 请求校验
+    const parsed = iotIngestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: '请求格式错误', details: parsed.error.issues });
+      return;
+    }
+    const { device_id, device_name, records } = parsed.data;
+
     const db = getDatabase();
-    const { device_id, device_name, records } = req.body;
-    if (!device_id || !Array.isArray(records) || records.length === 0) {
-      res.status(400).json({ success: false, error: 'device_id 和 records 数组为必填项' });
-      return;
-    }
-    if (records.length > 100) {
-      res.status(400).json({ success: false, error: '单次最多提交100条记录' });
-      return;
-    }
     let inserted = 0, skipped = 0;
     const now = new Date().toISOString();
 

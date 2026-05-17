@@ -12,9 +12,11 @@ const router = Router();
 const PROBLEM_STATUS_MAP: Record<string, string> = {
   '待处理': 'pending',
   '处理中': 'in_progress',
+  '待验收': 'waiting_acceptance',
   '已处理': 'completed',
   'pending': 'pending',
   'in_progress': 'in_progress',
+  'waiting_acceptance': 'waiting_acceptance',
   'completed': 'completed',
 };
 
@@ -22,6 +24,7 @@ const PROBLEM_STATUS_MAP: Record<string, string> = {
 const PROBLEM_STATUS_LABEL_MAP: Record<string, string> = {
   'pending': '待处理',
   'in_progress': '处理中',
+  'waiting_acceptance': '待验收',
   'completed': '已处理',
 };
 
@@ -100,19 +103,88 @@ router.get('/', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, problem_code, problem_type, title, description, greenhouse_name,
-            reporter_id, reporter_name, assignee_id, assignee_name, priority, status } = req.body;
+    // camelCase → snake_case 字段名映射（兼容前端发送的字段名）
+    const body = { ...req.body };
+    const POST_FIELD_MAP: Record<string, string> = {
+      problemCode: 'problem_code', problemType: 'problem_type',
+      greenhouseId: 'greenhouse_id', greenhouseName: 'greenhouse_name',
+      reporterId: 'reporter_id', reporterName: 'reporter_name',
+      assigneeId: 'assignee_id', assigneeName: 'assignee_name',
+      sourceType: 'source_type', sourceId: 'source_id',
+      inspectorId: 'inspector_id', inspectorName: 'inspector_name',
+      checkDate: 'check_date', checkTime: 'check_time',
+      cropStatus: 'crop_status', plantHeight: 'plant_height', leafCount: 'leaf_count',
+      issueText: 'issue_text', issueSeverity: 'issue_severity',
+      handleDate: 'handle_date', handleResult: 'handle_result',
+      sourceTaskId: 'source_task_id',
+      flowRecords: 'flow_records',
+      reworkCount: 'rework_count',
+      acceptedBy: 'accepted_by', acceptedTime: 'accepted_time',
+      rejectedBy: 'rejected_by', rejectedReason: 'rejected_reason', rejectedTime: 'rejected_time',
+      completionTime: 'completion_time',
+      expectedCompletion: 'expected_completion',
+      sourceModule: 'source_module', sourceDetail: 'source_detail',
+      cropName: 'crop_name',
+    };
+    for (const [camel, snake] of Object.entries(POST_FIELD_MAP)) {
+      if (body[camel] !== undefined && body[snake] === undefined) {
+        body[snake] = body[camel];
+      }
+    }
+
+    const {
+      id, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id,
+      reporter_id, reporter_name, assignee_id, assignee_name, priority, status,
+      // 巡查相关字段
+      crop_name, inspector_id, inspector_name, check_date, check_time,
+      weather, temperature, humidity, crop_status, plant_height, leaf_count,
+      // 问题字段
+      issue_text, issue_severity,
+      // 处理字段
+      handler, handle_date, handle_result, source_task_id,
+      // 流转记录
+      flow_records,
+      // 返工/接单/拒绝
+      rework_count, accepted_by, accepted_time,
+      rejected_by, rejected_reason, rejected_time,
+      // 其他
+      completion_time, expected_completion, remarks, images,
+      source_module, source_id, source_detail,
+    } = body;
 
     const newId = id || `PRB${Date.now()}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO problems (id, problem_code, problem_type, title, description, greenhouse_name,
-        reporter_id, reporter_name, assignee_id, assignee_name, priority, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, problem_code, problem_type, title, description, greenhouse_name,
-        reporter_id, reporter_name, assignee_id, assignee_name, priority || 'medium', normalizeProblemStatus(status), now, now]);
+      INSERT INTO problems (
+        id, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id,
+        reporter_id, reporter_name, assignee_id, assignee_name, priority, status,
+        crop_name, inspector_id, inspector_name, check_date, check_time,
+        weather, temperature, humidity, crop_status, plant_height, leaf_count,
+        issue_text, issue_severity,
+        handler, handle_date, handle_result, source_task_id,
+        flow_records,
+        rework_count, accepted_by, accepted_time,
+        rejected_by, rejected_reason, rejected_time,
+        completion_time, expected_completion, remarks, images,
+        source_module, source_id, source_detail,
+        create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newId, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id || '',
+      reporter_id, reporter_name, assignee_id, assignee_name, priority || 'medium', normalizeProblemStatus(status),
+      crop_name || '', inspector_id || '', inspector_name || '', check_date || '', check_time || '',
+      weather || '', temperature || 0, humidity || 0, crop_status || '', plant_height || 0, leaf_count || 0,
+      issue_text || '', issue_severity || '',
+      handler || '', handle_date || '', handle_result || '', source_task_id || '',
+      typeof flow_records === 'string' ? flow_records : JSON.stringify(flow_records || []),
+      rework_count || 0, accepted_by || '', accepted_time || '',
+      rejected_by || '', rejected_reason || '', rejected_time || '',
+      completion_time || '', expected_completion || '', remarks || '', typeof images === 'string' ? images : JSON.stringify(images || []),
+      source_module || '', source_id || '', source_detail || '',
+      now, now,
+    ]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });
@@ -125,12 +197,56 @@ router.post('/', (req: Request, res: Response) => {
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
     const now = new Date().toISOString();
+
+    // camelCase → snake_case 字段名映射（保证前端发送的字段能正确写入DB列）
+    const FIELD_MAP: Record<string, string> = {
+      problemCode: 'problem_code', problemType: 'problem_type',
+      greenhouseId: 'greenhouse_id', greenhouseName: 'greenhouse_name',
+      reporterId: 'reporter_id', reporterName: 'reporter_name',
+      assigneeId: 'assignee_id', assigneeName: 'assignee_name',
+      sourceType: 'source_type', sourceId: 'source_id',
+      inspectionId: 'inspection_id', inspectionCode: 'inspection_code',
+      handlerId: 'handler_id', handlerName: 'handler_name',
+      handleResult: 'handle_result', handleDate: 'handle_date',
+      sourceTaskId: 'source_task_id',
+      flowRecords: 'flow_records',
+      reworkCount: 'rework_count',
+      acceptedBy: 'accepted_by', acceptedTime: 'accepted_time',
+      rejectedBy: 'rejected_by', rejectedReason: 'rejected_reason', rejectedTime: 'rejected_time',
+      completionTime: 'completion_time',
+      expectedCompletion: 'expected_completion',
+      sourceModule: 'source_module', sourceDetail: 'source_detail',
+      createTime: 'create_time', updateTime: 'update_time',
+      resolveTime: 'resolve_time', assignedAt: 'assigned_at',
+      cropName: 'crop_name',
+      inspectorId: 'inspector_id', inspectorName: 'inspector_name',
+      checkDate: 'check_date', checkTime: 'check_time',
+      cropStatus: 'crop_status', plantHeight: 'plant_height', leafCount: 'leaf_count',
+      issueText: 'issue_text', issueSeverity: 'issue_severity',
+    };
+    for (const [camel, snake] of Object.entries(FIELD_MAP)) {
+      if (updates[camel] !== undefined && updates[snake] === undefined) {
+        updates[snake] = updates[camel];
+        delete updates[camel];
+      }
+    }
 
     // 对 status 字段进行标准化转换
     if (updates.status) {
       updates.status = normalizeProblemStatus(updates.status);
+    }
+
+    // JSON 字段序列化
+    if (updates.flow_records !== undefined && typeof updates.flow_records !== 'string') {
+      updates.flow_records = JSON.stringify(updates.flow_records);
+    }
+    if (updates.images !== undefined && typeof updates.images !== 'string') {
+      updates.images = JSON.stringify(updates.images);
+    }
+    if (updates.feedback_data !== undefined && typeof updates.feedback_data !== 'string') {
+      updates.feedback_data = JSON.stringify(updates.feedback_data);
     }
 
     const db = getDatabase();
@@ -349,6 +465,8 @@ router.get('/summary-overview', (req: Request, res: Response) => {
     console.error('获取问题统计概览失败:', error);
     res.status(500).json({ success: false, error: '获取问题统计概览失败' });
   }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -372,7 +490,6 @@ router.get('/:id', (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ success: false, error: '获取问题详情失败' });
   }
-});
 });
 
 export default router;

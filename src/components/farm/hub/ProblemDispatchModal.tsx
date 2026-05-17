@@ -1,11 +1,12 @@
 /**
  * 农事任务中心 - 问题分派弹窗
- * 样式与现有弹窗统一
+ * V2.0: 补齐 Task 创建 + 流转记录写入
  */
 
 import React, { useState, useEffect } from 'react';
-import { ProblemEntry } from '../../../hooks/usePersistentProblems';
 import { useUserStore, useProblemStore } from '../../../stores';
+import type { ProblemData } from '../../../stores/useProblemStore';
+import { useProblemDispatch, type ProblemFlowRecord } from '../../../hooks/useProblemDispatch';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,13 +23,14 @@ const SEVERITY_CONFIG: Record<string, { bg: string; text: string; color: string 
   '严重': { bg: 'bg-red-100', text: 'text-red-700', color: 'red' },
 };
 
-type Worker = User & {
-  skills?: string[];
-  currentLoad?: number;
+const STATUS_CN_MAP: Record<string, string> = {
+  'pending': '待处理',
+  'in_progress': '处理中',
+  'waiting_acceptance': '待验收',
+  'completed': '已处理',
 };
 
 export function ProblemDispatchModal({ problemId, onClose, onDispatched }: ProblemDispatchModalProps) {
-  // 从Zustand store获取用户列表
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
 
@@ -38,11 +40,13 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
     }
   }, [users.length, loadUsers]);
 
-  // 从 Zustand Store 获取问题数据
   const storeProblems = useProblemStore((state) => state.problems);
   const updateProblemInStore = useProblemStore((state) => state.updateProblem);
 
-  const [problem, setProblem] = useState<ProblemEntry | null>(null);
+  // V2.0: 使用统一的 dispatch engine
+  const { dispatchProblem, workerList } = useProblemDispatch();
+
+  const [problem, setProblem] = useState<ProblemData | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [priority, setPriority] = useState<'高' | '中' | '低'>('中');
   const [expectedDate, setExpectedDate] = useState<string>('');
@@ -53,57 +57,46 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
   useEffect(() => {
     const found = storeProblems.find(p => p.id === problemId);
     if (found) {
-      // 将 Store 的 ProblemData 映射为 ProblemEntry 格式供 UI 使用
-      setProblem({
-        id: found.id as number,
-        problemCode: found.problemCode || '',
-        issueText: found.description || found.title || '',
-        issueSeverity: (found.severity || '中等') as '轻微' | '中等' | '严重',
-        greenhouseName: found.greenhouseName || '',
-        // 注意：原文使用了 greehouseName（拼写错误），保留原字段名称
-        sourceModule: (found.sourceType || 'manual') as ProblemEntry['sourceModule'],
-        handlerId: found.handlerId || '',
-        status: (found.status || '待处理') as ProblemEntry['status'],
-        // 填充 ProblemEntry 的必填字段（UI 未使用但类型需要）
-        greenhouseId: found.greenhouseId || '',
-        cropName: '',
-        inspectorId: '',
-        inspectorName: '',
-        checkDate: '',
-        checkTime: '',
-        weather: '',
-        temperature: 0,
-        humidity: 0,
-        cropStatus: '',
-      } as ProblemEntry);
+      setProblem(found);
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setExpectedDate(tomorrow.toISOString().split('T')[0]);
     }
   }, [problemId, storeProblems]);
 
-  const availableWorkers = users.filter((w: User) => w.id !== problem?.handlerId);
+  const availableWorkers = workerList;
 
   const handleSubmit = async () => {
     if (!problem || !selectedWorkerId) return;
     setIsSubmitting(true);
     try {
-      const selectedWorker = users.find((w: User) => w.id === selectedWorkerId);
+      const selectedWorker = workerList.find(w => w.id === selectedWorkerId);
 
-      // 通过 Zustand Store 更新问题（乐观更新 + API 写入）
-      await updateProblemInStore(problemId, {
-        status: 'processing',
-        handlerName: selectedWorker?.name || '',
-        handlerId: selectedWorkerId,
-        assignedAt: new Date().toISOString(),
-        priority: priority,
-        expectedDate: expectedDate,
-        requireCheckin: requireCheckin,
-        requirePhoto: requirePhoto,
-      } as Record<string, unknown>);
-      onDispatched();
-    } catch (error) {
-      // 提交分派失败
+      const requiredFeedback: string[] = [];
+      if (requireCheckin) requiredFeedback.push('gps');
+      if (requirePhoto) { requiredFeedback.push('photo_before'); requiredFeedback.push('photo_after'); }
+
+      const priorityMap: Record<string, 'high' | 'medium' | 'low'> = {
+        '高': 'high', '中': 'medium', '低': 'low',
+      };
+
+      // V2.0: 通过统一的 dispatchProblem 创建任务 + 流转记录 + 写入API
+      const task = dispatchProblem(
+        problemId as number,
+        selectedWorkerId,
+        selectedWorker?.name || '',
+        'U001',
+        '系统管理员',
+        expectedDate,
+        requiredFeedback,
+        priorityMap[priority] || 'medium'
+      );
+
+      if (task) {
+        onDispatched();
+      }
+    } catch {
+      // 分派失败
     } finally {
       setIsSubmitting(false);
     }
@@ -120,7 +113,13 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
     );
   }
 
-  const severityConfig = SEVERITY_CONFIG[problem.issueSeverity] || SEVERITY_CONFIG['轻微'];
+  const issueText = problem.issueText || problem.description || problem.title || '';
+  const severity = problem.issueSeverity || '中等';
+  const severityConfig = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG['轻微'];
+  const statusLabel = problem.statusLabel || STATUS_CN_MAP[problem.status || ''] || problem.status || '';
+  const greenhouseName = problem.greenhouseName || '';
+  const problemCode = problem.problemCode || `PD${problemId}`;
+  const sourceModule = problem.sourceModule || 'manual';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -143,27 +142,27 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
             <div className="space-y-2 text-sm">
               <div>
                 <span className="text-gray-500">问题描述:</span>
-                <p className="mt-1 text-gray-900">{problem.issueText}</p>
+                <p className="mt-1 text-gray-900">{issueText}</p>
               </div>
               <div className="flex items-center gap-4">
                 <div>
                   <span className="text-gray-500">问题编号:</span>
-                  <span className="ml-2 text-gray-900">{problem.problemCode}</span>
+                  <span className="ml-2 text-gray-900">{problemCode}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">来源:</span>
-                  <span className="ml-2 text-gray-900">{problem.sourceModule === 'inspection' ? '巡查' : '手动录入'}</span>
+                  <span className="text-gray-500">状态:</span>
+                  <span className="ml-2 text-gray-900">{statusLabel}</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div>
                   <span className="text-gray-500">温室区域:</span>
-                  <span className="ml-2 text-gray-900">{problem.greehouseName || '-'}</span>
+                  <span className="ml-2 text-gray-900">{greenhouseName || '-'}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">严重程度:</span>
                   <span className={`ml-2 px-2 py-0.5 text-xs rounded ${severityConfig.bg} ${severityConfig.text}`}>
-                    {problem.issueSeverity}
+                    {severity}
                   </span>
                 </div>
               </div>
@@ -190,10 +189,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                     className="w-4 h-4 text-emerald-600"
                   />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{worker.name}</p>
-                    {worker.department && (
-                      <p className="text-xs text-gray-500">{worker.department}</p>
-                    )}
+                    <p className="text-sm font-medium text-gray-900">{worker.name}（{worker.position}）</p>
                   </div>
                 </label>
               ))}

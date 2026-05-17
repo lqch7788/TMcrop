@@ -1065,11 +1065,56 @@ export function initializeDatabase() {
   }
 
   // 为问题记录表添加关联字段
-  try {
-    db.run(`ALTER TABLE problems ADD COLUMN greenhouse_id TEXT`);
-  } catch (e) {
-    // 列可能已存在，忽略错误
-  }
+  try { db.run(`ALTER TABLE problems ADD COLUMN greenhouse_id TEXT`); } catch (e) {}
+  // 巡查问题流转闭环字段（V2.0 数据层迁移）
+  try { db.run(`ALTER TABLE problems ADD COLUMN crop_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN inspector_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN inspector_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN check_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN check_time TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN weather TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN temperature REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN humidity REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN crop_status TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN plant_height REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN leaf_count INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN issue_text TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN issue_severity TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN handler TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN handle_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN handle_result TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN source_task_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN flow_records TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN rework_count INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN accepted_by TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN accepted_time TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN rejected_by TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN rejected_reason TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN rejected_time TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN completion_time TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN expected_completion TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN remarks TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN images TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN source_module TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN source_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE problems ADD COLUMN source_detail TEXT`); } catch (e) {}
+
+  // 创建问题流转记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS problem_flow_records (
+      id TEXT PRIMARY KEY,
+      problem_id TEXT NOT NULL,
+      operator_id TEXT,
+      operator_name TEXT,
+      action TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT,
+      comment TEXT,
+      feedback_data TEXT,
+      action_time TEXT NOT NULL,
+      create_time TEXT NOT NULL
+    )
+  `);
 
   // 为人工记录表添加工人ID关联
   try {
@@ -2202,6 +2247,18 @@ export function initializeDatabase() {
       mark_aid TEXT,
       is_use INTEGER DEFAULT 1,
       sort_order INTEGER DEFAULT 0
+    )
+  `);
+
+  // ========== V10.0: IoT设备白名单 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT NOT NULL UNIQUE,
+      device_name TEXT NOT NULL,
+      api_key TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
 

@@ -2,10 +2,12 @@
  * 种植筛选工具栏组件
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
+import { TreeSelect } from '@/components/ui';
+import type { TreeSelectNode } from '@/components/ui/TreeSelect';
 
 interface PlantingFilterProps {
   filters: PlantingFilters;
@@ -28,6 +30,40 @@ export function PlantingFilter({
   areas,
   statusOptions
 }: PlantingFilterProps) {
+  /** 将扁平区域数据构建为树形结构 */
+  const areaTreeData = useMemo<TreeSelectNode[]>(() => {
+    const nodeMap = new Map<string, TreeSelectNode>();
+    const roots: TreeSelectNode[] = [];
+
+    // 先创建所有节点
+    areas.forEach((a) => {
+      nodeMap.set(a.value, { key: a.value, title: a.label, children: [] });
+    });
+
+    // 建立父子关系
+    areas.forEach((a) => {
+      const node = nodeMap.get(a.value)!;
+      if (a.parent && nodeMap.has(a.parent)) {
+        const parent = nodeMap.get(a.parent)!;
+        if (!parent.children) parent.children = [];
+        parent.children!.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    // 清理空 children 数组
+    const cleanChildren = (nodes: TreeSelectNode[]) => {
+      nodes.forEach((n) => {
+        if (n.children && n.children.length === 0) delete n.children;
+        if (n.children) cleanChildren(n.children);
+      });
+    };
+    cleanChildren(roots);
+
+    return roots;
+  }, [areas]);
+
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
@@ -81,19 +117,18 @@ export function PlantingFilter({
           />
         </div>
 
-        {/* 种植区域/大棚位置 */}
-        <div className="min-w-[120px]">
+        {/* 种植区域/大棚位置（树形选择） */}
+        <div className="min-w-[160px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">大棚位置</label>
-          <select
-            value={filters.areaName}
-            onChange={(e) => onChange({ ...filters, areaName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">全部</option>
-            {areas.map(a => (
-              <option key={a.value} value={a.value}>{a.label}</option>
-            ))}
-          </select>
+          <TreeSelect
+            value={filters.areaName || undefined}
+            onChange={(val) => onChange({ ...filters, areaName: val || '' })}
+            treeData={areaTreeData}
+            placeholder="全部"
+            allowClear
+            showSearch
+            className="h-10"
+          />
         </div>
 
         {/* 采收状态 */}

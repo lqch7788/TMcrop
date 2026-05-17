@@ -4,11 +4,12 @@
  * 使用 UnifiedModal 包装，提交时调用 store.createItem()
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import { useFertilizerStore } from '@/stores';
+import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 
 interface FertilizerAddModalProps {
   isOpen: boolean;
@@ -69,14 +70,6 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // 生成施肥编号
-  const handleGenerateCode = async () => {
-    const code = await store.generateCode();
-    if (code) {
-      updateField('fertilizerCode', code);
-    }
-  };
-
   // 提交表单
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim()) return; // 基本校验
@@ -129,22 +122,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={form.fertilizerCode}
-                      onChange={(e) => updateField('fertilizerCode', e.target.value.toUpperCase())}
-                      placeholder="输入或点击生成"
-                      className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                    <button
-                      onClick={handleGenerateCode}
-                      className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 shrink-0"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      生成
-                    </button>
-                  </div>
+                  <FertilizerCodeGenerator
+                    value={form.fertilizerCode}
+                    onChange={(code) => updateField('fertilizerCode', code)}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>

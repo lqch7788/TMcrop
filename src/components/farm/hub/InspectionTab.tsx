@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
-import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
+import { useProblemStore } from '../../../stores/useProblemStore';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems } from '../../../stores';
 import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
@@ -208,8 +208,9 @@ export function InspectionTab({
     setInspectionRecords(inspections);
   }, [inspections]);
 
-  // 问题相关 Hook
-  const { addProblem, forceRefresh } = usePersistentProblems();
+  // 问题相关 Hook (V2.0: API 数据层)
+  const createProblem = useProblemStore((s) => s.createProblem);
+  const fetchProblems = useProblemStore((s) => s.fetchProblems);
   const { approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
 
   // 任务数据（用于获取实际处理进度）
@@ -537,7 +538,7 @@ export function InspectionTab({
   };
 
   // 创建巡查记录
-  const handleCreateRecord = () => {
+  const handleCreateRecord = async () => {
     if (!validateForm()) return;
 
     const selectedUser = users.find(u => u.id === newRecord.inspectorId);
@@ -571,7 +572,7 @@ export function InspectionTab({
       infrastructureName = selectedInfrastructure?.name || '';
     }
 
-    // 问题推送逻辑
+    // 问题推送逻辑 (V2.0: 通过 API Store 创建问题)
     let newProblemId: number | undefined;
     if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult && newRecord.inspectionResult !== 'normal') {
       const presetIssues = newRecord.issuePresets?.join('、') || '';
@@ -591,7 +592,9 @@ export function InspectionTab({
         }
       }
 
-      newProblemId = addProblem({
+      // V2.0: 通过 API Store 创建问题（替换 localStorage addProblem）
+      const createdProblem = await createProblem({
+        problem_code: `PD${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Date.now()).slice(-3)}`,
         greenhouseId: newRecord.greenhouseId,
         greenhouseName: greenhouseName,
         cropName: cropName,
@@ -600,19 +603,32 @@ export function InspectionTab({
         checkDate: newRecord.checkDate,
         checkTime: newRecord.checkTime,
         weather: newRecord.weather,
-        temperature: newRecord.temperature,
-        humidity: newRecord.humidity,
+        temperature: newRecord.temperature || 0,
+        humidity: newRecord.humidity || 0,
         cropStatus: newRecord.cropStatus,
-        plantHeight: newRecord.plantHeight || undefined,
-        leafCount: newRecord.leafCount || undefined,
+        plantHeight: newRecord.plantHeight || 0,
+        leafCount: newRecord.leafCount || 0,
         issueText: issueText || newRecord.issueText || '未描述具体问题',
         issueSeverity: severity,
-        status: '待处理',
+        status: '待处理' as any,
         remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
-        images: newRecord.issuePhotos || [],
+        images: newRecord.issuePhotos || [] as any,
         sourceModule: 'inspection',
         sourceId: newRecord.recordCode,
+        flowRecords: [{
+          id: `FR-${Date.now()}`,
+          problemId: 0, // 将在创建后更新
+          operatorId: newRecord.inspectorId,
+          operatorName: selectedUser?.name || '',
+          action: 'report',
+          fromStatus: '',
+          toStatus: '待处理',
+          actionTime: new Date().toISOString(),
+        }] as any,
       });
+      if (createdProblem) {
+        newProblemId = createdProblem.id as number;
+      }
     }
 
     const record = {
@@ -817,7 +833,7 @@ export function InspectionTab({
       '系统管理员',
       acceptanceComment || '验收通过'
     );
-    forceRefresh();
+    fetchProblems();
     setAcceptanceModal({ isOpen: false, problemId: null });
     setAcceptanceComment('');
   };
@@ -831,7 +847,7 @@ export function InspectionTab({
       '系统管理员',
       reason
     );
-    forceRefresh();
+    fetchProblems();
     setAcceptanceModal({ isOpen: false, problemId: null });
   };
 
