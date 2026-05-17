@@ -53,7 +53,24 @@ export class SeedSourceRepository {
       0 AS printCount,
       ss.create_by AS createBy,
       ss.create_time AS createTime,
-      ss.update_time AS updateTime
+      ss.update_time AS updateTime,
+      ss.propagation_type AS propagationType,
+      ss.propagation_status AS propagationStatus,
+      ss.propagation_method AS propagationMethod,
+      ss.parent_male_id AS parentMaleId,
+      ss.parent_male_code AS parentMaleCode,
+      ss.parent_female_id AS parentFemaleId,
+      ss.parent_female_code AS parentFemaleCode,
+      ss.mother_plant_id AS motherPlantId,
+      ss.mother_plant_code AS motherPlantCode,
+      ss.linked_planting_id AS linkedPlantingId,
+      ss.linked_planting_code AS linkedPlantingCode,
+      ss.propagation_start_date AS propagationStartDate,
+      ss.expected_harvest_date AS expectedHarvestDate,
+      ss.actual_harvest_date AS actualHarvestDate,
+      ss.breeding_location AS breedingLocation,
+      ss.target_traits AS targetTraits,
+      ss.generation
     FROM seed_sources ss
     LEFT JOIN crop_varieties cv
       ON ss.crop_code = cv.crop_code
@@ -254,6 +271,154 @@ export class SeedSourceRepository {
     }
     stmt.free();
     return maxSerial;
+  }
+
+  // ========== 繁殖过程记录操作 ==========
+
+  /**
+   * 添加繁殖过程记录
+   */
+  async addPropagationRecord(data: any): Promise<any> {
+    const db = getDatabase();
+    const id = `PR${Date.now()}`;
+    const now = new Date().toISOString();
+
+    const params = [
+      id,
+      data.seed_source_id || '',
+      data.record_date || '',
+      data.stage || '',
+      data.temperature ?? null,
+      data.humidity ?? null,
+      data.abnormality || null,
+      data.operator || null,
+      data.remarks || null,
+      JSON.stringify(data.pictures || []),
+      data.pollination_type || null,
+      data.pollinator_crop || null,
+      data.flower_count || 0,
+      data.fruit_set_count || 0,
+      data.harvest_seed_count || 0,
+      data.seed_weight || 0,
+      data.harvest_plant_count || 0,
+      data.germination_rate || 0,
+      data.purity || 0,
+      data.moisture || 0,
+      data.survival_rate || 0,
+      data.rooted_rate || 0,
+      data.graft_success_rate || 0,
+      now,
+      now,
+    ] as any[];
+
+    db.run(`
+      INSERT INTO propagation_records
+      (id, seed_source_id, record_date, stage,
+       temperature, humidity, abnormality, operator, remarks, pictures,
+       pollination_type, pollinator_crop, flower_count, fruit_set_count,
+       harvest_seed_count, seed_weight, harvest_plant_count,
+       germination_rate, purity, moisture,
+       survival_rate, rooted_rate, graft_success_rate,
+       create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, params);
+
+    saveDatabase();
+    return { ...data, id, create_time: now, update_time: now };
+  }
+
+  /**
+   * 获取繁殖过程记录列表
+   */
+  async getPropagationRecords(seedSourceId: string): Promise<any[]> {
+    const db = getDatabase();
+    const result = db.exec(
+      'SELECT * FROM propagation_records WHERE seed_source_id = ? ORDER BY record_date DESC, create_time DESC',
+      [seedSourceId]
+    );
+
+    if (!result || result.length === 0) return [];
+
+    const { columns, values } = result[0];
+    const records: any[] = [];
+    for (const row of values) {
+      const record: any = {};
+      columns.forEach((col: string, i: number) => {
+        record[col] = row[i];
+      });
+      // 解析 pictures JSON 字符串
+      if (typeof record.pictures === 'string') {
+        try { record.pictures = JSON.parse(record.pictures); } catch (e) { record.pictures = []; }
+      } else {
+        record.pictures = [];
+      }
+      records.push(record);
+    }
+    return records;
+  }
+
+  /**
+   * 推进繁殖阶段
+   */
+  async updatePropagationStage(id: string, newStage: string): Promise<void> {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      'UPDATE seed_sources SET propagation_status = ?, update_time = ? WHERE id = ?',
+      [newStage, now, id]
+    );
+    saveDatabase();
+  }
+
+  /**
+   * 完成繁殖入库 - 更新库存数量和状态
+   */
+  async completePropagation(id: string, quantity: number): Promise<void> {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 获取当前记录
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error('种源记录不存在');
+    }
+
+    const newAvailable = (existing.remaining_quantity || 0) + quantity;
+    const newInitial = (existing.quantity || 0) + quantity;
+
+    db.run(
+      `UPDATE seed_sources SET
+        propagation_status = 'completed',
+        status = 'sufficient',
+        quantity = ?,
+        remaining_quantity = ?,
+        actual_harvest_date = ?,
+        update_time = ?
+      WHERE id = ?`,
+      [newInitial, newAvailable, now, now, id]
+    );
+    saveDatabase();
+  }
+
+  /**
+   * 获取可用于留种的种植记录
+   */
+  async getPlantingsForSeedSaving(): Promise<any[]> {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT * FROM plantings
+      WHERE status = 'harvested'
+      ORDER BY update_time DESC
+    `);
+
+    if (!result || result.length === 0) return [];
+
+    const { columns, values } = result[0];
+    return values.map((row: any[]) => {
+      const obj: any = {};
+      columns.forEach((col: string, i: number) => { obj[col] = row[i]; });
+      return obj;
+    });
   }
 }
 

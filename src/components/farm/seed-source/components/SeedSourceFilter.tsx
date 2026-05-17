@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, RotateCcw, Filter } from 'lucide-react';
-import { SeedSourceFilters, SourceType } from '../../../../types/crop';
+import { SeedSourceFilters, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
 import { useUserStore } from '../../../../stores/useUserStore';
@@ -150,6 +150,40 @@ export function SeedSourceFilter({
             {statusOptions.map(s => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
+          </select>
+        </div>
+
+        {/* 入库方式（繁殖途径） */}
+        <div className="min-w-[130px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">入库方式</label>
+          <select
+            value={filters.propagationType || ''}
+            onChange={(e) => onChange({ ...filters, propagationType: e.target.value || undefined })}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value="">全部</option>
+            <option value={PropagationType.EXTERNAL}>外购入库</option>
+            <option value={PropagationType.BREEDING}>育种计划产出</option>
+            <option value={PropagationType.SEED_SAVING}>种植留种</option>
+            <option value={PropagationType.ASEXUAL}>无性繁殖</option>
+          </select>
+        </div>
+
+        {/* 繁殖阶段 */}
+        <div className="min-w-[120px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">繁殖阶段</label>
+          <select
+            value={filters.propagationStatus || ''}
+            onChange={(e) => onChange({ ...filters, propagationStatus: e.target.value || undefined })}
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          >
+            <option value="">全部</option>
+            <option value={PropagationStatus.PLANNED}>已计划</option>
+            <option value={PropagationStatus.IN_PROGRESS}>进行中</option>
+            <option value={PropagationStatus.HARVESTED}>已采收</option>
+            <option value={PropagationStatus.QUALITY_CHECKED}>已质检</option>
+            <option value={PropagationStatus.COMPLETED}>已入库</option>
+            <option value={PropagationStatus.FAILED}>失败</option>
           </select>
         </div>
 

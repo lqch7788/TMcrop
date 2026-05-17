@@ -5,9 +5,39 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
-import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
+import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle, ClipboardList, GitBranch } from 'lucide-react';
+import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+
+// 繁殖途径标签颜色
+const PROPAGATION_TYPE_LABELS: Record<string, string> = {
+  external: '外购入库',
+  breeding: '育种计划',
+  seed_saving: '种植留种',
+  asexual: '无性繁殖',
+};
+const PROPAGATION_TYPE_COLORS: Record<string, string> = {
+  external: 'bg-gray-100 text-gray-600',
+  breeding: 'bg-orange-100 text-orange-700',
+  seed_saving: 'bg-green-100 text-green-700',
+  asexual: 'bg-purple-100 text-purple-700',
+};
+const PROPAGATION_STATUS_LABELS: Record<string, string> = {
+  planned: '已计划',
+  in_progress: '进行中',
+  harvested: '已采收',
+  quality_checked: '已质检',
+  completed: '已入库',
+  failed: '失败',
+};
+const PROPAGATION_STATUS_COLORS: Record<string, string> = {
+  planned: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  harvested: 'bg-green-100 text-green-700',
+  quality_checked: 'bg-purple-100 text-purple-700',
+  completed: 'bg-emerald-100 text-emerald-700',
+  failed: 'bg-red-100 text-red-700',
+};
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -34,6 +64,9 @@ interface SeedSourceTableProps {
   onImageClick: (images: string[]) => void;
   // 结束相关回调
   onEnd: (record: SeedSource, endType: 'normal' | 'abnormal') => void;
+  // 繁殖途径回调
+  onPropagationRecord: (record: SeedSource) => void;
+  onPropagationStage: (record: SeedSource) => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -68,6 +101,8 @@ export function SeedSourceTable({
   onPrint,
   onImageClick,
   onEnd,
+  onPropagationRecord,
+  onPropagationStage,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -389,7 +424,22 @@ export function SeedSourceTable({
                     {SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {SOURCE_ORIGIN_MAP[record.sourceOrigin] || record.sourceOrigin || '-'}
+                    <div className="flex flex-col gap-1">
+                      {record.propagationType && record.propagationType !== 'external' ? (
+                        <>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${PROPAGATION_TYPE_COLORS[record.propagationType] || 'bg-gray-100 text-gray-600'}`}>
+                            {PROPAGATION_TYPE_LABELS[record.propagationType] || record.propagationType}
+                          </span>
+                          {record.propagationStatus && (
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${PROPAGATION_STATUS_COLORS[record.propagationStatus] || 'bg-gray-100 text-gray-600'}`}>
+                              {PROPAGATION_STATUS_LABELS[record.propagationStatus] || record.propagationStatus}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin] || record.sourceOrigin || '-'}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
@@ -428,6 +478,25 @@ export function SeedSourceTable({
                       >
                         <Image className="w-4 h-4" />
                       </button>
+                      {/* 繁殖途径操作按钮（非外购 + 未完成时显示） */}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && (
+                        <>
+                          <button
+                            onClick={() => onPropagationRecord(record)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                            title="过程记录"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onPropagationStage(record)}
+                            className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
+                            title="阶段推进"
+                          >
+                            <GitBranch className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => onEnd(record, 'normal')}
                         className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"

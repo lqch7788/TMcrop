@@ -158,14 +158,14 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           // 尝试从API获取
           // API返回格式: { success: true, data: Task[], meta: {...} }
-          const apiData = await enhancedApiClient.get<{ success: boolean; data: Task[]; meta?: { total: number } }>('/farm-tasks', {
+          const apiData = await enhancedApiClient.get<Task[]>('/farm-tasks', {
             useCache: false,  // 禁用缓存，确保每次都从API获取
             cacheStrategy: 'network-first',
           });
 
           // 正确处理 API 返回的 { success, data, meta } 结构
-          if (apiData && apiData.success && Array.isArray(apiData.data) && apiData.data.length > 0) {
-            set({ tasks: apiData.data, isLoading: false });
+          if (Array.isArray(apiData) && apiData.length > 0) {
+            set({ tasks: apiData, isLoading: false });
             return;
           }
 

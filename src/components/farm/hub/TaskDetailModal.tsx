@@ -197,6 +197,10 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
+                  <label className="text-xs text-gray-500">任务类型</label>
+                  <p className="font-semibold text-gray-900">{task.typeName || task.type || '-'}</p>
+                </div>
+                <div>
                   <label className="text-xs text-gray-500">任务区域</label>
                   <p className="font-semibold text-gray-900">{task.greenhouseName || task.field || '-'}</p>
                 </div>

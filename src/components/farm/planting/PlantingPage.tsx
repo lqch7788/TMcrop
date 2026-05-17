@@ -279,6 +279,17 @@ export default function PlantingPage() {
     setMarkModalOpen(true);
   };
 
+  // 留种操作 - 跳转到种源管理页面，自动打开留种弹窗
+  const handleSeedSaving = (record: Planting) => {
+    const params = new URLSearchParams({
+      action: 'seed-saving',
+      plantingId: record.id,
+      plantingCode: record.plantingCode || '',
+      cropName: record.cropName || '',
+    });
+    navigate(`/farm/seed-source?${params.toString()}`);
+  };
+
   const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; labelNumber: string; targetArea: string; operationDate: string; remarks: string }) => {
     // 从 store 读取最新标签列表（避免闭包陷阱）
     const freshLabels = usePlantLabelStore.getState().labels;
@@ -516,6 +527,7 @@ export default function PlantingPage() {
         onLabelDetail={handleLabelDetail}
         onMove={handleMove}
         onMark={handleMark}
+        onSeedSaving={handleSeedSaving}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}

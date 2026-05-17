@@ -207,12 +207,12 @@ export function useProblemDispatch() {
     const severity = getIssueSeverity(problem);
 
     // 判断问题类型
-    const getProblemType = (text: string): Task['type'] => {
-      if (text.includes('虫') || text.includes('蚜')) return 'spraying';
-      if (text.includes('病') || text.includes('斑') || text.includes('灰霉')) return 'spraying';
-      if (text.includes('水') || text.includes('旱')) return 'irrigation';
-      if (text.includes('肥')) return 'fertilization';
-      return 'scouting';
+    const getProblemType = (text: string): { type: Task['type']; typeName: string } => {
+      if (text.includes('虫') || text.includes('蚜')) return { type: 'pesticide', typeName: '植保' };
+      if (text.includes('病') || text.includes('斑') || text.includes('灰霉')) return { type: 'pesticide', typeName: '植保' };
+      if (text.includes('水') || text.includes('旱')) return { type: 'irrigation', typeName: '灌溉' };
+      if (text.includes('肥')) return { type: 'fertilization', typeName: '施肥' };
+      return { type: 'other', typeName: '其他' };
     };
 
     // 确定优先级
@@ -221,8 +221,8 @@ export function useProblemDispatch() {
     // 通过 useTasks.createTask 创建任务
     const newTask = createTask({
       title: `【问题处理】${issueText.slice(0, 30)}`,
-      type: getProblemType(issueText),
-      typeName: '问题处理',
+      type: getProblemType(issueText).type,
+      typeName: getProblemType(issueText).typeName,
       priority,
       status: 'pending',
       batchId: '',

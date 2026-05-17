@@ -1,49 +1,27 @@
 /**
  * 种植区域管理页面（温室大棚管理）
  * 功能：温室信息的新增、编辑、删除、查询
- * 使用 API 替代硬编码数据
+ * 架构：组件 → useGreenhouseStore (Zustand) → API
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import {
-  getGreenhouses,
-  createGreenhouse,
-  updateGreenhouse as updateGreenhouseApi,
-  deleteGreenhouse as deleteGreenhouseApi,
-  Greenhouse as GreenhouseType,
-} from '../services/apiBasicDataService';
+import { useGreenhouseStore } from '../stores';
+import type { Greenhouse } from '../services/apiBasicDataService';
 
 const GREENHOUSE_TYPES = ['温室大棚', '春秋大棚', '日光温室', '智能温室', '其他'];
 
 export default function PlantAreaManagement() {
-  const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
+  const { greenhouses, loading, error, loadGreenhouses, addGreenhouse, editGreenhouse, removeGreenhouse } = useGreenhouseStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editingGreenhouse, setEditingGreenhouse] = useState<Greenhouse | null>(null);
   const [newGreenhouse, setNewGreenhouse] = useState<Partial<Greenhouse>>({ status: 'active' });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const pageSize = 5;
-
-  // 加载温室数据
-  const loadGreenhouses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getGreenhouses();
-      setGreenhouses(data);
-    } catch (err) {
-      console.error('加载温室数据失败:', err);
-      setError('加载温室数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     loadGreenhouses();
@@ -65,29 +43,25 @@ export default function PlantAreaManagement() {
     }
     try {
       if (editingGreenhouse) {
-        await updateGreenhouseApi(editingGreenhouse.id, {
+        await editGreenhouse(editingGreenhouse.id, {
           name: newGreenhouse.name,
           code: newGreenhouse.code,
           greenhouseType: newGreenhouse.greenhouseType,
           area: newGreenhouse.area,
           location: newGreenhouse.location,
         });
-        await loadGreenhouses();
-        setShowModal(false);
-        setEditingGreenhouse(null);
-        setNewGreenhouse({ status: 'active' });
       } else {
-        await createGreenhouse({
+        await addGreenhouse({
           name: newGreenhouse.name,
           code: newGreenhouse.code,
           greenhouseType: newGreenhouse.greenhouseType,
           area: newGreenhouse.area,
           location: newGreenhouse.location,
         });
-        await loadGreenhouses();
-        setShowModal(false);
-        setNewGreenhouse({ status: 'active' });
       }
+      setShowModal(false);
+      setEditingGreenhouse(null);
+      setNewGreenhouse({ status: 'active' });
     } catch (err) {
       console.error('保存温室失败:', err);
       alert('保存温室失败');
@@ -97,15 +71,14 @@ export default function PlantAreaManagement() {
   const handleDeleteGreenhouse = async (id: string) => {
     if (!confirm('确定删除该温室吗？')) return;
     try {
-      await deleteGreenhouseApi(id);
-      await loadGreenhouses();
+      await removeGreenhouse(id);
     } catch (err) {
       console.error('删除温室失败:', err);
       alert('删除温室失败');
     }
   };
 
-  const editGreenhouse = (gh: Greenhouse) => {
+  const editGreenhouseAction = (gh: Greenhouse) => {
     setEditingGreenhouse(gh);
     setNewGreenhouse(gh);
     setShowModal(true);
@@ -270,7 +243,7 @@ export default function PlantAreaManagement() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => editGreenhouse(gh)}
+                        onClick={() => editGreenhouseAction(gh)}
                         title="编辑"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -290,7 +263,6 @@ export default function PlantAreaManagement() {
             </tbody>
           </table>
         </div>
-        {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
             共 {filteredGreenhouses.length} 条记录，第 {currentPage}/{totalPages || 1} 页

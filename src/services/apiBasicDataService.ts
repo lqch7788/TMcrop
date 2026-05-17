@@ -881,3 +881,253 @@ export async function updateApprovalTypeRule(id: number, item: Partial<ApprovalT
     offlineQueue: true,
   });
 }
+
+// ============================================
+// 分支/基地管理
+// ============================================
+
+/** 分支/基地 */
+export interface Branch {
+  id: number;
+  oid: string;
+  branchCode: string;
+  branchName: string;
+  location?: string;
+  area?: number;
+  manager?: string;
+  contact?: string;
+  blockCount?: number;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** 获取所有分支/基地 */
+export async function getBranches(): Promise<Branch[]> {
+  const data = await enhancedApiClient.get<Branch[]>('/basic-data/branches', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 创建分支/基地 */
+export async function createBranch(branch: Partial<Branch>): Promise<Branch> {
+  const result = await enhancedApiClient.post<Branch>('/basic-data/branches', branch, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新分支/基地 */
+export async function updateBranch(id: number, branch: Partial<Branch>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/branches/${id}`, branch, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除分支/基地 */
+export async function deleteBranch(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/branches/${id}`, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 班次管理
+// ============================================
+
+/** 班次 */
+export interface Shift {
+  id: number;
+  oid: string;
+  shiftCode: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  shiftType?: string;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** 获取所有班次 */
+export async function getShifts(): Promise<Shift[]> {
+  const data = await enhancedApiClient.get<Shift[]>('/basic-data/shifts', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 创建班次 */
+export async function createShift(shift: Partial<Shift>): Promise<Shift> {
+  const result = await enhancedApiClient.post<Shift>('/basic-data/shifts', shift, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新班次 */
+export async function updateShift(id: number, shift: Partial<Shift>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/shifts/${id}`, shift, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除班次 */
+export async function deleteShift(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/shifts/${id}`, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 成本核算管理
+// ============================================
+
+/** 成本类别 */
+export interface CostCategoryItem {
+  id: number;
+  oid: string;
+  categoryCode: string;
+  categoryName: string;
+  categoryType: string;
+  unit?: string;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** 成本预算 */
+export interface CostBudgetItem {
+  id: number;
+  oid: string;
+  budgetName: string;
+  categoryOid: string;
+  budgetYear: number;
+  budgetMonth?: number;
+  budgetAmount: number;
+  usedAmount: number;
+  status?: string;
+  categoryName?: string;
+  categoryCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function getCostCategories(): Promise<CostCategoryItem[]> {
+  const data = await enhancedApiClient.get<CostCategoryItem[]>('/basic-data/cost-categories', {
+    useCache: true, cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+export async function createCostCategory(item: Partial<CostCategoryItem>): Promise<CostCategoryItem> {
+  return await enhancedApiClient.post<CostCategoryItem>('/basic-data/cost-categories', item, { offlineQueue: true });
+}
+
+export async function updateCostCategory(id: number, item: Partial<CostCategoryItem>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/cost-categories/${id}`, item, { offlineQueue: true });
+}
+
+export async function deleteCostCategory(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/cost-categories/${id}`, { offlineQueue: true });
+}
+
+export async function getCostBudgets(): Promise<CostBudgetItem[]> {
+  const data = await enhancedApiClient.get<CostBudgetItem[]>('/basic-data/cost-budgets', {
+    useCache: true, cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+export async function createCostBudget(item: Partial<CostBudgetItem>): Promise<CostBudgetItem> {
+  return await enhancedApiClient.post<CostBudgetItem>('/basic-data/cost-budgets', item, { offlineQueue: true });
+}
+
+export async function updateCostBudget(id: number, item: Partial<CostBudgetItem>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/cost-budgets/${id}`, item, { offlineQueue: true });
+}
+
+export async function deleteCostBudget(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/cost-budgets/${id}`, { offlineQueue: true });
+}
+
+// ========== 农事活动类型 & API ==========
+
+export interface FarmActivity {
+  id: number;
+  oid: string;
+  activityCode: string;
+  activityName: string;
+  activityType?: string;
+  priority?: string;
+  branchOid?: string;
+  blockOid?: string;
+  startTime?: string;
+  endTime?: string;
+  assigneeIds?: string[];
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function getFarmActivities(): Promise<FarmActivity[]> {
+  const data = await enhancedApiClient.get<FarmActivity[]>('/basic-data/farm-activities', {
+    useCache: true, cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+export async function createFarmActivity(item: Partial<FarmActivity>): Promise<FarmActivity> {
+  return await enhancedApiClient.post<FarmActivity>('/basic-data/farm-activities', item, { offlineQueue: true });
+}
+
+export async function updateFarmActivity(id: number, item: Partial<FarmActivity>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/farm-activities/${id}`, item, { offlineQueue: true });
+}
+
+export async function deleteFarmActivity(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/farm-activities/${id}`, { offlineQueue: true });
+}
+
+// ========== 物料类型 & API ==========
+
+export interface MaterialType {
+  id: number;
+  oid: string;
+  typeCode: string;
+  typeName: string;
+  category?: string;
+  defaultUnit?: string;
+  defaultPrice?: number;
+  specifications?: string;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function getMaterialTypes(): Promise<MaterialType[]> {
+  const data = await enhancedApiClient.get<MaterialType[]>('/basic-data/material-types', {
+    useCache: true, cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+export async function createMaterialType(item: Partial<MaterialType>): Promise<MaterialType> {
+  return await enhancedApiClient.post<MaterialType>('/basic-data/material-types', item, { offlineQueue: true });
+}
+
+export async function updateMaterialType(id: number, item: Partial<MaterialType>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/material-types/${id}`, item, { offlineQueue: true });
+}
+
+export async function deleteMaterialType(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/material-types/${id}`, { offlineQueue: true });
+}

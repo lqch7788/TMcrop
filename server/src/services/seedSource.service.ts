@@ -4,7 +4,7 @@
  */
 
 import { seedSourceRepository, SeedSourceRepository } from '../repositories/seedSource.repository';
-import { SeedSourceQuery, CreateSeedSourceDTO, UpdateSeedSourceDTO } from '../types/seedSource';
+import { SeedSourceQuery, CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
 
 /**
  * 种源服务类
@@ -130,6 +130,61 @@ export class SeedSourceService {
     // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
     const code = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
     return code;
+  }
+
+  // ========== 繁殖过程记录业务逻辑 ==========
+
+  /**
+   * 添加繁殖过程记录
+   */
+  async addPropagationRecord(seedSourceId: string, data: CreatePropagationRecordDTO) {
+    const existing = await this.repository.findById(seedSourceId);
+    if (!existing) {
+      throw new Error('种源记录不存在');
+    }
+
+    const record = { ...data, seed_source_id: seedSourceId };
+    return this.repository.addPropagationRecord(record);
+  }
+
+  /**
+   * 获取繁殖过程记录列表
+   */
+  async getPropagationRecords(seedSourceId: string) {
+    return this.repository.getPropagationRecords(seedSourceId);
+  }
+
+  /**
+   * 推进繁殖阶段
+   */
+  async updatePropagationStage(seedSourceId: string, data: UpdatePropagationStageDTO) {
+    const existing = await this.repository.findById(seedSourceId);
+    if (!existing) {
+      throw new Error('种源记录不存在');
+    }
+
+    await this.repository.updatePropagationStage(seedSourceId, data.new_stage);
+    return { id: seedSourceId, new_stage: data.new_stage };
+  }
+
+  /**
+   * 完成繁殖入库
+   */
+  async completePropagation(seedSourceId: string, data: CompletePropagationDTO) {
+    const existing = await this.repository.findById(seedSourceId);
+    if (!existing) {
+      throw new Error('种源记录不存在');
+    }
+
+    await this.repository.completePropagation(seedSourceId, data.quantity);
+    return { id: seedSourceId, quantity: data.quantity };
+  }
+
+  /**
+   * 获取可用于留种的种植记录
+   */
+  async getPlantingsForSeedSaving() {
+    return this.repository.getPlantingsForSeedSaving();
   }
 }
 

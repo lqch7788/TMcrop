@@ -159,3 +159,43 @@ export async function toggleRule(id: string): Promise<void> {
     offlineQueue: true,
   });
 }
+
+// ============================================
+// 通知偏好
+// ============================================
+
+export interface NotificationPreferences {
+  id?: number;
+  userOid: string;
+  approvalNotify: boolean;
+  alertNotify: boolean;
+  dailySummary: boolean;
+  announcementNotify: boolean;
+  dndEnabled: boolean;
+  dndStartTime: string;
+  dndEndTime: string;
+}
+
+/** 获取用户通知偏好 */
+export async function getPreferences(userOid: string): Promise<NotificationPreferences> {
+  const data = await enhancedApiClient.get<NotificationPreferences>(`/notifications/preferences/${userOid}`, {
+    useCache: false,
+  });
+  return data || {
+    userOid,
+    approvalNotify: true,
+    alertNotify: true,
+    dailySummary: false,
+    announcementNotify: true,
+    dndEnabled: false,
+    dndStartTime: '22:00',
+    dndEndTime: '08:00',
+  };
+}
+
+/** 保存用户通知偏好 */
+export async function savePreferences(userOid: string, prefs: Partial<NotificationPreferences>): Promise<void> {
+  await enhancedApiClient.put(`/notifications/preferences/${userOid}`, prefs, {
+    offlineQueue: true,
+  });
+}

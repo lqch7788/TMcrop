@@ -10,7 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../types/crop';
+import { SeedSource, SourceType, SourceOrigin, StockStatus, PropagationType, PropagationStatus, PropagationRecord } from '../types/crop';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendSeedSource {
@@ -44,6 +44,24 @@ interface BackendSeedSource {
   createBy: string;
   createTime: string;
   updateTime: string;
+  // 繁殖途径字段
+  propagationType?: string;
+  propagationStatus?: string;
+  propagationMethod?: string;
+  parentMaleId?: string;
+  parentMaleCode?: string;
+  parentFemaleId?: string;
+  parentFemaleCode?: string;
+  motherPlantId?: string;
+  motherPlantCode?: string;
+  linkedPlantingId?: string;
+  linkedPlantingCode?: string;
+  propagationStartDate?: string;
+  expectedHarvestDate?: string;
+  actualHarvestDate?: string;
+  breedingLocation?: string;
+  targetTraits?: string;
+  generation?: string;
   [key: string]: unknown;
 }
 
@@ -115,6 +133,24 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     // 关联生产计划字段
     productionPlanId: (item as any).productionPlanId || '',
     productionPlanCode: item.productionPlanCode || '',
+    // 繁殖途径字段
+    propagationType: (item.propagationType as PropagationType) || PropagationType.EXTERNAL,
+    propagationStatus: (item.propagationStatus as PropagationStatus) || undefined,
+    propagationMethod: item.propagationMethod || undefined,
+    parentMaleId: item.parentMaleId || undefined,
+    parentMaleCode: item.parentMaleCode || undefined,
+    parentFemaleId: item.parentFemaleId || undefined,
+    parentFemaleCode: item.parentFemaleCode || undefined,
+    motherPlantId: item.motherPlantId || undefined,
+    motherPlantCode: item.motherPlantCode || undefined,
+    linkedPlantingId: item.linkedPlantingId || undefined,
+    linkedPlantingCode: item.linkedPlantingCode || undefined,
+    propagationStartDate: item.propagationStartDate || undefined,
+    expectedHarvestDate: item.expectedHarvestDate || undefined,
+    actualHarvestDate: item.actualHarvestDate || undefined,
+    breedingLocation: item.breedingLocation || undefined,
+    targetTraits: item.targetTraits || undefined,
+    generation: item.generation || undefined,
   };
 }
 
@@ -292,4 +328,64 @@ export async function generateSeedCode(dateStr: string): Promise<string> {
   } catch {
     return '';
   }
+}
+
+// ========== 繁殖过程记录 API ==========
+
+/**
+ * 添加繁殖过程记录
+ */
+export async function addPropagationRecord(seedSourceId: string, data: Partial<PropagationRecord>): Promise<PropagationRecord> {
+  const result = await enhancedApiClient.post<PropagationRecord>(
+    `/seed-sources/${seedSourceId}/propagation-records`,
+    data,
+    { offlineQueue: true }
+  );
+  return result;
+}
+
+/**
+ * 获取繁殖过程记录列表
+ */
+export async function getPropagationRecords(seedSourceId: string): Promise<PropagationRecord[]> {
+  const data = await enhancedApiClient.get<PropagationRecord[]>(
+    `/seed-sources/${seedSourceId}/propagation-records`,
+    { useCache: true, cacheStrategy: 'network-first' }
+  );
+  return data;
+}
+
+/**
+ * 推进繁殖阶段
+ */
+export async function updatePropagationStage(seedSourceId: string, newStage: string): Promise<{ id: string; new_stage: string }> {
+  const result = await enhancedApiClient.put<{ id: string; new_stage: string }>(
+    `/seed-sources/${seedSourceId}/propagation-stage`,
+    { new_stage: newStage },
+    { offlineQueue: true }
+  );
+  return result;
+}
+
+/**
+ * 完成繁殖入库
+ */
+export async function completePropagation(seedSourceId: string, quantity: number): Promise<{ id: string; quantity: number }> {
+  const result = await enhancedApiClient.post<{ id: string; quantity: number }>(
+    `/seed-sources/${seedSourceId}/complete-propagation`,
+    { quantity },
+    { offlineQueue: true }
+  );
+  return result;
+}
+
+/**
+ * 获取可用于留种的种植记录
+ */
+export async function getPlantingsForSeedSaving(): Promise<any[]> {
+  const data = await enhancedApiClient.get<any[]>('/seed-sources/available-for-seed-saving', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data;
 }

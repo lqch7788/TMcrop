@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle, Tag, MoveRight, Bookmark } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -45,6 +45,7 @@ interface PlantingTableProps {
   onLabelDetail?: (record: Planting) => void;
   onMove?: (record: Planting) => void;
   onMark?: (record: Planting) => void;
+  onSeedSaving?: (record: Planting) => void;  // 留种操作
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -85,6 +86,7 @@ export function PlantingTable({
   onLabelDetail,
   onMove,
   onMark,
+  onSeedSaving,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -473,6 +475,15 @@ export function PlantingTable({
                 title="标记管理"
               >
                 <Bookmark className="w-4 h-4" />
+              </button>
+            )}
+            {onSeedSaving && record.status === 'harvested' && (
+              <button
+                onClick={() => onSeedSaving(record)}
+                className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                title="留种"
+              >
+                <Sprout className="w-4 h-4" />
               </button>
             )}
           </div>

@@ -164,6 +164,24 @@ export type { SalaryAdjustmentData } from './useSalaryAdjustmentStore';
 export { useSalaryBudgetStore } from './useSalaryBudgetStore';
 export type { SalaryBudgetData } from './useSalaryBudgetStore';
 
+// ==================== 分支/基地管理 Store ====================
+export { useBranchStore } from './useBranchStore';
+export type { Branch } from '../services/apiBasicDataService';
+
+// ==================== 班次管理 Store ====================
+export { useShiftStore } from './useShiftStore';
+export type { Shift } from '../services/apiBasicDataService';
+
+// ==================== 成本核算 Store ====================
+export { useCostStore } from './useCostStore';
+export type { CostCategoryItem, CostBudgetItem } from '../services/apiBasicDataService';
+
+// ==================== 系统配置 Store ====================
+export { useSystemConfigStore } from './useSystemConfigStore';
+
+// ==================== 审批流程 Store ====================
+export { useApprovalWorkflowStore } from './useApprovalWorkflowStore';
+
 // ==================== 绩效考核 V2.0 Store ====================
 export { usePerformanceStore } from './usePerformanceStore';
 
@@ -248,3 +266,10 @@ export type { RegionNode } from './useRegionStore';
 // V11.0: 工序定义管理
 export { useProcessDefinitionStore } from './useProcessDefinitionStore';
 export { useApprovalLevelStore } from './useApprovalLevelStore';
+export { useNotificationSettingsStore } from './useNotificationSettingsStore';
+
+// V11.0: 农事活动管理
+export { useFarmActivityStore } from './useFarmActivityStore';
+
+// V11.0: 物料类型管理
+export { useMaterialTypeStore } from './useMaterialTypeStore';

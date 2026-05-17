@@ -886,6 +886,24 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE plantings ADD COLUMN soil_ph REAL DEFAULT 0`); } catch (e) {}
   try { db.run(`ALTER TABLE plantings ADD COLUMN soil_ec REAL DEFAULT 0`); } catch (e) {}
   try { db.run(`ALTER TABLE plantings ADD COLUMN attrition_rate REAL DEFAULT 0`); } catch (e) {}
+  // ========== V12.0: 种源繁殖途径字段 ==========
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN propagation_type TEXT DEFAULT 'external'`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN propagation_status TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN propagation_method TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN parent_male_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN parent_male_code TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN parent_female_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN parent_female_code TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN mother_plant_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN mother_plant_code TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN linked_planting_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN linked_planting_code TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN propagation_start_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN expected_harvest_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN actual_harvest_date TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN breeding_location TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN target_traits TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE seed_sources ADD COLUMN generation TEXT`); } catch (e) {}
 
   // 为采收记录表添加关联字段
   try {
@@ -1860,6 +1878,37 @@ export function initializeDatabase() {
       update_time TEXT
     )
   `);
+  // ========== V12.0: 繁殖过程记录表 ==========
+  // 存储育种/留种/无性繁殖各阶段的过程记录
+  db.run(`
+    CREATE TABLE IF NOT EXISTS propagation_records (
+      id TEXT PRIMARY KEY,
+      seed_source_id TEXT NOT NULL,
+      record_date TEXT NOT NULL,
+      stage TEXT NOT NULL,
+      temperature REAL,
+      humidity REAL,
+      abnormality TEXT,
+      operator TEXT,
+      remarks TEXT,
+      pictures TEXT,
+      pollination_type TEXT,
+      pollinator_crop TEXT,
+      flower_count INTEGER DEFAULT 0,
+      fruit_set_count INTEGER DEFAULT 0,
+      harvest_seed_count INTEGER DEFAULT 0,
+      seed_weight REAL DEFAULT 0,
+      harvest_plant_count INTEGER DEFAULT 0,
+      germination_rate REAL DEFAULT 0,
+      purity REAL DEFAULT 0,
+      moisture REAL DEFAULT 0,
+      survival_rate REAL DEFAULT 0,
+      rooted_rate REAL DEFAULT 0,
+      graft_success_rate REAL DEFAULT 0,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
 
   // 为生产计划表添加新字段（向后兼容）
   const productionPlanColumns = [
@@ -2324,6 +2373,24 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== V11.0: 通知偏好设置表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_oid TEXT NOT NULL UNIQUE,
+      approval_notify INTEGER DEFAULT 1,
+      alert_notify INTEGER DEFAULT 1,
+      daily_summary INTEGER DEFAULT 0,
+      announcement_notify INTEGER DEFAULT 1,
+      dnd_enabled INTEGER DEFAULT 0,
+      dnd_start_time TEXT,
+      dnd_end_time TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
   // 审批类型规则表 — 37种审批类型的特殊规则
   db.run(`
     CREATE TABLE IF NOT EXISTS approval_type_rules (
@@ -2336,6 +2403,114 @@ export function initializeDatabase() {
       batch_approval_supported INTEGER DEFAULT 0,
       custom_approver_count INTEGER,
       remark TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 成本核算管理表 ==========
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cost_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      category_code TEXT NOT NULL,
+      category_name TEXT NOT NULL,
+      category_type TEXT NOT NULL DEFAULT 'other',
+      unit TEXT DEFAULT '元',
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cost_budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      budget_name TEXT NOT NULL,
+      category_oid TEXT NOT NULL,
+      budget_year INTEGER NOT NULL,
+      budget_month INTEGER,
+      budget_amount REAL DEFAULT 0,
+      used_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 班次管理表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS shifts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      shift_code TEXT NOT NULL,
+      shift_name TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      shift_type TEXT DEFAULT '早班',
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 分支/基地管理表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS branches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      branch_code TEXT NOT NULL,
+      branch_name TEXT NOT NULL,
+      location TEXT,
+      area REAL DEFAULT 0,
+      manager TEXT,
+      contact TEXT,
+      block_count INTEGER DEFAULT 0,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 农事活动定义表（系统设置 - 农事活动管理）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS farm_activities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      activity_code TEXT NOT NULL,
+      activity_name TEXT NOT NULL,
+      activity_type TEXT,
+      priority TEXT DEFAULT 'MEDIUM',
+      branch_oid TEXT,
+      block_oid TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      assignee_ids TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 物料类型定义表（系统设置 - 物料管理）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      type_code TEXT NOT NULL,
+      type_name TEXT NOT NULL,
+      category TEXT,
+      default_unit TEXT,
+      default_price REAL DEFAULT 0,
+      specifications TEXT,
+      description TEXT,
       status TEXT DEFAULT 'active',
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))

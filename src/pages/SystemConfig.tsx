@@ -1,66 +1,47 @@
 /**
  * 系统参数配置页面
  * 功能：系统配置的新增、编辑、删除、查询
- * 使用 API 替代 localStorage
+ * 架构：组件 → useSystemConfigStore (Zustand) → API
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
-import {
-  getSystemConfigs,
-  createSystemConfig,
-  updateSystemConfig,
-  deleteSystemConfig,
-  SystemConfig as SystemConfigType,
-} from '../services/apiBasicDataService';
+import { useSystemConfigStore } from '../stores';
+import type { SystemConfig } from '../services/apiBasicDataService';
 
-const DEFAULT_CONFIGS: SystemConfigType[] = [
-  { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', category: 'system', description: '系统显示名称', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '2', configKey: 'system_version', configValue: 'V1.2.0', configType: 'string', category: 'system', description: '当前系统版本', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否启用演示模式', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '4', configKey: 'show_tutorial', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否显示新手引导', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '5', configKey: 'theme_color', configValue: 'emerald', configType: 'string', category: 'ui', description: '系统主题色', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '6', configKey: 'auto_save_interval', configValue: '5000', configType: 'number', category: 'system', description: '自动保存间隔（毫秒）', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '7', configKey: 'page_size', configValue: '10', configType: 'number', category: 'ui', description: '列表默认分页大小', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '8', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用系统通知', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '9', configKey: 'data_retention_days', configValue: '365', configType: 'number', category: 'system', description: '本地数据保留天数', isActive: 1, createdAt: '', updatedAt: '' },
-  { id: '10', configKey: 'enable_export', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用数据导出功能', isActive: 1, createdAt: '', updatedAt: '' },
+// 默认配置作为 API 返回空时的后备
+const DEFAULT_CONFIGS: SystemConfig[] = [
+  { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', category: 'system', description: '系统显示名称', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '2', configKey: 'system_version', configValue: 'V1.2.0', configType: 'string', category: 'system', description: '当前系统版本', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否启用演示模式', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '4', configKey: 'show_tutorial', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否显示新手引导', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '5', configKey: 'theme_color', configValue: 'emerald', configType: 'string', category: 'ui', description: '系统主题色', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '6', configKey: 'auto_save_interval', configValue: '5000', configType: 'number', category: 'system', description: '自动保存间隔（毫秒）', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '7', configKey: 'page_size', configValue: '10', configType: 'number', category: 'ui', description: '列表默认分页大小', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '8', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用系统通知', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '9', configKey: 'data_retention_days', configValue: '365', configType: 'number', category: 'system', description: '本地数据保留天数', isActive: true, createdAt: '', updatedAt: '' },
+  { id: '10', configKey: 'enable_export', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用数据导出功能', isActive: true, createdAt: '', updatedAt: '' },
 ];
 
 export default function SystemConfig() {
-  const [configs, setConfigs] = useState<SystemConfig[]>([]);
+  const { configs, loading, error, loadConfigs, addConfig, updateConfig, removeConfig } = useSystemConfigStore();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newConfig, setNewConfig] = useState<Partial<SystemConfig>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 加载系统配置
-  const loadConfigs = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getSystemConfigs();
-      // 如果API返回空数据，使用默认配置
-      setConfigs(data && data.length > 0 ? data : DEFAULT_CONFIGS);
-    } catch (err) {
-      console.error('加载系统配置失败:', err);
-      setConfigs(DEFAULT_CONFIGS);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     loadConfigs();
   }, [loadConfigs]);
 
+  // 使用 store 数据，空时回退到默认配置
+  const displayConfigs = configs.length > 0 ? configs : DEFAULT_CONFIGS;
+
   const filteredConfigs = activeCategory === 'all'
-    ? configs
-    : configs.filter(c => c.category === activeCategory);
+    ? displayConfigs
+    : displayConfigs.filter(c => c.category === activeCategory);
 
   const handleStartEdit = (config: SystemConfig) => {
     setEditingId(config.id);
@@ -69,8 +50,7 @@ export default function SystemConfig() {
 
   const handleSaveEdit = async (id: string) => {
     try {
-      await updateSystemConfig(id, { configValue: editValue });
-      await loadConfigs();
+      await updateConfig(id, { configValue: editValue });
       setEditingId(null);
       setEditValue('');
     } catch (err) {
@@ -90,14 +70,13 @@ export default function SystemConfig() {
       return;
     }
     try {
-      await createSystemConfig({
+      await addConfig({
         configKey: newConfig.configKey,
         configValue: newConfig.configValue || '',
         configType: newConfig.configType || 'string',
         category: newConfig.category || 'system',
         description: newConfig.description || '',
       });
-      await loadConfigs();
       setNewConfig({});
       setShowAddForm(false);
     } catch (err) {
@@ -109,17 +88,10 @@ export default function SystemConfig() {
   const handleDeleteConfig = async (id: string) => {
     if (!confirm('确定要删除这个配置项吗？')) return;
     try {
-      await deleteSystemConfig(id);
-      await loadConfigs();
+      await removeConfig(id);
     } catch (err) {
       console.error('删除配置失败:', err);
       alert('删除配置失败');
-    }
-  };
-
-  const handleResetDefaults = () => {
-    if (confirm('确定要恢复默认配置吗？这将丢失所有自定义配置。')) {
-      setConfigs(DEFAULT_CONFIGS);
     }
   };
 
@@ -186,7 +158,6 @@ export default function SystemConfig() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -201,12 +172,6 @@ export default function SystemConfig() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleResetDefaults}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            恢复默认
-          </button>
           <button
             onClick={() => setShowAddForm(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
@@ -250,7 +215,7 @@ export default function SystemConfig() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">配置名称</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">配置值</label>
               <input
                 type="text"
                 value={newConfig.configValue || ''}
@@ -287,10 +252,7 @@ export default function SystemConfig() {
           </div>
           <div className="flex items-center justify-end gap-2 mt-4">
             <button
-              onClick={() => {
-                setShowAddForm(false);
-                setNewConfig({});
-              }}
+              onClick={() => { setShowAddForm(false); setNewConfig({}); }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               取消
@@ -313,7 +275,6 @@ export default function SystemConfig() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-900">{config.configKey}</span>
-                  <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{config.configKey}</code>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     config.category === 'system' ? 'bg-blue-100 text-blue-800' :
                     config.category === 'ui' ? 'bg-purple-100 text-purple-800' :
@@ -325,7 +286,6 @@ export default function SystemConfig() {
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{config.description}</p>
               </div>
-
               <div className="flex items-center gap-4">
                 <div className="min-w-[120px]">
                   {renderValue(config)}
@@ -333,31 +293,19 @@ export default function SystemConfig() {
                 <div className="flex items-center gap-1">
                   {editingId === config.id ? (
                     <>
-                      <button
-                        onClick={() => handleSaveEdit(config.id)}
-                        className="p-1 text-green-600 hover:text-green-800"
-                      >
+                      <button onClick={() => handleSaveEdit(config.id)} className="p-1 text-green-600 hover:text-green-800">
                         <Save className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="p-1 text-gray-600 hover:text-gray-800"
-                      >
+                      <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:text-gray-800">
                         <X className="w-4 h-4" />
                       </button>
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => handleStartEdit(config)}
-                        className="p-1 text-gray-400 hover:text-blue-600"
-                      >
+                      <button onClick={() => handleStartEdit(config)} className="p-1 text-gray-400 hover:text-blue-600">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteConfig(config.id)}
-                        className="p-1 text-gray-400 hover:text-red-600"
-                      >
+                      <button onClick={() => handleDeleteConfig(config.id)} className="p-1 text-gray-400 hover:text-red-600">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </>

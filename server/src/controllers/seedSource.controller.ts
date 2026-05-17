@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { seedSourceService, SeedSourceService } from '../services/seedSource.service';
-import { CreateSeedSourceDTO, UpdateSeedSourceDTO } from '../types/seedSource';
+import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
 
 /**
  * 种源控制器类
@@ -150,6 +150,92 @@ export class SeedSourceController {
       res.json({ success: true, data: code });
     } catch (error) {
       console.error('生成种源编码失败:', error);
+      next(error);
+    }
+  }
+
+  // ========== 繁殖过程记录控制器方法 ==========
+
+  /**
+   * POST /seed-sources/:id/propagation-records
+   * 添加繁殖过程记录
+   */
+  async addPropagationRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data: CreatePropagationRecordDTO = req.body;
+      const result = await this.service.addPropagationRecord(id, data);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      if ((error as Error).message === '种源记录不存在') {
+        res.status(404).json({ success: false, error: '种源记录不存在' });
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  /**
+   * GET /seed-sources/:id/propagation-records
+   * 获取繁殖过程记录列表
+   */
+  async getPropagationRecords(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data = await this.service.getPropagationRecords(id);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /seed-sources/:id/propagation-stage
+   * 推进繁殖阶段
+   */
+  async updatePropagationStage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data: UpdatePropagationStageDTO = req.body;
+      const result = await this.service.updatePropagationStage(id, data);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      if ((error as Error).message === '种源记录不存在') {
+        res.status(404).json({ success: false, error: '种源记录不存在' });
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  /**
+   * POST /seed-sources/:id/complete-propagation
+   * 完成繁殖入库
+   */
+  async completePropagation(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data: CompletePropagationDTO = req.body;
+      const result = await this.service.completePropagation(id, data);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      if ((error as Error).message === '种源记录不存在') {
+        res.status(404).json({ success: false, error: '种源记录不存在' });
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  /**
+   * GET /plantings/available-for-seed-saving
+   * 获取可用于留种的种植记录
+   */
+  async getPlantingsForSeedSaving(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await this.service.getPlantingsForSeedSaving();
+      res.json({ success: true, data });
+    } catch (error) {
       next(error);
     }
   }

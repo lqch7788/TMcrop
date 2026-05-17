@@ -13,6 +13,8 @@ import { DetailModal } from './modals/DetailModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
+import { PropagationRecordModal } from './modals/PropagationRecordModal';
+import { PropagationStageModal } from './modals/PropagationStageModal';
 import {
   cropCategories,
   suppliers,
@@ -65,7 +67,9 @@ export default function SeedSourcePage() {
     orgId: '',
     recorderId: '',
     surplusMin: undefined,
-    surplusMax: undefined
+    surplusMax: undefined,
+    propagationType: undefined,
+    propagationStatus: undefined
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -97,6 +101,32 @@ export default function SeedSourcePage() {
   const [printMode, setPrintMode] = useState(false);
   const [printRecords, setPrintRecords] = useState<SeedSource[]>([]);
 
+  // 繁殖途径弹窗状态
+  const [propagationRecordOpen, setPropagationRecordOpen] = useState(false);
+  const [propagationStageOpen, setPropagationStageOpen] = useState(false);
+  const [propagationRecord, setPropagationRecord] = useState<SeedSource | null>(null);
+
+  // 留种初始化数据（从种植页面跳转来）
+  const [seedSavingInit, setSeedSavingInit] = useState<{
+    linkedPlantingId?: string;
+    linkedPlantingCode?: string;
+    cropName?: string;
+  } | null>(null);
+
+  // 处理从种植页面跳转来的留种请求
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    if (action === 'seed-saving') {
+      const plantingId = params.get('plantingId') || '';
+      const plantingCode = params.get('plantingCode') || '';
+      const cropName = params.get('cropName') || '';
+      setSeedSavingInit({ linkedPlantingId: plantingId, linkedPlantingCode: plantingCode, cropName });
+      setAddModalOpen(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   // 筛选后的数据（按创建时间倒序，新数据在前）
   const filteredData = useMemo(() => {
     // 方案1.3: 记录人ID转名称（用于级联筛选）
@@ -124,6 +154,15 @@ export default function SeedSourcePage() {
       // 方案1.3: 剩余数量范围筛选 (surplus = availableCount)
       if (filters.surplusMin !== undefined && item.availableCount < filters.surplusMin) return false;
       if (filters.surplusMax !== undefined && item.availableCount > filters.surplusMax) return false;
+      // 繁殖途径筛选
+      if (filters.propagationType) {
+        const itemPropType = (item as any).propagationType || 'external';
+        if (itemPropType !== filters.propagationType) return false;
+      }
+      if (filters.propagationStatus) {
+        const itemPropStatus = (item as any).propagationStatus;
+        if (itemPropStatus !== filters.propagationStatus) return false;
+      }
       return true;
     });
     // 按创建时间倒序排列（最新的在前）
@@ -170,7 +209,9 @@ export default function SeedSourcePage() {
       orgId: '',
       recorderId: '',
       surplusMin: undefined,
-      surplusMax: undefined
+      surplusMax: undefined,
+      propagationType: undefined,
+      propagationStatus: undefined
     });
     setPagination({ ...pagination, current: 1 });
   };
@@ -316,6 +357,18 @@ export default function SeedSourcePage() {
     setPrintModalOpen(true);
     setPrintMode(false);
     setSelectedRows([]);
+  };
+
+  // 处理繁殖过程记录
+  const handlePropagationRecord = (record: SeedSource) => {
+    setPropagationRecord(record);
+    setPropagationRecordOpen(true);
+  };
+
+  // 处理繁殖阶段推进
+  const handlePropagationStage = (record: SeedSource) => {
+    setPropagationRecord(record);
+    setPropagationStageOpen(true);
   };
 
   const handleConfirmExport = async () => {
@@ -479,14 +532,17 @@ export default function SeedSourcePage() {
         canDelete={canDelete}
         canExport={canExport}
         canPrint={canPrint}
+        onPropagationRecord={handlePropagationRecord}
+        onPropagationStage={handlePropagationStage}
       />
 
       {/* 弹窗 */}
       <AddModal
         isOpen={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onSuccess={loadItems}
+        onClose={() => { setAddModalOpen(false); setSeedSavingInit(null); }}
+        onSuccess={() => { loadItems(); setSeedSavingInit(null); }}
         units={units}
+        seedSavingInit={seedSavingInit}
       />
 
       {currentRecord && (
@@ -529,6 +585,21 @@ export default function SeedSourcePage() {
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
         selectedCount={selectedRows.length}
+      />
+
+      {/* 繁殖途径弹窗 */}
+      <PropagationRecordModal
+        isOpen={propagationRecordOpen}
+        onClose={() => setPropagationRecordOpen(false)}
+        record={propagationRecord}
+        onSuccess={loadItems}
+      />
+
+      <PropagationStageModal
+        isOpen={propagationStageOpen}
+        onClose={() => setPropagationStageOpen(false)}
+        record={propagationRecord}
+        onSuccess={loadItems}
       />
     </div>
   );

@@ -1,17 +1,16 @@
 /**
  * 区块管理页面
  * 功能：管理基地下的区域（如温室大棚、露天种植区等）
- * 区域类型：温室大棚、塑料大棚、玻璃温室、日光温室、露天种植区、其他
+ * 架构：组件 → useZoneStore / useGreenhouseStore (Zustand) → API
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Grid3X3, Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, MapPin, Layers, Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useGreenhouseStore } from '../stores';
-import { getZones, createZone, updateZone as updateZoneApi, deleteZone, Zone as ZoneType } from '../services/apiBasicDataService';
+import { useGreenhouseStore, useZoneStore } from '../stores';
+import type { Zone } from '../services/apiBasicDataService';
 
-// 区域类型选项
 const ZONE_TYPES = [
   { value: 'greenhouse', label: '温室大棚' },
   { value: 'plastic_house', label: '塑料大棚' },
@@ -21,7 +20,6 @@ const ZONE_TYPES = [
   { value: 'other', label: '其他' },
 ];
 
-// 获取区域类型显示名称
 const getZoneTypeName = (type: string) => {
   const found = ZONE_TYPES.find(z => z.value === type);
   return found ? found.label : type || '-';
@@ -33,10 +31,9 @@ const statusColors = {
 };
 
 export default function BlockManagement() {
-  // 从 Zustand Store 获取基地列表
-  const greenhouses = useGreenhouseStore((state) => state.greenhouses);
-  const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
-  const [zones, setZones] = useState<Zone[]>([]);
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
+  const { zones, loading, error, loadZones, addZone, editZone, removeZone } = useZoneStore();
   const [searchText, setSearchText] = useState('');
   const [baseFilter, setBaseFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -46,10 +43,7 @@ export default function BlockManagement() {
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [formData, setFormData] = useState<Partial<Zone>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // 将 greenhouses 转换为基地选项
   const baseOptions = useMemo(() => {
     return greenhouses.map(gh => ({
       value: gh.oid || gh.id,
@@ -57,39 +51,23 @@ export default function BlockManagement() {
     }));
   }, [greenhouses]);
 
-  // 加载区域数据
-  const loadZones = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getZones();
-      // 合并基地名称
-      const zonesWithBaseName = (data || []).map((zone: ZoneType) => {
-        const base = greenhouses.find(gh => gh.oid === zone.baseOid || gh.id === zone.baseOid);
-        return {
-          ...zone,
-          baseName: base?.name || base?.greenhouseName || zone.baseOid || '-'
-        };
-      });
-      setZones(zonesWithBaseName);
-    } catch (err) {
-      console.error('加载区域数据失败:', err);
-      setError('加载区域数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [greenhouses]);
-
   useEffect(() => {
     loadGreenhouses();
-  }, [loadGreenhouses]);
-
-  useEffect(() => {
     loadZones();
-  }, [loadZones]);
+  }, [loadGreenhouses, loadZones]);
 
-  // 过滤区域
-  const filteredZones = zones.filter(zone => {
+  // 合并基地名称到区域数据
+  const zonesWithBaseName = useMemo(() => {
+    return zones.map(zone => {
+      const base = greenhouses.find(gh => gh.oid === zone.baseOid || gh.id === zone.baseOid);
+      return {
+        ...zone,
+        baseName: base?.name || base?.greenhouseName || zone.baseOid || '-'
+      };
+    });
+  }, [zones, greenhouses]);
+
+  const filteredZones = zonesWithBaseName.filter(zone => {
     const matchSearch = !searchText ||
       zone.zoneName?.toLowerCase().includes(searchText.toLowerCase()) ||
       zone.zoneCode?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -137,10 +115,9 @@ export default function BlockManagement() {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     try {
       if (editingZone) {
-        await updateZoneApi(editingZone.id, {
+        await editZone(editingZone.id, {
           zoneName: formData.zoneName,
           zoneCode: formData.zoneCode,
           baseOid: formData.baseOid,
@@ -150,10 +127,8 @@ export default function BlockManagement() {
           status: formData.status,
           description: formData.description,
         });
-        await loadZones();
-        handleCloseModal();
       } else {
-        await createZone({
+        await addZone({
           zoneName: formData.zoneName,
           zoneCode: formData.zoneCode,
           baseOid: formData.baseOid,
@@ -162,9 +137,8 @@ export default function BlockManagement() {
           sortOrder: formData.sortOrder,
           description: formData.description,
         });
-        await loadZones();
-        handleCloseModal();
       }
+      handleCloseModal();
     } catch (err) {
       console.error('保存区域失败:', err);
       alert('保存区域失败');
@@ -174,8 +148,7 @@ export default function BlockManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除该区域吗？')) return;
     try {
-      await deleteZone(id);
-      await loadZones();
+      await removeZone(id);
     } catch (err) {
       console.error('删除区域失败:', err);
       alert('删除区域失败');
@@ -202,7 +175,6 @@ export default function BlockManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 页面头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -218,7 +190,6 @@ export default function BlockManagement() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: '区域总数', value: zones.length, color: 'bg-amber-500' },
@@ -240,11 +211,9 @@ export default function BlockManagement() {
         ))}
       </div>
 
-      {/* 筛选和操作栏 */}
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
           <div className="flex flex-1 gap-4 items-center">
-            {/* 搜索框 */}
             <div className="flex-1 max-w-md">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -257,8 +226,6 @@ export default function BlockManagement() {
                 />
               </div>
             </div>
-
-            {/* 基地筛选 */}
             <select
               value={baseFilter}
               onChange={(e) => setBaseFilter(e.target.value)}
@@ -269,8 +236,6 @@ export default function BlockManagement() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-
-            {/* 状态筛选 */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -281,8 +246,6 @@ export default function BlockManagement() {
               <option value="inactive">闲置</option>
             </select>
           </div>
-
-          {/* 新增按钮 */}
           <button
             onClick={() => handleOpenModal()}
             className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center gap-2 transition-colors"
@@ -293,7 +256,6 @@ export default function BlockManagement() {
         </div>
       </div>
 
-      {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -352,7 +314,6 @@ export default function BlockManagement() {
           </table>
         </div>
 
-        {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <p className="text-sm text-gray-500">
             显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredZones.length)} 条，共 {filteredZones.length} 条
@@ -377,7 +338,6 @@ export default function BlockManagement() {
         </div>
       </div>
 
-      {/* 新增/编辑弹窗 */}
       {showModal && (
         <Modal
           isOpen={showModal}
@@ -402,7 +362,6 @@ export default function BlockManagement() {
                 />
               </FormField>
             </div>
-
             <FormField label="所属基地" required error={errors.baseOid}>
               <select
                 value={formData.baseOid || ''}
@@ -415,7 +374,6 @@ export default function BlockManagement() {
                 ))}
               </select>
             </FormField>
-
             <FormField label="区域类型" required error={errors.zoneType}>
               <select
                 value={formData.zoneType || ''}
@@ -428,7 +386,6 @@ export default function BlockManagement() {
                 ))}
               </select>
             </FormField>
-
             <FormField label="面积(亩)" required error={errors.area}>
               <Input
                 type="number"
@@ -437,7 +394,6 @@ export default function BlockManagement() {
                 placeholder="请输入面积"
               />
             </FormField>
-
             <div className="grid grid-cols-2 gap-4">
               <FormField label="排序">
                 <Input
@@ -458,7 +414,6 @@ export default function BlockManagement() {
                 </select>
               </FormField>
             </div>
-
             <FormField label="备注说明">
               <Textarea
                 value={formData.description || ''}
