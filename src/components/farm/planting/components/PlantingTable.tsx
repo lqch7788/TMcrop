@@ -399,7 +399,7 @@ export function PlantingTable({
       },
       {
         title: '操作',
-        width: 280,
+        width: 250,
         render: (_: unknown, record: Planting) => (
           <div className="flex gap-1">
             <button
@@ -418,13 +418,6 @@ export function PlantingTable({
                 <CheckCircle className="w-4 h-4" />
               </button>
             )}
-            <button
-              onClick={() => onPrint(record)}
-              className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-              title="打印标签"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
             {record.pictures && record.pictures.length > 0 && (
               <button
                 onClick={() => onImageClick(record.pictures)}
@@ -612,6 +605,25 @@ export function PlantingTable({
                 取消
               </button>
             </>
+          ) : printMode ? (
+            /* 打印模式 */
+            <>
+              <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
+              <button
+                onClick={confirmPrint}
+                disabled={selectedRows.length === 0}
+                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                确认打印
+              </button>
+              <button
+                onClick={cancelPrintMode}
+                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+            </>
           ) : (
             /* 正常模式 */
             <>
@@ -631,6 +643,15 @@ export function PlantingTable({
                 >
                   <Download className="w-4 h-4" />
                   导出
+                </button>
+              )}
+              {canPrint && (
+                <button
+                  onClick={() => { if (onPrintModeChange) onPrintModeChange(true); }}
+                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  标签打印
                 </button>
               )}
             </>
