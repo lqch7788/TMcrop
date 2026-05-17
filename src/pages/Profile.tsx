@@ -62,7 +62,7 @@ const rolePermissions = {
     quickActions: [
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '基地总览', icon: LayoutDashboard, path: '/dashboard', desc: '查看基地概览' },
-      { label: '任务派发', icon: ClipboardList, path: '/task-dispatch', desc: '分配农事任务' },
+      { label: '任务派发', icon: ClipboardList, path: '/farm-hub', desc: '分配农事任务' },
       { label: '审批中心', icon: ClipboardCheck, path: '/pending-approval', desc: '处理审批事项' },
     ]
   },
@@ -81,7 +81,7 @@ const rolePermissions = {
     quickActions: [
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '基地总览', icon: LayoutDashboard, path: '/dashboard', desc: '本基地概览' },
-      { label: '任务派发', icon: ClipboardList, path: '/task-dispatch', desc: '本部门任务分配' },
+      { label: '任务派发', icon: ClipboardList, path: '/farm-hub', desc: '本部门任务分配' },
       { label: '考勤审核', icon: Calendar, path: '/settings/personnel/attendance', desc: '审核员工考勤' },
     ]
   },

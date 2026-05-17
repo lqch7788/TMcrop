@@ -58,6 +58,9 @@ export const DELETABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress'
 // 批量派发时可派发的状态（仅草稿）
 export const BATCH_DISPATCH_STATUSES = ['draft'];
 
+// 批量重派时可重派的状态（失败/已放弃）
+export const BATCH_REASSIGN_STATUSES = ['failed', 'abandoned'];
+
 // ========== 工作制配置 ==========
 export const WORK_HOUR_SYSTEMS = [
   { value: '8', label: '8小时工作制', workHours: 8, startHour: 8, endHour: 17 },

@@ -14,7 +14,7 @@ import { Plus, Upload } from 'lucide-react';
 // 导入迁移的 TaskTable 组件
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
-import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
+import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
 
 // 状态配置（从常量文件导入，与 taskDispatch 保持一致）
 const STATUS_FILTERS = STATUS_OPTIONS;
@@ -25,7 +25,7 @@ const STATUS_FILTERS = STATUS_OPTIONS;
 const BATCH_ACCEPT_STATUSES = ['waiting_acceptance'];
 
 // 工具栏状态类型
-type ToolbarMode = 'normal' | 'export' | 'batchEdit' | 'batchDelete' | 'batchDispatch' | 'batchVerify';
+type ToolbarMode = 'normal' | 'export' | 'batchEdit' | 'batchDelete' | 'batchDispatch' | 'batchVerify' | 'batchReassign';
 
 // 视图模式类型
 type ViewMode = 'list' | 'calendar';
@@ -64,6 +64,7 @@ interface TaskTabProps {
   onBatchVerify?: (taskIds: string[]) => void;
   onBatchDelete?: (taskIds: string[]) => void;
   onBatchEdit?: (taskIds: string[]) => void;
+  onBatchReassign?: (taskIds: string[]) => void;
   // 导入回调
   onImport?: () => void;
   // 导出回调
@@ -100,6 +101,7 @@ export function TaskTab({
   onBatchVerify,
   onBatchDelete,
   onBatchEdit,
+  onBatchReassign,
   onImport,
   onExport,
 }: TaskTabProps) {
@@ -261,6 +263,15 @@ export function TaskTab({
     onClearSelection();
   }, [onBatchVerify, selectedIds, onClearSelection]);
 
+  // 处理批量重派确认
+  const handleConfirmBatchReassign = useCallback(() => {
+    if (onBatchReassign && selectedIds.length > 0) {
+      onBatchReassign(selectedIds);
+    }
+    setToolbarMode('normal');
+    onClearSelection();
+  }, [onBatchReassign, selectedIds, onClearSelection]);
+
   // 处理全选
   const handleSelectAll = useCallback(() => {
     // 根据当前模式选中对应的任务
@@ -307,6 +318,15 @@ export function TaskTab({
           }
         }
       });
+    } else if (toolbarMode === 'batchReassign') {
+      // 批量重派模式：选中失败/已放弃状态的任务
+      filteredTasks.forEach(task => {
+        if (BATCH_REASSIGN_STATUSES.includes(task.status)) {
+          if (!selectedIds.includes(task.id)) {
+            onToggleSelect(task.id);
+          }
+        }
+      });
     }
   }, [filteredTasks, selectedIds, onToggleSelect, toolbarMode]);
 
@@ -333,6 +353,11 @@ export function TaskTab({
 
   const toggleBatchVerifyMode = () => {
     setToolbarMode(prev => prev === 'batchVerify' ? 'normal' : 'batchVerify');
+    onClearSelection();
+  };
+
+  const toggleBatchReassignMode = () => {
+    setToolbarMode(prev => prev === 'batchReassign' ? 'normal' : 'batchReassign');
     onClearSelection();
   };
 
@@ -457,6 +482,7 @@ export function TaskTab({
         batchDeleteMode={toolbarMode === 'batchDelete'}
         batchDispatchMode={toolbarMode === 'batchDispatch'}
         batchVerifyMode={toolbarMode === 'batchVerify'}
+        batchReassignMode={toolbarMode === 'batchReassign'}
         canRemind={canRemind}
         sendReminder={(
           taskId: string,
@@ -515,6 +541,9 @@ export function TaskTab({
         onConfirmBatchDispatch={handleConfirmBatchDispatch}
         onBatchVerify={toggleBatchVerifyMode}
         onConfirmBatchVerify={handleConfirmBatchVerify}
+        onBatchReassign={toggleBatchReassignMode}
+        onConfirmBatchReassign={handleConfirmBatchReassign}
+        onCancelBatchReassign={toggleBatchReassignMode}
         onConfirmBatchDelete={handleConfirmBatchDelete}
         onExport={toggleExportMode}
         onImport={onImport}
