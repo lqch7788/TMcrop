@@ -244,3 +244,7 @@ export type { FertilizerData } from './useFertilizerStore';
 
 export { useRegionStore } from './useRegionStore';
 export type { RegionNode } from './useRegionStore';
+
+// V11.0: 工序定义管理
+export { useProcessDefinitionStore } from './useProcessDefinitionStore';
+export { useApprovalLevelStore } from './useApprovalLevelStore';

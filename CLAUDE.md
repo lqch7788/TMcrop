@@ -405,6 +405,15 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 通过
 
+2. **修复新建任务后列表只显示任务ID、其他字段全空白**
+   - 根因：后端 `POST /farm-tasks` 只返回 `{ id: newId }`，Store 的 `addTask` 用 API 返回的 `{ id }` 替换完整的本地乐观数据
+   - 修复1：后端 POST 创建后查询完整记录，经 `transformTaskFields` 转换后返回全部字段
+   - 修复2：Store `addTask` 改为 merge（`{ ...t, ...savedTask }`）而非 replace（`{ ...savedTask }`）
+   - 修复3：`useTasks.createTask` 补全缺失的字段映射（batchId/batchCode/description/remarks/field/crop/teamId/teamName/toolsRemarks/requiredFeedback）
+   - 新增DB列：`team_id`、`team_name`、`tools_remarks`；同步更新 schema.ts、FIELD_NAME_MAP、transformTaskFields
+
+**构建状态：** ✅ 通过
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

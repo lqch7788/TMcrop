@@ -27,6 +27,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [allLabelNumbers, setAllLabelNumbers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [generatedLabels, setGeneratedLabels] = useState<any[]>([]);
+  const [printLabels, setPrintLabels] = useState<string[]>([]);
 
   // 操作员
   const storeUsers = useUserStore((s) => s.users);
@@ -56,21 +57,35 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   }, [isOpen, record.id, record.seedlingCode, record.survivalCount]);
 
+  // printLabels更新后触发打印（等待DOM渲染完成）
+  useEffect(() => {
+    if (printLabels.length > 0) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintLabels([]);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printLabels]);
+
   // 剩余数量
   const remainingCount = record.initialCount - record.lossCount;
 
   // 处理打印
-  const handlePrint = useCallback(async () => {
+  const handlePrint = async () => {
     setLoading(true);
     try {
+      let labelsToPrint: string[] = [];
+
       if (printMode === 'single') {
         if (!previewLabel) { alert('请选择要打印的标签'); return; }
+        labelsToPrint = [previewLabel];
         await apiService.printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
       } else if (printMode === 'multi') {
         if (selectedLabels.length === 0) { alert('请选择要打印的标签'); return; }
+        labelsToPrint = [...selectedLabels];
         await apiService.printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
       } else {
-        // 批量模式：通过Store生成标签
         const result = await generateBatchLabels({
           seedling_id: record.id,
           count: printCount,
@@ -79,18 +94,18 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           start_date: record.startDate,
         });
         if (result) {
+          labelsToPrint = result.labels.map((l: any) => l.labelNumber);
           setGeneratedLabels(result.labels);
-          // 刷新标签列表
           const nums = await apiService.generateAllLabelNumbers(record.id);
           setAllLabelNumbers(nums);
         }
         await apiService.printLabel(record.id, 'new', printCount, currentOperator);
       }
-      window.print();
+      setPrintLabels(labelsToPrint);
     } finally {
       setLoading(false);
     }
-  }, [printMode, previewLabel, selectedLabels, printCount, record, currentOperator, generateBatchLabels]);
+  };
 
   // 导出Excel（扫描功能码列为URL链接，不嵌入QR码图片）
   const handleExportExcel = useCallback(async () => {
@@ -398,11 +413,44 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       </div>
 
+      {/* 打印容器：正常隐藏，打印时显示所有选中标签 */}
+      <div className="hidden print-container">
+        {printLabels.map((label, index) => (
+          <div key={label} className="print-label-card">
+            <div className="bg-white p-3 border border-gray-300 rounded-lg">
+              <QRCodeSVG value={getQrCodeValue(label)} size={80} />
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace' }}>{label}</div>
+              <div style={{ fontSize: 9, color: '#666' }}>{record.cropName}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <style>{`
         @media print {
+          @page { margin: 10mm; }
           body * { visibility: hidden; }
-          .print-label, .print-label * { visibility: visible; }
-          .print-label { position: absolute; left: 0; top: 0; }
+          .print-container, .print-container * { visibility: visible; }
+          .print-container {
+            display: flex !important;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            align-content: flex-start;
+            gap: 16px;
+            padding: 20px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .print-label-card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            text-align: center;
+          }
         }
       `}</style>
     </UnifiedModal>

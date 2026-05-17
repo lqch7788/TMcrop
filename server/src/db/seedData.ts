@@ -4218,6 +4218,176 @@ function seedRegionData() {
 }
 
 /**
+ * 工序定义种子数据
+ */
+function seedProcessDefinitions() {
+  const db = getDatabase();
+
+  const result = db.exec('SELECT COUNT(*) as cnt FROM process_definitions');
+  const count: number = result.length > 0 ? Number(result[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const items = [
+    { code: 'PD001', name: '整地', type: '耕地', unit: '亩', price: 120, bonus: 5 },
+    { code: 'PD002', name: '播种', type: '播种', unit: '亩', price: 80, bonus: 5 },
+    { code: 'PD003', name: '施肥', type: '施肥', unit: '亩', price: 100, bonus: 10 },
+    { code: 'PD004', name: '浇水', type: '灌溉', unit: '亩', price: 60, bonus: 0 },
+    { code: 'PD005', name: '除草', type: '除草', unit: '亩', price: 90, bonus: 5 },
+    { code: 'PD006', name: '打药', type: '植保', unit: '亩', price: 110, bonus: 10 },
+    { code: 'PD007', name: '摘心', type: '修剪', unit: '株', price: 0.5, bonus: 0 },
+    { code: 'PD008', name: '授粉', type: '授粉', unit: '亩', price: 150, bonus: 15 },
+    { code: 'PD009', name: '采收', type: '采收', unit: '公斤', price: 2, bonus: 20 },
+    { code: 'PD010', name: '分级包装', type: '包装', unit: '公斤', price: 1, bonus: 10 },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO process_definitions (oid, process_code, process_name, process_type, unit, default_price, default_bonus, description, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const item of items) {
+    const oid = `PD${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    stmt.run([oid, item.code, item.name, item.type, item.unit, item.price, item.bonus, '']);
+  }
+  stmt.free();
+
+  console.log(`已导入工序定义种子数据: ${items.length}条`);
+}
+
+/**
+ * 审批级别配置种子数据（4个级别）
+ */
+function seedApprovalLevelConfigs() {
+  const db = getDatabase();
+
+  const result = db.exec('SELECT COUNT(*) as cnt FROM approval_level_configs');
+  const count: number = result.length > 0 ? Number(result[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const configs = [
+    { code: 'exempt', name: '免审批', desc: '金额低于阈值，自动通过，无需人工审批', approverCount: 0, requireMulti: 0, roles: null, sort: 0 },
+    { code: 'quick', name: '快速审批', desc: '单人审批，快速通过', approverCount: 1, requireMulti: 0, roles: JSON.stringify(['manager']), sort: 1 },
+    { code: 'standard', name: '标准审批', desc: '部门主管 + 经理二级审批', approverCount: 2, requireMulti: 0, roles: JSON.stringify(['department_head', 'manager']), sort: 2 },
+    { code: 'strict', name: '严格审批', desc: '部门主管 + 经理 + 总监三级审批', approverCount: 3, requireMulti: 1, roles: JSON.stringify(['department_head', 'manager', 'director']), sort: 3 },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO approval_level_configs (oid, level_code, level_name, description, approver_count, require_multi_approver, approver_roles, sort_order, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const item of configs) {
+    const oid = `ALC${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    stmt.run([oid, item.code, item.name, item.desc, item.approverCount, item.requireMulti, item.roles, item.sort]);
+  }
+  stmt.free();
+
+  console.log(`已导入审批级别配置种子数据: ${configs.length}条`);
+}
+
+/**
+ * 审批金额阈值种子数据（4个阈值）
+ */
+function seedApprovalAmountThresholds() {
+  const db = getDatabase();
+
+  const result = db.exec('SELECT COUNT(*) as cnt FROM approval_amount_thresholds');
+  const count: number = result.length > 0 ? Number(result[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const thresholds = [
+    { max: 1000, level: 'exempt', sort: 0 },
+    { max: 10000, level: 'quick', sort: 1 },
+    { max: 50000, level: 'standard', sort: 2 },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO approval_amount_thresholds (oid, max_amount, level_code, sort_order, status)
+    VALUES (?, ?, ?, ?, 'active')
+  `);
+
+  for (const item of thresholds) {
+    const oid = `AAT${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    stmt.run([oid, item.max, item.level, item.sort]);
+  }
+  stmt.free();
+
+  console.log(`已导入审批金额阈值种子数据: ${thresholds.length}条`);
+}
+
+/**
+ * 审批类型规则种子数据（37种类型）
+ */
+function seedApprovalTypeRules() {
+  const db = getDatabase();
+
+  const result = db.exec('SELECT COUNT(*) as cnt FROM approval_type_rules');
+  const count: number = result.length > 0 ? Number(result[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const rules = [
+    // 业务审批（10种）
+    { type: 'material_request', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '领料申请，根据金额确定审批级别' },
+    { type: 'return_material', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '退料单' },
+    { type: 'purchase_request', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '采购申请，根据采购金额确定审批级别' },
+    { type: 'material_inbound', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '物料入库' },
+    { type: 'material_transfer', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '库存调拨' },
+    { type: 'seed_source_inbound', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '种源入库，需要严格审批' },
+    { type: 'seedling_plan', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '育苗计划' },
+    { type: 'planting_plan', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '种植计划' },
+    { type: 'order_create', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '订单创建，高价值订单需要严格审批' },
+    { type: 'order_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '订单变更' },
+    // 生产审批（5种）
+    { type: 'production_plan', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '生产计划，需要标准审批' },
+    { type: 'production_batch', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '生产批次' },
+    { type: 'batch_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '批次变更' },
+    { type: 'batch_void', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '批次作废，强制严格审批' },
+    { type: 'tech_solution', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '技术方案' },
+    // 农事审批（4种）
+    { type: 'task_dispatch', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '任务派发' },
+    { type: 'task_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '任务变更' },
+    { type: 'inspection_issue', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '巡查问题' },
+    { type: 'issue_resolve', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '问题整改' },
+    // 采收审批（1种）
+    { type: 'harvest_request', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '采收申请' },
+    // 作物补录审批（3种）
+    { type: 'seed_source_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '种源补录，强制严格审批' },
+    { type: 'seedling_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '育苗补录，强制严格审批' },
+    { type: 'crop_storage_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '作物入库补录，强制严格审批' },
+    // 指标/公告审批（2种）
+    { type: 'indicator_approval', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '指标审批' },
+    { type: 'announcement_approval', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '公告审批' },
+    // 成本审批（2种）
+    { type: 'budget_create', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '预算编制，高金额需要严格审批' },
+    { type: 'budget_adjust', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '预算调整，高金额需要严格审批' },
+    // HR审批（10种）
+    { type: 'leave', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '请假，3天内快速审批' },
+    { type: 'overtime', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '加班，2小时内免审批' },
+    { type: 'resignation', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '离职，强制严格审批' },
+    { type: 'recruitment', forceExempt: 0, forceStrict: 0, forcedLevel: 'standard', batch: 0, customCount: null, remark: '招聘，标准二级审批（部门主管+经理）' },
+    { type: 'onboarding', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '入职' },
+    { type: 'attendance_repair', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '考勤补录' },
+    { type: 'salary_adjustment', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '调薪，强制严格审批' },
+    { type: 'contract_renewal', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '合同续签' },
+    { type: 'salary_budget', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '工资预算，强制严格审批' },
+    { type: 'transfer', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '转岗，强制严格审批' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO approval_type_rules (oid, approval_type, force_exempt, force_strict, forced_level, batch_approval_supported, custom_approver_count, remark, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const item of rules) {
+    const oid = `ATR${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    stmt.run([oid, item.type, item.forceExempt, item.forceStrict, item.forcedLevel, item.batch, item.customCount, item.remark]);
+  }
+  stmt.free();
+
+  console.log(`已导入审批类型规则种子数据: ${rules.length}条`);
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
@@ -4246,6 +4416,10 @@ export function exportDatabase() {
   seedEnergyCosts();
   seedFertilizerAndMarks();
   seedRegionData();
+  seedProcessDefinitions();
+  seedApprovalLevelConfigs();
+  seedApprovalAmountThresholds();
+  seedApprovalTypeRules();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');

@@ -226,11 +226,11 @@ export const useFarmTaskStore = create<FarmTaskState>()(
             { offlineQueue: true }
           );
 
-          // API成功，用API返回的真实ID替换临时ID
+          // API成功，将API返回数据合并到本地任务（保留本地字段，仅用API数据补充）
           const realId = savedTask.id || savedTask.taskCode || tempId;
           set(state => ({
             tasks: state.tasks.map(t =>
-              t.id === tempId ? { ...savedTask, id: realId, taskCode: savedTask.taskCode || taskCode } : t
+              t.id === tempId ? { ...t, ...savedTask, id: realId, taskCode: savedTask.taskCode || t.taskCode || taskCode } : t
             ),
           }));
 

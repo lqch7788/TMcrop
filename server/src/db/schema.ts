@@ -546,6 +546,9 @@ export function initializeDatabase() {
       version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT
+      team_id TEXT DEFAULT '',
+      team_name TEXT DEFAULT '',
+      tools_remarks TEXT DEFAULT ''
     )
   `);
 
@@ -2259,6 +2262,83 @@ export function initializeDatabase() {
       api_key TEXT NOT NULL,
       is_active INTEGER DEFAULT 1,
       create_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 为 departments 表添加缺失的描述列
+  try {
+    db.run(`ALTER TABLE departments ADD COLUMN description TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+
+  // ========== V11.0: 工序定义表（系统设置 - 工序管理）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS process_definitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      process_code TEXT NOT NULL,
+      process_name TEXT NOT NULL,
+      process_type TEXT,
+      unit TEXT DEFAULT '亩',
+      default_price REAL DEFAULT 0,
+      default_bonus REAL DEFAULT 0,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ========== V11.0: 分级审批配置表 ==========
+
+  // 审批级别配置表 — 4个审批级别的详细配置
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approval_level_configs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      level_code TEXT NOT NULL UNIQUE,
+      level_name TEXT NOT NULL,
+      description TEXT,
+      approver_count INTEGER DEFAULT 0,
+      require_multi_approver INTEGER DEFAULT 0,
+      approver_roles TEXT,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 审批金额阈值表 — 金额区间对应的审批级别
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approval_amount_thresholds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      max_amount REAL NOT NULL,
+      level_code TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 审批类型规则表 — 37种审批类型的特殊规则
+  db.run(`
+    CREATE TABLE IF NOT EXISTS approval_type_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oid TEXT UNIQUE NOT NULL,
+      approval_type TEXT NOT NULL UNIQUE,
+      force_exempt INTEGER DEFAULT 0,
+      force_strict INTEGER DEFAULT 0,
+      forced_level TEXT,
+      batch_approval_supported INTEGER DEFAULT 0,
+      custom_approver_count INTEGER,
+      remark TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
 

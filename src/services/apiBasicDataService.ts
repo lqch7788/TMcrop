@@ -22,8 +22,11 @@ export interface Department {
   managerId?: string;
   managerName?: string;
   parentOid?: string;
+  parentName?: string;
   sortNumber?: number;
+  description?: string;
   status?: string;
+  staffCount?: number;
   createdAt?: string;
 }
 
@@ -247,6 +250,28 @@ export async function getDepartments(): Promise<Department[]> {
     cacheStrategy: 'network-first',
   });
   return data || [];
+}
+
+/** 创建部门 */
+export async function createDepartment(dept: Partial<Department>): Promise<Department> {
+  const result = await enhancedApiClient.post<Department>('/basic-data/departments', dept, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新部门 */
+export async function updateDepartment(id: string, dept: Partial<Department>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/departments/${id}`, dept, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除部门 */
+export async function deleteDepartment(id: string): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/departments/${id}`, {
+    offlineQueue: true,
+  });
 }
 
 // ============================================
@@ -683,6 +708,176 @@ export async function updateDevice(id: string, device: Partial<Device>): Promise
  */
 export async function deleteDevice(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/devices/${id}`, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 工序定义类型
+// ============================================
+
+export interface ProcessDefinition {
+  id: number;
+  oid: string;
+  processCode: string;
+  processName: string;
+  processType?: string;
+  unit?: string;
+  defaultPrice?: number;
+  defaultBonus?: number;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ============================================
+// 工序定义 API
+// ============================================
+
+/** 获取所有工序定义 */
+export async function getProcessDefinitions(): Promise<ProcessDefinition[]> {
+  const data = await enhancedApiClient.get<ProcessDefinition[]>('/basic-data/process-definitions', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 创建工序定义 */
+export async function createProcessDefinition(item: Partial<ProcessDefinition>): Promise<ProcessDefinition> {
+  const result = await enhancedApiClient.post<ProcessDefinition>('/basic-data/process-definitions', item, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新工序定义 */
+export async function updateProcessDefinition(id: number | string, item: Partial<ProcessDefinition>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/process-definitions/${id}`, item, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除工序定义 */
+export async function deleteProcessDefinition(id: number | string): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/process-definitions/${id}`, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 分级审批 — 审批级别配置
+// ============================================
+
+export interface ApprovalLevelConfigItem {
+  id: number;
+  oid: string;
+  levelCode: string;
+  levelName: string;
+  description: string;
+  approverCount: number;
+  requireMultiApprover: number;
+  approverRoles: string[] | null;
+  sortOrder: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 获取所有审批级别配置 */
+export async function getApprovalLevelConfigs(): Promise<ApprovalLevelConfigItem[]> {
+  const data = await enhancedApiClient.get<ApprovalLevelConfigItem[]>('/basic-data/approval-level-configs', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 更新审批级别配置 */
+export async function updateApprovalLevelConfig(id: number, item: Partial<ApprovalLevelConfigItem>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/approval-level-configs/${id}`, item, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 分级审批 — 审批金额阈值
+// ============================================
+
+export interface ApprovalAmountThresholdItem {
+  id: number;
+  oid: string;
+  maxAmount: number;
+  levelCode: string;
+  sortOrder: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 获取所有金额阈值 */
+export async function getApprovalAmountThresholds(): Promise<ApprovalAmountThresholdItem[]> {
+  const data = await enhancedApiClient.get<ApprovalAmountThresholdItem[]>('/basic-data/approval-amount-thresholds', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 创建金额阈值 */
+export async function createApprovalAmountThreshold(item: Partial<ApprovalAmountThresholdItem>): Promise<ApprovalAmountThresholdItem> {
+  const result = await enhancedApiClient.post<ApprovalAmountThresholdItem>('/basic-data/approval-amount-thresholds', item, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新金额阈值 */
+export async function updateApprovalAmountThreshold(id: number, item: Partial<ApprovalAmountThresholdItem>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/approval-amount-thresholds/${id}`, item, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除金额阈值 */
+export async function deleteApprovalAmountThreshold(id: number): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/approval-amount-thresholds/${id}`, {
+    offlineQueue: true,
+  });
+}
+
+// ============================================
+// 分级审批 — 审批类型规则
+// ============================================
+
+export interface ApprovalTypeRuleItem {
+  id: number;
+  oid: string;
+  approvalType: string;
+  forceExempt: number;
+  forceStrict: number;
+  forcedLevel: string | null;
+  batchApprovalSupported: number;
+  customApproverCount: number | null;
+  remark: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 获取所有审批类型规则 */
+export async function getApprovalTypeRules(): Promise<ApprovalTypeRuleItem[]> {
+  const data = await enhancedApiClient.get<ApprovalTypeRuleItem[]>('/basic-data/approval-type-rules', {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 更新审批类型规则 */
+export async function updateApprovalTypeRule(id: number, item: Partial<ApprovalTypeRuleItem>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/approval-type-rules/${id}`, item, {
     offlineQueue: true,
   });
 }

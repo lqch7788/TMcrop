@@ -364,14 +364,8 @@ export default function PlantingPage() {
       return;
     }
     setPrintRecords(records);
-    if (records.length === 1) {
-      // 单条记录直接打印
-      setCurrentRecord(records[0]);
-      setPrintModalOpen(true);
-    } else {
-      // 多条记录打开打印弹窗选择
-      setPrintModalOpen(true);
-    }
+    setCurrentRecord(records[0]);
+    setPrintModalOpen(true);
     setPrintMode(false);
     setSelectedRows([]);
   };
