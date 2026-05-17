@@ -237,11 +237,6 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '临时任务不存在' });
     }
 
-    // 只允许删除草稿或已取消的任务
-    if (task.status !== 'draft' && task.status !== 'cancelled') {
-      return res.status(400).json({ success: false, error: '只允许删除草稿或已取消的临时任务' });
-    }
-
     db.run('DELETE FROM temp_tasks WHERE id = ?', [id]);
     saveDatabase();
     res.json({ success: true, data: { id } });
