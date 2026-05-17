@@ -668,6 +668,21 @@ export function initializeDatabase() {
     )
   `);
 
+  // 临时任务表新列（向后兼容）
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN estimated_hours REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN worker_count INTEGER DEFAULT 1`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN actual_hours REAL DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN progress INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN reject_count INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN urgency TEXT DEFAULT 'normal'`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN estimated_days INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN reject_reason TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN acceptance_remarks TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN operation_records TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN greenhouse_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN title TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN location TEXT`); } catch (e) {}
+
   // 创建采购计划表
   db.run(`
     CREATE TABLE IF NOT EXISTS purchase_plans (
