@@ -332,10 +332,46 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
 ];
 
 // ============================================================
+// 从 Zustand Store 加载运行时配置（优先），硬编码配置作为降级
+// Store 通过 syncApprovalStoreData() 推送运行时数据到此模块
+// ============================================================
+
+let _storeLevelConfigs: any[] = [];
+let _storeAmountThresholds: any[] = [];
+let _storeTypeRules: any[] = [];
+let _storeReady = false;
+
+/** 由 useApprovalLevelStore 在数据加载完成后调用，同步运行时配置 */
+export function syncApprovalStoreData(data: {
+  levelConfigs: any[];
+  amountThresholds: any[];
+  typeRules: any[];
+}) {
+  _storeLevelConfigs = data.levelConfigs || [];
+  _storeAmountThresholds = data.amountThresholds || [];
+  _storeTypeRules = data.typeRules || [];
+  _storeReady = _storeLevelConfigs.length > 0 || _storeAmountThresholds.length > 0 || _storeTypeRules.length > 0;
+}
+
+// ============================================================
 // 根据类型获取特定配置
 // ============================================================
 
 export function getTypeSpecificConfig(type: ApprovalType): TypeSpecificConfig | undefined {
+  if (_storeReady && _storeTypeRules.length > 0) {
+    const rule = _storeTypeRules.find((r: any) => r.approvalType === type);
+    if (rule) {
+      return {
+        type: rule.approvalType as ApprovalType,
+        forceExempt: !!rule.forceExempt,
+        forceStrict: !!rule.forceStrict,
+        forcedLevel: rule.forcedLevel as ApprovalLevel | undefined,
+        customApproverCount: rule.customApproverCount,
+        batchApprovalSupported: !!rule.batchApprovalSupported,
+        remark: rule.remark,
+      };
+    }
+  }
   return TYPE_SPECIFIC_CONFIGS.find(config => config.type === type);
 }
 
@@ -344,12 +380,21 @@ export function getTypeSpecificConfig(type: ApprovalType): TypeSpecificConfig | 
 // ============================================================
 
 export function getLevelByAmount(amount: number): ApprovalLevel {
-  for (const threshold of AMOUNT_THRESHOLDS) {
-    if (amount < threshold.max) {
-      return threshold.level;
+  if (_storeReady && _storeAmountThresholds.length > 0) {
+    const sorted = [..._storeAmountThresholds].sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    for (const t of sorted) {
+      if (amount < t.maxAmount) {
+        return t.levelCode as ApprovalLevel;
+      }
+    }
+  } else {
+    for (const threshold of AMOUNT_THRESHOLDS) {
+      if (amount < threshold.max) {
+        return threshold.level;
+      }
     }
   }
-  return ApprovalLevel.STRICT; // 默认严格审批
+  return ApprovalLevel.STRICT;
 }
 
 // ============================================================
@@ -357,6 +402,23 @@ export function getLevelByAmount(amount: number): ApprovalLevel {
 // ============================================================
 
 export function getApprovalLevelConfig(level: ApprovalLevel): ApprovalLevelConfig {
+  if (_storeReady && _storeLevelConfigs.length > 0) {
+    const config = _storeLevelConfigs.find((c: any) => c.levelCode === level);
+    if (config) {
+      let approverRoles: string[] | undefined;
+      if (config.approverRoles) {
+        approverRoles = Array.isArray(config.approverRoles) ? config.approverRoles : [];
+      }
+      return {
+        level: config.levelCode as ApprovalLevel,
+        name: config.levelName,
+        description: config.description || '',
+        approverCount: config.approverCount || 0,
+        requireMultiApprover: !!config.requireMultiApprover,
+        approverRoles,
+      };
+    }
+  }
   return APPROVAL_LEVEL_CONFIGS[level];
 }
 

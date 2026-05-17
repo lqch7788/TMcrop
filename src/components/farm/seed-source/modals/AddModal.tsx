@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
-import { SourceType, StockStatus } from '../../../../types/crop';
+import { SourceType, StockStatus, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { generateSeedCode } from '../../../../services/apiSeedSourceService';
@@ -42,13 +42,16 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   units: Array<{ value: string; label: string }>;
+  /** 留种初始化数据（从种植页面跳转来） */
+  seedSavingInit?: { linkedPlantingId?: string; linkedPlantingCode?: string; cropName?: string; } | null;
 }
 
 export function AddModal({
   isOpen,
   onClose,
   onSuccess,
-  units
+  units,
+  seedSavingInit,
 }: AddModalProps) {
   // 使用审批Context
   const { addApproval } = useApprovalContext();
@@ -87,6 +90,15 @@ export function AddModal({
     // V3.1 补录相关字段
     isSupplementary: false,  // 是否补录
     supplementaryReason: '',  // 补录原因
+    // 繁殖途径字段
+    propagationType: PropagationType.EXTERNAL as string,
+    propagationMethod: '',
+    parentMaleId: '', parentMaleCode: '',
+    parentFemaleId: '', parentFemaleCode: '',
+    motherPlantId: '', motherPlantCode: '',
+    linkedPlantingId: '', linkedPlantingCode: '',
+    propagationStartDate: '', expectedHarvestDate: '',
+    breedingLocation: '', targetTraits: '', generation: '',
   });
 
   // 作物编码
@@ -131,6 +143,20 @@ export function AddModal({
     if (!targetSupplierType) return supplierSearchResults; // null = 展示全部
     return supplierSearchResults.filter(s => s.supplierType === targetSupplierType);
   }, [supplierSearchResults, formData.sourceType]);
+
+  // 留种初始化：从种植页面跳转时，自动切换到留种模式并填充信息
+  useEffect(() => {
+    if (isOpen && seedSavingInit) {
+      setFormData(prev => ({
+        ...prev,
+        propagationType: PropagationType.SEED_SAVING,
+        sourceOrigin: 'self_produced' as SourceOrigin,
+        linkedPlantingId: seedSavingInit.linkedPlantingId || '',
+        linkedPlantingCode: seedSavingInit.linkedPlantingCode || '',
+        cropName: seedSavingInit.cropName || prev.cropName,
+      }));
+    }
+  }, [isOpen, seedSavingInit]);
 
   // 当种源类型改变时，清空已选供应商（类型不匹配）
   useEffect(() => {
@@ -235,34 +261,53 @@ export function AddModal({
     // 创建种源记录（添加 await 确保数据保存完成）
     let newSeedSource;
     try {
-      newSeedSource = await useSeedSourceStore.getState().addItem({
-      seedCode: seedCode,
-      sourceOrigin: formData.sourceOrigin,
-      cropCategory: formData.cropCategory,
-      typeName: formData.typeName,
-      varietyName: formData.varietyName,
-      cropName: formData.cropName,
-      cropVariety: formData.cropVariety,
-      cropCode: cropCode,
-      supplierId: formData.supplierId,
-      supplierName,
-      purchaseDate: formData.purchaseDate,
-      quantity: formData.quantity,
-      unit: formData.unit,
-      unitPrice: formData.unitPrice,
-      totalAmount,
-      initialCount,
-      availableCount,
-      pictures: formData.pictures,
-      remarks: formData.remarks,
-      status,
-      traceabilityCode,
-      printCount: 0,
-      createBy: formData.createBy,
-      // V3.0 新增字段
-      productionPlanId: formData.productionPlanId,
-      productionPlanCode: formData.productionPlanCode,
-    });
+      const baseData: any = {
+        seedCode: seedCode,
+        sourceOrigin: formData.sourceOrigin,
+        cropCategory: formData.cropCategory,
+        typeName: formData.typeName,
+        varietyName: formData.varietyName,
+        cropName: formData.cropName,
+        cropVariety: formData.cropVariety,
+        cropCode: cropCode,
+        supplierId: formData.supplierId,
+        supplierName,
+        purchaseDate: formData.purchaseDate,
+        quantity: formData.quantity,
+        unit: formData.unit,
+        unitPrice: formData.unitPrice,
+        totalAmount,
+        initialCount,
+        availableCount,
+        pictures: formData.pictures,
+        remarks: formData.remarks,
+        status,
+        traceabilityCode,
+        printCount: 0,
+        createBy: formData.createBy,
+        // V3.0 新增字段
+        productionPlanId: formData.productionPlanId,
+        productionPlanCode: formData.productionPlanCode,
+      };
+
+      // 繁殖途径字段
+      if (formData.propagationType !== PropagationType.EXTERNAL) {
+        baseData.propagationType = formData.propagationType;
+        baseData.propagationStatus = PropagationStatus.PLANNED;
+        baseData.propagationMethod = formData.propagationMethod;
+        baseData.parentMaleCode = formData.parentMaleCode;
+        baseData.parentFemaleCode = formData.parentFemaleCode;
+        baseData.motherPlantId = formData.motherPlantId;
+        baseData.motherPlantCode = formData.motherPlantCode;
+        baseData.linkedPlantingId = formData.linkedPlantingId;
+        baseData.linkedPlantingCode = formData.linkedPlantingCode;
+        baseData.expectedHarvestDate = formData.expectedHarvestDate;
+        baseData.breedingLocation = formData.breedingLocation;
+        baseData.targetTraits = formData.targetTraits;
+        baseData.generation = formData.generation;
+      }
+
+      newSeedSource = await useSeedSourceStore.getState().addItem(baseData);
     } catch (error) {
       console.error('创建种源失败:', error);
       alert('创建失败，请重试');
@@ -361,6 +406,15 @@ export function AddModal({
       // V3.1 补录相关字段
       isSupplementary: false,
       supplementaryReason: '',
+      // 繁殖途径字段
+      propagationType: PropagationType.EXTERNAL as string,
+      propagationMethod: '',
+      parentMaleId: '', parentMaleCode: '',
+      parentFemaleId: '', parentFemaleCode: '',
+      motherPlantId: '', motherPlantCode: '',
+      linkedPlantingId: '', linkedPlantingCode: '',
+      propagationStartDate: '', expectedHarvestDate: '',
+      breedingLocation: '', targetTraits: '', generation: '',
     });
     setCropCode('');
     setSeedCode('');
@@ -381,6 +435,39 @@ export function AddModal({
         cancelText="取消"
       >
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          {/* 入库方式选择（占两列） */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">入库方式</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '从供应商采购入库', icon: '📦' },
+                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '育种计划产出的种子', icon: '🧬' },
+                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '从种植作物上留种', icon: '🌱' },
+                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '扦插/嫁接/分株/组培', icon: '🪴' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    propagationType: opt.value,
+                    propagationMethod: '',
+                    sourceOrigin: opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'self_produced' as SourceOrigin,
+                  }))}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    formData.propagationType === opt.value
+                      ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-lg mb-1">{opt.icon}</div>
+                  <div className="text-sm font-medium text-gray-900">{opt.label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* 种源批号 - 可点击生成 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">种源批号</label>
@@ -465,8 +552,181 @@ export function AddModal({
             )}
           </div>
 
+          {/* ===== 育种计划产出字段 ===== */}
+          {formData.propagationType === PropagationType.BREEDING && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">育种方法</label>
+                <select
+                  value={formData.propagationMethod}
+                  onChange={(e) => setFormData({ ...formData, propagationMethod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">选择育种方法</option>
+                  <option value={BreedingMethod.CROSSBREEDING}>杂交育种</option>
+                  <option value={BreedingMethod.SELECTION}>选择育种</option>
+                  <option value={BreedingMethod.BACKCROSS}>回交育种</option>
+                  <option value={BreedingMethod.HYBRID}>杂交优势</option>
+                  <option value={BreedingMethod.OPEN_POLLINATION}>开放授粉</option>
+                  <option value={BreedingMethod.MUTATION}>诱变育种</option>
+                  <option value={BreedingMethod.OTHER}>其他</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">父本编号</label>
+                <input
+                  type="text"
+                  value={formData.parentMaleCode}
+                  onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
+                  placeholder="♂ 父本种源批号"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">母本编号</label>
+                <input
+                  type="text"
+                  value={formData.parentFemaleCode}
+                  onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
+                  placeholder="♀ 母本种源批号"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">世代</label>
+                <select
+                  value={formData.generation}
+                  onChange={(e) => setFormData({ ...formData, generation: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">选择世代</option>
+                  <option value="F1">F1</option>
+                  <option value="F2">F2</option>
+                  <option value="F3">F3</option>
+                  <option value="BC1">BC1</option>
+                  <option value="BC2">BC2</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">育种地点</label>
+                <input
+                  type="text"
+                  value={formData.breedingLocation}
+                  onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
+                  placeholder="育种基地/温室"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">目标性状</label>
+                <input
+                  type="text"
+                  value={formData.targetTraits}
+                  onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
+                  placeholder="如：抗病、高产、早熟"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">预计采收日期</label>
+                <input
+                  type="date"
+                  value={formData.expectedHarvestDate}
+                  onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ===== 种植留种字段 ===== */}
+          {formData.propagationType === PropagationType.SEED_SAVING && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
+                <input
+                  type="text"
+                  value={formData.linkedPlantingCode}
+                  onChange={(e) => setFormData({ ...formData, linkedPlantingCode: e.target.value })}
+                  placeholder="种植批次号"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">留种株标识</label>
+                <input
+                  type="text"
+                  value={formData.linkedPlantingId}
+                  onChange={(e) => setFormData({ ...formData, linkedPlantingId: e.target.value })}
+                  placeholder="留种株编号"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">预计采收日期</label>
+                <input
+                  type="date"
+                  value={formData.expectedHarvestDate}
+                  onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ===== 无性繁殖字段 ===== */}
+          {formData.propagationType === PropagationType.ASEXUAL && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">繁殖方式</label>
+                <select
+                  value={formData.propagationMethod}
+                  onChange={(e) => setFormData({ ...formData, propagationMethod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">选择繁殖方式</option>
+                  <option value={AsexualMethod.CUTTING}>扦插</option>
+                  <option value={AsexualMethod.GRAFTING}>嫁接</option>
+                  <option value={AsexualMethod.DIVISION}>分株</option>
+                  <option value={AsexualMethod.TISSUE_CULTURE}>组培</option>
+                  <option value={AsexualMethod.BULB}>种球/球根</option>
+                  <option value={AsexualMethod.LAYERING}>压条</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">母株编号</label>
+                <input
+                  type="text"
+                  value={formData.motherPlantCode}
+                  onChange={(e) => setFormData({ ...formData, motherPlantCode: e.target.value })}
+                  placeholder="母株种源批号"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">母株ID</label>
+                <input
+                  type="text"
+                  value={formData.motherPlantId}
+                  onChange={(e) => setFormData({ ...formData, motherPlantId: e.target.value })}
+                  placeholder="母株记录ID"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">预计产出种苗数</label>
+                <input
+                  type="number"
+                  value={formData.quantity || ''}
+                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </>
+          )}
+
           {/* 供应商 - 外部采购时必填，其他来源可选（搜索模式） */}
-          {formData.sourceOrigin === 'external_purchase' ? (
+          {formData.propagationType === PropagationType.EXTERNAL ? (
             <div ref={supplierSearchRef} className="relative">
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 <span className="text-red-500">*</span> 供应商

@@ -17,6 +17,7 @@ import {
   type ApprovalAmountThresholdItem,
   type ApprovalTypeRuleItem,
 } from '../services/apiBasicDataService';
+import { syncApprovalStoreData } from '../config/approvalHierarchy';
 
 interface ApprovalLevelStore {
   // 审批级别配置
@@ -75,6 +76,8 @@ export const useApprovalLevelStore = create<ApprovalLevelStore>()(
             getApprovalTypeRules(),
           ]);
           set({ levelConfigs, amountThresholds, typeRules, loading: false, lastFetch: now });
+          // 同步运行时数据到 approvalHierarchy 配置模块
+          syncApprovalStoreData({ levelConfigs, amountThresholds, typeRules });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载分级审批数据失败', loading: false });
         }
@@ -195,6 +198,15 @@ export const useApprovalLevelStore = create<ApprovalLevelStore>()(
         amountThresholds: state.amountThresholds,
         typeRules: state.typeRules,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.levelConfigs.length > 0) {
+          syncApprovalStoreData({
+            levelConfigs: state.levelConfigs,
+            amountThresholds: state.amountThresholds,
+            typeRules: state.typeRules,
+          });
+        }
+      },
     }
   )
 );

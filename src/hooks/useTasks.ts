@@ -137,7 +137,12 @@ function convertStoreFarmTaskToTask(t: StoreTask): Task {
     greenhouseId: t.greenhouseId || '',
     greenhouseName: t.greenhouseName || '',
     cropName: t.cropName || '',
-    types: (t as Record<string, unknown>).types as string[] || [],
+    types: (() => {
+      const raw = (t as Record<string, unknown>).types;
+      if (Array.isArray(raw) && raw.length > 0) return raw as string[];
+      const typeStr = t.type || t.typeName || '';
+      return typeStr ? typeStr.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+    })(),
     field: t.field || t.greenhouseName || '',
     assignee: (t as Record<string, unknown>).assignee as string || t.assigneeName || '',
     crop: (t as Record<string, unknown>).crop as string || t.cropName || '',
@@ -710,8 +715,8 @@ export function useTasks(): UseTasksReturn {
       assignerId: taskData.assignerId || '',
       assignerName: taskData.assignerName || '',
       dueDate: taskData.dueDate,
-      planStart: (taskData as Task).planStart,
-      planEnd: (taskData as Task).planEnd,
+      planStart: (taskData as Task).planStart || (taskData as any).plannedDate || '',
+      planEnd: (taskData as Task).planEnd || (taskData as any).plannedDate || '',
       estimatedDays: (taskData as Task).estimatedDays,
       estimatedHours: (taskData as Task).estimatedHours,
       materials: (taskData as Task).materials || [],
@@ -805,8 +810,6 @@ export function useTasks(): UseTasksReturn {
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
-      updatedAt: now,
-      version: task.version + 1,
     });
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
@@ -824,8 +827,6 @@ export function useTasks(): UseTasksReturn {
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
-      updatedAt: now,
-      version: task.version + 1,
     });
   }, [tasks, createTaskRecord, saveTaskRecords]);
 

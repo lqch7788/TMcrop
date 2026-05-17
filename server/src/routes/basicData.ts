@@ -1700,7 +1700,7 @@ router.get('/approval-level-configs', (req, res) => {
         let val = row[i];
         // 解析 JSON 字段
         if (col === 'approver_roles' && val) {
-          try { val = JSON.parse(val); } catch (e) { /* keep as string */ }
+          try { val = JSON.parse(String(val)); } catch (e) { /* keep as string */ }
         }
         obj[camelCol] = val;
       });
@@ -1925,6 +1925,667 @@ router.put('/approval-type-rules/:id', (req, res) => {
   } catch (error) {
     console.error('更新审批类型规则失败:', error);
     res.status(500).json({ success: false, error: '更新审批类型规则失败' });
+  }
+});
+
+// ============================================
+// 分支/基地管理 API
+// ============================================
+
+/**
+ * 获取所有分支/基地
+ * GET /api/basic-data/branches
+ */
+router.get('/branches', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, branch_code, branch_name, location, area, manager, contact, block_count, description, status, created_at, updated_at
+      FROM branches
+      WHERE status != 'deleted'
+      ORDER BY branch_code
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const branches = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: branches });
+  } catch (error) {
+    console.error('获取分支/基地失败:', error);
+    res.status(500).json({ success: false, error: '获取分支/基地失败' });
+  }
+});
+
+/**
+ * 创建分支/基地
+ * POST /api/basic-data/branches
+ */
+router.post('/branches', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { branchCode, branchName, location, area, manager, contact, blockCount, description, status } = req.body;
+
+    if (!branchCode || !branchName) {
+      return res.status(400).json({ success: false, error: '分支编码和名称不能为空' });
+    }
+
+    const oid = `BR${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO branches (oid, branch_code, branch_name, location, area, manager, contact, block_count, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [oid, branchCode, branchName, location || '', area || 0, manager || '', contact || '', blockCount || 0, description || '', status || 'active', now, now]);
+
+    // 返回创建的记录
+    const created = db.exec(`SELECT id, oid, branch_code, branch_name, location, area, manager, contact, block_count, description, status, created_at, updated_at FROM branches WHERE oid = ?`, [oid]);
+    if (created.length > 0 && created[0].values.length > 0) {
+      const columns = created[0].columns;
+      const row = created[0].values[0];
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return res.json({ success: true, message: '分支创建成功', data: obj });
+    }
+
+    res.json({ success: true, message: '分支创建成功' });
+  } catch (error) {
+    console.error('创建分支/基地失败:', error);
+    res.status(500).json({ success: false, error: '创建分支/基地失败' });
+  }
+});
+
+/**
+ * 更新分支/基地
+ * PUT /api/basic-data/branches/:id
+ */
+router.put('/branches/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { branchCode, branchName, location, area, manager, contact, blockCount, description, status } = req.body;
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE branches
+      SET branch_code = COALESCE(?, branch_code),
+          branch_name = COALESCE(?, branch_name),
+          location = COALESCE(?, location),
+          area = COALESCE(?, area),
+          manager = COALESCE(?, manager),
+          contact = COALESCE(?, contact),
+          block_count = COALESCE(?, block_count),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [branchCode, branchName, location, area, manager, contact, blockCount, description, status, now, id]);
+
+    res.json({ success: true, message: '分支更新成功' });
+  } catch (error) {
+    console.error('更新分支/基地失败:', error);
+    res.status(500).json({ success: false, error: '更新分支/基地失败' });
+  }
+});
+
+/**
+ * 删除分支/基地（软删除）
+ * DELETE /api/basic-data/branches/:id
+ */
+router.delete('/branches/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE branches SET status = 'deleted', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '分支删除成功' });
+  } catch (error) {
+    console.error('删除分支/基地失败:', error);
+    res.status(500).json({ success: false, error: '删除分支/基地失败' });
+  }
+});
+
+// ============================================
+// 班次管理 API
+// ============================================
+
+/**
+ * 获取所有班次
+ * GET /api/basic-data/shifts
+ */
+router.get('/shifts', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, shift_code, shift_name, start_time, end_time, shift_type, description, status, created_at, updated_at
+      FROM shifts
+      WHERE status != 'deleted'
+      ORDER BY start_time
+    `);
+
+    if (result.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const columns = result[0].columns;
+    const shifts = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: shifts });
+  } catch (error) {
+    console.error('获取班次失败:', error);
+    res.status(500).json({ success: false, error: '获取班次失败' });
+  }
+});
+
+/**
+ * 创建班次
+ * POST /api/basic-data/shifts
+ */
+router.post('/shifts', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { shiftCode, shiftName, startTime, endTime, shiftType, description, status } = req.body;
+
+    if (!shiftCode || !shiftName || !startTime || !endTime) {
+      return res.status(400).json({ success: false, error: '班次编码、名称、开始时间和结束时间不能为空' });
+    }
+
+    const oid = `SH${Date.now()}`;
+    const now = new Date().toISOString();
+
+    db.run(`
+      INSERT INTO shifts (oid, shift_code, shift_name, start_time, end_time, shift_type, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [oid, shiftCode, shiftName, startTime, endTime, shiftType || '早班', description || '', status || 'active', now, now]);
+
+    const created = db.exec(`SELECT id, oid, shift_code, shift_name, start_time, end_time, shift_type, description, status, created_at, updated_at FROM shifts WHERE oid = ?`, [oid]);
+    if (created.length > 0 && created[0].values.length > 0) {
+      const columns = created[0].columns;
+      const row = created[0].values[0];
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return res.json({ success: true, message: '班次创建成功', data: obj });
+    }
+
+    res.json({ success: true, message: '班次创建成功' });
+  } catch (error) {
+    console.error('创建班次失败:', error);
+    res.status(500).json({ success: false, error: '创建班次失败' });
+  }
+});
+
+/**
+ * 更新班次
+ * PUT /api/basic-data/shifts/:id
+ */
+router.put('/shifts/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { shiftCode, shiftName, startTime, endTime, shiftType, description, status } = req.body;
+    const now = new Date().toISOString();
+
+    db.run(`
+      UPDATE shifts
+      SET shift_code = COALESCE(?, shift_code),
+          shift_name = COALESCE(?, shift_name),
+          start_time = COALESCE(?, start_time),
+          end_time = COALESCE(?, end_time),
+          shift_type = COALESCE(?, shift_type),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status),
+          updated_at = ?
+      WHERE id = ?
+    `, [shiftCode, shiftName, startTime, endTime, shiftType, description, status, now, id]);
+
+    res.json({ success: true, message: '班次更新成功' });
+  } catch (error) {
+    console.error('更新班次失败:', error);
+    res.status(500).json({ success: false, error: '更新班次失败' });
+  }
+});
+
+/**
+ * 删除班次（软删除）
+ * DELETE /api/basic-data/shifts/:id
+ */
+router.delete('/shifts/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE shifts SET status = 'deleted', updated_at = ? WHERE id = ?`, [now, id]);
+
+    res.json({ success: true, message: '班次删除成功' });
+  } catch (error) {
+    console.error('删除班次失败:', error);
+    res.status(500).json({ success: false, error: '删除班次失败' });
+  }
+});
+
+// ============================================
+// 成本类别管理 API
+// ============================================
+
+router.get('/cost-categories', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT id, oid, category_code, category_name, category_type, unit, description, status, created_at, updated_at
+      FROM cost_categories
+      WHERE status != 'deleted'
+      ORDER BY category_code
+    `);
+
+    if (result.length === 0) return res.json({ success: true, data: [] });
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取成本类别失败:', error);
+    res.status(500).json({ success: false, error: '获取成本类别失败' });
+  }
+});
+
+router.post('/cost-categories', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { categoryCode, categoryName, categoryType, unit, description, status } = req.body;
+    if (!categoryCode || !categoryName) {
+      return res.status(400).json({ success: false, error: '类别编码和名称不能为空' });
+    }
+    const oid = `CC${Date.now()}`;
+    const now = new Date().toISOString();
+    db.run(`
+      INSERT INTO cost_categories (oid, category_code, category_name, category_type, unit, description, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [oid, categoryCode, categoryName, categoryType || 'other', unit || '元', description || '', status || 'active', now, now]);
+
+    const created = db.exec(`SELECT * FROM cost_categories WHERE oid = ?`, [oid]);
+    if (created.length > 0 && created[0].values.length > 0) {
+      const cols = created[0].columns;
+      const row = created[0].values[0];
+      const obj: any = {};
+      cols.forEach((col, i) => { obj[col.replace(/_([a-z])/g, (_, l) => l.toUpperCase())] = row[i]; });
+      return res.json({ success: true, message: '成本类别创建成功', data: obj });
+    }
+    res.json({ success: true, message: '成本类别创建成功' });
+  } catch (error) {
+    console.error('创建成本类别失败:', error);
+    res.status(500).json({ success: false, error: '创建成本类别失败' });
+  }
+});
+
+router.put('/cost-categories/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { categoryCode, categoryName, categoryType, unit, description, status } = req.body;
+    const now = new Date().toISOString();
+    db.run(`
+      UPDATE cost_categories
+      SET category_code = COALESCE(?, category_code), category_name = COALESCE(?, category_name),
+          category_type = COALESCE(?, category_type), unit = COALESCE(?, unit),
+          description = COALESCE(?, description), status = COALESCE(?, status), updated_at = ?
+      WHERE id = ?
+    `, [categoryCode, categoryName, categoryType, unit, description, status, now, id]);
+    res.json({ success: true, message: '成本类别更新成功' });
+  } catch (error) {
+    console.error('更新成本类别失败:', error);
+    res.status(500).json({ success: false, error: '更新成本类别失败' });
+  }
+});
+
+router.delete('/cost-categories/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    db.run(`UPDATE cost_categories SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    res.json({ success: true, message: '成本类别删除成功' });
+  } catch (error) {
+    console.error('删除成本类别失败:', error);
+    res.status(500).json({ success: false, error: '删除成本类别失败' });
+  }
+});
+
+// ============================================
+// 成本预算管理 API
+// ============================================
+
+router.get('/cost-budgets', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`
+      SELECT b.id, b.oid, b.budget_name, b.category_oid, b.budget_year, b.budget_month,
+             b.budget_amount, b.used_amount, b.status, b.created_at, b.updated_at,
+             c.category_name, c.category_code
+      FROM cost_budgets b
+      LEFT JOIN cost_categories c ON b.category_oid = c.oid
+      WHERE b.status != 'deleted'
+      ORDER BY b.budget_year DESC, b.budget_month DESC
+    `);
+
+    if (result.length === 0) return res.json({ success: true, data: [] });
+
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取成本预算失败:', error);
+    res.status(500).json({ success: false, error: '获取成本预算失败' });
+  }
+});
+
+router.post('/cost-budgets', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { budgetName, categoryOid, budgetYear, budgetMonth, budgetAmount, usedAmount, status } = req.body;
+    if (!budgetName || !categoryOid || !budgetYear) {
+      return res.status(400).json({ success: false, error: '预算名称、类别和年份不能为空' });
+    }
+    const oid = `CB${Date.now()}`;
+    const now = new Date().toISOString();
+    db.run(`
+      INSERT INTO cost_budgets (oid, budget_name, category_oid, budget_year, budget_month, budget_amount, used_amount, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [oid, budgetName, categoryOid, budgetYear, budgetMonth || null, budgetAmount || 0, usedAmount || 0, status || 'active', now, now]);
+
+    const created = db.exec(`
+      SELECT b.*, c.category_name, c.category_code FROM cost_budgets b
+      LEFT JOIN cost_categories c ON b.category_oid = c.oid WHERE b.oid = ?
+    `, [oid]);
+    if (created.length > 0 && created[0].values.length > 0) {
+      const cols = created[0].columns;
+      const row = created[0].values[0];
+      const obj: any = {};
+      cols.forEach((col, i) => { obj[col.replace(/_([a-z])/g, (_, l) => l.toUpperCase())] = row[i]; });
+      return res.json({ success: true, message: '预算创建成功', data: obj });
+    }
+    res.json({ success: true, message: '预算创建成功' });
+  } catch (error) {
+    console.error('创建预算失败:', error);
+    res.status(500).json({ success: false, error: '创建预算失败' });
+  }
+});
+
+router.put('/cost-budgets/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { budgetName, categoryOid, budgetYear, budgetMonth, budgetAmount, usedAmount, status } = req.body;
+    const now = new Date().toISOString();
+    db.run(`
+      UPDATE cost_budgets
+      SET budget_name = COALESCE(?, budget_name), category_oid = COALESCE(?, category_oid),
+          budget_year = COALESCE(?, budget_year), budget_month = COALESCE(?, budget_month),
+          budget_amount = COALESCE(?, budget_amount), used_amount = COALESCE(?, used_amount),
+          status = COALESCE(?, status), updated_at = ?
+      WHERE id = ?
+    `, [budgetName, categoryOid, budgetYear, budgetMonth, budgetAmount, usedAmount, status, now, id]);
+    res.json({ success: true, message: '预算更新成功' });
+  } catch (error) {
+    console.error('更新预算失败:', error);
+    res.status(500).json({ success: false, error: '更新预算失败' });
+  }
+});
+
+router.delete('/cost-budgets/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    db.run(`UPDATE cost_budgets SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    res.json({ success: true, message: '预算删除成功' });
+  } catch (error) {
+    console.error('删除预算失败:', error);
+    res.status(500).json({ success: false, error: '删除预算失败' });
+  }
+});
+
+// ========== 农事活动 CRUD ==========
+router.get('/farm-activities', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`SELECT * FROM farm_activities WHERE status != 'deleted' ORDER BY created_at DESC`);
+    if (result.length === 0) return res.json({ success: true, data: [] });
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+        let val = row[i];
+        if (camelCol === 'assigneeIds' && typeof val === 'string') {
+          try { val = JSON.parse(val); } catch {}
+        }
+        obj[camelCol] = val;
+      });
+      return obj;
+    });
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取农事活动失败:', error);
+    res.status(500).json({ success: false, error: '获取农事活动失败' });
+  }
+});
+
+router.post('/farm-activities', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { activityCode, activityName, activityType, priority, branchOid, blockOid, startTime, endTime, assigneeIds, description, status } = req.body;
+    if (!activityCode || !activityName) {
+      return res.status(400).json({ success: false, error: '活动编码和名称不能为空' });
+    }
+    const oid = `FA${Date.now()}`;
+    const now = new Date().toISOString();
+    const assigneeStr = Array.isArray(assigneeIds) ? JSON.stringify(assigneeIds) : assigneeIds || '[]';
+    db.run(
+      `INSERT INTO farm_activities (oid, activity_code, activity_name, activity_type, priority, branch_oid, block_oid, start_time, end_time, assignee_ids, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [oid, activityCode, activityName, activityType || null, priority || 'MEDIUM', branchOid || null, blockOid || null, startTime || null, endTime || null, assigneeStr, description || null, status || 'active', now, now]
+    );
+    const result = db.exec(`SELECT * FROM farm_activities WHERE oid = ?`, [oid]);
+    const columns = result[0].columns;
+    const created: any = {};
+    columns.forEach((col, i) => {
+      const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+      let val = result[0].values[0][i];
+      if (camelCol === 'assigneeIds' && typeof val === 'string') {
+        try { val = JSON.parse(val); } catch {}
+      }
+      created[camelCol] = val;
+    });
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    console.error('创建农事活动失败:', error);
+    res.status(500).json({ success: false, error: '创建农事活动失败' });
+  }
+});
+
+router.put('/farm-activities/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const fields = ['activity_code', 'activity_name', 'activity_type', 'priority', 'branch_oid', 'block_oid', 'start_time', 'end_time', 'assignee_ids', 'description', 'status'];
+    const camelToSnake: Record<string, string> = {
+      activityCode: 'activity_code', activityName: 'activity_name', activityType: 'activity_type',
+      branchOid: 'branch_oid', blockOid: 'block_oid', startTime: 'start_time', endTime: 'end_time',
+      assigneeIds: 'assignee_ids',
+    };
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    Object.entries(req.body).forEach(([k, v]) => {
+      const col = camelToSnake[k] || k.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
+      if (fields.includes(col)) {
+        let val = v;
+        if (col === 'assignee_ids' && Array.isArray(v)) val = JSON.stringify(v);
+        setClauses.push(`${col} = COALESCE(?, ${col})`);
+        values.push(val);
+      }
+    });
+    if (setClauses.length === 0) return res.status(400).json({ success: false, error: '无有效字段' });
+    setClauses.push(`updated_at = ?`);
+    values.push(new Date().toISOString());
+    values.push(parseInt(id));
+    db.run(`UPDATE farm_activities SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    const result = db.exec(`SELECT * FROM farm_activities WHERE id = ?`, [parseInt(id)]);
+    const columns = result[0].columns;
+    const updated: any = {};
+    columns.forEach((col, i) => {
+      const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+      updated[camelCol] = result[0].values[0][i];
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('更新农事活动失败:', error);
+    res.status(500).json({ success: false, error: '更新农事活动失败' });
+  }
+});
+
+router.delete('/farm-activities/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    db.run(`UPDATE farm_activities SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    res.json({ success: true, message: '农事活动删除成功' });
+  } catch (error) {
+    console.error('删除农事活动失败:', error);
+    res.status(500).json({ success: false, error: '删除农事活动失败' });
+  }
+});
+
+// ========== 物料类型 CRUD ==========
+router.get('/material-types', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(`SELECT * FROM material_types WHERE status != 'deleted' ORDER BY id`);
+    if (result.length === 0) return res.json({ success: true, data: [] });
+    const columns = result[0].columns;
+    const items = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => {
+        const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+        obj[camelCol] = row[i];
+      });
+      return obj;
+    });
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('获取物料类型失败:', error);
+    res.status(500).json({ success: false, error: '获取物料类型失败' });
+  }
+});
+
+router.post('/material-types', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { typeCode, typeName, category, defaultUnit, defaultPrice, specifications, description, status } = req.body;
+    if (!typeCode || !typeName) {
+      return res.status(400).json({ success: false, error: '物料编码和名称不能为空' });
+    }
+    const oid = `MT${Date.now()}`;
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT INTO material_types (oid, type_code, type_name, category, default_unit, default_price, specifications, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [oid, typeCode, typeName, category || null, defaultUnit || null, defaultPrice || 0, specifications || null, description || null, status || 'active', now, now]
+    );
+    const result = db.exec(`SELECT * FROM material_types WHERE oid = ?`, [oid]);
+    const columns = result[0].columns;
+    const created: any = {};
+    columns.forEach((col, i) => {
+      const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+      created[camelCol] = result[0].values[0][i];
+    });
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    console.error('创建物料类型失败:', error);
+    res.status(500).json({ success: false, error: '创建物料类型失败' });
+  }
+});
+
+router.put('/material-types/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const fields = ['type_code', 'type_name', 'category', 'default_unit', 'default_price', 'specifications', 'description', 'status'];
+    const camelToSnake: Record<string, string> = {
+      typeCode: 'type_code', typeName: 'type_name', defaultUnit: 'default_unit', defaultPrice: 'default_price',
+    };
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    Object.entries(req.body).forEach(([k, v]) => {
+      const col = camelToSnake[k] || k.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
+      if (fields.includes(col)) {
+        setClauses.push(`${col} = COALESCE(?, ${col})`);
+        values.push(v);
+      }
+    });
+    if (setClauses.length === 0) return res.status(400).json({ success: false, error: '无有效字段' });
+    setClauses.push(`updated_at = ?`);
+    values.push(new Date().toISOString());
+    values.push(parseInt(id));
+    db.run(`UPDATE material_types SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    const result = db.exec(`SELECT * FROM material_types WHERE id = ?`, [parseInt(id)]);
+    const columns = result[0].columns;
+    const updated: any = {};
+    columns.forEach((col, i) => {
+      const camelCol = col.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+      updated[camelCol] = result[0].values[0][i];
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('更新物料类型失败:', error);
+    res.status(500).json({ success: false, error: '更新物料类型失败' });
+  }
+});
+
+router.delete('/material-types/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    db.run(`UPDATE material_types SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    res.json({ success: true, message: '物料类型删除成功' });
+  } catch (error) {
+    console.error('删除物料类型失败:', error);
+    res.status(500).json({ success: false, error: '删除物料类型失败' });
   }
 });
 

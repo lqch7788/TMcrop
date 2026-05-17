@@ -1,16 +1,14 @@
+/**
+ * 审批流程配置页面
+ * 架构：组件 → useApprovalWorkflowStore (Zustand) → API
+ */
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Settings, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import {
-  getWorkflows,
-  createWorkflow,
-  updateWorkflow as updateWorkflowApi,
-  deleteWorkflow as deleteWorkflowApi,
-  toggleWorkflow,
-  ApprovalNode,
-  ApprovalWorkflow,
-} from '../services/apiApprovalWorkflowService';
+import { useApprovalWorkflowStore } from '../stores';
+import type { ApprovalWorkflow, ApprovalNode } from '../services/apiApprovalWorkflowService';
 
 const MODULE_OPTIONS = [
   { value: 'production', label: '生产管理' },
@@ -22,7 +20,7 @@ const MODULE_OPTIONS = [
 ];
 
 export default function ApprovalWorkflowConfig() {
-  const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([]);
+  const { workflows, loading, error, loadWorkflows, addWorkflow, editWorkflow, removeWorkflow, toggleWorkflowStatus } = useApprovalWorkflowStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<ApprovalWorkflow | null>(null);
@@ -31,27 +29,10 @@ export default function ApprovalWorkflowConfig() {
     status: 'active',
     nodes: [],
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 加载审批工作流数据
-  const loadWorkflows = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getWorkflows();
-      setWorkflows(data);
-    } catch (err) {
-      console.error('加载审批工作流失败:', err);
-      setError('加载审批工作流失败');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     loadWorkflows();
-  }, []);
+  }, [loadWorkflows]);
 
   const filteredWorkflows = workflows.filter(w =>
     w.name.includes(searchTerm) || w.code.includes(searchTerm) || w.module.includes(searchTerm)
@@ -76,12 +57,11 @@ export default function ApprovalWorkflowConfig() {
       };
 
       if (editingWorkflow) {
-        await updateWorkflowApi(editingWorkflow.id, payload);
+        await editWorkflow(editingWorkflow.id, payload);
       } else {
-        await createWorkflow(payload);
+        await addWorkflow(payload);
       }
 
-      await loadWorkflows();
       setShowModal(false);
       setEditingWorkflow(null);
       setNewWorkflow({ status: 'active', nodes: [] });
@@ -94,15 +74,14 @@ export default function ApprovalWorkflowConfig() {
   const handleDeleteWorkflow = async (id: string) => {
     if (!confirm('确定删除该审批流程吗？')) return;
     try {
-      await deleteWorkflowApi(id);
-      await loadWorkflows();
+      await removeWorkflow(id);
     } catch (err) {
       console.error('删除审批工作流失败:', err);
       alert('删除失败');
     }
   };
 
-  const editWorkflow = (workflow: ApprovalWorkflow) => {
+  const editWorkflowAction = (workflow: ApprovalWorkflow) => {
     setEditingWorkflow(workflow);
     setNewWorkflow(workflow);
     setShowModal(true);
@@ -139,10 +118,9 @@ export default function ApprovalWorkflowConfig() {
     });
   };
 
-  const toggleWorkflowStatus = async (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     try {
-      await toggleWorkflow(id);
-      await loadWorkflows();
+      await toggleWorkflowStatus(id);
     } catch (err) {
       console.error('切换审批工作流状态失败:', err);
       alert('切换状态失败');
@@ -221,10 +199,10 @@ export default function ApprovalWorkflowConfig() {
                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
                     {MODULE_OPTIONS.find(m => m.value === workflow.module)?.label || workflow.module}
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => toggleWorkflowStatus(workflow.id)} className="text-sm text-emerald-600 hover:underline">
+                  <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(workflow.id)} className="text-sm text-emerald-600 hover:underline">
                     {workflow.status === 'active' ? '停用' : '启用'}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => editWorkflow(workflow)} className="p-1.5 hover:bg-gray-100 rounded">
+                  <Button variant="ghost" size="icon" onClick={() => editWorkflowAction(workflow)} className="p-1.5 hover:bg-gray-100 rounded">
                     <Edit2 className="w-4 h-4 text-gray-600" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(workflow.id)} className="p-1.5 hover:bg-red-50 rounded">
@@ -237,7 +215,6 @@ export default function ApprovalWorkflowConfig() {
                 <span className="font-medium">触发条件：</span>{workflow.triggerCondition}
               </div>
 
-              {/* 展开/收起按钮 */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -252,7 +229,6 @@ export default function ApprovalWorkflowConfig() {
                 {expandedWorkflows.includes(workflow.id) ? '收起节点' : '查看审批节点'} ({workflow.nodes?.length || 0})
               </Button>
 
-              {/* 审批节点 */}
               {expandedWorkflows.includes(workflow.id) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2 overflow-x-auto">
@@ -382,7 +358,7 @@ export default function ApprovalWorkflowConfig() {
                           <label className="block text-xs text-gray-600 mb-1">节点名称</label>
                           <input
                             type="text"
-                            value={node.name}
+                            value={node.name || ''}
                             onChange={(e) => updateNode(node.id, { name: e.target.value })}
                             className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
                           />
@@ -391,7 +367,7 @@ export default function ApprovalWorkflowConfig() {
                           <label className="block text-xs text-gray-600 mb-1">审批角色</label>
                           <input
                             type="text"
-                            value={node.approverRole}
+                            value={node.approverRole || ''}
                             onChange={(e) => updateNode(node.id, { approverRole: e.target.value })}
                             className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
                           />
@@ -400,7 +376,7 @@ export default function ApprovalWorkflowConfig() {
                           <label className="block text-xs text-gray-600 mb-1">超时时间（小时）</label>
                           <input
                             type="number"
-                            value={node.timeoutHours}
+                            value={node.timeoutHours || ''}
                             onChange={(e) => updateNode(node.id, { timeoutHours: parseInt(e.target.value) })}
                             className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
                           />
@@ -409,7 +385,7 @@ export default function ApprovalWorkflowConfig() {
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={node.autoApproveOnTimeout}
+                              checked={node.autoApproveOnTimeout || false}
                               onChange={(e) => updateNode(node.id, { autoApproveOnTimeout: e.target.checked })}
                               className="rounded"
                             />
@@ -418,7 +394,7 @@ export default function ApprovalWorkflowConfig() {
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={node.requireComment}
+                              checked={node.requireComment || false}
                               onChange={(e) => updateNode(node.id, { requireComment: e.target.checked })}
                               className="rounded"
                             />

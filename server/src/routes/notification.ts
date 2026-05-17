@@ -340,4 +340,116 @@ router.patch('/rules/:id/toggle', (req, res) => {
   }
 });
 
+// ============================================
+// 通知偏好 API
+// ============================================
+
+/**
+ * 获取用户通知偏好
+ * GET /api/notifications/preferences/:userOid
+ */
+router.get('/preferences/:userOid', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { userOid } = req.params;
+
+    const result = db.exec(`
+      SELECT id, user_oid, approval_notify, alert_notify, daily_summary, announcement_notify,
+             dnd_enabled, dnd_start_time, dnd_end_time, created_at, updated_at
+      FROM notification_preferences
+      WHERE user_oid = ? AND status = 'active'
+    `, [userOid]);
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      // 返回默认偏好
+      return res.json({
+        success: true,
+        data: {
+          userOid,
+          approvalNotify: true,
+          alertNotify: true,
+          dailySummary: false,
+          announcementNotify: true,
+          dndEnabled: false,
+          dndStartTime: '22:00',
+          dndEndTime: '08:00',
+        },
+      });
+    }
+
+    const columns = result[0].columns;
+    const row = result[0].values[0];
+    const obj: any = {};
+    columns.forEach((col, i) => {
+      const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      obj[camelCol] = row[i];
+    });
+
+    res.json({ success: true, data: obj });
+  } catch (error) {
+    console.error('获取通知偏好失败:', error);
+    res.status(500).json({ success: false, error: '获取通知偏好失败' });
+  }
+});
+
+/**
+ * 保存用户通知偏好（upsert）
+ * PUT /api/notifications/preferences/:userOid
+ */
+router.put('/preferences/:userOid', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { userOid } = req.params;
+    const { approvalNotify, alertNotify, dailySummary, announcementNotify, dndEnabled, dndStartTime, dndEndTime } = req.body;
+    const now = new Date().toISOString();
+
+    // 检查是否已存在
+    const existing = db.exec(`SELECT id FROM notification_preferences WHERE user_oid = ?`, [userOid]);
+
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      // 更新
+      db.run(`
+        UPDATE notification_preferences
+        SET approval_notify = COALESCE(?, approval_notify),
+            alert_notify = COALESCE(?, alert_notify),
+            daily_summary = COALESCE(?, daily_summary),
+            announcement_notify = COALESCE(?, announcement_notify),
+            dnd_enabled = COALESCE(?, dnd_enabled),
+            dnd_start_time = COALESCE(?, dnd_start_time),
+            dnd_end_time = COALESCE(?, dnd_end_time),
+            updated_at = ?
+        WHERE user_oid = ?
+      `, [
+        approvalNotify !== undefined ? (approvalNotify ? 1 : 0) : null,
+        alertNotify !== undefined ? (alertNotify ? 1 : 0) : null,
+        dailySummary !== undefined ? (dailySummary ? 1 : 0) : null,
+        announcementNotify !== undefined ? (announcementNotify ? 1 : 0) : null,
+        dndEnabled !== undefined ? (dndEnabled ? 1 : 0) : null,
+        dndStartTime, dndEndTime, now, userOid,
+      ]);
+    } else {
+      // 插入
+      db.run(`
+        INSERT INTO notification_preferences (user_oid, approval_notify, alert_notify, daily_summary, announcement_notify, dnd_enabled, dnd_start_time, dnd_end_time, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        userOid,
+        approvalNotify !== false ? 1 : 0,
+        alertNotify !== false ? 1 : 0,
+        dailySummary ? 1 : 0,
+        announcementNotify !== false ? 1 : 0,
+        dndEnabled ? 1 : 0,
+        dndStartTime || '22:00',
+        dndEndTime || '08:00',
+        now, now,
+      ]);
+    }
+
+    res.json({ success: true, message: '通知偏好保存成功' });
+  } catch (error) {
+    console.error('保存通知偏好失败:', error);
+    res.status(500).json({ success: false, error: '保存通知偏好失败' });
+  }
+});
+
 export default router;

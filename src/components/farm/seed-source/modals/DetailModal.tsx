@@ -8,6 +8,15 @@ import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+import { PropagationType, PropagationStatus } from '../../../../types/crop';
+
+// 繁殖途径标签
+const PROPAGATION_TYPE_LABELS: Record<string, string> = {
+  external: '外购入库', breeding: '育种计划产出', seed_saving: '种植留种', asexual: '无性繁殖',
+};
+const PROPAGATION_STATUS_LABELS: Record<string, string> = {
+  planned: '已计划', in_progress: '进行中', harvested: '已采收', quality_checked: '已质检', completed: '已入库', failed: '失败',
+};
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -133,6 +142,93 @@ export function DetailModal({
             </div>
           </div>
         </div>
+
+        {/* 繁殖信息（非外购时显示） */}
+        {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">繁殖信息</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">入库方式：</span>
+                <span className="text-sm font-medium text-orange-700">
+                  {PROPAGATION_TYPE_LABELS[record.propagationType] || record.propagationType}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">当前阶段：</span>
+                <span className="text-sm font-medium text-blue-700">
+                  {PROPAGATION_STATUS_LABELS[record.propagationStatus || ''] || record.propagationStatus || '-'}
+                </span>
+              </div>
+              {record.propagationMethod && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">具体方法：</span>
+                  <span className="text-sm text-gray-900">{record.propagationMethod}</span>
+                </div>
+              )}
+              {record.propagationStartDate && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">开始日期：</span>
+                  <span className="text-sm text-gray-900">{record.propagationStartDate}</span>
+                </div>
+              )}
+              {record.expectedHarvestDate && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">预计采收：</span>
+                  <span className="text-sm text-gray-900">{record.expectedHarvestDate}</span>
+                </div>
+              )}
+              {record.actualHarvestDate && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">实际采收：</span>
+                  <span className="text-sm text-gray-900">{record.actualHarvestDate}</span>
+                </div>
+              )}
+              {/* 亲本信息 */}
+              {(record.parentMaleCode || record.parentFemaleCode) && (
+                <div className="flex items-center col-span-2">
+                  <span className="text-sm text-gray-500 w-24">亲本信息：</span>
+                  <span className="text-sm text-gray-900">
+                    {record.parentMaleCode && <span className="mr-3">♂{record.parentMaleCode}</span>}
+                    {record.parentFemaleCode && <span>♀{record.parentFemaleCode}</span>}
+                  </span>
+                </div>
+              )}
+              {/* 母株信息 */}
+              {record.motherPlantCode && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">母株编号：</span>
+                  <span className="text-sm text-gray-900">{record.motherPlantCode}</span>
+                </div>
+              )}
+              {/* 关联种植记录 */}
+              {record.linkedPlantingCode && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">关联种植：</span>
+                  <span className="text-sm text-gray-900">{record.linkedPlantingCode}</span>
+                </div>
+              )}
+              {record.breedingLocation && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">育种地点：</span>
+                  <span className="text-sm text-gray-900">{record.breedingLocation}</span>
+                </div>
+              )}
+              {record.targetTraits && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">目标性状：</span>
+                  <span className="text-sm text-gray-900">{record.targetTraits}</span>
+                </div>
+              )}
+              {record.generation && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 w-24">世代：</span>
+                  <span className="text-sm text-gray-900">{record.generation}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 其他信息 */}
         <div>

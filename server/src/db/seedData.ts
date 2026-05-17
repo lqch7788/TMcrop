@@ -484,6 +484,152 @@ function seedSeedSources() {
 }
 
 /**
+ * 导入繁殖途径种源数据（育种/留种/无性繁殖）
+ * 独立于基础种源数据，支持已有数据库升级
+ */
+function seedPropagationSeedSources() {
+  const db = getDatabase();
+
+  const existing = db.exec("SELECT COUNT(*) FROM seed_sources WHERE propagation_type IS NOT NULL AND propagation_type != 'external'");
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+
+  if (count > 0) {
+    console.log(`繁殖途径种源数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const propagationSources = [
+    // ===== 3条育种计划产出 (breeding) =====
+    {
+      id: 'SS008', source_code: 'ZZ20260401-001', source_name: 'F1杂交辣椒种子',
+      source_type: 'seed', source_origin: 'internal_seed',
+      crop_category: '蔬菜类', type_name: '茄果类', variety_name: '辣椒',
+      crop_name: '杂交辣椒F1', crop_variety: '辣椒', crop_code: 'PD030200100',
+      supplier_id: '', supplier_name: '自育种',
+      quantity: 0, unit: '粒', purchase_date: '2026-04-01',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: 'JZB2026-001',
+      create_by: '李明辉', create_time: '2026-04-01T08:00:00.000Z', update_time: '2026-04-01T08:00:00.000Z',
+      propagation_type: 'breeding', propagation_status: 'planned', propagation_method: 'crossbreeding',
+      parent_male_id: 'SS001', parent_male_code: 'ZZ20260115-001',
+      parent_female_id: 'SS004', parent_female_code: 'ZZ20260215-003',
+      propagation_start_date: '2026-04-01', expected_harvest_date: '2026-06-15',
+      breeding_location: '育种温室A区', target_traits: '抗病性强、果实均匀、辣度适中', generation: 'F1',
+    },
+    {
+      id: 'SS009', source_code: 'ZZ20260410-002', source_name: '选择育种番茄种子',
+      source_type: 'seed', source_origin: 'internal_seed',
+      crop_category: '蔬菜类', type_name: '茄果类', variety_name: '番茄',
+      crop_name: '大红番茄908', crop_variety: '番茄', crop_code: 'PD030100400',
+      supplier_id: '', supplier_name: '自育种',
+      quantity: 0, unit: '粒', purchase_date: '2026-04-10',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: 'JZB2026-002',
+      create_by: '陈建国', create_time: '2026-04-10T09:00:00.000Z', update_time: '2026-04-10T09:00:00.000Z',
+      propagation_type: 'breeding', propagation_status: 'in_progress', propagation_method: 'selection',
+      parent_female_id: 'SS002', parent_female_code: 'ZZ20260120-002',
+      propagation_start_date: '2026-04-10', expected_harvest_date: '2026-07-01',
+      breeding_location: '育种温室B区', target_traits: '大果型、耐储运、高产', generation: 'F3',
+    },
+    {
+      id: 'SS010', source_code: 'ZZ20260420-003', source_name: '回交育种黄瓜种子',
+      source_type: 'seed', source_origin: 'internal_seed',
+      crop_category: '蔬菜类', type_name: '瓜类', variety_name: '黄瓜',
+      crop_name: '抗病黄瓜BC2', crop_variety: '黄瓜', crop_code: 'PD030300200',
+      supplier_id: '', supplier_name: '自育种',
+      quantity: 0, unit: '粒', purchase_date: '2026-04-20',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: 'JZB2026-003',
+      create_by: '李明辉', create_time: '2026-04-20T10:00:00.000Z', update_time: '2026-04-20T10:00:00.000Z',
+      propagation_type: 'breeding', propagation_status: 'in_progress', propagation_method: 'backcross',
+      parent_male_id: 'SS005', parent_male_code: 'ZZ20260301-001',
+      parent_female_id: 'SS003', parent_female_code: 'ZZ20260201-002',
+      propagation_start_date: '2026-04-20', expected_harvest_date: '2026-07-20',
+      breeding_location: '育种温室A区', target_traits: '白粉病抗性、早熟', generation: 'BC2',
+    },
+    // ===== 1条种植留种 (seed_saving) =====
+    {
+      id: 'SS011', source_code: 'ZZ20260501-001', source_name: '大叶菠菜留种',
+      source_type: 'seed', source_origin: 'internal_seed',
+      crop_category: '蔬菜类', type_name: '叶菜类', variety_name: '菠菜',
+      crop_name: '大叶菠菜', crop_variety: '菠菜', crop_code: 'PD010100300',
+      supplier_id: '', supplier_name: '种植留种',
+      quantity: 0, unit: '粒', purchase_date: '2026-05-01',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: '',
+      create_by: '张伟', create_time: '2026-05-01T06:00:00.000Z', update_time: '2026-05-01T06:00:00.000Z',
+      propagation_type: 'seed_saving', propagation_status: 'planned', propagation_method: '',
+      linked_planting_id: 'PL001', linked_planting_code: 'ZZB20260301-001',
+      propagation_start_date: '2026-05-01', expected_harvest_date: '2026-06-20',
+      breeding_location: 'B2地块', target_traits: '叶片肥厚、耐抽薹', generation: '',
+    },
+    // ===== 2条无性繁殖 (asexual) =====
+    {
+      id: 'SS012', source_code: 'ZZ20260505-001', source_name: '玫瑰香葡萄扦插苗',
+      source_type: 'cutting', source_origin: 'cutting',
+      crop_category: '果树类', type_name: '浆果类', variety_name: '葡萄',
+      crop_name: '玫瑰香葡萄', crop_variety: '葡萄', crop_code: 'GS010100200',
+      supplier_id: '', supplier_name: '无性繁殖',
+      quantity: 0, unit: '株', purchase_date: '2026-05-05',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: '',
+      create_by: '赵志强', create_time: '2026-05-05T08:00:00.000Z', update_time: '2026-05-05T08:00:00.000Z',
+      propagation_type: 'asexual', propagation_status: 'planned', propagation_method: 'cutting',
+      mother_plant_id: 'SS006', mother_plant_code: 'ZZ20260315-001',
+      propagation_start_date: '2026-05-05', expected_harvest_date: '2026-06-15',
+      breeding_location: '育苗温室C区', target_traits: '根系发达、成活率高', generation: '',
+    },
+    {
+      id: 'SS013', source_code: 'ZZ20260510-002', source_name: '红富士苹果嫁接苗',
+      source_type: 'grafting', source_origin: 'grafting',
+      crop_category: '果树类', type_name: '仁果类', variety_name: '苹果',
+      crop_name: '红富士苹果', crop_variety: '苹果', crop_code: 'GS020100100',
+      supplier_id: '', supplier_name: '无性繁殖',
+      quantity: 0, unit: '株', purchase_date: '2026-05-10',
+      purchase_price: 0, total_amount: 0, used_quantity: 0, remaining_quantity: 0,
+      status: 'depleted', production_plan_code: '',
+      create_by: '赵志强', create_time: '2026-05-10T09:00:00.000Z', update_time: '2026-05-10T09:00:00.000Z',
+      propagation_type: 'asexual', propagation_status: 'in_progress', propagation_method: 'grafting',
+      mother_plant_id: 'SS007', mother_plant_code: 'ZZ20260320-001',
+      propagation_start_date: '2026-05-10', expected_harvest_date: '2026-06-30',
+      breeding_location: '果园嫁接区', target_traits: '矮化砧木、早果性强', generation: '',
+    },
+  ];
+
+  for (const ps of propagationSources as any[]) {
+    db.run(`
+      INSERT OR REPLACE INTO seed_sources
+      (id, source_code, source_name, source_type, source_origin,
+       crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
+       supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
+       total_amount, used_quantity, remaining_quantity, status, production_plan_code,
+       create_by, create_time, update_time,
+       propagation_type, propagation_status, propagation_method,
+       parent_male_id, parent_male_code, parent_female_id, parent_female_code,
+       mother_plant_id, mother_plant_code,
+       linked_planting_id, linked_planting_code,
+       propagation_start_date, expected_harvest_date, actual_harvest_date,
+       breeding_location, target_traits, generation)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      ps.id, ps.source_code, ps.source_name, ps.source_type, ps.source_origin,
+      ps.crop_category, ps.type_name, ps.variety_name, ps.crop_name, ps.crop_variety, ps.crop_code,
+      ps.supplier_id, ps.supplier_name, ps.quantity, ps.unit, ps.purchase_date, ps.purchase_price,
+      ps.total_amount, ps.used_quantity, ps.remaining_quantity, ps.status, ps.production_plan_code,
+      ps.create_by, ps.create_time, ps.update_time,
+      ps.propagation_type || null, ps.propagation_status || null, ps.propagation_method || null,
+      ps.parent_male_id || null, ps.parent_male_code || null, ps.parent_female_id || null, ps.parent_female_code || null,
+      ps.mother_plant_id || null, ps.mother_plant_code || null,
+      ps.linked_planting_id || null, ps.linked_planting_code || null,
+      ps.propagation_start_date || null, ps.expected_harvest_date || null, ps.actual_harvest_date || null,
+      ps.breeding_location || null, ps.target_traits || null, ps.generation || null,
+    ]);
+  }
+
+  console.log(`已导入 ${propagationSources.length} 条繁殖途径种源数据`);
+}
+
+/**
  * 导入生产计划数据
  */
 function seedProductionPlans() {
@@ -4388,12 +4534,173 @@ function seedApprovalTypeRules() {
 }
 
 /**
+ * 导入成本类别种子数据
+ */
+function seedCostCategories() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM cost_categories');
+  const count = existing.length > 0 ? Number(existing[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const categories = [
+    { oid: 'CC001', code: 'COST-MAT-001', name: '肥料成本', type: 'material', unit: '元/吨', description: '各种肥料采购成本' },
+    { oid: 'CC002', code: 'COST-MAT-002', name: '农药成本', type: 'material', unit: '元/升', description: '农药采购成本' },
+    { oid: 'CC003', code: 'COST-LAB-001', name: '人工成本', type: 'labor', unit: '元/工时', description: '工人工资和福利' },
+    { oid: 'CC004', code: 'COST-EQP-001', name: '设备折旧', type: 'equipment', unit: '元/月', description: '设备折旧费用' },
+    { oid: 'CC005', code: 'COST-ENR-001', name: '水电费', type: 'energy', unit: '元/度', description: '水电能源消耗' },
+    { oid: 'CC006', code: 'COST-OTH-001', name: '其他费用', type: 'other', unit: '元', description: '其他杂项费用' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO cost_categories (oid, category_code, category_name, category_type, unit, description, status)
+    VALUES (?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const c of categories) {
+    stmt.run([c.oid, c.code, c.name, c.type, c.unit, c.description]);
+  }
+  stmt.free();
+  console.log(`已导入成本类别种子数据: ${categories.length}条`);
+}
+
+/**
+ * 导入成本预算种子数据
+ */
+function seedCostBudgets() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM cost_budgets');
+  const count = existing.length > 0 ? Number(existing[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const budgets = [
+    { oid: 'CB001', name: '2024年Q1肥料预算', categoryOid: 'CC001', year: 2024, month: 3, amount: 50000, used: 32000 },
+    { oid: 'CB002', name: '2024年Q1农药预算', categoryOid: 'CC002', year: 2024, month: 3, amount: 20000, used: 15000 },
+    { oid: 'CB003', name: '2024年Q1人工预算', categoryOid: 'CC003', year: 2024, month: 3, amount: 80000, used: 65000 },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO cost_budgets (oid, budget_name, category_oid, budget_year, budget_month, budget_amount, used_amount, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const b of budgets) {
+    stmt.run([b.oid, b.name, b.categoryOid, b.year, b.month, b.amount, b.used]);
+  }
+  stmt.free();
+  console.log(`已导入成本预算种子数据: ${budgets.length}条`);
+}
+
+/**
+ * 导入班次种子数据
+ */
+function seedShifts() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM shifts');
+  const count = existing.length > 0 ? Number(existing[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const shifts = [
+    { oid: 'SH001', code: 'SH001', name: '早班', startTime: '06:00', endTime: '14:00', type: '早班', description: '早班 06:00-14:00' },
+    { oid: 'SH002', code: 'SH002', name: '中班', startTime: '14:00', endTime: '22:00', type: '中班', description: '中班 14:00-22:00' },
+    { oid: 'SH003', code: 'SH003', name: '晚班', startTime: '22:00', endTime: '06:00', type: '晚班', description: '晚班 22:00-次日06:00' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO shifts (oid, shift_code, shift_name, start_time, end_time, shift_type, description, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+  `);
+
+  for (const s of shifts) {
+    stmt.run([s.oid, s.code, s.name, s.startTime, s.endTime, s.type, s.description]);
+  }
+  stmt.free();
+  console.log(`已导入班次种子数据: ${shifts.length}条`);
+}
+
+/**
+ * 导入分支/基地种子数据
+ */
+function seedBranches() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM branches');
+  const count = existing.length > 0 ? Number(existing[0].values[0][0]) : 0;
+  if (count > 0) return;
+
+  const branches = [
+    { oid: 'BR001', code: 'BR001', name: '一号种植基地', location: '北京市通州区', area: 50000, manager: '张建国', contact: '13800138001', blockCount: 12, description: '主产区，种植番茄、黄瓜等' },
+    { oid: 'BR002', code: 'BR002', name: '二号种植基地', location: '北京市顺义区', area: 35000, manager: '李明辉', contact: '13800138002', blockCount: 8, description: '叶菜类种植区' },
+    { oid: 'BR003', code: 'BR003', name: '三号种植基地', location: '北京市大兴区', area: 28000, manager: '王建国', contact: '13800138003', blockCount: 6, description: '草莓种植专区' },
+    { oid: 'BR004', code: 'BR004', name: '四号种植基地', location: '北京市昌平区', area: 42000, manager: '赵文静', contact: '13800138004', blockCount: 0, description: '备用基地', status: 'inactive' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO branches (oid, branch_code, branch_name, location, area, manager, contact, block_count, description, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const b of branches) {
+    stmt.run([b.oid, b.code, b.name, b.location, b.area, b.manager, b.contact, b.blockCount, b.description, b.status || 'active']);
+  }
+  stmt.free();
+  console.log(`已导入分支/基地种子数据: ${branches.length}条`);
+}
+
+function seedFarmActivities() {
+  const db = getDatabase();
+  const count = Number(db.exec("SELECT COUNT(*) FROM farm_activities")[0]?.values[0][0] || 0);
+  if (count > 0) { console.log(`农事活动数据已存在 (${count}条)，跳过种子导入`); return; }
+
+  const now = new Date().toISOString();
+  const items = [
+    { oid: 'FA001', code: 'FA202604001', name: '番茄地块浇水', type: 'WATERING', priority: 'MEDIUM', branchOid: 'BR001', startTime: '2026-04-15T08:00', endTime: '2026-04-15T10:00', assigneeIds: '["陈小芳"]', description: '根据土壤湿度情况进行灌溉', status: 'active' },
+    { oid: 'FA002', code: 'FA202604002', name: '黄瓜地块施肥', type: 'FERTILIZING', priority: 'HIGH', branchOid: 'BR001', startTime: '2026-04-14T14:00', endTime: '2026-04-14T17:00', assigneeIds: '["周志强","吴美丽"]', description: '按照施肥计划执行', status: 'completed' },
+    { oid: 'FA003', code: 'FA202604003', name: '生菜地块采收', type: 'HARVESTING', priority: 'HIGH', branchOid: 'BR002', startTime: '2026-04-16T06:00', endTime: '2026-04-16T12:00', assigneeIds: '["吴美丽","郑胜利","马超"]', description: '按时采收保证品质', status: 'in_progress' },
+    { oid: 'FA004', code: 'FA202604004', name: '草莓地块巡田', type: 'INSPECTION', priority: 'LOW', branchOid: 'BR003', startTime: '2026-04-15T09:00', endTime: '2026-04-15T11:00', assigneeIds: '["赵文静"]', description: '日常巡田检查', status: 'active' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO farm_activities (oid, activity_code, activity_name, activity_type, priority, branch_oid, start_time, end_time, assignee_ids, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of items) {
+    stmt.run([item.oid, item.code, item.name, item.type, item.priority, item.branchOid, item.startTime, item.endTime, item.assigneeIds, item.description, item.status, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入农事活动种子数据: ${items.length}条`);
+}
+
+function seedMaterialTypes() {
+  const db = getDatabase();
+  const count = Number(db.exec("SELECT COUNT(*) FROM material_types")[0]?.values[0][0] || 0);
+  if (count > 0) { console.log(`物料类型数据已存在 (${count}条)，跳过种子导入`); return; }
+
+  const now = new Date().toISOString();
+  const items = [
+    { oid: 'MT001', code: 'FERT001', name: '复合肥', category: '肥料', unit: '公斤', price: 8.5, spec: 'N-P-K 15-15-15', desc: '通用复合肥', status: 'active' },
+    { oid: 'MT002', code: 'FERT002', name: '尿素', category: '肥料', unit: '公斤', price: 3.2, spec: '含氮46%', desc: '氮肥', status: 'active' },
+    { oid: 'MT003', code: 'FERT003', name: '有机肥', category: '肥料', unit: '吨', price: 1200, spec: '腐熟有机肥', desc: '有机肥', status: 'active' },
+    { oid: 'MT004', code: 'PEST001', name: '除草剂', category: '农药', unit: '升', price: 45, spec: '500ml/瓶', desc: '除草剂', status: 'active' },
+    { oid: 'MT005', code: 'PEST002', name: '杀虫剂', category: '农药', unit: '升', price: 68, spec: '1L/瓶', desc: '杀虫剂', status: 'active' },
+    { oid: 'MT006', code: 'PEST003', name: '杀菌剂', category: '农药', unit: '升', price: 55, spec: '500ml/瓶', desc: '杀菌剂', status: 'active' },
+    { oid: 'MT007', code: 'FILM001', name: '地膜', category: '农膜', unit: '公斤', price: 15, spec: '宽1.2m', desc: '地膜', status: 'active' },
+    { oid: 'MT008', code: 'FILM002', name: '棚膜', category: '农膜', unit: '公斤', price: 22, spec: '宽8m', desc: '棚膜', status: 'active' },
+    { oid: 'MT009', code: 'TOOL001', name: '铁锹', category: '工具', unit: '把', price: 35, spec: '标准', desc: '铁锹', status: 'active' },
+    { oid: 'MT010', code: 'TOOL002', name: '剪刀', category: '工具', unit: '把', price: 18, spec: '标准', desc: '修枝剪', status: 'active' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO material_types (oid, type_code, type_name, category, default_unit, default_price, specifications, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of items) {
+    stmt.run([item.oid, item.code, item.name, item.category, item.unit, item.price, item.spec, item.desc, item.status, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入物料类型种子数据: ${items.length}条`);
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
   seedCropVarieties();
   seedSuppliers();
   seedSeedSources();
+  seedPropagationSeedSources();
   seedProductionPlans();
   seedSeedlings();
   seedPlantings();
@@ -4417,9 +4724,15 @@ export function exportDatabase() {
   seedFertilizerAndMarks();
   seedRegionData();
   seedProcessDefinitions();
+  seedCostCategories();
+  seedCostBudgets();
+  seedShifts();
+  seedBranches();
   seedApprovalLevelConfigs();
   seedApprovalAmountThresholds();
   seedApprovalTypeRules();
+  seedFarmActivities();
+  seedMaterialTypes();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');

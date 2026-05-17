@@ -1,43 +1,104 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Package, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../components/ui/button';
+/**
+ * 物料管理页面（物料类型定义）
+ * 架构：组件 → useMaterialTypeStore (Zustand) → API
+ */
 
-// 备用物料数据
-const defaultMaterials = [
-  { id: 1, code: 'MAT001', name: '复合肥', category: '肥料', unit: '公斤', price: 8.5, stock: 500, status: '充足', statusClass: 'normal' },
-  { id: 2, code: 'MAT002', name: '尿素', category: '肥料', unit: '公斤', price: 3.2, stock: 800, status: '充足', statusClass: 'normal' },
-  { id: 3, code: 'MAT003', name: '有机肥', category: '肥料', unit: '吨', price: 1200, stock: 50, status: '充足', statusClass: 'normal' },
-  { id: 4, code: 'MAT004', name: '除草剂', category: '农药', unit: '升', price: 45, stock: 120, status: '充足', statusClass: 'normal' },
-  { id: 5, code: 'MAT005', name: '杀虫剂', category: '农药', unit: '升', price: 68, stock: 80, status: '充足', statusClass: 'normal' },
-  { id: 6, code: 'MAT006', name: '杀菌剂', category: '农药', unit: '升', price: 55, stock: 60, status: '不足', statusClass: 'warning' },
-  { id: 7, code: 'MAT007', name: '地膜', category: '农膜', unit: '公斤', price: 15, stock: 200, status: '充足', statusClass: 'normal' },
-  { id: 8, code: 'MAT008', name: '棚膜', category: '农膜', unit: '公斤', price: 22, stock: 150, status: '充足', statusClass: 'normal' },
-  { id: 9, code: 'MAT009', name: '铁锹', category: '工具', unit: '把', price: 35, stock: 50, status: '充足', statusClass: 'normal' },
-  { id: 10, code: 'MAT010', name: '剪刀', category: '工具', unit: '把', price: 18, stock: 40, status: '不足', statusClass: 'warning' },
-];
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Package, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
+import { useMaterialTypeStore } from '../stores';
+import type { MaterialType } from '../services/apiBasicDataService';
+
+const CATEGORY_OPTIONS = ['肥料', '农药', '农膜', '工具', '种子', '其他'];
 
 export default function MaterialManagement() {
+  const { types, loading, error, loadTypes, addType, editType, removeType } = useMaterialTypeStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<MaterialType | null>(null);
+  const [formData, setFormData] = useState<Partial<MaterialType>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const pageSize = 8;
 
-  const materialData = useMemo(() => {
-    // 使用备用数据
-    return defaultMaterials;
-  }, []);
+  useEffect(() => {
+    loadTypes();
+  }, [loadTypes]);
 
-  const filteredMaterials = useMemo(() => {
-    return materialData.filter(item => {
-      const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.code.includes(searchTerm);
+  const filtered = useMemo(() => {
+    return types.filter(item => {
+      const matchSearch = (item.typeName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.typeCode || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchCategory = categoryFilter === '全部' || item.category === categoryFilter;
       return matchSearch && matchCategory;
     });
-  }, [materialData, searchTerm, categoryFilter]);
+  }, [types, searchTerm, categoryFilter]);
 
-  const totalPages = Math.ceil(filteredMaterials.length / pageSize);
-  const paginatedMaterials = filteredMaterials.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleOpenModal = (item?: MaterialType) => {
+    if (item) { setEditingItem(item); setFormData(item); }
+    else { setEditingItem(null); setFormData({ status: 'active' }); }
+    setErrors({}); setShowModal(true);
+  };
+
+  const handleCloseModal = () => { setShowModal(false); setEditingItem(null); setFormData({}); setErrors({}); };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.typeCode?.trim()) newErrors.typeCode = '请输入物料编码';
+    if (!formData.typeName?.trim()) newErrors.typeName = '请输入物料名称';
+    if (!formData.category) newErrors.category = '请选择类别';
+    if (!formData.defaultUnit?.trim()) newErrors.defaultUnit = '请输入单位';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    try {
+      if (editingItem) {
+        await editType(editingItem.id, formData);
+      } else {
+        await addType(formData);
+      }
+      handleCloseModal();
+    } catch (err) { alert('保存失败'); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm('确定删除该物料类型吗？')) {
+      try { await removeType(id); } catch (err) { alert('删除失败'); }
+    }
+  };
+
+  const stats = useMemo(() => ({
+    total: types.length,
+    active: types.filter(t => t.status === 'active').length,
+    inactive: types.filter(t => t.status === 'inactive').length,
+  }), [types]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-2 text-gray-600">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <AlertTriangle className="w-8 h-8 text-red-500" />
+        <span className="ml-2 text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -51,7 +112,7 @@ export default function MaterialManagement() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">物料管理</h1>
-            <p className="text-gray-500">生产物料的添加、修改、删除、搜索</p>
+            <p className="text-gray-500">生产物料类型的添加、修改、删除、搜索</p>
           </div>
         </div>
       </div>
@@ -62,32 +123,19 @@ export default function MaterialManagement() {
             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
               <Package className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{materialData.length}</p>
-              <p className="text-xs text-gray-500">物料种类</p>
-            </div>
+            <div><p className="text-2xl font-bold text-gray-900">{stats.total}</p><p className="text-xs text-gray-500">物料种类</p></div>
           </div>
         </div>
         <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{materialData.filter(m => m.status === '充足').length}</p>
-              <p className="text-xs text-gray-500">库存充足</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><span className="text-green-600 text-lg">✓</span></div>
+            <div><p className="text-2xl font-bold text-gray-900">{stats.active}</p><p className="text-xs text-gray-500">启用</p></div>
           </div>
         </div>
         <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <span className="text-amber-600 text-lg">!</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{materialData.filter(m => m.status === '不足').length}</p>
-              <p className="text-xs text-gray-500">库存不足</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><span className="text-amber-600 text-lg">!</span></div>
+            <div><p className="text-2xl font-bold text-gray-900">{stats.inactive}</p><p className="text-xs text-gray-500">停用</p></div>
           </div>
         </div>
       </div>
@@ -96,46 +144,28 @@ export default function MaterialManagement() {
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
-            <input
-              type="text"
-              placeholder="搜索物料名称..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            />
+            <input type="text" placeholder="搜索物料..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
           </div>
           <div className="min-w-[150px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <option>全部</option>
-              <option>肥料</option>
-              <option>农药</option>
-              <option>农膜</option>
-              <option>工具</option>
+              {CATEGORY_OPTIONS.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="default">重置</Button>
-            <Button variant="default">
-              <Search className="w-4 h-4" />
-              搜索
-            </Button>
-            <Button variant="default">
-              <Plus className="w-4 h-4" />
-              添加物料
+            <Button variant="default" onClick={() => { setSearchTerm(''); setCategoryFilter('全部'); }}>重置</Button>
+            <Button variant="default" onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4" /> 添加物料
             </Button>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">物料列表</h3>
-        </div>
+        <div className="p-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-900">物料列表</h3></div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -144,36 +174,30 @@ export default function MaterialManagement() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">物料名称</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类别</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单位</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单价(元)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">库存数量</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">参考单价(元)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">规格</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedMaterials.map((item) => (
+              {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.price}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.stock}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.typeCode}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.typeName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.category || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.defaultUnit || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.defaultPrice || 0}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.specifications || '-'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      item.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {item.status}
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {item.status === 'active' ? '启用' : '停用'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" title="编辑">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="destructive" title="删除">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => handleOpenModal(item)} title="编辑"><Edit className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="destructive" onClick={() => handleDelete(item.id)} title="删除"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -181,41 +205,60 @@ export default function MaterialManagement() {
             </tbody>
           </table>
         </div>
-        {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {filteredMaterials.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
+          <div className="text-sm text-gray-500">共 {filtered.length} 条记录，第 {currentPage}/{totalPages || 1} 页</div>
           <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                size="sm"
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <Button size="icon" variant="ghost" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
+            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+              const page = i + 1;
+              return <Button key={page} size="sm" variant={currentPage === page ? 'default' : 'ghost'} onClick={() => setCurrentPage(page)}>{page}</Button>;
+            })}
+            <Button size="icon" variant="ghost" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <Modal isOpen={showModal} onClose={handleCloseModal} title={editingItem ? '编辑物料' : '新增物料'} onConfirm={handleSubmit}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="物料编码" required error={errors.typeCode}>
+                <Input value={formData.typeCode || ''} onChange={(e) => setFormData({ ...formData, typeCode: e.target.value })} placeholder="如：FERT001" />
+              </FormField>
+              <FormField label="物料名称" required error={errors.typeName}>
+                <Input value={formData.typeName || ''} onChange={(e) => setFormData({ ...formData, typeName: e.target.value })} placeholder="请输入物料名称" />
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="类别" required error={errors.category}>
+                <select value={formData.category || ''} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option value="">请选择</option>
+                  {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </FormField>
+              <FormField label="单位" required error={errors.defaultUnit}>
+                <Input value={formData.defaultUnit || ''} onChange={(e) => setFormData({ ...formData, defaultUnit: e.target.value })} placeholder="如：公斤" />
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="参考单价(元)">
+                <Input type="number" value={formData.defaultPrice || 0} onChange={(e) => setFormData({ ...formData, defaultPrice: Number(e.target.value) })} placeholder="参考单价" />
+              </FormField>
+              <FormField label="状态">
+                <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option value="active">启用</option><option value="inactive">停用</option>
+                </select>
+              </FormField>
+            </div>
+            <FormField label="规格">
+              <Input value={formData.specifications || ''} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} placeholder="规格说明" />
+            </FormField>
+            <FormField label="备注说明">
+              <Textarea value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="请输入备注说明（可选）" rows={3} />
+            </FormField>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

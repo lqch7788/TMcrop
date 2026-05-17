@@ -239,8 +239,8 @@ router.post('/', (req: Request, res: Response) => {
     const {
       id,
       task_code, taskCode,
-      task_title, taskTitle,
-      task_type, taskType,
+      task_title, taskTitle, title,
+      task_type, taskType, type,
       task_content, taskContent,
       assignee_id, assigneeId,
       assignee_name, assigneeName,
@@ -256,7 +256,7 @@ router.post('/', (req: Request, res: Response) => {
       create_by, createBy,
       due_date, dueDate,
       progress,
-      crop,
+      crop, cropName,
       estimated_hours, estimatedHours,
       estimated_days, estimatedDays,
       remarks,
@@ -264,6 +264,11 @@ router.post('/', (req: Request, res: Response) => {
       tools,
       batch_id, batchId,
       batch_code, batchCode,
+      // 前端直接发送的字段名（createTask/useTasks.ts apiTaskData）
+      planStart,
+      planEnd,
+      field,
+      assignee,
       // 数据改造新增字段（落库保存）
       type_name, typeName,
       source_type, sourceType,
@@ -279,6 +284,12 @@ router.post('/', (req: Request, res: Response) => {
       team_name, teamName,
       tools_remarks, toolsRemarks,
     } = req.body;
+
+    // planStart/planEnd 是组合格式 "yyyy-MM-dd HH:mm"，拆分为 date 和 time
+    const planStartVal = planStart || '';
+    const planEndVal = planEnd || '';
+    const finalPlanDate = plan_date || planDate || (planStartVal ? planStartVal.split(' ')[0] : '');
+    const finalPlanTime = plan_time || planTime || (planStartVal ? planStartVal.split(' ')[1] || '' : '');
 
     const newId = id || task_code || taskCode || `NS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now() % 1000).padStart(3, '0')}`;
     const now = new Date().toISOString();
@@ -303,25 +314,25 @@ router.post('/', (req: Request, res: Response) => {
     `, [
       newId,
       task_code || taskCode || newId,
-      task_title || taskTitle || '',
-      task_type || taskType || '',
-      task_content || taskContent || '',
+      task_title || taskTitle || title || '',
+      task_type || taskType || type || '',
+      task_content || taskContent || description || '',
       assignee_id || assigneeId || '',
-      assignee_name || assigneeName || '',
+      assignee_name || assigneeName || assignee || '',
       assigner_id || assignerId || '',
       assigner_name || assignerName || '',
       greenhouse_id || greenhouseId || '',
-      greenhouse_name || greenhouseName || '',
+      greenhouse_name || greenhouseName || field || '',
       area_name || areaName || '',
-      plan_date || planDate || '',
-      plan_time || planTime || '',
+      finalPlanDate,
+      finalPlanTime,
       priority || 'normal',
       normalizeTaskStatus(status),
       create_by || createBy || 'system',
       now, now,
-      due_date || dueDate || null,
+      due_date || dueDate || (planEndVal ? planEndVal.split(' ')[0] : null),
       progress || 0,
-      crop || '',
+      crop || cropName || '',
       estimated_hours || estimatedHours || 0,
       estimated_days || estimatedDays || 0,
       remarks || '',
@@ -350,14 +361,10 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
 
     // 查询刚创建的完整记录，返回给前端（避免Store乐观更新被空数据覆盖）
-    const created = db.exec('SELECT * FROM farm_tasks WHERE id = ?', [newId]);
-    if (created && created.length > 0 && created[0].values && created[0].values.length > 0) {
-      const row = created[0];
-      const columns = row.columns;
-      const values = row.values[0];
-      const obj: any = {};
-      columns.forEach((col: string, i: number) => { obj[col] = values[i]; });
-      const transformed = transformTaskFields(obj);
+    // 使用 queryToObjects 自动将 snake_case 列名转为驼峰命名，确保 transformTaskFields 正确读取
+    const createdItems = queryToObjects(db, 'SELECT * FROM farm_tasks WHERE id = ?', [newId]);
+    if (createdItems && createdItems.length > 0) {
+      const transformed = transformTaskFields(createdItems[0]);
       res.status(201).json({ success: true, data: transformed });
     } else {
       res.status(201).json({ success: true, data: { id: newId } });
@@ -450,9 +457,27 @@ router.put('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 过滤有效字段并转换为数据库列名
-    const validKeys = Object.keys(updates).filter(k =>
-      k !== 'id' && updates[k] !== undefined
-    );
+    // 过滤有效字段并转换为数据库列名（跳过不存在于 DB 的字段，避免 SQL 错误）
+    const validDbColumns = new Set([
+      'id', 'task_code', 'task_title', 'task_type', 'task_content',
+      'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name',
+      'greenhouse_id', 'greenhouse_name', 'area_name',
+      'plan_date', 'plan_time', 'priority', 'status',
+      'completion_date', 'completion_note',
+      'batch_id', 'batch_code', 'create_by',
+      'version', 'create_time', 'update_time',
+      'due_date', 'progress', 'crop', 'estimated_hours', 'estimated_days',
+      'remarks', 'materials', 'tools',
+      'type_name', 'source_type', 'dispatch_mode',
+      'feedback_requirements', 'rework_history', 'deadline_extensions',
+      'type_config', 'sop_content', 'description',
+      'team_id', 'team_name', 'tools_remarks',
+    ]);
+    const validKeys = Object.keys(updates).filter(k => {
+      if (k === 'id' || updates[k] === undefined) return false;
+      const dbCol = toDbColumnName(k);
+      return validDbColumns.has(dbCol);
+    });
 
     if (validKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });

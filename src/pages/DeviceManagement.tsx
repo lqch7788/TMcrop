@@ -1,48 +1,26 @@
 /**
  * 设备管理页面
  * 功能：设备信息的新增、编辑、删除、查询
- * 使用 API 替代 localStorage
+ * 架构：组件 → useDeviceStore (Zustand) → API
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import {
-  getDevices,
-  createDevice,
-  updateDevice,
-  deleteDevice as deleteDeviceApi,
-  Device as DeviceType,
-} from '../services/apiBasicDataService';
+import { useDeviceStore } from '../stores';
+import type { Device } from '../services/apiBasicDataService';
 
 const DEVICE_TYPES = ['传感器', '摄像头', '控制器', '气象站', '灌溉设备', '施肥设备', '其他'];
 
 export default function DeviceManagement() {
-  const [devices, setDevices] = useState<Device[]>([]);
+  const { devices, loading, error, loadDevices, addDevice, editDevice, removeDevice } = useDeviceStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [newDevice, setNewDevice] = useState<Partial<Device>>({ status: 'online' });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 加载设备数据
-  const loadDevices = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getDevices();
-      setDevices(data);
-    } catch (err) {
-      console.error('加载设备数据失败:', err);
-      setError('加载设备数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     loadDevices();
@@ -62,7 +40,7 @@ export default function DeviceManagement() {
     }
     try {
       if (editingDevice) {
-        await updateDevice(editingDevice.id, {
+        await editDevice(editingDevice.id, {
           deviceName: newDevice.deviceName,
           deviceCode: newDevice.deviceCode,
           deviceType: newDevice.deviceType,
@@ -74,12 +52,8 @@ export default function DeviceManagement() {
           status: newDevice.status,
           description: newDevice.description,
         });
-        await loadDevices();
-        setShowModal(false);
-        setEditingDevice(null);
-        setNewDevice({ status: 'online' });
       } else {
-        await createDevice({
+        await addDevice({
           deviceName: newDevice.deviceName,
           deviceCode: newDevice.deviceCode,
           deviceType: newDevice.deviceType,
@@ -90,10 +64,10 @@ export default function DeviceManagement() {
           installDate: newDevice.installDate,
           description: newDevice.description,
         });
-        await loadDevices();
-        setShowModal(false);
-        setNewDevice({ status: 'online' });
       }
+      setShowModal(false);
+      setEditingDevice(null);
+      setNewDevice({ status: 'online' });
     } catch (err) {
       console.error('保存设备失败:', err);
       alert('保存设备失败');
@@ -103,15 +77,14 @@ export default function DeviceManagement() {
   const handleDeleteDevice = async (id: string) => {
     if (!confirm('确定删除该设备吗？')) return;
     try {
-      await deleteDeviceApi(id);
-      await loadDevices();
+      await removeDevice(id);
     } catch (err) {
       console.error('删除设备失败:', err);
       alert('删除设备失败');
     }
   };
 
-  const editDevice = (device: Device) => {
+  const editDeviceAction = (device: Device) => {
     setEditingDevice(device);
     setNewDevice(device);
     setShowModal(true);
@@ -264,7 +237,7 @@ export default function DeviceManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-              <Button size="icon" variant="ghost" onClick={() => editDevice(device)}>
+              <Button size="icon" variant="ghost" onClick={() => editDeviceAction(device)}>
                 <Edit2 className="w-4 h-4 text-gray-600" />
               </Button>
               <Button size="icon" variant="destructive" onClick={() => handleDeleteDevice(device.id)}>

@@ -102,6 +102,78 @@ export enum StockStatus {
   DEPLETED = 'depleted'       // 耗尽
 }
 
+// ========== 繁殖途径类型（种源管理升级 V2.0）==========
+
+/** 繁殖途径类型 - 区分种源入库的核心途径 */
+export enum PropagationType {
+  EXTERNAL = 'external',       // 外购（现有模式，默认值）
+  BREEDING = 'breeding',       // 育种计划产出
+  SEED_SAVING = 'seed_saving', // 种植留种
+  ASEXUAL = 'asexual',         // 无性繁殖
+}
+
+/** 统一繁殖阶段 - 适用于所有繁殖途径 */
+export enum PropagationStatus {
+  PLANNED = 'planned',             // 已计划
+  IN_PROGRESS = 'in_progress',     // 进行中
+  HARVESTED = 'harvested',         // 已采收
+  QUALITY_CHECKED = 'quality_checked', // 已质检
+  COMPLETED = 'completed',         // 已入库
+  FAILED = 'failed',               // 失败
+}
+
+/** 育种方法 - 育种计划产出途径专用 */
+export enum BreedingMethod {
+  CROSSBREEDING = 'crossbreeding',    // 杂交育种
+  SELECTION = 'selection',             // 选择育种
+  BACKCROSS = 'backcross',            // 回交育种
+  HYBRID = 'hybrid',                   // 杂种优势
+  OPEN_POLLINATION = 'open_pollination', // 开放授粉
+  MUTATION = 'mutation',               // 诱变育种
+  OTHER = 'other',                     // 其他
+}
+
+/** 无性繁殖方式 - 无性繁殖途径专用 */
+export enum AsexualMethod {
+  CUTTING = 'cutting',                  // 扦插
+  GRAFTING = 'grafting',               // 嫁接
+  DIVISION = 'division',               // 分株
+  TISSUE_CULTURE = 'tissue_culture',   // 组培
+  BULB = 'bulb',                       // 种球/球根
+  LAYERING = 'layering',               // 压条
+}
+
+/** 繁殖过程记录 */
+export interface PropagationRecord {
+  id: string;
+  seedSourceId: string;         // 关联种源ID
+  recordDate: string;           // 记录日期
+  stage: PropagationStatus;     // 当前阶段
+  // 通用环境字段
+  temperature?: number;         // 温度℃
+  humidity?: number;            // 湿度%
+  abnormality?: string;         // 异常描述
+  operator?: string;            // 操作人员
+  remarks?: string;             // 备注
+  pictures?: string[];          // 阶段照片
+  // 育种途径专用字段
+  pollinationType?: 'self' | 'cross' | 'open'; // 授粉类型
+  pollinatorCrop?: string;      // 授粉作物
+  flowerCount?: number;         // 授粉花朵数
+  fruitSetCount?: number;       // 坐果数
+  // 采收阶段字段
+  harvestSeedCount?: number;    // 采收种子数
+  seedWeight?: number;          // 种子重量(g)
+  harvestPlantCount?: number;   // 采收苗数（无性繁殖用）
+  // 质检阶段字段
+  germinationRate?: number;     // 发芽率%
+  purity?: number;              // 净度%
+  moisture?: number;            // 水分%
+  survivalRate?: number;        // 成活率%（无性繁殖）
+  rootedRate?: number;          // 生根率%（扦插用）
+  graftSuccessRate?: number;    // 嫁接成活率%（嫁接用）
+}
+
 // ========== 种源类型 ==========
 
 /**
@@ -149,6 +221,28 @@ export interface SeedSource {
   baseName?: string;          // 基地名称
   // 打印记录（新增）
   printRecords?: PrintRecord[];  // 打印历史
+  // === 繁殖相关字段（propagationType ≠ 'external' 时有值）===
+  propagationType?: PropagationType;      // 途径类型
+  propagationStatus?: PropagationStatus;  // 当前繁殖阶段
+  propagationMethod?: string;             // 具体方法（BreedingMethod 或 AsexualMethod）
+  propagationRecords?: PropagationRecord[]; // 繁殖过程记录
+  // 亲本/母株关联
+  parentMaleId?: string;          // 父本ID（育种途径）
+  parentMaleCode?: string;        // 父本批号
+  parentFemaleId?: string;        // 母本ID（育种途径）
+  parentFemaleCode?: string;      // 母本批号
+  motherPlantId?: string;         // 母株ID（无性繁殖）
+  motherPlantCode?: string;       // 母株批号
+  // 种植留种关联
+  linkedPlantingId?: string;      // 关联种植记录ID
+  linkedPlantingCode?: string;    // 关联种植批号
+  // 繁殖时间线
+  propagationStartDate?: string;  // 繁殖开始日期
+  expectedHarvestDate?: string;   // 预计采收日期
+  actualHarvestDate?: string;     // 实际采收日期
+  breedingLocation?: string;      // 育种/繁殖地点
+  targetTraits?: string;          // 育种目标性状
+  generation?: string;            // 世代（F1/F2/BC1）
 }
 
 // ========== 每日记录类型 ==========
@@ -376,6 +470,9 @@ export interface SeedSourceFilters {
   recorderId?: string;   // 记录人ID
   surplusMin?: number;   // 剩余数量最小值
   surplusMax?: number;   // 剩余数量最大值
+  // 繁殖途径筛选
+  propagationType?: string;    // 入库方式（external/breeding/seed_saving/asexual）
+  propagationStatus?: string;  // 繁殖阶段
 }
 
 /** 育苗筛选条件 */

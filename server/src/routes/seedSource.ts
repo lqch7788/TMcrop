@@ -17,6 +17,15 @@ router.get('/generate-code', (req, res, next) => seedSourceController.generateCo
 // 批量删除路由必须在 /:id 之前
 router.delete('/batch', (req, res, next) => seedSourceController.deleteBatch(req, res, next));
 
+// 可用留种的种植记录（必须在 :id 路由之前，避免被 :id 匹配）
+router.get('/available-for-seed-saving', (req, res, next) => seedSourceController.getPlantingsForSeedSaving(req, res, next));
+
+// 繁殖阶段操作（带 :id 参数）
+router.get('/:id/propagation-records', (req, res, next) => seedSourceController.getPropagationRecords(req, res, next));
+router.post('/:id/propagation-records', (req, res, next) => seedSourceController.addPropagationRecord(req, res, next));
+router.put('/:id/propagation-stage', (req, res, next) => seedSourceController.updatePropagationStage(req, res, next));
+router.post('/:id/complete-propagation', (req, res, next) => seedSourceController.completePropagation(req, res, next));
+
 // 检查种源是否可删除（被育苗引用则不可删）
 router.get('/:id/check-deletable', (req, res) => {
   try {

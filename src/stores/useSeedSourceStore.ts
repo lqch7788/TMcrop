@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { SeedSource } from '../types/crop';
+import { SeedSource, PropagationRecord } from '../types/crop';
 import * as seedSourceService from '../services/apiSeedSourceService';
 import { enhancedApiClient } from '../lib/apiClient';
 
@@ -19,6 +19,11 @@ interface SeedSourceState {
   updateItem: (id: string, updates: Partial<SeedSource>) => Promise<SeedSource | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
+  // 繁殖途径方法
+  addPropagationRecord: (seedSourceId: string, data: Partial<PropagationRecord>) => Promise<PropagationRecord | null>;
+  loadPropagationRecords: (seedSourceId: string) => Promise<PropagationRecord[]>;
+  updatePropagationStage: (seedSourceId: string, newStage: string) => Promise<boolean>;
+  completePropagation: (seedSourceId: string, quantity: number) => Promise<boolean>;
 }
 
 export const useSeedSourceStore = create<SeedSourceState>()(
@@ -95,6 +100,67 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         return result;
       } catch (error) {
         console.error('[useSeedSourceStore] 批量删除种源失败:', error);
+        return false;
+      }
+    },
+
+    // ========== 繁殖途径方法 ==========
+
+    addPropagationRecord: async (seedSourceId, data) => {
+      try {
+        const result = await seedSourceService.addPropagationRecord(seedSourceId, data);
+        enhancedApiClient.clearCache().catch(() => {});
+        return result;
+      } catch (error) {
+        console.error('[useSeedSourceStore] 添加繁殖过程记录失败:', error);
+        return null;
+      }
+    },
+
+    loadPropagationRecords: async (seedSourceId) => {
+      try {
+        return await seedSourceService.getPropagationRecords(seedSourceId);
+      } catch (error) {
+        console.error('[useSeedSourceStore] 获取繁殖过程记录失败:', error);
+        return [];
+      }
+    },
+
+    updatePropagationStage: async (seedSourceId, newStage) => {
+      try {
+        await seedSourceService.updatePropagationStage(seedSourceId, newStage);
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === seedSourceId ? { ...item, propagationStatus: newStage as any } : item
+          ),
+        }));
+        enhancedApiClient.clearCache().catch(() => {});
+        return true;
+      } catch (error) {
+        console.error('[useSeedSourceStore] 推进繁殖阶段失败:', error);
+        return false;
+      }
+    },
+
+    completePropagation: async (seedSourceId, quantity) => {
+      try {
+        await seedSourceService.completePropagation(seedSourceId, quantity);
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === seedSourceId
+              ? {
+                  ...item,
+                  propagationStatus: 'completed' as any,
+                  availableCount: item.availableCount + quantity,
+                  quantity: item.quantity + quantity,
+                }
+              : item
+          ),
+        }));
+        enhancedApiClient.clearCache().catch(() => {});
+        return true;
+      } catch (error) {
+        console.error('[useSeedSourceStore] 完成繁殖入库失败:', error);
         return false;
       }
     },

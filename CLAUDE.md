@@ -412,7 +412,45 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
    - 修复3：`useTasks.createTask` 补全缺失的字段映射（batchId/batchCode/description/remarks/field/crop/teamId/teamName/toolsRemarks/requiredFeedback）
    - 新增DB列：`team_id`、`team_name`、`tools_remarks`；同步更新 schema.ts、FIELD_NAME_MAP、transformTaskFields
 
+3. **修复新建任务字段名映射错误 — 前端→后端字段名完全不匹配**
+   - 根因：前端 `createTask` 发送 `title/type/cropName/planStart/planEnd`，后端 POST 解构的是 `task_title/taskType/crop/plan_date/planTime`，全部丢失
+   - 修复：后端 POST 新增接收前端字段名（`title`, `type`, `cropName`, `planStart`, `planEnd`, `field`, `assignee`）
+   - `planStart` 拆分 → `plan_date` + `plan_time`；`planEnd` → `due_date`
+   - VALUES 全部改为后端字段名 → 前端字段名 → 空值的三级 fallback
+
 **构建状态：** ✅ 通过
+
+### 2026-05-17 会话 (第二阶段) — 系统设置优化方案 Phase 1-2 执行
+
+**完成的工作：**
+
+1. **Phase 1 Module 4: 分级审批（ApprovalLevelConfig）— 从只读空壳到完整 CRUD**
+   - 新增 3 个 DB 表：`approval_level_configs`（4个级别）、`approval_amount_thresholds`（3个阈值）、`approval_type_rules`（37种审批类型规则）
+   - 新增 9 条后端 API 路由（`/api/basic-data/approval-*`）
+   - 新增 3 个种子数据函数，37种类型规则从 `approvalHierarchy.ts` 迁移到 DB
+   - 创建 `useApprovalLevelStore`（Zustand + persist），含 store-to-config 桥接（`syncApprovalStoreData()`）保持向后兼容
+   - 重写 `ApprovalLevelConfig.tsx`：三个可编辑 TAB（阈值/级别/规则），新增 ThresholdModal/LevelConfigModal/TypeRuleModal/DeleteConfirmModal
+   - `approvalHierarchy.ts` 更新：`getTypeSpecificConfig()`/`getLevelByAmount()`/`getApprovalLevelConfig()` 优先读 Store 数据，fallback 到硬编码
+
+2. **Phase 2 Module 1: 通知设置（NotificationSettings）— 架构升级 + Preferences TAB 补全**
+   - 新增 `notification_preferences` 表 + 后端 API：`GET/PUT /notifications/preferences/:userOid`
+   - 创建 `useNotificationSettingsStore`（Zustand + persist），统一管理 channels/rules/preferences
+   - 重写 `NotificationSettings.tsx`：3个TAB全部可用
+   - Channels TAB：新增 ChannelModal（add/edit/delete/toggle）
+   - Rules TAB：新增 RuleModal（add/edit/delete/toggle）
+   - Preferences TAB：4个通知开关 + 免打扰时段配置 + 保存按钮（dirty 检测）
+
+3. **Phase 2 Module 2: 分支管理（BranchManagement）— mock → API 完整改造**
+   - 新增 `branches` 表（10个字段：branch_code, branch_name, location, area, manager, contact, block_count, description, status）
+   - 新增种子数据 `seedBranches()`：4条原始基地数据
+   - 新增后端 API：`GET/POST/PUT/DELETE /basic-data/branches`（软删除）
+   - 前端 `apiBasicDataService.ts`：新增 `Branch` 接口 + `getBranches/createBranch/updateBranch/deleteBranch`
+   - 创建 `useBranchStore`（Zustand + persist，5分钟缓存）
+   - 重写 `BranchManagement.tsx`（388行→约250行）：local `useState(mockBranches)` → `useBranchStore`
+   - 表单字段从 `code/name` 映射到 `branchCode/branchName`，与后端 snake_case 对齐
+
+**构建状态：** ✅ 前端 + 后端均通过
+**API 验证：** ✅ GET/POST/PUT/DELETE 全部测试通过
 
 ## Skill routing
 
