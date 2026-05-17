@@ -10,7 +10,7 @@ import {
   Calendar, User, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, AlertTriangle
 } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useFarmActivityStore, useBranchStore, useZoneStore, useWorkerStore } from '../stores';
+import { useFarmActivityStore, useZoneStore, useWorkerStore } from '../stores';
 import type { FarmActivity } from '../services/apiBasicDataService';
 
 const ACTIVITY_TYPES: Record<string, { label: string; color: string }> = {
@@ -39,8 +39,6 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
 
 export default function FarmActivityManagement() {
   const { activities, loading, error, loadActivities, addActivity, editActivity, removeActivity } = useFarmActivityStore();
-  const branches = useBranchStore((s) => s.branches);
-  const loadBranches = useBranchStore((s) => s.loadBranches);
   const zones = useZoneStore((s) => s.zones);
   const loadZones = useZoneStore((s) => s.loadZones);
   const workers = useWorkerStore((s) => s.workers);
@@ -58,12 +56,10 @@ export default function FarmActivityManagement() {
 
   useEffect(() => {
     loadActivities();
-    loadBranches();
     loadZones();
     loadWorkers();
-  }, [loadActivities, loadBranches, loadZones, loadWorkers]);
+  }, [loadActivities, loadZones, loadWorkers]);
 
-  const branchOptions = useMemo(() => branches.map(b => ({ value: b.oid, label: b.branchName })), [branches]);
   const zoneOptions = useMemo(() => zones.map(z => ({ value: z.oid, label: z.zoneName })), [zones]);
   const workerOptions = useMemo(() => workers.map(w => ({ value: w.oid || w.id, label: w.name || w.realName })), [workers]);
 
@@ -239,7 +235,7 @@ export default function FarmActivityManagement() {
                 const statusInfo = STATUS_CONFIG[activity.status || ''] || { label: activity.status || '-', color: 'bg-gray-100 text-gray-600', icon: Clock };
                 const priorityInfo = PRIORITY_CONFIG[activity.priority || ''] || { label: activity.priority || '-', color: 'text-gray-600 bg-gray-50' };
                 const StatusIcon = statusInfo.icon;
-                const branchName = branches.find(b => b.oid === activity.branchOid)?.branchName || '';
+                const branchName = activity.branchOid || '';
                 const zoneName = zones.find(z => z.oid === activity.blockOid)?.zoneName || '';
                 return (
                   <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
@@ -309,10 +305,7 @@ export default function FarmActivityManagement() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField label="所属基地">
-                <select value={formData.branchOid || ''} onChange={(e) => setFormData({ ...formData, branchOid: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">请选择</option>
-                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                <Input value={formData.branchOid || ''} onChange={(e) => setFormData({ ...formData, branchOid: e.target.value })} placeholder="请输入基地名称" />
               </FormField>
               <FormField label="所属区块">
                 <select value={formData.blockOid || ''} onChange={(e) => setFormData({ ...formData, blockOid: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">

@@ -164,10 +164,6 @@ export type { SalaryAdjustmentData } from './useSalaryAdjustmentStore';
 export { useSalaryBudgetStore } from './useSalaryBudgetStore';
 export type { SalaryBudgetData } from './useSalaryBudgetStore';
 
-// ==================== 分支/基地管理 Store ====================
-export { useBranchStore } from './useBranchStore';
-export type { Branch } from '../services/apiBasicDataService';
-
 // ==================== 班次管理 Store ====================
 export { useShiftStore } from './useShiftStore';
 export type { Shift } from '../services/apiBasicDataService';

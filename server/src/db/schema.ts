@@ -2459,25 +2459,6 @@ export function initializeDatabase() {
     )
   `);
 
-  // ========== V11.0: 分支/基地管理表 ==========
-  db.run(`
-    CREATE TABLE IF NOT EXISTS branches (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      oid TEXT UNIQUE NOT NULL,
-      branch_code TEXT NOT NULL,
-      branch_name TEXT NOT NULL,
-      location TEXT,
-      area REAL DEFAULT 0,
-      manager TEXT,
-      contact TEXT,
-      block_count INTEGER DEFAULT 0,
-      description TEXT,
-      status TEXT DEFAULT 'active',
-      created_at TEXT DEFAULT (datetime('now','localtime')),
-      updated_at TEXT DEFAULT (datetime('now','localtime'))
-    )
-  `);
-
   // ========== V11.0: 农事活动定义表（系统设置 - 农事活动管理）==========
   db.run(`
     CREATE TABLE IF NOT EXISTS farm_activities (
