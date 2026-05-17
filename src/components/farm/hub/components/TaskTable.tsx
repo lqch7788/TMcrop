@@ -3,8 +3,8 @@
  * 整合表头、行、分页器
  */
 
-import React from 'react';
-import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -150,6 +150,7 @@ export function TaskTable({
   onImport,
   onCreate,
 }: TaskTableProps) {
+  const [showMoreActions, setShowMoreActions] = useState(false);
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode || batchReassignMode;
   const total = tasks.length;
   const paginatedTasks = tasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -285,7 +286,7 @@ export function TaskTable({
             </>
           ) : (
             <>
-              {/* 正常模式按钮 */}
+              {/* 正常模式按钮 - 常用操作始终显示 */}
               {onCreate && (
                 <button
                   onClick={onCreate}
@@ -313,50 +314,66 @@ export function TaskTable({
                   删除
                 </button>
               )}
-              {onBatchDispatch && (
-                <button
-                  onClick={onBatchDispatch}
-                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                  派发
-                </button>
-              )}
-              {onBatchVerify && (
-                <button
-                  onClick={onBatchVerify}
-                  className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  验收
-                </button>
-              )}
-              {onBatchReassign && (
-                <button
-                  onClick={onBatchReassign}
-                  className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  重派
-                </button>
-              )}
-              {onExport && (
-                <button
-                  onClick={onExport}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
-              )}
-              {onImport && (
-                <button
-                  onClick={onImport}
-                  className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  导入
-                </button>
+              {/* 更多操作下拉 */}
+              {(onBatchDispatch || onBatchVerify || onBatchReassign || onExport || onImport) && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMoreActions(!showMoreActions)}
+                    className="h-8 px-3 flex items-center gap-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-200"
+                  >
+                    更多
+                    {showMoreActions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                  {showMoreActions && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-1.5 flex items-center gap-1">
+                      {onBatchDispatch && (
+                        <button
+                          onClick={() => { onBatchDispatch?.(); setShowMoreActions(false); }}
+                          className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors whitespace-nowrap"
+                        >
+                          <Send className="w-4 h-4" />
+                          派发
+                        </button>
+                      )}
+                      {onBatchVerify && (
+                        <button
+                          onClick={() => { onBatchVerify?.(); setShowMoreActions(false); }}
+                          className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          验收
+                        </button>
+                      )}
+                      {onBatchReassign && (
+                        <button
+                          onClick={() => { onBatchReassign?.(); setShowMoreActions(false); }}
+                          className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors whitespace-nowrap"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          重派
+                        </button>
+                      )}
+                      {onExport && (
+                        <button
+                          onClick={() => { onExport?.(); setShowMoreActions(false); }}
+                          className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                        >
+                          <Download className="w-4 h-4" />
+                          导出
+                        </button>
+                      )}
+                      {onImport && (
+                        <button
+                          onClick={() => { onImport?.(); setShowMoreActions(false); }}
+                          className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
+                        >
+                          <Upload className="w-4 h-4" />
+                          导入
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}

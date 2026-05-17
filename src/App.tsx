@@ -50,7 +50,6 @@ import WarehouseManagement from './pages/WarehouseManagement';
 import TeamManagement from './pages/TeamManagement';
 import CostAccounting from './pages/CostAccounting';
 import AuditLog from './pages/AuditLog';
-import BranchManagement from './pages/BranchManagement';
 import BlockManagement from './pages/BlockManagement';
 import FarmActivityManagement from './pages/FarmActivityManagement';
 import BaseSettings from './pages/BaseSettings';
@@ -247,7 +246,6 @@ function AppContent() {
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<BaseSettings />} />
-            <Route path="branch" element={<BranchManagement />} />
             <Route path="block" element={<BlockManagement />} />
             <Route path="farm-activity" element={<FarmActivityManagement />} />
           </Route>

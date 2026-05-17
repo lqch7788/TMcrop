@@ -883,58 +883,6 @@ export async function updateApprovalTypeRule(id: number, item: Partial<ApprovalT
 }
 
 // ============================================
-// 分支/基地管理
-// ============================================
-
-/** 分支/基地 */
-export interface Branch {
-  id: number;
-  oid: string;
-  branchCode: string;
-  branchName: string;
-  location?: string;
-  area?: number;
-  manager?: string;
-  contact?: string;
-  blockCount?: number;
-  description?: string;
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/** 获取所有分支/基地 */
-export async function getBranches(): Promise<Branch[]> {
-  const data = await enhancedApiClient.get<Branch[]>('/basic-data/branches', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
-  return data || [];
-}
-
-/** 创建分支/基地 */
-export async function createBranch(branch: Partial<Branch>): Promise<Branch> {
-  const result = await enhancedApiClient.post<Branch>('/basic-data/branches', branch, {
-    offlineQueue: true,
-  });
-  return result;
-}
-
-/** 更新分支/基地 */
-export async function updateBranch(id: number, branch: Partial<Branch>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/branches/${id}`, branch, {
-    offlineQueue: true,
-  });
-}
-
-/** 删除分支/基地 */
-export async function deleteBranch(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/branches/${id}`, {
-    offlineQueue: true,
-  });
-}
-
-// ============================================
 // 班次管理
 // ============================================
 

@@ -1,16 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Search, Filter, Eye, Download, AlertTriangle, ChevronLeft } from 'lucide-react';
-import {
-  getOperationLogs,
-  getOperationLogStats,
-  OperationLog,
-  OperationLogStats,
-} from '../services/apiOperationLogService';
+import { FileText, Search, Eye, Download, AlertTriangle, ChevronLeft, Loader2 } from 'lucide-react';
+import { enhancedApiClient } from '../lib/apiClient';
+
+interface OperationLog {
+  id: string;
+  userId?: string;
+  username: string;
+  action: string;
+  module: string;
+  resourceType?: string;
+  resourceId?: string;
+  description?: string;
+  oldValue?: string;
+  newValue?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  status: string;
+  level?: string;
+  errorMessage?: string;
+  created_at: string;
+}
+
+interface LogStats {
+  total: number;
+  today: number;
+  info: number;
+  warning: number;
+  error: number;
+}
+
+const EMPTY_STATS: LogStats = { total: 0, today: 0, info: 0, warning: 0, error: 0 };
 
 export default function AuditLog() {
   const [logs, setLogs] = useState<OperationLog[]>([]);
-  const [stats, setStats] = useState<OperationLogStats>({ total: 0, today: 0, info: 0, warning: 0, error: 0 });
+  const [stats, setStats] = useState<LogStats>(EMPTY_STATS);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
@@ -22,73 +46,76 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(true);
   const pageSize = 10;
 
-  // 获取日志列表
-  const fetchLogs = useCallback(async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const result = await getOperationLogs({
-        page: currentPage,
-        limit: pageSize,
-        search: searchTerm || undefined,
-        module: filterModule !== 'all' ? filterModule : undefined,
-        level: filterLevel !== 'all' ? filterLevel : undefined,
-        startDate: filterDate || undefined,
-      });
+      // 并行获取日志列表和统计数据
+      const params = new URLSearchParams();
+      params.set('page', String(currentPage));
+      params.set('limit', String(pageSize));
+      if (searchTerm) params.set('search', searchTerm);
+      if (filterModule !== 'all') params.set('module', filterModule);
+      if (filterLevel !== 'all') params.set('level', filterLevel);
+      if (filterDate) params.set('start_date', filterDate);
 
-      setLogs(result.data);
-      setTotalPages(result.meta?.totalPages || 1);
-    } catch (error) {
-      console.error('获取日志失败:', error);
+      const [logsResult, statsResult] = await Promise.allSettled([
+        enhancedApiClient.get<any>(`/operation-logs?${params.toString()}`, { useCache: false }),
+        enhancedApiClient.get<any>('/operation-logs/stats/summary', { useCache: true }),
+      ]);
+
+      // 处理日志列表
+      if (logsResult.status === 'fulfilled') {
+        const data = logsResult.value;
+        if (Array.isArray(data)) {
+          setLogs(data);
+        } else if (data && Array.isArray(data.data)) {
+          setLogs(data.data);
+          setTotalPages(data.meta?.totalPages || data.totalPages || 1);
+        } else {
+          setLogs([]);
+        }
+      } else {
+        console.error('获取日志失败:', logsResult.reason);
+        setLogs([]);
+      }
+
+      // 处理统计数据
+      if (statsResult.status === 'fulfilled') {
+        const data = statsResult.value;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setStats({
+            total: data.total ?? 0,
+            today: data.today ?? 0,
+            info: data.info ?? 0,
+            warning: data.warning ?? 0,
+            error: data.error ?? 0,
+          });
+        }
+      } else {
+        console.error('获取统计失败:', statsResult.reason);
+      }
+    } catch (err) {
+      console.error('AuditLog fetch error:', err);
     } finally {
       setLoading(false);
     }
   }, [currentPage, searchTerm, filterModule, filterLevel, filterDate]);
 
-  // 获取统计数据
-  const fetchStats = useCallback(async () => {
-    try {
-      const data = await getOperationLogStats();
-      setStats(data);
-    } catch (error) {
-      console.error('获取统计数据失败:', error);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchLogs();
-    fetchStats();
-  }, [fetchLogs, fetchStats]);
+    fetchData();
+  }, [fetchData]);
 
-  // 筛选后的日志（前端再做一次筛选，因为API可能没有返回所有数据）
-  const filteredLogs = logs.filter(log => {
-    const matchSearch = !searchTerm ||
+  // 前端二次筛选
+  const filteredLogs = logs.filter((log) => {
+    const matchSearch =
+      !searchTerm ||
       (log.username && log.username.includes(searchTerm)) ||
       (log.description && log.description.includes(searchTerm)) ||
       (log.action && log.action.includes(searchTerm));
     return matchSearch;
   });
 
-  const viewLogDetails = (log: OperationLog) => {
-    setSelectedLog(log);
-    setShowDetailModal(true);
-  };
-
-  const exportLogs = () => {
-    const csv = [
-      ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'].join(','),
-      ...filteredLogs.map(log => [
-        log.created_at, log.username, log.action, log.module, log.description, log.ip_address || '-', log.status || log.level || 'info'
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  const modules = [...new Set(logs.map(l => l.module).filter(Boolean))];
+  const modules = [...new Set(logs.map((l) => l.module).filter(Boolean))];
 
   const getLevelColor = (status: string | undefined) => {
     const level = status || 'info';
@@ -105,14 +132,9 @@ export default function AuditLog() {
     }
   };
 
-  const getLevelLabel = (status: string | undefined) => {
-    const map: Record<string, string> = {
-      info: '信息',
-      success: '信息',
-      warning: '警告',
-      error: '错误'
-    };
-    return map[status || 'info'] || status || '信息';
+  const getLevelLabel = (s: string | undefined) => {
+    const map: Record<string, string> = { info: '信息', success: '信息', warning: '警告', error: '错误' };
+    return map[s || 'info'] || s || '信息';
   };
 
   const getActionColor = (action: string) => {
@@ -123,6 +145,29 @@ export default function AuditLog() {
     if (action.includes('APPROVE') || action.includes('审批')) return 'bg-purple-100 text-purple-700';
     if (action.includes('EXPORT') || action.includes('导出')) return 'bg-cyan-100 text-cyan-700';
     return 'bg-gray-100 text-gray-700';
+  };
+
+  const exportLogs = () => {
+    const csv = [
+      ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'].join(','),
+      ...filteredLogs
+        .map((log) =>
+          [
+            log.created_at,
+            log.username,
+            log.action,
+            log.module,
+            log.description,
+            log.ipAddress || '-',
+            log.level || log.status || 'info',
+          ].join(',')
+        ),
+    ].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   return (
@@ -138,68 +183,50 @@ export default function AuditLog() {
           onClick={exportLogs}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
         >
-          <Download className="w-4 h-4" />
-          导出日志
+          <Download className="w-4 h-4" /> 导出日志
         </button>
       </div>
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">日志总数</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">今日</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.today}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-blue-600">信息</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.info}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-yellow-600">警告</p>
-          <p className="text-2xl font-bold text-yellow-600 mt-1">{stats.warning}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-red-600">错误</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{stats.error}</p>
-        </div>
+        {[
+          { label: '日志总数', value: stats.total, color: 'text-gray-900' },
+          { label: '今日', value: stats.today, color: 'text-emerald-600' },
+          { label: '信息', value: stats.info, color: 'text-blue-600' },
+          { label: '警告', value: stats.warning, color: 'text-yellow-600' },
+          { label: '错误', value: stats.error, color: 'text-red-600' },
+        ].map((item) => (
+          <div key={item.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <p className="text-sm text-gray-500">{item.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${item.color}`}>{item.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* 过滤 */}
+      {/* 过滤栏 */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             placeholder="搜索日志..."
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
           />
         </div>
         <select
           value={filterModule}
-          onChange={(e) => {
-            setFilterModule(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          onChange={(e) => { setFilterModule(e.target.value); setCurrentPage(1); }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
         >
           <option value="all">全部模块</option>
-          {modules.map(m => <option key={m} value={m}>{m}</option>)}
+          {modules.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
         <select
           value={filterLevel}
-          onChange={(e) => {
-            setFilterLevel(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          onChange={(e) => { setFilterLevel(e.target.value); setCurrentPage(1); }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
         >
           <option value="all">全部级别</option>
           <option value="info">信息</option>
@@ -209,26 +236,26 @@ export default function AuditLog() {
         <input
           type="date"
           value={filterDate}
-          onChange={(e) => {
-            setFilterDate(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
         />
-        <button
-          onClick={() => fetchLogs()}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
-        >
+        <button onClick={fetchData} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200">
           刷新
         </button>
       </div>
 
-      {/* 日志列表 */}
+      {/* 日志表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">加载中...</div>
+          <div className="flex items-center justify-center p-12 text-gray-500 gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+            加载中...
+          </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">暂无日志数据</div>
+          <div className="p-12 text-center text-gray-400">
+            <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            暂无日志数据
+          </div>
         ) : (
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -243,7 +270,7 @@ export default function AuditLog() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredLogs.map(log => (
+              {filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
                     {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-'}
@@ -257,25 +284,22 @@ export default function AuditLog() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>
-                      {log.action}
-                    </span>
+                    <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>{log.action}</span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{log.module || '-'}</td>
                   <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={log.description}>
                     {log.description || '-'}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(log.status || log.level)}`}>
-                      {getLevelLabel(log.status || log.level)}
+                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(log.level || log.status)}`}>
+                      {getLevelLabel(log.level || log.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end">
                       <button
-                        onClick={() => viewLogDetails(log)}
+                        onClick={() => { setSelectedLog(log); setShowDetailModal(true); }}
                         className="p-1.5 hover:bg-gray-100 rounded"
-                        title="查看详情"
                       >
                         <Eye className="w-4 h-4 text-gray-600" />
                       </button>
@@ -292,19 +316,19 @@ export default function AuditLog() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            共 {filteredLogs.length} 条记录，第 {currentPage} / {totalPages} 页
+            共 {filteredLogs.length} 条，第 {currentPage}/{totalPages} 页
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="px-3 py-1.5 text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
             >
               上一页
             </button>
             <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
               className="px-3 py-1.5 text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
             >
               下一页
@@ -315,74 +339,54 @@ export default function AuditLog() {
 
       {/* 日志详情弹窗 */}
       {showDetailModal && selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDetailModal(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">日志详情</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">时间</p>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString('zh-CN') : '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">用户</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.username || '系统'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">操作</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.action || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">模块</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.module || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">IP地址</p>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLog.ip_address || '-'}</p>
-                </div>
+                <DetailField label="时间" value={selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString('zh-CN') : '-'} />
+                <DetailField label="用户" value={selectedLog.username || '系统'} />
+                <DetailField label="操作" value={selectedLog.action || '-'} />
+                <DetailField label="模块" value={selectedLog.module || '-'} />
+                <DetailField label="IP地址" value={selectedLog.ipAddress || '-'} />
                 <div>
                   <p className="text-xs text-gray-500">级别</p>
-                  <p className="mt-1">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(selectedLog.status || selectedLog.level)}`}>
-                      {getLevelLabel(selectedLog.status || selectedLog.level)}
-                    </span>
-                  </p>
+                  <span className={`inline-block mt-1 px-2 py-1 text-xs rounded-full ${getLevelColor(selectedLog.level || selectedLog.status)}`}>
+                    {getLevelLabel(selectedLog.level || selectedLog.status)}
+                  </span>
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">描述</p>
-                <p className="text-sm text-gray-900 mt-1">{selectedLog.description || '-'}</p>
-              </div>
-              {selectedLog.old_value && (
+              <DetailField label="描述" value={selectedLog.description || '-'} />
+              {selectedLog.oldValue && (
                 <div>
                   <p className="text-xs text-gray-500">原值</p>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{selectedLog.old_value}</pre>
-                  </div>
+                  <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-xs whitespace-pre-wrap">{selectedLog.oldValue}</pre>
                 </div>
               )}
-              {selectedLog.new_value && (
+              {selectedLog.newValue && (
                 <div>
                   <p className="text-xs text-gray-500">新值</p>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{selectedLog.new_value}</pre>
-                  </div>
+                  <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-xs whitespace-pre-wrap">{selectedLog.newValue}</pre>
                 </div>
               )}
             </div>
             <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
-              >
+              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">
                 关闭
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-sm text-gray-900 mt-1">{value}</p>
     </div>
   );
 }

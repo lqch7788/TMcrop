@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
 import { SourceType, StockStatus, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -440,11 +440,13 @@ export function AddModal({
             <label className="block text-sm font-medium text-gray-900 mb-2">入库方式</label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '从供应商采购入库', icon: '📦' },
-                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '育种计划产出的种子', icon: '🧬' },
-                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '从种植作物上留种', icon: '🌱' },
-                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '扦插/嫁接/分株/组培', icon: '🪴' },
-              ].map((opt) => (
+                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '从供应商采购入库', Icon: ShoppingCart },
+                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '育种计划产出的种子', Icon: Dna },
+                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '从种植作物上留种', Icon: Sprout },
+                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '扦插/嫁接/分株/组培', Icon: Scissors },
+              ].map((opt) => {
+                const IconComponent = opt.Icon;
+                return (
                 <button
                   key={opt.value}
                   type="button"
@@ -460,11 +462,14 @@ export function AddModal({
                       : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-lg mb-1">{opt.icon}</div>
-                  <div className="text-sm font-medium text-gray-900">{opt.label}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{opt.desc}</div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
+                    <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">{opt.desc}</div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
 

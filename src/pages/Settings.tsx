@@ -13,7 +13,6 @@ const basicDataSections = [
   { icon: BookOpen, label: '数据字典', path: '/settings/dictionary', desc: '管理所有枚举值和状态' },
   { icon: Building2, label: '基地设置', path: '/settings/bases', desc: '管理基地信息配置' },
   { icon: Target, label: '部门设置', path: '/settings/departments', desc: '设置组织架构' },
-  { icon: GitBranch, label: '分支管理', path: '/settings/branch', desc: '管理分场/基地分支' },
   { icon: MapPin, label: '种植区域', path: '/settings/regions', desc: '管理温室和大棚区域' },
   { icon: Layers, label: '区块管理', path: '/settings/block', desc: '管理基地下的种植区块' },
 ];

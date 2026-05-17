@@ -2475,6 +2475,16 @@ function seedDictionaries() {
     { id: 'biz-026', category: 'source_type', code: 'bulb', name: '种球', sort_number: 7 },
     { id: 'biz-027', category: 'source_type', code: 'other', name: '其他', sort_number: 8 },
 
+    // 来源途径（获取渠道分类，与 source_type 种源类型区分）
+    { id: 'biz-028', category: 'source_origin', code: 'external_purchase', name: '外部采购', sort_number: 1 },
+    { id: 'biz-029', category: 'source_origin', code: 'internal_seed', name: '内部育种/留种', sort_number: 2 },
+    { id: 'biz-036', category: 'source_origin', code: 'self_produced', name: '自产', sort_number: 3 },
+    { id: 'biz-037', category: 'source_origin', code: 'commissioned', name: '委托生产', sort_number: 4 },
+    { id: 'biz-038', category: 'source_origin', code: 'gift', name: '赠送/受赠', sort_number: 5 },
+    { id: 'biz-039', category: 'source_origin', code: 'direct_seedling', name: '直接育苗', sort_number: 6 },
+    { id: 'biz-090', category: 'source_origin', code: 'direct_planting', name: '直接定植', sort_number: 7 },
+    { id: 'biz-091', category: 'source_origin', code: 'external_harvest', name: '外部采收', sort_number: 8 },
+
     // 育苗场地/区域
     { id: 'biz-030', category: 'seedling_site', code: 'SITE001', name: '育苗温室A区', sort_number: 1 },
     { id: 'biz-031', category: 'seedling_site', code: 'SITE002', name: '育苗温室B区', sort_number: 2 },
@@ -4617,34 +4627,6 @@ function seedShifts() {
   console.log(`已导入班次种子数据: ${shifts.length}条`);
 }
 
-/**
- * 导入分支/基地种子数据
- */
-function seedBranches() {
-  const db = getDatabase();
-  const existing = db.exec('SELECT COUNT(*) FROM branches');
-  const count = existing.length > 0 ? Number(existing[0].values[0][0]) : 0;
-  if (count > 0) return;
-
-  const branches = [
-    { oid: 'BR001', code: 'BR001', name: '一号种植基地', location: '北京市通州区', area: 50000, manager: '张建国', contact: '13800138001', blockCount: 12, description: '主产区，种植番茄、黄瓜等' },
-    { oid: 'BR002', code: 'BR002', name: '二号种植基地', location: '北京市顺义区', area: 35000, manager: '李明辉', contact: '13800138002', blockCount: 8, description: '叶菜类种植区' },
-    { oid: 'BR003', code: 'BR003', name: '三号种植基地', location: '北京市大兴区', area: 28000, manager: '王建国', contact: '13800138003', blockCount: 6, description: '草莓种植专区' },
-    { oid: 'BR004', code: 'BR004', name: '四号种植基地', location: '北京市昌平区', area: 42000, manager: '赵文静', contact: '13800138004', blockCount: 0, description: '备用基地', status: 'inactive' },
-  ];
-
-  const stmt = db.prepare(`
-    INSERT INTO branches (oid, branch_code, branch_name, location, area, manager, contact, block_count, description, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  for (const b of branches) {
-    stmt.run([b.oid, b.code, b.name, b.location, b.area, b.manager, b.contact, b.blockCount, b.description, b.status || 'active']);
-  }
-  stmt.free();
-  console.log(`已导入分支/基地种子数据: ${branches.length}条`);
-}
-
 function seedFarmActivities() {
   const db = getDatabase();
   const count = Number(db.exec("SELECT COUNT(*) FROM farm_activities")[0]?.values[0][0] || 0);
@@ -4727,7 +4709,6 @@ export function exportDatabase() {
   seedCostCategories();
   seedCostBudgets();
   seedShifts();
-  seedBranches();
   seedApprovalLevelConfigs();
   seedApprovalAmountThresholds();
   seedApprovalTypeRules();
