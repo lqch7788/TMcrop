@@ -234,7 +234,9 @@
       "mcp__memory__search_nodes",
       "mcp__memory__create_entities",
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT stock_type, COUNT\\(*\\) as cnt FROM inventory GROUP BY stock_type\")",
-      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"PRAGMA table_info\\(farm_tasks\\);\")"
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"PRAGMA table_info\\(farm_tasks\\);\")",
+      "Read(//d/TMcrop/yuanxingtu/V1.3/**)",
+      "Bash(npm install *)"
     ]
   }
 }
