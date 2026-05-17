@@ -367,6 +367,29 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 **API 验证：** ✅ GET/POST/DELETE 全部正常
 **涉及文件：** 14 个文件修改
 
+### 2026-05-17 会话 — 审核报告剩余P2+P3方案完成
+
+**完成的工作：**
+
+1. **方案1.3 (P2): 种源更多筛选弹窗**
+   - `SeedSourceFilters` 类型扩展：添加 `cropType`, `orgId`, `recorderId`, `surplusMin`, `surplusMax`
+   - `SeedSourceFilter.tsx`：添加"更多筛选"按钮 + Popover弹窗，含作物类型→作物名称级联、组织→记录人级联、剩余数量范围
+   - `SeedSourcePage.tsx`：添加新筛选字段的过滤逻辑和重置处理
+   - 使用 `useDictionaryStore`（作物类型）、`useDepartmentStore`（组织）、`useUserStore`（记录人）
+
+2. **方案4.2 (P2): 采收时间改为datetime**
+   - `AddModal.tsx`：`type="date"` → `type="datetime-local"`，标签"采收日期"→"采收时间"
+   - `BatchEditModal.tsx`：同上
+   - `DetailModal.tsx`：显示格式 `harvestDate?.replace('T', ' ')`
+   - `HarvestTable.tsx`：表头+单元格格式更新
+   - `HarvestPage.tsx`：默认值 `split('T')[0]` → `slice(0, 16)`，验证提示更新，导出标签更新
+
+3. **方案2.7 (P3): 种子编号combogrid展示**
+   - `AddModal.tsx`：种源选择从 `<select>` 改为 `input + Popover` 表格，四列（作物名称/种源批号/采购数量/可用数量），支持搜索过滤、点击选择、外部点击关闭
+   - `EditModal.tsx`：同上同步改造
+
+**构建状态：** ✅ 前端 + 后端均通过
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
