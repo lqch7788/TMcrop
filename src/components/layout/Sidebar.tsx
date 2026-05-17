@@ -28,7 +28,7 @@ const menuItems = [
   { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
   { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },
   { icon: BarChart3, label: '生产汇总表', path: '/reports', category: 'summary' },
-  { icon: CheckSquare, label: '审批中心', path: '/approvals', category: 'workflow' },
+  { icon: CheckSquare, label: '审批管理', path: '/approvals', category: 'workflow' },
 ];
 
 const productionSubItems = [
@@ -532,7 +532,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     )}
                   </>
                   )
-                ) : item.label === '审批中心' ? (
+                ) : item.label === '审批管理' ? (
                   filteredApprovalSubItems.length > 0 && (
                   <>
                     <button
