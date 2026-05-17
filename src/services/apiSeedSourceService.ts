@@ -217,7 +217,7 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
     unit: source.unit,
     purchase_price: source.unitPrice,
     total_amount: source.totalAmount,
-    remaining_quantity: source.availableCount,
+    remaining_quantity: source.quantity,
     used_quantity: source.usedQuantity || 0,
     status: source.status,
     remarks: source.remarks || '',

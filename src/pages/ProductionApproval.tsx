@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
+import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
 import BatchActionBar from '../components/approval/BatchActionBar';
 import { Button } from '../components/ui/button';
 
@@ -34,13 +35,17 @@ export default function ProductionApproval() {
 
   // 查看详情处理
   const handleViewDetail = async (approval: Approval) => {
-    // 如果是采购申请，加载采购计划详情
+    // 如果是采购申请，从Store获取采购计划详情
     if (approval.businessLink?.type === 'purchase') {
       try {
-        const response = await fetch(`/api/purchase-plans/${approval.businessLink.requestId}`);
-        const result = await response.json();
-        if (result.success && result.data) {
-          setDetailModal({ show: true, approval, purchasePlanDetail: result.data });
+        // 确保Store已加载数据
+        const store = usePurchasePlanStore.getState();
+        if (store.plans.length === 0) {
+          await store.fetchPlans();
+        }
+        const planDetail = store.plans.find(p => p.id === approval.businessLink?.requestId);
+        if (planDetail) {
+          setDetailModal({ show: true, approval, purchasePlanDetail: planDetail });
           return;
         }
       } catch (error) {

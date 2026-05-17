@@ -795,28 +795,49 @@ router.patch('/:id/action', (req, res) => {
 
     saveDatabase();
 
-    // 审批操作完成后，调用审批联动更新业务表
-    if (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'cancelled') {
+    // 审批操作完成后，调用审批联动更新业务表（覆盖所有业务类型）
+    if (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'cancelled' || newStatus === 'partially_approved') {
       const businessLink = approval.business_link ? JSON.parse(approval.business_link as string) : null;
-      if (businessLink && businessLink.type === 'production') {
+      if (businessLink?.type && businessLink?.requestId) {
         try {
-          const action = newStatus === 'approved' ? 'approved' : newStatus === 'rejected' ? 'rejected' : 'cancelled';
-          // 提取 approvalAction 用于区分编辑审批和作废审批
-          const approvalAction = businessLink.approvalAction as string | undefined;
-          const result = updateBusinessTable(db, businessLink.type, businessLink.requestId, action, approval.code as string, { approvalAction });
+          const linkageAction = newStatus === 'approved' ? 'approved' as const
+            : newStatus === 'rejected' ? 'rejected' as const
+            : newStatus === 'cancelled' ? 'cancelled' as const
+            : 'partially_approved' as const;
+          const result = updateBusinessTable(db, businessLink.type, businessLink.requestId, linkageAction, approval.code as string, businessLink);
           if (result.success) {
-            console.log(`【审批联动】生产计划状态已更新: ${businessLink.requestId} -> ${action}, approvalAction: ${approvalAction}`);
+            console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
+          } else {
+            console.warn(`【审批联动】${businessLink.type} 更新失败: ${result.message}`);
           }
         } catch (e) {
-          console.error('【审批联动】更新生产计划状态失败:', e);
+          console.error('【审批联动】更新业务表失败:', e);
         }
       }
+    }
+
+    // 重新查询完整审批记录返回
+    const reloadStmt = db.prepare('SELECT * FROM approvals WHERE id = ?');
+    reloadStmt.bind([id]);
+    let updatedApproval: Record<string, unknown> | null = null;
+    if (reloadStmt.step()) {
+      updatedApproval = reloadStmt.getAsObject();
+    }
+    reloadStmt.free();
+
+    // JSON字段解析
+    if (updatedApproval) {
+      ['approvers', 'records', 'business_link', 'attachments', 'materials', 'related_task_ids'].forEach(field => {
+        if (typeof updatedApproval![field] === 'string') {
+          try { updatedApproval![field] = JSON.parse(updatedApproval![field] as string); } catch { /* keep original */ }
+        }
+      });
     }
 
     res.json({
       success: true,
       message: '审批操作成功',
-      data: {
+      data: updatedApproval || {
         newStatus,
         newCurrentStep,
         totalSteps: approval.total_steps,
@@ -1388,58 +1409,6 @@ router.post('/batch-action', (req, res) => {
   } catch (error) {
     console.error('批量审批失败:', error);
     res.status(500).json({ success: false, error: '批量审批失败' });
-  }
-});
-
-/**
- * 审批联动更新（前端调用 /api/approvals/update）
- * POST /api/approvals/update
- */
-router.post('/update', (req, res) => {
-  try {
-    const db = getDatabase();
-    const { approvalId, approvalCode, action, businessLink, operatorId, operatorName, extra } = req.body;
-
-    if (!approvalId || !action || !businessLink) {
-      return res.status(400).json({ success: false, error: '缺少必要参数' });
-    }
-
-    const businessType = businessLink.type;
-    const requestId = businessLink.requestId;
-
-    console.log(`【审批联动】开始更新业务表: ${businessType}/${requestId}, 动作: ${action}`);
-
-    // 更新业务表
-    const result = updateBusinessTable(
-      db,
-      businessType,
-      requestId,
-      action,
-      approvalCode || '',
-      extra
-    );
-
-    if (result.success) {
-      saveDatabase();
-      res.json({
-        success: true,
-        message: result.message,
-        data: {
-          businessType,
-          requestId,
-          action,
-          approvalCode,
-        },
-      });
-    } else {
-      res.json({
-        success: false,
-        error: result.message,
-      });
-    }
-  } catch (error) {
-    console.error('审批联动更新失败:', error);
-    res.status(500).json({ success: false, error: '审批联动更新失败' });
   }
 });
 

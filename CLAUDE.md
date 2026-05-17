@@ -452,6 +452,35 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 **构建状态：** ✅ 前端 + 后端均通过
 **API 验证：** ✅ GET/POST/PUT/DELETE 全部测试通过
 
+### 2026-05-17 会话 (第三阶段) — 审批中心修复计划 阶段5 完成
+
+**完成的工作：**
+
+1. **PATCH /:id/action 后端增强**
+   - `server/src/routes/approval.ts`：PATCH 端点业务联动从仅处理 `production` 类型扩展为覆盖所有业务类型
+   - 新增 `partially_approved` 状态联动支持
+   - 端点返回完整审批记录（含已解析的 JSON 字段），不再仅返回状态摘要
+   - 修复前：只对 `businessLink.type === 'production'` 执行 `updateBusinessTable`
+   - 修复后：所有 `businessLink.type + requestId` 组合均触发联动
+
+2. **移除冗余 POST /update 路由**
+   - `server/src/routes/approval.ts`：删除 `POST /api/approvals/update`（47行）
+   - 确认：零前端调用者，功能已被 PATCH 端点完全覆盖
+
+3. **approval_rules & approval-type-rules API**
+   - 确认已有完整 CRUD 路由：`GET/PUT /api/basic-data/approval-rules` 和 `approval-type-rules`
+   - 无需修改
+
+4. **HR审批数据迁移评估**
+   - 确认 `HrApproval.tsx` 已通过 `useHrApprovals()` → `useApprovalStore()` 使用主审批系统
+   - 发现 `src/services/hrApprovalService.ts` 为孤立死代码（零项目内导入），待用户确认删除
+
+4. **删除孤立死代码**
+   - `src/services/hrApprovalService.ts`（354行）：纯 localStorage HR审批服务，零引用，已删除
+
+**构建状态：** ✅ 前端 + 后端均通过
+**审批中心修复计划 5 个阶段全部完成**
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

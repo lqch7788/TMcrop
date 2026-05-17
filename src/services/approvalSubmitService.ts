@@ -82,57 +82,40 @@ class ApprovalSubmitService {
       // 2. 生成审批编号
       const approvalCode = this.generateApprovalCode(businessData.type);
 
-      // 3. 补全审批数据
+      // 3. 补全审批数据（统一以 pending 提交，自动通过走 PATCH 联动）
       const fullApproval = {
         ...approval,
         id: this.generateId(),
         code: approvalCode,
-        status: levelResult.autoApprove ? 'approved' : 'pending' as const,
+        status: 'pending' as const,
       };
 
-      // 4. 调用API保存审批数据
-      const token = localStorage.getItem('token');
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      // 4. 调用 API 保存审批数据（使用 enhancedApiClient，走三级降级）
+      const { enhancedApiClient } = await import('../lib/apiClient');
+      const response = await enhancedApiClient.post<{ success: boolean; id: string; code: string; error?: string }>(
+        '/api/approvals',
+        fullApproval
+      );
 
-      const response = await fetch('/api/approvals', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(fullApproval),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
+      if (!response.success) {
         return {
           success: false,
           autoApprove: levelResult.autoApprove,
           level: levelResult.level,
-          message: `提交审批失败: ${result.error}`,
+          message: `提交审批失败: ${response.error}`,
         };
       }
 
-      // 5. 如果是自动通过，执行业务联动
+      // 5. 如果是自动通过，调用 PATCH 端点触发审批联动（updateBusinessTable）
       if (levelResult.autoApprove) {
-        // 触发业务状态更新 - 调用审批联动API
-        console.log('【审批提交】自动通过审批，businessLink:', businessData.businessLink);
+        console.log('【审批提交】自动通过审批，触发PATCH联动，businessLink:', businessData.businessLink);
         try {
-          const token = localStorage.getItem('token');
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (token) headers['Authorization'] = `Bearer ${token}`;
-
-          await fetch('/api/approval-linkage/update', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              approvalId: fullApproval.id,
-              approvalCode: fullApproval.code,
-              action: 'approved',
-              businessLink: businessData.businessLink,
-              operatorId: businessData.applicantId,
-              operatorName: businessData.applicantName,
-            }),
-          });
+          const approverId = businessData.applicantId || 'system';
+          const approverName = businessData.applicantName || '系统';
+          await enhancedApiClient.patch(
+            `/api/approvals/${fullApproval.id}/action`,
+            { action: 'approve', comment: '免审批自动通过', approverId, approverName }
+          );
           console.log('【审批提交】自动通过审批，业务联动更新成功');
         } catch (linkError) {
           console.error('【审批提交】自动通过审批，业务联动更新失败:', linkError);
@@ -209,6 +192,7 @@ class ApprovalSubmitService {
       [ApprovalType.CROP_STORAGE_SUPPLEMENTARY]: 'CB',
       // 指标/公告审批
       [ApprovalType.INDICATOR_APPROVAL]: 'ZB',
+      [ApprovalType.INDICATOR_ADJUST]: 'ZT',
       [ApprovalType.ANNOUNCEMENT_APPROVAL]: 'GG',
       // 成本审批
       [ApprovalType.BUDGET_CREATE]: 'YS',

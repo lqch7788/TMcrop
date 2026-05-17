@@ -250,9 +250,9 @@ export default function SeedSourcePage() {
   const handleDelete = async (ids: string[]) => {
     for (const id of ids) {
       try {
-        const res = await enhancedApiClient.get(`/seed-sources/${id}/check-deletable`);
-        if (!res.data?.deletable) {
-          alert(`该种源已被 ${res.data?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
+        const res = await enhancedApiClient.get<{ deletable: boolean; refCount: number }>(`/seed-sources/${id}/check-deletable`);
+        if (!res?.deletable) {
+          alert(`该种源已被 ${res?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
           return;
         }
       } catch { /* 降级策略：检查失败时允许继续删除 */ }
