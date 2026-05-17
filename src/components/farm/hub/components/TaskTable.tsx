@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle } from 'lucide-react';
+import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw } from 'lucide-react';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -54,6 +54,7 @@ interface TaskTableProps {
   batchDeleteMode: boolean;
   batchDispatchMode: boolean;
   batchVerifyMode: boolean;
+  batchReassignMode: boolean;
   // 催办
   canRemind: (taskId: string) => { allowed: boolean; reason?: string };
   sendReminder: (
@@ -93,6 +94,9 @@ interface TaskTableProps {
   onConfirmBatchDispatch?: () => void;
   onBatchVerify?: () => void;
   onConfirmBatchVerify?: () => void;
+  onBatchReassign?: () => void;
+  onConfirmBatchReassign?: () => void;
+  onCancelBatchReassign?: () => void;
   onExport?: () => void;
   onImport?: () => void;
   onCreate?: () => void;
@@ -109,6 +113,7 @@ export function TaskTable({
   batchDeleteMode,
   batchDispatchMode,
   batchVerifyMode,
+  batchReassignMode,
   canRemind,
   sendReminder,
   onSelectRow,
@@ -138,11 +143,14 @@ export function TaskTable({
   onConfirmBatchDispatch,
   onBatchVerify,
   onConfirmBatchVerify,
+  onBatchReassign,
+  onConfirmBatchReassign,
+  onCancelBatchReassign,
   onExport,
   onImport,
   onCreate,
 }: TaskTableProps) {
-  const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode;
+  const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode || batchReassignMode;
   const total = tasks.length;
   const paginatedTasks = tasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -259,6 +267,22 @@ export function TaskTable({
                 取消
               </button>
             </>
+          ) : batchReassignMode ? (
+            <>
+              <button
+                onClick={onConfirmBatchReassign}
+                disabled={selectedIds.length === 0}
+                className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认重派
+              </button>
+              <button
+                onClick={() => { onCancelBatchReassign?.(); }}
+                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+            </>
           ) : (
             <>
               {/* 正常模式按钮 */}
@@ -287,6 +311,33 @@ export function TaskTable({
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
+                </button>
+              )}
+              {onBatchDispatch && (
+                <button
+                  onClick={onBatchDispatch}
+                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  派发
+                </button>
+              )}
+              {onBatchVerify && (
+                <button
+                  onClick={onBatchVerify}
+                  className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  验收
+                </button>
+              )}
+              {onBatchReassign && (
+                <button
+                  onClick={onBatchReassign}
+                  className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  重派
                 </button>
               )}
               {onExport && (
@@ -322,6 +373,7 @@ export function TaskTable({
               batchDeleteMode={batchDeleteMode}
               batchDispatchMode={batchDispatchMode}
               batchVerifyMode={batchVerifyMode}
+              batchReassignMode={batchReassignMode}
               isAllSelected={isAllSelected}
               isSomeSelected={isSomeSelected}
               onSelectAll={onSelectAll}

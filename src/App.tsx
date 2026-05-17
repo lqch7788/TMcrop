@@ -117,7 +117,6 @@ const Team = lazy(() => import('./pages/Team'));
 const TempTask = lazy(() => import('./pages/TempTask'));
 const TaskCenterPage = lazy(() => import('./pages/farm/TaskCenterPage'));
 const FarmTaskHub = lazy(() => import('./pages/farm/FarmTaskHub'));
-const TaskDispatchPage = lazy(() => import('./pages/farm/TaskDispatchPage'));
 const AttendancePage = lazy(() => import('./pages/labor/AttendancePage'));
 const PersonnelPage = lazy(() => import('./pages/labor/PersonnelPage'));
 const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
@@ -340,7 +339,7 @@ function AppContent() {
           <Route path="/env-control" element={<EnvControl />} />
           <Route path="/agriculture-record" element={<AgricultureRecord />} />
           <Route path="/dispatch" element={<DispatchPage />} />
-          <Route path="/task-dispatch" element={<TaskDispatchPage />} />
+          <Route path="/task-dispatch" element={<Navigate to="/farm-hub" replace />} />
           <Route path="/traceability" element={<Traceability />} />
           <Route path="/device-monitor" element={<DeviceMonitor />} />
           <Route path="/alert-info" element={<AlertInfo />} />

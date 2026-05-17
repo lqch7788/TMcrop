@@ -1,12 +1,11 @@
 /**
  * 育苗标签打印弹窗
- * 支持单标签打印、多标签打印、批量生成、导出Excel(含QR码)
- * V10.1: 切换至API服务+Zustand Store，增强QR码Excel导出
+ * 支持单标签打印、多标签打印、批量生成、导出Excel
+ * 导出用URL链接替代QR码图片，避免文件过大导致系统卡死
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import QRCode from 'qrcode';
-import { Download, Printer, Loader2 } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling } from '../../../../types/crop';
 import * as apiService from '../../../../services/apiSeedlingService';
@@ -60,15 +59,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   // 剩余数量
   const remainingCount = record.initialCount - record.lossCount;
 
-  // 生成QR码数据URI（用于Excel导出）
-  const generateQrDataUri = useCallback(async (content: string): Promise<string> => {
-    try {
-      return await QRCode.toDataURL(content, { width: 120, margin: 1 });
-    } catch {
-      return '';
-    }
-  }, []);
-
   // 处理打印
   const handlePrint = useCallback(async () => {
     setLoading(true);
@@ -102,7 +92,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   }, [printMode, previewLabel, selectedLabels, printCount, record, currentOperator, generateBatchLabels]);
 
-  // 导出Excel（含QR码图片）
+  // 导出Excel（扫描功能码列为URL链接，不嵌入QR码图片）
   const handleExportExcel = useCallback(async () => {
     setLoading(true);
     try {
@@ -136,16 +126,13 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       if (labelsToExport.length === 0) { alert('没有可导出的标签'); return; }
 
-      // 生成QR码data URI并构建HTML
-      const qrPromises = labelsToExport.map(async (label, i) => {
-        const qrValue = JSON.stringify({
-          type: 'seedling', code: label, cropName: record.cropName,
-          variety: record.cropVariety, site: record.siteName, date: record.startDate
-        });
-        const qrDataUri = await generateQrDataUri(qrValue);
-        return { label, qrDataUri, index: i + 1 };
-      });
-      const qrRows = await Promise.all(qrPromises);
+      // 构建标签URL（扫描功能码 = URL链接，人工可在线生成QR码）
+      const baseUrl = 'https://tm-crop.com/ResumeTimeline';
+      const rows = labelsToExport.map((label, i) => ({
+        index: i + 1,
+        label,
+        url: `${baseUrl}?labelID=${encodeURIComponent(label)}`,
+      }));
 
       const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签打印</title>
 <style>
@@ -154,24 +141,30 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #999; padding: 8px 10px; text-align: center; vertical-align: middle; }
   th { background-color: #059669; color: #fff; font-weight: bold; }
-  td img { display: block; margin: 0 auto; }
+  td a { color: #2563eb; text-decoration: underline; }
   tr:nth-child(even) { background-color: #f9fafb; }
   .print-btn { display: inline-block; margin: 10px; padding: 8px 16px; background: #059669; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
   @media print { .no-print { display: none; } }
 </style></head><body>
   <div class="no-print" style="text-align:center;padding:10px;">
     <button class="print-btn" onclick="window.print()">打印此页</button>
-    <span style="color:#666;font-size:12px;">共 ${qrRows.length} 个标签</span>
+    <span style="color:#666;font-size:12px;">共 ${rows.length} 个标签 | 扫描功能码为URL链接，可用在线工具生成QR码</span>
   </div>
   <table>
-    <thead><tr><th>序号</th><th>QR码</th><th>标签编号</th><th>作物名称</th><th>品种</th><th>场地</th><th>育苗日期</th></tr></thead>
-    <tbody>${qrRows.map(r => `<tr>
+    <thead><tr>
+      <th>序号</th>
+      <th>作物名称</th>
+      <th>大棚位置</th>
+      <th>扫描功能码</th>
+      <th>种植序号</th>
+      <th>种植日期</th>
+    </tr></thead>
+    <tbody>${rows.map(r => `<tr>
       <td>${r.index}</td>
-      <td><img src="${r.qrDataUri}" width="100" height="100" alt="QR" /></td>
-      <td style="font-family:monospace;font-size:11px;">${r.label}</td>
       <td>${record.cropName}</td>
-      <td>${record.cropVariety || ''}</td>
       <td>${record.siteName}</td>
+      <td><a href="${r.url}" target="_blank">${r.url}</a></td>
+      <td style="font-family:monospace;font-size:11px;">${r.label}</td>
       <td>${record.startDate}</td>
     </tr>`).join('')}</tbody>
   </table>
@@ -187,7 +180,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     } finally {
       setLoading(false);
     }
-  }, [printMode, previewLabel, selectedLabels, printCount, record, generateQrDataUri, generateBatchLabels]);
+  }, [printMode, previewLabel, selectedLabels, printCount, record, generateBatchLabels]);
 
   // 切换选择标签
   const toggleLabel = (label: string) => {
@@ -218,9 +211,36 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       onClose={onClose}
       title="标签打印与导出"
       size="lg"
+      height={650}
       showFooter={true}
-      onSubmit={handlePrint}
-      submitText={loading ? '处理中...' : '打印'}
+      footer={
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+          <div></div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleExportExcel}
+              disabled={loading}
+              className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              导出Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={loading}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {loading ? '处理中...' : '打印'}
+            </button>
+          </div>
+        </div>
+      }
       cancelText="取消"
       submitDisabled={loading}
     >
@@ -327,11 +347,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">标签预览 {previewLabel && `- ${previewLabel}`}</span>
-            <button onClick={handleExportExcel} disabled={loading}
-              className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50">
-              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-              导出Excel(含QR码)
-            </button>
           </div>
           <div className="flex justify-center">
             {template === 'small' ? (
@@ -381,21 +396,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-400">点击"打印"按钮使用浏览器打印功能</div>
-          <div className="flex gap-2">
-            <button onClick={handleExportExcel} disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              导出Excel(含QR码)
-            </button>
-            <button onClick={handlePrint} disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 disabled:opacity-50">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-              打印
-            </button>
-          </div>
-        </div>
       </div>
 
       <style>{`

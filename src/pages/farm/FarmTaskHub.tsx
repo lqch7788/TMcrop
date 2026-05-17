@@ -7,6 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
+import { useReminder } from '../../hooks/useReminder';
 import { useTempTasks } from '../../hooks/useTempTasks';
 import { FarmHubHeader } from '../../components/farm/hub/FarmHubHeader';
 import { TaskTab } from '../../components/farm/hub/TaskTab';
@@ -27,7 +28,7 @@ import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPi
 import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
-import { useUserStore, useGreenhouseStore } from '../../stores';
+import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
 import { format, parse, addDays, addHours } from 'date-fns';
 
 // 导入弹窗适配器
@@ -117,11 +118,18 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
 export function FarmTaskHub() {
   const tasksHook = useTasks();
   const hub = useFarmHub(tasksHook);
+  const { sendReminder } = useReminder();
   const { tempTasks } = useTempTasks();
   const users = useUserStore((state) => state.users);
   // 温室数据（替换硬编码 taskDispatchFields）
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
+  // 员工列表（用于批量派发/重派选择执行人，从 TaskDispatchPage 合并）
+  const workers = useWorkerStore((s) => s.workers);
+  const staffOptions = useMemo(() => workers.map(w => ({
+    value: w.id || w.name,
+    label: w.name,
+  })), [workers]);
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
   // 任务区域字段列表（从温室 Store 动态计算）
@@ -242,6 +250,13 @@ export function FarmTaskHub() {
   const [exportIds, setExportIds] = useState<string[]>([]);
   const [batchEditIds, setBatchEditIds] = useState<string[]>([]);
 
+  // 批量操作增强状态（从 TaskDispatchPage 合并）
+  const [showBatchDispatchModal, setShowBatchDispatchModal] = useState(false);
+  const [batchDispatchTarget, setBatchDispatchTarget] = useState<{ id: string; name: string }>({ id: '', name: '' });
+  const [showBatchVerifyConfirm, setShowBatchVerifyConfirm] = useState(false);
+  const [showBatchReassignModal, setShowBatchReassignModal] = useState(false);
+  const [batchReassignTarget, setBatchReassignTarget] = useState<{ id: string; name: string }>({ id: '', name: '' });
+
   // 任务详情回调
   const handleTaskVerify = (taskId: string) => {
     setDetailTaskId(null);
@@ -293,9 +308,9 @@ export function FarmTaskHub() {
     setVerifyTaskId(task.id);
   };
 
-  // 催办任务
+  // 催办任务 (从 TaskDispatchPage 合并)
   const handleTaskRemind = (task: import('../../types/task').Task) => {
-    // 催办功能后续实现
+    sendReminder(task.id, task.taskCode, task.assigneeId, task.assigneeName || '', 'U001', '系统管理员');
   };
 
   // 选择执行人
@@ -323,32 +338,54 @@ export function FarmTaskHub() {
     }
   };
 
-  // 批量操作回调
+  // 批量操作回调 (从 TaskDispatchPage 合并完整逻辑)
   const handleBatchDispatch = (taskIds: string[]) => {
-    // 获取选中的任务
-    const tasksToDispatch = hub.tasks.filter(t => taskIds.includes(t.id));
-    if (tasksToDispatch.length === 0) return;
+    setBatchDispatchTaskIds(taskIds);
+    setShowBatchDispatchModal(true);
+  };
 
-    // 打开派发弹窗（单选模式选择执行人，然后批量派发）
-    // 这里简化处理：直接标记为已派发状态
-    taskIds.forEach(taskId => {
-      const task = hub.tasks.find(t => t.id === taskId);
-      if (task && task.status === 'pending') {
-        // 更新任务状态为已派发
-        tasksHook.updateTaskStatus(taskId, 'accepted');
-      }
+  const confirmBatchDispatch = (assigneeId: string, assigneeName: string) => {
+    batchDispatchTaskIds.forEach(taskId => {
+      tasksHook.acceptAndAssign(taskId, assigneeId, assigneeName);
     });
+    setShowBatchDispatchModal(false);
+    setBatchDispatchTaskIds([]);
+    hub.clearSelection();
     hub.refresh();
   };
 
   const handleBatchVerify = (taskIds: string[]) => {
-    // 批量验收：只处理waiting_acceptance状态的任务，将其标记为已完成
-    taskIds.forEach(taskId => {
-      const task = hub.tasks.find(t => t.id === taskId);
-      if (task && task.status === 'waiting_acceptance') {
-        tasksHook.updateTaskStatus(taskId, 'completed');
-      }
+    setBatchVerifyTaskIds(taskIds);
+    setShowBatchVerifyConfirm(true);
+  };
+
+  const confirmBatchVerify = () => {
+    batchVerifyTaskIds.forEach(taskId => {
+      tasksHook.acceptCompletion(taskId, '批量验收通过');
     });
+    setShowBatchVerifyConfirm(false);
+    setBatchVerifyTaskIds([]);
+    hub.clearSelection();
+    hub.refresh();
+  };
+
+  // 批量重派 (从 TaskDispatchPage 合并)
+  const [batchDispatchTaskIds, setBatchDispatchTaskIds] = useState<string[]>([]);
+  const [batchVerifyTaskIds, setBatchVerifyTaskIds] = useState<string[]>([]);
+  const [batchReassignTaskIds, setBatchReassignTaskIds] = useState<string[]>([]);
+
+  const handleBatchReassign = (taskIds: string[]) => {
+    setBatchReassignTaskIds(taskIds);
+    setShowBatchReassignModal(true);
+  };
+
+  const confirmBatchReassign = (newAssigneeId: string, newAssigneeName: string) => {
+    batchReassignTaskIds.forEach(taskId => {
+      tasksHook.reassignTask(taskId, newAssigneeId, newAssigneeName);
+    });
+    setShowBatchReassignModal(false);
+    setBatchReassignTaskIds([]);
+    hub.clearSelection();
     hub.refresh();
   };
 
@@ -460,6 +497,7 @@ export function FarmTaskHub() {
                 onBatchEdit={handleBatchEdit}
                 onImport={() => setShowImportModal(true)}
                 onExport={handleExport}
+                onBatchReassign={handleBatchReassign}
               />
             )}
             {hub.state.activeTab === 'inspection' && (
@@ -719,6 +757,123 @@ export function FarmTaskHub() {
         onClose={() => setShowImportModal(false)}
         onImport={handleBatchImport}
       />
+
+      {/* ========== 批量操作弹窗（从 TaskDispatchPage 合并） ========== */}
+
+      {/* 批量派发 — 选择执行人 */}
+      {showBatchDispatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">批量派发任务</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              将为选中的 <span className="font-medium text-gray-700">{batchDispatchTaskIds.length}</span> 个待派工任务统一指派执行人
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">选择执行人</label>
+              <select
+                value={batchDispatchTarget.id}
+                onChange={(e) => {
+                  const opt = staffOptions.find(s => s.value === e.target.value);
+                  setBatchDispatchTarget({ id: e.target.value, name: opt?.label || '' });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">-- 请选择执行人 --</option>
+                {staffOptions.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBatchDispatchModal(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => confirmBatchDispatch(batchDispatchTarget.id, batchDispatchTarget.name)}
+                disabled={!batchDispatchTarget.id}
+                className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+              >
+                确认派发
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 批量验收确认 */}
+      {showBatchVerifyConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">批量验收通过</h3>
+            <p className="text-sm text-gray-500 mb-2">
+              即将对选中的 <span className="font-medium text-gray-700">{batchVerifyTaskIds.length}</span> 个任务全部标记为"验收通过"
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-xs text-yellow-700">此操作将批量通过验收，任务状态将变为"已完成"</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBatchVerifyConfirm(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmBatchVerify}
+                className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              >
+                确认批量验收
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 批量重派 — 选择新执行人 */}
+      {showBatchReassignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">批量重新派发</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              将为选中的 <span className="font-medium text-gray-700">{batchReassignTaskIds.length}</span> 个失败/放弃任务统一更换执行人
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">选择新执行人</label>
+              <select
+                value={batchReassignTarget.id}
+                onChange={(e) => {
+                  const opt = staffOptions.find(s => s.value === e.target.value);
+                  setBatchReassignTarget({ id: e.target.value, name: opt?.label || '' });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">-- 请选择新执行人 --</option>
+                {staffOptions.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBatchReassignModal(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => confirmBatchReassign(batchReassignTarget.id, batchReassignTarget.name)}
+                disabled={!batchReassignTarget.id}
+                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                确认重派
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

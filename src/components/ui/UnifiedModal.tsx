@@ -15,6 +15,8 @@ interface UnifiedModalProps {
   showMaximize?: boolean;
   enableDrag?: boolean;
   enableResize?: boolean;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -36,6 +38,8 @@ export function UnifiedModal({
   showMaximize = true,
   enableDrag = true,
   enableResize = true,
+  width,
+  height,
 }: UnifiedModalProps) {
   return (
     <Modal
@@ -52,6 +56,8 @@ export function UnifiedModal({
       showMaximize={showMaximize}
       enableDrag={enableDrag}
       enableResize={enableResize}
+      width={width}
+      height={height}
     >
       {children}
     </Modal>

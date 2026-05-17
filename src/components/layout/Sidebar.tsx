@@ -6,7 +6,7 @@ import {
   Users, MapPin, Target, ScrollText,
   Wifi, Thermometer, Activity, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
-  Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map, Send,
+  Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
   Leaf, Flower2, Trees, CheckCircle,
@@ -89,7 +89,6 @@ const materialsSubItems = [
 // 注意：农事任务派发、巡查记录、问题分派已统一到农事任务中心，临时任务派发保留独立入口
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
-  { icon: Send, label: '任务派发', path: '/task-dispatch' },
   { icon: ClipboardList, label: '任务中心', path: '/task-center' },
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },

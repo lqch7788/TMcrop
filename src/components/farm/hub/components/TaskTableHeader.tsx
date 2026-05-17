@@ -10,6 +10,7 @@ interface TaskTableHeaderProps {
   batchDeleteMode?: boolean;
   batchDispatchMode?: boolean;
   batchVerifyMode?: boolean;
+  batchReassignMode?: boolean;
   isAllSelected?: boolean;
   isSomeSelected?: boolean;
   onSelectAll?: () => void;
@@ -21,11 +22,12 @@ export function TaskTableHeader({
   batchDeleteMode,
   batchDispatchMode,
   batchVerifyMode,
+  batchReassignMode,
   isAllSelected,
   isSomeSelected,
   onSelectAll,
 }: TaskTableHeaderProps) {
-  const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode;
+  const showCheckbox = exportMode || batchEditMode || batchDeleteMode || batchDispatchMode || batchVerifyMode || batchReassignMode;
 
   return (
     <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
