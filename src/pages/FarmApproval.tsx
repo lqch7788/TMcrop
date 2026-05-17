@@ -12,8 +12,11 @@ import {
   AlertTriangle, CheckSquare, Eye, Square, CheckSquare as CheckSquareIcon
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
-import { ApprovalStatus, ApprovalType } from '../types/approval';
+import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
+import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import BatchActionBar from '../components/approval/BatchActionBar';
+import { ApprovalDetail } from '../components/approval/ApprovalDetail';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
 import { Button } from '../components/ui/button';
 
 export default function FarmApproval() {
@@ -27,6 +30,9 @@ export default function FarmApproval() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [detailApproval, setDetailApproval] = useState<Approval | null>(null);
+  // 加载审批关联的业务数据
+  const { data: businessData, isLoading: businessLoading } = useApprovalBusinessDetail(detailApproval);
 
   const tabs = [
     { key: 'task_dispatch', label: '任务派发', icon: FileText, types: [ApprovalType.TASK_DISPATCH] },
@@ -292,7 +298,7 @@ export default function FarmApproval() {
                 <td className="px-4 py-3">{getStatusBadge(approval.status)}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={() => setDetailApproval(approval)}>
                       <Eye className="w-4 h-4" />
                     </Button>
                     {approval.status === ApprovalStatus.PENDING && (
@@ -347,6 +353,27 @@ export default function FarmApproval() {
             </div>
           </div>
         )}
+
+        {/* 审批详情弹窗 */}
+        <Dialog open={!!detailApproval} onOpenChange={(open) => { if (!open) setDetailApproval(null); }}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>审批详情</DialogTitle>
+            </DialogHeader>
+            {detailApproval && (
+            <div className="space-y-4">
+              <ApprovalDetail approval={detailApproval} />
+              {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
+              {businessData && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
+                  <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

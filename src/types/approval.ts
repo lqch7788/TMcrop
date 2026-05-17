@@ -44,8 +44,9 @@ export enum ApprovalType {
   SEEDLING_SUPPLEMENTARY = 'seedling_supplementary',     // 育苗补录
   CROP_STORAGE_SUPPLEMENTARY = 'crop_storage_supplementary', // 作物入库补录
 
-  // ========== 指标/公告审批（2种）==========
-  INDICATOR_APPROVAL = 'indicator_approval',    // 指标审批
+  // ========== 指标/公告审批（3种）==========
+  INDICATOR_APPROVAL = 'indicator_approval',    // 指标发布审批
+  INDICATOR_ADJUST = 'indicator_adjust',       // 指标调整审批
   ANNOUNCEMENT_APPROVAL = 'announcement_approval', // 公告审批
 
   // ========== 成本审批（2种）==========
@@ -372,8 +373,9 @@ export const getApprovalTypeName = (type: ApprovalType): string => {
     [ApprovalType.SEEDLING_SUPPLEMENTARY]: '育苗补录',
     [ApprovalType.CROP_STORAGE_SUPPLEMENTARY]: '作物入库补录',
 
-    // ========== 指标/公告审批（2种）==========
-    [ApprovalType.INDICATOR_APPROVAL]: '指标审批',
+    // ========== 指标/公告审批（3种）==========
+    [ApprovalType.INDICATOR_APPROVAL]: '指标发布',
+    [ApprovalType.INDICATOR_ADJUST]: '指标调整',
     [ApprovalType.ANNOUNCEMENT_APPROVAL]: '公告审批',
 
     // ========== 成本审批（2种）==========

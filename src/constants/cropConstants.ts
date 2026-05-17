@@ -30,6 +30,9 @@ export const SOURCE_TYPE_MAP: Record<string, string> = {
 export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, string> = {
   internal_seed: '内部种源',
   external_purchase: '外部采购',
+  self_produced: '自产',
+  commissioned: '委托生产',
+  gift: '赠送/受赠',
   tissue_culture: '组培苗',
   grafting: '嫁接苗',
   seedling_split: '分株繁殖',

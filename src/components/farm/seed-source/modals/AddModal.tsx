@@ -243,8 +243,8 @@ export function AddModal({
     // 计算总金额
     const totalAmount = formData.quantity * formData.unitPrice;
 
-    // 初始数量 = 可用数量（新入库）
-    const initialCount = formData.quantity * 1000;
+    // 入库数量 = 可用数量（新入库时均为用户输入的数量）
+    const initialCount = formData.quantity;
     const availableCount = initialCount;
 
     // 判断库存状态

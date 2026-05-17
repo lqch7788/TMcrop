@@ -177,6 +177,10 @@ class EnhancedApiClient {
     return this.request<T>({ url, method: 'DELETE' }, options);
   }
 
+  async patch<T>(url: string, data?: unknown, options?: ApiOptions): Promise<T> {
+    return this.request<T>({ url, method: 'PATCH', data }, options);
+  }
+
   // ========== 缓存方法 ==========
 
   private async getFromCache<T>(key: string): Promise<T | null> {

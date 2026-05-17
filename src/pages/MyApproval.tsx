@@ -1,23 +1,28 @@
 // ============================================================
 // 我提交的审批页面 - 重构版本
 // 文件路径：src/pages/MyApproval.tsx
-// 使用统一数据层：ApprovalContext
+// 使用统一数据层：Store
 // ============================================================
 
 import { useState, useMemo } from 'react';
 import { FileText, Search, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApproval, useMyApprovals } from '../hooks/useApproval';
-import { ApprovalStatus } from '../types/approval';
+import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
+import { ApprovalStatus, Approval } from '../types/approval';
+import { ApprovalDetail } from '../components/approval/ApprovalDetail';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
 import { Button } from '../components/ui/button';
 
 export default function MyApproval() {
   const { cancel } = useApproval();
-  // TODO: 实际应从用户Context获取当前用户ID
-  const { myApprovals } = useMyApprovals({ applicantId: 'current_user' });
+  // 从 localStorage 获取当前用户ID，hook 内部有 fallback 逻辑
+  const { myApprovals } = useMyApprovals({ applicantId: localStorage.getItem('userId') || undefined });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
+  const [detailApproval, setDetailApproval] = useState<Approval | null>(null);
+  const { data: businessData, isLoading: businessLoading } = useApprovalBusinessDetail(detailApproval);
   const pageSize = 5;
 
   // 筛选
@@ -187,7 +192,7 @@ export default function MyApproval() {
                             <XCircle className="w-4 h-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" title="查看">
+                        <Button variant="ghost" size="icon" title="查看" onClick={() => setDetailApproval(item)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </div>
@@ -237,6 +242,27 @@ export default function MyApproval() {
           </div>
         </div>
       </div>
+
+      {/* 审批详情弹窗 */}
+      <Dialog open={!!detailApproval} onOpenChange={(open) => { if (!open) setDetailApproval(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>审批详情</DialogTitle>
+          </DialogHeader>
+          {detailApproval && (
+            <div className="space-y-4">
+              <ApprovalDetail approval={detailApproval} />
+              {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
+              {businessData && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
+                  <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

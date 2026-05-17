@@ -1,19 +1,17 @@
 // ============================================================
-// 审批中心 - 全局审批Context
+// 审批中心 - 全局审批Context (V2.1 - 委托到 Zustand Store)
 // 文件路径：src/contexts/ApprovalContext.tsx
-// 组件化结构：统一管理审批模块的共享数据
-// 支持 API 持久化
+// 架构：Context(薄封装层) → useApprovalStore → enhancedApiClient → API
+// 说明：保留Context包装层以兼容现有组件，所有数据操作委托到Store
 // ============================================================
 
-import React, { createContext, useContext, useReducer, useMemo, useCallback, useEffect, ReactNode } from 'react';
-import { approvalReducer, initialApprovalState, type ApprovalState } from '../reducers/approvalReducer';
+import React, { createContext, useContext, useMemo, useCallback, useEffect, ReactNode } from 'react';
 import {
   Approval,
   ApprovalType,
   ApprovalStatus,
   ApprovalFilters,
   ApprovalStats,
-  BusinessLink,
 } from '../types/approval';
 import { useApprovalStore } from '../stores/useApprovalStore';
 import {
@@ -23,15 +21,10 @@ import {
 } from '../types/approvalIntegration';
 import { registerBusinessIntegration } from '../services/approvalBusinessIntegration';
 import { approvalTimeoutService, useTimeoutChecker } from '../services/approvalTimeoutService';
-import { TimeoutCheckResult, TimeoutLevel } from '../config/approvalTimeout';
+import { TimeoutCheckResult } from '../config/approvalTimeout';
 
 // ============================================================
-// API 配置
-// ============================================================
-const API_BASE = '/api/approvals';
-
-// ============================================================
-// Context Value 类型定义
+// Context Value 类型定义 (保持兼容)
 // ============================================================
 
 interface ApprovalContextValue {
@@ -41,8 +34,8 @@ interface ApprovalContextValue {
   stats: ApprovalStats;
   isLoaded: boolean;
 
-  // 原始状态（用于需要访问全部数据的场景）
-  getState: () => ApprovalState;
+  // 原始状态（兼容旧接口，返回Store快照的近似值）
+  getState: () => { approvals: Approval[]; filters: ApprovalFilters };
 
   // 筛选方法
   setFilters: (filters: Partial<ApprovalFilters>) => void;
@@ -94,49 +87,21 @@ interface ApprovalProviderProps {
 }
 
 // ============================================================
-// Provider 实现
+// Provider 实现 — 委托到 useApprovalStore
 // ============================================================
 
-// 清除 localStorage（可选，用于重置演示数据）
-export const clearApprovalsStorage = () => {
-  // localStorage 已不再使用，保留接口兼容性
-};
+// 清除 localStorage（兼容旧接口，实际已无 localStorage）
+export const clearApprovalsStorage = () => {};
 
-export function ApprovalProvider({ children, initialApprovals }: ApprovalProviderProps) {
-  // 使用 reducer 管理状态
-  const [state, dispatch] = useReducer(approvalReducer, {
-    ...initialApprovalState,
-    approvals: initialApprovals || [],
-  });
-
-  // 从 API 加载审批数据（通过 useApprovalStore）
-  const loadApprovalsFromAPI = useCallback(async () => {
-    try {
-      await useApprovalStore.getState().fetchApprovals();
-      const storeApprovals = useApprovalStore.getState().approvals;
-      if (storeApprovals.length > 0) {
-        dispatch({ type: 'SET_APPROVALS', payload: storeApprovals });
-      } else {
-        // API 无数据且 store 无缓存时，保持空列表
-        console.warn('[ApprovalContext] API 和 Store 均无审批数据');
-        dispatch({ type: 'SET_APPROVALS', payload: [] });
-      }
-    } catch (error) {
-      console.warn('[ApprovalContext] 加载审批数据失败:', error);
-      // 加载失败时保持现有数据（或空列表）
-    }
-  }, []);
+export function ApprovalProvider({ children, initialApprovals: _initialApprovals }: ApprovalProviderProps) {
+  // 直接使用 Zustand Store 作为唯一数据源
+  const store = useApprovalStore();
 
   // 注册业务联动处理器（仅注册一次）
   useEffect(() => {
     registerAllHandlers();
     registerBusinessIntegration();
   }, []);
-
-  // 组件挂载时从 API 加载数据
-  useEffect(() => {
-    loadApprovalsFromAPI();
-  }, [loadApprovalsFromAPI]);
 
   // 超时检测处理器
   const handleTimeoutFound = useCallback((approval: Approval, result: TimeoutCheckResult) => {
@@ -147,337 +112,192 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     });
   }, []);
 
-  // 启动定时超时检查
-  useTimeoutChecker(state.approvals, handleTimeoutFound, 5 * 60 * 1000);
+  // 启动定时超时检查（从Store获取approvals）
+  useTimeoutChecker(store.approvals, handleTimeoutFound, 5 * 60 * 1000);
 
-  // 计算统计数据
+  // 统计数据（从Store的approvals计算，含超时统计）
   const stats = useMemo<ApprovalStats>(() => {
-    const now = new Date();
-    const overdueThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-    // 超时统计
-    const timeoutStats = approvalTimeoutService.getTimeoutStats(state.approvals);
-
+    const timeoutStats = approvalTimeoutService.getTimeoutStats(store.approvals);
     return {
-      total: state.approvals.length,
-      pending: state.approvals.filter(a => a.status === ApprovalStatus.PENDING).length,
-      approved: state.approvals.filter(a => a.status === ApprovalStatus.APPROVED).length,
-      rejected: state.approvals.filter(a => a.status === ApprovalStatus.REJECTED).length,
-      partiallyApproved: state.approvals.filter(a => a.status === ApprovalStatus.PARTIALLY_APPROVED).length,
-      myPending: 0, // 需要结合当前用户ID计算
-      mySubmitted: 0, // 需要结合当前用户ID计算
+      total: store.approvals.length,
+      pending: store.approvals.filter(a => a.status === ApprovalStatus.PENDING).length,
+      approved: store.approvals.filter(a => a.status === ApprovalStatus.APPROVED).length,
+      rejected: store.approvals.filter(a => a.status === ApprovalStatus.REJECTED).length,
+      partiallyApproved: store.approvals.filter(a => a.status === ApprovalStatus.PARTIALLY_APPROVED).length,
+      myPending: 0,
+      mySubmitted: 0,
       overdue: timeoutStats.overdue + timeoutStats.ultimate,
-      urgent: state.approvals.filter(a => a.priority === 'urgent' && a.status === ApprovalStatus.PENDING).length,
+      urgent: store.approvals.filter(a => a.priority === 'urgent' && a.status === ApprovalStatus.PENDING).length,
     };
-  }, [state.approvals]);
+  }, [store.approvals]);
 
-  // 获取当前状态
-  const getState = useCallback(() => state, [state]);
+  // 获取当前状态快照（兼容旧接口）
+  const getState = useCallback(() => ({
+    approvals: useApprovalStore.getState().approvals,
+    filters: useApprovalStore.getState().filters,
+  }), []);
 
-  // 筛选方法
+  // 筛选方法 — 委托到Store
   const setFilters = useCallback((filters: Partial<ApprovalFilters>) => {
-    dispatch({ type: 'SET_FILTERS', payload: filters });
-  }, []);
+    store.setFilters(filters);
+  }, [store.setFilters]);
 
   const resetFilters = useCallback(() => {
-    dispatch({ type: 'RESET_FILTERS' });
-  }, []);
+    store.resetFilters();
+  }, [store.resetFilters]);
 
-  // CRUD 操作（通过 API）
+  // CRUD 操作 — 委托到Store
   const addApproval = useCallback(async (approval: Approval) => {
-    try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(approval),
-      });
-      const result = await response.json();
-      if (result.success) {
-        // 重新加载数据
-        await loadApprovalsFromAPI();
-      } else {
-        console.error('Failed to add approval via API:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to add approval via API:', error);
-    }
-  }, [loadApprovalsFromAPI]);
+    await store.addApproval(approval);
+  }, [store.addApproval]);
 
   const updateApproval = useCallback(async (id: string, updates: Partial<Approval>) => {
-    try {
-      const response = await fetch(`${API_BASE}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      const result = await response.json();
-      if (result.success) {
-        // 重新加载数据
-        await loadApprovalsFromAPI();
-      } else {
-        console.error('Failed to update approval via API:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to update approval via API:', error);
-    }
-  }, [loadApprovalsFromAPI]);
+    await store.updateApproval(id, updates);
+  }, [store.updateApproval]);
 
   const deleteApproval = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) {
-        // 重新加载数据
-        await loadApprovalsFromAPI();
-      } else {
-        console.error('Failed to delete approval via API:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to delete approval via API:', error);
-    }
-  }, [loadApprovalsFromAPI]);
+    await store.deleteApproval(id);
+  }, [store.deleteApproval]);
 
-  // 审批操作（通过 API）
+  // 审批操作 — 先执行业务联动，再委托到Store
   const approve = useCallback(async (id: string, comment?: string) => {
-    const approval = state.approvals.find(a => a.id === id);
+    const approval = store.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('approved', approval, { comment });
     }
-    // 获取当前用户信息
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
-    try {
-      const response = await fetch(`${API_BASE}/${id}/action`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve', comment, approverId, approverName }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        await loadApprovalsFromAPI();
-      } else {
-        console.error('审批失败:', result.error);
-        alert('审批失败: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Failed to approve via API:', error);
-    }
-  }, [state.approvals, loadApprovalsFromAPI]);
+    await store.approve(id, comment);
+  }, [store.approvals, store.approve]);
 
   const reject = useCallback(async (id: string, comment: string) => {
-    const approval = state.approvals.find(a => a.id === id);
+    const approval = store.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('rejected', approval, { reason: comment });
     }
-    // 获取当前用户信息
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
-    try {
-      const response = await fetch(`${API_BASE}/${id}/action`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reject', comment, approverId, approverName }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        await loadApprovalsFromAPI();
-      } else {
-        console.error('审批失败:', result.error);
-        alert('审批失败: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Failed to reject via API:', error);
-    }
-  }, [state.approvals, loadApprovalsFromAPI]);
+    await store.reject(id, comment);
+  }, [store.approvals, store.reject]);
 
   const partiallyApprove = useCallback(async (id: string, items: Record<string, number>, comment?: string) => {
-    const approval = state.approvals.find(a => a.id === id);
+    const approval = store.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
-    // 获取当前用户信息
     const approverId = localStorage.getItem('userId') || '';
     const approverName = localStorage.getItem('username') || '系统';
     try {
-      await fetch(`${API_BASE}/${id}/action`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'partially_approve', comment, approvedItems: items, approverId, approverName }),
+      const { enhancedApiClient } = await import('../lib/apiClient');
+      await enhancedApiClient.patch(`/api/approvals/${id}/action`, {
+        action: 'partially_approve', comment, approvedItems: items, approverId, approverName,
       });
-      await loadApprovalsFromAPI();
+      await store.fetchApprovals();
     } catch (error) {
-      console.error('Failed to partially approve via API:', error);
+      console.error('Failed to partially approve:', error);
     }
-  }, [state.approvals, loadApprovalsFromAPI]);
+  }, [store.approvals, store.fetchApprovals]);
 
   const cancel = useCallback(async (id: string, reason?: string) => {
-    const approval = state.approvals.find(a => a.id === id);
+    const approval = store.approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('cancelled', approval, { reason });
     }
-    // 获取当前用户信息
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
-    try {
-      await fetch(`${API_BASE}/${id}/action`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', comment: reason, approverId, approverName }),
-      });
-      await loadApprovalsFromAPI();
-    } catch (error) {
-      console.error('Failed to cancel via API:', error);
-    }
-  }, [state.approvals, loadApprovalsFromAPI]);
+    await store.cancel(id, reason);
+  }, [store.approvals, store.cancel]);
 
-  // 批量审批操作
+  // 批量操作 — 先执行业务联动，再委托到Store
   const batchApprove = useCallback(async (ids: string[], comment?: string) => {
-    // 获取当前用户信息
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
-    // 依次执行每个审批
-    const promises = ids.map(async (id) => {
-      const approval = state.approvals.find(a => a.id === id);
+    for (const id of ids) {
+      const approval = store.approvals.find(a => a.id === id);
       if (approval) {
         executeApprovalIntegration('approved', approval, { comment });
       }
-      try {
-        await fetch(`${API_BASE}/${id}/action`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'approve', comment, approverId, approverName }),
-        });
-      } catch (error) {
-        console.error(`Failed to batch approve ${id}:`, error);
-        throw error;
-      }
-    });
-    try {
-      await Promise.all(promises);
-      await loadApprovalsFromAPI();
-    } catch (error) {
-      console.error('Failed to batch approve:', error);
-      throw error;
     }
-  }, [state.approvals, loadApprovalsFromAPI]);
+    await store.batchApprove(ids, comment);
+  }, [store.approvals, store.batchApprove]);
 
   const batchReject = useCallback(async (ids: string[], comment: string) => {
-    // 获取当前用户信息
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
-    // 依次执行每个拒绝
-    const promises = ids.map(async (id) => {
-      const approval = state.approvals.find(a => a.id === id);
+    for (const id of ids) {
+      const approval = store.approvals.find(a => a.id === id);
       if (approval) {
         executeApprovalIntegration('rejected', approval, { reason: comment });
       }
-      try {
-        await fetch(`${API_BASE}/${id}/action`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'reject', comment, approverId, approverName }),
-        });
-      } catch (error) {
-        console.error(`Failed to batch reject ${id}:`, error);
-        throw error;
-      }
-    });
-    try {
-      await Promise.all(promises);
-      await loadApprovalsFromAPI();
-    } catch (error) {
-      console.error('Failed to batch reject:', error);
-      throw error;
     }
-  }, [state.approvals, loadApprovalsFromAPI]);
+    await store.batchReject(ids, comment);
+  }, [store.approvals, store.batchReject]);
 
-  // 查询方法
+  // 查询方法 — 从Store数据派生
   const getApprovalById = useCallback((id: string) => {
-    return state.approvals.find(a => a.id === id);
-  }, [state.approvals]);
+    return store.approvals.find(a => a.id === id);
+  }, [store.approvals]);
 
   const getApprovalsByType = useCallback((type: ApprovalType) => {
-    return state.approvals.filter(a => a.type === type);
-  }, [state.approvals]);
+    return store.approvals.filter(a => a.type === type);
+  }, [store.approvals]);
 
   const getApprovalsByStatus = useCallback((status: ApprovalStatus) => {
-    return state.approvals.filter(a => a.status === status);
-  }, [state.approvals]);
+    return store.approvals.filter(a => a.status === status);
+  }, [store.approvals]);
 
   const getPendingApprovals = useCallback(() => {
-    return state.approvals.filter(a => a.status === ApprovalStatus.PENDING);
-  }, [state.approvals]);
+    return store.approvals.filter(a => a.status === ApprovalStatus.PENDING);
+  }, [store.approvals]);
 
   const getApprovedApprovals = useCallback(() => {
-    return state.approvals.filter(a =>
+    return store.approvals.filter(a =>
       a.status === ApprovalStatus.APPROVED || a.status === ApprovalStatus.PARTIALLY_APPROVED
     );
-  }, [state.approvals]);
+  }, [store.approvals]);
 
   const getRejectedApprovals = useCallback(() => {
-    return state.approvals.filter(a => a.status === ApprovalStatus.REJECTED);
-  }, [state.approvals]);
+    return store.approvals.filter(a => a.status === ApprovalStatus.REJECTED);
+  }, [store.approvals]);
 
   const getMyApprovals = useCallback((userId: string) => {
-    return state.approvals.filter(a =>
+    return store.approvals.filter(a =>
       a.status === ApprovalStatus.PENDING &&
       a.approvers.some(approver => approver.userId === userId && approver.status === 'pending')
     );
-  }, [state.approvals]);
+  }, [store.approvals]);
 
   const getApprovalsByApplicant = useCallback((applicantId: string) => {
-    return state.approvals.filter(a => a.applicantId === applicantId);
-  }, [state.approvals]);
+    return store.approvals.filter(a => a.applicantId === applicantId);
+  }, [store.approvals]);
 
   // 获取筛选后的审批列表
   const getFilteredApprovals = useCallback(() => {
-    let result = state.approvals;
+    let result = store.approvals;
+    const filters = store.filters;
 
-    // 关键词筛选
-    if (state.filters.keyword) {
-      const keyword = state.filters.keyword.toLowerCase();
+    if (filters.keyword) {
+      const keyword = filters.keyword.toLowerCase();
       result = result.filter(a =>
         a.title.toLowerCase().includes(keyword) ||
         a.applicantName.toLowerCase().includes(keyword) ||
         a.code.toLowerCase().includes(keyword)
       );
     }
-
-    // 类型筛选
-    if (state.filters.type?.length) {
-      result = result.filter(a => state.filters.type!.includes(a.type));
+    if (filters.type?.length) {
+      result = result.filter(a => filters.type!.includes(a.type));
     }
-
-    // 状态筛选
-    if (state.filters.status?.length) {
-      result = result.filter(a => state.filters.status!.includes(a.status));
+    if (filters.status?.length) {
+      result = result.filter(a => filters.status!.includes(a.status));
     }
-
-    // 类别筛选
-    if (state.filters.category?.length) {
-      result = result.filter(a => state.filters.category!.includes(a.category));
+    if (filters.category?.length) {
+      result = result.filter(a => filters.category!.includes(a.category));
     }
-
-    // 部门筛选
-    if (state.filters.department?.length) {
-      result = result.filter(a => state.filters.department!.includes(a.applicantDepartment));
+    if (filters.department?.length) {
+      result = result.filter(a => filters.department!.includes(a.applicantDepartment));
     }
-
-    // 优先级筛选
-    if (state.filters.priority?.length) {
-      result = result.filter(a => state.filters.priority!.includes(a.priority));
+    if (filters.priority?.length) {
+      result = result.filter(a => filters.priority!.includes(a.priority));
     }
-
-    // 日期筛选
-    if (state.filters.startDate) {
-      result = result.filter(a => a.applyDate >= state.filters.startDate!);
+    if (filters.startDate) {
+      result = result.filter(a => a.applyDate >= filters.startDate!);
     }
-    if (state.filters.endDate) {
-      result = result.filter(a => a.applyDate <= state.filters.endDate!);
+    if (filters.endDate) {
+      result = result.filter(a => a.applyDate <= filters.endDate!);
     }
 
     return result;
-  }, [state.approvals, state.filters]);
+  }, [store.approvals, store.filters]);
 
   // 辅助方法：获取状态文本
   const getStatusText = useCallback((status: ApprovalStatus): string => {
@@ -491,11 +311,6 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     };
     return statusMap[status] || status;
   }, []);
-
-  // 刷新审批数据
-  const refreshApprovals = useCallback(async () => {
-    await loadApprovalsFromAPI();
-  }, [loadApprovalsFromAPI]);
 
   // 辅助方法：获取类型文本
   const getTypeText = useCallback((type: ApprovalType): string => {
@@ -513,12 +328,17 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     return typeMap[type] || type;
   }, []);
 
+  // 刷新审批数据
+  const refreshApprovals = useCallback(async () => {
+    await store.fetchApprovals();
+  }, [store.fetchApprovals]);
+
   // 合并所有方法到 value
   const value = useMemo<ApprovalContextValue>(() => ({
-    approvals: state.approvals,
-    filters: state.filters,
+    approvals: store.approvals,
+    filters: store.filters,
     stats,
-    isLoaded: true,
+    isLoaded: store.isLoaded,
     getState,
     setFilters,
     resetFilters,
@@ -529,6 +349,8 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     reject,
     partiallyApprove,
     cancel,
+    batchApprove,
+    batchReject,
     getApprovalById,
     getApprovalsByType,
     getApprovalsByStatus,
@@ -542,8 +364,9 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     getTypeText,
     refreshApprovals,
   }), [
-    state.approvals,
-    state.filters,
+    store.approvals,
+    store.filters,
+    store.isLoaded,
     stats,
     getState,
     setFilters,
@@ -555,6 +378,8 @@ export function ApprovalProvider({ children, initialApprovals }: ApprovalProvide
     reject,
     partiallyApprove,
     cancel,
+    batchApprove,
+    batchReject,
     getApprovalById,
     getApprovalsByType,
     getApprovalsByStatus,
