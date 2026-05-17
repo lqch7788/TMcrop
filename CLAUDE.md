@@ -390,6 +390,21 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 
 **构建状态：** ✅ 前端 + 后端均通过
 
+### 2026-05-17 会话
+
+**完成的工作：**
+
+1. **TaskDispatchPage 合并到 FarmTaskHub**
+   - 功能合并：批量派发、批量验收、批量重派、催办功能全部整合到农事任务中心
+   - TaskTab 新增 batchReassign 工具栏模式 + BATCH_REASSIGN_STATUSES 常量
+   - FarmTaskHub 新增 3 个批量操作弹窗 UI（派发选择执行人、验收确认、重派选择执行人）
+   - TaskTable/TaskTableHeader 同步新增 batchReassignMode 支持
+   - 路由：`/task-dispatch` → 重定向到 `/farm-hub`
+   - Sidebar/Profile 移除/更新 task-dispatch 引用
+   - 删除 `src/pages/farm/TaskDispatchPage.tsx`
+
+**构建状态：** ✅ 通过
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
