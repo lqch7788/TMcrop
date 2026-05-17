@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight, CheckCircle, XCircle, Tag } from 'lucide-react';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -30,6 +30,7 @@ interface SeedlingTableProps {
   onDailyRecord: (record: Seedling) => void;
   onTransplant: (record: Seedling) => void;
   onPrint: (record: Seedling) => void;
+  onLabelManage?: (record: Seedling) => void;
   onImageClick: (images: string[]) => void;
   // 结束相关回调
   onEnd: (record: Seedling, endType: 'normal' | 'abnormal') => void;
@@ -67,6 +68,7 @@ export function SeedlingTable({
   onDailyRecord,
   onTransplant,
   onPrint,
+  onLabelManage,
   onImageClick,
   onEnd,
   operationMode,
@@ -567,6 +569,15 @@ export function SeedlingTable({
                       >
                         <Printer className="w-4 h-4" />
                       </button>
+                      {onLabelManage && (
+                        <button
+                          onClick={() => onLabelManage(record)}
+                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          title="标签管理"
+                        >
+                          <Tag className="w-4 h-4" />
+                        </button>
+                      )}
                       {record.pictures && record.pictures.length > 0 && (
                         <button
                           onClick={() => onImageClick(record.pictures)}

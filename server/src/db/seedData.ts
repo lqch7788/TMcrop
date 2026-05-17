@@ -1843,6 +1843,9 @@ function seedGreenhouses() {
     'updated_at TEXT'
   ];
 
+  // 方案2.5: 添加区域类型列
+  columnsToAdd.push('area_type TEXT DEFAULT "4"');
+
   for (const colDef of columnsToAdd) {
     const colName = colDef.split(' ')[0];
     try {
@@ -1850,6 +1853,20 @@ function seedGreenhouses() {
       console.log(`已添加 greenhouses 表缺失的列: ${colName}`);
     } catch (e) {
       // 列可能已存在，忽略错误
+    }
+  }
+
+  // 方案2.6: 添加育苗工时列
+  {
+    const seedlingCols = ['work_hours REAL DEFAULT NULL'];
+    for (const colDef of seedlingCols) {
+      const colName = colDef.split(' ')[0];
+      try {
+        db.run(`ALTER TABLE seedlings ADD COLUMN ${colDef}`);
+        console.log(`已添加 seedlings 表缺失的列: ${colName}`);
+      } catch (e) {
+        // 列可能已存在，忽略错误
+      }
     }
   }
 

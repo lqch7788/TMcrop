@@ -24,6 +24,7 @@ import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { enhancedApiClient } from '../../../lib/apiClient';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
@@ -58,7 +59,10 @@ export default function PlantingPage() {
     startDate: '',
     endDate: '',
     transplantDate: '',
-    createBy: ''
+    createBy: '',
+    orgName: '',
+    countMin: undefined,
+    countMax: undefined,
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -145,6 +149,10 @@ export default function PlantingPage() {
       if (filters.endDate && item.plantingDate > filters.endDate) return false;
       if (filters.transplantDate && item.transplantDate !== filters.transplantDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
+      // 方案3.3: 组织筛选 + 定植数量范围
+      if (filters.orgName && !(item as any).orgName?.includes(filters.orgName)) return false;
+      if (filters.countMin !== undefined && item.plantingCount < filters.countMin) return false;
+      if (filters.countMax !== undefined && item.plantingCount > filters.countMax) return false;
       return true;
     });
   }, [plantings, filters]);
@@ -189,6 +197,18 @@ export default function PlantingPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
+    // 删除前检查标签履历关联（方案3.2）
+    for (const id of ids) {
+      try {
+        const res = await enhancedApiClient.get(`/plantings/${id}/check-deletable`);
+        if (!res.data?.deletable) {
+          alert(`种植记录已被 ${res.data?.labelCount || '多个'} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
+          return;
+        }
+      } catch {
+        // 检查失败不阻止删除（降级策略）
+      }
+    }
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
@@ -300,7 +320,10 @@ export default function PlantingPage() {
       startDate: '',
       endDate: '',
       transplantDate: '',
-      createBy: ''
+      createBy: '',
+      orgName: '',
+      countMin: undefined,
+      countMax: undefined,
     });
     setPagination({ ...pagination, current: 1 });
   };

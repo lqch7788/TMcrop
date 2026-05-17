@@ -23,7 +23,10 @@ import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../..
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
+import { useUserStore } from '../../../stores/useUserStore';
 import { useToastStore } from '../../../stores/useToastStore';
+import { enhancedApiClient } from '../../../lib/apiClient';
+import * as XLSX from 'xlsx';
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -57,7 +60,12 @@ export default function SeedSourcePage() {
     startDate: '',
     endDate: '',
     status: '',
-    createBy: ''
+    createBy: '',
+    cropType: '',
+    orgId: '',
+    recorderId: '',
+    surplusMin: undefined,
+    surplusMax: undefined
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -91,9 +99,19 @@ export default function SeedSourcePage() {
 
   // 筛选后的数据（按创建时间倒序，新数据在前）
   const filteredData = useMemo(() => {
+    // 方案1.3: 记录人ID转名称（用于级联筛选）
+    let recorderName = '';
+    if (filters.recorderId) {
+      const userStore = useUserStore.getState();
+      const user = userStore.users.find((u: any) => (u.oid || u.id) === filters.recorderId);
+      recorderName = user?.name || '';
+    }
+
     const filtered = seedSources.filter(item => {
       if (filters.cropCategory && item.cropCategory !== filters.cropCategory) return false;
       if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
+      // 方案1.3: 作物类型筛选（按cropCategory匹配）
+      if (filters.cropType && item.cropCategory !== filters.cropType) return false;
       if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
       if (filters.sourceType && item.sourceType !== filters.sourceType) return false;
       if (filters.supplierName && !item.supplierName.includes(filters.supplierName)) return false;
@@ -101,6 +119,11 @@ export default function SeedSourcePage() {
       if (filters.startDate && item.purchaseDate < filters.startDate) return false;
       if (filters.endDate && item.purchaseDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
+      // 方案1.3: 记录人筛选
+      if (recorderName && item.createBy !== recorderName) return false;
+      // 方案1.3: 剩余数量范围筛选 (surplus = availableCount)
+      if (filters.surplusMin !== undefined && item.availableCount < filters.surplusMin) return false;
+      if (filters.surplusMax !== undefined && item.availableCount > filters.surplusMax) return false;
       return true;
     });
     // 按创建时间倒序排列（最新的在前）
@@ -142,7 +165,12 @@ export default function SeedSourcePage() {
       startDate: '',
       endDate: '',
       status: '',
-      createBy: ''
+      createBy: '',
+      cropType: '',
+      orgId: '',
+      recorderId: '',
+      surplusMin: undefined,
+      surplusMax: undefined
     });
     setPagination({ ...pagination, current: 1 });
   };
@@ -177,8 +205,17 @@ export default function SeedSourcePage() {
     setLightboxOpen(true);
   };
 
-  // 处理删除（通过 Store）
+  // 处理删除（通过 Store，删除前检查是否有育苗引用）
   const handleDelete = async (ids: string[]) => {
+    for (const id of ids) {
+      try {
+        const res = await enhancedApiClient.get(`/seed-sources/${id}/check-deletable`);
+        if (!res.data?.deletable) {
+          alert(`该种源已被 ${res.data?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
+          return;
+        }
+      } catch { /* 降级策略：检查失败时允许继续删除 */ }
+    }
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
@@ -288,14 +325,14 @@ export default function SeedSourcePage() {
   };
 
   const handleConfirmExport = async () => {
-    // 获取选中的数据
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头
-    const headers = ['种源批号', '种源类型', '作物类别', '作物品种', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
+    // 导出表头（含图片列）
+    const headers = ['种源图片', '种源批号', '种源类型', '作物类别', '作物品种', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
+      '种源图片': (record.pictures && record.pictures.length > 0) ? record.pictures[0] : '',
       '种源批号': record.seedCode,
       '种源类型': record.sourceType === SourceType.SEED ? '种子' :
                   record.sourceType === SourceType.SEEDLING ? '种苗/实生苗' :
@@ -324,53 +361,67 @@ export default function SeedSourcePage() {
       '备注': record.remarks || ''
     }));
 
-    // 创建内容
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    }
-
-    const fileName = `种源管理_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `种源管理_${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
 
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
+      if (exportFormat === 'xlsx') {
+        // 使用 SheetJS 导出 xlsx（含图片列）
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
+        // 设置图片列宽约 240px (30字符) + 行高
+        ws['!cols'] = headers.map((h, i) => {
+          if (h === '种源图片') return { wch: 30 }; // 图片列宽
+          if (h === '备注') return { wch: 25 };
+          return { wch: 15 };
         });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-      } else {
-        const blob = new Blob([content], { type: mimeType });
+        XLSX.utils.book_append_sheet(wb, ws, '种源记录');
+        XLSX.writeFile(wb, fileName);
+
+        // 如果有图片数据，尝试嵌入base64图片（xlsx原生图片支持）
+        selectedData.forEach((record, rowIdx) => {
+          if (record.pictures && record.pictures.length > 0) {
+            const imgData = record.pictures[0];
+            if (imgData.startsWith('data:image/')) {
+              try {
+                // 将base64图片嵌入到单元格（通过xlsx cell comment方式存储URL）
+                const cellRef = XLSX.utils.encode_cell({ r: rowIdx + 1, c: 0 });
+                if (ws[cellRef]) {
+                  ws[cellRef].l = { Target: imgData }; // 存储为超链接
+                }
+              } catch { /* 图片嵌入失败不影响导出 */ }
+            }
+          }
+        });
+      } else if (exportFormat === 'csv') {
+        const content = headers.join(',') + '\n' + exportData.map(row =>
+          headers.map(h => `"${typeof row[h] === 'string' ? row[h].replace(/"/g, '""') : row[h] || ''}"`).join(',')
+        ).join('\n');
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
+      } else {
+        const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName.replace('xlsx', 'xls');
+        a.click();
+        URL.revokeObjectURL(url);
       }
     } catch (err) {
       console.error('Export failed:', err);
-      const blob = new Blob([content], { type: mimeType });
+      // 降级：xls格式
+      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = fileName;
+      a.download = `种源管理_${new Date().toISOString().slice(0, 10)}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     }

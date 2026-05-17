@@ -2,7 +2,7 @@
  * 育苗编辑弹窗
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SeedSource } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
@@ -47,12 +47,46 @@ export function EditModal({
     survivalCount: record.survivalCount,
     plantedCount: record.plantedCount,
     remarks: record.remarks || '',
+    // 方案2.6: 育苗工时
+    workHours: (record as any).workHours || 0,
     // 新增缺失字段
     qualityGrade: record.qualityGrade || '',
     isFinished: record.isFinished || false,
     chargePerson: record.chargePerson || '',
     targetSurvivalCount: record.targetSurvivalCount || 0
   });
+
+  // 方案2.7: combogrid种源选择器状态
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+
+  const filteredSeedSources = useMemo(() => {
+    if (!sourceSearch) return seedSources || [];
+    const q = sourceSearch.toLowerCase();
+    return (seedSources || []).filter(s =>
+      s.seedCode?.toLowerCase().includes(q) ||
+      s.cropName?.toLowerCase().includes(q) ||
+      s.cropVariety?.toLowerCase().includes(q)
+    );
+  }, [seedSources, sourceSearch]);
+
+  const selectedSourceLabel = useMemo(() => {
+    const source = seedSources.find(s => s.id === formData.sourceId);
+    return source ? `${source.seedCode} - ${source.cropName}` : '';
+  }, [seedSources, formData.sourceId]);
+
+  const sourcePopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sourcePopoverOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sourcePopoverRef.current && !sourcePopoverRef.current.contains(e.target as Node)) {
+        setSourcePopoverOpen(false);
+        setSourceSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sourcePopoverOpen]);
 
   // 当 record 变化时重置表单
   useEffect(() => {
@@ -72,6 +106,8 @@ export function EditModal({
       survivalCount: record.survivalCount,
       plantedCount: record.plantedCount,
       remarks: record.remarks || '',
+      // 方案2.6: 育苗工时
+      workHours: (record as any).workHours || 0,
       // 新增缺失字段
       qualityGrade: record.qualityGrade || '',
       isFinished: record.isFinished || false,
@@ -119,7 +155,8 @@ export function EditModal({
         qualityGrade: formData.qualityGrade,
         isFinished: formData.isFinished,
         chargePerson: formData.chargePerson,
-        targetSurvivalCount: formData.targetSurvivalCount
+        targetSurvivalCount: formData.targetSurvivalCount,
+        workHours: formData.workHours || undefined,
       });
     } catch (error) {
       console.error('更新育苗记录失败:', error);
@@ -168,21 +205,77 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 关联种源 */}
+        {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">关联种源</label>
-          <select
-            value={formData.sourceId}
-            onChange={(e) => handleSourceChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">请选择</option>
-            {Array.isArray(seedSources) && seedSources.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.seedCode} - {s.cropName} ({s.cropVariety})
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
+              placeholder="搜索种源批号或作物名称..."
+              onFocus={() => {
+                setSourcePopoverOpen(true);
+                setSourceSearch('');
+              }}
+              onChange={(e) => {
+                setSourceSearch(e.target.value);
+                setSourcePopoverOpen(true);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {formData.sourceId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', selectedCropCode: '', cropName: '', cropVariety: '' }));
+                  setSourceSearch('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            )}
+            {sourcePopoverOpen && (
+              <div ref={sourcePopoverRef} className="absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden"
+                style={{ minWidth: '500px', left: 0, right: 0 }}
+              >
+                <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+                  <div>作物名称</div>
+                  <div>种源批号</div>
+                  <div>采购数量</div>
+                  <div>可用数量</div>
+                </div>
+                <div className="overflow-y-auto max-h-48">
+                  {filteredSeedSources.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-gray-400 text-center">无匹配种源</div>
+                  ) : (
+                    filteredSeedSources.map(s => (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          handleSourceChange(s.id);
+                          setSourcePopoverOpen(false);
+                          setSourceSearch('');
+                        }}
+                        className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
+                          ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
+                      >
+                        <div className="truncate font-medium text-gray-800">{s.cropName}</div>
+                        <div className="truncate text-emerald-700">{s.seedCode}</div>
+                        <div className="text-gray-600">{s.quantity} {s.unit}</div>
+                        <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
+                          {s.availableCount} {s.unit}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
+                  共 {filteredSeedSources.length} 条 | 点击行选择
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 作物品种选择 */}
@@ -317,6 +410,20 @@ export function EditModal({
             onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             placeholder="请输入目标成活数量"
+          />
+        </div>
+
+        {/* 方案2.6: 育苗工时 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">工时（小时）</label>
+          <input
+            type="number"
+            value={formData.workHours || ''}
+            onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="请输入育苗工时"
+            min="0"
+            step="0.5"
           />
         </div>
 

@@ -41,6 +41,10 @@ export interface SupplierFiltersState {
   status: string;
   supplierAttribute: string;
   organization: string;
+  /** 区域级联筛选（方案6.1） */
+  province?: string;
+  city?: string;
+  district?: string;
 }
 
 export interface EditFormData {

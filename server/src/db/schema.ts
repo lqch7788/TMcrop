@@ -2209,7 +2209,7 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS plant_labels (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       label_number TEXT NOT NULL,
-      planting_id TEXT NOT NULL,
+      planting_id TEXT,
       seedling_id TEXT,
       move_in_area_id INTEGER,
       move_in_area_name TEXT,

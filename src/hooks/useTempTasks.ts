@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTempTaskStore, type TempTaskData } from '../stores';
+import { useFarmTaskStore } from '../stores/farmTaskStore';
 
 // ============================================
 // 临时任务状态流转
@@ -377,6 +378,29 @@ export function useTempTasks(): UseTempTasksReturn {
       remarks: newTask.remarks,
       createdAt: newTask.createdAt,
       updatedAt: newTask.updatedAt,
+    });
+
+    // 同步创建统一 Task（sourceType: 'tempTask'），写入 farmTaskStore 供任务列表统一展示
+    useFarmTaskStore.getState().addTask({
+      title: newTask.title,
+      type: newTask.type || 'other',
+      typeName: newTask.type || '临时任务',
+      status: (newTask.status === 'pending_reassign' ? 'pending' : newTask.status) as 'draft' | 'pending',
+      priority: (newTask.urgency === 'urgent' ? 'urgent' : newTask.urgency === 'high' ? 'high' : 'normal'),
+      progress: newTask.progress || 0,
+      sourceType: 'tempTask',
+      assigneeId: newTask.assigneeId,
+      assigneeName: newTask.assigneeName,
+      assignerId: newTask.assignerId,
+      assignerName: newTask.assignerName,
+      dueDate: newTask.dueDate,
+      greenhouseId: newTask.greenhouseId,
+      greenhouseName: newTask.greenhouseName,
+      estimatedHours: newTask.estimatedHours,
+      reworkCount: newTask.rejectCount || 0,
+      reworkHistory: [],
+      deadlineExtensions: [],
+      remarks: newTask.description || newTask.remarks,
     });
 
     // 创建操作记录

@@ -1,0 +1,255 @@
+/**
+ * 育苗标签管理弹窗
+ * 对标 iAGS seedlingManagement.ejs 第577-770行 + 第1654-1706行
+ * 标签列表 + 标签履历时间线 + 标签数据导出(1000/2000/全部)
+ */
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { X, Search, Tag, Download } from 'lucide-react';
+import { LabelResumeTimeline } from '../../../ui';
+import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
+import { usePlantLabelStore } from '../../../../stores';
+import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
+
+const PAGE_SIZE = 20;
+const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
+
+interface SeedlingLabelManageModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  seedlingId: string;
+  seedlingCode: string;
+}
+
+export default function SeedlingLabelManageModal({
+  isOpen,
+  onClose,
+  seedlingId,
+  seedlingCode,
+}: SeedlingLabelManageModalProps) {
+  const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } = usePlantLabelStore();
+
+  const [searchText, setSearchText] = useState('');
+  const [labelPage, setLabelPage] = useState(1);
+  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
+
+  // 加载标签数据
+  useEffect(() => {
+    if (isOpen && seedlingId) {
+      loadLabels();
+    }
+  }, [isOpen, seedlingId, loadLabels]);
+
+  // 筛选与该育苗相关的标签
+  const seedlingLabels = useMemo(() => {
+    return labels.filter((l) => String(l.seedling_id) === String(seedlingId));
+  }, [labels, seedlingId]);
+
+  // 搜索过滤
+  const filteredLabels = useMemo(() => {
+    if (!searchText) return seedlingLabels;
+    return seedlingLabels.filter((l) =>
+      l.label_number.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [seedlingLabels, searchText]);
+
+  // 分页
+  const paginatedLabels = useMemo(() => {
+    const start = (labelPage - 1) * PAGE_SIZE;
+    return filteredLabels.slice(start, start + PAGE_SIZE);
+  }, [filteredLabels, labelPage]);
+
+  const labelTotalPages = Math.max(1, Math.ceil(filteredLabels.length / PAGE_SIZE));
+
+  // 选中标签的履历
+  const selectedResumes = useMemo(() => {
+    if (selectedLabelId === null) return [];
+    return resumeMap[selectedLabelId] || [];
+  }, [selectedLabelId, resumeMap]);
+
+  // 选中标签时加载履历
+  const handleSelectLabel = useCallback(async (labelId: number) => {
+    setSelectedLabelId(labelId);
+    await loadResumesForLabels([labelId]);
+  }, [loadResumesForLabels]);
+
+  // 导出标签数据
+  const handleExport = useCallback((size: number) => {
+    const toExport = size === 0 ? filteredLabels : filteredLabels.slice(0, size);
+    if (toExport.length === 0) { alert('无数据可导出'); return; }
+
+    const headers = ['标签编号', '移入位置', '移入日期', '移出位置', '移出日期', '创建时间'];
+    const rows = toExport.map((l) => [
+      l.label_number,
+      l.move_in_area_name || '',
+      l.move_in_date || '',
+      l.move_out_area_name || '',
+      l.move_out_date || '',
+      l.create_time || '',
+    ]);
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签数据</title>
+<style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px 10px}th{background:#059669;color:#fff}</style>
+</head><body><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
+
+    const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `育苗标签_${seedlingCode}_${new Date().toISOString().slice(0, 10)}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredLabels, seedlingCode]);
+
+  if (!isOpen) return null;
+
+  const selectedLabel = seedlingLabels.find((l) => l.id === selectedLabelId);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[85vh] flex flex-col">
+        {/* 标题栏 */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
+          <h3 className="text-lg font-semibold text-white">
+            育苗标签管理 - {seedlingCode}
+          </h3>
+          <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 工具栏: 搜索 + 导出 */}
+        <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={searchText}
+              onChange={(e) => { setSearchText(e.target.value); setLabelPage(1); }}
+              placeholder="搜索标签编号..."
+              className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">导出:</span>
+            {EXPORT_SIZES.map((size) => (
+              <button
+                key={size}
+                onClick={() => handleExport(size)}
+                className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-emerald-50 hover:border-emerald-300 flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" />
+                {size === 0 ? '全部' : `${size}条`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 主体：左侧标签列表 + 右侧履历时间线 */}
+        <div className="flex-1 overflow-hidden flex">
+          {/* 左侧：标签列表 */}
+          <div className="w-2/5 border-r border-gray-200 overflow-y-auto">
+            {labelsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : filteredLabels.length === 0 ? (
+              <div className="py-12 text-center text-gray-400">
+                <Tag className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">暂无标签数据</p>
+              </div>
+            ) : (
+              <>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">标签编号</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">移入位置</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">移入日期</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {paginatedLabels.map((label) => (
+                      <tr
+                        key={label.id}
+                        className={`cursor-pointer transition-colors ${
+                          selectedLabelId === label.id ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleSelectLabel(label.id)}
+                      >
+                        <td className="px-3 py-2 font-mono text-xs">{label.label_number}</td>
+                        <td className="px-3 py-2 text-xs text-gray-600">{label.move_in_area_name || '-'}</td>
+                        <td className="px-3 py-2 text-xs text-gray-600">{label.move_in_date || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* 分页 */}
+                {labelTotalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 p-3 border-t">
+                    <button
+                      onClick={() => setLabelPage((p) => Math.max(1, p - 1))}
+                      disabled={labelPage === 1}
+                      className="px-2 py-1 text-xs border rounded disabled:opacity-30"
+                    >
+                      上一页
+                    </button>
+                    <span className="text-xs text-gray-500">{labelPage}/{labelTotalPages}</span>
+                    <button
+                      onClick={() => setLabelPage((p) => Math.min(labelTotalPages, p + 1))}
+                      disabled={labelPage === labelTotalPages}
+                      className="px-2 py-1 text-xs border rounded disabled:opacity-30"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* 右侧：标签履历时间线 */}
+          <div className="w-3/5 overflow-y-auto p-4">
+            {selectedLabelId === null ? (
+              <div className="py-12 text-center text-gray-400">
+                <Tag className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>请在左侧选择一个标签查看履历</p>
+              </div>
+            ) : resumeLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <LabelResumeTimeline
+                entries={selectedResumes.map((r): LabelResumeEntry => ({
+                  id: r.id,
+                  operationType: r.operation_type,
+                  fromAreaName: r.from_area_name || undefined,
+                  toAreaName: r.to_area_name || undefined,
+                  operationDate: r.operation_date,
+                  markName: r.mark_name || undefined,
+                  markColor: r.mark_color || undefined,
+                  operatorName: r.operator_name || undefined,
+                }))}
+                currentLabel={selectedLabel?.label_number}
+                currentMark={undefined}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 底部 */}
+        <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+          <span className="text-xs text-gray-400">
+            共 {filteredLabels.length} 个标签
+          </span>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

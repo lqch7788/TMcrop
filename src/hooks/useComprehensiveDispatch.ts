@@ -646,8 +646,9 @@ function normalizeInspectionTask(problem: {
     '轻微': 'normal',
   };
 
-  // 问题类型判断
-  const getType = (text: string): { type: string; typeName: string } => {
+  // 问题类型判断（issueText 可能为空或未定义）
+  const getType = (text?: string): { type: string; typeName: string } => {
+    if (!text) return { type: 'scouting', typeName: '问题处理' };
     if (text.includes('虫') || text.includes('蚜')) return { type: 'spraying', typeName: '病虫防治' };
     if (text.includes('病') || text.includes('斑')) return { type: 'spraying', typeName: '病害处理' };
     if (text.includes('水') || text.includes('旱')) return { type: 'irrigation', typeName: '灌溉处理' };
@@ -655,14 +656,14 @@ function normalizeInspectionTask(problem: {
     return { type: 'scouting', typeName: '问题处理' };
   };
 
-  const typeInfo = getType(problem.issueText);
+  const typeInfo = getType(problem.issueText || '');
 
   return {
     id: `inspection-${problem.id}`,
     source: 'inspection',
     sourceId: problem.id.toString(),
     taskCode: `PD-${problem.id}`,
-    title: `【问题处理】${problem.issueText.slice(0, 30)}`,
+    title: `【问题处理】${(problem.issueText || '未知问题').slice(0, 30)}`,
     type: typeInfo.type,
     typeName: typeInfo.typeName,
     priority: severityToPriority[problem.issueSeverity] || 'normal',

@@ -4,7 +4,7 @@
  * V3.1: 支持补录申请功能, 使用 API 驱动的 DictSelect 组件
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
 import { SourceType, StockStatus } from '../../../../types/crop';
@@ -24,6 +24,18 @@ import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
+
+/** 种源类型 → 供应商类型 级联映射 */
+const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
+  seed: 'SP',              // 种子 → 原材料供应
+  seedling: 'SP',          // 种苗 → 原材料供应
+  cutting: 'SP',           // 扦插苗 → 原材料供应
+  grafting: 'SP',          // 嫁接苗 → 原材料供应
+  tissue_culture: 'SP',    // 组培苗 → 原材料供应
+  split: 'SP',             // 分株苗 → 原材料供应
+  bulb: 'SP',              // 种球 → 原材料供应
+  other: null,             // 其他 → 显示全部供应商
+};
 
 interface AddModalProps {
   isOpen: boolean;
@@ -112,6 +124,24 @@ export function AddModal({
       setSupplierSearchResults([]);
     }
   }, [supplierSearchKeyword]);
+
+  // 种源类型→供应商类型级联过滤
+  const filteredSearchResults = useMemo(() => {
+    const targetSupplierType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+    if (!targetSupplierType) return supplierSearchResults; // null = 展示全部
+    return supplierSearchResults.filter(s => s.supplierType === targetSupplierType);
+  }, [supplierSearchResults, formData.sourceType]);
+
+  // 当种源类型改变时，清空已选供应商（类型不匹配）
+  useEffect(() => {
+    if (selectedSupplier) {
+      const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+      if (targetType && selectedSupplier.supplierType !== targetType) {
+        setSelectedSupplier(null);
+        setFormData(prev => ({ ...prev, supplierId: '', supplierName: '' }));
+      }
+    }
+  }, [formData.sourceType]);
 
   // 选择作物后填充表单
   const handleSelectCrop = (variety: CropVariety) => {
@@ -483,11 +513,16 @@ export function AddModal({
                     </button>
                   </div>
 
-                  {/* 供应商搜索结果下拉 */}
+                  {/* 供应商搜索结果下拉（按种源类型级联过滤） */}
                   {showSupplierSearch && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      {supplierSearchResults.length > 0 ? (
-                        supplierSearchResults.map((supplier) => (
+                      {formData.sourceType !== 'other' && filteredSearchResults.length !== supplierSearchResults.length && supplierSearchResults.length > 0 && (
+                        <div className="px-3 py-1.5 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">
+                          已按种源类型过滤：显示"{(SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType] || '')}"类型供应商
+                        </div>
+                      )}
+                      {filteredSearchResults.length > 0 ? (
+                        filteredSearchResults.map((supplier) => (
                           <button
                             key={supplier.id}
                             type="button"
@@ -505,7 +540,11 @@ export function AddModal({
                         ))
                       ) : supplierSearchKeyword.trim() ? (
                         <div className="p-4 text-center text-sm text-gray-500">
-                          未找到 "{supplierSearchKeyword}"
+                          {supplierSearchResults.length > 0 ? (
+                            <>当前种源类型下未找到匹配供应商，请切换种源类型或修改搜索关键词</>
+                          ) : (
+                            <>未找到 "{supplierSearchKeyword}"</>
+                          )}
                         </div>
                       ) : (
                         <div className="p-4 text-center text-sm text-gray-500">

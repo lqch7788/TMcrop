@@ -1,11 +1,17 @@
 /**
  * 统一任务管理 Hook
  * 管理农事任务的增删改查、状态流转、超时检测、催办等
- * 数据存储在 localStorage，实现刷新后数据不丢失
+ *
+ * 数据层（升级方案V1.0）：
+ * - 农事任务：farmTaskStore (Zustand) → enhancedApiClient → API，三级降级（API → IndexedDB → localStorage）
+ * - 临时任务：useTempTaskStore (Zustand)
+ * - 巡查记录：useInspectionDataStore (Zustand)
+ * - 操作记录/催办记录：localStorage（待后续迁移到独立 Store）
+ *
+ * 组件不直接读写 localStorage，统一通过 Zustand Store 层管理数据。
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useLocalStorage } from './useLocalStorage';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { STORAGE_KEYS } from './useLocalStorage';
 import { usePersistentWorkLogs } from './usePersistentWorkLogs';
 import { usePersistentAttendance } from './usePersistentAttendance';
@@ -18,7 +24,6 @@ import {
   ReworkRecord,
   ReminderRecord,
   DeadlineExtension,
-  FeedbackRequirement,
 } from '../types/task';
 import {
   OVERTIME_CONFIG,
@@ -26,8 +31,8 @@ import {
   REMINDER_CONFIG,
   REWORK_CONFIG,
   TASK_PERMISSIONS,
-  STATUS_TRANSITIONS,
   TASK_ACTION_CONFIG,
+  STORAGE_CONFIG,
 } from '../config/taskConfig';
 
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
@@ -41,8 +46,18 @@ import { useTempTaskStore, TempTaskData } from '../stores/useTempTaskStore';
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
+// 导入存储容量管理
+import { checkStorageCapacity } from '../utils/storageManager';
 
 // ========== API 同步辅助函数 ==========
+
+/** 根据任务来源路由到正确的 Zustand Store */
+function getStoreForTask(task: Task) {
+  if (task.dispatchMode === 'tempTask' || task.sourceType === 'tempTask') {
+    return useTempTaskStore.getState();
+  }
+  return useFarmTaskStore.getState();
+}
 
 /** 异步API同步（fire-and-forget），失败不影响本地操作 */
 function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
@@ -290,95 +305,11 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
   };
 }
 
-// ============================================
-// 从 Zustand Store 获取种子任务数据（替代 mock 数据导入）
-// ============================================
-function getInitialFarmTasks(): Task[] {
-  try {
-    const storeTasks = useFarmTaskStore.getState().tasks;
-    if (storeTasks && storeTasks.length > 0) {
-      return storeTasks.map(convertStoreFarmTaskToTask);
-    }
-  } catch { /* store 数据为空或未初始化 */ }
-  return [];
-}
-
-function getInitialTempTasks(): Task[] {
-  try {
-    const storeItems = useTempTaskStore.getState().tasks;
-    if (storeItems && storeItems.length > 0) {
-      return storeItems.map(convertStoreTempTaskToTask);
-    }
-  } catch { /* store 数据为空或未初始化 */ }
-  return [];
-}
-
-function getInitialInspectionTasks(): Task[] {
-  try {
-    const storeRecords = useInspectionDataStore.getState().records;
-    if (storeRecords && storeRecords.length > 0) {
-      return storeRecords.map(convertStoreInspectionToTask);
-    }
-  } catch { /* store 数据为空或未初始化 */ }
-  return [];
-}
-
-const INITIAL_TASKS: Task[] = getInitialFarmTasks();
-
-// ============================================
-// 合并初始任务数据（农事任务 + 临时任务 + 巡查反馈处理任务）
-// ============================================
-const INITIAL_TASKS_WITH_TEMP: Task[] = [
-  ...INITIAL_TASKS,
-  ...getInitialTempTasks(),
-  ...getInitialInspectionTasks(),
-];
-
-// 数据版本控制（用于检测数据结构变化，自动重置数据）
-const DATA_VERSION = 10; // 强制刷新，清除旧缓存
-const STORAGE_VERSION_KEY = 'yuanxingtu_tasks_version';
-
-// ============================================
-// 生成任务编号 NS+年月日+3位流水号
-// ============================================
-function generateTaskCode(existingTasks: Task[]): string {
-  const date = new Date();
-  const datePrefix = date.getFullYear().toString() +
-    String(date.getMonth() + 1).padStart(2, '0') +
-    String(date.getDate()).padStart(2, '0');
-
-  // 查找当天的最大流水号
-  let maxSequence = 0;
-  existingTasks.forEach(t => {
-    // 匹配格式：NS20260417-xxx
-    if (t.taskCode && t.taskCode.startsWith('NS' + datePrefix + '-')) {
-      const seqStr = t.taskCode.slice(-3);
-      const seq = parseInt(seqStr, 10);
-      if (!isNaN(seq) && seq > maxSequence) {
-        maxSequence = seq;
-      }
-    }
-  });
-
-  // 下一个序号
-  const nextSequence = maxSequence + 1;
-  return `NS${datePrefix}-${String(nextSequence).padStart(3, '0')}`;
-}
-
-// ============================================
-// 生成操作记录编号
-// ============================================
-function generateRecordCode(): string {
-  const date = new Date();
-  const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-  const random = String(Math.random()).slice(2, 6);
-  return `OP${dateStr}-${random}`;
-}
 
 // ============================================
 // 超时检测
 // ============================================
-function detectOvertime(task: Task): TaskTimeout | undefined {
+export function detectOvertime(task: Task): TaskTimeout | undefined {
   const now = new Date();
 
   // 1. 接受超时检测（pending状态）
@@ -463,9 +394,8 @@ function canPerformAction(
 // Hook 返回类型
 // ============================================
 export interface UseTasksReturn {
-  // 任务列表
+  // 任务列表（响应式派生自 farmTaskStore + tempTaskStore + inspectionDataStore）
   tasks: Task[];
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 
   // 操作记录列表
   taskRecords: TaskRecord[];
@@ -565,85 +495,79 @@ export interface UseTasksReturn {
 // useTasks Hook
 // ============================================
 export function useTasks(): UseTasksReturn {
-  // 从 localStorage 读取任务数据（包含农事任务和临时任务）
-  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS_WITH_TEMP);
-  // 标记是否已从API加载过数据
-  const [apiLoaded, setApiLoaded] = useState(false);
+  // ========== 响应式数据：从 Zustand Store 读取（升级方案V1.0：localStorage → Store）==========
+  const storeTasks = useFarmTaskStore(s => s.tasks);
+  const tempTasks = useTempTaskStore(s => s.tasks);
+  const inspectionRecords = useInspectionDataStore(s => s.records);
 
-  // 版本检测：如果存储的版本低于当前版本，合并数据而不是覆盖
+  // 合并三类任务为统一 Task 格式（响应式派生）
+  const tasks = useMemo(() => {
+    const farmTasks = storeTasks.map(convertStoreFarmTaskToTask);
+    const convertedTempTasks = tempTasks.map(convertStoreTempTaskToTask);
+    const convertedInspectionTasks = inspectionRecords.map(convertStoreInspectionToTask);
+    const all = [...farmTasks, ...convertedTempTasks, ...convertedInspectionTasks];
+    return Array.isArray(all) ? all : [];
+  }, [storeTasks, tempTasks, inspectionRecords]);
+
+  // 初始化：触发 farmTaskStore 从 API 拉取数据
   useEffect(() => {
-    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
-    if (!storedVersion || parseInt(storedVersion, 10) < DATA_VERSION) {
-      // 版本不匹配，读取当前任务并与初始数据合并
-      // 这样可以保留问题分派等用户创建的任务
-      try {
-        const existingData = localStorage.getItem(STORAGE_KEYS.TASKS);
-        if (existingData) {
-          const parsed = JSON.parse(existingData);
-          const existingTasks = parsed.data || parsed; // 兼容新旧格式
-          // 过滤出用户创建的任务（非初始数据中的任务）
-          const initialIds = INITIAL_TASKS_WITH_TEMP.map(t => t.id);
-          const userCreatedTasks = Array.isArray(existingTasks)
-            ? existingTasks.filter((t: Task) => !initialIds.includes(t.id))
-            : [];
-          // 合并初始数据和用户创建的任务
-          const mergedTasks = [...INITIAL_TASKS_WITH_TEMP, ...userCreatedTasks];
-          setTasks(mergedTasks);
-          console.log(`[useTasks] 合并任务数据：初始${INITIAL_TASKS_WITH_TEMP.length}个 + 用户创建${userCreatedTasks.length}个 = ${mergedTasks.length}个`);
-          // 调试：检查用户创建的任务是否有 requiredFeedback
-          if (userCreatedTasks.length > 0) {
-            console.log('[useTasks] 用户创建任务示例:', JSON.stringify(userCreatedTasks[0], null, 2));
-          }
-        } else {
-          setTasks(INITIAL_TASKS_WITH_TEMP);
-        }
-      } catch (e) {
-        console.warn('[useTasks] 读取任务数据失败，使用初始数据', e);
-        setTasks(INITIAL_TASKS_WITH_TEMP);
+    useFarmTaskStore.getState().fetchTasks();
+  }, []);
+
+  // ========== 数据迁移：将旧 localStorage (yuanxingtu_tasks) 数据导入 farmTaskStore ==========
+  useEffect(() => {
+    try {
+      const legacyData = localStorage.getItem(STORAGE_KEYS.TASKS);
+      if (!legacyData) return;
+
+      const parsed = JSON.parse(legacyData);
+      // 兼容新旧格式：{ data: [...], version: N } 或直接数组
+      const rawTasks: Record<string, unknown>[] = Array.isArray(parsed)
+        ? parsed
+        : (parsed.data as Record<string, unknown>[]) || [];
+
+      if (rawTasks.length === 0) return;
+
+      // 转换为 farmTaskStore 的 Task 格式，保留原始 ID/taskCode/状态
+      const storeTasks = rawTasks
+        .filter(t => t.id && t.title)
+        .map(t => ({
+          id: String(t.id || ''),
+          taskCode: String(t.taskCode || t.code || ''),
+          title: String(t.title || ''),
+          type: String(t.type || 'other'),
+          typeName: String(t.typeName || t.type || '其他'),
+          status: String(t.status || 'pending') as 'draft' | 'pending' | 'accepted' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'rejected' | 'failed' | 'cancelled' | 'abandoned',
+          priority: String(t.priority || 'normal') as 'urgent' | 'high' | 'normal',
+          progress: Number(t.progress || 0),
+          sourceType: String(t.sourceType || 'dispatch') as 'dispatch' | 'tempTask' | 'smart',
+          assigneeId: String(t.assigneeId || ''),
+          assigneeName: String(t.assigneeName || t.assignee || ''),
+          assignerId: String(t.assignerId || ''),
+          assignerName: String(t.assignerName || ''),
+          dueDate: String(t.dueDate || ''),
+          greenhouseId: String(t.greenhouseId || ''),
+          greenhouseName: String(t.greenhouseName || ''),
+          cropName: String(t.cropName || ''),
+          estimatedDays: Number(t.estimatedDays || 0),
+          estimatedHours: Number(t.estimatedHours || 0),
+          reworkCount: Number(t.reworkCount || 0),
+          reworkHistory: (t.reworkHistory as unknown[]) || [],
+          deadlineExtensions: (t.deadlineExtensions as unknown[]) || [],
+          version: Number(t.version || 1),
+          createdAt: String(t.createdAt || new Date().toISOString()),
+          updatedAt: String(t.updatedAt || new Date().toISOString()),
+          remarks: String(t.remarks || ''),
+        })) as import('../stores/farmTaskStore').Task[];
+
+      if (storeTasks.length > 0) {
+        useFarmTaskStore.getState().importLegacyTasks(storeTasks);
+        console.log(`[useTasks] 从旧 localStorage 迁移 ${storeTasks.length} 条任务到 farmTaskStore`);
       }
-      localStorage.setItem(STORAGE_VERSION_KEY, String(DATA_VERSION));
+    } catch (e) {
+      console.warn('[useTasks] 旧数据迁移失败:', e);
     }
-  }, [setTasks]);
-
-  // 尝试从API加载任务数据
-  // 注意：此函数只在初始化时调用一次，后续任务更新通过 createTask/updateTask 等函数处理
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadFromAPI = async () => {
-      try {
-        const apiTasks = await enhancedApiClient.get<Task[]>('/farm-tasks', {
-          useCache: false,
-        });
-
-        if (cancelled) return;
-
-        console.log('[useTasks] API返回:', Array.isArray(apiTasks) ? `${apiTasks.length}条` : '非数组');
-
-        if (Array.isArray(apiTasks) && apiTasks.length > 0) {
-          console.log('[useTasks] 从API获取到任务数据:', apiTasks.length, '条');
-          setTasks(apiTasks);
-          setApiLoaded(true);
-        } else {
-          console.log('[useTasks] API返回空，使用种子数据');
-          setTasks(INITIAL_TASKS_WITH_TEMP);
-          setApiLoaded(true);
-        }
-      } catch (error) {
-        if (cancelled) return;
-        console.warn('[useTasks] API调用失败:', error);
-        // API失败时使用种子数据
-        setTasks(INITIAL_TASKS_WITH_TEMP);
-        setApiLoaded(true);
-      }
-    };
-
-    loadFromAPI();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []); // 空依赖数组，只在挂载时运行一次
+  }, []);
 
   // 操作记录
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);
@@ -685,18 +609,43 @@ export function useTasks(): UseTasksReturn {
     }
   }, []);
 
-  // 保存操作记录到 localStorage
-  const saveTaskRecords = useCallback((records: TaskRecord[]) => {
-    taskRecordsRef.current = records;  // 更新 ref
-    setTaskRecords(records);
-    localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(records));
+  // ========== 存储容量管理：写入前检查，超限时修剪旧记录 ==========
+
+  /** 检查存储容量并在必要时修剪旧操作记录（保留最近 500 条） */
+  const ensureStorageCapacity = useCallback(() => {
+    const cap = checkStorageCapacity();
+    if (cap.ok) return;
+
+    // 容量告警：修剪旧操作记录
+    console.warn(`[useTasks] ${cap.message}，自动修剪旧操作记录`);
+    try {
+      const stored = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
+      if (stored) {
+        const records: TaskRecord[] = JSON.parse(stored);
+        if (records.length > STORAGE_CONFIG.maxRecords) {
+          const trimmed = records.slice(-STORAGE_CONFIG.maxRecords);
+          localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(trimmed));
+          taskRecordsRef.current = trimmed;
+          setTaskRecords(trimmed);
+        }
+      }
+    } catch { /* ignore */ }
   }, []);
 
-  // 保存催办记录到 localStorage
+  // 保存操作记录到 localStorage（写入前检查容量）
+  const saveTaskRecords = useCallback((records: TaskRecord[]) => {
+    taskRecordsRef.current = records;
+    setTaskRecords(records);
+    ensureStorageCapacity();
+    localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(records));
+  }, [ensureStorageCapacity]);
+
+  // 保存催办记录到 localStorage（写入前检查容量）
   const saveReminderRecords = useCallback((records: ReminderRecord[]) => {
     setReminderRecords(records);
+    ensureStorageCapacity();
     localStorage.setItem(`${STORAGE_KEYS.TASKS}_reminders`, JSON.stringify(records));
-  }, []);
+  }, [ensureStorageCapacity]);
 
   // 创建操作记录的辅助函数
   const createTaskRecord = useCallback(
@@ -740,23 +689,67 @@ export function useTasks(): UseTasksReturn {
   // 创建任务
   const createTask = useCallback((taskData: Partial<Task>, dispatchMode?: 'farm' | 'tempTask' | 'smart', initialStatus?: TaskStatus): Task => {
     const now = new Date().toISOString();
-    const taskId = generateTaskCode([]);
 
     // 确保执行人信息完整
-    // assignee 可能是后端返回的扩展字段
     const finalAssigneeName = taskData.assigneeName || (taskData as unknown as { assignee?: string }).assignee || '';
     const finalAssigneeId = taskData.assigneeId ||
       (finalAssigneeName ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}` : '');
 
-    const newTask: Task = {
-      id: taskId,
-      taskCode: taskId,
+    // 准备 Store 需要的任务数据
+    const apiTaskData = {
       title: taskData.title || '',
       type: taskData.type || '',
       typeName: taskData.typeName || '',
+      status: initialStatus || taskData.status || 'pending',
       priority: taskData.priority || 'normal',
       progress: 0,
       sourceType: taskData.sourceType || 'dispatch',
+      dispatchMode: dispatchMode || taskData.dispatchMode || 'farm',
+      assigneeId: finalAssigneeId,
+      assigneeName: finalAssigneeName,
+      assignerId: taskData.assignerId || '',
+      assignerName: taskData.assignerName || '',
+      dueDate: taskData.dueDate,
+      planStart: (taskData as Task).planStart,
+      planEnd: (taskData as Task).planEnd,
+      estimatedDays: (taskData as Task).estimatedDays,
+      estimatedHours: (taskData as Task).estimatedHours,
+      materials: (taskData as Task).materials || [],
+      tools: (taskData as Task).tools || [],
+      sopContent: (taskData as Task).sopContent,
+      typeConfig: (taskData as Task).typeConfig,
+      feedbackRequirements: taskData.feedbackRequirements || taskData.requiredFeedback || [],
+      greenhouseId: (taskData as Task).greenhouseId,
+      greenhouseName: (taskData as Task).greenhouseName,
+      cropName: (taskData as Task).cropName,
+    };
+
+    // 使用 farmTaskStore 的 addTask（乐观本地更新 + API 同步 + 离线队列）
+    // 注意：addTask 内部先做乐观本地更新（同步），再做 API 调用（异步）
+    // 因此调用后 store 状态已立即更新，可以从 getState().tasks[0] 读取新任务
+    useFarmTaskStore.getState().addTask(apiTaskData).then(s => {
+      if (s) console.log('[createTask] 后端API创建任务成功:', s.id);
+    }).catch(error => {
+      console.error('[createTask] 后端API创建任务失败:', error);
+    });
+
+    // 读取乐观更新的任务（addTask 将新任务 prepend 到数组头部）
+    const storeTask = useFarmTaskStore.getState().tasks[0];
+    const result = storeTask ? convertStoreFarmTaskToTask(storeTask) : null;
+    console.log('[createTask] 返回任务:', result?.id || 'null');
+    return result || ({
+      id: '',
+      taskCode: '',
+      title: taskData.title || '',
+      type: taskData.type || '',
+      typeName: taskData.typeName || '',
+      status: initialStatus || taskData.status || 'pending',
+      priority: taskData.priority || 'normal',
+      progress: 0,
+      sourceType: taskData.sourceType || 'dispatch',
+      dispatchMode: dispatchMode || taskData.dispatchMode || 'farm',
+      assigneeId: finalAssigneeId,
+      assigneeName: finalAssigneeName,
       assignerId: taskData.assignerId || '',
       assignerName: taskData.assignerName || '',
       dueDate: taskData.dueDate,
@@ -767,281 +760,125 @@ export function useTasks(): UseTasksReturn {
       version: 1,
       createdAt: now,
       updatedAt: now,
-      // 先展开 taskData，这样 taskData 中的 status 会覆盖默认值
-      ...taskData,
-      // 在展开 taskData 之后再强制覆盖关键字段，确保 dispatchMode 不被覆盖
-      dispatchMode: dispatchMode || taskData.dispatchMode || 'farm',
-      assigneeId: finalAssigneeId,
-      assigneeName: finalAssigneeName,
-    };
-
-    let savedTask: Task | null = null;
-    setTasks(prev => {
-      const realTaskId = generateTaskCode(prev);
-      savedTask = { ...newTask, id: realTaskId, taskCode: realTaskId };
-      const updated = [savedTask, ...prev];
-      console.log('[createTask] 创建任务:', JSON.stringify({ id: realTaskId, title: savedTask.title, dispatchMode: savedTask.dispatchMode, status: savedTask.status }));
-      console.log('[createTask] 更新后任务总数:', updated.length, '其中农事任务数量:', updated.filter(t => t.dispatchMode === 'farm').length);
-      console.log('[createTask] 任务 dispatchMode 详情:', savedTask.dispatchMode);
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    console.log('[createTask] 返回任务:', savedTask ? savedTask.id : 'null');
-
-    // 调用后端API创建任务（失败不影响本地操作）
-    if (savedTask) {
-      Promise.resolve().then(async () => {
-        try {
-          // 准备API创建任务的数据（排除自动生成的字段）
-          const apiTaskData = {
-            title: savedTask.title,
-            type: savedTask.type,
-            typeName: savedTask.typeName,
-            status: savedTask.status,
-            priority: savedTask.priority,
-            sourceType: savedTask.sourceType,
-            assigneeId: savedTask.assigneeId,
-            assigneeName: savedTask.assigneeName,
-            assignerId: savedTask.assignerId,
-            assignerName: savedTask.assignerName,
-            dueDate: savedTask.dueDate,
-            planStart: savedTask.planStart,
-            planEnd: savedTask.planEnd,
-            estimatedDays: savedTask.estimatedDays,
-            estimatedHours: savedTask.estimatedHours,
-            description: savedTask.description,
-            remarks: savedTask.remarks,
-            materials: savedTask.materials,
-            tools: savedTask.tools,
-            requiredFeedback: savedTask.requiredFeedback,
-            typeConfig: savedTask.typeConfig,
-            greenhouseId: savedTask.greenhouseId,
-            greenhouseName: savedTask.greenhouseName,
-            cropName: savedTask.cropName,
-            batchId: savedTask.batchId,
-            batchCode: savedTask.batchCode,
-          };
-          // 使用 farmTaskStore 的 addTask（内置三级降级和离线队列）
-          await useFarmTaskStore.getState().addTask(apiTaskData);
-          console.log('[createTask] 后端API创建任务成功:', savedTask.id);
-        } catch (error) {
-          console.error('[createTask] 后端API创建任务失败:', error);
-        }
-      });
-    }
-
-    return savedTask || newTask;
-  }, [setTasks]);
+    } as Task);
+  }, []);
 
   // 发布任务
   const publishTask = useCallback((id: string) => {
-    let updatedTasks: Task[] | null = null;
-    setTasks(prev => {
-      const newTasks = prev.map(task => {
-        if (task.id !== id || task.status !== 'draft') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'draft') return;
 
-        const now = new Date().toISOString();
-        const record = createTaskRecord({ ...task, status: 'pending' }, 'publish', 'draft');
+    const now = new Date().toISOString();
+    const record = createTaskRecord({ ...task, status: 'pending' }, 'publish', 'draft');
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        // 立即保存操作记录
-      saveTaskRecords([record, ...taskRecordsRef.current]);
-
-        updatedTasks = prev.map(t =>
-          t.id === id
-            ? { ...t, status: 'pending', updatedAt: now, version: t.version + 1 }
-            : t
-        );
-
-        return {
-          ...task,
-          status: 'pending',
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-      return newTasks;
+    getStoreForTask(task).updateTask(id, {
+      status: 'pending',
+      updatedAt: now,
+      version: task.version + 1,
     });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
-    // 确保持久化到 localStorage
-    if (updatedTasks) {
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updatedTasks }));
-    }
-
-    // API异步同步：发布任务
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/publish`),
-      `publishTask(${id})`
-    );
-  }, [taskRecords, saveTaskRecords, createTaskRecord]);
-
-  // 撤回任务（撤回执行人，任务可重新派发）
+  // 撤回任务（pending → cancelled，撤回原因记录在操作记录中）
   const withdrawTask = useCallback((id: string, reason: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'pending') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'pending') return;
 
-        const now = new Date().toISOString();
-        const record = createTaskRecord({ ...task, assigneeId: '', assigneeName: '' }, 'withdraw', 'pending', { reason });
+    const now = new Date().toISOString();
+    const record = createTaskRecord({ ...task, status: 'cancelled' }, 'withdraw', 'pending', { reason });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          // 撤回：清空执行人，状态保持 pending（可重新派发）
-          assigneeId: '',
-          assigneeName: '',
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    getStoreForTask(task).updateTask(id, {
+      status: 'cancelled',
+      cancelledReason: reason,
+      cancelledAt: now,
+      cancelledBy: task.assignerId,
+      updatedAt: now,
+      version: task.version + 1,
     });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
-    // API异步同步：撤回任务
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/withdraw`, { reason }),
-      `withdrawTask(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
-
-  // 取消任务（彻底取消，后续不再执行）
+  // 取消任务（彻底取消，后续不再执行，保留执行人信息用于审计追溯）
   const cancelTask = useCallback((id: string, reason: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
-        if (!['pending', 'accepted', 'in_progress'].includes(task.status)) return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || !['pending', 'accepted', 'in_progress'].includes(task.status)) return;
 
-        const now = new Date().toISOString();
-        const record = createTaskRecord({ ...task, status: 'cancelled' }, 'cancel', task.status, { reason });
+    const now = new Date().toISOString();
+    const record = createTaskRecord({ ...task, status: 'cancelled' }, 'cancel', task.status, { reason });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          status: 'cancelled',
-          cancelledReason: reason,
-          cancelledAt: now,
-          cancelledBy: task.assignerId,
-          // 取消：清空执行人，任务彻底终止
-          assigneeId: '',
-          assigneeName: '',
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    getStoreForTask(task).updateTask(id, {
+      status: 'cancelled',
+      cancelledReason: reason,
+      cancelledAt: now,
+      cancelledBy: task.assignerId,
+      updatedAt: now,
+      version: task.version + 1,
     });
-
-    // API异步同步：取消任务
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/cancel`, { reason }),
-      `cancelTask(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress
   const acceptTask = useCallback((id: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'pending') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'pending') return;
 
-        const now = new Date();
-        const nowStr = now.toISOString().split('T')[0];
-        const timeStr = now.toTimeString().slice(0, 5);
+    const now = new Date();
+    const nowStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().slice(0, 5);
 
-        const record = createTaskRecord({ ...task, status: 'accepted' }, 'accept', 'pending');
+    const record = createTaskRecord({ ...task, status: 'accepted' }, 'accept', 'pending');
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        saveTaskRecords([record, ...taskRecords]);
-
-        // 创建考勤记录（从任务上下文获取部门信息）
-        try {
-          addAttendance({
-            workerId: task.assigneeId,
-            name: task.assigneeName,
-            dept: (task as { dept?: string }).dept || '生产部', // 从任务获取部门，默认生产部
-            date: nowStr,
-            checkIn: timeStr,
-            checkOut: '',
-            hours: 0,
-            status: '进行中',
-            statusClass: 'info',
-            taskId: task.id,
-            batchId: task.batchId,
-          });
-        } catch (error) {
-          console.error('创建考勤记录失败:', error);
-          // 考勤记录失败不影响任务接受流程
-        }
-
-        return {
-          ...task,
-          status: 'accepted',
-          acceptedAt: now.toISOString(),
-          startTime: nowStr,
-          updatedAt: now.toISOString(),
-          version: task.version + 1,
-        };
+    // 创建考勤记录（从任务上下文获取部门信息）
+    try {
+      addAttendance({
+        workerId: task.assigneeId,
+        name: task.assigneeName,
+        dept: (task as { dept?: string }).dept || '生产部',
+        date: nowStr,
+        checkIn: timeStr,
+        checkOut: '',
+        hours: 0,
+        status: '进行中',
+        statusClass: 'info',
+        taskId: task.id,
+        batchId: (task as { batchId?: string }).batchId,
       });
+    } catch (error) {
+      console.error('创建考勤记录失败:', error);
+    }
 
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    getStoreForTask(task).updateTask(id, {
+      status: 'accepted',
+      acceptedAt: now.toISOString(),
+      startTime: nowStr,
+      updatedAt: now.toISOString(),
+      version: task.version + 1,
     });
-
-    // API异步同步：接受任务
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/accept`),
-      `acceptTask(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, addAttendance]);
+  }, [tasks, createTaskRecord, saveTaskRecords, addAttendance]);
 
   // 选择执行人（用于待派工任务）- 设置执行人，状态变为 pending（待接受）
   const acceptAndAssign = useCallback((id: string, assigneeId: string, assigneeName: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
 
-        const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-        // 创建操作记录
-        const record = createTaskRecord(
-          { ...task, assigneeId, assigneeName },
-          'assign',
-          task.status
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          assigneeId,
-          assigneeName,
-          status: 'pending',  // 状态变为待接受，执行人可见并可接受/拒绝
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：选择执行人即重新派发
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
-        assigneeId, assigneeName,
-      }),
-      `acceptAndAssign(${id})`
+    const record = createTaskRecord(
+      { ...task, assigneeId, assigneeName },
+      'assign',
+      task.status
     );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
+    getStoreForTask(task).updateTask(id, {
+      assigneeId,
+      assigneeName,
+      status: 'pending',
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 提交进度
   const submitProgress = useCallback((
@@ -1056,7 +893,6 @@ export function useTasks(): UseTasksReturn {
       startTime?: string;
       endTime?: string;
       isFinal?: boolean;
-      // 新增反馈字段
       gpsLocation?: { lat: number; lng: number };
       photosBefore?: string[];
       photosAfter?: string[];
@@ -1067,142 +903,105 @@ export function useTasks(): UseTasksReturn {
       workers?: number;
     }
   ) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
 
-        const now = new Date();
-        const nowStr = now.toISOString().split('T')[0];
-        const timeStr = now.toTimeString().slice(0, 5);
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const nowStr = nowIso.split('T')[0];
+    const timeStr = now.toTimeString().slice(0, 5);
 
-        // 计算进度增量
-        const progressIncrement = progress - task.progress;
+    const progressIncrement = progress - task.progress;
 
-        // 确定新状态
-        let newStatus: TaskStatus = task.status;
-        const action: TaskAction = options?.isFinal ? 'submit' : 'progress';
+    let newStatus: TaskStatus = task.status;
+    const action: TaskAction = options?.isFinal ? 'submit' : 'progress';
 
-        if (options?.isFinal) {
-          newStatus = 'waiting_acceptance';
-        } else if (task.status === 'accepted') {
-          newStatus = 'in_progress';
-        }
+    if (options?.isFinal) {
+      newStatus = 'waiting_acceptance';
+    } else if (task.status === 'accepted') {
+      newStatus = 'in_progress';
+    }
 
-        // 构建完整的反馈对象
-        const feedbackData: TaskRecord['feedback'] = {
-          text: options?.remarks,
-          materials: options?.materials,
-          gpsLocation: options?.gpsLocation,
-          // images 字段用于存储照片（兼容 photosBefore + photosAfter）
-          images: [
-            ...(options?.photosBefore || []),
-            ...(options?.photosAfter || []),
-          ],
-          voiceNote: options?.voiceNote,
-          // 工作量确认
-          workloadDays: options?.workloadDays,
-          workloadHours: options?.workloadHours,
-          workers: options?.workers,
-          // 物资编码
-          materialCode: options?.materialCode,
-        };
+    const feedbackData: TaskRecord['feedback'] = {
+      text: options?.remarks,
+      materials: options?.materials,
+      gpsLocation: options?.gpsLocation,
+      images: [
+        ...(options?.photosBefore || []),
+        ...(options?.photosAfter || []),
+      ],
+      voiceNote: options?.voiceNote,
+      workloadDays: options?.workloadDays,
+      workloadHours: options?.workloadHours,
+      workers: options?.workers,
+      materialCode: options?.materialCode,
+    };
 
-        // 创建操作记录
-        const record = createTaskRecord(
-          { ...task, status: newStatus, progress },
-          action,
-          task.status,
-          {
-            progress,
-            progressIncrement,
-            feedback: feedbackData,
-            comment: options?.remarks,
-          }
-        );
+    const record = createTaskRecord(
+      { ...task, status: newStatus, progress },
+      action,
+      task.status,
+      { progress, progressIncrement, feedback: feedbackData, comment: options?.remarks }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        saveTaskRecords([record, ...taskRecords]);
+    // 计算工作时长
+    let workDuration = 0;
+    if (options?.startTime && options?.endTime) {
+      const [sh, sm] = options.startTime.split(':').map(Number);
+      const [eh, em] = options.endTime.split(':').map(Number);
+      workDuration += (eh * 60 + em) - (sh * 60 + sm);
+    }
 
-        // 计算工作时长
-        let workDuration = 0;
-        if (options?.startTime && options?.endTime) {
-          const [sh, sm] = options.startTime.split(':').map(Number);
-          const [eh, em] = options.endTime.split(':').map(Number);
-          workDuration += (eh * 60 + em) - (sh * 60 + sm);
-        }
+    // 更新考勤记录
+    if (options?.startTime && options?.endTime) {
+      const [sh, sm] = options.startTime.split(':').map(Number);
+      const [eh, em] = options.endTime.split(':').map(Number);
+      const hoursWorked = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
 
-        // 更新考勤记录
-        if (options?.startTime && options?.endTime) {
-          const [sh, sm] = options.startTime.split(':').map(Number);
-          const [eh, em] = options.endTime.split(':').map(Number);
-          const hoursWorked = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-
-          const attendanceRecord = attendance.find(a => a.taskId === task.id);
-          if (attendanceRecord) {
-            updateAttendance(attendanceRecord.id, {
-              checkOut: options.endTime,
-              hours: hoursWorked,
-            });
-          }
-        }
-
-        // 同步到每日工单汇总
-        syncWorkLogFromTask({
-          id: task.id,
-          taskCode: task.taskCode,
-          assigneeName: task.assigneeName,
-          cropName: task.cropName || '',
-          greenhouseName: task.greenhouseName || '',
-          title: task.title,
-          batchId: task.batchId,
-          batchCode: task.batchCode,
-          type: task.type,
-          typeName: task.typeName,
-        }, {
-          progress,
-          notes: options?.remarks,
-          workload: options?.workload,
-          workloadDays: options?.workloadDays,
-          workloadHours: options?.workloadHours,
-          workers: options?.workers,
-          unit: options?.unit,
-          startTime: options?.startTime,
-          endTime: options?.endTime,
+      const attendanceRecord = attendance.find(a => a.taskId === task.id);
+      if (attendanceRecord) {
+        updateAttendance(attendanceRecord.id, {
+          checkOut: options.endTime,
+          hours: hoursWorked,
         });
+      }
+    }
 
-        return {
-          ...task,
-          progress,
-          status: newStatus,
-          startTime: task.startTime || options?.startTime,
-          endTime: options?.endTime,
-          workDuration,
-          updatedAt: now.toISOString(),
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    // 同步到每日工单汇总
+    syncWorkLogFromTask({
+      id: task.id,
+      taskCode: task.taskCode,
+      assigneeName: task.assigneeName,
+      cropName: task.cropName || '',
+      greenhouseName: task.greenhouseName || '',
+      title: task.title,
+      batchId: (task as { batchId?: string }).batchId,
+      batchCode: (task as { batchCode?: string }).batchCode,
+      type: task.type,
+      typeName: task.typeName,
+    }, {
+      progress,
+      notes: options?.remarks,
+      workload: options?.workload,
+      workloadDays: options?.workloadDays,
+      workloadHours: options?.workloadHours,
+      workers: options?.workers,
+      unit: options?.unit,
+      startTime: options?.startTime,
+      endTime: options?.endTime,
     });
 
-    // API异步同步：提交进度 或 申请验收
-    if (options?.isFinal) {
-      syncToApi(
-        () => enhancedApiClient.post(`/farm-tasks/${id}/submit-acceptance`, {
-          progress, comment: options?.remarks,
-        }),
-        `submitAcceptance(${id})`
-      );
-    } else {
-      syncToApi(
-        () => enhancedApiClient.post(`/farm-tasks/${id}/progress`, {
-          progress, comment: options?.remarks,
-        }),
-        `submitProgress(${id})`
-      );
-    }
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, attendance, updateAttendance, syncWorkLogFromTask]);
+    getStoreForTask(task).updateTask(id, {
+      progress,
+      status: newStatus,
+      startTime: task.startTime || options?.startTime,
+      endTime: options?.endTime,
+      workDuration,
+      updatedAt: nowIso,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords, attendance, updateAttendance, syncWorkLogFromTask]);
 
   // 超时处理
   const handleOvertime = useCallback((
@@ -1210,364 +1009,228 @@ export function useTasks(): UseTasksReturn {
     action: 'continue' | 'abandon',
     options?: { reason?: string; newDeadline?: string }
   ) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'in_progress') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'in_progress') return;
 
-        const now = new Date().toISOString();
-        const taskAction: TaskAction = action === 'continue' ? 'overtime_continue' : 'overtime_abandon';
+    const now = new Date().toISOString();
+    const taskAction: TaskAction = action === 'continue' ? 'overtime_continue' : 'overtime_abandon';
 
-        const record = createTaskRecord(
-          {
-            ...task,
-            status: action === 'continue' ? 'in_progress' : 'abandoned',
-          },
-          taskAction,
-          task.status,
-          { reason: options?.reason }
-        );
+    const record = createTaskRecord(
+      { ...task, status: action === 'continue' ? 'in_progress' : 'abandoned' },
+      taskAction,
+      task.status,
+      { reason: options?.reason }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        saveTaskRecords([record, ...taskRecords]);
-
-        if (action === 'continue') {
-          // 继续执行：延期处理
-          const extension: DeadlineExtension = {
-            id: `EXT_${Date.now()}`,
-            originalDeadline: task.dueDate || '',
-            newDeadline: options?.newDeadline || '',
-            reason: options?.reason || '',
-            extendedBy: task.assigneeId,
-            extendedAt: now,
-          };
-
-          return {
-            ...task,
-            status: 'in_progress',
-            dueDate: options?.newDeadline || task.dueDate,
-            deadlineExtensions: [...task.deadlineExtensions, extension],
-            updatedAt: now,
-            version: task.version + 1,
-          };
-        } else {
-          // 放弃执行
-          return {
-            ...task,
-            status: 'abandoned',
-            abandonedReason: options?.reason,
-            abandonedAt: now,
-            updatedAt: now,
-            version: task.version + 1,
-          };
-        }
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：超时处理
     if (action === 'continue') {
-      syncToApi(
-        () => enhancedApiClient.post(`/farm-tasks/${id}/overtime-continue`, {
-          newDeadline: options?.newDeadline, reason: options?.reason,
-        }),
-        `overtimeContinue(${id})`
-      );
+      const extension: DeadlineExtension = {
+        id: `EXT_${Date.now()}`,
+        originalDeadline: task.dueDate || '',
+        newDeadline: options?.newDeadline || '',
+        reason: options?.reason || '',
+        extendedBy: task.assigneeId,
+        extendedAt: now,
+      };
+
+      getStoreForTask(task).updateTask(id, {
+        status: 'in_progress',
+        dueDate: options?.newDeadline || task.dueDate,
+        deadlineExtensions: [...task.deadlineExtensions, extension],
+        updatedAt: now,
+        version: task.version + 1,
+      });
     } else {
-      syncToApi(
-        () => enhancedApiClient.post(`/farm-tasks/${id}/overtime-abandon`, {
-          reason: options?.reason,
-        }),
-        `overtimeAbandon(${id})`
-      );
+      getStoreForTask(task).updateTask(id, {
+        status: 'abandoned',
+        abandonedReason: options?.reason,
+        abandonedAt: now,
+        updatedAt: now,
+        version: task.version + 1,
+      });
     }
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 验收通过
   const acceptCompletion = useCallback((id: string, comments?: string) => {
-    // 用于存储需要更新育苗的任务信息（在 setTasks 回调中提取）
-    let seedlingSourceId: string | null = null;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'waiting_acceptance') return;
 
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'waiting_acceptance') return task;
+    const now = new Date().toISOString();
 
-        const now = new Date().toISOString();
+    const record = createTaskRecord(
+      { ...task, status: 'completed' },
+      'complete',
+      'waiting_acceptance',
+      { comment: comments }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-        const record = createTaskRecord(
-          { ...task, status: 'completed' },
-          'complete',
-          'waiting_acceptance',
-          { comment: comments }
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        // 更新考勤记录状态为已完成
-        const attendanceRecord = attendance.find(a => a.taskId === task.id);
-        if (attendanceRecord) {
-          updateAttendance(attendanceRecord.id, {
-            status: '已完成',
-            statusClass: 'success',
-          });
-        }
-
-        // ========== 回传更新育苗状态 ==========
-        // 如果是育苗任务，验收通过后更新育苗状态为已完成
-        // 注意：现在使用 apiSeedlingService，需要异步等待
-        if (task.type === 'seedling' && task.sourceId) {
-          seedlingSourceId = task.sourceId;
-        }
-        // ==========================================
-
-        return {
-          ...task,
-          status: 'completed',
-          completedAt: now,
-          progress: 100,
-          acceptanceRecord: {
-            acceptedBy: task.assignerId,
-            acceptedByName: task.assignerName,
-            acceptedAt: now,
-            comments,
-          },
-          updatedAt: now,
-          version: task.version + 1,
-        };
+    // 更新考勤记录状态为已完成
+    const attendanceRecord = attendance.find(a => a.taskId === task.id);
+    if (attendanceRecord) {
+      updateAttendance(attendanceRecord.id, {
+        status: '已完成',
+        statusClass: 'success',
       });
+    }
 
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // 在 setTasks 完成后执行异步更新育苗状态
-    if (seedlingSourceId) {
+    // 回传更新育苗状态
+    if (task.type === 'seedling' && task.sourceId) {
       Promise.resolve().then(async () => {
         try {
-          await updateSeedling(seedlingSourceId!, {
+          await updateSeedling(task.sourceId!, {
             status: SeedlingStatus.COMPLETED,
             isFinished: true
           });
-          console.log('[acceptCompletion] 育苗状态已更新为已完成:', seedlingSourceId);
+          console.log('[acceptCompletion] 育苗状态已更新为已完成:', task.sourceId);
         } catch (error) {
           console.error('[acceptCompletion] 更新育苗状态失败:', error);
         }
       });
     }
 
-    // API异步同步：验收通过（使用专用端点，后端会记录操作历史）
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/complete`, { comments }),
-      `acceptCompletion(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord, attendance, updateAttendance]);
+    getStoreForTask(task).updateTask(id, {
+      status: 'completed',
+      completedAt: now,
+      progress: 100,
+      acceptanceRecord: {
+        acceptedBy: task.assignerId,
+        acceptedByName: task.assignerName,
+        acceptedAt: now,
+        comments,
+      },
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords, attendance, updateAttendance]);
 
   // 验收驳回
   const rejectForRework = useCallback((id: string, reason: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'waiting_acceptance') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'waiting_acceptance') return;
 
-        const now = new Date().toISOString();
-        const newReworkCount = task.reworkCount + 1;
+    const now = new Date().toISOString();
+    const newReworkCount = task.reworkCount + 1;
+    const newStatus: TaskStatus = newReworkCount >= REWORK_CONFIG.maxReworkCount ? 'failed' : 'rejected';
 
-        // 第2次驳回后变为 failed，需要重新派发
-        const newStatus: TaskStatus = newReworkCount >= REWORK_CONFIG.maxReworkCount ? 'failed' : 'rejected';
+    const reworkRecord: ReworkRecord = {
+      reworkCount: newReworkCount,
+      reworkReason: reason,
+      reworkBy: task.assignerId,
+      reworkAt: now,
+      taskStatusBeforeRework: task.status,
+    };
 
-        // 记录返工历史
-        const reworkRecord: ReworkRecord = {
-          reworkCount: newReworkCount,
-          reworkReason: reason,
-          reworkBy: task.assignerId,
-          reworkAt: now,
-          taskStatusBeforeRework: task.status,
-        };
-
-        const record = createTaskRecord(
-          { ...task, status: newStatus, reworkCount: newReworkCount },
-          'reject',
-          'waiting_acceptance',
-          { reason }
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          status: newStatus,
-          reworkCount: newReworkCount,
-          reworkHistory: [...task.reworkHistory, reworkRecord],
-          rejectReason: reason,
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：验收驳回
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/reject`, { reason }),
-      `rejectForRework(${id})`
+    const record = createTaskRecord(
+      { ...task, status: newStatus, reworkCount: newReworkCount },
+      'reject',
+      'waiting_acceptance',
+      { reason }
     );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
+    getStoreForTask(task).updateTask(id, {
+      status: newStatus,
+      reworkCount: newReworkCount,
+      reworkHistory: [...task.reworkHistory, reworkRecord],
+      rejectReason: reason,
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 继续执行（返工后）
   const continueExecution = useCallback((id: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id || task.status !== 'rejected') return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.status !== 'rejected') return;
 
-        const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-        const record = createTaskRecord(
-          { ...task, status: 'in_progress' },
-          'continue',
-          'rejected'
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          status: 'in_progress',
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：继续执行（返工后重新执行）
-    syncToApi(
-      () => enhancedApiClient.put(`/farm-tasks/${id}`, { status: 'in_progress' }),
-      `continueExecution(${id})`
+    const record = createTaskRecord(
+      { ...task, status: 'in_progress' },
+      'continue',
+      'rejected'
     );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
+    getStoreForTask(task).updateTask(id, {
+      status: 'in_progress',
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 执行人拒绝任务（拒绝后任务状态变为rejected，可重新派发）
   const rejectByExecutor = useCallback((id: string, rejectReason: string, executorId: string, executorName: string) => {
-    setTasks(prev => {
-      const taskIndex = prev.findIndex(t => t.id === id || t.taskCode === id);
-      if (taskIndex === -1) {
-        console.warn('[useTasks] rejectByExecutor: 任务不存在 id=', id);
-        return prev;
-      }
+    const task = tasks.find(t => t.id === id || t.taskCode === id);
+    if (!task) {
+      console.warn('[useTasks] rejectByExecutor: 任务不存在 id=', id);
+      return;
+    }
 
-      const task = prev[taskIndex];
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      // 创建拒绝记录（保留完整历史）
-      const record: TaskRecord = {
-        id: `TR_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        taskId: task.id,
-        taskCode: task.taskCode,
-        taskTitle: task.title,
-        operatorId: executorId,
-        operatorName: executorName,
-        action: 'reject',
-        actionName: '执行人拒绝',
-        fromStatus: task.status,
-        toStatus: 'rejected',
-        reason: rejectReason,
-        actionTime: now,
-        createdAt: now.split('T')[0],
-      };
+    const record: TaskRecord = {
+      id: `TR_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      taskId: task.id,
+      taskCode: task.taskCode,
+      taskTitle: task.title,
+      operatorId: executorId,
+      operatorName: executorName,
+      action: 'reject',
+      actionName: '执行人拒绝',
+      fromStatus: task.status,
+      toStatus: 'rejected',
+      reason: rejectReason,
+      actionTime: now,
+      createdAt: now.split('T')[0],
+    };
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
-      // 更新任务：清空执行人，状态改为 rejected，增加拒绝计数
-      const updatedTasks = prev.map((t, idx) => {
-        if (idx !== taskIndex) return t;
-        console.log('[rejectByExecutor] setting executorRejectCount:', (t.executorRejectCount || 0) + 1);
-        return {
-          ...t,
-          status: 'rejected',
-          assigneeId: '',
-          assigneeName: '',
-          rejectReason: rejectReason,
-          executorRejectCount: (t.executorRejectCount || 0) + 1,
-          updatedAt: now,
-          version: t.version + 1,
-        };
-      });
-
-      // 立即保存到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updatedTasks }));
-      saveTaskRecords([record, ...taskRecords]);
-
-      return updatedTasks;
+    getStoreForTask(task).updateTask(task.id, {
+      status: 'rejected',
+      assigneeId: '',
+      assigneeName: '',
+      rejectReason: rejectReason,
+      executorRejectCount: ((task as { executorRejectCount?: number }).executorRejectCount || 0) + 1,
+      updatedAt: now,
+      version: task.version + 1,
     });
-
-    // API异步同步：执行人拒绝
-    syncToApi(
-      () => enhancedApiClient.put(`/farm-tasks/${id}`, {
-        status: 'rejected', assigneeId: '', assigneeName: '',
-      }),
-      `rejectByExecutor(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords]);
+  }, [tasks, saveTaskRecords]);
 
   // 重新派发
   const reassignTask = useCallback((id: string, newAssigneeId: string, newAssigneeName: string) => {
     console.log('[reassignTask] called with:', id, newAssigneeId, newAssigneeName);
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
-        if (!['failed', 'abandoned', 'rejected'].includes(task.status)) return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task || !['failed', 'abandoned', 'rejected'].includes(task.status)) return;
 
-        const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-        // 如果执行人拒绝次数 >= 2，必须清空执行人（强制更换执行人），但状态仍为 pending
-        const rejectCount = task.executorRejectCount || 0;
-        console.log('[reassignTask] task:', task.id, 'status:', task.status, 'executorRejectCount:', rejectCount);
-        const mustClearAssignee = rejectCount >= 2;
-        console.log('[reassignTask] mustClearAssignee:', mustClearAssignee);
-        const finalAssigneeId = mustClearAssignee ? '' : newAssigneeId;
-        const finalAssigneeName = mustClearAssignee ? '' : newAssigneeName;
-        const finalStatus: TaskStatus = 'pending'; // 始终保持 pending，这样任务会出现在派发列表中等待选择新执行人
-        console.log('[reassignTask] finalStatus:', finalStatus);
+    const rejectCount = (task as { executorRejectCount?: number }).executorRejectCount || 0;
+    const mustClearAssignee = rejectCount >= 2;
+    const finalAssigneeId = mustClearAssignee ? '' : newAssigneeId;
+    const finalAssigneeName = mustClearAssignee ? '' : newAssigneeName;
+    const finalStatus: TaskStatus = 'pending';
 
-        const record = createTaskRecord(
-          { ...task, status: finalStatus, assigneeId: finalAssigneeId, assigneeName: finalAssigneeName },
-          'reassign',
-          task.status
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          status: finalStatus,
-          assigneeId: finalAssigneeId,
-          assigneeName: finalAssigneeName,
-          reworkCount: 0,
-          reworkHistory: [],
-          deadlineExtensions: [],
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：重新派发
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
-        assigneeId: newAssigneeId, assigneeName: newAssigneeName,
-      }),
-      `reassignTask(${id})`
+    const record = createTaskRecord(
+      { ...task, status: finalStatus, assigneeId: finalAssigneeId, assigneeName: finalAssigneeName },
+      'reassign',
+      task.status
     );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
+    getStoreForTask(task).updateTask(id, {
+      status: finalStatus,
+      assigneeId: finalAssigneeId,
+      assigneeName: finalAssigneeName,
+      reworkCount: 0,
+      reworkHistory: [],
+      deadlineExtensions: [],
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 催办
   const sendReminder = useCallback((id: string, message?: string) => {
@@ -1618,7 +1281,7 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'remind', undefined, { comment: message });
     saveTaskRecords([record, ...taskRecords]);
 
-    // API异步同步：催办
+    // API异步同步：催办（保留 — 催办API不由farmTaskStore管理）
     syncToApi(
       () => enhancedApiClient.post(`/farm-tasks/${id}/remind`, { message }),
       `sendReminder(${id})`
@@ -1627,114 +1290,68 @@ export function useTasks(): UseTasksReturn {
 
   // 延期
   const extendDeadline = useCallback((id: string, newDeadline: string, reason: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
 
-        const now = new Date().toISOString();
-
-        // 检查延期次数限制
-        if (task.deadlineExtensions.length >= DEADLINE_CONFIG.maxExtensions) {
-          console.warn('延期次数已达上限');
-          return task;
-        }
-
-        const extension: DeadlineExtension = {
-          id: `EXT_${Date.now()}`,
-          originalDeadline: task.dueDate || '',
-          newDeadline,
-          reason,
-          extendedBy: task.assigneeId,
-          extendedAt: now,
-        };
-
-        const record = createTaskRecord(
-          { ...task, dueDate: newDeadline },
-          'extend_deadline',
-          task.status,
-          { comment: reason }
-        );
-
-        saveTaskRecords([record, ...taskRecords]);
-
-        return {
-          ...task,
-          dueDate: newDeadline,
-          deadlineExtensions: [...task.deadlineExtensions, extension],
-          updatedAt: now,
-          version: task.version + 1,
-        };
-      });
-
-      // 持久化到 localStorage
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // API异步同步：延期
-    syncToApi(
-      () => enhancedApiClient.post(`/farm-tasks/${id}/extend-deadline`, {
-        newDeadline, reason,
-      }),
-      `extendDeadline(${id})`
-    );
-  }, [setTasks, taskRecords, saveTaskRecords, createTaskRecord]);
-
-  // 删除任务（同时从本地和后端删除）
-  const deleteTask = useCallback(async (id: string) => {
-    // 先从本地删除
-    setTasks(prev => {
-      const updated = prev.filter(task => task.id !== id);
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
-    });
-
-    // 同时调用后端API删除（失败不影响本地）
-    try {
-      await enhancedApiClient.delete(`/farm-tasks/${id}`);
-      console.log('[deleteTask] 后端删除成功:', id);
-    } catch (error) {
-      console.warn('[deleteTask] 后端删除失败:', id, error);
+    // 检查延期次数限制
+    if (task.deadlineExtensions.length >= DEADLINE_CONFIG.maxExtensions) {
+      console.warn('延期次数已达上限');
+      return;
     }
-  }, [setTasks]);
 
-  // 更新任务（本地乐观更新 + API同步）
+    const now = new Date().toISOString();
+
+    const extension: DeadlineExtension = {
+      id: `EXT_${Date.now()}`,
+      originalDeadline: task.dueDate || '',
+      newDeadline,
+      reason,
+      extendedBy: task.assigneeId,
+      extendedAt: now,
+    };
+
+    const record = createTaskRecord(
+      { ...task, dueDate: newDeadline },
+      'extend_deadline',
+      task.status,
+      { comment: reason }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
+    getStoreForTask(task).updateTask(id, {
+      dueDate: newDeadline,
+      deadlineExtensions: [...task.deadlineExtensions, extension],
+      updatedAt: now,
+      version: task.version + 1,
+    });
+  }, [tasks, createTaskRecord, saveTaskRecords]);
+
+  // 删除任务（Store 层统一管理：根据任务来源路由到正确 Store）
+  const deleteTask = useCallback((id: string) => {
+    const task = tasks.find(t => t.id === id);
+    const store = task ? getStoreForTask(task) : useFarmTaskStore.getState();
+    store.deleteTask(id);
+  }, [tasks]);
+
+  // 更新任务（本地乐观更新 + API同步，根据任务来源路由到正确 Store）
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
-    setTasks(prev => {
-      const updated = prev.map(task =>
-        task.id === id
-          ? { ...task, ...updates, updatedAt: new Date().toISOString(), version: task.version + 1 }
-          : task
-      );
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    const task = tasks.find(t => t.id === id);
+    const store = task ? getStoreForTask(task) : useFarmTaskStore.getState();
+    store.updateTask(id, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
     });
+  }, [tasks]);
 
-    // API 异步同步：使用通用 PUT 端点
-    syncToApi(
-      () => enhancedApiClient.put(`/farm-tasks/${id}`, updates),
-      `updateTask(${id})`
-    );
-  }, [setTasks]);
-
-  // 更新任务状态（通用状态更新，本地+API同步）
+  // 更新任务状态（通用状态更新，根据任务来源路由到正确 Store）
   const updateTaskStatus = useCallback((id: string, status: TaskStatus) => {
-    setTasks(prev => {
-      const updated = prev.map(task =>
-        task.id === id
-          ? { ...task, status, updatedAt: new Date().toISOString(), version: task.version + 1 }
-          : task
-      );
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    const task = tasks.find(t => t.id === id);
+    const store = task ? getStoreForTask(task) : useFarmTaskStore.getState();
+    store.updateTask(id, {
+      status,
+      updatedAt: new Date().toISOString(),
     });
-
-    // API 异步同步
-    syncToApi(
-      () => enhancedApiClient.put(`/farm-tasks/${id}`, { status }),
-      `updateTaskStatus(${id})`
-    );
-  }, [setTasks]);
+  }, [tasks]);
 
   // 更新任务进度
   const updateTaskProgress = useCallback((id: string, progress: number, options?: {
@@ -1742,24 +1359,20 @@ export function useTasks(): UseTasksReturn {
     workload?: number;
     isFinal?: boolean;
   }) => {
-    setTasks(prev => {
-      const updated = prev.map(task => {
-        if (task.id !== id) return task;
-        const newStatus: TaskStatus = options?.isFinal ? 'waiting_acceptance'
-          : progress > 0 && task.status === 'accepted' ? 'in_progress'
-          : task.status;
-        return {
-          ...task,
-          progress,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-          version: task.version + 1,
-        };
-      });
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify({ version: DATA_VERSION, data: updated }));
-      return updated;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newStatus: TaskStatus = options?.isFinal ? 'waiting_acceptance'
+      : progress > 0 && task.status === 'accepted' ? 'in_progress'
+      : task.status;
+
+    getStoreForTask(task).updateTask(id, {
+      progress,
+      status: newStatus,
+      updatedAt: new Date().toISOString(),
+      version: task.version + 1,
     });
-  }, [setTasks]);
+  }, [tasks]);
 
   // 获取任务
   const getTask = useCallback((id: string) => {
@@ -1776,13 +1389,8 @@ export function useTasks(): UseTasksReturn {
     return taskRecords.filter(record => record.taskId === taskId);
   }, [taskRecords]);
 
-  // 确保 tasks 总是数组，防止 undefined 导致渲染错误
-  const safeTasks = Array.isArray(tasks) ? tasks : [];
-
   return {
-    tasks: safeTasks,
-    unifiedTasks: safeTasks, // 统一任务列表（unifiedTasks作为tasks的别名）
-    setTasks,
+    tasks,
     taskRecords,
     reminderRecords,
     detectOvertime,

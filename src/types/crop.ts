@@ -370,6 +370,12 @@ export interface SeedSourceFilters {
   endDate: string;       // 结束日期
   status: string;       // 库存状态
   createBy: string;      // 记录人员
+  // 方案1.3: 更多筛选字段
+  cropType?: string;     // 作物类型（级联筛选）
+  orgId?: string;        // 组织ID（级联筛选记录人）
+  recorderId?: string;   // 记录人ID
+  surplusMin?: number;   // 剩余数量最小值
+  surplusMax?: number;   // 剩余数量最大值
 }
 
 /** 育苗筛选条件 */
@@ -409,6 +415,10 @@ export interface PlantingFilters {
   cropName: string;      // 作物名称
   transplantDate: string; // 定植日期
   createBy: string;      // 记录人员
+  // 方案3.3: 组织筛选 + 定植数量范围筛选
+  orgName?: string;       // 组织名称
+  countMin?: number;      // 定植数量最小值
+  countMax?: number;      // 定植数量最大值
 }
 
 // ========== 作物实例类型（核心） ==========

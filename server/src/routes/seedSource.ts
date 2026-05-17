@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { seedSourceController } from '../controllers/seedSource.controller';
+import { getDatabase } from '../db';
 
 const router = Router();
 
@@ -15,6 +16,19 @@ router.get('/generate-code', (req, res, next) => seedSourceController.generateCo
 
 // 批量删除路由必须在 /:id 之前
 router.delete('/batch', (req, res, next) => seedSourceController.deleteBatch(req, res, next));
+
+// 检查种源是否可删除（被育苗引用则不可删）
+router.get('/:id/check-deletable', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const cntResult = db.exec('SELECT COUNT(*) as cnt FROM seedlings WHERE source_id = ?', [id]);
+    const refCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
+    res.json({ success: true, data: { deletable: refCount === 0, refCount } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '检查失败' });
+  }
+});
 
 // 将请求传递给 controller
 router.get('/', (req, res, next) => seedSourceController.getAll(req, res, next));

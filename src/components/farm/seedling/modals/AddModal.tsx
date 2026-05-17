@@ -4,7 +4,7 @@
  * V3.1: 支持补录申请功能
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
@@ -102,6 +102,8 @@ export function AddModal({
     propagationMultiple: 0,   // 扩繁倍数（扩繁模式用）
     customMultiple: 0,        // 自定义扩繁倍数
     theoreticalYield: 0,        // 理论产量（扩繁模式用）
+    // 方案2.6: 育苗工时
+    workHours: 0,
     // V3.1 补录相关字段
     isSupplementary: false,  // 是否补录
     supplementaryReason: '',  // 补录原因
@@ -109,6 +111,41 @@ export function AddModal({
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
+
+  // 方案2.7: combogrid种源选择器状态
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+
+  // 方案2.7: 过滤种源列表用于combogrid展示
+  const filteredSeedSources = useMemo(() => {
+    if (!sourceSearch) return seedSources || [];
+    const q = sourceSearch.toLowerCase();
+    return (seedSources || []).filter(s =>
+      s.seedCode?.toLowerCase().includes(q) ||
+      s.cropName?.toLowerCase().includes(q) ||
+      s.cropVariety?.toLowerCase().includes(q)
+    );
+  }, [seedSources, sourceSearch]);
+
+  // 方案2.7: 获取选中种源的显示文本
+  const selectedSourceLabel = useMemo(() => {
+    const source = seedSources.find(s => s.id === formData.sourceId);
+    return source ? `${source.seedCode} - ${source.cropName}` : '';
+  }, [seedSources, formData.sourceId]);
+
+  // 方案2.7: combogrid popover 外部点击关闭
+  const sourcePopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sourcePopoverOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sourcePopoverRef.current && !sourcePopoverRef.current.contains(e.target as Node)) {
+        setSourcePopoverOpen(false);
+        setSourceSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sourcePopoverOpen]);
 
   // 自动计算目标成苗数
   const targetSurvivalCount = useMemo(() => {
@@ -286,6 +323,7 @@ export function AddModal({
       targetSurvivalCount: targetSurvivalCount,
       chargePerson: formData.chargePerson || undefined,
       productionPlanCode: formData.productionPlanId || undefined,
+      workHours: formData.workHours || undefined,
       calculateMode: formData.calculateMode,
       motherPlantCount: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? formData.motherPlantCount : undefined,
       propagationMultiple: formData.calculateMode === SeedlingCalculateMode.PROPAGATION
@@ -536,23 +574,84 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             <h3 className="text-sm font-semibold text-blue-900">关联种源信息</h3>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {/* 关联种源 */}
+            {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 关联种源 <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.sourceId}
-                onChange={(e) => handleSourceChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">请选择</option>
-                {Array.isArray(seedSources) && seedSources.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.seedCode} - {s.cropName} ({s.cropVariety})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
+                  placeholder="搜索种源批号或作物名称..."
+                  onFocus={() => {
+                    setSourcePopoverOpen(true);
+                    setSourceSearch('');
+                  }}
+                  onChange={(e) => {
+                    setSourceSearch(e.target.value);
+                    setSourcePopoverOpen(true);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                {/* 清除按钮 */}
+                {formData.sourceId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' }));
+                      setSourceSearch('');
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    ×
+                  </button>
+                )}
+                {/* 下拉表格 Popover */}
+                {sourcePopoverOpen && (
+                  <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden"
+                    style={{ minWidth: '500px', left: 0 }}
+                  >
+                    {/* 表头 */}
+                    <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+                      <div>作物名称</div>
+                      <div>种源批号</div>
+                      <div>采购数量</div>
+                      <div>可用数量</div>
+                    </div>
+                    {/* 表格行 */}
+                    <div className="overflow-y-auto max-h-48">
+                      {filteredSeedSources.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-gray-400 text-center">无匹配种源</div>
+                      ) : (
+                        filteredSeedSources.map(s => (
+                          <div
+                            key={s.id}
+                            onClick={() => {
+                              handleSourceChange(s.id);
+                              setSourcePopoverOpen(false);
+                              setSourceSearch('');
+                            }}
+                            className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
+                              ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
+                          >
+                            <div className="truncate font-medium text-gray-800">{s.cropName}</div>
+                            <div className="truncate text-emerald-700">{s.seedCode}</div>
+                            <div className="text-gray-600">{s.quantity} {s.unit}</div>
+                            <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
+                              {s.availableCount} {s.unit}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {/* 底部提示 */}
+                    <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
+                      共 {filteredSeedSources.length} 条 | 点击行选择 | 点击外部关闭
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 来源类型（只读自动带入） */}
@@ -704,6 +803,20 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* 方案2.6: 育苗工时 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">工时（小时）</label>
+              <input
+                type="number"
+                value={formData.workHours || ''}
+                onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="请输入育苗工时"
+                min="0"
+                step="0.5"
               />
             </div>
           </div>

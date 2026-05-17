@@ -63,6 +63,8 @@ export { VirtualTable, type VirtualTableColumn, type VirtualTableProps } from '.
 
 // 通用组件
 export { Timeline } from './Timeline'
+export { default as LabelResumeTimeline } from './LabelResumeTimeline'
+export type { LabelResumeEntry, LabelResumeTimelineProps } from './LabelResumeTimeline'
 export { List } from './List'
 
 // 数字输入框

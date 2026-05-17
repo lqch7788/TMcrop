@@ -451,7 +451,19 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const { id, seedling_code, source_id, source_name, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-            seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by } = req.body;
+            seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
+            work_hours } = req.body;
+    const workHours = work_hours ?? req.body.workHours;
+
+    // 方案2.5: 验证育苗地点AreaType=4（种植区）
+    if (greenhouse_name) {
+      const db = getDatabase();
+      const areaCheck = db.exec('SELECT area_type FROM greenhouses WHERE name = ? AND area_type IS NOT NULL AND area_type != ?', [greenhouse_name, '4']);
+      const invalidCount = areaCheck[0]?.values?.length || 0;
+      if (invalidCount > 0) {
+        return res.status(400).json({ success: false, error: '所选位置不是种植区域(AreaType=4)，无法用于育苗' });
+      }
+    }
 
     const newId = id || `SD${Date.now()}`;
     const now = new Date().toISOString();
@@ -460,11 +472,11 @@ router.post('/', (req: Request, res: Response) => {
     db.run(`
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, source_id, source_name, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, now, now]
+        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null, now, now]
         .map(v => v === undefined ? null : v));
 
     saveDatabase();

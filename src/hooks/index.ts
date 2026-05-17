@@ -51,3 +51,7 @@ export type {
 // AI优化建议
 export { useAIOptimization } from './useAIOptimization';
 export type { UseAIOptimizationReturn } from './useAIOptimization';
+
+// 生产计划人工成本统计
+export { useLaborCostCalc, calculateLaborCost } from './useLaborCostCalc';
+export type { LaborCostSummary, LaborCostItem } from './useLaborCostCalc';

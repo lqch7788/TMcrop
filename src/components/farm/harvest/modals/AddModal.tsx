@@ -54,6 +54,8 @@ interface AddModalProps {
     // V3.1 补录相关字段
     isSupplementary: boolean;  // 是否补录
     supplementaryReason: string;  // 补录原因
+    // V3.2 单价
+    unitPrice: number;
   };
   onFormChange: (field: string, value: any) => void;
   onAddProduct: () => void;
@@ -182,9 +184,9 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.harvestCode && <p className="text-red-500 text-xs mt-1">{errors.harvestCode}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收日期</label>
+          <label className="block text-sm font-medium text-gray-900 mb-1">采收时间</label>
           <input
-            type="date"
+            type="datetime-local"
             value={addForm.harvestDate}
             onChange={(e) => onFormChange('harvestDate', e.target.value)}
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -265,6 +267,26 @@ export const AddModal: React.FC<AddModalProps> = ({
             placeholder="请输入审核人员"
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+        </div>
+        {/* V3.2 单价字段 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            单价 (元/kg) <span className="text-xs text-gray-400">(可选)</span>
+          </label>
+          <input
+            type="number"
+            value={addForm.unitPrice || ''}
+            onChange={(e) => onFormChange('unitPrice', Number(e.target.value))}
+            placeholder="输入单价自动计算收入"
+            min="0"
+            step="0.01"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+          {(addForm.unitPrice || 0) > 0 && (
+            <p className="mt-1 text-xs text-emerald-600">
+              预计收入: {((addForm.unitPrice || 0) * (addForm.products.reduce((sum: number, p: any) => sum + (p.harvestQuantity || 0), 0))).toFixed(2)} 元
+            </p>
+          )}
         </div>
         {/* V3.0 采收类型 */}
         <div>

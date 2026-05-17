@@ -1,10 +1,14 @@
 /**
  * 种源筛选工具栏组件
+ * 方案1.3: 添加"更多筛选"弹窗 — 作物类型→作物名称级联、组织→记录人级联、剩余数量范围
  */
 
-import React from 'react';
-import { Search, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, RotateCcw, Filter } from 'lucide-react';
 import { SeedSourceFilters, SourceType } from '../../../../types/crop';
+import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
+import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
+import { useUserStore } from '../../../../stores/useUserStore';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -25,6 +29,59 @@ export function SeedSourceFilter({
   suppliers,
   statusOptions
 }: SeedSourceFilterProps) {
+  // 更多筛选弹窗状态
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // 从 Store 获取级联数据
+  const departments = useDepartmentStore((s) => s.departments);
+  const loadDepartments = useDepartmentStore((s) => s.loadDepartments);
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
+
+  // 作物类型选项（从字典）
+  const cropTypes = getDictItems('crop_category');
+
+  // 加载级联数据
+  useEffect(() => {
+    if (showAdvanced) {
+      loadDepartments();
+      loadUsers();
+    }
+  }, [showAdvanced, loadDepartments, loadUsers]);
+
+  // 根据组织过滤记录人
+  const filteredUsers = filters.orgId
+    ? users.filter((u: any) => u.orgOid === filters.orgId)
+    : users;
+
+  // 点击外部关闭弹窗
+  useEffect(() => {
+    if (!showAdvanced) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setShowAdvanced(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAdvanced]);
+
+  // 更新单个高级筛选字段
+  const updateAdvanced = (patch: Partial<SeedSourceFilters>) => {
+    onChange({ ...filters, ...patch });
+  };
+
+  // 是否有高级筛选激活
+  const hasAdvancedFilter = filters.cropType || filters.orgId || filters.recorderId ||
+    filters.surplusMin !== undefined || filters.surplusMax !== undefined;
+
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
@@ -120,7 +177,156 @@ export function SeedSourceFilter({
         </div>
 
         {/* 按钮行 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end">
+          {/* 更多筛选按钮 */}
+          <div className="relative">
+            <button
+              ref={triggerRef}
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className={`h-10 px-3 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors
+                ${hasAdvancedFilter
+                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+            >
+              <Filter className="w-4 h-4" />
+              更多筛选
+              {hasAdvancedFilter && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              )}
+            </button>
+
+            {/* 高级筛选 Popover */}
+            {showAdvanced && (
+              <div
+                ref={popoverRef}
+                className="absolute top-12 right-0 z-50 bg-white rounded-xl shadow-lg border border-gray-200 p-5 w-[480px]"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900">高级筛选</h3>
+                  <button
+                    onClick={() => {
+                      updateAdvanced({
+                        cropType: '',
+                        orgId: '',
+                        recorderId: '',
+                        surplusMin: undefined,
+                        surplusMax: undefined,
+                      });
+                    }}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    清空高级筛选
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* 作物类型 → 作物名称级联 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">作物类型</label>
+                      <select
+                        value={filters.cropType || ''}
+                        onChange={(e) => {
+                          // 切换作物类型时，清空作物名称（因为作物名称已由filters.cropName单独管理，这里作物类型主要用于级联提示）
+                          updateAdvanced({ cropType: e.target.value || undefined });
+                        }}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">全部</option>
+                        {cropTypes.map((t: any) => (
+                          <option key={t.dictCode} value={t.dictCode}>{t.dictLabel}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">作物名称</label>
+                      <input
+                        type="text"
+                        value={filters.cropName}
+                        onChange={(e) => updateAdvanced({ cropName: e.target.value })}
+                        placeholder="按作物名称筛选"
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 组织 → 记录人级联 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">组织</label>
+                      <select
+                        value={filters.orgId || ''}
+                        onChange={(e) => {
+                          const orgId = e.target.value || undefined;
+                          // 切换组织时清空记录人
+                          updateAdvanced({ orgId, recorderId: '' });
+                        }}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">全部</option>
+                        {departments.map((d: any) => (
+                          <option key={d.oid || d.id} value={d.oid || d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">记录人</label>
+                      <select
+                        value={filters.recorderId || ''}
+                        onChange={(e) => updateAdvanced({ recorderId: e.target.value || undefined })}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">全部</option>
+                        {filteredUsers.map((u: any) => (
+                          <option key={u.oid || u.id} value={u.oid || u.id}>{u.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* 剩余数量范围 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">剩余数量范围</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={filters.surplusMin ?? ''}
+                        onChange={(e) => updateAdvanced({
+                          surplusMin: e.target.value ? Number(e.target.value) : undefined
+                        })}
+                        placeholder="最小值"
+                        min="0"
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                      <span className="text-gray-400 text-xs">—</span>
+                      <input
+                        type="number"
+                        value={filters.surplusMax ?? ''}
+                        onChange={(e) => updateAdvanced({
+                          surplusMax: e.target.value ? Number(e.target.value) : undefined
+                        })}
+                        placeholder="最大值"
+                        min="0"
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 底部按钮 */}
+                <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => setShowAdvanced(false)}
+                    className="h-8 px-4 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                  >
+                    关闭
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={onReset}
             className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"

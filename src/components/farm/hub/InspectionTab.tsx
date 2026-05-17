@@ -4,10 +4,9 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useLocalStorage, STORAGE_KEYS } from '../../../hooks/useLocalStorage';
 import { useProblemStore } from '../../../stores/useProblemStore';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
-import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems } from '../../../stores';
+import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems, useFarmTaskStore } from '../../../stores';
 import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
 import { InspectionToolbar } from './components/InspectionToolbar';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
@@ -213,8 +212,8 @@ export function InspectionTab({
   const fetchProblems = useProblemStore((s) => s.fetchProblems);
   const { approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
 
-  // 任务数据（用于获取实际处理进度）
-  const [tasks] = useLocalStorage<any[]>(STORAGE_KEYS.TASKS, []);
+  // 任务数据（用于获取实际处理进度，从 Zustand Store 读取）
+  const tasks = useFarmTaskStore((s) => s.tasks);
 
   // 获取默认巡查人员（避免硬编码）
   const defaultInspector = useMemo(() => {

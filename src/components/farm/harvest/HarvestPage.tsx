@@ -16,6 +16,7 @@ import { inbound as inventoryInbound } from '../../../services/inventoryService'
 import { StockType, BusinessType, SourceType } from '../../../types/inventory';
 import { getCurrentUsername } from '../../../hooks/farm';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { validateUnitPrice, validateDateNotFuture } from '../../../lib/validators';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -211,7 +212,7 @@ export default function HarvestPage() {
       const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
 
       // 导出表头
-      const headers = ['采收单号', '采收日期', '采收区域', '入库仓库', '采收人员', '产品编码', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
+      const headers = ['采收单号', '采收时间', '采收区域', '入库仓库', '采收人员', '单价(元/kg)', '收入(元)', '产品编码', '作物品种', '批次号', '种植模式', '采收量(kg)', '目标产量(kg)', '完成率', '品质等级', '状态', '审核人员', '备注'];
 
       // 展开产品明细生成导出数据
       const exportData: Record<string, string>[] = [];
@@ -228,10 +229,12 @@ export default function HarvestPage() {
           products.forEach((product, productIdx) => {
             exportData.push({
               '采收单号': record.harvestCode || '-',
-              '采收日期': record.harvestDate || '-',
+              '采收时间': record.harvestDate || '-',
               '采收区域': record.greenhouseName || '-',
               '入库仓库': record.warehouseName || '-',
               '采收人员': harvesterNames,
+              '单价(元/kg)': (record.unitPrice != null) ? record.unitPrice.toFixed(2) : '-',
+              '收入(元)': (record.totalAmount != null) ? record.totalAmount.toFixed(2) : '-',
               '产品编码': product.productCode || generateProductCode(product.cropName || record.cropName || '', product.variety || record.variety || '', recordIdx * 100 + productIdx),
               '作物品种': product.variety || record.variety || '-',
               '批次号': product.batchCode || record.batchCode || '-',
@@ -249,10 +252,12 @@ export default function HarvestPage() {
           // 没有产品明细时，显示主行数据
           exportData.push({
             '采收单号': record.harvestCode || '-',
-            '采收日期': record.harvestDate || '-',
+            '采收时间': record.harvestDate || '-',
             '采收区域': record.greenhouseName || '-',
             '入库仓库': record.warehouseName || '-',
             '采收人员': harvesterNames,
+            '单价(元/kg)': (record.unitPrice != null) ? record.unitPrice.toFixed(2) : '-',
+            '收入(元)': (record.totalAmount != null) ? record.totalAmount.toFixed(2) : '-',
             '产品编码': generateProductCode(record.cropName || '', record.variety || '', recordIdx),
             '作物品种': record.variety || '-',
             '批次号': record.batchCode || '-',
@@ -456,7 +461,7 @@ export default function HarvestPage() {
     harvestCode: '',
     batchCode: '',
     greenhouseId: '',
-    harvestDate: new Date().toISOString().split('T')[0],
+    harvestDate: new Date().toISOString().slice(0, 16),
     warehouseId: '',
     harvesterIds: [] as string[],
     harvesterNames: [] as string[],
@@ -482,6 +487,8 @@ export default function HarvestPage() {
     // V3.1 补录相关字段
     isSupplementary: false,  // 是否补录
     supplementaryReason: '',  // 补录原因
+    // V3.2 单价字段
+    unitPrice: 0,  // 单价(元/kg)
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -499,8 +506,19 @@ export default function HarvestPage() {
     if (!newRecord.harvestCode) newErrors.harvestCode = '请生成采收单号';
     if (!newRecord.batchCode) newErrors.batchCode = '请选择采收批次';
     if (!newRecord.greenhouseId) newErrors.greenhouseId = '请选择采收区域';
-    if (!newRecord.harvestDate) newErrors.harvestDate = '请选择采收日期';
+    if (!newRecord.harvestDate) newErrors.harvestDate = '请选择采收时间';
     if (!newRecord.warehouseId) newErrors.warehouseId = '请选择入库仓库';
+
+    // 数值验证（方案4.3 + 方案4.2）
+    if (newRecord.unitPrice && !validateUnitPrice(newRecord.unitPrice)) {
+      if (newRecord.unitPrice < 0) newErrors.unitPrice = '单价不能为负数';
+      else if (newRecord.unitPrice > 1000000) newErrors.unitPrice = '单价不能超过 1,000,000 元/kg';
+      else newErrors.unitPrice = '单价最多2位小数';
+    }
+    if (newRecord.harvestDate && !validateDateNotFuture(newRecord.harvestDate)) {
+      newErrors.harvestDate = '采收时间不能超过当前时间';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -574,6 +592,9 @@ export default function HarvestPage() {
       // 生成采收单号
       const harvestCode = newRecord.harvestCode || await genHarvestCode();
 
+      const quantity = product.harvestQuantity || totalHarvestQuantity;
+      const unitPrice = newRecord.unitPrice || 0;
+
       const record = {
         harvestCode,
         batchCode: newRecord.batchCode,
@@ -581,7 +602,7 @@ export default function HarvestPage() {
         greenhouseId: newRecord.greenhouseId,
         greenhouseName: selectedGreenhouse?.name || '',
         harvestDate: newRecord.harvestDate,
-        harvestQuantity: product.harvestQuantity || totalHarvestQuantity,
+        harvestQuantity: quantity,
         unit: '公斤',
         grade: product.grade as 'A' | 'B' | 'C',
         warehouseId: newRecord.warehouseId,
@@ -595,6 +616,8 @@ export default function HarvestPage() {
         plantingMode: product.plantingMode || selectedBatch?.plantingMode || '',
         targetYield: product.targetYield || selectedBatch?.targetYield || 0,
         quality: 'good' as const,
+        unitPrice,                                    // 单价(元/kg)
+        totalAmount: quantity * unitPrice,            // 收入 = 产量 × 单价
       };
 
       // 使用 Store 添加记录（架构：组件 → Store → API）
@@ -632,13 +655,14 @@ export default function HarvestPage() {
       harvestCode: '',
       batchCode: '',
       greenhouseId: '',
-      harvestDate: new Date().toISOString().split('T')[0],
+      harvestDate: new Date().toISOString().slice(0, 16),
       warehouseId: '',
       harvesterIds: [],
       harvesterNames: [],
       auditor: currentAuditor,
       remarks: '',
       products: [],
+      unitPrice: 0,
     });
     setErrors({});
   };
@@ -657,7 +681,7 @@ export default function HarvestPage() {
     setNewRecord({
       batchCode: '',
       greenhouseId: '',
-      harvestDate: new Date().toISOString().split('T')[0],
+      harvestDate: new Date().toISOString().slice(0, 16),
       harvestQuantity: 0,
       grade: 'A',
       warehouseId: '',

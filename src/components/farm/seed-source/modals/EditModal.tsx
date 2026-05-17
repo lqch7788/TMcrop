@@ -3,13 +3,26 @@
  * V3.1: 使用 API 驱动的 DictSelect 组件和 CropCodeSelector
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
+import * as supplierService from '../../../../services/supplierService';
+
+/** 种源类型 → 供应商类型 级联映射 */
+const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
+  seed: 'SP',
+  seedling: 'SP',
+  cutting: 'SP',
+  grafting: 'SP',
+  tissue_culture: 'SP',
+  split: 'SP',
+  bulb: 'SP',
+  other: null,
+};
 
 interface EditModalProps {
   isOpen: boolean;
@@ -83,6 +96,31 @@ export function EditModal({
       remarks: record.remarks || ''
     });
   }, [record]);
+
+  // 种源类型→供应商类型级联过滤
+  const filteredSuppliers = useMemo(() => {
+    const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+    if (!targetType) return suppliers; // null = 展示全部
+    const allSuppliers = supplierService.getAllSuppliers();
+    const validIds = new Set(
+      allSuppliers.filter(s => s.supplierType === targetType).map(s => String(s.id))
+    );
+    return suppliers.filter(s => validIds.has(s.value));
+  }, [formData.sourceType, suppliers]);
+
+  // 种源类型改变时，清空类型不匹配的已选供应商
+  useEffect(() => {
+    if (formData.supplierId) {
+      const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+      if (targetType) {
+        const allSuppliers = supplierService.getAllSuppliers();
+        const currentSupplier = allSuppliers.find(s => String(s.id) === formData.supplierId);
+        if (currentSupplier && currentSupplier.supplierType !== targetType) {
+          setFormData(prev => ({ ...prev, supplierId: '', supplierName: '' }));
+        }
+      }
+    }
+  }, [formData.sourceType]);
 
   // 处理作物编码选择
   const handleCropCodeChange = (code: string, varietyInfo: CropVariety | null) => {
@@ -268,9 +306,12 @@ export function EditModal({
                 ? '请选择'
                 : '内部自留/无需填写'
             }</option>
-            {formData.sourceOrigin === 'external_purchase' && suppliers.map(s => (
+            {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.map(s => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
+            {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.length === 0 && suppliers.length > 0 && (
+              <option value="" disabled className="text-gray-400">当前种源类型下无匹配供应商，请切换种源类型</option>
+            )}
           </select>
         </div>
 

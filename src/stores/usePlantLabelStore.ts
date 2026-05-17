@@ -82,6 +82,16 @@ interface PlantLabelState {
 
   submitMove: (labelId: number, data: MoveFormData) => Promise<boolean>;
   submitMark: (markId: number, labelIds: number[]) => Promise<boolean>;
+
+  /** 批量生成标签 */
+  generateBatchLabels: (params: {
+    seedling_id?: string;
+    planting_id?: string;
+    count: number;
+    crop_name?: string;
+    area_name?: string;
+    start_date?: string;
+  }) => Promise<{ labels: any[]; totalPrinted: number } | null>;
 }
 
 export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
@@ -191,6 +201,20 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
       return false;
     } catch {
       return false;
+    }
+  },
+
+  /** 批量生成标签（育苗/种植标签打印） */
+  generateBatchLabels: async (params) => {
+    try {
+      const res = await enhancedApiClient.post('/plant-labels/generate-batch', params);
+      if (res.success) {
+        await get().loadLabels();
+        return res.data;
+      }
+      return null;
+    } catch {
+      return null;
     }
   },
 }));

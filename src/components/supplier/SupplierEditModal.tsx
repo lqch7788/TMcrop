@@ -6,6 +6,14 @@ import { UnifiedModal } from '../ui/UnifiedModal';
 import { Cascader } from '../ui/Cascader';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
+import {
+  validateMobilePhone,
+  validateWorkPhone,
+  validateFax,
+  validateBankCard,
+  validateCode,
+  runValidations,
+} from '../../lib/validators';
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -133,6 +141,19 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
 
   const handleSubmit = () => {
     if (!supplier) return;
+
+    // 格式验证（对标 iAGS purchaserManagement 第613-670行）
+    const errors = runValidations([
+      { field: 'mobilePhone', valid: validateMobilePhone(form.mobilePhone), message: '手机号格式不正确，应为1开头的11位数字' },
+      { field: 'workPhone', valid: validateWorkPhone(form.workPhone), message: '工作电话格式不正确，应为区号-号码格式（如：0571-88886666）' },
+      { field: 'fax', valid: validateFax(form.fax), message: '传真格式不正确' },
+      { field: 'bankCardNumber', valid: validateBankCard(form.bankCardNumber), message: '银行卡号格式不正确，应为15位或17-18位数字' },
+    ]);
+    if (errors.length > 0) {
+      alert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
+      return;
+    }
+
     onSave({
       ...supplier,
       ...form

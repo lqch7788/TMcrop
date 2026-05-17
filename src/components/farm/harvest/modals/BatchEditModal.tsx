@@ -170,10 +170,10 @@ export function BatchEditModal({
               />
             </FormField>
 
-            {/* 采收日期 - 可编辑 */}
-            <FormField label="采收日期">
+            {/* 采收时间 - 可编辑 */}
+            <FormField label="采收时间">
               <Input
-                type="date"
+                type="datetime-local"
                 value={editedData.harvestDate ?? currentRecord.harvestDate}
                 onChange={(e) => handleFieldChange('harvestDate', e.target.value)}
               />

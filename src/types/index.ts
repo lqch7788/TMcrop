@@ -376,6 +376,9 @@ export interface HarvestRecord {
   plantingInstanceId?: string; // 种植实例ID
   // 溯源码
   traceCode?: string;         // 追溯码
+  // ========== V3.2 单价+收入字段 ==========
+  unitPrice?: number;          // 单价(元/kg)
+  totalAmount?: number;        // 收入总额(元) = harvestQuantity * unitPrice
   // ========== V3.1 采收入库扩展字段 ==========
   // 入库类型：区分种源入库、育苗成活入库、种植采收入库
   inboundType?: 'seed_source' | 'seedling' | 'planting_harvest';
