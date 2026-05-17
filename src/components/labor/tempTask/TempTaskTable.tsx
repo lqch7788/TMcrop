@@ -1,9 +1,9 @@
-import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { Button } from '@/components/ui/button';
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-50' },
   pending: { label: '待执行', color: 'text-amber-600', bg: 'bg-amber-50' },
   accepted: { label: '已接受', color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -13,6 +13,8 @@ const statusConfig = {
   cancelled: { label: '已取消', color: 'text-gray-600', bg: 'bg-gray-50' },
   rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-50' },
   pending_reassign: { label: '待重新派发', color: 'text-purple-600', bg: 'bg-purple-50' },
+  failed: { label: '执行失败', color: 'text-red-600', bg: 'bg-red-50' },
+  abandoned: { label: '已放弃', color: 'text-gray-500', bg: 'bg-gray-100' },
 };
 
 // 必填反馈配置
@@ -55,16 +57,23 @@ interface TempTaskTableProps {
   batchEditMode?: boolean;
   batchDeleteMode?: boolean;
   selectedRows: string[];
+  isMyTasksView?: boolean; // 执行人视图时显示"接受/拒绝"；管理者视图显示"撤回/取消"
   onViewTask: (task: TempTask) => void;
   onEditTask: (task: TempTask) => void;
   onStartTask?: (task: TempTask) => void;
   onSubmitComplete?: (task: TempTask) => void;
   onAccept?: (task: TempTask) => void;
+  onReject?: (task: TempTask) => void; // 执行人拒绝
   onWithdraw?: (task: TempTask) => void;
   onCancel?: (task: TempTask) => void;
+  onContinue?: (task: TempTask) => void; // 继续执行
   onReassign?: (task: TempTask) => void;
+  onPublish?: (task: TempTask) => void; // 发布草稿
   onAcceptComplete?: (task: TempTask) => void;
   onRejectComplete?: (task: TempTask, reason: string) => void;
+  // 催办
+  canRemind?: (taskId: string) => { allowed: boolean; reason?: string };
+  sendReminder?: (task: TempTask) => void;
   onSelectAll?: () => void;
   onSelectRow?: (id: string) => void;
   pagination?: {
@@ -83,16 +92,22 @@ export function TempTaskTable({
   batchEditMode = false,
   batchDeleteMode = false,
   selectedRows = [],
+  isMyTasksView = false,
   onViewTask,
   onEditTask,
   onStartTask,
   onSubmitComplete,
   onAccept,
+  onReject,
   onWithdraw,
   onCancel,
+  onContinue,
   onReassign,
+  onPublish,
   onAcceptComplete,
   onRejectComplete,
+  canRemind,
+  sendReminder,
   onSelectAll,
   onSelectRow,
   pagination,
@@ -284,58 +299,87 @@ export function TempTaskTable({
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-1 flex-wrap">
-                    {/* 待验收 或 进度100% - 验收按钮 */}
+                    {/* 草稿状态 - 发布按钮 */}
+                    {task.status === 'draft' && onPublish && (
+                      <Button size="sm" variant="blue" onClick={() => onPublish(task)}>
+                        发布
+                      </Button>
+                    )}
+
+                    {/* 待验收 - 验收按钮 */}
                     {(task.status === 'waiting_acceptance' || task.progress === 100) && onAccept && (
-                      <Button
-                        size="sm"
-                        onClick={() => onAccept(task)}
-                      >
+                      <Button size="sm" onClick={() => onAccept(task)}>
                         验收
                       </Button>
                     )}
 
-                    {/* pending 且进度未100% - 撤回按钮 */}
-                    {task.status === 'pending' && task.progress !== 100 && onWithdraw && (
-                      <Button
-                        variant="warning"
-                        size="sm"
-                        onClick={() => onWithdraw(task)}
-                      >
-                        撤回
+                    {/* pending 且无执行人 - 选择执行人 */}
+                    {task.status === 'pending' && !task.assigneeId && onReassign && (
+                      <Button size="sm" variant="blue" onClick={() => onReassign(task)}>
+                        选择执行人
                       </Button>
                     )}
 
-                    {/* in_progress - 取消按钮 */}
-                    {task.status === 'in_progress' && onCancel && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onCancel(task)}
-                      >
+                    {/* pending 且有执行人 */}
+                    {task.status === 'pending' && task.assigneeId && (
+                      <div className="flex items-center gap-1">
+                        {isMyTasksView ? (
+                          <>
+                            {onAccept && (
+                              <Button size="sm" onClick={() => onAccept(task)}>接受</Button>
+                            )}
+                            {onReject && (
+                              <Button size="sm" variant="destructive" onClick={() => onReject(task)}>拒绝</Button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {onWithdraw && (
+                              <Button size="sm" variant="warning" onClick={() => onWithdraw(task)}>撤回</Button>
+                            )}
+                            {onCancel && (
+                              <Button size="sm" variant="destructive" onClick={() => onCancel(task)}>取消</Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* accepted/in_progress - 取消按钮 */}
+                    {(task.status === 'accepted' || task.status === 'in_progress') && onCancel && (
+                      <Button size="sm" variant="destructive" onClick={() => onCancel(task)}>
                         取消
                       </Button>
                     )}
 
-                    {/* rejected/pending_reassign - 重新派发按钮 */}
-                    {(task.status === 'rejected' || task.status === 'pending_reassign') && onReassign && (
-                      <Button
-                        variant="blue"
-                        size="sm"
-                        onClick={() => onReassign(task)}
-                      >
+                    {/* rejected/pending_reassign/failed/abandoned - 重新派发 */}
+                    {(task.status === 'rejected' || task.status === 'pending_reassign' || task.status === 'failed' || task.status === 'abandoned') && onReassign && (
+                      <Button size="sm" variant="blue" onClick={() => onReassign(task)}>
                         重新派发
                       </Button>
                     )}
 
-                    {/* pending 但没有执行人 - 选择执行人按钮 */}
-                    {task.status === 'pending' && !task.assigneeId && onReassign && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onReassign(task)}
-                      >
-                        选择执行人
+                    {/* 已完成或已驳回后可继续执行 */}
+                    {(task.status === 'completed' || task.status === 'rejected') && onContinue && (
+                      <Button size="sm" variant="outline" onClick={() => onContinue(task)}>
+                        继续执行
                       </Button>
+                    )}
+
+                    {/* 催办按钮 - 已发布且非终态 */}
+                    {!['draft', 'completed', 'cancelled', 'abandoned', 'pending'].includes(task.status) && sendReminder && (
+                      <button
+                        onClick={() => sendReminder(task)}
+                        disabled={canRemind ? !canRemind(task.id).allowed : false}
+                        className={`px-2 py-1 text-xs rounded transition-colors ${
+                          canRemind?.(task.id)?.allowed !== false
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={canRemind?.(task.id)?.reason || ''}
+                      >
+                        催办
+                      </button>
                     )}
                   </div>
                 </td>

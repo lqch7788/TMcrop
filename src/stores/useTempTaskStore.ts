@@ -85,6 +85,21 @@ const FIELD_MAP: Record<string, string> = {
   update_time: 'updatedAt',
   reject_reason: 'rejectReason',
   acceptance_remarks: 'acceptanceRemarks',
+  // 新增字段映射
+  due_date: 'dueDate',
+  estimated_hours: 'estimatedHours',
+  estimated_days: 'estimatedDays',
+  worker_count: 'workerCount',
+  actual_hours: 'actualHours',
+  progress: 'progress',
+  reject_count: 'rejectCount',
+  urgency: 'urgency',
+  operation_records: 'operationRecords',
+  title: 'title',
+  location: 'location',
+  priority: 'priority',
+  status: 'status',
+  remarks: 'remarks',
 };
 
 /** 后端 → 前端 字段映射 */

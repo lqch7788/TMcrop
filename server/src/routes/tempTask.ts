@@ -110,26 +110,15 @@ router.get('/:id', (req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   try {
     const {
-      id,
-      task_code,
-      task_title,
-      task_type,
-      task_content,
-      requester_id,
-      requester_name,
-      assignee_id,
-      assignee_name,
-      greenhouse_id,
-      greenhouse_name,
-      area_name,
-      request_date,
-      request_time,
-      priority,
-      status,
-      completion_date,
-      completion_note,
-      remarks,
-      create_by,
+      id, task_code, task_title, task_type, task_content,
+      requester_id, requester_name, assignee_id, assignee_name,
+      greenhouse_id, greenhouse_name, area_name,
+      request_date, request_time, priority, status,
+      completion_date, completion_note, remarks, create_by,
+      // 新增字段
+      due_date, urgency, estimated_hours, estimated_days,
+      worker_count, actual_hours, progress, reject_count,
+      reject_reason, acceptance_remarks, title, location,
     } = req.body;
 
     const newId = id || `TT${Date.now()}`;
@@ -144,35 +133,33 @@ router.post('/', (req: Request, res: Response) => {
         greenhouse_id, greenhouse_name, area_name,
         request_date, request_time, priority, status,
         completion_date, completion_note, remarks, create_by,
-        create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        create_time, update_time, due_date, urgency,
+        estimated_hours, estimated_days, worker_count,
+        actual_hours, progress, reject_count, reject_reason,
+        acceptance_remarks, title, location
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId,
-      taskCode,
-      task_title,
-      task_type,
-      task_content,
-      requester_id,
-      requester_name,
-      assignee_id,
-      assignee_name,
-      greenhouse_id,
-      greenhouse_name,
-      area_name,
+      newId, taskCode, task_title, task_type, task_content,
+      requester_id, requester_name, assignee_id, assignee_name,
+      greenhouse_id, greenhouse_name, area_name,
       request_date || now.substring(0, 10),
       request_time || now.substring(11, 19),
-      priority || 'medium',
-      status || 'pending',
-      completion_date,
-      completion_note,
-      remarks,
-      create_by,
-      now,
-      now,
+      priority || 'medium', status || 'pending',
+      completion_date, completion_note, remarks, create_by,
+      now, now,
+      due_date, urgency || 'normal',
+      estimated_hours ?? 0, estimated_days ?? 0, worker_count ?? 1,
+      actual_hours ?? 0, progress ?? 0, reject_count ?? 0,
+      reject_reason, acceptance_remarks,
+      title || task_title, location || area_name,
     ]);
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, task_code: taskCode } });
+
+    // 读取完整记录返回
+    const created = queryToObjects(db, `SELECT * FROM temp_tasks WHERE id = ?`, [newId]);
+    const data = created.length > 0 ? created[0] : { id: newId, task_code: taskCode };
+    res.status(201).json({ success: true, data });
   } catch (error) {
     console.error('创建临时任务失败:', error);
     res.status(500).json({ success: false, error: '创建临时任务失败' });
