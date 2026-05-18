@@ -481,6 +481,43 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 **构建状态：** ✅ 前端 + 后端均通过
 **审批中心修复计划 5 个阶段全部完成**
 
+### 2026-05-18 会话 — 数据字典去重修复
+
+**问题诊断：**
+1. 两套种子数据（`seedData.ts` + `seedBasicData.ts`）在每次服务器启动时都无条件执行
+2. 两套数据使用不同的 ID 体系，同一 `(category_code, dict_code)` 存在不同 ID 的行，`INSERT OR REPLACE` 按 `id` 主键处理导致重复
+3. 删除操作是软删除（status='inactive'），重启时种子数据覆盖回 'active'，删除项复活
+4. seedBasicData.ts 内部有 6 个 ID 冲突（D138/D139/D140/D141/D142/D143 被多个分类复用），导致 `INSERT OR REPLACE` 时不同分类的条目相互覆盖
+
+**修复内容：**
+
+1. **seedBasicData.ts ID 冲突修复**：
+   - source_origin 分类 D138-D148 → SO01-SO12（12个唯一ID）
+   - greenhouse_type 分类 D140-D143 → GT01-GT04（4个唯一ID）
+
+2. **移除 destructive DELETE**：
+   - seedBasicData.ts `seedDictionaries()` 中 12 个分类的 `DELETE FROM` 语句已移除
+   - 改为存在性检查（SELECT 先查再 INSERT），不丢失任何数据
+
+3. **seedData.ts 种子逻辑修复**：
+   - `INSERT OR REPLACE` → 存在性检查 + `INSERT`
+   - 添加 ID 冲突回退机制（try/catch + 生成唯一 fallback ID）
+
+4. **数据库去重迁移**（`fixMissingSchema.ts` 新增 `deduplicateDictionaries()`）：
+   - 每次启动时自动检测活跃重复条目
+   - 融合全部字段（label/value/color/sort_order）到最优行
+   - 硬删除冗余行（数据已合并完备，不会丢失）
+
+5. **启动顺序优化**（`index.ts`）：
+   - 去重 → seedBasicData（数据更完整）→ seedData（补充独有分类）
+   - 保证更完整的数据优先生效
+
+**页面引用验证**：所有页面通过 `(category_code, dict_code)` 组合引用字典项，不依赖 `id`，去重后引用不会断裂。
+
+**涉及文件：** `fixMissingSchema.ts`、`seedBasicData.ts`、`seedData.ts`、`index.ts`
+**构建状态：** ✅ 前端 + 后端 TypeScript 均通过
+**验证结果：** 二次重启后"字典数据无重复，跳过去重"+"新增 0，跳过全部"
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

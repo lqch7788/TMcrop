@@ -578,10 +578,10 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D03Y', categoryCode: 'notification_config', dictCode: 'wechat_notification_enabled', dictLabel: '启用微信通知', dictValue: 'false', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
   { id: 'D03Z', categoryCode: 'notification_config', dictCode: 'notification_reminder_hours', dictLabel: '通知提醒间隔(小时)', dictValue: '24', color: 'gray', sortOrder: 4, isDefault: 0, status: 'active' },
   // 温室类型
-  { id: 'D140', categoryCode: 'greenhouse_type', dictCode: 'glass', dictLabel: '玻璃温室', dictValue: 'glass', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D141', categoryCode: 'greenhouse_type', dictCode: 'solar', dictLabel: '日光温室', dictValue: 'solar', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D142', categoryCode: 'greenhouse_type', dictCode: 'plastic', dictLabel: '塑料大棚', dictValue: 'plastic', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'D143', categoryCode: 'greenhouse_type', dictCode: 'open', dictLabel: '露天种植', dictValue: 'open', color: 'gray', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'GT01', categoryCode: 'greenhouse_type', dictCode: 'glass', dictLabel: '玻璃温室', dictValue: 'glass', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'GT02', categoryCode: 'greenhouse_type', dictCode: 'solar', dictLabel: '日光温室', dictValue: 'solar', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'GT03', categoryCode: 'greenhouse_type', dictCode: 'plastic', dictLabel: '塑料大棚', dictValue: 'plastic', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'GT04', categoryCode: 'greenhouse_type', dictCode: 'open', dictLabel: '露天种植', dictValue: 'open', color: 'gray', sortOrder: 4, isDefault: 0, status: 'active' },
   // 温室状态
   { id: 'D040', categoryCode: 'greenhouse_status', dictCode: 'using', dictLabel: '使用中', dictValue: 'using', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D041', categoryCode: 'greenhouse_status', dictCode: 'maintenance', dictLabel: '维护中', dictValue: 'maintenance', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -635,18 +635,19 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D138', categoryCode: 'material_cost_type', dictCode: 'film', dictLabel: '基质农膜', dictValue: 'film', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'D139', categoryCode: 'material_cost_type', dictCode: 'other', dictLabel: '其他物料', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
   // 来源途径 - V3.0扩展至12项（含历史数据）
-  { id: 'D138', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '自产自繁', dictValue: 'self_produced', color: 'green', sortOrder: 0, isDefault: 0, status: 'active' },
-  { id: 'D139', categoryCode: 'source_origin', dictCode: 'commissioned', dictLabel: '委托培育', dictValue: 'commissioned', color: 'purple', sortOrder: 0, isDefault: 0, status: 'active' },
-  { id: 'D139A', categoryCode: 'source_origin', dictCode: 'gift', dictLabel: '政府/机构赠送', dictValue: 'gift', color: 'orange', sortOrder: 0, isDefault: 0, status: 'active' },
-  { id: 'D140', categoryCode: 'source_origin', dictCode: 'internal_seed', dictLabel: '内部种源', dictValue: 'internal_seed', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
-  { id: 'D141', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
-  { id: 'D142', categoryCode: 'source_origin', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'D143', categoryCode: 'source_origin', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'D144', categoryCode: 'source_origin', dictCode: 'seedling_split', dictLabel: '分株繁殖', dictValue: 'seedling_split', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
-  { id: 'D145', categoryCode: 'source_origin', dictCode: 'cutting', dictLabel: '扦插繁殖', dictValue: 'cutting', color: 'cyan', sortOrder: 6, isDefault: 0, status: 'active' },
-  { id: 'D146', categoryCode: 'source_origin', dictCode: 'direct_seedling', dictLabel: '直播育苗', dictValue: 'direct_seedling', color: 'lime', sortOrder: 7, isDefault: 0, status: 'active' },
-  { id: 'D147', categoryCode: 'source_origin', dictCode: 'direct_planting', dictLabel: '直接定植', dictValue: 'direct_planting', color: 'teal', sortOrder: 8, isDefault: 0, status: 'active' },
-  { id: 'D148', categoryCode: 'source_origin', dictCode: 'external_harvest', dictLabel: '外部采收', dictValue: 'external_harvest', color: 'pink', sortOrder: 9, isDefault: 0, status: 'active' },
+  // 注意：ID已修正为避免与material_cost_type/greenhouse_type的ID冲突
+  { id: 'SO01', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '自产自繁', dictValue: 'self_produced', color: 'green', sortOrder: 0, isDefault: 0, status: 'active' },
+  { id: 'SO02', categoryCode: 'source_origin', dictCode: 'commissioned', dictLabel: '委托培育', dictValue: 'commissioned', color: 'purple', sortOrder: 0, isDefault: 0, status: 'active' },
+  { id: 'SO03', categoryCode: 'source_origin', dictCode: 'gift', dictLabel: '政府/机构赠送', dictValue: 'gift', color: 'orange', sortOrder: 0, isDefault: 0, status: 'active' },
+  { id: 'SO04', categoryCode: 'source_origin', dictCode: 'internal_seed', dictLabel: '内部种源', dictValue: 'internal_seed', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'SO05', categoryCode: 'source_origin', dictCode: 'external_purchase', dictLabel: '外部采购', dictValue: 'external_purchase', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'SO06', categoryCode: 'source_origin', dictCode: 'tissue_culture', dictLabel: '组培苗', dictValue: 'tissue_culture', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'SO07', categoryCode: 'source_origin', dictCode: 'grafting', dictLabel: '嫁接苗', dictValue: 'grafting', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'SO08', categoryCode: 'source_origin', dictCode: 'seedling_split', dictLabel: '分株繁殖', dictValue: 'seedling_split', color: 'yellow', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'SO09', categoryCode: 'source_origin', dictCode: 'cutting', dictLabel: '扦插繁殖', dictValue: 'cutting', color: 'cyan', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'SO10', categoryCode: 'source_origin', dictCode: 'direct_seedling', dictLabel: '直播育苗', dictValue: 'direct_seedling', color: 'lime', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'SO11', categoryCode: 'source_origin', dictCode: 'direct_planting', dictLabel: '直接定植', dictValue: 'direct_planting', color: 'teal', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'SO12', categoryCode: 'source_origin', dictCode: 'external_harvest', dictLabel: '外部采收', dictValue: 'external_harvest', color: 'pink', sortOrder: 9, isDefault: 0, status: 'active' },
   // ============================================
   // 作物管理字典项（V5.0方案补充）
   // ============================================
@@ -1200,49 +1201,67 @@ export function seedDictionaryCategories() {
  */
 export function seedDictionaries() {
   const db = getDatabase();
-
-  // 先清理可能重复的字典分类，避免与 seedData.ts 中的数据重复
-  // seedData.ts 中有以下分类的 biz-xxx 格式 ID，需要清理
-  const categoriesToClean = [
-    'source_type',       // biz-020 ~ biz-027
-    'seedling_type',     // biz-001 ~ biz-012
-    'seedling_site',     // biz-030 ~ biz-033
-    'planting_area',     // biz-040 ~ biz-044
-    'survival_rate_target', // biz-050 ~ biz-052
-    'seedling_plan_type',   // biz-060 ~ biz-062
-    'propagation_multiple',  // biz-070 ~ biz-077
-    'planting_status',   // biz-085 ~ biz-088
-    'operator',          // biz-080 ~ biz-084
-    'material_type',     // dt-mat-xxx
-    'employee_status',   // dt-emp-xxx
-    'gender',            // dt-gender-xxx
-  ];
-
-  for (const cat of categoriesToClean) {
-    db.run(`DELETE FROM dictionaries WHERE category_code = ?`, [cat]);
-  }
+  let inserted = 0;
+  let skipped = 0;
 
   for (const dict of defaultDictionaries) {
-    db.run(`
-      INSERT OR REPLACE INTO dictionaries
-      (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      dict.id,
-      dict.categoryCode,
-      dict.dictCode,
-      dict.dictLabel,
-      dict.dictValue,
-      dict.color,
-      dict.sortOrder,
-      dict.isDefault,
-      dict.status,
-      new Date().toISOString(),
-      new Date().toISOString()
-    ]);
+    // 检查 (category_code, dict_code) 是否已存在（不管状态），存在则跳过
+    const checkStmt = db.prepare(
+      'SELECT id FROM dictionaries WHERE category_code = ? AND dict_code = ?'
+    );
+    checkStmt.bind([dict.categoryCode, dict.dictCode]);
+    const exists = checkStmt.step();
+    checkStmt.free();
+
+    if (exists) {
+      skipped++;
+      continue;
+    }
+
+    // 插入新条目；若ID冲突（极罕见），自动生成唯一ID回退
+    try {
+      db.run(`
+        INSERT INTO dictionaries
+        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        dict.id,
+        dict.categoryCode,
+        dict.dictCode,
+        dict.dictLabel,
+        dict.dictValue,
+        dict.color,
+        dict.sortOrder,
+        dict.isDefault,
+        dict.status,
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]);
+    } catch {
+      // ID冲突回退：生成唯一ID
+      const fallbackId = `${dict.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      db.run(`
+        INSERT INTO dictionaries
+        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        fallbackId,
+        dict.categoryCode,
+        dict.dictCode,
+        dict.dictLabel,
+        dict.dictValue,
+        dict.color,
+        dict.sortOrder,
+        dict.isDefault,
+        dict.status,
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]);
+    }
+    inserted++;
   }
 
-  console.log(`已导入 ${defaultDictionaries.length} 条字典项数据`);
+  console.log(`已处理 ${defaultDictionaries.length} 条字典项数据（新增 ${inserted}，跳过 ${skipped}）`);
 }
 
 /**
