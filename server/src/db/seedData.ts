@@ -2569,22 +2569,56 @@ function seedDictionaries() {
     { id: 'dt-fb-016', category: 'feedback_personnel', code: 'xiangwentian', name: '向问天', sort_number: 16 },
   ];
 
+  let inserted = 0;
+  let skipped = 0;
+
   for (const dict of dictionaries) {
-    db.run(`
-      INSERT OR REPLACE INTO dictionaries
-      (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))
-    `, [
-      dict.id,
-      dict.category,
-      dict.code,
-      dict.name,
-      dict.name,
-      dict.sort_number
-    ]);
+    // 检查 (category_code, dict_code) 是否已存在（不管状态），存在则跳过
+    const checkStmt = db.prepare(
+      'SELECT id FROM dictionaries WHERE category_code = ? AND dict_code = ?'
+    );
+    checkStmt.bind([dict.category, dict.code]);
+    const exists = checkStmt.step();
+    checkStmt.free();
+
+    if (exists) {
+      skipped++;
+      continue;
+    }
+
+    // 插入新条目；若ID冲突（极罕见），自动生成唯一ID回退
+    try {
+      db.run(`
+        INSERT INTO dictionaries
+        (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))
+      `, [
+        dict.id,
+        dict.category,
+        dict.code,
+        dict.name,
+        dict.name,
+        dict.sort_number
+      ]);
+    } catch {
+      const fallbackId = `${dict.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      db.run(`
+        INSERT INTO dictionaries
+        (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))
+      `, [
+        fallbackId,
+        dict.category,
+        dict.code,
+        dict.name,
+        dict.name,
+        dict.sort_number
+      ]);
+    }
+    inserted++;
   }
 
-  console.log(`已导入 ${dictionaries.length} 条字典数据`);
+  console.log(`已处理 ${dictionaries.length} 条字典数据（新增 ${inserted}，跳过 ${skipped}）`);
 }
 
 /**

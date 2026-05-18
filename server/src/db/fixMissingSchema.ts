@@ -447,6 +447,106 @@ export async function fixMissingSchema(): Promise<void> {
   console.log('\n数据库结构修复完成！');
 }
 
+/**
+ * 字典数据去重 — 合并每对 (category_code, dict_code) 的多条记录
+ * 保留最完整的行，合并最佳字段，软删除其余
+ * 幂等操作，可安全重复执行
+ */
+export function deduplicateDictionaries(): void {
+  const db = getDatabase();
+
+  // 仅对活跃记录去重（inactive 是用户已删除，不纳入）
+  const stmt = db.prepare(`
+    SELECT category_code, dict_code, COUNT(*) as cnt
+    FROM dictionaries
+    WHERE status = 'active'
+    GROUP BY category_code, dict_code
+    HAVING cnt > 1
+  `);
+
+  const duplicates: Array<{ category_code: string; dict_code: string; cnt: number }> = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as { category_code: string; dict_code: string; cnt: number };
+    duplicates.push(row);
+  }
+  stmt.free();
+
+  if (duplicates.length === 0) {
+    console.log('字典数据无重复，跳过去重');
+    return;
+  }
+
+  console.log(`发现 ${duplicates.length} 组重复字典数据，开始去重...`);
+
+  for (const dup of duplicates) {
+    const categoryCode = dup.category_code;
+    const dictCode = dup.dict_code;
+
+    // 获取该组的所有行，按数据完整性排序
+    const rowsStmt = db.prepare(`
+      SELECT * FROM dictionaries
+      WHERE category_code = ? AND dict_code = ?
+      ORDER BY
+        CASE WHEN color IS NOT NULL AND color != '' THEN 0 ELSE 1 END,
+        CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+        sort_order DESC,
+        updated_at DESC
+    `);
+    rowsStmt.bind([categoryCode, dictCode]);
+    const rows: Array<Record<string, unknown>> = [];
+    while (rowsStmt.step()) {
+      rows.push(rowsStmt.getAsObject());
+    }
+    rowsStmt.free();
+
+    if (rows.length < 2) continue;
+
+    // 保留第一条（排序后最优），融合其他行的更好字段
+    const keeper = rows[0];
+    const toDelete = rows.slice(1);
+
+    // 从所有行中取最佳字段值
+    let bestLabel = keeper.dict_label as string;
+    let bestColor = keeper.color as string | null;
+    let bestValue = keeper.dict_value as string;
+    let bestSortOrder = (keeper.sort_order as number) || 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const label = r.dict_label as string;
+      const color = r.color as string | null;
+      const value = r.dict_value as string;
+      const sortOrder = (r.sort_order as number) || 0;
+
+      // 优先选有内容的 label（更长的）
+      if (label && label.length > bestLabel.length) bestLabel = label;
+      // 优先选有 color 值的
+      if (color && !bestColor) bestColor = color;
+      // 优先选有内容的 value
+      if (value && value.length > bestValue.length) bestValue = value;
+      // 取最大 sort_order
+      if (sortOrder > bestSortOrder) bestSortOrder = sortOrder;
+    }
+
+    // 更新保留行
+    db.run(`
+      UPDATE dictionaries
+      SET dict_label = ?, dict_value = ?, color = ?, sort_order = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `, [bestLabel, bestValue, bestColor, bestSortOrder, keeper.id as string]);
+
+    // 硬删除重复行（最优行已融合全部数据，重复行无保留价值）
+    for (const row of toDelete) {
+      db.run(`DELETE FROM dictionaries WHERE id = ?`, [row.id as string]);
+    }
+
+    console.log(`  去重: ${categoryCode}/${dictCode} → 保留 ${keeper.id}, 删除 ${toDelete.map(r => r.id).join(', ')}`);
+  }
+
+  saveDatabase();
+  console.log('字典数据去重完成');
+}
+
 // 独立运行时执行
 async function main() {
   await initDatabase();

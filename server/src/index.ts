@@ -10,7 +10,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
 import { initDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
-import { fixMissingSchema } from './db/fixMissingSchema';
+import { fixMissingSchema, deduplicateDictionaries } from './db/fixMissingSchema';
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
@@ -64,15 +64,19 @@ async function start() {
     console.log('正在修复数据库结构...');
     await fixMissingSchema();
 
-    // 导入种子数据（延迟导入避免循环依赖）
-    console.log('正在导入种子数据...');
-    const { exportDatabase } = await import('./db/seedData');
-    exportDatabase();
+    // 字典数据去重（合并两套种子数据可能产生的重复）
+    console.log('正在执行字典数据去重...');
+    deduplicateDictionaries();
 
-    // 导入基础数据（V5.0新增：部门/仓库/温室/职位/字典等）
+    // 导入基础数据（V5.0：部门/仓库/温室/字典等，数据更完整，先执行）
     console.log('正在导入基础数据...');
     const { exportBasicData } = await import('./db/seedBasicData');
     exportBasicData();
+
+    // 导入种子数据（补充基础数据中未覆盖的字典分类）
+    console.log('正在导入种子数据...');
+    const { exportDatabase } = await import('./db/seedData');
+    exportDatabase();
 
     // 中间件
     app.use(cors);
