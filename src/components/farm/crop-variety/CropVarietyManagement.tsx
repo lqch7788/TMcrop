@@ -17,12 +17,14 @@ import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
   getCategoryOptions,
-  getTypeOptionsByCategory,
-  getVarietyOptionsByType,
-  getSubVariety1Options,
   generateCropCode,
   getMaxDetailVarietyCode
 } from '../../../services/cropVarietyService';
+import {
+  getTypeOptionsByCategory,
+  getVarietyOptionsByType,
+  getSubVariety1Options,
+} from '../../../services/cropVarietyExtensionService';
 import {
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
@@ -403,7 +405,11 @@ export default function CropVarietyManagement() {
 
   const handleDeleteConfirm = async () => {
     if (deleteConfirm.variety) {
-      await store.deleteItem(deleteConfirm.variety.id);
+      const success = await store.deleteItem(deleteConfirm.variety.id);
+      if (!success) {
+        alert('删除失败，请重试');
+        return;
+      }
       handleRefresh();
       if (selectedVariety?.id === deleteConfirm.variety.id) {
         setSelectedVariety(null);
@@ -806,7 +812,9 @@ export default function CropVarietyManagement() {
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-gray-600 text-sm">
-              要删除的品种：<span className="font-medium">{deleteConfirm.variety?.varietyName}</span>
+              要删除的品种：<span className="font-medium">
+                {deleteConfirm.variety?.detailVarietyName || deleteConfirm.variety?.subVariety1Name || deleteConfirm.variety?.varietyName}
+              </span>
             </p>
           </div>
         </div>

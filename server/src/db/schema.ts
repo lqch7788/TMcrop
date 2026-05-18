@@ -1619,7 +1619,20 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
-  // ========== 作物品种库扩展表（用户新增的类型/品种/子品种）==========
+  // ========== 作物品种库扩展表（用户新增的类别/类型/品种/子品种）==========
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_variety_category_extensions (
+      id TEXT PRIMARY KEY,
+      category_code TEXT NOT NULL,
+      category_name TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(category_code)
+    )
+  `);
   db.run(`
     CREATE TABLE IF NOT EXISTS crop_variety_type_extensions (
       id TEXT PRIMARY KEY,

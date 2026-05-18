@@ -7,6 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Search, Plus, Sprout } from 'lucide-react';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
+import {
+  getTypeOptionsByCategory as getExtendedTypeOptions,
+  getVarietyOptionsByType as getExtendedVarietyOptions,
+  initExtensionCache
+} from '../../../../services/cropVarietyExtensionService';
 import { CropVariety } from '../../../../types/cropVariety';
 
 interface QuickAddModalProps {
@@ -36,16 +41,17 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
   // 预览编码
   const [previewCode, setPreviewCode] = useState('');
 
-  // 初始化选项数据
+  // 初始化选项数据（含扩展缓存）
   useEffect(() => {
     const categories = cropVarietyService.getCategoryOptions();
     setCategoryOptions(categories);
+    initExtensionCache(); // 确保扩展数据缓存已初始化
   }, []);
 
   // 当选择类别变化时，加载类型选项
   useEffect(() => {
     if (selectedCategory) {
-      const types = cropVarietyService.getTypeOptionsByCategory(selectedCategory);
+      const types = getExtendedTypeOptions(selectedCategory);
       setTypeOptions(types);
       setSelectedType('');
       setSelectedVariety('');
@@ -56,7 +62,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
   // 当选择类型变化时，加载品种选项
   useEffect(() => {
     if (selectedCategory && selectedType) {
-      const varieties = cropVarietyService.getVarietyOptionsByType(selectedCategory, selectedType);
+      const varieties = getExtendedVarietyOptions(selectedCategory, selectedType);
       setVarietyOptions(varieties);
       setSelectedVariety('');
       setStep('variety');

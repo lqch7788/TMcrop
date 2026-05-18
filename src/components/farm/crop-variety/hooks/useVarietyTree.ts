@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { produceCategories, getProduceTypesByCategory, ProduceCategoryCode } from '../../../../data/produceCodeRule';
 import { getVarietyOptions, getAllVarieties as getLocalVarieties } from '../../../../services/cropVarietyService';
-import { getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } from '../../../../services/cropVarietyExtensionService';
+import { getCategoryExtensions, getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } from '../../../../services/cropVarietyExtensionService';
 
 /**
  * 将已录入品种转换为以编码前缀分组的Map
@@ -461,6 +461,33 @@ export function useVarietyTree(
       if (categoryNode.hasChildren || categoryNode.isRecorded || categoryNode.children.length > 0) {
         nodes.push(categoryNode);
       }
+    }
+
+    // 添加用户扩展的类别（数据库返回 snake_case 字段名）
+    const existingCategoryCodes = new Set(produceCategories.map(c => c.code));
+    const extensionCategories = getCategoryExtensions();
+    for (const extCat of extensionCategories) {
+      if (categoryFilter && extCat.category_code !== categoryFilter) continue;
+      // 跳过已存在的预定义类别
+      if (existingCategoryCodes.has(extCat.category_code as any)) continue;
+      const catNode = buildTreeNode(
+        'category',
+        extCat.category_name,
+        extCat.category_code,
+        {
+          categoryCode: extCat.category_code as ProduceCategoryCode,
+          categoryName: extCat.category_name,
+          typeCode: '',
+          typeName: '',
+          varietyCode: '',
+          varietyName: '',
+        },
+        recordedVarietyMap
+      );
+      // 标记为扩展节点
+      (catNode as any).isExtension = true;
+      (catNode as any).extensionId = extCat.id;
+      nodes.push(catNode);
     }
 
     return nodes;

@@ -8,14 +8,16 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
   getCategoryOptions,
-  getTypeOptionsByCategory,
-  getVarietyOptionsByType,
   generateCropCode,
   getAllVarieties,
   getMaxDetailVarietyCode
 } from '../../../../services/cropVarietyService';
 import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
-import { getSubVariety1Options as getSubVariety1OptionsFromExtension } from '../../../../services/cropVarietyExtensionService';
+import {
+  getTypeOptionsByCategory,
+  getVarietyOptionsByType,
+  getSubVariety1Options as getSubVariety1OptionsFromExtension
+} from '../../../../services/cropVarietyExtensionService';
 import { Search, Check, X, RefreshCw } from 'lucide-react';
 
 interface AddCropVarietyModalProps {
@@ -335,6 +337,7 @@ export function AddCropVarietyModal({
 
       // 通过 Store 添加品种
       await store.addItem({
+        cropCode: cropCode,           // 作物编码（数据库NOT NULL必填）
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
         typeCode: formData.typeCode,

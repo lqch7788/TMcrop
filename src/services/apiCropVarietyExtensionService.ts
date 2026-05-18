@@ -11,7 +11,18 @@
 
 import { enhancedApiClient } from '../lib/apiClient';
 
-const API_BASE = '/api/crop-varieties/extensions';
+const API_BASE = '/crop-varieties/extensions';
+
+// 类别扩展
+export interface CategoryExtension {
+  id: string;
+  category_code: string;
+  category_name: string;
+  sort_order?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 // 类型扩展
 export interface TypeExtension {
@@ -51,6 +62,63 @@ export interface SubVariety1Extension {
   status?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+// ==================== 类别扩展 ====================
+
+/**
+ * 获取所有类别扩展
+ */
+export async function getAllCategoryExtensions(): Promise<CategoryExtension[]> {
+  return await enhancedApiClient.get<CategoryExtension[]>(`${API_BASE}/categories`, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+}
+
+/**
+ * 创建类别扩展
+ */
+export async function addCategoryExtension(
+  categoryCode: string,
+  categoryName: string
+): Promise<CategoryExtension> {
+  return await enhancedApiClient.post<CategoryExtension>(`${API_BASE}/categories`, {
+    category_code: categoryCode,
+    category_name: categoryName
+  }, {
+    offlineQueue: true,
+    useCache: true,
+  });
+}
+
+/**
+ * 删除类别扩展
+ */
+export async function deleteCategoryExtension(id: string): Promise<boolean> {
+  await enhancedApiClient.delete(`${API_BASE}/categories/${id}`, {
+    offlineQueue: true,
+  });
+  return true;
+}
+
+/**
+ * 更新类别扩展
+ */
+export async function updateCategoryExtension(
+  id: string,
+  categoryName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<boolean> {
+  await enhancedApiClient.put(`${API_BASE}/categories/${id}`, {
+    category_name: categoryName,
+    sort_order: sortOrder,
+    status
+  }, {
+    offlineQueue: true,
+  });
+  return true;
 }
 
 // ==================== 类型扩展 ====================
