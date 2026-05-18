@@ -1353,6 +1353,305 @@ export function seedApprovalWorkflows() {
 /**
  * 导出所有基础数据
  */
+/**
+ * 编码规则分类种子数据（物料 + 供应商）
+ * 数据源：src/data/codeRuleData.ts（物料） + src/stores/useSupplierCodeRuleStore.ts（供应商）
+ * 平铺存储到 material_code_categories 表，通过 rule_type 区分
+ */
+export function seedCodeRuleCategories() {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  let added = 0;
+
+  const insertCategory = (code: string, name: string, nameEn: string, parentCode: string, level: string, ruleType: string, sortOrder: number) => {
+    // 按 code + parent_code + rule_type 去重（同一code可能出现在不同parent下，如多个大类下都有'01'中类）
+    const existing = db.exec(
+      `SELECT id FROM material_code_categories WHERE code = ? AND parent_code = ? AND rule_type = ? AND status = 'active'`,
+      [code, parentCode, ruleType]
+    );
+    if (existing.length > 0 && existing[0].values.length > 0) return;
+
+    const id = `${ruleType === 'supplier' ? 'SCC' : 'MCC'}${Date.now()}_${parentCode}_${code}`;
+    db.run(
+      `INSERT INTO material_code_categories (id, code, name, name_en, parent_code, level, rule_type, sort_order, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+      [id, code, name, nameEn, parentCode, level, ruleType, sortOrder, now, now]
+    );
+    added++;
+  };
+
+  // ========== 供应商编码规则（2级：big → mid）==========
+  // 数据来源：useSupplierCodeRuleStore.ts initialCategories
+  const supplierCategories = [
+    {
+      code: 'SP', name: '种子与种苗类', nameEn: 'Seed & Seedling',
+      midCategories: [
+        { code: '01', name: '粮食作物种子' }, { code: '02', name: '经济作物种子' }, { code: '03', name: '蔬菜种子/种苗' },
+        { code: '04', name: '水果苗木' }, { code: '05', name: '花卉与观赏植物' }, { code: '06', name: '食用菌/药用菌菌种' }, { code: '99', name: '其他种质资源' },
+      ]
+    },
+    {
+      code: 'FE', name: '肥料与土壤改良类', nameEn: 'Fertilizer & Soil Amendment',
+      midCategories: [
+        { code: '01', name: '有机肥' }, { code: '02', name: '化学肥料' }, { code: '03', name: '微生物菌剂/生物刺激素' },
+        { code: '04', name: '土壤调理剂' }, { code: '05', name: '育苗基质' }, { code: '99', name: '其他肥料类' },
+      ]
+    },
+    {
+      code: 'PP', name: '农药与植保产品类', nameEn: 'Pesticide & Plant Protection',
+      midCategories: [
+        { code: '01', name: '杀虫剂' }, { code: '02', name: '杀菌剂' }, { code: '03', name: '除草剂' },
+        { code: '04', name: '植物生长调节剂' }, { code: '05', name: '绿色防控产品' }, { code: '06', name: '生物农药' }, { code: '99', name: '其他植保产品' },
+      ]
+    },
+    {
+      code: 'EQ', name: '农业机械与设备类', nameEn: 'Agricultural Machinery & Equipment',
+      midCategories: [
+        { code: '01', name: '耕作与动力机械' }, { code: '02', name: '播种/移栽设备' }, { code: '03', name: '植保机械' },
+        { code: '04', name: '收获与采收机械' }, { code: '05', name: '初加工与分选设备' }, { code: '99', name: '其他农机设备' },
+      ]
+    },
+    {
+      code: 'FA', name: '设施农业资材类', nameEn: 'Facility Agriculture Materials',
+      midCategories: [
+        { code: '01', name: '温室/大棚骨架材料' }, { code: '02', name: '覆盖材料' }, { code: '03', name: '通风降温设备' },
+        { code: '04', name: '加温设备' }, { code: '05', name: '补光系统' }, { code: '06', name: '智能环控系统' }, { code: '99', name: '其他设施农业资材' },
+      ]
+    },
+    {
+      code: 'IR', name: '灌溉与水肥一体化类', nameEn: 'Irrigation & Fertilization',
+      midCategories: [
+        { code: '01', name: '水泵与水源设备' }, { code: '02', name: '输水管网' }, { code: '03', name: '过滤系统' },
+        { code: '04', name: '施肥装置' }, { code: '05', name: '灌溉终端' }, { code: '99', name: '其他灌溉设备' },
+      ]
+    },
+    {
+      code: 'OP', name: '日常劳保与劳动工具类', nameEn: 'Labor Protection & Tools',
+      midCategories: [
+        { code: '01', name: '劳动防护用品' }, { code: '02', name: '日常手动工具' }, { code: '03', name: '小型电动工具' },
+        { code: '04', name: '清洁与卫生用品' }, { code: '99', name: '其他作业支持用品' },
+      ]
+    },
+    {
+      code: 'PH', name: '仓储与物流资材类', nameEn: 'Storage & Logistics Materials',
+      midCategories: [
+        { code: '01', name: '采收容器' }, { code: '02', name: '农产品包装材料' }, { code: '03', name: '冷链设备' },
+        { code: '04', name: '装卸与仓储设备' }, { code: '99', name: '其他采后处理' },
+      ]
+    },
+    {
+      code: 'TS', name: '检测与技术服务类', nameEn: 'Testing & Technical Services',
+      midCategories: [
+        { code: '01', name: '土壤/水质检测服务' }, { code: '02', name: '农残快检设备与试剂' }, { code: '03', name: '农业物联网设备' },
+        { code: '04', name: '数字农业软件服务' }, { code: '05', name: '农业技术咨询与培训' }, { code: '99', name: '其他技术服务' },
+      ]
+    },
+    {
+      code: 'UT', name: '能源与辅助耗材类', nameEn: 'Energy & Auxiliary Consumables',
+      midCategories: [
+        { code: '01', name: '燃油/润滑油' }, { code: '02', name: '电力与新能源' }, { code: '03', name: '通用工业耗材' }, { code: '99', name: '其他能源与耗材' },
+      ]
+    },
+    {
+      code: 'OT', name: '其他综合类', nameEn: 'Others',
+      midCategories: [
+        { code: '01', name: '其他未分类供应商' },
+      ]
+    },
+  ];
+
+  // 插入供应商分类
+  let sortIdx = 0;
+  for (const big of supplierCategories) {
+    insertCategory(big.code, big.name, big.nameEn, '', 'big', 'supplier', sortIdx++);
+    let midSortIdx = 0;
+    for (const mid of big.midCategories) {
+      insertCategory(mid.code, mid.name, '', big.code, 'mid', 'supplier', midSortIdx++);
+    }
+  }
+
+  // ========== 物料编码规则（3级：big → mid → sub）==========
+  // 数据来源：src/data/codeRuleData.ts initialCategories
+  const materialCategories = [
+    {
+      code: 'SP', name: '生产投入类', nameEn: 'Production Inputs',
+      midCategories: [
+        {
+          code: '01', name: '种质资源',
+          subCategories: [
+            { code: '01', name: '粮食作物种子' }, { code: '02', name: '经济作物种子' }, { code: '03', name: '蔬菜种子' },
+            { code: '04', name: '蔬菜种苗' }, { code: '05', name: '水果苗木种苗' }, { code: '06', name: '水果苗木种子' },
+            { code: '07', name: '花卉与观赏植物' }, { code: '08', name: '食用菌菌种' }, { code: '99', name: '其他种质资源' },
+          ]
+        },
+        {
+          code: '02', name: '肥料与土壤改良剂',
+          subCategories: [
+            { code: '01', name: '有机肥' }, { code: '02', name: '化学肥料' }, { code: '03', name: '水溶肥' },
+            { code: '04', name: '叶面肥' }, { code: '05', name: '微生物菌剂' }, { code: '06', name: '土壤调理剂' },
+            { code: '07', name: '育苗基质' }, { code: '99', name: '其他类型' },
+          ]
+        },
+        {
+          code: '03', name: '农药与植保产品',
+          subCategories: [
+            { code: '01', name: '杀虫剂' }, { code: '02', name: '杀菌剂' }, { code: '03', name: '杀螨剂' },
+            { code: '04', name: '除草剂' }, { code: '05', name: '植物生长调节剂' }, { code: '06', name: '物理防控用品' },
+            { code: '07', name: '生物农药' }, { code: '99', name: '其他类型' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'EQ', name: '设施与装备类', nameEn: 'Equipment & Facilities',
+      midCategories: [
+        {
+          code: '01', name: '生产设施',
+          subCategories: [
+            { code: '01', name: '塑料薄膜' }, { code: '02', name: '灌溉设备' }, { code: '03', name: '通风设备' },
+            { code: '04', name: '保温设备' }, { code: '05', name: '降温设备' }, { code: '06', name: '温室骨架' }, { code: '99', name: '其他设施' },
+          ]
+        },
+        {
+          code: '02', name: '农机具',
+          subCategories: [
+            { code: '01', name: '耕作机械' }, { code: '02', name: '播种机械' }, { code: '03', name: '施肥机械' },
+            { code: '04', name: '采收机械' }, { code: '05', name: '搬运机械' }, { code: '99', name: '其他机械' },
+          ]
+        },
+        {
+          code: '03', name: '包装设备',
+          subCategories: [
+            { code: '01', name: '包装材料' }, { code: '02', name: '包装机械' }, { code: '03', name: '标签设备' }, { code: '99', name: '其他' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'OP', name: '作业支持类', nameEn: 'Operational Support',
+      midCategories: [
+        {
+          code: '01', name: '劳保与防护用品',
+          subCategories: [
+            { code: '01', name: '手部防护' }, { code: '02', name: '足部防护' }, { code: '03', name: '身体防护' },
+            { code: '04', name: '呼吸/眼部防护' }, { code: '05', name: '防晒防暑用品' }, { code: '99', name: '其他劳保防护类' },
+          ]
+        },
+        {
+          code: '02', name: '日常劳动工具',
+          subCategories: [
+            { code: '01', name: '手动农具' }, { code: '02', name: '修剪工具' }, { code: '03', name: '小型电动工具' },
+            { code: '04', name: '清洁工具' }, { code: '05', name: '小型运输车' }, { code: '99', name: '其他劳动工具' },
+          ]
+        },
+        {
+          code: '03', name: '标识与记录用品',
+          subCategories: [
+            { code: '01', name: '田间标牌/标签' }, { code: '02', name: '记录本、记号笔' },
+            { code: '03', name: '二维码/RFID标签' }, { code: '99', name: '其他标识记录用品' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'PH', name: '采后处理与流通类', nameEn: 'Post-harvest & Logistics',
+      midCategories: [
+        {
+          code: '01', name: '采收容器',
+          subCategories: [
+            { code: '01', name: '塑料周转箱' }, { code: '02', name: '采摘篮/筐' }, { code: '03', name: '吨袋/编织袋' },
+            { code: '04', name: '包装材料' }, { code: '05', name: '纸箱' }, { code: '06', name: '泡沫网套/隔板' },
+            { code: '07', name: '胶带、封口耗材' }, { code: '08', name: '商品标签/追溯标签' }, { code: '99', name: '其他采收材料' },
+          ]
+        },
+        {
+          code: '02', name: '冷链与仓储设备',
+          subCategories: [
+            { code: '01', name: '预冷库/冷藏库' }, { code: '02', name: '冷藏运输设备' }, { code: '03', name: '保温箱、冰袋' }, { code: '99', name: '其他' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'IT', name: '数字化与管理类', nameEn: 'Digital & Management',
+      midCategories: [
+        {
+          code: '01', name: '监测设备',
+          subCategories: [
+            { code: '01', name: '空气/土壤/光照等传感器' }, { code: '02', name: '手持检测类设备' }, { code: '03', name: '气象站' },
+            { code: '04', name: '虫情测报灯' }, { code: '05', name: '视频监控设备' }, { code: '99', name: '其他检测相关设备' },
+          ]
+        },
+        {
+          code: '02', name: '控制设备',
+          subCategories: [
+            { code: '01', name: '环境参数感知设备' }, { code: '02', name: '执行控制设备' }, { code: '03', name: '人机交互与本地操作设备' },
+            { code: '04', name: '通信与联网设备' }, { code: '05', name: '电源与辅助控制设备' }, { code: '99', name: '其他相关控制设备' },
+          ]
+        },
+        {
+          code: '03', name: '软件与服务',
+          subCategories: [
+            { code: '01', name: 'ERP模块许可' }, { code: '02', name: '温室大棚控制系统web' },
+            { code: '03', name: '温室大棚控制系统小程序' }, { code: '04', name: '数据分析服务' },
+            { code: '05', name: '产品检测服务' }, { code: '99', name: '其他软件与服务' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'EC', name: '能源与通用耗材', nameEn: 'Energy & Consumables',
+      midCategories: [
+        {
+          code: '01', name: '能源类',
+          subCategories: [
+            { code: '01', name: '柴油/汽油' }, { code: '02', name: '电力' }, { code: '03', name: '太阳能板及配件' }, { code: '99', name: '其他能源类' },
+          ]
+        },
+        {
+          code: '02', name: '通用耗材',
+          subCategories: [
+            { code: '01', name: '电线、电缆' }, { code: '02', name: '扎带、螺丝、密封胶' },
+            { code: '03', name: '电池' }, { code: '04', name: '润滑油、润滑脂' }, { code: '99', name: '其他耗材' },
+          ]
+        },
+      ]
+    },
+    {
+      code: 'OT', name: '其他类', nameEn: 'Others',
+      midCategories: [
+        {
+          code: '01', name: '未分类资材',
+          subCategories: [
+            { code: '01', name: '其他未分类资材' },
+          ]
+        },
+      ]
+    },
+  ];
+
+  // 插入物料分类
+  sortIdx = 0;
+  for (const big of materialCategories) {
+    insertCategory(big.code, big.name, big.nameEn, '', 'big', 'material', sortIdx++);
+    let midSortIdx = 0;
+    for (const mid of big.midCategories) {
+      insertCategory(mid.code, mid.name, '', big.code, 'mid', 'material', midSortIdx++);
+      let subSortIdx = 0;
+      for (const sub of mid.subCategories) {
+        const subParentCode = big.code + mid.code; // e.g., 'SP01'
+        insertCategory(sub.code, sub.name, '', subParentCode, 'sub', 'material', subSortIdx++);
+      }
+    }
+  }
+
+  if (added > 0) {
+    console.log(`✓ 种子数据：编码规则分类已添加 ${added} 条`);
+  } else {
+    console.log('• 编码规则分类：数据已存在，跳过');
+  }
+}
+
 export function exportBasicData() {
   seedDepartments();
   seedWarehouses();
@@ -1364,6 +1663,7 @@ export function exportBasicData() {
   seedNotificationChannels();
   seedNotificationRules();
   seedApprovalWorkflows();
+  seedCodeRuleCategories();
   saveDatabase();
   console.log('基础数据导入完成');
 }

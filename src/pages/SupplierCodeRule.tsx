@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AddMidModal } from '../components/codeRule/AddMidModal';
@@ -8,12 +8,17 @@ import { useSupplierCodeRuleStore } from '../stores';
 export default function SupplierCodeRule() {
   const navigate = useNavigate();
   const categories = useSupplierCodeRuleStore((s) => s.categories);
+  const isLoading = useSupplierCodeRuleStore((s) => s.isLoading);
+  const fetchCategories = useSupplierCodeRuleStore((s) => s.fetchCategories);
   const updateBigName = useSupplierCodeRuleStore((s) => s.updateBigName);
   const updateMidName = useSupplierCodeRuleStore((s) => s.updateMidName);
   const addBigCategory = useSupplierCodeRuleStore((s) => s.addBigCategory);
   const addMidCategory = useSupplierCodeRuleStore((s) => s.addMidCategory);
   const deleteBigCategory = useSupplierCodeRuleStore((s) => s.deleteBigCategory);
   const deleteMidCategory = useSupplierCodeRuleStore((s) => s.deleteMidCategory);
+
+  // 组件挂载时从后端加载数据
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
   const [expandedBig, setExpandedBig] = useState<Set<string>>(new Set(categories.map(c => c.code)));
   const [editingCell, setEditingCell] = useState<{type: 'big' | 'mid'; bigCode: string; midCode?: string} | null>(null);
@@ -44,14 +49,14 @@ export default function SupplierCodeRule() {
     setEditValue(currentName || '');
   };
 
-  // 保存编辑（通过Store持久化）
-  const saveEdit = () => {
+  // 保存编辑（通过Store持久化到后端DB）
+  const saveEdit = async () => {
     if (!editingCell || !editValue.trim()) return;
 
     if (editingCell.type === 'big') {
-      updateBigName(editingCell.bigCode, editValue.trim());
+      await updateBigName(editingCell.bigCode, editValue.trim());
     } else if (editingCell.midCode) {
-      updateMidName(editingCell.bigCode, editingCell.midCode, editValue.trim());
+      await updateMidName(editingCell.bigCode, editingCell.midCode, editValue.trim());
     }
 
     setEditingCell(null);
@@ -64,34 +69,34 @@ export default function SupplierCodeRule() {
     setEditValue('');
   };
 
-  // 添加大类（通过Store持久化）
-  const handleAddBigCategory = () => {
+  // 添加大类（通过Store持久化到后端DB）
+  const handleAddBigCategory = async () => {
     if (!newBigCode.trim() || !newBigName.trim()) return;
-    addBigCategory(newBigCode.trim().toUpperCase(), newBigName.trim());
+    await addBigCategory(newBigCode.trim().toUpperCase(), newBigName.trim());
     setNewBigCode('');
     setNewBigName('');
     setShowAddBig(false);
   };
 
-  // 添加中类（通过Store持久化）
-  const handleAddMidCategory = (bigCode: string, midCode: string, midName: string) => {
+  // 添加中类（通过Store持久化到后端DB）
+  const handleAddMidCategory = async (bigCode: string, midCode: string, midName: string) => {
     if (!midCode.trim() || !midName.trim()) return;
-    addMidCategory(bigCode, midCode.trim(), midName.trim());
+    await addMidCategory(bigCode, midCode.trim(), midName.trim());
     setNewMidCode('');
     setNewMidName('');
     setShowAddMid(null);
   };
 
-  // 删除大类（通过Store持久化）
-  const handleDeleteBigCategory = (bigCode: string) => {
+  // 删除大类（通过Store持久化到后端DB）
+  const handleDeleteBigCategory = async (bigCode: string) => {
     if (!confirm(`确定要删除大类 "${bigCode}" 吗？`)) return;
-    deleteBigCategory(bigCode);
+    await deleteBigCategory(bigCode);
   };
 
-  // 删除中类（通过Store持久化）
-  const handleDeleteMidCategory = (bigCode: string, midCode: string) => {
+  // 删除中类（通过Store持久化到后端DB）
+  const handleDeleteMidCategory = async (bigCode: string, midCode: string) => {
     if (!confirm(`确定要删除中类 "${midCode}" 吗？`)) return;
-    deleteMidCategory(bigCode, midCode);
+    await deleteMidCategory(bigCode, midCode);
   };
 
   // 渲染编辑单元格
@@ -120,7 +125,7 @@ export default function SupplierCodeRule() {
       );
     }
     return (
-      <div className="flex items-center gap-2 group">
+      <div className="flex items-center gap-2">
         <span className="cursor-pointer hover:text-emerald-600" onClick={() => startEdit(type, bigCode, midCode, currentName)}>
           {currentName}
         </span>
@@ -128,7 +133,6 @@ export default function SupplierCodeRule() {
           variant="ghost"
           size="icon"
           onClick={() => startEdit(type, bigCode, midCode, currentName)}
-          className="opacity-0 group-hover:opacity-100"
         >
           <Edit2 className="w-3 h-3" />
         </Button>
@@ -258,7 +262,13 @@ export default function SupplierCodeRule() {
                       )}
                     </td>
                     <td className="px-2 py-3"></td>
-                    <td className="px-2 py-3"></td>
+                    <td className="px-2 py-3">
+                      {isEditing && (
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteBigCategory(big.code)}>
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
+                    </td>
                   </tr>
 
                   {/* 如果大类已展开，渲染中类 */}
@@ -348,7 +358,7 @@ export default function SupplierCodeRule() {
               <Button variant="destructive" onClick={() => {
                   setShowSaveConfirm(false);
                   setIsEditing(false);
-                  alert('编码规则已保存！数据将持久化存储，清除缓存后不会丢失。');
+                  // 数据已通过每次CRUD操作实时持久化到后端数据库，无需额外保存
                 }}>
                 确认保存
               </Button>

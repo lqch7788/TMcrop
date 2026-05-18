@@ -78,6 +78,11 @@ async function start() {
     const { exportDatabase } = await import('./db/seedData');
     exportDatabase();
 
+    // 导入物料编码分类种子数据（7大类+18中类+80+小类）
+    console.log('正在导入物料编码分类数据...');
+    const { seedMaterialCodeCategories } = await import('./db/seedMaterialCodeCategories');
+    seedMaterialCodeCategories();
+
     // 中间件
     app.use(cors);
     app.use(requestLogger);
