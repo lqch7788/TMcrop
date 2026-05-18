@@ -218,11 +218,11 @@ export default function CodeRule() {
       );
     }
     return (
-      <div className="flex items-center gap-2 group">
+      <div className="flex items-center gap-2">
         <span className="cursor-pointer hover:text-emerald-600" onClick={() => startEdit(type, bigCode, midCode, subCode, currentName)}>
           {currentName}
         </span>
-        <Button variant="ghost" size="icon" onClick={() => startEdit(type, bigCode, midCode, subCode, currentName)} className="opacity-0 group-hover:opacity-100">
+        <Button variant="ghost" size="icon" onClick={() => startEdit(type, bigCode, midCode, subCode, currentName)}>
           <Edit2 className="w-3 h-3" />
         </Button>
       </div>
