@@ -4,7 +4,7 @@
  * V10.0 新增
  */
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { iotAuth } from '../middleware/iotAuth';
 import { iotIngestSchema } from '../validation/iotIngest';
@@ -63,6 +63,7 @@ router.post('/batch-delete', (req: Request, res: Response) => {
     }
     const delPlaceholders = deletableIds.map(() => '?').join(',');
     db.run(`DELETE FROM fertilizer_records WHERE id IN (${delPlaceholders})`, deletableIds);
+    saveDatabase(); // 持久化到磁盘
     res.json({ success: true, data: { deleted: deletableIds.length, skipped: ids.length - deletableIds.length } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -137,6 +138,7 @@ router.post('/', (req: Request, res: Response) => {
     );
 
     const items = queryToObjects(db, `SELECT * FROM fertilizer_records WHERE fertilizer_code = ?`, [code]);
+    saveDatabase(); // 持久化到磁盘，防止重启数据丢失
     res.status(201).json({ success: true, data: items[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -216,6 +218,7 @@ router.post('/iot-ingest', iotAuth, (req: Request, res: Response) => {
       );
       inserted++;
     }
+    saveDatabase(); // 持久化到磁盘
     res.status(201).json({ success: true, data: { inserted, skipped, total: records.length, device_id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -262,6 +265,7 @@ router.put('/:id', (req: Request, res: Response) => {
        body.planting_code ?? existing[0].planting_code, now, id]
     );
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
+    saveDatabase(); // 持久化到磁盘
     res.json({ success: true, data: updated[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -277,6 +281,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
     if (existing[0].data_source === 'auto_iot') { res.status(403).json({ success: false, error: 'IoT自动记录不可删除' }); return; }
     db.run(`DELETE FROM fertilizer_records WHERE id = ?`, [id]);
+    saveDatabase(); // 持久化到磁盘
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });

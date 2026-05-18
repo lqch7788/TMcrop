@@ -55,9 +55,6 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
   // 可编辑状态列表
   const EDITABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'rejected'];
 
-  // 可删除状态列表（所有状态都可以删除）
-  const DELETABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected', 'failed', 'cancelled', 'abandoned'];
-
   // 可派发状态列表
   const PUBLISHABLE_STATUSES = ['draft'];
 
@@ -200,7 +197,6 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                           onDelete(task.id);
                         }
                       }}
-                      disabled={!DELETABLE_STATUSES.includes(task.status)}
                       className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="删除"
                     >

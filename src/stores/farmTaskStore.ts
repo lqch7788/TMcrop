@@ -350,6 +350,12 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         tasks: state.tasks,
         filters: state.filters,
       }),
+      // 防御 localStorage 数据损坏：确保 tasks 总是数组
+      onRehydrateStorage: () => (state) => {
+        if (state && !Array.isArray(state.tasks)) {
+          state.tasks = [];
+        }
+      },
     }
   )
 );

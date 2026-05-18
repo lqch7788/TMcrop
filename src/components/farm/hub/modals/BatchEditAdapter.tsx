@@ -25,7 +25,8 @@ function getBatchCodes() {
 
 // 获取员工选项（从Store读取）
 function getStaff() {
-  return useWorkerStore.getState().workers.map(s => ({
+  const w = useWorkerStore.getState().workers;
+  return (Array.isArray(w) ? w : []).map(s => ({
     id: s.id,
     name: s.name,
     status: s.status,

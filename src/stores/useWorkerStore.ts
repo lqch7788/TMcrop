@@ -52,6 +52,12 @@ export const useWorkerStore = create<WorkerStore>()(
     {
       name: 'worker_store',
       partialize: (state) => ({ workers: state.workers }),
+      // 防御 localStorage 数据损坏：确保 workers 总是数组
+      onRehydrateStorage: () => (state) => {
+        if (state && !Array.isArray(state.workers)) {
+          state.workers = [];
+        }
+      },
     }
   )
 );

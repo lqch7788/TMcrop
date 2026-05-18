@@ -124,9 +124,9 @@ export const useFertilizerStore = create<FertilizerState>()(
           const params = new URLSearchParams();
           Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
           const response = await enhancedApiClient.get<any>(`/fertilizer?${params.toString()}`);
-          const data = response.data ?? response;
-          const rawItems = Array.isArray(data) ? data : data?.data ?? [];
-          set({ items: rawItems.map(normalizeFertilizer), isLoading: false });
+          // enhancedApiClient 已解包 data，queryToObjects 已在服务端转 camelCase
+          const rawItems = Array.isArray(response) ? response : response?.data ?? [];
+          set({ items: rawItems as FertilizerData[], isLoading: false });
         } catch (err) {
           set({ error: (err as Error).message, isLoading: false });
         }
@@ -135,7 +135,8 @@ export const useFertilizerStore = create<FertilizerState>()(
       fetchItemById: async (id: string) => {
         try {
           const response = await enhancedApiClient.get<any>(`/fertilizer/${id}`);
-          return normalizeFertilizer(response.data ?? response);
+          // enhancedApiClient 已解包 data，queryToObjects 已在服务端转 camelCase
+          return (response.data ?? response) as FertilizerData;
         } catch {
           return null;
         }
@@ -143,9 +144,11 @@ export const useFertilizerStore = create<FertilizerState>()(
 
       createItem: async (item) => {
         try {
+          // denormalize: camelCase → snake_case（后端 req.body 期望 snake_case）
           const body = denormalizeFertilizer(item);
           const response = await enhancedApiClient.post('/fertilizer', body);
-          const newItem = normalizeFertilizer(response.data ?? response);
+          // 响应：enhancedApiClient 已解包 data，queryToObjects 已转 camelCase
+          const newItem = (response.data ?? response) as FertilizerData;
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (err) {
@@ -158,7 +161,8 @@ export const useFertilizerStore = create<FertilizerState>()(
         try {
           const body = denormalizeFertilizer(updates);
           const response = await enhancedApiClient.put(`/fertilizer/${id}`, body);
-          const updated = normalizeFertilizer(response.data ?? response);
+          // 响应：enhancedApiClient 已解包 data，queryToObjects 已转 camelCase
+          const updated = (response.data ?? response) as FertilizerData;
           set((state) => ({
             items: state.items.map((i) => (i.id === id ? updated : i)),
           }));

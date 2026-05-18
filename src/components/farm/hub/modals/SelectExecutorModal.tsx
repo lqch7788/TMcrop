@@ -35,7 +35,7 @@ export function SelectExecutorModal({
   // 从Store获取员工列表（替换原 taskDispatchStaff mock数据）
   const workers = useWorkerStore((s) => s.workers);
   const loadWorkers = useWorkerStore((s) => s.loadWorkers);
-  const taskDispatchStaff = useMemo(() => workers.map(w => ({
+  const taskDispatchStaff = useMemo(() => (Array.isArray(workers) ? workers : []).map(w => ({
     id: w.id,
     name: w.name,
     status: w.status,
@@ -47,10 +47,10 @@ export function SelectExecutorModal({
 
   // 加载员工数据
   useEffect(() => {
-    if (workers.length === 0) {
+    if (!Array.isArray(workers) || workers.length === 0) {
       loadWorkers();
     }
-  }, [workers.length, loadWorkers]);
+  }, [workers, loadWorkers]);
 
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   // 分派模式：ai_assisted 或 manual

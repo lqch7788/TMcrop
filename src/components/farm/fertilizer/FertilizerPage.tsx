@@ -4,7 +4,7 @@
  * 所有数据通过 useFertilizerStore 管理
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Sprout, Plus, Trash2, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sprout, Trash2 } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
@@ -14,7 +14,7 @@ import { FertilizerDetailModal } from './FertilizerDetailModal';
 import { FertilizerBatchDeleteModal } from './FertilizerBatchDeleteModal';
 import { FertilizerStatsPanel } from './FertilizerStatsPanel';
 import FertilizerExportModal from './FertilizerExportModal';
-import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
+import type { IotDeviceStatus } from './IotDataIndicator';
 
 type OperationMode = 'normal' | 'delete' | 'export';
 
@@ -107,6 +107,11 @@ export default function FertilizerPage() {
   }, [store]);
 
   // ========== 批量操作 ==========
+  const handleBatchDeleteMode = useCallback(() => {
+    setOperationMode(prev => prev === 'delete' ? 'normal' : 'delete');
+    setSelectedIds([]);
+  }, []);
+
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
     setShowBatchDeleteModal(true);
@@ -262,50 +267,6 @@ export default function FertilizerPage() {
         </div>
       </div>
 
-      {/* IoT设备连接状态 */}
-      <IotDataIndicator devices={iotDevices} loading={isLoading} />
-
-      {/* Action buttons bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={handleAdd}
-            className="h-9 px-4 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            新增施肥记录
-          </button>
-          <button
-            onClick={() => {
-              setOperationMode('delete');
-            }}
-            className={`h-9 px-4 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${
-              operationMode === 'delete'
-                ? 'bg-red-600 text-white'
-                : 'bg-white text-red-600 border border-red-200 hover:bg-red-50'
-            }`}
-          >
-            <Trash2 className="w-4 h-4" />
-            批量删除
-          </button>
-          <button
-            onClick={handleExport}
-            className="h-9 px-4 flex items-center gap-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            导出
-          </button>
-        </div>
-        <button
-          onClick={() => setShowStats(!showStats)}
-          className="h-9 px-4 flex items-center gap-2 bg-white text-emerald-600 border border-emerald-200 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors"
-        >
-          <BarChart3 className="w-4 h-4" />
-          统计分析
-          {showStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-      </div>
-
       {/* 批量删除操作栏 */}
       {operationMode === 'delete' && selectedIds.length > 0 && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -344,6 +305,12 @@ export default function FertilizerPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onAdd={handleAdd}
+        onBatchDeleteMode={handleBatchDeleteMode}
+        onExportMode={handleExport}
+        iotDevices={iotDevices}
+        iotLoading={isLoading}
+        showStats={showStats}
+        onToggleStats={() => setShowStats(!showStats)}
       />
 
       {/* Stats Panel (collapsible) */}
