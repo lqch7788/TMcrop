@@ -111,9 +111,9 @@ function normalizeTask(db: Record<string, unknown>): TempTaskData {
     }
   }
   // 确保必要字段
-  result.title = result.title || result.task_title || '';
-  result.type = result.type || result.task_type || '';
-  result.description = result.description || result.task_content || '';
+  result.title = result.title || result.taskTitle || result.task_title || '';
+  result.type = result.type || result.taskType || result.task_type || '';
+  result.description = result.description || result.taskContent || result.task_content || '';
   result.taskCode = result.taskCode || result.task_code || '';
   result.priority = result.priority || result.urgency || 'normal';
   result.status = result.status || 'draft';

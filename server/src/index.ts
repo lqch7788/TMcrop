@@ -83,36 +83,24 @@ async function start() {
     // API 路由
     app.use('/api', routes);
 
+    // 生产环境/Electron：托管前端静态文件
+    // Electron 打包后通过 FRONTEND_DIST 环境变量指定前端文件路径（可能在 asar 内）
+    const frontendDist = process.env.FRONTEND_DIST || path.join(__dirname, '../../dist');
+    if (fs.existsSync(frontendDist)) {
+      app.use(express.static(frontendDist));
+      // SPA fallback：所有非API请求返回index.html
+      app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+          res.sendFile(path.join(frontendDist, 'index.html'));
+        }
+      });
+    }
+
     // 404 处理（必须在路由之后）
     app.use(notFoundHandler);
 
     // 全局错误处理（必须在所有中间件和路由之后）
     app.use(errorHandler);
-
-    // 根路径
-    app.get('/', (req, res) => {
-      res.json({
-        name: '原形图后端 API 服务',
-        version: '1.0.0',
-        status: 'running',
-        endpoints: {
-          api: '/api',
-          health: '/api/health',
-          cropVarieties: '/api/crop-varieties',
-          inventory: '/api/inventory',
-          seedlings: '/api/seedlings',
-          seedSources: '/api/seed-sources',
-          plantings: '/api/plantings',
-          harvest: '/api/harvest',
-          suppliers: '/api/suppliers',
-          cropInstances: '/api/crop-instances',
-          farmTasks: '/api/farm-tasks',
-          inspections: '/api/inspections',
-          problems: '/api/problems',
-          labor: '/api/labor'
-        }
-      });
-    });
 
     // 启动服务（端口冲突自动尝试下一个端口，最多尝试10次）
     const MAX_PORT = PORT + 9;

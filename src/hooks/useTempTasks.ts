@@ -221,14 +221,26 @@ function generateRecordCode(): string {
 // ============================================
 // Store 数据结构 → TempTask 格式映射函数
 // ============================================
+/** 类型值→中文名称映射（兼容两套类型体系） */
+const TYPE_LABEL_MAP: Record<string, string> = {
+  fertilization: '施肥', irrigation: '灌溉', pruning: '修剪',
+  pesticide: '植保', rootIrrigation: '灌根', planting: '定植',
+  harvest: '采收', weeding: '除草',
+  farm_repair: '农事抢修', equipment_repair: '设备维修',
+  facility_maintenance: '设施维护', staff_dispatch: '人员调配',
+  cleaning: '清洁整理', safety_check: '安全检查',
+  other: '其他',
+};
+
 /** 将后端 Store 的数据格式映射为前端 TempTask 格式 */
 function mapStoreTaskToTempTask(t: TempTaskData): TempTask {
+  const typeVal = (t.type || t.task_type || t.tempTaskType || '') as string;
   return {
     id: t.id || '',
     taskCode: t.taskCode || t.task_code || '',
-    title: t.title || t.task_title || '',
-    type: t.type || t.task_type || '',
-    typeName: '',
+    title: t.title || t.taskTitle || t.task_title || '',
+    type: typeVal,
+    typeName: TYPE_LABEL_MAP[typeVal] || typeVal,
     urgency: (t.urgency || t.priority || 'normal') as TempTask['urgency'],
     location: t.location || t.area_name || '',
     greenhouseId: t.greenhouseId || t.greenhouse_id,
@@ -462,7 +474,7 @@ export function useTempTasks(): UseTempTasksReturn {
       // 保存计算的更新，用于异步持久化
       Object.assign(computedUpdates, updates);
 
-      return { ...task, ...updates };
+  return { ...task, ...updates };
     }));
 
     // 异步持久化到后端（通过 Zustand Store）

@@ -1253,7 +1253,7 @@ export const TempTaskTab: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-gray-900">临时任务派发列表</h3>
+            <h3 className="text-lg font-semibold text-gray-900">临时任务表</h3>
             {stats && (
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500">共</span>

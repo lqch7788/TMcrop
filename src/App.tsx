@@ -383,7 +383,14 @@ function App() {
 
   // 应用启动时恢复登录状态（token持久化验证）
   useEffect(() => {
-    useAuthStore.getState().verifyToken();
+    const authState = useAuthStore.getState();
+    // 如果已登录则验证token
+    if (authState.isAuthenticated && authState.token) {
+      authState.verifyToken();
+    } else {
+      // 默认使用陆启闯自动登录（密码123456）
+      authState.login('陆启闯', '123456');
+    }
   }, []);
 
   // 启动同步管理器（SYNC模式）
