@@ -240,19 +240,38 @@ export function MyTasksPage() {
 
     switch (taskFilter) {
       case 'problem':
-        // 问题处理任务：有 sourceProblemId 的任务，按创建时间倒序
+        // 巡查反馈/问题处理：dispatchMode 为 problem 或 inspection 的记录，按创建时间倒序
         return myTasks
-          .filter(task => task.sourceProblemId !== undefined)
+          .filter(task => {
+            const t = task as TaskWithExtras;
+            const dm = (t as any).dispatchMode;
+            if (dm === 'problem' || dm === 'inspection') return true;
+            if (task.sourceProblemId !== undefined || (t as any).sourceInspectionId !== undefined) return true;
+            return false;
+          })
           .sort(sortByCreatedAt);
       case 'production':
-        // 生产任务：没有 sourceProblemId 且不是临时任务的任务，按创建时间倒序
+        // 农事任务：仅显示 NS 开头 + dispatchMode 为 farm（或未设置）的任务，按创建时间倒序
         return myTasks
-          .filter(task => !task.sourceProblemId && (task as TaskWithExtras).sourceType !== 'tempTask')
+          .filter(task => {
+            const t = task as TaskWithExtras;
+            if (!task.taskCode || !task.taskCode.startsWith('NS')) return false;
+            const dm = (t as any).dispatchMode;
+            if (dm === 'problem' || dm === 'inspection' || dm === 'tempTask') return false;
+            if (t.sourceType === 'tempTask') return false;
+            if (task.sourceProblemId !== undefined) return false;
+            return true;
+          })
           .sort(sortByCreatedAt);
       case 'temp':
-        // 临时任务 Tab：筛选 sourceType === 'tempTask' 且非草稿状态，按开始时间倒序
+        // 临时任务处理：仅显示 TT 开头 + sourceType 为 tempTask 且非草稿状态，按开始时间倒序
         return myTasks
-          .filter(task => (task as TaskWithExtras).sourceType === 'tempTask' && task.status !== 'draft')
+          .filter(task => {
+            const t = task as TaskWithExtras;
+            if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
+            if (task.status === 'draft') return false;
+            return t.sourceType === 'tempTask' || (t as any).dispatchMode === 'tempTask';
+          })
           .sort((a, b) => {
             const getTime = (t: TaskWithExtras): number => {
               const timeStr = t.startDate || t.planStart || '';
