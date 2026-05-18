@@ -18,9 +18,10 @@ export default function FertilizerCodeGenerator({ value, onChange, disabled = fa
   /** 从后端获取新的施肥编号 */
   const generateCode = async () => {
     try {
-      const res = await enhancedApiClient.get('/fertilizer/generate-code');
-      if (res.success && res.data?.code) {
-        onChange(res.data.code);
+      const res = await enhancedApiClient.get<{ code: string }>('/fertilizer/generate-code');
+      // enhancedApiClient 自动解包 data 字段，res 直接是 { code: "SF20260518-0002" }
+      if (res?.code) {
+        onChange(res.code);
       }
     } catch {
       // 降级：本地生成

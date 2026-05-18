@@ -14,7 +14,7 @@ import { Plus, Upload } from 'lucide-react';
 // 导入迁移的 TaskTable 组件
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
-import { EDITABLE_STATUSES, DELETABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
+import { EDITABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
 
 // 状态配置（从常量文件导入，与 taskDispatch 保持一致）
 const STATUS_FILTERS = STATUS_OPTIONS;
@@ -292,12 +292,10 @@ export function TaskTab({
         }
       });
     } else if (toolbarMode === 'batchDelete') {
-      // 批量删除模式：选中可删除的任务（使用常量）
+      // 批量删除模式：选中所有任务（不限制状态）
       filteredTasks.forEach(task => {
-        if (DELETABLE_STATUSES.includes(task.status)) {
-          if (!selectedIds.includes(task.id)) {
-            onToggleSelect(task.id);
-          }
+        if (!selectedIds.includes(task.id)) {
+          onToggleSelect(task.id);
         }
       });
     } else if (toolbarMode === 'batchDispatch') {

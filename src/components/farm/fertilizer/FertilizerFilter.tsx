@@ -26,18 +26,6 @@ export function FertilizerFilter({
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
-        {/* 肥料名称 */}
-        <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">肥料名称</label>
-          <input
-            type="text"
-            value={filters.fertilizerName || ''}
-            onChange={(e) => updateFilter('fertilizerName', e.target.value)}
-            placeholder="请输入肥料名称"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
         {/* 肥料类型（字典选择） */}
         <div className="min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">肥料类型</label>

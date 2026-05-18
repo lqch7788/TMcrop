@@ -6,9 +6,10 @@
  * IoT记录行有绿色左边框，仅可查看不可编辑删除
  */
 import React from 'react';
-import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
+import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
 
 interface FertilizerTableProps {
   data: FertilizerData[];
@@ -20,6 +21,12 @@ interface FertilizerTableProps {
   onEdit: (record: FertilizerData) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  onBatchDeleteMode: () => void;
+  onExportMode: () => void;
+  iotDevices?: IotDeviceStatus[];
+  iotLoading?: boolean;
+  showStats?: boolean;
+  onToggleStats?: () => void;
 }
 
 // 简易分页
@@ -35,6 +42,12 @@ export function FertilizerTable({
   onEdit,
   onDelete,
   onAdd,
+  onBatchDeleteMode,
+  onExportMode,
+  iotDevices = [],
+  iotLoading = false,
+  showStats = false,
+  onToggleStats,
 }: FertilizerTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const totalPages = Math.ceil(data.length / PAGE_SIZE) || 1;
@@ -112,20 +125,53 @@ export function FertilizerTable({
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 表头操作栏 */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">施肥记录列表</h3>
-        <button
-          onClick={onAdd}
-          className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          新增
-        </button>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">施肥记录列表</h3>
+          <IotDataIndicator devices={iotDevices} loading={iotLoading} />
+          {onToggleStats && (
+            <button
+              onClick={onToggleStats}
+              className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              统计分析
+              {showStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onAdd}
+            className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            新增
+          </button>
+          <button
+            onClick={onBatchDeleteMode}
+            className={`h-8 px-3 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${
+              operationMode === 'delete'
+                ? 'bg-red-700 text-white'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            }`}
+          >
+            <Trash2 className="w-4 h-4" />
+            批量删除
+          </button>
+          <button
+            onClick={onExportMode}
+            className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            导出
+          </button>
+        </div>
       </div>
 
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">

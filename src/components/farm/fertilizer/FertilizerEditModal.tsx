@@ -4,10 +4,13 @@
  * 提交时调用 store.updateItem()
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { DictSelect } from '../../common/settings/DictSelect';
+import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, FertilizerData } from '@/stores';
+import * as cropVarietyService from '@/services/cropVarietyService';
+import type { CropVariety } from '@/types/cropVariety';
 
 interface FertilizerEditModalProps {
   isOpen: boolean;
@@ -34,13 +37,32 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     operatorName: '',
     description: '',
   });
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    basic: true,
-    fertilizer: true,
-    location: false,
-    operation: false,
-  });
   const [submitting, setSubmitting] = useState(false);
+  const [cropCode, setCropCode] = useState('');
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+
+  // 初始化品种库
+  useEffect(() => {
+    if (isOpen) {
+      cropVarietyService.initVarieties();
+    }
+  }, [isOpen]);
+
+  // 作物选择处理
+  const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {
+    if (isIot) return;
+    if (varietyInfo) {
+      setSelectedCrop(varietyInfo);
+      setCropCode(varietyInfo.cropCode);
+      const cropNameValue = varietyInfo.detailVarietyCode && varietyInfo.detailVarietyCode !== '00'
+        ? varietyInfo.varietyName
+        : (varietyInfo.subVariety1Name || varietyInfo.varietyName);
+      setForm(prev => ({
+        ...prev,
+        cropName: cropNameValue,
+      }));
+    }
+  }, [isIot]);
 
   // 预填充数据
   useEffect(() => {
@@ -73,10 +95,6 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     });
   }, [isIot]);
 
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim() || isIot) return;
     setSubmitting(true);
@@ -98,15 +116,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     onSaved();
   };
 
-  const SectionHeader = ({ keyName, title, icon }: { keyName: string; title: string; icon: string }) => (
-    <button
-      type="button"
-      onClick={() => toggleSection(keyName)}
-      className="w-full flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-t-lg text-sm font-semibold"
-    >
-      <span>{icon} {title}</span>
-      {expandedSections[keyName] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-    </button>
+  const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
+    <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
   );
 
   const inputClass = isIot
@@ -129,186 +140,187 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         </div>
       )}
 
-      <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* Section 1: 基础信息 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="basic" title="基础信息" icon="📋" />
-          {expandedSections.basic && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
-                  <input
-                    type="text"
-                    value={form.fertilizerCode}
-                    readOnly
-                    className={inputClass + ' font-mono'}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
-                  <input
-                    type="text"
-                    value={isIot ? 'IoT自动' : '手动录入'}
-                    readOnly
-                    className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 font-medium ${
-                      isIot ? 'text-green-600' : 'text-blue-600'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section 2: 肥料与用量 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="fertilizer" title="肥料与用量" icon="🧪" />
-          {expandedSections.fertilizer && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">肥料名称 <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    value={form.fertilizerName}
-                    onChange={(e) => updateField('fertilizerName', e.target.value)}
-                    disabled={isIot}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
-                  <DictSelect
-                    category="fertilizer_type"
-                    value={form.fertilizerType}
-                    onChange={(value) => updateField('fertilizerType', value)}
-                    placeholder="选择肥料类型"
-                    disabled={isIot}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
-                  <input
-                    type="text"
-                    value={form.dilutionRatio}
-                    onChange={(e) => updateField('dilutionRatio', e.target.value)}
-                    disabled={isIot}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
-                  <input
-                    type="number"
-                    value={form.quantity || ''}
-                    onChange={(e) => updateField('quantity', Number(e.target.value))}
-                    disabled={isIot}
-                    min="0"
-                    step="0.01"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
-                  <input
-                    type="number"
-                    value={form.unitPrice || ''}
-                    onChange={(e) => updateField('unitPrice', Number(e.target.value))}
-                    disabled={isIot}
-                    min="0"
-                    step="0.01"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
+        <div>
+          <SectionTitle title="基础信息" icon="📋" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
                 <input
                   type="text"
-                  value={`${form.totalCost.toFixed(2)} 元`}
+                  value={form.fertilizerCode}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-green-50 font-bold text-emerald-700"
+                  className={inputClass + ' font-mono'}
                 />
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section 3: 位置与时间 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="location" title="位置与时间" icon="📍" />
-          {expandedSections.location && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
-                  <input
-                    type="text"
-                    value={form.greenhouseName}
-                    onChange={(e) => updateField('greenhouseName', e.target.value)}
-                    disabled={isIot}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
-                  <input
-                    type="text"
-                    value={form.cropName}
-                    onChange={(e) => updateField('cropName', e.target.value)}
-                    disabled={isIot}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
-                <input
-                  type="datetime-local"
-                  value={form.fertilizeTime}
-                  onChange={(e) => updateField('fertilizeTime', e.target.value)}
-                  disabled={isIot}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section 4: 操作与备注 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="operation" title="操作与备注" icon="📝" />
-          {expandedSections.operation && (
-            <div className="p-4 space-y-3 bg-white">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
                 <input
                   type="text"
-                  value={form.operatorName}
-                  onChange={(e) => updateField('operatorName', e.target.value)}
-                  disabled={isIot}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  disabled={isIot}
-                  rows={3}
-                  className={`w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none ${
-                    isIot
-                      ? 'border border-gray-200 bg-gray-100 cursor-not-allowed text-gray-500'
-                      : 'border border-gray-400'
+                  value={isIot ? 'IoT自动' : '手动录入'}
+                  readOnly
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 font-medium ${
+                    isIot ? 'text-green-600' : 'text-blue-600'
                   }`}
                 />
               </div>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Section 2: 肥料与用量 */}
+        <div>
+          <SectionTitle title="肥料与用量" icon="🧪" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
+                <DictSelect
+                  category="fertilizer_type"
+                  value={form.fertilizerType}
+                  onChange={(value) => updateField('fertilizerType', value)}
+                  placeholder="选择肥料类型"
+                  disabled={isIot}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">肥料名称 <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={form.fertilizerName}
+                  onChange={(e) => updateField('fertilizerName', e.target.value)}
+                  disabled={isIot}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
+                <input
+                  type="text"
+                  value={form.dilutionRatio}
+                  onChange={(e) => updateField('dilutionRatio', e.target.value)}
+                  disabled={isIot}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
+                <input
+                  type="number"
+                  value={form.quantity || ''}
+                  onChange={(e) => updateField('quantity', Number(e.target.value))}
+                  disabled={isIot}
+                  min="0"
+                  step="0.01"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
+                <input
+                  type="number"
+                  value={form.unitPrice || ''}
+                  onChange={(e) => updateField('unitPrice', Number(e.target.value))}
+                  disabled={isIot}
+                  min="0"
+                  step="0.01"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+              <input
+                type="text"
+                value={`${form.totalCost.toFixed(2)} 元`}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-green-50 font-bold text-emerald-700"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: 位置与时间 */}
+        <div>
+          <SectionTitle title="位置与时间" icon="📍" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
+                <input
+                  type="text"
+                  value={form.greenhouseName}
+                  onChange={(e) => updateField('greenhouseName', e.target.value)}
+                  disabled={isIot}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+                <CropCodeSelector
+                  value={cropCode}
+                  onChange={handleCropCodeChange}
+                  placeholder="搜索或选择作物品种..."
+                  size="md"
+                  showFullPath={true}
+                  disabled={isIot}
+                />
+                {selectedCrop && (
+                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                    <div className="text-emerald-700">
+                      {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                      {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
+              <input
+                type="datetime-local"
+                value={form.fertilizeTime}
+                onChange={(e) => updateField('fertilizeTime', e.target.value)}
+                disabled={isIot}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: 操作与备注 */}
+        <div>
+          <SectionTitle title="操作与备注" icon="📝" />
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+              <input
+                type="text"
+                value={form.operatorName}
+                onChange={(e) => updateField('operatorName', e.target.value)}
+                disabled={isIot}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                disabled={isIot}
+                rows={3}
+                className={`w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none ${
+                  isIot
+                    ? 'border border-gray-200 bg-gray-100 cursor-not-allowed text-gray-500'
+                    : 'border border-gray-400'
+                }`}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

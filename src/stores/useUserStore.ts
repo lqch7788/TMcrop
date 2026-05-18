@@ -52,6 +52,12 @@ export const useUserStore = create<UserStore>()(
     {
       name: 'user_store',
       partialize: (state) => ({ users: state.users }),
+      // 防御 localStorage 数据损坏：确保 users 总是数组
+      onRehydrateStorage: () => (state) => {
+        if (state && !Array.isArray(state.users)) {
+          state.users = [];
+        }
+      },
     }
   )
 );

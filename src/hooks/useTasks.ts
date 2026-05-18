@@ -480,7 +480,7 @@ export interface UseTasksReturn {
   extendDeadline: (id: string, newDeadline: string, reason: string) => void;
 
   // 删除任务
-  deleteTask: (id: string) => void;
+  deleteTask: (id: string) => Promise<void>;
 
   // 更新任务
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -1340,10 +1340,10 @@ export function useTasks(): UseTasksReturn {
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 删除任务（Store 层统一管理：根据任务来源路由到正确 Store）
-  const deleteTask = useCallback((id: string) => {
+  const deleteTask = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
     const store = task ? getStoreForTask(task) : useFarmTaskStore.getState();
-    store.deleteTask(id);
+    await store.deleteTask(id);
   }, [tasks]);
 
   // 更新任务（本地乐观更新 + API同步，根据任务来源路由到正确 Store）

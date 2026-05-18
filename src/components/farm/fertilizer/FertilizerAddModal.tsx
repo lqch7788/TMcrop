@@ -1,16 +1,19 @@
 /**
  * 施肥新增弹窗组件
- * 4个可折叠区域：基础信息、肥料与用量、位置与时间、操作与备注
+ * 4个区域：基础信息、肥料与用量、位置与时间、操作与备注
  * 使用 UnifiedModal 包装，提交时调用 store.createItem()
  */
-import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Search, X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
-import { useFertilizerStore } from '@/stores';
+import CropCodeSelector from '../../farm/common/CropCodeSelector';
+import { useFertilizerStore, useProductionPlanStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
+import * as cropVarietyService from '@/services/cropVarietyService';
+import type { CropVariety } from '@/types/cropVariety';
 
 interface FertilizerAddModalProps {
   isOpen: boolean;
@@ -39,18 +42,69 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   const store = useFertilizerStore();
 
   const [form, setForm] = useState(defaultForm);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    basic: true,
-    fertilizer: true,
-    location: false,
-    operation: false,
-  });
   const [submitting, setSubmitting] = useState(false);
+  const [cropCode, setCropCode] = useState('');
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+
+  // 生产计划搜索状态
+  const [planSearchKeyword, setPlanSearchKeyword] = useState('');
+  const [selectedPlanLabel, setSelectedPlanLabel] = useState(''); // 选中显示文本
+  const [showPlanSearch, setShowPlanSearch] = useState(false);
+  const planSearchRef = useRef<HTMLDivElement>(null);
+
+  // 获取生产计划列表（过滤已完成）
+  const planOptions = useMemo(() => {
+    const plans = useProductionPlanStore.getState().plans;
+    const activePlans = plans.filter(p => p.status !== 'completed');
+    if (!planSearchKeyword.trim()) return activePlans;
+    const kw = planSearchKeyword.toLowerCase();
+    return activePlans.filter(p =>
+      p.batchCode.toLowerCase().includes(kw) ||
+      (p.cropName || '').toLowerCase().includes(kw)
+    );
+  }, [planSearchKeyword]);
+
+  // 点击外部关闭计划搜索
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (planSearchRef.current && !planSearchRef.current.contains(e.target as Node)) {
+        setShowPlanSearch(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 初始化品种库
+  useEffect(() => {
+    if (isOpen) {
+      cropVarietyService.initVarieties();
+    }
+  }, [isOpen]);
+
+  // 作物选择处理
+  const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {
+    if (varietyInfo) {
+      setSelectedCrop(varietyInfo);
+      setCropCode(varietyInfo.cropCode);
+      const cropNameValue = varietyInfo.detailVarietyCode && varietyInfo.detailVarietyCode !== '00'
+        ? varietyInfo.varietyName
+        : (varietyInfo.subVariety1Name || varietyInfo.varietyName);
+      setForm(prev => ({
+        ...prev,
+        cropName: cropNameValue,
+      }));
+    }
+  }, []);
 
   // 重置表单
   useEffect(() => {
     if (isOpen) {
       setForm(defaultForm);
+      setCropCode('');
+      setSelectedCrop(null);
+      setPlanSearchKeyword('');
+      setSelectedPlanLabel('');
     }
   }, [isOpen]);
 
@@ -65,11 +119,6 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       return next;
     });
   }, []);
-
-  // 切换折叠
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   // 提交表单
   const handleSubmit = async () => {
@@ -99,16 +148,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     onSaved();
   };
 
-  // 渲染折叠标题
-  const SectionHeader = ({ keyName, title, icon }: { keyName: string; title: string; icon: string }) => (
-    <button
-      type="button"
-      onClick={() => toggleSection(keyName)}
-      className="w-full flex items-center justify-between bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2.5 rounded-t-lg text-sm font-semibold"
-    >
-      <span>{icon} {title}</span>
-      {expandedSections[keyName] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-    </button>
+  // 区域标题（纯文本粗体，无折叠功能）
+  const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
+    <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
   );
 
   return (
@@ -119,202 +161,295 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       size="xl"
       showFooter={false}
     >
-      <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* Section 1: 基础信息 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="basic" title="基础信息" icon="📋" />
-          {expandedSections.basic && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
-                  <FertilizerCodeGenerator
-                    value={form.fertilizerCode}
-                    onChange={(code) => updateField('fertilizerCode', code)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
-                  <select
-                    value={form.dataSource}
-                    onChange={(e) => updateField('dataSource', e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="manual">手动录入</option>
-                    <option value="auto_iot">IoT自动</option>
-                  </select>
-                </div>
+        <div>
+          <SectionTitle title="基础信息" icon="📋" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
+                <FertilizerCodeGenerator
+                  value={form.fertilizerCode}
+                  onChange={(code) => updateField('fertilizerCode', code)}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
-                  <input
-                    type="text"
-                    value={form.productionPlanCode || ''}
-                    onChange={(e) => updateField('productionPlanCode', e.target.value)}
-                    placeholder="可选，输入生产计划编号"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
-                  <input
-                    type="text"
-                    value={form.plantingCode || ''}
-                    onChange={(e) => updateField('plantingCode', e.target.value)}
-                    placeholder="可选，输入种植记录编号"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
+                <select
+                  value={form.dataSource}
+                  onChange={(e) => updateField('dataSource', e.target.value)}
+                  className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="manual">手动录入</option>
+                  <option value="auto_iot">IoT自动</option>
+                </select>
               </div>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-4">
+              <div ref={planSearchRef} className="relative">
+                <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+                {/* 已选中计划（包括"不关联"选项） */}
+                {selectedPlanLabel ? (
+                  <div className={`p-2 border rounded-lg ${
+                    form.productionPlanCode
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-medium ${
+                        form.productionPlanCode ? 'text-blue-800' : 'text-gray-500'
+                      }`}>
+                        {selectedPlanLabel}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateField('productionPlanCode', '');
+                          updateField('productionPlanId', '');
+                          setPlanSearchKeyword('');
+                          setSelectedPlanLabel('');
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <X className={`w-4 h-4 ${form.productionPlanCode ? 'text-blue-600' : 'text-gray-400'}`} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        value={planSearchKeyword}
+                        onChange={(e) => { setPlanSearchKeyword(e.target.value); setShowPlanSearch(true); }}
+                        onFocus={() => setShowPlanSearch(true)}
+                        placeholder="搜索生产计划批次号..."
+                        className="flex-1 px-3 py-2 border border-gray-400 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPlanSearch(!showPlanSearch)}
+                        className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-400 rounded-r-lg hover:bg-gray-200"
+                      >
+                        <Search className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                    {/* 下拉选项 */}
+                    {showPlanSearch && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        {/* 第一个选项：不关联 */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateField('productionPlanCode', '');
+                            updateField('productionPlanId', '');
+                            setPlanSearchKeyword('');
+                            setSelectedPlanLabel('不关联生产计划');
+                            setShowPlanSearch(false);
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 border-b border-gray-100"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">不关联生产计划</span>
+                        </button>
+                        {planOptions.length > 0 ? (
+                          planOptions.map((plan) => (
+                            <button
+                              key={plan.id}
+                              type="button"
+                              onClick={() => {
+                                updateField('productionPlanId', plan.id);
+                                updateField('productionPlanCode', plan.batchCode);
+                                setPlanSearchKeyword(plan.batchCode);
+                                setSelectedPlanLabel(plan.batchCode);
+                                setShowPlanSearch(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-emerald-50 flex items-center justify-between border-b border-gray-100 last:border-b-0"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{plan.batchCode}</p>
+                                <p className="text-xs text-gray-500">{plan.cropName || ''} · {plan.greenhouseName || ''}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                plan.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
+                                plan.status === 'planned' ? 'bg-amber-100 text-amber-600' :
+                                'bg-gray-100 text-gray-500'
+                              }`}>
+                                {plan.status === 'in_progress' ? '进行中' : plan.status === 'planned' ? '计划中' : plan.status}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-sm text-gray-400">
+                            无匹配的生产计划
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
+                <input
+                  type="text"
+                  value={form.plantingCode || ''}
+                  onChange={(e) => updateField('plantingCode', e.target.value)}
+                  placeholder="可选，输入种植记录编号"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Section 2: 肥料与用量 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="fertilizer" title="肥料与用量" icon="🧪" />
-          {expandedSections.fertilizer && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">
-                    肥料名称 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.fertilizerName}
-                    onChange={(e) => updateField('fertilizerName', e.target.value)}
-                    placeholder="请输入肥料名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
-                  <DictSelect
-                    category="fertilizer_type"
-                    value={form.fertilizerType}
-                    onChange={(value) => updateField('fertilizerType', value)}
-                    placeholder="选择肥料类型"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
-                  <input
-                    type="text"
-                    value={form.dilutionRatio}
-                    onChange={(e) => updateField('dilutionRatio', e.target.value)}
-                    placeholder="如 1:500"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
-                  <input
-                    type="number"
-                    value={form.quantity || ''}
-                    onChange={(e) => updateField('quantity', Number(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
-                  <input
-                    type="number"
-                    value={form.unitPrice || ''}
-                    onChange={(e) => updateField('unitPrice', Number(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+        <div>
+          <SectionTitle title="肥料与用量" icon="🧪" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
+                <DictSelect
+                  category="fertilizer_type"
+                  value={form.fertilizerType}
+                  onChange={(value) => updateField('fertilizerType', value)}
+                  placeholder="选择肥料类型"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  肥料名称 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
-                  value={`${form.totalCost.toFixed(2)} 元`}
-                  readOnly
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-green-50 font-bold text-emerald-700"
+                  value={form.fertilizerName}
+                  onChange={(e) => updateField('fertilizerName', e.target.value)}
+                  placeholder="请输入肥料名称"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </div>
-          )}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
+                <input
+                  type="text"
+                  value={form.dilutionRatio}
+                  onChange={(e) => updateField('dilutionRatio', e.target.value)}
+                  placeholder="如 1:500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
+                <input
+                  type="number"
+                  value={form.quantity || ''}
+                  onChange={(e) => updateField('quantity', Number(e.target.value))}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
+                <input
+                  type="number"
+                  value={form.unitPrice || ''}
+                  onChange={(e) => updateField('unitPrice', Number(e.target.value))}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+              <input
+                type="text"
+                value={`${form.totalCost.toFixed(2)} 元`}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-green-50 font-bold text-emerald-700"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Section 3: 位置与时间 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="location" title="位置与时间" icon="📍" />
-          {expandedSections.location && (
-            <div className="p-4 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
-                  <input
-                    type="text"
-                    value={form.greenhouseName}
-                    onChange={(e) => updateField('greenhouseName', e.target.value)}
-                    placeholder="请输入温室位置"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
-                  <input
-                    type="text"
-                    value={form.cropName}
-                    onChange={(e) => updateField('cropName', e.target.value)}
-                    placeholder="请输入作物品种"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
+        <div>
+          <SectionTitle title="位置与时间" icon="📍" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
                 <input
-                  type="datetime-local"
-                  value={form.fertilizeTime}
-                  onChange={(e) => updateField('fertilizeTime', e.target.value)}
+                  type="text"
+                  value={form.greenhouseName}
+                  onChange={(e) => updateField('greenhouseName', e.target.value)}
+                  placeholder="请输入温室位置"
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+                <CropCodeSelector
+                  value={cropCode}
+                  onChange={handleCropCodeChange}
+                  placeholder="搜索或选择作物品种..."
+                  size="md"
+                  showFullPath={true}
+                />
+                {selectedCrop && (
+                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                    <div className="text-emerald-700">
+                      {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                      {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
+              <input
+                type="datetime-local"
+                value={form.fertilizeTime}
+                onChange={(e) => updateField('fertilizeTime', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Section 4: 操作与备注 */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <SectionHeader keyName="operation" title="操作与备注" icon="📝" />
-          {expandedSections.operation && (
-            <div className="p-4 space-y-3 bg-white">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
-                <input
-                  type="text"
-                  value={form.operatorName}
-                  onChange={(e) => updateField('operatorName', e.target.value)}
-                  placeholder="请输入操作员名称"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="请输入备注信息"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                />
-              </div>
+        <div>
+          <SectionTitle title="操作与备注" icon="📝" />
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+              <input
+                type="text"
+                value={form.operatorName}
+                onChange={(e) => updateField('operatorName', e.target.value)}
+                placeholder="请输入操作员名称"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                placeholder="请输入备注信息"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

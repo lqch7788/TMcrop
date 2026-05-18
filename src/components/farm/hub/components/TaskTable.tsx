@@ -8,7 +8,7 @@ import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, Che
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
-import { EDITABLE_STATUSES, DELETABLE_STATUSES, STATUS_MAP } from '../constants_taskDispatch';
+import { EDITABLE_STATUSES, STATUS_MAP } from '../constants_taskDispatch';
 
 interface Task {
   id: string;
@@ -399,8 +399,7 @@ export function TaskTable({
           <tbody className="divide-y divide-gray-300">
             {paginatedTasks.map((task, index) => {
               const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
-              const isDeletable = batchDeleteMode && DELETABLE_STATUSES.includes(task.status);
-              const isSelectable = batchEditMode ? isEditable : (batchDeleteMode ? isDeletable : true);
+              const isSelectable = batchEditMode ? isEditable : true;
               const statusName = STATUS_MAP[task.status]?.label || task.status;
               const selectableReason = !isSelectable ? `${statusName}状态不支持此操作` : undefined;
 

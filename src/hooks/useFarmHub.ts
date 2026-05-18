@@ -286,10 +286,12 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   // 添加 refreshKey 依赖，当 hub.refresh() 被调用时会重新计算
   const tasks = useMemo(() => {
     // 从 useTasks 获取数据（useTasks 内部使用 farmTaskStore -> enhancedApiClient）
+    // 农事任务TAB只显示 NS 开头的任务（农事任务编号格式：NS+年月日+流水号）
     const farmTasks = useTasksData
       .filter(t => {
         const dispatchMode = t.dispatchMode || 'farm';
-        return dispatchMode === 'farm';
+        const taskCode = t.taskCode || t.id || '';
+        return dispatchMode === 'farm' && taskCode.startsWith('NS');
       })
       .sort(sortByCreatedAt);
     console.log('[useFarmHub] tasks from useTasks (三级降级), count:', farmTasks.length);
