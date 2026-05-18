@@ -17,10 +17,10 @@ import {
   AlertTriangle,
   Zap,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { Space } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import { useProductionPlanStore } from '@/stores';
 import dayjs from 'dayjs';
@@ -41,47 +41,91 @@ interface TaskTypeSummary {
 // 周汇总表格组件
 // ============================================
 function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[80px]">周次</TableHead>
-          <TableHead className="w-[120px]">开始日期</TableHead>
-          <TableHead className="w-[120px]">结束日期</TableHead>
-          <TableHead className="w-[80px]">任务数</TableHead>
-          <TableHead className="w-[100px]">总工时</TableHead>
-          <TableHead className="w-[100px]">所需人数</TableHead>
-          <TableHead>重点作物</TableHead>
-          <TableHead>重点任务</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((item) => (
-          <TableRow key={item.weekNumber}>
-            <TableCell className="font-semibold">第 {item.weekNumber} 周</TableCell>
-            <TableCell>{item.startDate}</TableCell>
-            <TableCell>{item.endDate}</TableCell>
-            <TableCell><Badge variant="info">{item.taskCount}</Badge></TableCell>
-            <TableCell>{item.totalHours}h</TableCell>
-            <TableCell>{item.requiredWorkers} 人</TableCell>
-            <TableCell>
-              <Space wrap>
-                {item.keyCrops.map(crop => (
-                  <Badge key={crop} variant="success">{crop}</Badge>
-                ))}
-              </Space>
-            </TableCell>
-            <TableCell>
-              <Space wrap>
-                {item.keyTasks.map(task => (
-                  <Badge key={task} variant="secondary">{task}</Badge>
-                ))}
-              </Space>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">按周汇总</h3>
+        <p className="text-sm text-gray-500 mt-0.5">共 {data.length} 周数据</p>
+      </div>
+
+      {/* 表格 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">周次</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">开始日期</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">结束日期</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">所需人数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">重点作物</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">重点任务</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
+            {paginatedData.map((item) => (
+              <tr key={item.weekNumber} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">第 {item.weekNumber} 周</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.startDate}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.endDate}</td>
+                <td className="px-4 py-3 text-center whitespace-nowrap"><Badge variant="info">{item.taskCount}</Badge></td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.totalHours}h</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.requiredWorkers} 人</td>
+                <td className="px-4 py-3 text-center whitespace-nowrap">
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {item.keyCrops.map(crop => (
+                      <Badge key={crop} variant="success">{crop}</Badge>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-center whitespace-nowrap">
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {item.keyTasks.map(task => (
+                      <Badge key={task} variant="secondary">{task}</Badge>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 分页 */}
+      {data.length > pageSize && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -89,38 +133,87 @@ function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
 // 物资需求表格组件（带合计行）
 // ============================================
 function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
   const totalPrice = useMemo(() => {
     return data.reduce((sum, m) => sum + m.estimatedTotalPrice, 0);
   }, [data]);
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[120px]">物资名称</TableHead>
-          <TableHead className="w-[120px]">规格</TableHead>
-          <TableHead className="w-[100px]">数量</TableHead>
-          <TableHead className="w-[120px]">预估单价</TableHead>
-          <TableHead className="w-[120px]">预估总价</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((item, index) => (
-          <TableRow key={index}>
-            <TableCell>{item.materialName}</TableCell>
-            <TableCell>{item.specification}</TableCell>
-            <TableCell className="font-semibold">{item.quantity} {item.unit}</TableCell>
-            <TableCell>¥{item.estimatedUnitPrice.toFixed(2)}</TableCell>
-            <TableCell className="font-semibold text-red-500">¥{item.estimatedTotalPrice.toFixed(2)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-      {/* 合计行 */}
-      <div className="flex justify-between items-center p-3 bg-gray-50 border-t border-gray-100">
-        <span className="font-semibold">合计</span>
-        <span className="font-semibold text-red-500">¥{totalPrice.toFixed(2)}</span>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">物资需求计划</h3>
+        <p className="text-sm text-gray-500 mt-0.5">基于月度任务规划，预测所需的物资消耗</p>
       </div>
-    </Table>
+
+      {/* 表格 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">物资名称</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">规格</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">数量</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预估单价</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预估总价</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
+            {paginatedData.map((item, index) => (
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm text-gray-900 text-center whitespace-nowrap">{item.materialName}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.specification}</td>
+                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">{item.quantity} {item.unit}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">¥{item.estimatedUnitPrice.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm font-semibold text-red-500 text-center whitespace-nowrap">¥{item.estimatedTotalPrice.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+          {/* 合计行 */}
+          <tfoot>
+            <tr className="bg-gray-50 border-t-2 border-gray-300">
+              <td className="px-4 py-3 text-center"></td>
+              <td className="px-4 py-3 text-center"></td>
+              <td className="px-4 py-3 text-center"></td>
+              <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">合计</td>
+              <td className="px-4 py-3 text-sm font-bold text-red-500 text-center whitespace-nowrap">¥{totalPrice.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* 分页 */}
+      {data.length > pageSize && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -128,27 +221,71 @@ function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
 // 人员需求表格组件
 // ============================================
 function WorkerTable({ data }: { data: WorkerRequirement[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(data.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, currentPage]);
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[100px]">角色</TableHead>
-          <TableHead className="w-[120px]">技能要求</TableHead>
-          <TableHead className="w-[100px]">需求人数</TableHead>
-          <TableHead className="w-[100px]">预估工时</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((item, index) => (
-          <TableRow key={index}>
-            <TableCell>{item.role}</TableCell>
-            <TableCell>{item.skill}</TableCell>
-            <TableCell><Badge variant="info">{item.requiredCount} 人</Badge></TableCell>
-            <TableCell>{item.estimatedHours}h</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">人员需求计划</h3>
+        <p className="text-sm text-gray-500 mt-0.5">基于月度任务规划，预测所需的人员配置</p>
+      </div>
+
+      {/* 表格 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">角色</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">技能要求</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">需求人数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预估工时</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
+            {paginatedData.map((item, index) => (
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center whitespace-nowrap">{item.role}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.skill}</td>
+                <td className="px-4 py-3 text-center whitespace-nowrap"><Badge variant="info">{item.requiredCount} 人</Badge></td>
+                <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.estimatedHours}h</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 分页 */}
+      {data.length > pageSize && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">共 {data.length} 条</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -172,15 +309,30 @@ export default function MonthlyPlanningPage() {
   // 从 Zustand Store 获取批次列表
   const batches = storeBatches;
 
-  // 批次选项
-  const batchOptions = useMemo(() => {
-    return batches
-      .filter((b: any) => b.batchStatus === 'in_progress' || b.batchStatus === 'published')
-      .map((b: any) => ({
-        value: b.id,
-        label: `${b.batchCode} - ${b.cropName}`,
-      }));
+  // 可选批次列表（仅进行中和已发布）
+  const availableBatches = useMemo(() => {
+    return batches.filter(
+      (b: any) => b.batchStatus === 'in_progress' || b.batchStatus === 'published'
+    );
   }, [batches]);
+
+  // 批次选择表格分页
+  const [batchPage, setBatchPage] = useState(1);
+  const batchPageSize = 5;
+  const batchTotalPages = Math.ceil(availableBatches.length / batchPageSize) || 1;
+  const paginatedBatches = availableBatches.slice(
+    (batchPage - 1) * batchPageSize,
+    batchPage * batchPageSize
+  );
+
+  // 批次状态中文映射
+  const batchStatusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      draft: '草稿', pending: '待审核', published: '已发布',
+      in_progress: '进行中', completed: '已完成', cancelled: '已取消',
+    };
+    return map[status] || status;
+  };
 
   // 生成月度计划
   useEffect(() => {
@@ -250,72 +402,20 @@ export default function MonthlyPlanningPage() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => window.location.href = '/farm-hub'}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft />
-            <span>返回</span>
-          </button>
-        </div>
         <div className="flex items-center gap-3">
+          <a
+            href="/farm-hub"
+            className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition-colors"
+            title="返回农事任务中心"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </a>
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
             <Calendar className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">月度任务规划</h1>
             <p className="text-xs text-gray-500">基于作物生长周期和生产批次，生成未来一个月的任务规划、物资需求和成本预估</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 日期选择、批次筛选和操作按钮 */}
-      <div className="bg-[#F2F6FA] rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">选择月份:</span>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => handleMonthChange(dayjs(e.target.value + '-01'))}
-                className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">生产批次:</span>
-              <select
-                multiple
-                value={selectedBatches}
-                onChange={(e) => {
-                  const options = e.target.selectedOptions;
-                  const values = Array.from(options).map(opt => opt.value);
-                  handleBatchChange(values);
-                }}
-                className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[200px]"
-              >
-                {batchOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
-            >
-              <RotateCw />
-              刷新数据
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
-            >
-              <Download />
-              导出规划
-            </button>
           </div>
         </div>
       </div>
@@ -337,64 +437,252 @@ export default function MonthlyPlanningPage() {
         ))}
       </div>
 
+      {/* 日期选择和操作按钮 */}
+      <div className="bg-[#F2F6FA] rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">选择月份:</span>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => handleMonthChange(dayjs(e.target.value + '-01'))}
+                className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
+            >
+              <RotateCw />
+              刷新数据
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
+            >
+              <Download />
+              导出规划
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 生产批次选择表格 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* 标题栏 */}
+        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">生产批次选择</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              勾选要纳入月度规划的批次（仅显示进行中/已发布），已选 {selectedBatches.length} / {availableBatches.length} 个批次
+            </p>
+          </div>
+          {selectedBatches.length > 0 && (
+            <button
+              onClick={() => setSelectedBatches([])}
+              className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+            >
+              清除选择
+            </button>
+          )}
+        </div>
+
+        {/* 表格 */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
+                  <input
+                    type="checkbox"
+                    checked={paginatedBatches.length > 0 && paginatedBatches.every((b: any) => selectedBatches.includes(b.id))}
+                    onChange={() => {
+                      const pageIds = paginatedBatches.map((b: any) => b.id);
+                      const allPageSelected = paginatedBatches.every((b: any) => selectedBatches.includes(b.id));
+                      if (allPageSelected) {
+                        setSelectedBatches(prev => prev.filter(id => !pageIds.includes(id)));
+                      } else {
+                        setSelectedBatches(prev => [...new Set([...prev, ...pageIds])]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-white/30 bg-white/20"
+                  />
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">批次编号</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物名称</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">品种</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">位置</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">面积(亩)</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">生长阶段</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">开始日期</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">预计采收</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-300">
+              {paginatedBatches.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">暂无进行中或已发布的生产批次</td>
+                </tr>
+              ) : (
+                paginatedBatches.map((batch: any) => {
+                  const isSelected = selectedBatches.includes(batch.id);
+                  return (
+                    <tr
+                      key={batch.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedBatches(prev => prev.filter(id => id !== batch.id));
+                        } else {
+                          setSelectedBatches(prev => [...prev, batch.id]);
+                        }
+                      }}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setSelectedBatches(prev => prev.filter(id => id !== batch.id));
+                            } else {
+                              setSelectedBatches(prev => [...prev, batch.id]);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-600"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center whitespace-nowrap">
+                        {batch.batchCode || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
+                        {batch.cropName || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
+                        {batch.variety || batch.cropType || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
+                        {batch.greenhouseName || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
+                        {batch.plantingArea || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          {batch.stageName || batch.stage || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
+                        {batch.startDate || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
+                        {batch.expectedHarvestDate || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                          batch.batchStatus === 'in_progress'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {batchStatusLabel(batch.batchStatus)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 分页 */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">共 {availableBatches.length} 条</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBatchPage(p => Math.max(1, p - 1))}
+              disabled={batchPage === 1}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-gray-600">{batchPage} / {batchTotalPages}</span>
+            <button
+              onClick={() => setBatchPage(p => Math.min(batchTotalPages, p + 1))}
+              disabled={batchPage >= batchTotalPages}
+              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Tab 切换 - 样式与农事任务中心统一 */}
       <div className="bg-white rounded-xl shadow-sm">
-        {/* Tab 头部 */}
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+        {/* Tab 头部 - 绿色药丸按钮 */}
+        <div className="border-b border-gray-200 px-4 py-3">
+          <nav className="flex gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'overview'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <FileText className="mr-1" />
+              <FileText className="w-4 h-4" />
               规划概览
             </button>
             <button
               onClick={() => setActiveTab('weekly')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'weekly'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Calendar className="mr-1" />
+              <Calendar className="w-4 h-4" />
               按周汇总
             </button>
             <button
               onClick={() => setActiveTab('materials')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'materials'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <ShoppingCart className="mr-1" />
+              <ShoppingCart className="w-4 h-4" />
               物资需求
             </button>
             <button
               onClick={() => setActiveTab('workers')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'workers'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Users className="mr-1" />
+              <Users className="w-4 h-4" />
               人员需求
             </button>
             <button
               onClick={() => setActiveTab('cost')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'cost'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <DollarSign className="mr-1" />
+              <DollarSign className="w-4 h-4" />
               成本预估
             </button>
           </nav>
@@ -451,34 +739,17 @@ export default function MonthlyPlanningPage() {
 
           {/* 按周汇总 Tab */}
           {activeTab === 'weekly' && monthlyPlan && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">按周汇总</h3>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <WeeklySummaryTable data={monthlyPlan.weeklySummaries} />
-              </div>
-            </div>
+            <WeeklySummaryTable data={monthlyPlan.weeklySummaries} />
           )}
 
           {/* 物资需求 Tab */}
           {activeTab === 'materials' && monthlyPlan && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">物资需求计划</h3>
-              <p className="text-sm text-gray-500 mb-4">基于月度任务规划，预测所需的物资消耗</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <MaterialTableWithSummary data={monthlyPlan.materialRequirements} />
-              </div>
-            </div>
+            <MaterialTableWithSummary data={monthlyPlan.materialRequirements} />
           )}
 
           {/* 人员需求 Tab */}
           {activeTab === 'workers' && monthlyPlan && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">人员需求计划</h3>
-              <p className="text-sm text-gray-500 mb-4">基于月度任务规划，预测所需的人员配置</p>
-              <div className="rounded-lg overflow-hidden border border-gray-100">
-                <WorkerTable data={monthlyPlan.workerRequirements} />
-              </div>
-            </div>
+            <WorkerTable data={monthlyPlan.workerRequirements} />
           )}
 
           {/* 成本预估 Tab */}

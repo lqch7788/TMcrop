@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../hooks/useTempTasks';
-import { useTasks } from '../../../hooks/useTasks';
+
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../types/task';
 
@@ -686,7 +686,7 @@ export function TempTaskPage() {
   const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
   // 统一任务管理 Hook（用于临时任务同步）
-  const { createTask, publishTask } = useTasks();
+
 
   // 紧急程度映射到优先级
   const mapUrgencyToPriority = (urgency?: string): 'urgent' | 'high' | 'normal' => {
@@ -781,36 +781,7 @@ export function TempTaskPage() {
         // 计算总工时
         const totalEstimatedHours = ((taskData.estimatedDays || 0) * 8 + (taskData.estimatedHours || 0)) * (taskData.workerCount || 1);
 
-        // ========== 方式1：使用 useTasks.createTask() 创建临时任务（同步到"我的任务-临时任务处理"）==========
-        const useTasksTask = createTask({
-          title: taskData.title || '',
-          type: taskData.tempTaskType || 'other',
-          typeName: TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他',
-          priority: mapUrgencyToPriority(taskData.urgency),
-          assigneeId: taskData.assigneeId || '',
-          assigneeName: taskData.assigneeName || '待分配',
-          assignerId: 'admin',
-          assignerName: '管理员',
-          planStart: taskData.planStart || '',
-          dueDate: taskData.dueDate || '',
-          description: taskData.description || '',
-          remarks: taskData.notes || '',
-          sourceType: 'tempTask',
-          // 临时任务特有字段
-          workLocation: taskData.workLocation || '',
-          tempTaskType: taskData.tempTaskType || 'other',
-          urgency: taskData.urgency || 'normal',
-          estimatedDays: taskData.estimatedDays || 0,
-          estimatedHours: taskData.estimatedHours || 0,
-          workerCount: taskData.workerCount || 1,
-          totalEstimatedHours,
-          greenhouseId: taskData.greenhouseId || '',
-          greenhouseName: taskData.workLocation || '',
-          // 必填反馈
-          requiredFeedback: taskData.requiredFeedback || [],
-        }, 'tempTask', finalStatus);
-
-        // ========== 方式2：同时使用 addTempTask（兼容临时任务派发列表显示）==========
+        // 使用 addTempTask 创建临时任务（直接存入 useTempTaskStore，同步到"我的任务-临时任务处理"）
         const newTask = addTempTask({
           title: taskData.title || '',
           type: taskData.tempTaskType || 'other',
@@ -833,9 +804,11 @@ export function TempTaskPage() {
           remarks: taskData.notes || '',
           status: finalStatus,
           requiredFeedback: taskData.requiredFeedback || [],
+          sourceType: 'tempTask',
+          dispatchMode: 'tempTask',
         });
 
-        // ========== 数据闭环：同步到农事操作记录 ==========
+        // 数据闭环：同步到农事操作记录
         addTempTaskRecord({
           operationType: taskData.tempTaskType || 'other',
           operationTypeName: `临时任务-${TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他'}`,
@@ -845,8 +818,8 @@ export function TempTaskPage() {
           operatorId: taskData.assigneeId || '',
           operatorName: taskData.assigneeName || '待分配',
           operationDate: new Date().toISOString().split('T')[0],
-          sourceId: useTasksTask.id,
-          sourceCode: useTasksTask.taskCode,
+          sourceId: newTask?.id || '',
+          sourceCode: newTask?.taskCode || newTask?.id || '',
           progress: 0,
           remarks: finalStatus === 'pending' ? '临时任务已发布' : '临时任务已创建（草稿）',
         });

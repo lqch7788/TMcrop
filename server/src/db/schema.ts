@@ -1226,6 +1226,34 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ========== V6.2: 作物品种表扩展字段（环境参数、生长周期、别名、描述等） ==========
+  const cropVarietyExtendedColumns = [
+    { name: 'alias', type: 'TEXT' },
+    { name: 'image', type: 'TEXT' },
+    { name: 'description', type: 'TEXT' },
+    { name: 'germination_period', type: 'REAL' },
+    { name: 'seedling_period', type: 'REAL' },
+    { name: 'flowering_period', type: 'REAL' },
+    { name: 'fruiting_period', type: 'REAL' },
+    { name: 'harvest_period', type: 'REAL' },
+    { name: 'air_temperature', type: 'REAL' },
+    { name: 'air_humidity', type: 'REAL' },
+    { name: 'co2_content', type: 'REAL' },
+    { name: 'light_intensity', type: 'REAL' },
+    { name: 'soil_temperature', type: 'REAL' },
+    { name: 'soil_humidity', type: 'REAL' },
+    { name: 'soil_ph', type: 'REAL' },
+    { name: 'soil_ec', type: 'REAL' },
+    { name: 'remarks', type: 'TEXT' },
+  ];
+  for (const col of cropVarietyExtendedColumns) {
+    try {
+      db.run(`ALTER TABLE crop_varieties ADD COLUMN ${col.name} ${col.type}`);
+    } catch (e) {
+      // 列可能已存在，忽略错误
+    }
+  }
+
   // ========== V6.0 Phase 1: 新增系统配置和操作日志表 ==========
 
   // 系统配置表 - 存储系统参数配置

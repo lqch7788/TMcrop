@@ -11,7 +11,7 @@ import {
   DisplayMode
 } from '../types';
 import { produceCategories, getProduceTypesByCategory, ProduceCategoryCode } from '../../../../data/produceCodeRule';
-import { getVarietyOptions, getAllVarieties } from '../../../../services/cropVarietyService';
+import { getVarietyOptions, getAllVarieties as getLocalVarieties } from '../../../../services/cropVarietyService';
 import { getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } from '../../../../services/cropVarietyExtensionService';
 
 /**
@@ -19,11 +19,15 @@ import { getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } fro
  * key: 前8位编码 (category+type+variety+subVariety1)
  * value: 对应的已录入品种列表
  */
-const buildRecordedVarietyMap = (): Map<string, CropVariety[]> => {
-  const varieties = getAllVarieties();
+/**
+ * 将已录入品种转换为以编码前缀分组的Map
+ * @param varieties 品种数据源（Store 或 localStorage）
+ */
+const buildRecordedVarietyMap = (varieties?: CropVariety[]): Map<string, CropVariety[]> => {
+  const data = varieties ?? getLocalVarieties();
   const map = new Map<string, CropVariety[]>();
 
-  for (const v of varieties) {
+  for (const v of data) {
     // 构建前8位key（category+type+variety+subVariety1）
     const key = `${v.categoryCode}${v.typeCode}${v.varietyCode}${v.subVariety1Code || '000'}`;
     if (!map.has(key)) {
@@ -78,8 +82,8 @@ const buildTreeNode = (
           { ...path, typeCode: type.code, typeName: type.name },
           recordedMap
         );
+        children.push(typeNode);
         if (typeNode.hasChildren || typeNode.isRecorded) {
-          children.push(typeNode);
           hasChildren = true;
         }
         childCount++;
@@ -105,6 +109,8 @@ const buildTreeNode = (
       }
     }
     isRecorded = hasRecordedVariety(code, '', '', undefined, recordedMap);
+    // 确保有类型子节点时展开箭头显示
+    if (children.length > 0) hasChildren = true;
   } else if (level === 'type') {
     // 类型节点 - 构建品种子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === path.categoryCode);
@@ -149,6 +155,8 @@ const buildTreeNode = (
       }
     }
     isRecorded = hasRecordedVariety(path.categoryCode, code, '', undefined, recordedMap);
+    // 确保有子品种时展开箭头显示
+    if (children.length > 0) hasChildren = true;
   } else if (level === 'variety') {
     // 品种节点 - 构建子品种1子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === path.categoryCode);
@@ -413,15 +421,16 @@ export function useVarietyTree(
   categoryFilter: string = '',
   displayMode: DisplayMode = 'recorded',
   defaultExpandLevel: TreeLevel = 'subVariety1',
-  refreshKey?: number
+  refreshKey?: number,
+  recordedVarieties?: CropVariety[]
 ): UseVarietyTreeReturn {
   // 展开状态
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   // 是否已初始化（避免刷新时重置展开状态）
   const [isExpandedInitialized, setIsExpandedInitialized] = useState(false);
 
-  // 构建已录入品种Map
-  const recordedVarietyMap = useMemo(() => buildRecordedVarietyMap(), [refreshKey]);
+  // 构建已录入品种Map（从传入的 varieties 或 localStorage 获取）
+  const recordedVarietyMap = useMemo(() => buildRecordedVarietyMap(recordedVarieties), [recordedVarieties, refreshKey]);
 
   // 构建完整树形数据
   const fullTreeData = useMemo((): VarietyTreeNode[] => {
@@ -448,8 +457,8 @@ export function useVarietyTree(
         recordedVarietyMap
       );
 
-      // 只有有内容的类别才显示
-      if (categoryNode.hasChildren || categoryNode.isRecorded) {
+      // 始终显示所有预定义类别
+      if (categoryNode.hasChildren || categoryNode.isRecorded || categoryNode.children.length > 0) {
         nodes.push(categoryNode);
       }
     }

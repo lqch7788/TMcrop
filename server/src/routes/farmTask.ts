@@ -110,6 +110,9 @@ function transformTaskFields(item: any): any {
     sourceType: item.sourceType || 'dispatch',
     dispatchMode: item.dispatchMode || 'farm',
     sourceId: item.sourceId || '',
+    sourceCode: item.sourceCode || '',
+    sourceProblemId: item.sourceProblemId || '',
+    sourceInspectionId: item.sourceInspectionId || '',
     // 反馈要求
     feedbackRequirements: parseJsonField(item.feedbackRequirements, []),
     requiredFeedback: parseJsonField(item.feedbackRequirements, []),
@@ -283,6 +286,11 @@ router.post('/', (req: Request, res: Response) => {
       team_id, teamId,
       team_name, teamName,
       tools_remarks, toolsRemarks,
+      // 问题分派/巡查关联字段
+      source_problem_id, sourceProblemId,
+      source_inspection_id, sourceInspectionId,
+      source_id, sourceId,
+      source_code, sourceCode,
     } = req.body;
 
     // planStart/planEnd 是组合格式 "yyyy-MM-dd HH:mm"，拆分为 date 和 time
@@ -308,9 +316,10 @@ router.post('/', (req: Request, res: Response) => {
         feedback_requirements,
         rework_history, deadline_extensions,
         type_config, sop_content, description,
-        team_id, team_name, tools_remarks
+        team_id, team_name, tools_remarks,
+        source_problem_id, source_inspection_id, source_id, source_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -356,6 +365,11 @@ router.post('/', (req: Request, res: Response) => {
       team_id || teamId || "",
       team_name || teamName || "",
       tools_remarks || toolsRemarks || "",
+      // 问题分派/巡查关联字段
+      source_problem_id || sourceProblemId || null,
+      source_inspection_id || sourceInspectionId || null,
+      source_id || sourceId || null,
+      source_code || sourceCode || null,
     ]);
 
     saveDatabase();
@@ -425,6 +439,12 @@ const FIELD_NAME_MAP: Record<string, string> = {
   team_name: 'team_name',
   toolsRemarks: 'tools_remarks',
   tools_remarks: 'tools_remarks',
+  sourceProblemId: 'source_problem_id',
+  source_problem_id: 'source_problem_id',
+  sourceInspectionId: 'source_inspection_id',
+  source_inspection_id: 'source_inspection_id',
+  sourceCode: 'source_code',
+  source_code: 'source_code',
 };
 
 /**
@@ -472,6 +492,7 @@ router.put('/:id', (req: Request, res: Response) => {
       'feedback_requirements', 'rework_history', 'deadline_extensions',
       'type_config', 'sop_content', 'description',
       'team_id', 'team_name', 'tools_remarks',
+      'source_problem_id', 'source_inspection_id', 'source_id', 'source_code',
     ]);
     const validKeys = Object.keys(updates).filter(k => {
       if (k === 'id' || updates[k] === undefined) return false;

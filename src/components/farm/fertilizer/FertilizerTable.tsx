@@ -171,7 +171,7 @@ export function FertilizerTable({
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
@@ -197,7 +197,7 @@ export function FertilizerTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
                 <td colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">

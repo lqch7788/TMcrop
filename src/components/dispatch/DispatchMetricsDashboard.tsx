@@ -13,7 +13,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Target,
 } from 'lucide-react';
 
 /** 趋势方向类型 */
@@ -38,31 +37,17 @@ interface MetricCardProps {
 }
 
 function MetricCard({ metric }: MetricCardProps) {
-  // 趋势图标和颜色
   const getTrendIcon = () => {
     switch (metric.trend) {
       case 'up':
-        return <TrendingUp className="w-4 h-4 text-green-500" />;
+        return <TrendingUp className="w-3.5 h-3.5 text-green-500" />;
       case 'down':
-        return <TrendingDown className="w-4 h-4 text-red-500" />;
+        return <TrendingDown className="w-3.5 h-3.5 text-red-500" />;
       default:
-        return <Minus className="w-4 h-4 text-gray-400" />;
+        return <Minus className="w-3.5 h-3.5 text-gray-400" />;
     }
   };
 
-  // 获取趋势文字颜色
-  const getTrendTextColor = () => {
-    switch (metric.trend) {
-      case 'up':
-        return 'text-green-600';
-      case 'down':
-        return 'text-red-600';
-      default:
-        return 'text-gray-500';
-    }
-  };
-
-  // 计算完成进度百分比
   const getProgressPercent = () => {
     if (metric.target && typeof metric.value === 'number') {
       return Math.min((metric.value / metric.target) * 100, 100);
@@ -73,42 +58,29 @@ function MetricCard({ metric }: MetricCardProps) {
   const progress = getProgressPercent();
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      {/* 头部：图标和趋势 */}
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-lg ${metric.bgColor} flex items-center justify-center`}>
+    <div className="bg-white rounded-lg border border-gray-200 p-2.5 hover:shadow-md transition-shadow">
+      {/* 主行：图标 + 标签 + 数值 + 趋势（水平排列） */}
+      <div className="flex items-center gap-2">
+        <div className={`w-7 h-7 rounded-md ${metric.bgColor} flex items-center justify-center shrink-0`}>
           {metric.icon}
         </div>
-        <div className={`flex items-center gap-1 text-xs font-medium ${getTrendTextColor()}`}>
-          {getTrendIcon()}
-          {metric.trendValue && <span>{metric.trendValue}</span>}
-        </div>
-      </div>
-
-      {/* 指标名称 */}
-      <div className="text-xs text-gray-500 mb-1">{metric.label}</div>
-
-      {/* 当前值 */}
-      <div className="flex items-baseline gap-1 mb-2">
-        <span className={`text-2xl font-bold ${metric.color}`}>
+        <span className="text-xs text-gray-500 truncate">{metric.label}</span>
+        <span className={`text-lg font-bold ${metric.color} ml-auto`}>
           {metric.value}
         </span>
         {metric.unit && (
-          <span className="text-sm text-gray-400">{metric.unit}</span>
+          <span className="text-xs text-gray-400 -ml-1">{metric.unit}</span>
         )}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {getTrendIcon()}
+          {metric.trendValue && <span className="text-xs text-gray-400">{metric.trendValue}</span>}
+        </div>
       </div>
 
-      {/* 目标值进度条 */}
+      {/* 进度条 */}
       {progress !== null && metric.target && (
-        <div className="mt-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span className="flex items-center gap-1">
-              <Target className="w-3 h-3" />
-              目标: {metric.target}
-            </span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="mt-1.5">
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${metric.color.replace('text-', 'bg-')}`}
               style={{ width: `${progress}%` }}

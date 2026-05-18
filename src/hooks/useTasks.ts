@@ -37,6 +37,8 @@ import {
 
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
 import { updateSeedling } from '../services/apiSeedlingService';
+// 导入操作日志服务（用于将操作记录写入后端数据库）
+import { createOperationLog } from '../services/apiOperationLogService';
 import { SeedlingStatus } from '../types/crop';
 // 导入农事任务 Store（统一数据层）
 import { useFarmTaskStore, Task as StoreTask } from '../stores/farmTaskStore';
@@ -421,7 +423,7 @@ export interface UseTasksReturn {
   getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
 
   // 创建任务（草稿）
-  createTask: (taskData: Partial<Task>, dispatchMode?: 'farm' | 'tempTask' | 'smart') => Task;
+  createTask: (taskData: Partial<Task>, dispatchMode?: 'farm' | 'tempTask' | 'smart' | 'problem' | 'inspection', initialStatus?: TaskStatus) => Task;
 
   // 发布任务
   publishTask: (id: string) => void;
@@ -637,12 +639,29 @@ export function useTasks(): UseTasksReturn {
     } catch { /* ignore */ }
   }, []);
 
-  // 保存操作记录到 localStorage（写入前检查容量）
+  // 保存操作记录到 localStorage 并同步写入后端数据库
   const saveTaskRecords = useCallback((records: TaskRecord[]) => {
     taskRecordsRef.current = records;
     setTaskRecords(records);
     ensureStorageCapacity();
     localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(records));
+
+    // 将最新一条记录同步写入后端数据库（异步，不阻塞UI）
+    const latest = records[0];
+    if (latest) {
+      createOperationLog({
+        userId: latest.operatorId,
+        username: latest.operatorName,
+        action: latest.action,
+        module: '农事任务',
+        resourceType: 'task',
+        resourceId: latest.taskId,
+        description: `${latest.operatorName} ${TASK_ACTION_CONFIG[latest.action]?.label || latest.action} 任务【${latest.taskTitle}】`,
+        status: 'success',
+      }).catch(() => {
+        // API 写入失败时静默降级，不影响 localStorage 本地存储
+      });
+    }
   }, [ensureStorageCapacity]);
 
   // 保存催办记录到 localStorage（写入前检查容量）
@@ -692,7 +711,7 @@ export function useTasks(): UseTasksReturn {
   );
 
   // 创建任务
-  const createTask = useCallback((taskData: Partial<Task>, dispatchMode?: 'farm' | 'tempTask' | 'smart', initialStatus?: TaskStatus): Task => {
+  const createTask = useCallback((taskData: Partial<Task>, dispatchMode?: 'farm' | 'tempTask' | 'smart' | 'problem' | 'inspection', initialStatus?: TaskStatus): Task => {
     const now = new Date().toISOString();
 
     // 确保执行人信息完整
@@ -739,6 +758,10 @@ export function useTasks(): UseTasksReturn {
       teamName: (taskData as any).teamName || '',
       toolsRemarks: (taskData as any).toolsRemarks || '',
       requiredFeedback: (taskData as any).requiredFeedback || [],
+      // 问题分派关联字段（确保分派的问题任务能在"巡查反馈处理"Tab正确显示）
+      sourceProblemId: (taskData as any).sourceProblemId || '',
+      sourceId: (taskData as any).sourceId || '',
+      sourceCode: (taskData as any).sourceCode || '',
     };
 
     // 使用 farmTaskStore 的 addTask（乐观本地更新 + API 同步 + 离线队列）

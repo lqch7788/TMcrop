@@ -205,12 +205,13 @@ export function usePendingConfirmTasks(
 
     // 3. 巡查问题 - 待处理问题
     pendingProblems.forEach(problem => {
+      const issueText = problem.issueText || problem.description || problem.title || '';
       const normalizedTask: UnifiedDispatchTask = {
         id: `inspection-${problem.id}`,
         source: 'inspection',
         sourceId: problem.id.toString(),
         taskCode: `PD-${problem.id}`,
-        title: `【问题处理】${problem.issueText.slice(0, 30)}`,
+        title: `【问题处理】${issueText.slice(0, 30)}`,
         type: 'scouting',
         typeName: '问题处理',
         priority: problem.issueSeverity === '严重' ? 'urgent' :
@@ -223,7 +224,7 @@ export function usePendingConfirmTasks(
         requiredSkills: [],
         estimatedHours: 2,
         dueDate: '',
-        description: problem.issueText,
+        description: issueText,
         createdAt: new Date().toISOString(),
       };
 

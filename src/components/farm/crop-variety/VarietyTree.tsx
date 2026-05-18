@@ -10,6 +10,7 @@ import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
 import { getCategoryOptions } from '../../../services/cropVarietyService';
 import { CropVariety } from '../../../types/cropVariety';
+import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
 
 /**
  * 树形展示组件
@@ -47,6 +48,10 @@ export function VarietyTree({
   const searchCodeKeyword = externalSearchKeyword !== undefined ? externalSearchKeyword : internalSearchCodeKeyword;
   const categoryFilter = externalCategoryFilter !== undefined ? externalCategoryFilter : internalCategoryFilter;
 
+  // 从 Store 获取已录入品种数据
+  const store = useCropVarietyStore();
+  const recordedVarieties = store.items;
+
   // 获取类别选项
   const categoryOptions = getCategoryOptions();
 
@@ -60,7 +65,7 @@ export function VarietyTree({
     collapseAll,
     expandToLevel,
     totalNodeCount
-  } = useVarietyTree(combinedSearchKeyword, categoryFilter, 'all', 'subVariety1', refreshKey);
+  } = useVarietyTree(combinedSearchKeyword, categoryFilter, 'all', 'subVariety1', refreshKey, recordedVarieties);
 
   // 通知展开状态变化
   React.useEffect(() => {

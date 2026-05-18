@@ -7,11 +7,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, CheckCircle, Clock, AlertTriangle,
   Bot, AlertCircle, RotateCw, Send, ArrowLeft,
-  ChevronDown } from 'lucide-react';
+  ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import { Pagination } from '@/components/ui';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
 import dayjs from 'dayjs';
@@ -32,13 +30,11 @@ function TaskProgressTable({ title, description, data }: TaskProgressTableProps)
   const pageSize = 10;
   const totalPages = Math.ceil(data.length / pageSize);
 
-  // 计算当前页数据
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return data.slice(start, start + pageSize);
   }, [data, currentPage]);
 
-  // 状态映射
   const getStatusConfig = (status: string) => {
     const statusMap: Record<string, { variant: 'success' | 'info' | 'warning' | 'secondary'; text: string }> = {
       ahead: { variant: 'success', text: '提前完成' },
@@ -50,56 +46,73 @@ function TaskProgressTable({ title, description, data }: TaskProgressTableProps)
   };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
-      <p className="text-sm text-gray-500 mb-4">{description}</p>
-      <div className="rounded-lg overflow-hidden border border-gray-100">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">任务名称</TableHead>
-              <TableHead className="w-[120px]">计划日期</TableHead>
-              <TableHead className="w-[120px]">实际完成</TableHead>
-              <TableHead className="w-[100px]">状态</TableHead>
-              <TableHead className="w-[100px]">延迟天数</TableHead>
-              <TableHead className="w-[100px]">执行人</TableHead>
-              <TableHead>延迟原因</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+      </div>
+
+      {/* 表格 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务名称</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划日期</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">实际完成</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">延迟天数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">延迟原因</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
             {paginatedData.map((item) => {
               const statusConfig = getStatusConfig(item.progressStatus);
               return (
-                <TableRow key={item.taskId}>
-                  <TableCell className="font-medium truncate">{item.taskName}</TableCell>
-                  <TableCell>{item.plannedDate}</TableCell>
-                  <TableCell>{item.actualCompletionDate || '-'}</TableCell>
-                  <TableCell>
+                <tr key={item.taskId} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 truncate max-w-[200px]">{item.taskName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.plannedDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.actualCompletionDate || '-'}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Badge variant={statusConfig.variant}>{statusConfig.text}</Badge>
-                  </TableCell>
-                  <TableCell>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     {item.delayDays ? (
                       <span className="text-red-500 font-medium">{item.delayDays}天</span>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>{item.actualAssignee}</TableCell>
-                  <TableCell className="truncate">{item.delayReason || '-'}</TableCell>
-                </TableRow>
+                    ) : <span className="text-gray-400">-</span>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.actualAssignee}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{item.delayReason || '-'}</td>
+                </tr>
               );
             })}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <span className="text-sm text-gray-500">共 {data.length} 条</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -121,7 +134,6 @@ function WorkerLoadTable({ data }: WorkerLoadTableProps) {
     return data.slice(start, start + pageSize);
   }, [data, currentPage]);
 
-  // 状态映射
   const getLoadStatusConfig = (status: string) => {
     const statusMap: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'secondary'; text: string }> = {
       normal: { variant: 'success', text: '正常' },
@@ -140,55 +152,72 @@ function WorkerLoadTable({ data }: WorkerLoadTableProps) {
   };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">人员负荷分析</h3>
-      <p className="text-sm text-gray-500 mb-4">各执行人员当前的工作负荷情况</p>
-      <div className="rounded-lg overflow-hidden border border-gray-100">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">员工姓名</TableHead>
-              <TableHead className="w-[100px]">今日任务数</TableHead>
-              <TableHead className="w-[80px]">已完成</TableHead>
-              <TableHead className="w-[120px]">完成率</TableHead>
-              <TableHead className="w-[100px]">负荷状态</TableHead>
-              <TableHead className="w-[100px]">可用性</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">人员负荷分析</h3>
+        <p className="text-sm text-gray-500 mt-0.5">各执行人员当前的工作负荷情况</p>
+      </div>
+
+      {/* 表格 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">员工姓名</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">今日任务数</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">已完成</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">完成率</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">负荷状态</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">可用性</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
             {paginatedData.map((item) => {
               const loadStatusConfig = getLoadStatusConfig(item.loadStatus);
               const availConfig = getAvailabilityConfig(item.availability);
               return (
-                <TableRow key={item.workerId}>
-                  <TableCell className="font-medium">{item.workerName}</TableCell>
-                  <TableCell className="font-semibold">{item.todayTasks}</TableCell>
-                  <TableCell>{item.completedTasks} / {item.todayTasks}</TableCell>
-                  <TableCell>
+                <tr key={item.workerId} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center whitespace-nowrap">{item.workerName}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">{item.todayTasks}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.completedTasks} / {item.todayTasks}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Progress value={item.completionRate} size="sm" />
-                  </TableCell>
-                  <TableCell>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Badge variant={loadStatusConfig.variant}>{loadStatusConfig.text}</Badge>
-                  </TableCell>
-                  <TableCell>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Badge variant={availConfig.variant}>{availConfig.text}</Badge>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               );
             })}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <span className="text-sm text-gray-500">共 {data.length} 条</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -243,16 +272,14 @@ export default function DailyPlanningPage() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => window.location.href = '/farm-hub'}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft />
-            <span>返回</span>
-          </button>
-        </div>
         <div className="flex items-center gap-3">
+          <a
+            href="/farm-hub"
+            className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition-colors"
+            title="返回农事任务中心"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </a>
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
             <Calendar className="w-5 h-5 text-white" />
           </div>
@@ -330,63 +357,64 @@ export default function DailyPlanningPage() {
         </div>
       )}
 
-      {/* Tab 切换 - 样式与农事任务中心统一 */}
+      {/* Tab 切换 */}
       <div className="bg-white rounded-xl shadow-sm">
         {/* Tab 头部 */}
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+        <div className="border-b border-gray-200 px-4 py-3">
+          <nav className="flex gap-2">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'overview'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
+              <Calendar className="w-4 h-4" />
               任务概览
             </button>
             <button
               onClick={() => setActiveTab('ahead')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'ahead'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <CheckCircle className="mr-1" />
+              <CheckCircle className="w-4 h-4" />
               提前完成 ({report?.aheadTasks.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('delayed')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'delayed'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <AlertTriangle className="mr-1" />
+              <AlertTriangle className="w-4 h-4" />
               已推迟 ({report?.delayedTasks.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('unfinished')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'unfinished'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <AlertCircle className="mr-1" />
+              <AlertCircle className="w-4 h-4" />
               未完成 ({report?.unfinishedTasks.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('workers')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                 activeTab === 'workers'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Clock className="mr-1" />
+              <Clock className="w-4 h-4" />
               人员负荷 ({report?.workerLoadAnalysis.length || 0})
             </button>
           </nav>

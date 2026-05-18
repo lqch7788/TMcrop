@@ -14,7 +14,7 @@ import {
   getAllVarieties,
   getMaxDetailVarietyCode
 } from '../../../../services/cropVarietyService';
-import { createVariety as addVarietyApi } from '../../../../services/apiCropVarietyService';
+import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
 import { getSubVariety1Options as getSubVariety1OptionsFromExtension } from '../../../../services/cropVarietyExtensionService';
 import { Search, Check, X, RefreshCw } from 'lucide-react';
 
@@ -41,6 +41,9 @@ export function AddCropVarietyModal({
   onSuccess,
   prefillData
 }: AddCropVarietyModalProps) {
+  // Zustand Store
+  const store = useCropVarietyStore();
+
   const [formData, setFormData] = useState({
     categoryCode: '',
     categoryName: '',
@@ -330,8 +333,8 @@ export function AddCropVarietyModal({
       const finalDetailVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || '';
       const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
 
-      // 添加品种
-      await addVarietyApi({
+      // 通过 Store 添加品种
+      await store.addItem({
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
         typeCode: formData.typeCode,

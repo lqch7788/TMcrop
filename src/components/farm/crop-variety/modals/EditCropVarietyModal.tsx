@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
-import { updateVariety } from '../../../../services/apiCropVarietyService';
+import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
 
 interface EditCropVarietyModalProps {
   isOpen: boolean;
@@ -20,6 +20,9 @@ export function EditCropVarietyModal({
   onSuccess,
   variety
 }: EditCropVarietyModalProps) {
+  // Zustand Store
+  const store = useCropVarietyStore();
+
   // 作物品种：与表格一致，detailVarietyCode === '00' 时显示子品种名称
   const getInitialVarietyName = () => {
     if (variety.detailVarietyCode && variety.detailVarietyCode !== '00') {
@@ -90,7 +93,7 @@ export function EditCropVarietyModal({
   // 提交
   const handleSubmit = async () => {
     try {
-      await updateVariety(variety.id, {
+      await store.updateItem(variety.id, {
         varietyName: formData.varietyName,
         alias: parseAlias(formData.alias),
         image: formData.image || undefined,

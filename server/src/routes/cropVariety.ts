@@ -94,43 +94,66 @@ router.get('/:id', (req: Request, res: Response) => {
  */
 router.post('/', (req: Request, res: Response) => {
   try {
-    const {
-      id,
-      crop_code,
-      category_code,
-      category_name,
-      type_code,
-      type_name,
-      variety_code,
-      variety_name,
-      sub_variety1_code,
-      sub_variety1_name,
-      detail_variety_code,
-      detail_variety_name = '',
-      status = 'active'
-    } = req.body;
-
-    const newId = id || `CV${Date.now()}`;
     const now = new Date().toISOString();
+    const newId = req.body.id || `CV${Date.now()}`;
+
+    // 所有支持的字段列表（snake_case）
+    const fields = [
+      'id', 'crop_code', 'category_code', 'category_name', 'type_code', 'type_name',
+      'variety_code', 'variety_name', 'sub_variety1_code', 'sub_variety1_name',
+      'detail_variety_code', 'detail_variety_name',
+      'alias', 'image', 'description',
+      'germination_period', 'seedling_period', 'flowering_period', 'fruiting_period', 'harvest_period',
+      'air_temperature', 'air_humidity', 'co2_content', 'light_intensity',
+      'soil_temperature', 'soil_humidity', 'soil_ph', 'soil_ec',
+      'remarks', 'status'
+    ];
+
+    const columns: string[] = [];
+    const placeholders: string[] = [];
+    const values: any[] = [];
+
+    for (const field of fields) {
+      if (req.body[field] !== undefined) {
+        columns.push(field);
+        placeholders.push('?');
+        // alias 可能是数组，转为 JSON 字符串存储
+        if (field === 'alias' && Array.isArray(req.body[field])) {
+          values.push(JSON.stringify(req.body[field]));
+        } else {
+          values.push(req.body[field]);
+        }
+      }
+    }
+
+    // 确保 ID 总是包含
+    if (!columns.includes('id')) {
+      columns.unshift('id');
+      placeholders.unshift('?');
+      values.unshift(newId);
+    }
+
+    columns.push('create_time', 'update_time');
+    placeholders.push('?', '?');
+    values.push(now, now);
 
     const db = getDatabase();
-    db.run(`
-      INSERT INTO crop_varieties
-      (id, crop_code, category_code, category_name, type_code, type_name,
-       variety_code, variety_name, sub_variety1_code, sub_variety1_name,
-       detail_variety_code, detail_variety_name, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      newId, crop_code, category_code, category_name, type_code, type_name,
-      variety_code, variety_name, sub_variety1_code, sub_variety1_name,
-      detail_variety_code, detail_variety_name, status, now, now
-    ]);
+    db.run(
+      `INSERT INTO crop_varieties (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`,
+      values
+    );
 
     saveDatabase();
 
+    // 返回完整记录
+    const stmt = db.prepare('SELECT * FROM crop_varieties WHERE id = ?');
+    stmt.bind([newId]);
+    const fullRecord = stmt.getAsObject();
+    stmt.free();
+
     res.status(201).json({
       success: true,
-      data: { id: newId }
+      data: fullRecord
     });
   } catch (error) {
     console.error('创建作物品种失败:', error);
@@ -159,7 +182,11 @@ router.put('/:id', (req: Request, res: Response) => {
       'variety_code', 'variety_name',
       'sub_variety1_code', 'sub_variety1_name',
       'detail_variety_code', 'detail_variety_name',
-      'status'
+      'alias', 'image', 'description',
+      'germination_period', 'seedling_period', 'flowering_period', 'fruiting_period', 'harvest_period',
+      'air_temperature', 'air_humidity', 'co2_content', 'light_intensity',
+      'soil_temperature', 'soil_humidity', 'soil_ph', 'soil_ec',
+      'remarks', 'status'
     ];
 
     // 构建更新语句，只包含允许的字段
@@ -169,7 +196,12 @@ router.put('/:id', (req: Request, res: Response) => {
     for (const key of Object.keys(updates)) {
       if (key !== 'id' && allowedFields.includes(key)) {
         validUpdates.push(`${key} = ?`);
-        values.push(updates[key]);
+        // alias 如果是数组，转为 JSON 字符串存储
+        if (key === 'alias' && Array.isArray(updates[key])) {
+          values.push(JSON.stringify(updates[key]));
+        } else {
+          values.push(updates[key]);
+        }
       }
     }
 
@@ -601,5 +633,115 @@ router.put('/extensions/subvariety1/:id', (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: '更新子品种1扩展失败' });
   }
 });
+
+/**
+ * 批量导入作物品种（用于数据迁移）
+ * 按 crop_code 去重，已存在的跳过
+ */
+router.post('/bulk', (req: Request, res: Response) => {
+  try {
+    const { varieties } = req.body;
+    if (!Array.isArray(varieties) || varieties.length === 0) {
+      return res.status(400).json({ success: false, error: 'varieties 数组不能为空' });
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    let inserted = 0;
+    let skipped = 0;
+
+    // 获取已存在的 crop_code 集合
+    const existingCodes = new Set<string>();
+    const existingStmt = db.prepare('SELECT crop_code FROM crop_varieties');
+    while (existingStmt.step()) {
+      const row = existingStmt.getAsObject();
+      if (row.crop_code) existingCodes.add(row.crop_code as string);
+    }
+    existingStmt.free();
+
+    // 所有支持的字段
+    const fields = [
+      'id', 'crop_code', 'category_code', 'category_name', 'type_code', 'type_name',
+      'variety_code', 'variety_name', 'sub_variety1_code', 'sub_variety1_name',
+      'detail_variety_code', 'detail_variety_name',
+      'alias', 'image', 'description',
+      'germination_period', 'seedling_period', 'flowering_period', 'fruiting_period', 'harvest_period',
+      'air_temperature', 'air_humidity', 'co2_content', 'light_intensity',
+      'soil_temperature', 'soil_humidity', 'soil_ph', 'soil_ec',
+      'remarks', 'status'
+    ];
+
+    for (const item of varieties) {
+      const cropCode = item.crop_code || item.cropCode;
+      if (!cropCode) continue;
+      if (existingCodes.has(cropCode)) {
+        skipped++;
+        continue;
+      }
+
+      const columns: string[] = [];
+      const placeholders: string[] = [];
+      const values: any[] = [];
+
+      for (const field of fields) {
+        // 尝试 snake_case 和 camelCase
+        const value = item[field] ?? item[toCamelCase(field)];
+        if (value !== undefined && value !== null) {
+          columns.push(field);
+          placeholders.push('?');
+          if (field === 'alias' && Array.isArray(value)) {
+            values.push(JSON.stringify(value));
+          } else {
+            values.push(value);
+          }
+        }
+      }
+
+      // 确保必填字段
+      if (!columns.includes('crop_code')) {
+        columns.push('crop_code');
+        placeholders.push('?');
+        values.push(cropCode);
+      }
+      if (!columns.includes('status')) {
+        columns.push('status');
+        placeholders.push('?');
+        values.push('active');
+      }
+
+      columns.push('create_time', 'update_time');
+      placeholders.push('?', '?');
+      values.push(now, now);
+
+      try {
+        db.run(
+          `INSERT INTO crop_varieties (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`,
+          values
+        );
+        existingCodes.add(cropCode);
+        inserted++;
+      } catch (e) {
+        console.error(`插入 ${cropCode} 失败:`, e);
+      }
+    }
+
+    if (inserted > 0) {
+      saveDatabase();
+    }
+
+    res.json({
+      success: true,
+      data: { inserted, skipped, total: varieties.length }
+    });
+  } catch (error) {
+    console.error('批量导入作物品种失败:', error);
+    res.status(500).json({ success: false, error: '批量导入作物品种失败' });
+  }
+});
+
+// snake_case → camelCase 辅助函数
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
 
 export default router;
