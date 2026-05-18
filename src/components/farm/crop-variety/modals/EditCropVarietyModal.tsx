@@ -23,10 +23,10 @@ export function EditCropVarietyModal({
   // Zustand Store
   const store = useCropVarietyStore();
 
-  // 作物品种：与表格一致，detailVarietyCode === '00' 时显示子品种名称
+  // 作物品种：detailVarietyCode !== '00' 时显示最细分品种名称(detailVarietyName)，否则显示子品种或品种名
   const getInitialVarietyName = () => {
     if (variety.detailVarietyCode && variety.detailVarietyCode !== '00') {
-      return variety.varietyName || '';
+      return variety.detailVarietyName || variety.subVariety1Name || variety.varietyName || '';
     }
     return variety.subVariety1Name || variety.varietyName || '';
   };
@@ -55,14 +55,8 @@ export function EditCropVarietyModal({
 
   // 当 variety 变化时重置表单
   useEffect(() => {
-    const getVarietyName = () => {
-      if (variety.detailVarietyCode && variety.detailVarietyCode !== '00') {
-        return variety.varietyName || '';
-      }
-      return variety.subVariety1Name || variety.varietyName || '';
-    };
     setFormData({
-      varietyName: getVarietyName(),
+      varietyName: getInitialVarietyName(),
       alias: variety.alias?.join(', ') || '',
       image: variety.image || '',
       description: variety.description || '',
@@ -93,8 +87,9 @@ export function EditCropVarietyModal({
   // 提交
   const handleSubmit = async () => {
     try {
-      await store.updateItem(variety.id, {
-        varietyName: formData.varietyName,
+      // 判断更新哪个字段：有 detailVarietyCode 且不为 '00' 时更新 detailVarietyName，否则更新 varietyName
+      const hasDetail = variety.detailVarietyCode && variety.detailVarietyCode !== '00';
+      const updateData: Record<string, unknown> = {
         alias: parseAlias(formData.alias),
         image: formData.image || undefined,
         description: formData.description || undefined,
@@ -113,7 +108,14 @@ export function EditCropVarietyModal({
         soilEc: formData.soilEc,
         status: formData.status as CropVarietyStatus,
         remarks: formData.remarks
-      });
+      };
+      // 根据是否有 detail 级别决定更新哪个名称字段
+      if (hasDetail) {
+        updateData.detailVarietyName = formData.varietyName;
+      } else {
+        updateData.varietyName = formData.varietyName;
+      }
+      await store.updateItem(variety.id, updateData);
       onSuccess();
       onClose();
     } catch (error) {

@@ -4,13 +4,14 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, FolderPlus } from 'lucide-react';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
 import { getCategoryOptions } from '../../../services/cropVarietyService';
 import { CropVariety } from '../../../types/cropVariety';
 import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
+import * as extensionService from '../../../services/cropVarietyExtensionService';
 
 /**
  * 树形展示组件
@@ -95,6 +96,17 @@ export function VarietyTree({
     }
   };
 
+  // 新增类别
+  const handleAddCategory = () => {
+    const code = prompt('请输入类别编码（2位大写字母，如：FR）：');
+    if (!code || !code.trim()) return;
+    const name = prompt('请输入类别名称（如：水果类）：');
+    if (!name || !name.trim()) return;
+    extensionService.addCategoryExtension(code.trim().toUpperCase(), name.trim())
+      .then(() => onRefresh?.())
+      .catch((err: Error) => alert('新增类别失败: ' + err.message));
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
       {/* 搜索和操作栏 */}
@@ -161,6 +173,13 @@ export function VarietyTree({
             </div>
           </div>
 
+          <button
+            onClick={handleAddCategory}
+            className="h-10 px-4 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2 flex-shrink-0"
+          >
+            <FolderPlus className="w-4 h-4" />
+            新增类别
+          </button>
           <button
             onClick={() => onAdd()}
             className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 flex-shrink-0"
@@ -240,16 +259,16 @@ export function VarietyTree({
           </div>
         ) : (
           <table className="w-full" style={{ tableLayout: 'fixed' }}>
-            <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white sticky top-0 z-10">
+            <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">类别</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">品种</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">子品种</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">作物品种</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">类别</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">类型</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-28">品种</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-28">子品种</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-32">作物品种</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-36">编码</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

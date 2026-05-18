@@ -67,6 +67,7 @@ router.get('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM crop_varieties WHERE id = ?');
     stmt.bind([id]);
+    stmt.step();
     const variety = stmt.getAsObject();
 
     if (!variety || Object.keys(variety).length === 0) {
@@ -148,6 +149,7 @@ router.post('/', (req: Request, res: Response) => {
     // 返回完整记录
     const stmt = db.prepare('SELECT * FROM crop_varieties WHERE id = ?');
     stmt.bind([newId]);
+    stmt.step();
     const fullRecord = stmt.getAsObject();
     stmt.free();
 
@@ -159,7 +161,8 @@ router.post('/', (req: Request, res: Response) => {
     console.error('创建作物品种失败:', error);
     res.status(500).json({
       success: false,
-      error: '创建作物品种失败'
+      error: '创建作物品种失败',
+      detail: (error as Error).message
     });
   }
 });
@@ -250,6 +253,102 @@ router.delete('/:id', (req: Request, res: Response) => {
       success: false,
       error: '删除作物品种失败'
     });
+  }
+});
+
+// ==================== 类别扩展 API ====================
+
+/**
+ * 获取所有扩展类别
+ */
+router.get('/extensions/categories', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const results = db.exec('SELECT * FROM crop_variety_category_extensions ORDER BY sort_order, category_code');
+
+    if (results.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const { columns, values } = results[0];
+    const extensions = values.map((row: any[]) => {
+      const obj: any = {};
+      columns.forEach((col: string, i: number) => {
+        obj[col] = row[i];
+      });
+      return obj;
+    });
+
+    res.json({ success: true, data: extensions });
+  } catch (error) {
+    console.error('获取类别扩展失败:', error);
+    res.status(500).json({ success: false, error: '获取类别扩展失败' });
+  }
+});
+
+/**
+ * 创建类别扩展
+ */
+router.post('/extensions/categories', (req: Request, res: Response) => {
+  try {
+    const { id, category_code, category_name, sort_order = 0, status = 'active' } = req.body;
+
+    if (!category_code || !category_name) {
+      return res.status(400).json({ success: false, error: '缺少必要参数' });
+    }
+
+    const newId = id || `CATEXT${Date.now()}`;
+    const now = new Date().toISOString();
+    const db = getDatabase();
+
+    db.run(`
+      INSERT INTO crop_variety_category_extensions
+      (id, category_code, category_name, sort_order, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [newId, category_code, category_name, sort_order, status, now, now]);
+
+    saveDatabase();
+    res.status(201).json({ success: true, data: { id: newId } });
+  } catch (error) {
+    console.error('创建类别扩展失败:', error);
+    res.status(500).json({ success: false, error: '创建类别扩展失败' });
+  }
+});
+
+/**
+ * 删除类别扩展
+ */
+router.delete('/extensions/categories/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    db.run('DELETE FROM crop_variety_category_extensions WHERE id = ?', [id]);
+    saveDatabase();
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('删除类别扩展失败:', error);
+    res.status(500).json({ success: false, error: '删除类别扩展失败' });
+  }
+});
+
+/**
+ * 更新类别扩展
+ */
+router.put('/extensions/categories/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { category_name, sort_order, status } = req.body;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      `UPDATE crop_variety_category_extensions SET category_name = ?, sort_order = ?, status = ?, updated_at = ? WHERE id = ?`,
+      [category_name, sort_order || 0, status || 'active', now, id]
+    );
+    saveDatabase();
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('更新类别扩展失败:', error);
+    res.status(500).json({ success: false, error: '更新类别扩展失败' });
   }
 });
 

@@ -5,11 +5,16 @@
  */
 
 import type {
+  CategoryExtension,
   TypeExtension,
   VarietyExtension,
   SubVariety1Extension
 } from './apiCropVarietyExtensionService';
 import {
+  getAllCategoryExtensions,
+  addCategoryExtension as apiAddCategoryExtension,
+  deleteCategoryExtension,
+  updateCategoryExtension as apiUpdateCategoryExtension,
   getAllTypeExtensions,
   getTypeExtensionsByCategory,
   addTypeExtension as apiAddTypeExtension,
@@ -26,11 +31,16 @@ import {
   deleteSubVariety1Extension,
   updateSubVariety1Extension as apiUpdateSubVariety1Extension
 } from './apiCropVarietyExtensionService';
-import { getSubVariety1Options as getConfigSubVariety1Options } from './cropVarietyService';
+import {
+  getSubVariety1Options as getConfigSubVariety1Options,
+  getTypeOptionsByCategory as getConfigTypeOptionsByCategory,
+  getVarietyOptionsByType as getConfigVarietyOptionsByType
+} from './cropVarietyService';
 
-export { TypeExtension, VarietyExtension, SubVariety1Extension };
+export { CategoryExtension, TypeExtension, VarietyExtension, SubVariety1Extension };
 
 // 内存缓存
+let categoryExtensionsCache: CategoryExtension[] = [];
 let typeExtensionsCache: TypeExtension[] = [];
 let varietyExtensionsCache: VarietyExtension[] = [];
 let subVariety1ExtensionsCache: SubVariety1Extension[] = [];
@@ -40,11 +50,13 @@ let isCacheInitialized = false;
 export async function initExtensionCache(): Promise<void> {
   if (isCacheInitialized) return;
   try {
-    const [types, varieties, subVarieties] = await Promise.all([
+    const [categories, types, varieties, subVarieties] = await Promise.all([
+      getAllCategoryExtensions(),
       getAllTypeExtensions(),
       getAllVarietyExtensions(),
       getAllSubVariety1Extensions()
     ]);
+    categoryExtensionsCache = categories;
     typeExtensionsCache = types;
     varietyExtensionsCache = varieties;
     subVariety1ExtensionsCache = subVarieties;
@@ -57,11 +69,13 @@ export async function initExtensionCache(): Promise<void> {
 // 强制刷新缓存
 async function refreshCache(): Promise<void> {
   try {
-    const [types, varieties, subVarieties] = await Promise.all([
+    const [categories, types, varieties, subVarieties] = await Promise.all([
+      getAllCategoryExtensions(),
       getAllTypeExtensions(),
       getAllVarietyExtensions(),
       getAllSubVariety1Extensions()
     ]);
+    categoryExtensionsCache = categories;
     typeExtensionsCache = types;
     varietyExtensionsCache = varieties;
     subVariety1ExtensionsCache = subVarieties;
@@ -69,6 +83,43 @@ async function refreshCache(): Promise<void> {
     console.error('刷新扩展缓存失败:', error);
     throw error;
   }
+}
+
+// ==================== 类别扩展 ====================
+
+/** 获取所有扩展类别 */
+export function getCategoryExtensions(): CategoryExtension[] {
+  return categoryExtensionsCache.filter(c => c.status !== 'inactive');
+}
+
+/** 添加类别扩展 */
+export async function addCategoryExtension(
+  categoryCode: string,
+  categoryName: string
+): Promise<void> {
+  const exists = categoryExtensionsCache.some(c => c.category_code === categoryCode);
+  if (exists) {
+    throw new Error('该类别编码已存在');
+  }
+  await apiAddCategoryExtension(categoryCode, categoryName);
+  await refreshCache();
+}
+
+/** 删除类别扩展 */
+export async function removeCategoryExtension(id: string): Promise<void> {
+  await deleteCategoryExtension(id);
+  await refreshCache();
+}
+
+/** 更新类别扩展 */
+export async function updateCategoryExtension(
+  id: string,
+  categoryName: string,
+  sortOrder?: number,
+  status?: string
+): Promise<void> {
+  await apiUpdateCategoryExtension(id, categoryName, sortOrder, status);
+  await refreshCache();
 }
 
 // 获取指定类别的所有扩展类型
@@ -152,6 +203,63 @@ export async function updateVarietyExtension(
 ): Promise<void> {
   await apiUpdateVarietyExtension(id, varietyName, sortOrder, status);
   await refreshCache();
+}
+
+// 获取指定类别的类型选项（合并预配置和扩展数据）
+export function getTypeOptionsByCategory(
+  categoryCode: string
+): Array<{ value: string; label: string }> {
+  // 从预配置数据获取类型选项
+  const configOptions = getConfigTypeOptionsByCategory(categoryCode);
+
+  // 从扩展缓存获取用户新增的类型
+  const extensions = typeExtensionsCache.filter(
+    t => t.category_code === categoryCode
+  );
+
+  const extensionOptions = extensions.map(e => ({
+    value: e.type_code,
+    label: e.type_name
+  }));
+
+  // 合并选项（扩展选项在前，预配置选项在后去重）
+  const allOptions = [...extensionOptions];
+  configOptions.forEach(opt => {
+    if (!allOptions.some(o => o.value === opt.value)) {
+      allOptions.push(opt);
+    }
+  });
+
+  return allOptions;
+}
+
+// 获取指定类型下的品种选项（合并预配置和扩展数据）
+export function getVarietyOptionsByType(
+  categoryCode: string,
+  typeCode: string
+): Array<{ value: string; label: string }> {
+  // 从预配置数据获取品种选项
+  const configOptions = getConfigVarietyOptionsByType(categoryCode, typeCode);
+
+  // 从扩展缓存获取用户新增的品种
+  const extensions = varietyExtensionsCache.filter(
+    v => v.category_code === categoryCode && v.type_code === typeCode
+  );
+
+  const extensionOptions = extensions.map(e => ({
+    value: e.variety_code,
+    label: e.variety_name
+  }));
+
+  // 合并选项（扩展选项在前，预配置选项在后去重）
+  const allOptions = [...extensionOptions];
+  configOptions.forEach(opt => {
+    if (!allOptions.some(o => o.value === opt.value)) {
+      allOptions.push(opt);
+    }
+  });
+
+  return allOptions;
 }
 
 // 获取指定品种的所有扩展子品种1
