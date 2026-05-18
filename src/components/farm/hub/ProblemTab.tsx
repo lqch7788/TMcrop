@@ -19,7 +19,7 @@ import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
 import {
   AlertTriangle, List, X, Clock, User, MapPin, Package, Camera, Mic, Sparkles, UserPlus,
-  CheckCircle, Plus, Trash2, Download
+  CheckCircle, Plus, Trash2, Download, Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
@@ -34,6 +34,15 @@ const FEEDBACK_OPTIONS = [
   { key: 'material', label: '物资扫码', icon: Package },
   { key: 'voice', label: '语音备注', icon: Mic },
 ] as const;
+
+// 状态映射：后端英文 → 前端中文（与 ProblemTable 保持一致）
+const STATUS_CN_MAP: Record<string, string> = {
+  'pending': '待处理',
+  'in_progress': '处理中',
+  'waiting_acceptance': '待验收',
+  'completed': '已处理',
+};
+const getStatusCN = (status: string): string => STATUS_CN_MAP[status] || status;
 
 // 问题创建默认值常量
 const DEFAULT_PROBLEM_VALUES = {
@@ -234,8 +243,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   ] as const;
 
   const getProblemType = (issueText: string): { type: string; typeName: string } => {
+    const text = issueText || '';
     for (const mapping of PROBLEM_TYPE_MAPPING) {
-      if (mapping.keywords.some(kw => issueText.includes(kw))) {
+      if (mapping.keywords.some(kw => text.includes(kw))) {
         return { type: mapping.type, typeName: mapping.typeName };
       }
     }
@@ -251,13 +261,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
   // ========== 将问题转换为统一任务格式（用于AI推荐） ==========
   const getProblemTaskInfo = useCallback((problem: ProblemEntry) => {
-    const typeInfo = getProblemType(problem.issueText);
+    const issueText = problem.issueText || '';
+    const typeInfo = getProblemType(issueText);
     return {
       id: `inspection-${problem.id}`,
       source: 'inspection' as const,
       sourceId: problem.id.toString(),
       taskCode: `PD-${problem.id}`,
-      title: `【问题处理】${problem.issueText.slice(0, 30)}`,
+      title: `【问题处理】${issueText.slice(0, 30)}`,
       type: typeInfo.type,
       typeName: typeInfo.typeName,
       priority: SEVERITY_TO_PRIORITY[problem.issueSeverity] || 'normal',
@@ -269,7 +280,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       requiredSkills: [],
       estimatedHours: 2,
       dueDate: '',
-      description: problem.issueText,
+      description: issueText,
       createdAt: new Date().toISOString(),
     };
   }, []);
@@ -280,11 +291,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     const recommendations = getRecommendations(taskInfo, 5);
 
     // 病虫害问题：提升技能匹配度权重
-    const isPestOrDisease = problem.issueText.includes('虫') ||
-                           problem.issueText.includes('病') ||
-                           problem.issueText.includes('蚜') ||
-                           problem.issueText.includes('斑') ||
-                           problem.issueText.includes('灰霉');
+    const issueText = problem.issueText || '';
+    const isPestOrDisease = issueText.includes('虫') ||
+                           issueText.includes('病') ||
+                           issueText.includes('蚜') ||
+                           issueText.includes('斑') ||
+                           issueText.includes('灰霉');
 
     if (isPestOrDisease && recommendations.length > 0) {
       return [...recommendations].sort((a, b) => b.skillMatchRate - a.skillMatchRate);
@@ -406,7 +418,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   // ========== 批量选择相关 ==========
   const handleBatchSelectAll = () => {
     const selectable = batchDispatchMode
-      ? filteredProblems.filter(p => p.status === '待处理' && !p.sourceTaskId)
+      ? filteredProblems.filter(p => getStatusCN(p.status) === '待处理' && !p.sourceTaskId)
       : filteredProblems;
     if (selectedRows.length === selectable.length) {
       setSelectedRows([]);
@@ -501,7 +513,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const handleDeleteConfirm = () => {
     const allProblems = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
     const idsToDelete = allProblems
-      .filter(p => selectedRows.includes(p.id) && p.status === '待处理' && !p.sourceTaskId)
+      .filter(p => selectedRows.includes(p.id) && getStatusCN(p.status) === '待处理' && !p.sourceTaskId)
       .map(p => p.id);
 
     if (idsToDelete.length > 0) {
@@ -530,7 +542,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       '问题描述': row.issueText,
       '严重程度': row.issueSeverity,
       '状态': row.status,
-      '处理人': row.handler || '-',
+      '处理人': row.handler || row.handlerName || row.assigneeName || '-',
       '巡检日期': row.checkDate,
       '巡检时间': row.checkTime,
     }));
@@ -1137,17 +1149,6 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           onStatusFilterChange={setStatusFilter}
           onSeverityFilterChange={setSeverityFilter}
           onSourceModuleChange={setSourceModuleFilter}
-          onBatchDispatch={() => {
-            setBatchDispatchMode(true);
-            setSelectedProblems([]);
-            setStatusFilter('pending');
-          }}
-          onBatchDelete={() => setShowDeleteWarning(true)}
-          onShowDeleteWarning={() => setShowDeleteWarning(true)}
-          onExport={() => {
-            setExportMode(true);
-            setSelectedRows([]);
-          }}
           onCancelExport={() => {
             setExportMode(false);
             setSelectedRows([]);
@@ -1160,7 +1161,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             setBatchDispatchMode(false);
             setSelectedProblems([]);
           }}
-          onCreate={() => setShowCreateModal(true)}
+          onConfirmDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
+          onConfirmExport={() => setShowExportModal(true)}
+          onConfirmDelete={() => setShowDeleteWarning(true)}
         />
 
         {/* 问题管理列表标题 */}
@@ -1179,6 +1182,36 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 </div>
               )}
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                新建
+              </button>
+              <button
+                onClick={() => {
+                  setBatchDispatchMode(true);
+                  setSelectedProblems([]);
+                  setStatusFilter('pending');
+                }}
+                className="h-8 px-3 flex items-center gap-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+                批量分派
+              </button>
+              <button
+                onClick={() => {
+                  setExportMode(true);
+                  setSelectedRows([]);
+                }}
+                className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </div>
           </div>
 
         {/* 问题表格 */}
@@ -1194,23 +1227,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           onToggleSelect={toggleSelect}
           onToggleSelectAll={handleBatchSelectAll}
           onBatchSelectAll={toggleSelectAll}
-          onBatchDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
           onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
-          onBatchDelete={() => setShowDeleteWarning(true)}
-          onExport={() => setExportMode(true)}
-          onCancelBatchDelete={() => {
-            setBatchDeleteMode(false);
-            setSelectedRows([]);
-          }}
-          onCancelBatchDispatch={() => {
-            setBatchDispatchMode(false);
-            setSelectedProblems([]);
-          }}
-          onCancelExport={() => {
-            setExportMode(false);
-            setSelectedRows([]);
-          }}
-          onShowExportModal={() => setShowExportModal(true)}
         />
         </div>
 

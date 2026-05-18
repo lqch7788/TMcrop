@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Send, Download, Trash2, Plus } from 'lucide-react';
+import { Send, Download, Trash2 } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
 import { Button } from '@/components/ui/button';
 
@@ -29,11 +29,13 @@ interface ProblemFilterToolbarProps {
   // 操作回调
   onBatchDispatch: () => void;
   onBatchDelete: () => void;
-  onShowDeleteWarning: () => void;
   onExport: () => void;
   onCancelExport: () => void;
   onCancelBatchDelete: () => void;
   onCancelBatchDispatch: () => void;
+  onConfirmDispatch?: () => void;    // 确认分派按钮回调
+  onConfirmExport?: () => void;      // 确认导出按钮回调
+  onConfirmDelete?: () => void;      // 确认删除按钮回调
   onCreate?: () => void;
   // 权限控制
   canCreate?: boolean;
@@ -61,11 +63,13 @@ export function ProblemFilterToolbar({
   onSourceModuleChange,
   onBatchDispatch,
   onBatchDelete,
-  onShowDeleteWarning,
   onExport,
   onCancelExport,
   onCancelBatchDelete,
   onCancelBatchDispatch,
+  onConfirmDispatch,
+  onConfirmExport,
+  onConfirmDelete,
   canCreate = true,
   canDispatch = true,
   canDelete = true,
@@ -159,7 +163,7 @@ export function ProblemFilterToolbar({
           <div className="flex gap-2 ml-auto">
             <Button
               size="sm"
-              onClick={onShowDeleteWarning}
+              onClick={onConfirmExport}
             >
               <Download className="w-4 h-4" />
               确认导出
@@ -177,7 +181,7 @@ export function ProblemFilterToolbar({
             <Button
               size="sm"
               variant="destructive"
-              onClick={onShowDeleteWarning}
+              onClick={onConfirmDelete}
               disabled={selectedRowsLength === 0}
             >
               <Trash2 className="w-4 h-4" />
@@ -196,6 +200,7 @@ export function ProblemFilterToolbar({
             <Button
               size="sm"
               variant="warning"
+              onClick={onConfirmDispatch}
               disabled={selectedProblemsLength === 0}
             >
               <Send className="w-4 h-4" />
@@ -209,38 +214,7 @@ export function ProblemFilterToolbar({
               取消
             </Button>
           </div>
-        ) : (
-          <div className="flex gap-2 ml-auto">
-            {canCreate && onCreate && (
-              <Button
-                size="sm"
-                onClick={onCreate}
-              >
-                <Plus className="w-4 h-4" />
-                新建
-              </Button>
-            )}
-            {canDispatch && (
-              <Button
-                size="sm"
-                variant="warning"
-                onClick={onBatchDispatch}
-              >
-                <Send className="w-4 h-4" />
-                批量分派
-              </Button>
-            )}
-            {canExport && (
-              <Button
-                size="sm"
-                onClick={onExport}
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-            )}
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

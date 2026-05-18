@@ -25,7 +25,22 @@ function snakeToCamel(obj: unknown): unknown {
   const result: Record<string, unknown> = {};
   for (const key in obj as Record<string, unknown>) {
     const camelKey = key.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
-    result[camelKey] = snakeToCamel((obj as Record<string, unknown>)[key]);
+    let value = (obj as Record<string, unknown>)[key];
+    // alias 字段从 JSON 字符串解析为数组
+    if (key === 'alias' && typeof value === 'string') {
+      try { value = JSON.parse(value); } catch { value = []; }
+    }
+    result[camelKey] = snakeToCamel(value);
+  }
+  return result;
+}
+
+/** 将 camelCase 转换为 snake_case */
+function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key in obj) {
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    result[snakeKey] = obj[key];
   }
   return result;
 }
@@ -73,7 +88,8 @@ export async function getVarietyById(id: string): Promise<CropVariety | undefine
  * 降级策略：API → 离线队列
  */
 export async function createVariety(data: Partial<CropVariety>): Promise<string> {
-  const result = await enhancedApiClient.post<{ id: string }>('/crop-varieties', data, {
+  const snakeData = camelToSnake(data as Record<string, unknown>);
+  const result = await enhancedApiClient.post<{ id: string }>('/crop-varieties', snakeData, {
     offlineQueue: true,
     useCache: true,
   });
@@ -85,7 +101,8 @@ export async function createVariety(data: Partial<CropVariety>): Promise<string>
  * 降级策略：API → 离线队列
  */
 export async function updateVariety(id: string, data: Partial<CropVariety>): Promise<string | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/crop-varieties/${id}`, data, {
+  const snakeData = camelToSnake(data as Record<string, unknown>);
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-varieties/${id}`, snakeData, {
     offlineQueue: true,
   });
   return result?.id || null;
@@ -100,6 +117,20 @@ export async function deleteVariety(id: string): Promise<boolean> {
     offlineQueue: true,
   });
   return true;
+}
+
+/**
+ * 批量导入品种（数据迁移用）
+ * 将 localStorage 数据批量推送到后端数据库
+ */
+export async function bulkImportVarieties(varieties: Record<string, unknown>[]): Promise<{ inserted: number; skipped: number; total: number }> {
+  const snakeData = varieties.map(v => camelToSnake(v));
+  const result = await enhancedApiClient.post<{ inserted: number; skipped: number; total: number }>(
+    '/crop-varieties/bulk',
+    { varieties: snakeData },
+    { offlineQueue: false, useCache: false }
+  );
+  return result;
 }
 
 /**

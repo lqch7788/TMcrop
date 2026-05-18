@@ -293,6 +293,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       description: newTask.sopContent || '',
       remarks: newTask.toolsRemarks || '',
       sourceType: 'dispatch',
+      dispatchMode: 'farm',  // 农事任务标识，用于"我的任务"Tab分类
       materials: newTask.materials,
       tools: newTask.tools,
       toolsRemarks: newTask.toolsRemarks,

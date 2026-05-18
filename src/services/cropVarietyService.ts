@@ -167,6 +167,7 @@ function saveVarieties(varieties: CropVariety[]): void {
 /**
  * 初始化品种库
  * 首次加载时从 produceCodeRule 导入默认数据
+ * 每次加载时确保完整的预定义数据集存在（合并默认数据与用户数据）
  */
 export function initVarieties(): CropVariety[] {
   if (isInitialized) {
@@ -174,25 +175,50 @@ export function initVarieties(): CropVariety[] {
   }
 
   const stored = localStorage.getItem(STORAGE_KEY);
+  const version = localStorage.getItem(STORAGE_VERSION_KEY);
+
+  // 生成完整的默认数据（来自 produceCodeRule 预定义结构）
+  const defaultData = importDefaultVarieties();
+  let storedVarieties: CropVariety[] = [];
+
   if (!stored) {
-    // 首次使用，导入默认数据
-    const defaultData = importDefaultVarieties();
-    saveVarieties(defaultData);
-    localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+    // 首次使用，使用默认数据
+    storedVarieties = defaultData;
   } else {
-    // 存储中有数据，检查是否需要迁移
-    const version = localStorage.getItem(STORAGE_VERSION_KEY);
-    if (!version || parseInt(version, 10) < CURRENT_VERSION) {
-      // 需要迁移数据
-      const varieties = JSON.parse(stored);
-      const migratedVarieties = migrateDataToV2(varieties);
-      saveVarieties(migratedVarieties);
-      localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+    try {
+      storedVarieties = JSON.parse(stored);
+      // 版本迁移
+      if (!version || parseInt(version, 10) < CURRENT_VERSION) {
+        storedVarieties = migrateDataToV2(storedVarieties);
+      }
+    } catch {
+      storedVarieties = defaultData;
     }
   }
 
+  // 确保完整数据集：将默认数据中缺失的条目补充到存储数据中
+  // 使用 cropCode 去重，存储数据优先（保留用户修改）
+  const storedCodeSet = new Set(storedVarieties.map(v => v.cropCode));
+  let hasNewEntries = false;
+
+  for (const defaultItem of defaultData) {
+    if (!storedCodeSet.has(defaultItem.cropCode)) {
+      storedVarieties.push(defaultItem);
+      storedCodeSet.add(defaultItem.cropCode);
+      hasNewEntries = true;
+    }
+  }
+
+  // 按 cropCode 排序
+  storedVarieties.sort((a, b) => a.cropCode.localeCompare(b.cropCode));
+
+  if (hasNewEntries || !stored) {
+    saveVarieties(storedVarieties);
+  }
+  localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
+
   isInitialized = true;
-  return getStoredVarieties();
+  return storedVarieties;
 }
 
 /**

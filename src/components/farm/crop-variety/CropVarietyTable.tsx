@@ -7,13 +7,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import {
-  getAllVarieties as getAllVarietiesFromService,
   getCategoryOptions,
-  deleteVariety as deleteVarietyFromService,
-  generateCropCode,
-  initVarieties
+  generateCropCode
 } from '../../../services/cropVarietyService';
-import { deleteVariety } from '../../../services/apiCropVarietyService';
+import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
 
 type ViewMode = 'table' | 'tree';
 
@@ -51,17 +48,12 @@ export function CropVarietyTable({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [allVarieties, setAllVarieties] = useState<CropVariety[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // 加载数据（与树状图一致，使用本地服务）
-  useEffect(() => {
-    const data = getAllVarietiesFromService();
-    setAllVarieties(data);
-    setLoading(false);
-  }, [refreshKey]);
+  // 从 Zustand Store 获取数据
+  const store = useCropVarietyStore();
+  const { items: allVarieties, isLoading: loading } = store;
 
-  // 获取类目选项
+  // 类目选项（静态数据来自 produceCodeRule）
   const categoryOptions = useMemo(() => getCategoryOptions(), []);
 
   // 过滤后的品种

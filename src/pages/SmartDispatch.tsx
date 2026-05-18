@@ -234,8 +234,103 @@ function TaskGroup({
   onAcceptOptimization: (task: PendingConfirmTask) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const isRecommended = title === 'AI已推荐';
 
   if (tasks.length === 0) return null;
+
+  if (isRecommended) {
+    return (
+      <div className="space-y-2">
+        {/* 表格标题 — 纯文字，黑色粗体 */}
+        <h3 className="text-sm font-bold text-gray-900">
+          {title} <span className="ml-1 text-xs font-normal text-gray-400">({tasks.length})</span>
+        </h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">选择</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">来源</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">任务编号</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">任务标题</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">类型</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">位置</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">优先级</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">AI推荐人</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">置信度</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-300">
+              {tasks.map((task) => {
+                const isSelected = selectedTaskId === task.id;
+                return (
+                  <tr
+                    key={task.id}
+                    onClick={() => onSelectTask(task)}
+                    className={`cursor-pointer transition-colors ${
+                      isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className={`w-5 h-5 rounded flex items-center justify-center text-xs ${
+                        isSelected ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {isSelected ? '✓' : ''}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{task.sourceLabel}</td>
+                    <td className="px-3 py-2 text-xs text-gray-500 font-mono whitespace-nowrap">{task.taskCode || '-'}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900 whitespace-nowrap max-w-xs truncate">{task.title}</td>
+                    <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{task.typeName}</td>
+                    <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{task.workZone || task.greenhouse || '-'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.normal}`}>
+                        {task.priority === 'urgent' ? '紧急' : task.priority === 'high' ? '高' : task.priority === 'normal' ? '中' : '低'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-sm font-medium text-emerald-700 whitespace-nowrap">
+                      {task.aiRecommendedWorkers?.[0]?.worker.name || '-'}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-emerald-600 whitespace-nowrap">
+                      {task.aiConfidenceScore ? `${task.aiConfidenceScore}%` : '-'}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAccept(task); }}
+                          disabled={!task.aiRecommendedWorkers?.length}
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            task.aiRecommendedWorkers?.length
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          接受
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onReplace(task); }}
+                          className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                        >
+                          更换
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDelay(task); }}
+                          className="px-2 py-1 rounded text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                        >
+                          延后
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -248,7 +343,7 @@ function TaskGroup({
           <span className="font-medium text-gray-900">{title}</span>
           <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs">{tasks.length}</span>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+        <ChevronDown className={`w-4 h-5 text-gray-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
       </button>
       {isExpanded && (
         <div className="grid grid-cols-2 gap-4">
@@ -328,6 +423,138 @@ export default function SmartDispatchPage() {
   const [dismissedRecommendations, setDismissedRecommendations] = useState<string[]>([]);
   const [expandedFactors, setExpandedFactors] = useState<Set<string>>(new Set());
   const [showConfigPanel, setShowConfigPanel] = useState(false);
+
+  // 派工配置弹窗拖拽/缩放/最大化
+  const [configIsMaximized, setConfigIsMaximized] = useState(false);
+  const configMinSize = { width: 640, height: 400 };
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDir, setResizeDir] = useState('');
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0, left: 0, top: 0 });
+
+  // 配置弹窗拖动
+  const handleConfigDragStart = (e: React.MouseEvent) => {
+    if (configIsMaximized) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    setIsDragging(true);
+    const dialog = document.getElementById('config-panel-dialog');
+    if (dialog) {
+      const rect = dialog.getBoundingClientRect();
+      setDragStart({ x: e.clientX, y: e.clientY, left: rect.left, top: rect.top });
+    }
+  };
+
+  // 配置弹窗缩放
+  const handleConfigResizeStart = (e: React.MouseEvent, dir: string) => {
+    if (configIsMaximized) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeDir(dir);
+    const dialog = document.getElementById('config-panel-dialog');
+    if (dialog) {
+      const rect = dialog.getBoundingClientRect();
+      setResizeStart({ x: e.clientX, y: e.clientY, w: rect.width, h: rect.height, left: rect.left, top: rect.top });
+    }
+  };
+
+  // 拖动+缩放 mouseMove/mouseUp (useEffect)
+  React.useEffect(() => {
+    if (!isDragging && !isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        const dialog = document.getElementById('config-panel-dialog');
+        if (dialog) {
+          dialog.style.position = 'fixed';
+          dialog.style.left = `${dragStart.left + deltaX}px`;
+          dialog.style.top = `${dragStart.top + deltaY}px`;
+          dialog.style.margin = '0';
+        }
+      }
+      if (isResizing) {
+        const dx = e.clientX - resizeStart.x;
+        const dy = e.clientY - resizeStart.y;
+        let newW = resizeStart.w;
+        let newH = resizeStart.h;
+        let newLeft = resizeStart.left;
+        let newTop = resizeStart.top;
+        if (resizeDir.includes('e')) newW = Math.max(configMinSize.width, resizeStart.w + dx);
+        if (resizeDir.includes('s')) newH = Math.max(configMinSize.height, resizeStart.h + dy);
+        if (resizeDir.includes('w')) {
+          newW = Math.max(configMinSize.width, resizeStart.w - dx);
+          newLeft = resizeStart.left + (resizeStart.w - newW);
+        }
+        if (resizeDir.includes('n')) {
+          newH = Math.max(configMinSize.height, resizeStart.h - dy);
+          newTop = resizeStart.top + (resizeStart.h - newH);
+        }
+        const dialog = document.getElementById('config-panel-dialog');
+        if (dialog) {
+          dialog.style.position = 'fixed';
+          dialog.style.width = `${newW}px`;
+          dialog.style.height = `${newH}px`;
+          dialog.style.left = `${newLeft}px`;
+          dialog.style.top = `${newTop}px`;
+          dialog.style.margin = '0';
+          dialog.style.maxWidth = 'none';
+          dialog.style.maxHeight = 'none';
+        }
+      }
+    };
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeDir('');
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragStart, resizeStart, resizeDir]);
+
+  // 配置弹窗最大化/还原
+  const toggleConfigMaximize = () => {
+    const dialog = document.getElementById('config-panel-dialog');
+    const overlay = document.getElementById('config-panel-overlay');
+    if (!configIsMaximized && dialog) {
+      dialog.style.position = 'fixed';
+      dialog.style.top = '0';
+      dialog.style.left = '0';
+      dialog.style.width = '100vw';
+      dialog.style.height = '100vh';
+      dialog.style.maxWidth = 'none';
+      dialog.style.maxHeight = 'none';
+      dialog.style.borderRadius = '0';
+      dialog.style.margin = '0';
+      dialog.style.transform = 'none';
+      if (overlay) {
+        overlay.style.alignItems = 'flex-start';
+        overlay.style.justifyContent = 'flex-start';
+      }
+    } else if (dialog) {
+      dialog.style.position = '';
+      dialog.style.top = '';
+      dialog.style.left = '';
+      dialog.style.width = '';
+      dialog.style.height = '';
+      dialog.style.maxWidth = '';
+      dialog.style.maxHeight = '';
+      dialog.style.borderRadius = '';
+      dialog.style.margin = '';
+      dialog.style.transform = '';
+      if (overlay) {
+        overlay.style.alignItems = '';
+        overlay.style.justifyContent = '';
+      }
+    }
+    setConfigIsMaximized(!configIsMaximized);
+  };
   const [showReplaceModal, setShowReplaceModal] = useState(false);
 
   // ── 计算属性 ──
@@ -436,6 +663,16 @@ export default function SmartDispatchPage() {
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* 返回农事任务中心 */}
+            <a
+              href="/farm-hub"
+              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              title="返回农事任务中心"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </a>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
               <Bot className="w-5 h-5 text-white" />
             </div>
@@ -446,7 +683,7 @@ export default function SmartDispatchPage() {
           </div>
           <button
             onClick={() => setShowConfigPanel(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
           >
             <Sparkles className="w-4 h-4" /> 配置中心
           </button>
@@ -857,20 +1094,59 @@ export default function SmartDispatchPage() {
 
       {/* 配置中心弹窗 */}
       {showConfigPanel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <div id="config-panel-overlay" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            id="config-panel-dialog"
+            className="bg-white rounded-xl w-full max-w-4xl shadow-xl max-h-[90vh] flex flex-col relative"
+          >
+            {/* 标题栏（渐变绿 + 可拖动） */}
+            <div
+              className="p-4 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 cursor-move rounded-t-xl"
+              onMouseDown={handleConfigDragStart}
+            >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-500" />
-                <h2 className="font-semibold text-gray-900">派工配置中心</h2>
+                <Sparkles className="w-5 h-5 text-white" />
+                <h2 className="font-semibold text-white select-none">派工配置中心</h2>
               </div>
-              <button onClick={() => setShowConfigPanel(false)} className="p-1 rounded hover:bg-gray-200 transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* 最大化/还原按钮 */}
+                <button
+                  onClick={toggleConfigMaximize}
+                  className="text-white hover:bg-emerald-500 p-1.5 rounded transition-colors"
+                  title={configIsMaximized ? '还原' : '最大化'}
+                >
+                  {configIsMaximized ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H6a2 2 0 00-2 2v2m0 4v2a2 2 0 002 2h2m8 0h2a2 2 0 002-2v-2m0-4V6a2 2 0 00-2-2h-2" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  )}
+                </button>
+                {/* 关闭按钮 */}
+                <button onClick={() => setShowConfigPanel(false)} className="text-white hover:bg-emerald-500 p-1.5 rounded transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <DispatchConfigPanel onSave={(config) => { console.log('配置已保存:', config); }} />
             </div>
+            {/* 缩放拖拽手柄（最大化时隐藏） */}
+            {!configIsMaximized && (
+              <>
+                <div className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'nw')} />
+                <div className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'ne')} />
+                <div className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'sw')} />
+                <div className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'se')} />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-n-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'n')} />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-s-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleConfigResizeStart(e, 's')} />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 cursor-w-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'w')} />
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-12 cursor-e-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleConfigResizeStart(e, 'e')} />
+              </>
+            )}
           </div>
         </div>
       )}

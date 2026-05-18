@@ -16,15 +16,12 @@ import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
-  initVarieties,
-  getVarietyStats,
   getCategoryOptions,
   getTypeOptionsByCategory,
   getVarietyOptionsByType,
   getSubVariety1Options,
   generateCropCode,
-  getMaxDetailVarietyCode,
-  deleteVariety
+  getMaxDetailVarietyCode
 } from '../../../services/cropVarietyService';
 import {
   getProduceTypesByCategory,
@@ -32,6 +29,7 @@ import {
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { ProduceCategoryCode } from '../../../data/produceCodeRule';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
+import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
 
 // 内联新增状态类型
 type InlineAddLevel = 'type' | 'variety' | 'subVariety1';
@@ -72,9 +70,11 @@ interface InlineEditState {
 export default function CropVarietyManagement() {
   const navigate = useNavigate();
 
+  // === Zustand Store ===
+  const store = useCropVarietyStore();
+  const { items: allVarieties, isLoading } = store;
+
   // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
-  // 品种管理模块权限 - 已取消，直接设置为 true
   const canCreate = true;
   const canEdit = true;
   const canDelete = true;
@@ -93,6 +93,7 @@ export default function CropVarietyManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [migrationDone, setMigrationDone] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, byCategory: {} as Record<string, number> });
 
   // 视图模式状态：表格 or 树形
@@ -225,17 +226,43 @@ export default function CropVarietyManagement() {
   }, []);
 
 
-  // 初始化品种库和扩展缓存
+  // 初始化：加载数据 + 迁移 localStorage → 后端
   useEffect(() => {
-    initVarieties();
-    extensionService.initExtensionCache();
+    const init = async () => {
+      extensionService.initExtensionCache();
+
+      // 先尝试从后端加载
+      await store.loadItems();
+
+      // 如果后端数据少于预期（默认206条），执行 localStorage → 后端迁移
+      // 迁移通过 crop_code 去重，不会覆盖已有数据
+      if (!migrationDone && store.items.length < 100) {
+        console.log(`[品种迁移] 后端数据仅 ${store.items.length} 条，开始从 localStorage 迁移...`);
+        const result = await store.migrateFromLocalStorage();
+        console.log(`[品种迁移] 完成: 新增 ${result.inserted}, 跳过 ${result.skipped}`);
+        setMigrationDone(true);
+      }
+    };
+    init();
   }, []);
 
-  // 加载统计数据
+  // 从 Store 数据计算统计
   useEffect(() => {
-    const s = getVarietyStats();
-    setStats(s);
-  }, [refreshKey]);
+    const items = store.items;
+    const statsData = {
+      total: items.length,
+      active: items.filter(v => v.status === 'active').length,
+      inactive: items.filter(v => v.status === 'inactive').length,
+      byCategory: {} as Record<string, number>
+    };
+    for (const v of items) {
+      if (!statsData.byCategory[v.categoryName]) {
+        statsData.byCategory[v.categoryName] = 0;
+      }
+      statsData.byCategory[v.categoryName]++;
+    }
+    setStats(statsData);
+  }, [store.items, refreshKey]);
 
   // 加载编码生成器选项
   useEffect(() => {
@@ -337,7 +364,7 @@ export default function CropVarietyManagement() {
   // 刷新列表
   const handleRefresh = () => {
     setRefreshKey(k => k + 1);
-    setStats(getVarietyStats());
+    store.refreshItems();
   };
 
   // 选择品种（查看详情）
@@ -374,9 +401,9 @@ export default function CropVarietyManagement() {
     setDeleteConfirm({ isOpen: true, variety });
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deleteConfirm.variety) {
-      deleteVariety(deleteConfirm.variety.id);
+      await store.deleteItem(deleteConfirm.variety.id);
       handleRefresh();
       if (selectedVariety?.id === deleteConfirm.variety.id) {
         setSelectedVariety(null);

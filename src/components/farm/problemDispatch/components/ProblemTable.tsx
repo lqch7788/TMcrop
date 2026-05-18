@@ -3,9 +3,18 @@
  */
 
 import React from 'react';
-import { Send, Download, Trash2 } from 'lucide-react';
 import { SourceCell } from './SourceCell';
-import { Button } from '@/components/ui/button';
+
+// 状态映射：后端英文 → 前端中文
+const STATUS_CN_MAP: Record<string, string> = {
+  'pending': '待处理',
+  'in_progress': '处理中',
+  'waiting_acceptance': '待验收',
+  'completed': '已处理',
+};
+
+/** 将后端英文状态转为中文显示 */
+const getStatusCN = (status: string): string => STATUS_CN_MAP[status] || status;
 
 interface ProblemEntry {
   id: number;
@@ -14,9 +23,10 @@ interface ProblemEntry {
   sourceTaskId?: string;
   issueText: string;
   issueSeverity: '轻微' | '中等' | '严重';
-  status: '待处理' | '处理中' | '待验收' | '已处理';
+  status: string; // 后端返回英文状态值
   handler?: string;
-  handlerName?: string; // 兼容别名
+  handlerName?: string;
+  assigneeName?: string; // 分派处理人别名
 }
 
 interface ProblemTableProps {
@@ -35,13 +45,6 @@ interface ProblemTableProps {
   onToggleSelectAll: () => void;
   onBatchSelectAll: () => void;
   // 操作按钮回调
-  onBatchDispatch?: () => void;
-  onBatchDelete?: () => void;
-  onExport?: () => void;
-  onCancelBatchDelete?: () => void;
-  onCancelBatchDispatch?: () => void;
-  onCancelExport?: () => void;
-  onShowExportModal?: () => void;
   onSingleDispatch?: (problem: ProblemEntry) => void;
 }
 
@@ -57,13 +60,6 @@ export function ProblemTable({
   onToggleSelect,
   onToggleSelectAll,
   onBatchSelectAll,
-  onBatchDispatch,
-  onBatchDelete,
-  onExport,
-  onCancelBatchDelete,
-  onCancelBatchDispatch,
-  onCancelExport,
-  onShowExportModal,
   onSingleDispatch,
 }: ProblemTableProps) {
   const showCheckbox = batchDeleteMode || exportMode || batchDispatchMode;
@@ -80,15 +76,18 @@ export function ProblemTable({
     }
   };
 
-  // 状态样式
+  // 状态样式（传入中文状态值）
   const getStatusStyle = (status: string) => {
-    switch (status) {
+    const cn = getStatusCN(status);
+    switch (cn) {
       case '已处理':
         return 'bg-green-100 text-green-700';
       case '处理中':
         return 'bg-amber-100 text-amber-700';
       case '待验收':
         return 'bg-purple-100 text-purple-700';
+      case '待处理':
+        return 'bg-blue-100 text-blue-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -101,66 +100,6 @@ export function ProblemTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 表头工具栏 */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
-        {exportMode ? (
-          <>
-            <Button
-              size="sm"
-              onClick={onShowExportModal}
-            >
-              <Download className="w-4 h-4" />
-              确认导出
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={onCancelExport}
-            >
-              取消
-            </Button>
-          </>
-        ) : batchDeleteMode ? (
-          <>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={onBatchDelete}
-              disabled={selectedRows.length === 0}
-            >
-              <Trash2 className="w-4 h-4" />
-              确认删除
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={onCancelBatchDelete}
-            >
-              取消
-            </Button>
-          </>
-        ) : batchDispatchMode ? (
-          <>
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={onBatchDispatch}
-              disabled={selectedProblems.length === 0}
-            >
-              <Send className="w-4 h-4" />
-              确认分派
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={onCancelBatchDispatch}
-            >
-              取消
-            </Button>
-          </>
-        ) : null}
-      </div>
-
       {/* 表格 */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -185,7 +124,7 @@ export function ProblemTable({
               <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-300">
             {problems.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
@@ -198,7 +137,7 @@ export function ProblemTable({
                   {/* 复选框 */}
                   <td className="px-4 py-3">
                     {batchDispatchMode ? (
-                      problem.status === '待处理' && !problem.sourceTaskId ? (
+                      getStatusCN(problem.status) === '待处理' && !problem.sourceTaskId ? (
                         <input
                           type="checkbox"
                           checked={selectedProblems.includes(problem.id)}
@@ -247,36 +186,34 @@ export function ProblemTable({
                   {/* 状态 */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(problem.status)}`}>
-                      {problem.status}
+                      {getStatusCN(problem.status)}
                     </span>
                   </td>
 
                   {/* 处理人 */}
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {problem.handler || problem.handlerName || '-'}
+                    {problem.handler || problem.handlerName || problem.assigneeName || '-'}
                   </td>
 
                   {/* 操作 */}
                   <td className="px-4 py-3">
-                    {problem.status === '待处理' && !problem.sourceTaskId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                    {getStatusCN(problem.status) === '待处理' && !problem.sourceTaskId && (
+                      <button
                         onClick={() => onSingleDispatch?.(problem)}
+                        className="px-2 py-1 bg-orange-500 text-white font-bold rounded text-xs hover:bg-orange-600 transition-colors"
                       >
                         分派
-                      </Button>
+                      </button>
                     )}
-                    {problem.status === '处理中' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                    {getStatusCN(problem.status) === '处理中' && (
+                      <button
                         onClick={() => onViewDetail(problem)}
+                        className="px-2 py-1 bg-blue-500 text-white font-bold rounded text-xs hover:bg-blue-600 transition-colors"
                       >
                         详情
-                      </Button>
+                      </button>
                     )}
-                    {problem.status === '待验收' && (
+                    {getStatusCN(problem.status) === '待验收' && (
                       <Button
                         variant="ghost"
                         size="sm"

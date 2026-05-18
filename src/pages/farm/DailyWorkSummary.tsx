@@ -261,6 +261,8 @@ export default function DailyWorkSummary() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <PageHeader
+        backTo="/farm-hub"
+        backTitle="返回农事任务中心"
         icon={<ClipboardList className="w-6 h-6 text-white" />}
         title="每日工单汇总"
         description={`基于任务数据汇总，共 ${summaries.length} 条任务记录`}
