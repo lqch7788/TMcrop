@@ -166,6 +166,23 @@ export function initializeDatabase() {
     )
   `);
 
+  // 物料编码分类树表（大类/中类/小类 三级层次）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_code_categories (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      name_en TEXT DEFAULT '',
+      parent_code TEXT DEFAULT '',
+      level TEXT NOT NULL DEFAULT 'big',
+      rule_type TEXT DEFAULT 'material',
+      sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
   // 通知渠道表
   db.run(`
     CREATE TABLE IF NOT EXISTS notification_channels (

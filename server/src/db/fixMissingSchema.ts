@@ -443,6 +443,45 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• iot_devices:', e.message);
   }
 
+  // 18.5 确保 material_code_categories 表存在
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS material_code_categories (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        name_en TEXT DEFAULT '',
+        parent_code TEXT DEFAULT '',
+        level TEXT NOT NULL DEFAULT 'big',
+        rule_type TEXT DEFAULT 'material',
+        sort_order INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    console.log('✓ material_code_categories 表创建成功');
+  } catch (e: any) {
+    console.log('• material_code_categories:', e.message);
+  }
+
+  // 19. material_code_categories 表添加 rule_type 列（区分物料/供应商编码规则）
+  try {
+    db.run(`ALTER TABLE material_code_categories ADD COLUMN rule_type TEXT DEFAULT 'material'`);
+    console.log('✓ material_code_categories 表添加 rule_type 列');
+    // SQLite ALTER TABLE ADD COLUMN 不向已有行填充默认值，需手动更新 NULL 行
+    const nullCount = db.exec(`SELECT COUNT(*) as cnt FROM material_code_categories WHERE rule_type IS NULL`);
+    const cnt = nullCount.length > 0 && nullCount[0].values.length > 0 ? Number(nullCount[0].values[0][0] ?? 0) : 0;
+    if (cnt > 0) {
+      db.run(`UPDATE material_code_categories SET rule_type = 'material' WHERE rule_type IS NULL`);
+      console.log(`✓ 已更新 ${cnt} 条旧记录的 rule_type = 'material'`);
+    }
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      console.log('• material_code_categories.rule_type:', e.message);
+    }
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

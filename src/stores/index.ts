@@ -95,6 +95,10 @@ export { useApprovalStore } from './useApprovalStore';
 
 export { useMaterialRequestDataStore } from './useMaterialRequestDataStore';
 
+// 物料编码规则分类树 Store
+export { useMaterialCodeRuleStore } from './useMaterialCodeRuleStore';
+export type { BigCategory, MidCategory, SubCategory } from './useMaterialCodeRuleStore';
+
 export { useExecuteDataStore } from './useExecuteDataStore';
 export { useStatisticsStore, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getSingleMonthTableData, getMonthCategoryData, getMonthSummary } from './useStatisticsStore';
 export type { MaterialStatItem, MonthlyStatItem, CategorySummaryItem, CategoryTrendItem, MonthSummaryRow, MonthDetailRow } from './useStatisticsStore';

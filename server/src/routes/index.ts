@@ -54,6 +54,7 @@ import salaryBudgetRouter from './salaryBudget';
 import fertilizerRouter from './fertilizer';
 import regionRouter from './region';
 import plantLabelRouter from './plantLabel';
+import materialCodeCategoriesRouter from './materialCodeCategories';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -205,6 +206,9 @@ router.use('/alerts', requireAuth, alertRouter);
 
 // 物料管理路由 - 需要认证
 router.use('/materials', requireAuth, materialsRouter);
+
+// 物料编码分类路由 - V12.0
+router.use('/material-code-categories', requireAuth, materialCodeCategoriesRouter);
 
 // 离职管理路由 - 需要认证
 router.use('/resignation', requireAuth, resignationRouter);

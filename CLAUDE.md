@@ -518,6 +518,48 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 **构建状态：** ✅ 前端 + 后端 TypeScript 均通过
 **验证结果：** 二次重启后"字典数据无重复，跳过去重"+"新增 0，跳过全部"
 
+### 2026-05-18/19 会话 — 供应商编码规则页面架构升级 (V2.1合规)
+
+**问题诊断：**
+- `http://localhost:5188/supplier-code-rule` 页面直接操作 localStorage，未遵循 V2.1 架构模板的三级降级数据流
+- `material_code_categories` 表缺少 `rule_type` 列，物料和服务商编码规则混在一起
+- 种子数据不完整：只播种了16条material + 18条supplier，缺少大量中类/小类
+- PUT/DELETE 路由的 WHERE 子句缺少 `rule_type`，可能跨类型影响数据
+
+**完成的工作：**
+
+1. **后端 Schema 升级 + 数据迁移**
+   - `fixMissingSchema.ts`：新增 `rule_type TEXT DEFAULT 'material'` 列 + NULL 值修复
+   - `seedBasicData.ts`：新增 `seedCodeRuleCategories()`（~200行），含 11 big + 60 mid 供应商编码 + 7 big + 17 mid + 99 sub 物料编码
+   - ID 格式：`SCC/MCC + Date.now() + '_' + parentCode + '_' + code`，解决同code不同parent的ID冲突
+   - 存在性检查改为 `(code, parent_code, rule_type)` 三元组，避免跨父级重复跳过
+
+2. **后端 API 路由升级**（`materialCodeCategories.ts`）
+   - GET：支持 `?rule_type=` 查询参数，SQL 添加 `AND rule_type = ?`
+   - POST：接收 `ruleType` 字段写入 DB
+   - PUT：WHERE 条件从 `code = ?` 改为 `code = ? AND rule_type = ?`
+   - DELETE：所有查询（查找/级联删除）均添加 `AND rule_type = ?`
+
+3. **前端 Store 重写**（`useSupplierCodeRuleStore.ts`，~420行）
+   - 从 localStorage 操作改为 `enhancedApiClient` 调用 API
+   - `rowsToTree()`：API 平铺行 → `BigCategory[]` 树形结构
+   - `fetchCategories()`：从 `/api/material-code-categories?rule_type=supplier` 加载
+   - `syncLocalToApi()`：localStorage 历史数据迁移到后端
+   - `migratedToApi` 标记 + persist 配置
+   - 所有 CRUD 方法改为 async + 乐观更新
+
+4. **前端页面适配**（`SupplierCodeRule.tsx`）
+   - 添加 `useEffect(() => { fetchCategories(); }, [fetchCategories])`
+   - 所有 CRUD 处理方法改为 async
+
+5. **修复 `CodeRule.tsx` 构建错误**
+   - line 598：`</>` → `</React.Fragment>`（匹配 line 536 的 `<React.Fragment key={...}>` 开头）
+
+**种子数据统计：** 123 条 material + 71 条 supplier = 194 条
+**CRUD 验证：** POST → PUT → GET → DELETE（含级联）全部通过
+**构建状态：** ✅ 前端 + 后端 TypeScript 均通过
+**涉及文件：** `materialCodeCategories.ts`, `fixMissingSchema.ts`, `seedBasicData.ts`, `useSupplierCodeRuleStore.ts`, `SupplierCodeRule.tsx`, `CodeRule.tsx`
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
