@@ -442,6 +442,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC007', code: 'greenhouse_status', name: '温室状态', module: 'base', description: '温室状态', sortOrder: 7, status: 'active' },
   { id: 'DC008', code: 'task_status', name: '任务状态', module: 'task', description: '任务状态', sortOrder: 8, status: 'active' },
   { id: 'DC008A', code: 'announcement_category', name: '公告分类', module: 'task', description: '公告分类', sortOrder: 8.1, status: 'active' },
+  { id: 'DC008B', code: 'announcement_type', name: '公告类型', module: 'task', description: '公告类型分类（生产通告/行政通告）', sortOrder: 8.15, status: 'active' },
   { id: 'DC009', code: 'attendance_status', name: '考勤状态', module: 'hr', description: '考勤记录状态', sortOrder: 9, status: 'active' },
   { id: 'DC010', code: 'overtime_type', name: '加班类型', module: 'hr', description: '加班类型分类', sortOrder: 10, status: 'active' },
   { id: 'DC011', code: 'leave_type', name: '请假类型', module: 'hr', description: '请假类型分类', sortOrder: 11, status: 'active' },
@@ -456,6 +457,8 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC020', code: 'purchase_type', name: '采购类型', module: 'purchase', description: '采购申请类型', sortOrder: 20, status: 'active' },
   { id: 'DC021', code: 'energy_type', name: '能源类型', module: 'production', description: '能源消耗类型（电/水/燃气等）', sortOrder: 21, status: 'active' },
   { id: 'DC022', code: 'material_cost_type', name: '物料成本类型', module: 'production', description: '物料成本类型（肥料/农药/种子等）', sortOrder: 22, status: 'active' },
+  { id: 'DC023', code: 'planting_season_status', name: '种植季状态', module: 'base', description: '种植季记录状态（种植中/已收获/休耕/准备中）', sortOrder: 23, status: 'active' },
+  { id: 'DC024', code: 'block_type', name: '区块类型', module: 'base', description: '设施内种植区块类型', sortOrder: 24, status: 'active' },
   // ============================================
   // 生产汇总表配置分类（V8.0新增）
   // ============================================
@@ -582,11 +585,29 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'GT01', categoryCode: 'greenhouse_type', dictCode: 'glass', dictLabel: '玻璃温室', dictValue: 'glass', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'GT02', categoryCode: 'greenhouse_type', dictCode: 'solar', dictLabel: '日光温室', dictValue: 'solar', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'GT03', categoryCode: 'greenhouse_type', dictCode: 'plastic', dictLabel: '塑料大棚', dictValue: 'plastic', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
-  { id: 'GT04', categoryCode: 'greenhouse_type', dictCode: 'open', dictLabel: '露天种植', dictValue: 'open', color: 'gray', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'GT04', categoryCode: 'greenhouse_type', dictCode: 'open', dictLabel: '露天种植区', dictValue: 'open', color: 'gray', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 设施类型扩展（V1.0 基地空间架构 — 新增5项）
+  { id: 'GT05', categoryCode: 'greenhouse_type', dictCode: 'film_greenhouse', dictLabel: '联动薄膜温室', dictValue: 'film_greenhouse', color: 'teal', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'GT06', categoryCode: 'greenhouse_type', dictCode: 'solar_tunnel', dictLabel: '日光拱棚', dictValue: 'solar_tunnel', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'GT07', categoryCode: 'greenhouse_type', dictCode: 'tissue_culture', dictLabel: '组培室', dictValue: 'tissue_culture', color: 'purple', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'GT08', categoryCode: 'greenhouse_type', dictCode: 'breeding_greenhouse', dictLabel: '育种温室', dictValue: 'breeding_greenhouse', color: 'pink', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'GT09', categoryCode: 'greenhouse_type', dictCode: 'nursery_greenhouse', dictLabel: '驯化育苗温室', dictValue: 'nursery_greenhouse', color: 'cyan', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'GT10', categoryCode: 'greenhouse_type', dictCode: 'other_facility', dictLabel: '其他设施', dictValue: 'other_facility', color: 'slate', sortOrder: 10, isDefault: 0, status: 'active' },
   // 温室状态
   { id: 'D040', categoryCode: 'greenhouse_status', dictCode: 'using', dictLabel: '使用中', dictValue: 'using', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D041', categoryCode: 'greenhouse_status', dictCode: 'maintenance', dictLabel: '维护中', dictValue: 'maintenance', color: 'yellow', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'D042', categoryCode: 'greenhouse_status', dictCode: 'idle', dictLabel: '空闲', dictValue: 'idle', color: 'gray', sortOrder: 3, isDefault: 0, status: 'active' },
+  // 种植季状态（基地空间架构 V1.0 新增）
+  { id: 'PS01', categoryCode: 'planting_season_status', dictCode: 'planting', dictLabel: '种植中', dictValue: 'planting', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PS02', categoryCode: 'planting_season_status', dictCode: 'harvested', dictLabel: '已收获', dictValue: 'harvested', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PS03', categoryCode: 'planting_season_status', dictCode: 'fallow', dictLabel: '休耕', dictValue: 'fallow', color: 'gray', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PS04', categoryCode: 'planting_season_status', dictCode: 'preparing', dictLabel: '翻耕准备中', dictValue: 'preparing', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  // 区块类型（基地空间架构 V1.0 新增）
+  { id: 'BT01', categoryCode: 'block_type', dictCode: 'planting', dictLabel: '种植区', dictValue: 'planting', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'BT02', categoryCode: 'block_type', dictCode: 'nursery', dictLabel: '育苗区', dictValue: 'nursery', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'BT03', categoryCode: 'block_type', dictCode: 'experiment', dictLabel: '试验区', dictValue: 'experiment', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'BT04', categoryCode: 'block_type', dictCode: 'storage', dictLabel: '仓储区', dictValue: 'storage', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'BT05', categoryCode: 'block_type', dictCode: 'passage', dictLabel: '通道区', dictValue: 'passage', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
   // 任务状态
   { id: 'D050', categoryCode: 'task_status', dictCode: 'pending', dictLabel: '待处理', dictValue: 'pending', color: 'orange', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'D051', categoryCode: 'task_status', dictCode: 'in_progress', dictLabel: '进行中', dictValue: 'in_progress', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -817,6 +838,9 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'AN004', categoryCode: 'announcement_category', dictCode: 'activity_notice', dictLabel: '活动通知', dictValue: '活动通知', color: 'purple', sortOrder: 4, isDefault: 1, status: 'active' },
   { id: 'AN005', categoryCode: 'announcement_category', dictCode: 'policy_revision', dictLabel: '制度修订', dictValue: '制度修订', color: 'red', sortOrder: 5, isDefault: 1, status: 'active' },
   { id: 'AN006', categoryCode: 'announcement_category', dictCode: 'production_notice', dictLabel: '生产公告', dictValue: '生产公告', color: 'cyan', sortOrder: 6, isDefault: 1, status: 'active' },
+  // 公告类型
+  { id: 'ANT001', categoryCode: 'announcement_type', dictCode: 'production_notice', dictLabel: '生产公告', dictValue: '生产公告', color: 'blue', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'ANT002', categoryCode: 'announcement_type', dictCode: 'admin_notice', dictLabel: '行政公告', dictValue: '行政公告', color: 'purple', sortOrder: 2, isDefault: 1, status: 'active' },
   // 农事任务类型 (20种) — dictCode使用中文名称
   { id: 'FAT001', categoryCode: 'farm_activity_type', dictCode: '巡田', dictLabel: '巡田', dictValue: '巡田', color: 'cyan', sortOrder: 1, isDefault: 1, status: 'active' },
   { id: 'FAT002', categoryCode: 'farm_activity_type', dictCode: '灌溉', dictLabel: '灌溉', dictValue: '灌溉', color: 'blue', sortOrder: 2, isDefault: 1, status: 'active' },

@@ -96,6 +96,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
         ref={ref}
         type="button"
         disabled={disabled}
+        data-state={isSelected ? 'active' : 'inactive'}
         onClick={() => onValueChange?.(value)}
         className={cn(
           "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-base font-semibold transition-all duration-200",

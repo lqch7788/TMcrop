@@ -51,6 +51,8 @@ import TeamManagement from './pages/TeamManagement';
 import CostAccounting from './pages/CostAccounting';
 import AuditLog from './pages/AuditLog';
 import BlockManagement from './pages/BlockManagement';
+import BackupRecovery from './pages/system/BackupRecovery';
+import SystemMonitorPage from './pages/system/SystemMonitor';
 
 import BaseSettings from './pages/BaseSettings';
 import Traceability from './pages/Traceability';
@@ -58,6 +60,7 @@ import DeviceMonitor from './pages/DeviceMonitor';
 import AlertInfo from './pages/AlertInfo';
 import Indicators from './pages/Indicators';
 import Announcement from './pages/Announcement';
+
 import CodeRule from './pages/CodeRule';
 import TechSolution from './pages/TechSolution';
 import PurchasePlan from './pages/PurchasePlan';
@@ -247,6 +250,8 @@ function AppContent() {
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<BaseSettings />} />
             <Route path="block" element={<BlockManagement />} />
+            <Route path="monitor" element={<SystemMonitorPage />} />
+            <Route path="backup" element={<BackupRecovery />} />
 
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
@@ -343,6 +348,7 @@ function AppContent() {
           <Route path="/alert-info" element={<AlertInfo />} />
           <Route path="/indicators" element={<Indicators />} />
           <Route path="/announcement" element={<Announcement />} />
+
 
           {/* 生产汇总表 V1.1 - 5页面（TAB合并） */}
           <Route path="/summary/overview" element={<SummaryOverview />} />

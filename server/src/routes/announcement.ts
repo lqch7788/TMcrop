@@ -21,6 +21,245 @@ function generateId(prefix: string): string {
 }
 
 // ============================================
+// 公告模板 API（注册在 /:id 之前，避免 /templates 被 /:id 匹配）
+// ============================================
+
+/**
+ * 获取所有公告模板
+ * GET /api/announcements/templates
+ * Query: type, status, keyword, page, limit
+ */
+router.get('/templates', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const {
+      type,
+      status,
+      keyword,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    let sql = 'SELECT * FROM announcement_templates WHERE 1=1';
+    const params: (string | number)[] = [];
+
+    if (type && type !== '全部') {
+      sql += ' AND type = ?';
+      params.push(type as string);
+    }
+
+    if (status) {
+      sql += ' AND status = ?';
+      params.push(status as string);
+    }
+
+    if (keyword) {
+      sql += ' AND (name LIKE ? OR code LIKE ? OR content LIKE ?)';
+      const kw = `%${keyword}%`;
+      params.push(kw, kw, kw);
+    }
+
+    const countSql = sql;
+    sql += ' ORDER BY create_time DESC';
+
+    const total = execCount(db, countSql, params);
+
+    const offset = (Number(page) - 1) * Number(limit);
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(Number(limit), offset);
+
+    const items = queryToObjects(db, sql, params);
+
+    res.json({
+      success: true,
+      data: items,
+      meta: { total, page: Number(page), limit: Number(limit) }
+    });
+  } catch (error) {
+    console.error('获取公告模板列表失败:', error);
+    res.status(500).json({ success: false, error: '获取公告模板列表失败' });
+  }
+});
+
+/**
+ * 获取单个公告模板
+ * GET /api/announcements/templates/:id
+ */
+router.get('/templates/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const stmt = db.prepare('SELECT * FROM announcement_templates WHERE id = ?');
+    stmt.bind([id]);
+    let item: Record<string, unknown> | null = null;
+    if (stmt.step()) {
+      item = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!item || Object.keys(item).length === 0) {
+      return res.status(404).json({ success: false, error: '公告模板不存在' });
+    }
+
+    res.json({ success: true, data: item });
+  } catch (error) {
+    console.error('获取公告模板详情失败:', error);
+    res.status(500).json({ success: false, error: '获取公告模板详情失败' });
+  }
+});
+
+/**
+ * 创建公告模板
+ * POST /api/announcements/templates
+ */
+router.post('/templates', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const {
+      code,
+      name,
+      type,
+      category,
+      title_template,
+      content,
+      default_priority,
+      status
+    } = req.body;
+
+    if (!name || !type) {
+      return res.status(400).json({ success: false, error: '模板名称和类型不能为空' });
+    }
+
+    const now = new Date().toISOString();
+    const id = generateId('ATPL');
+
+    let templateCode = code || `TPL_${Date.now()}`;
+
+    db.run(`
+      INSERT INTO announcement_templates (
+        id, code, name, type, category, title_template, content,
+        default_priority, usage_count, status, create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      templateCode,
+      name,
+      type,
+      category || '',
+      title_template || '',
+      content || '',
+      default_priority || 'normal',
+      0,
+      status || 'active',
+      now,
+      now
+    ]);
+
+    saveDatabase();
+
+    res.status(201).json({ success: true, message: '公告模板创建成功', data: { id, code: templateCode } });
+  } catch (error) {
+    console.error('创建公告模板失败:', error);
+    res.status(500).json({ success: false, error: '创建公告模板失败' });
+  }
+});
+
+/**
+ * 更新公告模板
+ * PUT /api/announcements/templates/:id
+ */
+router.put('/templates/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const now = new Date().toISOString();
+    const db = getDatabase();
+
+    const stmt = db.prepare('SELECT * FROM announcement_templates WHERE id = ?');
+    stmt.bind([id]);
+    let template: Record<string, unknown> | null = null;
+    if (stmt.step()) {
+      template = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!template) {
+      return res.status(404).json({ success: false, error: '公告模板不存在' });
+    }
+
+    const fieldMap: Record<string, string> = {
+      code: 'code',
+      name: 'name',
+      type: 'type',
+      category: 'category',
+      title_template: 'title_template',
+      content: 'content',
+      default_priority: 'default_priority',
+      usage_count: 'usage_count',
+      status: 'status'
+    };
+
+    const updateFields: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'id') continue;
+      const dbField = fieldMap[key] || key;
+      updateFields.push(`${dbField} = ?`);
+      values.push(value as string | number | null);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+    }
+
+    updateFields.push('update_time = ?');
+    values.push(now);
+    values.push(id);
+
+    db.run(`UPDATE announcement_templates SET ${updateFields.join(', ')} WHERE id = ?`, values);
+    saveDatabase();
+
+    res.json({ success: true, message: '公告模板更新成功' });
+  } catch (error) {
+    console.error('更新公告模板失败:', error);
+    res.status(500).json({ success: false, error: '更新公告模板失败' });
+  }
+});
+
+/**
+ * 删除公告模板
+ * DELETE /api/announcements/templates/:id
+ */
+router.delete('/templates/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const stmt = db.prepare('SELECT * FROM announcement_templates WHERE id = ?');
+    stmt.bind([id]);
+    let template: Record<string, unknown> | null = null;
+    if (stmt.step()) {
+      template = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!template) {
+      return res.status(404).json({ success: false, error: '公告模板不存在' });
+    }
+
+    db.run('DELETE FROM announcement_templates WHERE id = ?', [id]);
+    saveDatabase();
+
+    res.json({ success: true, message: '公告模板删除成功' });
+  } catch (error) {
+    console.error('删除公告模板失败:', error);
+    res.status(500).json({ success: false, error: '删除公告模板失败' });
+  }
+});
+
+// ============================================
 // 公告 API
 // ============================================
 
