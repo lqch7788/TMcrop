@@ -44,6 +44,14 @@ export type { TaskStatusUpdate, Task } from './useTaskStore';
 export { useAnnouncementStore } from './useAnnouncementStore';
 export type { AnnouncementStatusUpdate, Announcement } from './useAnnouncementStore';
 
+// V2.1 公告数据 Store（完整 CRUD + 审批集成）
+export { useAnnouncementDataStore } from './useAnnouncementDataStore';
+export type { AnnouncementData } from './useAnnouncementDataStore';
+
+// V2.1 公告模板 Store
+export { useAnnouncementTemplateStore } from './useAnnouncementTemplateStore';
+export type { AnnouncementTemplate } from './useAnnouncementTemplateStore';
+
 export { useBudgetStore } from './useBudgetStore';
 export type { BudgetStatusUpdate, Budget, BudgetItem } from './useBudgetStore';
 

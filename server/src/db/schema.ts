@@ -2014,6 +2014,25 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ========== V8.0: 公告模板表 ==========
+  // 公告模板表 - 用于存储公告模板，支持快速创建公告
+  db.run(`
+    CREATE TABLE IF NOT EXISTS announcement_templates (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      category TEXT,
+      title_template TEXT,
+      content TEXT,
+      default_priority TEXT DEFAULT 'normal',
+      usage_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // ========== V8.0: 公告表 ==========
   // 公告表 - 用于存储系统公告
   db.run(`

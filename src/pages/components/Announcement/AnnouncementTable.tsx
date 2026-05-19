@@ -5,7 +5,7 @@
 import { Megaphone, Eye, Edit, Trash2, Send, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { Notice } from '../../types/announcement.types';
-import { getStatusColor, getPriorityColor } from '../../hooks/useAnnouncement';
+import { getStatusColor, getPriorityColor } from './utils';
 
 interface AnnouncementTableProps {
   notices: Notice[];

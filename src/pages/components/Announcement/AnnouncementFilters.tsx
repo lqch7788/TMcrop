@@ -4,11 +4,14 @@
  */
 import { Search } from 'lucide-react';
 
+import type { ReactNode } from 'react';
+
 interface AnnouncementFiltersProps {
   searchKeyword: string;
   typeFilter: string;
   onSearchChange: (value: string) => void;
   onTypeChange: (type: string) => void;
+  children?: ReactNode;
 }
 
 export default function AnnouncementFilters({
@@ -16,6 +19,7 @@ export default function AnnouncementFilters({
   typeFilter,
   onSearchChange,
   onTypeChange,
+  children,
 }: AnnouncementFiltersProps) {
   const types = ['全部', '生产公告', '行政公告'];
 
@@ -43,7 +47,7 @@ export default function AnnouncementFilters({
         </div>
 
         {/* 关键词搜索 */}
-        <div className="flex-1 min-w-[200px]">
+        <div className="w-64">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -55,6 +59,13 @@ export default function AnnouncementFilters({
             />
           </div>
         </div>
+
+        {/* 操作按钮 */}
+        {children && (
+          <div className="flex items-center gap-3 ml-auto">
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );
