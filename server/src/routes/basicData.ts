@@ -2347,4 +2347,174 @@ router.delete('/material-types/:id', (req, res) => {
   }
 });
 
+// ============================================================
+// 基地（Bases）路由 — 基地空间架构 V1.0
+// ============================================================
+
+/** 获取所有基地 GET /api/basic-data/bases */
+router.get('/bases', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { company_oid } = req.query;
+    let sql = 'SELECT * FROM bases WHERE deleted_at IS NULL';
+    const params: any[] = [];
+    if (company_oid) {
+      sql += ' AND company_oid = ?';
+      params.push(company_oid);
+    }
+    sql += ' ORDER BY created_at DESC';
+    const result = db.exec(sql, params);
+
+    if (result.length === 0) return res.json({ success: true, data: [] });
+
+    const columns = result[0].columns;
+    const bases = result[0].values.map(row => {
+      const obj: any = {};
+      columns.forEach((col, i) => { obj[col] = row[i]; });
+      return obj;
+    });
+    res.json({ success: true, data: bases });
+  } catch (error) {
+    console.error('获取基地列表失败:', error);
+    res.status(500).json({ success: false, error: '获取基地列表失败' });
+  }
+});
+
+/** 获取单个基地 GET /api/basic-data/bases/:oid */
+router.get('/bases/:oid', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec('SELECT * FROM bases WHERE oid = ? AND deleted_at IS NULL', [req.params.oid]);
+    if (result.length === 0 || result[0].values.length === 0) {
+      return res.status(404).json({ success: false, error: '基地不存在' });
+    }
+    const columns = result[0].columns;
+    const base: any = {};
+    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
+    res.json({ success: true, data: base });
+  } catch (error) {
+    console.error('获取基地详情失败:', error);
+    res.status(500).json({ success: false, error: '获取基地详情失败' });
+  }
+});
+
+/** 创建基地 POST /api/basic-data/bases */
+router.post('/bases', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { name, companyOid, companyName, code, area, unit, province, city, lng, lat, manager, phone, soilType, ph, intro } = req.body;
+    if (!name || !companyOid) {
+      return res.status(400).json({ success: false, error: '基地名称和所属公司不能为空' });
+    }
+    const oid = `base_${Date.now()}`;
+    const now = new Date().toISOString();
+    db.run(`
+      INSERT INTO bases (oid, code, name, company_oid, company_name, area, unit, province, city, lng, lat, manager, phone, soil_type, ph, intro, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    `, [oid, code || '', name, companyOid, companyName || '', area || 0, unit || '亩', province || '', city || '', lng || 0, lat || 0, manager || '', phone || '', soilType || '', ph || 0, intro || '', now, now]);
+
+    const result = db.exec('SELECT * FROM bases WHERE oid = ?', [oid]);
+    const columns = result[0].columns;
+    const base: any = {};
+    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
+    res.json({ success: true, data: base, message: '基地创建成功' });
+  } catch (error) {
+    console.error('创建基地失败:', error);
+    res.status(500).json({ success: false, error: '创建基地失败' });
+  }
+});
+
+/** 批量迁移基地（从 localStorage） POST /api/basic-data/bases/migrate */
+router.post('/bases/migrate', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { companyGroups } = req.body;
+    if (!Array.isArray(companyGroups)) {
+      return res.status(400).json({ success: false, error: '数据格式错误' });
+    }
+    const now = new Date().toISOString();
+    let createdCount = 0;
+    db.run('BEGIN TRANSACTION');
+    try {
+      for (const company of companyGroups) {
+        const companyOid = `company_${company.id}`;
+        const companyName = company.name;
+        for (const base of company.bases || []) {
+          const baseOid = `base_${base.id}`;
+          // 检查是否已存在
+          const check = db.exec('SELECT COUNT(*) as cnt FROM bases WHERE oid = ?', [baseOid]);
+          const cnt = check[0]?.values[0]?.[0] || 0;
+          if (Number(cnt) > 0) continue;
+          db.run(`
+            INSERT INTO bases (oid, code, name, company_oid, company_name, area, unit, province, city, lng, lat, manager, phone, soil_type, ph, intro, greenhouse_count, field_area, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+          `, [baseOid, `BASE_${base.id}`, base.name, companyOid, companyName,
+              base.area || 0, base.unit || '亩', base.province || '', base.city || '',
+              base.lng || 0, base.lat || 0, base.manager || '', base.phone || '',
+              base.soilType || '', base.ph || 0, base.intro || '',
+              base.greenhouseCount || 0, base.fieldArea || 0, now, now]);
+          createdCount++;
+        }
+      }
+      db.run('COMMIT');
+      res.json({ success: true, message: `迁移完成，共创建 ${createdCount} 条基地记录`, count: createdCount });
+    } catch (txErr) {
+      db.run('ROLLBACK');
+      throw txErr;
+    }
+  } catch (error) {
+    console.error('基地迁移失败:', error);
+    res.status(500).json({ success: false, error: '基地迁移失败' });
+  }
+});
+
+/** 更新基地 PUT /api/basic-data/bases/:oid */
+router.put('/bases/:oid', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { name, code, companyOid, companyName, area, unit, province, city, lng, lat, manager, phone, soilType, ph, intro, status } = req.body;
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    const fields: Record<string, string> = {
+      name, code, company_name: companyName, company_oid: companyOid,
+      area, unit, province, city, lng, lat, manager, phone,
+      soil_type: soilType, ph, intro, status,
+    };
+    Object.entries(fields).forEach(([col, val]) => {
+      if (val !== undefined) {
+        setClauses.push(`${col} = ?`);
+        values.push(val);
+      }
+    });
+    if (setClauses.length === 0) {
+      return res.status(400).json({ success: false, error: '没有提供需要更新的字段' });
+    }
+    setClauses.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(req.params.oid);
+    db.run(`UPDATE bases SET ${setClauses.join(', ')} WHERE oid = ? AND deleted_at IS NULL`, values);
+
+    const result = db.exec('SELECT * FROM bases WHERE oid = ?', [req.params.oid]);
+    const columns = result[0].columns;
+    const base: any = {};
+    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
+    res.json({ success: true, data: base, message: '基地更新成功' });
+  } catch (error) {
+    console.error('更新基地失败:', error);
+    res.status(500).json({ success: false, error: '更新基地失败' });
+  }
+});
+
+/** 删除基地（软删除） DELETE /api/basic-data/bases/:oid */
+router.delete('/bases/:oid', (req, res) => {
+  try {
+    const db = getDatabase();
+    db.run('UPDATE bases SET deleted_at = ?, updated_at = ? WHERE oid = ?', [new Date().toISOString(), new Date().toISOString(), req.params.oid]);
+    res.json({ success: true, message: '基地已删除' });
+  } catch (error) {
+    console.error('删除基地失败:', error);
+    res.status(500).json({ success: false, error: '删除基地失败' });
+  }
+});
+
 export default router;
