@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  Settings as SettingsIcon, MapPin, Sprout, ScrollText, Users, Target, ChevronRight,
+  Settings as SettingsIcon, MapPin, ScrollText, Users, Target, ChevronRight,
   ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor,
   Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database,
-  Package, Wrench, Clock, DollarSign,
+  Clock, DollarSign,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -27,10 +27,10 @@ const permissionSections = [
 // 组3: 业务标准 — 生产相关的配置
 const businessSections = [
   { icon: Database, label: '作物品种库', path: '/settings/crop-variety', desc: '统一管理系统作物品种编码' },
-  { icon: Sprout, label: '作物管理', path: '/settings/crops', desc: '作物基础信息管理' },
+
   { icon: ScrollText, label: '工序管理', path: '/settings/processes', desc: '定义标准农事工序' },
-  { icon: Package, label: '物料管理', path: '/settings/materials', desc: '物料类型定义和规格管理' },
-  { icon: Wrench, label: '农事活动', path: '/settings/farm-activity', desc: '农事活动类型和计划模板' },
+
+
 ];
 
 // 组4: 运营管理 — 日常运营

@@ -51,7 +51,7 @@ import TeamManagement from './pages/TeamManagement';
 import CostAccounting from './pages/CostAccounting';
 import AuditLog from './pages/AuditLog';
 import BlockManagement from './pages/BlockManagement';
-import FarmActivityManagement from './pages/FarmActivityManagement';
+
 import BaseSettings from './pages/BaseSettings';
 import Traceability from './pages/Traceability';
 import DeviceMonitor from './pages/DeviceMonitor';
@@ -79,9 +79,9 @@ import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
 import PlantAreaManagement from './pages/PlantAreaManagement';
-import CropManagement from './pages/CropManagement';
+
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
-import MaterialManagement from './pages/MaterialManagement';
+
 import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
@@ -240,14 +240,14 @@ function AppContent() {
             <Route path="cost-accounting" element={<CostAccounting />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="regions" element={<PlantAreaManagement />} />
-            <Route path="crops" element={<CropManagement />} />
+
             <Route path="crop-variety" element={<CropVarietyManagement />} />
-            <Route path="materials" element={<MaterialManagement />} />
+
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<BaseSettings />} />
             <Route path="block" element={<BlockManagement />} />
-            <Route path="farm-activity" element={<FarmActivityManagement />} />
+
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
           <Route path="/settings/personnel/staff" element={<StaffManagementPage />} />

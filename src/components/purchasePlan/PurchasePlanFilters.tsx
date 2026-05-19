@@ -150,7 +150,7 @@ export function PurchasePlanFilters({
           />
         </div>
         <div className="flex gap-2 items-end ml-auto">
-          <Button size="sm" variant="secondary" onClick={onReset}>
+          <Button size="sm" onClick={onReset}>
             重置
           </Button>
           <Button size="sm" onClick={onSearch}>

@@ -234,7 +234,7 @@ export default function DictionaryManagement() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-green-50 min-h-screen">
       {/* 页面头部 */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
@@ -242,7 +242,7 @@ export default function DictionaryManagement() {
             <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </Link>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
               <Book className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -274,7 +274,7 @@ export default function DictionaryManagement() {
             </button>
             <button
               onClick={() => setShowAddCategoryModal(true)}
-              className="h-10 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 hover:shadow-lg transition-shadow"
+              className="h-10 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 hover:shadow-lg transition-shadow"
             >
               <Plus className="w-4 h-4" />
               新增分类
@@ -311,10 +311,14 @@ export default function DictionaryManagement() {
           const isModuleExpanded = expandedModules.has(mod.code);
           const totalItems = moduleCategories.reduce((sum, cat) => sum + getDictionariesByCategory(cat).length, 0);
 
-          // 过滤逻辑：如果有搜索词，只显示包含匹配项的模块
+          // 过滤逻辑：如果有搜索词，匹配分类名称或字典项名称
           if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();
             const hasMatchingItems = moduleCategories.some(cat => {
+              // 先检查分类名称（中文名 + 编码）
+              const catName = getCategoryChineseName(cat);
+              if (catName.toLowerCase().includes(searchLower) || cat.toLowerCase().includes(searchLower)) return true;
+              // 再检查分类下的字典项
               const items = getDictionariesByCategory(cat);
               return items.some(d =>
                 d.name.toLowerCase().includes(searchLower) ||
@@ -382,7 +386,7 @@ export default function DictionaryManagement() {
                                 ) : (
                                   <ChevronRight className="w-4 h-4 text-gray-400" />
                                 )}
-                                <span className="text-sm font-medium text-gray-700">{chineseName}</span>
+                                <span className="text-sm font-bold text-gray-700">{chineseName}</span>
                                 <span className="text-xs text-gray-400">({category})</span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -412,7 +416,7 @@ export default function DictionaryManagement() {
                                 ) : (
                                   <table className="table-fixed w-full text-xs">
                                     <thead>
-                                      <tr className="bg-gray-50 text-left text-gray-500">
+                                      <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-left text-white">
                                         <th className="py-1.5 pl-3 font-medium">编码</th>
                                         <th className="py-1.5 text-center font-medium">名称</th>
                                         <th className="py-1.5 text-center font-medium">排序</th>
@@ -420,14 +424,14 @@ export default function DictionaryManagement() {
                                         <th className="py-1.5 pr-2 text-right font-medium">操作</th>
                                       </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50">
+                                    <tbody className="divide-y divide-gray-300 bg-white">
                                       {items.map((item) => (
                                         <tr key={item.id} className="hover:bg-blue-50 transition-colors">
                                           <td className="py-1 pl-3">
                                             <span className="font-mono text-gray-700">{item.code}</span>
                                           </td>
                                           <td className="py-1 text-center">
-                                            <span className="text-gray-900 truncate block">{item.name}</span>
+                                            <span className="text-gray-900 truncate block font-bold">{item.name}</span>
                                           </td>
                                           <td className="py-1 text-center text-gray-500">
                                             {item.sortNumber || 0}

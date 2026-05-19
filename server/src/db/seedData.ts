@@ -4746,7 +4746,6 @@ export function exportDatabase() {
   seedApprovalLevelConfigs();
   seedApprovalAmountThresholds();
   seedApprovalTypeRules();
-  seedFarmActivities();
   seedMaterialTypes();
 
   saveDatabase();

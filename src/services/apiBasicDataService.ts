@@ -1005,45 +1005,6 @@ export async function deleteCostBudget(id: number): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/cost-budgets/${id}`, { offlineQueue: true });
 }
 
-// ========== 农事活动类型 & API ==========
-
-export interface FarmActivity {
-  id: number;
-  oid: string;
-  activityCode: string;
-  activityName: string;
-  activityType?: string;
-  priority?: string;
-  branchOid?: string;
-  blockOid?: string;
-  startTime?: string;
-  endTime?: string;
-  assigneeIds?: string[];
-  description?: string;
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export async function getFarmActivities(): Promise<FarmActivity[]> {
-  const data = await enhancedApiClient.get<FarmActivity[]>('/basic-data/farm-activities', {
-    useCache: true, cacheStrategy: 'network-first',
-  });
-  return data || [];
-}
-
-export async function createFarmActivity(item: Partial<FarmActivity>): Promise<FarmActivity> {
-  return await enhancedApiClient.post<FarmActivity>('/basic-data/farm-activities', item, { offlineQueue: true });
-}
-
-export async function updateFarmActivity(id: number, item: Partial<FarmActivity>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/farm-activities/${id}`, item, { offlineQueue: true });
-}
-
-export async function deleteFarmActivity(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/farm-activities/${id}`, { offlineQueue: true });
-}
-
 // ========== 物料类型 & API ==========
 
 export interface MaterialType {
