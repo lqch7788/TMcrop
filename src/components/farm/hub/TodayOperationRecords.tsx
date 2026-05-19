@@ -3,6 +3,7 @@
  * 展示最近的操作历史记录，支持快速查看全部记录
  */
 import { ClipboardList } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // 操作记录项类型
 export interface OperationRecord {
@@ -32,15 +33,17 @@ export function TodayOperationRecords({ records, onShowAll }: TodayOperationReco
           <ClipboardList className="w-5 h-5 text-gray-400" />
           今日操作记录
         </h2>
-        <button
+        <Button
+          variant="link"
+          size="sm"
           onClick={onShowAll}
-          className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+          className="text-emerald-600 hover:text-emerald-700"
         >
           查看全部
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </button>
+        </Button>
       </div>
       <div className="p-4">
         {records.length === 0 ? (

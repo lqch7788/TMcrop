@@ -1,5 +1,6 @@
 import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { Button } from '../ui/button';
 
 interface MaterialBatchEditModalProps {
   isOpen: boolean;
@@ -210,18 +211,12 @@ export function MaterialBatchEditModal({
       </div>
 
       <div className="flex gap-3 mt-6">
-        <button
-          onClick={onNext}
-          className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-        >
+        <Button size="sm" variant="outline" className="flex-1" onClick={onNext}>
           确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
-        </button>
-        <button
-          onClick={onSaveAll}
-          className="flex-1 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
+        </Button>
+        <Button size="sm" variant="blue" className="flex-1" onClick={onSaveAll}>
           保存全部 ({editedCount} 个)
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

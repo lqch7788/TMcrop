@@ -2936,18 +2936,18 @@ function seedAuthorityData() {
   // ========== 组织数据 ==========
   // 使用固定 OID 避免重复创建
   const orgs = [
-    { id: 'org-root', oid: 'ORG001', parent_oid: null, name: '宁波帮帮忙公司', org_type: 'company', sort_number: 1, status: 'active', description: '总公司' },
-    { id: 'org-prod', oid: 'ORG002', parent_oid: 'ORG001', name: '生产部', org_type: 'department', sort_number: 2, status: 'active', description: '生产管理部门' },
-    { id: 'org-tech', oid: 'ORG003', parent_oid: 'ORG001', name: '技术部', org_type: 'department', sort_number: 3, status: 'active', description: '技术研发部门' },
-    { id: 'org-logistics', oid: 'ORG004', parent_oid: 'ORG001', name: '后勤部', org_type: 'department', sort_number: 4, status: 'active', description: '后勤保障部门' },
-    { id: 'org-finance', oid: 'ORG005', parent_oid: 'ORG001', name: '财务部', org_type: 'department', sort_number: 5, status: 'active', description: '财务管理部门' },
+    { id: 'org-root', oid: 'ORG001', parent_oid: null, name: '宁波帮帮忙公司', org_type: 'company', sort_number: 1, status: 'active', description: '总公司', department_id: null },
+    { id: 'org-prod', oid: 'ORG002', parent_oid: 'ORG001', name: '生产部', org_type: 'department', sort_number: 2, status: 'active', description: '生产管理部门', department_id: 'DEPT001' },
+    { id: 'org-tech', oid: 'ORG003', parent_oid: 'ORG001', name: '技术部', org_type: 'department', sort_number: 3, status: 'active', description: '技术研发部门', department_id: 'DEPT002' },
+    { id: 'org-logistics', oid: 'ORG004', parent_oid: 'ORG001', name: '后勤部', org_type: 'department', sort_number: 4, status: 'active', description: '后勤保障部门', department_id: null },
+    { id: 'org-finance', oid: 'ORG005', parent_oid: 'ORG001', name: '财务部', org_type: 'department', sort_number: 5, status: 'active', description: '财务管理部门', department_id: 'DEPT004' },
   ];
 
   for (const org of orgs) {
     db.run(`
-      INSERT OR REPLACE INTO organizations (id, oid, parent_oid, aid, name, org_type, sort_order, status, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [org.id, org.oid, org.parent_oid, org.oid, org.name, org.org_type, org.sort_number, org.status, org.description, now, now]);
+      INSERT OR REPLACE INTO organizations (id, oid, parent_oid, aid, name, org_type, sort_order, status, description, department_id, department_name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [org.id, org.oid, org.parent_oid, org.oid, org.name, org.org_type, org.sort_number, org.status, org.description, org.department_id, org.department_id ? org.name : null, now, now]);
   }
 
   // ========== 动作定义 ==========

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
 import { useUserStore, useProblemStore } from '../../../../stores';
 
@@ -485,12 +486,13 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
               {/* 验收按钮 - 当问题状态为待验收时显示 */}
               {problem.status === '待验收' && onAcceptProblem && (
                 <div className="mt-4 pt-4 border-t border-red-200">
-                  <button
+                  <Button
+                    variant="default"
                     onClick={() => onAcceptProblem(problem.id)}
-                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                    className="w-full"
                   >
                     问题验收
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

@@ -10,6 +10,7 @@ import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
 import { useReminder } from '../../../hooks/useReminder';
 import { Plus, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // 导入迁移的 TaskTable 组件
 import { TaskTable } from './components/TaskTable';
@@ -422,34 +423,39 @@ export function TaskTab({
             ))}
           </select>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onResetFilters}
-          className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700"
         >
           重置
-        </button>
+        </Button>
         {/* 视图切换 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            className={`${
               viewMode === 'list'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             列表
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setViewMode('calendar')}
-            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            className={`${
               viewMode === 'calendar'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             日历
-          </button>
+          </Button>
         </div>
       </div>
 

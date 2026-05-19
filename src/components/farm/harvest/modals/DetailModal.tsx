@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, History } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import TraceChain from '../../trace/TraceChain';
 import { QUALITY_GRADE_MAP } from '../../../../constants/cropConstants';
 
@@ -65,17 +66,20 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
         {/* 标题栏 */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0">
           <h3 className="text-lg font-semibold text-white">采收入库详情</h3>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-white hover:bg-emerald-700 p-1 rounded"
+            className="text-white hover:bg-emerald-700"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 标签页切换 */}
         <div className="flex border-b border-gray-200 px-6 pt-4">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('info')}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === 'info'
@@ -84,8 +88,9 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
             }`}
           >
             基本信息
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('trace')}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1 ${
               activeTab === 'trace'
@@ -95,7 +100,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
           >
             <History className="w-4 h-4" />
             追溯链路
-          </button>
+          </Button>
         </div>
 
         {/* 内容区域 */}
@@ -233,12 +238,12 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-          <button
+          <Button
+            variant="secondary"
             onClick={onClose}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
           >
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </div>

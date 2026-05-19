@@ -281,9 +281,10 @@ export function VarietyTreeNode({
   const renderToggleButton = () => {
     if (!hasChildren) return <span className="w-4 inline-block" />;
     return (
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={handleToggle}
-        className="p-0.5 hover:bg-gray-200 rounded transition-colors"
         title={isExpanded ? '点击折叠' : `展开 ${node.childCount} 个子节点`}
       >
         {isExpanded ? (
@@ -291,7 +292,7 @@ export function VarietyTreeNode({
         ) : (
           <ChevronRight className="w-4 h-4 text-emerald-600" />
         )}
-      </button>
+      </Button>
     );
   };
 
@@ -348,18 +349,20 @@ export function VarietyTreeNode({
                   <span className="text-gray-700 text-sm">{node.name}</span>
                   {isTreeEditing && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
-                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -405,18 +408,20 @@ export function VarietyTreeNode({
                   )}
                   {isTreeEditing && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
-                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -462,18 +467,20 @@ export function VarietyTreeNode({
                   )}
                   {isTreeEditing && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); startInlineEdit(); }}
-                        className="p-1 text-amber-500 hover:bg-amber-50 rounded"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>

@@ -9,6 +9,7 @@ import { CropVarietyOption } from '@/types/cropVariety';
 import * as cropVarietyService from '@/services/cropVarietyService';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -284,17 +285,19 @@ export function EditModal({
               }`}
             />
             {searchKeyword && (
-              <button
+              <Button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setSearchKeyword('');
                   setFormData(prev => ({ ...prev, cropVariety: '', cropCategory: '' }));
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                variant="ghost"
+                size="icon"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
               >
                 <X className="w-4 h-4 text-gray-400" />
-              </button>
+              </Button>
             )}
           </div>
           {/* 下拉选择列表 */}
@@ -443,18 +446,12 @@ export function EditModal({
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-      >
+      <Button onClick={onClose} variant="secondary" size="sm">
         取消
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-      >
+      </Button>
+      <Button onClick={handleSubmit} variant="default" size="sm">
         保存修改
-      </button>
+      </Button>
     </div>
   );
 

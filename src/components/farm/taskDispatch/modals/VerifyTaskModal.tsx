@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '../../../ui/button';
 import { CheckCircle, XCircle, Clock, User, MessageSquare, Image, Mic, MapPin, Package } from 'lucide-react';
 import { Task, TaskRecord, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { TaskProgressTimeline } from '../components/TaskProgressTimeline';
@@ -155,65 +156,56 @@ export function VerifyTaskModal({
 
         {/* 操作按钮 */}
         <div className="flex gap-3 justify-end pt-2 border-t border-gray-200">
-          <button
+          <Button
             onClick={() => {
               resetForm();
               onClose();
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+            variant="secondary"
+            size="sm"
           >
             取消
-          </button>
+          </Button>
 
           {/* 驳回按钮 */}
-          <button
+          <Button
             onClick={() => setHandleType('reject')}
             disabled={handleType === 'approve'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              handleType === 'reject'
-                ? 'bg-red-500 text-white hover:bg-red-600'
-                : 'bg-red-50 text-red-600 hover:bg-red-100'
-            }`}
+            variant={handleType === 'reject' ? "destructive" : "outline"}
+            size="sm"
+            className={handleType !== 'reject' ? 'bg-red-50 text-red-600 hover:bg-red-100' : ''}
           >
             <XCircle className="w-4 h-4" />
             驳回返工
-          </button>
+          </Button>
 
           {/* 通过按钮 */}
-          <button
+          <Button
             onClick={() => setHandleType('approve')}
             disabled={handleType === 'reject'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              handleType === 'approve'
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-            }`}
+            variant={handleType === 'approve' ? "default" : "outline"}
+            size="sm"
+            className={handleType !== 'approve' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : ''}
           >
             <CheckCircle className="w-4 h-4" />
             验收通过
-          </button>
+          </Button>
         </div>
 
         {/* 确认操作 */}
         {handleType && (
           <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-            >
+            <Button onClick={resetForm} variant="secondary" size="sm">
               上一步
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSubmit}
               disabled={handleType === 'reject' && !comments.trim()}
-              className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                handleType === 'reject'
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'bg-emerald-500 text-white hover:bg-emerald-600'
-              }`}
+              variant={handleType === 'reject' ? "destructive" : "default"}
+              size="sm"
             >
               {handleType === 'reject' ? '确认驳回' : '确认通过'}
-            </button>
+            </Button>
           </div>
         )}
       </div>

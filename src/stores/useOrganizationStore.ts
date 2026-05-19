@@ -113,7 +113,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       await authorityService.saveOrganizations({
         inserted: [],
         updated: [],
-        deleted: [{ oid }],
+        deleted: [oid],
       });
       await get().loadOrganizations();
     } catch (err) {
@@ -161,7 +161,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       await authorityService.saveRoles({
         inserted: [],
         updated: [],
-        deleted: [{ oid }],
+        deleted: [oid],
       });
       await get().loadRoles();
     } catch (err) {
@@ -209,7 +209,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       await authorityService.saveUsers({
         inserted: [],
         updated: [],
-        deleted: [{ oid }],
+        deleted: [oid],
       });
       await get().loadUsers();
     } catch (err) {
@@ -274,7 +274,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       await authorityService.saveProcesses({
         inserted: [],
         updated: [],
-        deleted: [{ oid }],
+        deleted: [oid],
       });
       await get().loadProcesses();
     } catch (err) {

@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
 import { Seedling, SeedSource } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
@@ -224,16 +225,18 @@ export function EditModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {formData.sourceId && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', selectedCropCode: '', cropName: '', cropVariety: '' }));
                   setSourceSearch('');
                 }}
+                variant="ghost"
+                size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 ×
-              </button>
+              </Button>
             )}
             {sourcePopoverOpen && (
               <div ref={sourcePopoverRef} className="absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden"

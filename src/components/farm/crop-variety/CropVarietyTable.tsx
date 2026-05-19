@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -127,28 +128,22 @@ export function CropVarietyTable({
           {/* 视图切换 */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-sm text-gray-600 font-medium">视图：</span>
-            <button
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => onViewModeChange('table')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
-                viewMode === 'table'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
             >
               <List className="w-4 h-4" />
               表格
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={viewMode === 'tree' ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => onViewModeChange('tree')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
-                viewMode === 'tree'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
             >
               <GitBranch className="w-4 h-4" />
               树形
-            </button>
+            </Button>
           </div>
 
           {/* 搜索框区域 - 均匀分布 */}
@@ -189,13 +184,14 @@ export function CropVarietyTable({
           </div>
 
           {canCreate && (
-            <button
+            <Button
+              size="sm"
+              className="flex-shrink-0"
               onClick={onAdd}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 flex-shrink-0"
             >
               <Plus className="w-4 h-4" />
               新增作物
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -265,30 +261,33 @@ export function CropVarietyTable({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); onSelect(variety); }}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Button>
                       {canEdit && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => { e.stopPropagation(); onEdit(variety); }}
-                          className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
                           title="编辑品种"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                       {canDelete && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => handleDelete(variety, e)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                           title="删除品种"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </td>
@@ -316,21 +315,23 @@ export function CropVarietyTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {filteredVarieties.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{totalPages > 0 ? `${currentPage} / ${totalPages}` : '0 / 0'}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

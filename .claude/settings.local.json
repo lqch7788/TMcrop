@@ -271,7 +271,15 @@
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT rule_type, level, parent_code, code, name FROM material_code_categories WHERE status='active' AND rule_type='supplier' ORDER BY level, parent_code, code;\")",
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT rule_type, level, COUNT\\(*\\) FROM material_code_categories WHERE status='active' GROUP BY rule_type, level;\")",
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT code, name, level FROM material_code_categories WHERE status='active' AND rule_type='material' AND level='big' ORDER BY code;\")",
-      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT c.code, c.name, c.level, c.parent_code FROM material_code_categories c WHERE c.status='active' AND c.rule_type='material' AND c.level='mid' ORDER BY c.parent_code, c.code;\")"
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT c.code, c.name, c.level, c.parent_code FROM material_code_categories c WHERE c.status='active' AND c.rule_type='material' AND c.level='mid' ORDER BY c.parent_code, c.code;\")",
+      "Skill(team)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f'{r[\\\\\"oid\\\\\"]} - {r.get\\(\\\\\"name\\\\\",\\\\\"?\\\\\"\\)}'\\) for r in d.get\\('data',d.get\\('greenhouses',[]\\)\\)[:3]]\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); g=[r for r in d['data'] if r['oid']=='GH001']; print\\(json.dumps\\(g[0] if g else {}, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Total: {d[\\\\\"meta\\\\\"][\\\\\"total\\\\\"]}'\\); [print\\(f'  - {i[\\\\\"name\\\\\"]} \\({i[\\\\\"id\\\\\"]}\\) type={i[\\\\\"type\\\\\"]} cat={i.get\\(\\\\\"category\\\\\",\\\\\"N/A\\\\\"\\)}'\\) for i in d['data']]\")",
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, real_name, status FROM users LIMIT 10;\")",
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, substr\\(password_hash, 1, 30\\) as hash_preview FROM users WHERE username='陆启闯';\")",
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, password_hash, status FROM users WHERE username='陆启闯';\")",
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT * FROM organizations;\")"
     ]
   }
 }

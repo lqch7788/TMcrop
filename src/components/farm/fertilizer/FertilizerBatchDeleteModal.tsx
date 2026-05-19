@@ -5,6 +5,7 @@
 import React from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
+import { Button } from '../../ui/button';
 import { FertilizerData } from '@/stores';
 
 interface FertilizerBatchDeleteModalProps {
@@ -78,28 +79,32 @@ export function FertilizerBatchDeleteModal({
 
         {/* 按钮 */}
         <div className="flex justify-end gap-3 pt-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
           >
             取消
-          </button>
+          </Button>
           {manualItems.length > 0 && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
               确认删除 ({manualItems.length}条)
-            </button>
+            </Button>
           )}
           {manualItems.length === 0 && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               disabled
-              className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed"
+              className="opacity-50 cursor-not-allowed"
             >
               无可删除记录
-            </button>
+            </Button>
           )}
         </div>
       </div>

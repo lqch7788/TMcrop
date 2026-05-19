@@ -47,6 +47,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'contact_person', sql: 'ALTER TABLE organizations ADD COLUMN contact_person TEXT' },
     { name: 'contact_phone', sql: 'ALTER TABLE organizations ADD COLUMN contact_phone TEXT' },
     { name: 'sort_order', sql: 'ALTER TABLE organizations ADD COLUMN sort_order INTEGER DEFAULT 0' },
+    { name: 'department_id', sql: 'ALTER TABLE organizations ADD COLUMN department_id TEXT' },
+    { name: 'department_name', sql: 'ALTER TABLE organizations ADD COLUMN department_name TEXT' },
   ];
   for (const col of orgColumnsToAdd) {
     try {
@@ -57,6 +59,87 @@ export async function fixMissingSchema(): Promise<void> {
         // 列已存在或表未创建（由 schema.ts 负责）
       }
     }
+  }
+
+  // 2.5 数据修复：为没有 department_id 的部门类型组织自动补齐
+  try {
+    const orgsToFix = db.exec(`
+      SELECT oid, name, parent_oid, contact_person, description
+      FROM organizations
+      WHERE org_type = 'department' AND (department_id IS NULL OR department_id = '') AND status = 'active'
+    `);
+    if (orgsToFix.length > 0 && orgsToFix[0].values.length > 0) {
+      const cols = orgsToFix[0].columns;
+      const oidIdx = cols.indexOf('oid');
+      const nameIdx = cols.indexOf('name');
+      const parentIdx = cols.indexOf('parent_oid');
+      const contactIdx = cols.indexOf('contact_person');
+      const descIdx = cols.indexOf('description');
+      const now = new Date().toISOString();
+      for (const row of orgsToFix[0].values) {
+        const oid = row[oidIdx] as string;
+        const name = row[nameIdx] as string;
+        const parentOid = (row[parentIdx] || '') as string;
+        const contactPerson = (row[contactIdx] || '') as string;
+        const description = (row[descIdx] || '') as string;
+        // 检查是否已有同名部门（防重复）
+        const dupCheck = db.prepare(`SELECT id FROM departments WHERE name = ? AND status = 'active'`);
+        dupCheck.bind([name]);
+        if (dupCheck.step()) {
+          // 已有同名部门，直接关联
+          const existingId = (dupCheck.getAsObject()).id as string;
+          db.run('UPDATE organizations SET department_id = ?, department_name = ? WHERE oid = ?', [existingId, name, oid]);
+          dupCheck.free();
+          continue;
+        }
+        dupCheck.free();
+        const deptId = `DEPT_${Date.now()}`;
+        // 回填 organizations.department_id
+        db.run('UPDATE organizations SET department_id = ?, department_name = ? WHERE oid = ?', [deptId, name, oid]);
+        // 创建对应部门记录
+        db.run(`
+          INSERT OR IGNORE INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+        `, [deptId, deptId, name, deptId, parentOid, '', contactPerson, 0, description, now, now]);
+        console.log(`✓ 回填组织 "${name}" → 部门 ${deptId}`);
+      }
+    }
+  } catch (fixErr: any) {
+    console.log('回填 department_id 数据修复跳过:', fixErr.message);
+  }
+
+  // 2.6 数据修复：回填部门编码（code），根据部门名称映射
+  try {
+    const nameCodeMap: Record<string, string> = {
+      '生产部': 'DEPT_PROD',
+      '技术部': 'DEPT_TECH',
+      '仓储部': 'DEPT_WH',
+      '财务部': 'DEPT_FIN',
+      '综合办': 'DEPT_ADMIN',
+      '后勤部': 'DEPT_LOG',
+    };
+    const deptsToFix = db.exec(`SELECT id, oid, name, code FROM departments`);
+    if (deptsToFix.length > 0 && deptsToFix[0].values.length > 0) {
+      const cols = deptsToFix[0].columns;
+      const idIdx = cols.indexOf('id');
+      const nameIdx = cols.indexOf('name');
+      const codeIdx = cols.indexOf('code');
+      for (const row of deptsToFix[0].values) {
+        const id = row[idIdx] as string;
+        const name = row[nameIdx] as string;
+        const currentCode = (row[codeIdx] || '') as string;
+        const mappedCode = nameCodeMap[name];
+        // 仅当有映射且编码不匹配时更新
+        if (mappedCode && mappedCode !== currentCode) {
+          db.run('UPDATE departments SET code = ? WHERE id = ?', [mappedCode, id]);
+          // 同步更新关联组织的 department_id（组织用 department_id 关联部门记录）
+          db.run('UPDATE organizations SET department_id = ? WHERE department_id = ?', [mappedCode, currentCode || id]);
+          console.log(`✓ 回填部门编码: "${name}" → ${mappedCode}`);
+        }
+      }
+    }
+  } catch (codeFixErr: any) {
+    console.log('回填部门编码跳过:', codeFixErr.message);
   }
 
   // 3. 创建 devices 表（完整结构匹配 basicData.ts 的查询和操作）

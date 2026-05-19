@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUserStore } from '../../../stores';
+import { Button } from '../../ui/button';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {
@@ -211,12 +212,14 @@ export function InspectionTable({
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  <button
+                  <Button
                     onClick={() => onViewDetail(record)}
-                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    variant="link"
+                    size="sm"
+                    className="font-medium"
                   >
                     {record.recordCode}
-                  </button>
+                  </Button>
                 </td>
                 <td className="px-4 py-3 text-center">
                   {record.inspectionType === 'farm' && (
@@ -400,12 +403,13 @@ export function InspectionTable({
                     const problem = getProblemForRecord(record);
                     if (canAccept(problem)) {
                       return (
-                        <button
+                        <Button
                           onClick={() => onAcceptance?.(problem!)}
-                          className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded font-medium transition-colors"
+                          variant="default"
+                          size="sm"
                         >
                           验收
-                        </button>
+                        </Button>
                       );
                     }
                     if (problem && problem.status !== '已处理') {
@@ -429,12 +433,13 @@ export function InspectionTable({
         {showSelection && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">
-              <button
+              <Button
                 onClick={onSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                variant="link"
+                size="sm"
               >
                 {selectedRows.length === records.length ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -457,21 +462,23 @@ export function InspectionTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {records.length} 条</span>
-          <button
+          <Button
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            variant="ghost"
+            size="icon"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{currentPage} / {totalPages}</span>
-          <button
+          <Button
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            variant="ghost"
+            size="icon"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
+import { Button } from '../../ui/button';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
@@ -202,18 +203,19 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                       }`}>
                         {selectedPlanLabel}
                       </span>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => {
                           updateField('productionPlanCode', '');
                           updateField('productionPlanId', '');
                           setPlanSearchKeyword('');
                           setSelectedPlanLabel('');
                         }}
-                        className="p-1 hover:bg-gray-100 rounded"
                       >
                         <X className={`w-4 h-4 ${form.productionPlanCode ? 'text-blue-600' : 'text-gray-400'}`} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -227,20 +229,23 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                         placeholder="搜索生产计划批次号..."
                         className="flex-1 px-3 py-2 border border-gray-400 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setShowPlanSearch(!showPlanSearch)}
-                        className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-400 rounded-r-lg hover:bg-gray-200"
+                        className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
                       >
                         <Search className="w-4 h-4 text-gray-500" />
-                      </button>
+                      </Button>
                     </div>
                     {/* 下拉选项 */}
                     {showPlanSearch && (
                       <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                         {/* 第一个选项：不关联 */}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
                           onClick={() => {
                             updateField('productionPlanCode', '');
                             updateField('productionPlanId', '');
@@ -248,16 +253,17 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                             setSelectedPlanLabel('不关联生产计划');
                             setShowPlanSearch(false);
                           }}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 border-b border-gray-100"
+                          className="w-full justify-start rounded-none border-b border-gray-100"
                         >
                           <X className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-500">不关联生产计划</span>
-                        </button>
+                        </Button>
                         {planOptions.length > 0 ? (
                           planOptions.map((plan) => (
-                            <button
+                            <Button
                               key={plan.id}
                               type="button"
+                              variant="ghost"
                               onClick={() => {
                                 updateField('productionPlanId', plan.id);
                                 updateField('productionPlanCode', plan.batchCode);
@@ -265,7 +271,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                                 setSelectedPlanLabel(plan.batchCode);
                                 setShowPlanSearch(false);
                               }}
-                              className="w-full px-3 py-2 text-left hover:bg-emerald-50 flex items-center justify-between border-b border-gray-100 last:border-b-0"
+                              className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0"
                             >
                               <div>
                                 <p className="text-sm font-medium text-gray-800">{plan.batchCode}</p>
@@ -278,7 +284,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                               }`}>
                                 {plan.status === 'in_progress' ? '进行中' : plan.status === 'planned' ? '计划中' : plan.status}
                               </span>
-                            </button>
+                            </Button>
                           ))
                         ) : (
                           <div className="p-4 text-center text-sm text-gray-400">
@@ -455,19 +461,21 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           取消
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="default"
+          size="sm"
           onClick={handleSubmit}
           disabled={submitting || !form.fertilizerName.trim()}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? '保存中...' : '保存'}
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

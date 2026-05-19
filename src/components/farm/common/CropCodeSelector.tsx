@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, ChevronDown, ChevronRight, Leaf, Plus } from 'lucide-react';
+import { Button } from '../../ui/button';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   initVarieties,
@@ -111,13 +112,14 @@ export function CropCodeSelector({
   return (
     <div className={`relative ${className}`}>
       {/* 选择触发器 */}
-      <button
+      <Button
+        variant="outline"
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          w-full ${sizeClasses[size]} px-3 border border-gray-200 rounded-lg
-          bg-white text-left flex items-center justify-between gap-2
+          w-full ${sizeClasses[size]} px-3
+          text-left flex items-center justify-between gap-2
           focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
           disabled:bg-gray-100 disabled:cursor-not-allowed
           ${isOpen ? 'border-emerald-500 ring-1 ring-emerald-500' : ''}
@@ -141,7 +143,7 @@ export function CropCodeSelector({
         ) : (
           <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
         )}
-      </button>
+      </Button>
 
       {/* 下拉面板 */}
       {isOpen && (
@@ -163,28 +165,32 @@ export function CropCodeSelector({
 
           {/* 类别快速筛选 */}
           <div className="p-2 border-b border-gray-100 flex gap-1 flex-wrap">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setSelectedCategory('')}
-              className={`px-2 py-1 text-xs rounded-full transition-colors ${
+              className={`px-2 py-1 rounded-full ${
                 !selectedCategory
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                  : ''
               }`}
             >
               全部
-            </button>
+            </Button>
             {categoryOptions.map(cat => (
-              <button
+              <Button
                 key={cat.value}
+                variant="secondary"
+                size="sm"
                 onClick={() => setSelectedCategory(cat.value)}
-                className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                className={`px-2 py-1 rounded-full ${
                   selectedCategory === cat.value
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                    : ''
                 }`}
               >
                 {cat.label}
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -194,7 +200,9 @@ export function CropCodeSelector({
               <div className="px-4 py-6 text-center">
                 <div className="text-gray-500 text-sm mb-3">未找到匹配的品种</div>
                 {searchKeyword.trim() && (
-                  <button
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={() => {
                       // 自动创建新品种
                       const newVariety = findOrCreateVarietyByName(searchKeyword.trim());
@@ -204,11 +212,11 @@ export function CropCodeSelector({
                         setSearchKeyword('');
                       }
                     }}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2 mx-auto"
+                    className="mx-auto"
                   >
                     <Plus className="w-4 h-4" />
                     自动创建「{searchKeyword.trim()}」
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -276,11 +284,12 @@ interface OptionItemProps {
 
 function OptionItem({ option, isSelected, onSelect }: OptionItemProps) {
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={() => onSelect(option)}
       className={`
         w-full px-3 py-2 text-left flex items-start gap-2 hover:bg-emerald-50
-        transition-colors ${isSelected ? 'bg-emerald-50' : ''}
+        ${isSelected ? 'bg-emerald-50' : ''}
       `}
     >
       <Leaf className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
@@ -294,7 +303,7 @@ function OptionItem({ option, isSelected, onSelect }: OptionItemProps) {
       {isSelected && (
         <span className="text-xs text-emerald-600 font-medium">已选</span>
       )}
-    </button>
+    </Button>
   );
 }
 

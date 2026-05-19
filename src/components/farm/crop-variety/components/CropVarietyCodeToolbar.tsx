@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CropVarietyCodeToolbarProps {
   codeGenExpanded: boolean;
@@ -19,16 +20,17 @@ export function CropVarietyCodeToolbar({
 }: CropVarietyCodeToolbarProps) {
   return (
     <div className="flex items-center gap-4">
-      <button
+      <Button
+        size="sm"
         onClick={onCodeRuleClick}
-        className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
       >
         编码规则 &gt;&gt;
-      </button>
+      </Button>
       <span className="text-sm font-bold text-gray-900">产品编码生成</span>
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onCodeGenToggle}
-        className="p-1 hover:bg-gray-100 rounded transition-colors"
         title={codeGenExpanded ? '收起' : '展开'}
       >
         {codeGenExpanded ? (
@@ -36,7 +38,7 @@ export function CropVarietyCodeToolbar({
         ) : (
           <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
         )}
-      </button>
+      </Button>
     </div>
   );
 }

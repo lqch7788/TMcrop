@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../ui/button';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from './MaterialFilters';
 import { MaterialsTable } from './MaterialsTable';
 import { MaterialDetailModal } from './MaterialDetailModal';
@@ -844,14 +845,16 @@ export default function WarehouseMaterialsPage() {
                   className="w-40 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
                   readOnly
                 />
-                <button
+                <Button
+                  size="sm"
                   onClick={handleCodeGen}
                   disabled={!codeGen.subCategory}
-                  className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
                 >
                   生成
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="blue"
                   onClick={() => {
                     if (codeGen.generatedCode) {
                       navigator.clipboard.writeText(codeGen.generatedCode);
@@ -860,16 +863,16 @@ export default function WarehouseMaterialsPage() {
                     }
                   }}
                   disabled={!codeGen.generatedCode}
-                  className="px-4 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
                 >
                   {copySuccess ? '已复制!' : '复制'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setCodeGen({ bigCategory: '', midCategory: '', subCategory: '', generatedCode: '' })}
-                  className="px-4 h-10 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 whitespace-nowrap flex items-center gap-1"
                 >
                   重置
-                </button>
+                </Button>
               </div>
             </div>
           </div>

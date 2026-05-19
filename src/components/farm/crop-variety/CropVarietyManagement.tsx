@@ -14,6 +14,7 @@ import { CropVarietyDetail } from './CropVarietyDetail';
 import { AddCropVarietyModal } from './modals/AddCropVarietyModal';
 import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
   getCategoryOptions,
@@ -501,16 +502,17 @@ export default function CropVarietyManagement() {
         <div className="flex items-center justify-between">
           {/* 左侧工具栏 */}
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              size="sm"
               onClick={handleCodeRuleClick}
-              className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               编码规则 &gt;&gt;
-            </button>
+            </Button>
             <span className="text-sm font-bold text-gray-900">作物编码生成</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setCodeGenExpanded(!codeGenExpanded)}
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
               title={codeGenExpanded ? '收起' : '展开'}
             >
               {codeGenExpanded ? (
@@ -518,7 +520,7 @@ export default function CropVarietyManagement() {
               ) : (
                 <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -619,22 +621,21 @@ export default function CropVarietyManagement() {
                     placeholder="生成结果"
                     className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
                   />
-                  <button
+                  <Button
                     onClick={handleGenerateCode}
                     disabled={!codeGenVariety}
-                    className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
                   >
                     <RefreshCw className="w-4 h-4" />
                     生成
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="blue"
                     onClick={handleCopyCode}
                     disabled={!generatedCode}
-                    className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
                   >
                     {copySuccess ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copySuccess ? '已复制' : '复制'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

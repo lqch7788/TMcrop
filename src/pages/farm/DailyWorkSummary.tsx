@@ -9,7 +9,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Layers, Mail, Clock, CheckCircle, Loader, Download } from 'lucide-react';
+import { Button } from '../../components/ui/button';
 import {
   PageHeader,
   StatCards,
@@ -106,11 +107,11 @@ export default function DailyWorkSummary() {
     const pending = summaries.filter(s => s.status === '待接受').length;
 
     return [
-      { label: '任务总数', value: total, icon: '📋', iconBgColor: 'bg-blue-500' },
-      { label: '待接受', value: pending, icon: '📨', iconBgColor: 'bg-gray-500' },
-      { label: '进行中', value: inProgress, icon: '⟳', iconBgColor: 'bg-amber-500' },
-      { label: '待验收', value: waitingAcceptance, icon: '⏳', iconBgColor: 'bg-orange-500' },
-      { label: '已完成', value: completed, icon: '✓', iconBgColor: 'bg-green-500' },
+      { label: '任务总数', value: total, icon: <Layers className="w-4 h-4 text-white" />, iconBgColor: 'from-blue-500 to-blue-600' },
+      { label: '待接受', value: pending, icon: <Mail className="w-4 h-4 text-white" />, iconBgColor: 'from-gray-500 to-gray-600' },
+      { label: '进行中', value: inProgress, icon: <Loader className="w-4 h-4 text-white" />, iconBgColor: 'from-amber-500 to-amber-600' },
+      { label: '待验收', value: waitingAcceptance, icon: <Clock className="w-4 h-4 text-white" />, iconBgColor: 'from-orange-500 to-orange-600' },
+      { label: '已完成', value: completed, icon: <CheckCircle className="w-4 h-4 text-white" />, iconBgColor: 'from-green-500 to-green-600' },
     ];
   }, [summaries]);
 
@@ -261,11 +262,9 @@ export default function DailyWorkSummary() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <PageHeader
-        backTo="/farm-hub"
-        backTitle="返回农事任务中心"
         icon={<ClipboardList className="w-6 h-6 text-white" />}
         title="每日工单汇总"
-        description={`基于任务数据汇总，共 ${summaries.length} 条任务记录`}
+description="基于任务数据汇总的每日农事工单执行情况"
       />
 
       {/* 统计卡片 */}
@@ -281,12 +280,18 @@ export default function DailyWorkSummary() {
         onExportClick={exportHook.handleExportClick}
         onConfirmExport={exportHook.handleConfirmExport}
         onCancelExport={exportHook.handleCancelExport}
+        hideExportButton
       />
 
-      {/* 表格标题 */}
+      {/* 表格标题栏 + 导出按钮 */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800">每日工单汇总表</h3>
-        <span className="text-sm text-gray-500">共 {filteredSummaries.length} 条记录</span>
+        {!exportHook.exportMode && (
+          <Button size="sm" onClick={exportHook.handleExportClick}>
+            <Download className="w-4 h-4" />
+            导出
+          </Button>
+        )}
       </div>
 
       {/* 数据表格 */}

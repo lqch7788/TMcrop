@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '../../ui/button';
 
 // 按钮类型
 export interface FilterButtonProps {
@@ -31,22 +32,22 @@ export function FilterButton({
   className = '',
   variant = 'gray'
 }: FilterButtonProps) {
-  const baseClasses = 'h-10 px-4 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors';
-
-  const variantClasses = {
-    primary: 'bg-emerald-600 text-white hover:bg-emerald-700',
-    secondary: 'bg-blue-500 text-white hover:bg-blue-600',
-    gray: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+  // FilterButton variant 映射到 Button 组件的 variant
+  const buttonVariantMap: Record<string, 'default' | 'blue' | 'secondary'> = {
+    primary: 'default',
+    secondary: 'blue',
+    gray: 'secondary'
   };
 
   return (
-    <button
+    <Button
+      variant={buttonVariantMap[variant]}
       onClick={onClick}
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      className={className}
     >
       {icon}
       {children}
-    </button>
+    </Button>
   );
 }
 

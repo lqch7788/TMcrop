@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
 
@@ -229,13 +230,13 @@ export function EditCropVarietyModal({
                 />
               </label>
               {formData.image && (
-                <button
-                  type="button"
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={() => setFormData({ ...formData, image: '' })}
-                  className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm border border-red-200"
                 >
                   删除
-                </button>
+                </Button>
               )}
             </div>
           </div>

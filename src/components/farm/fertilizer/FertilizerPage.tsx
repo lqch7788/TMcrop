@@ -4,6 +4,7 @@
  * 所有数据通过 useFertilizerStore 管理
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Button } from '../../ui/button';
 import { Sprout, Trash2 } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
@@ -271,19 +272,21 @@ export default function FertilizerPage() {
       {operationMode === 'delete' && selectedIds.length > 0 && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
           <span className="text-sm text-red-700">已选择 {selectedIds.length} 条记录</span>
-          <button
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleBatchDelete}
-            className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             确认删除
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => { setOperationMode('normal'); setSelectedIds([]); }}
-            className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
           >
             取消
-          </button>
+          </Button>
         </div>
       )}
 

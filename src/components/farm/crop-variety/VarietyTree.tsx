@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, FolderPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
@@ -115,28 +116,22 @@ export function VarietyTree({
           {/* 视图切换 */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-sm text-gray-600 font-medium">视图：</span>
-            <button
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => onViewModeChange('table')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
-                viewMode === 'table'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
             >
               <List className="w-4 h-4" />
               表格
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={viewMode === 'tree' ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => onViewModeChange('tree')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
-                viewMode === 'tree'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
             >
               <GitBranch className="w-4 h-4" />
               树形
-            </button>
+            </Button>
           </div>
 
           {/* 搜索框区域 - 均匀分布 */}
@@ -173,35 +168,40 @@ export function VarietyTree({
             </div>
           </div>
 
-          <button
+          <Button
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
             onClick={handleAddCategory}
-            className="h-10 px-4 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2 flex-shrink-0"
           >
             <FolderPlus className="w-4 h-4" />
             新增类别
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            className="flex-shrink-0"
             onClick={() => onAdd()}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
             新增作物
-          </button>
+          </Button>
           {!isTreeEditing ? (
-            <button
+            <Button
+              variant="warning"
+              size="sm"
+              className="flex-shrink-0"
               onClick={() => onTreeEditingChange?.(true)}
-              className="h-10 px-4 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 flex items-center gap-2 flex-shrink-0"
             >
               <Edit2 className="w-4 h-4" />
               修改规则
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              size="sm"
+              className="bg-gray-500 hover:bg-gray-600 text-white flex-shrink-0"
               onClick={() => onTreeEditingChange?.(false)}
-              className="h-10 px-4 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 flex items-center gap-2 flex-shrink-0"
             >
               退出编辑
-            </button>
+            </Button>
           )}
         </div>
 
@@ -211,26 +211,30 @@ export function VarietyTree({
             共 {totalNodeCount} 个节点
           </span>
           <div className="flex items-center gap-3">
-            <button
+            <Button
+              variant="link"
+              size="sm"
               onClick={() => expandToLevel('subVariety1')}
-              className="text-xs text-emerald-600 hover:text-emerald-700"
             >
               展开到子品种
-            </button>
+            </Button>
             <span className="text-gray-300">|</span>
-            <button
+            <Button
+              variant="link"
+              size="sm"
               onClick={expandAll}
-              className="text-xs text-emerald-600 hover:text-emerald-700"
             >
               全部展开
-            </button>
+            </Button>
             <span className="text-gray-300">|</span>
-            <button
+            <Button
+              variant="link"
+              size="sm"
+              className="text-gray-500 hover:text-gray-700"
               onClick={collapseAll}
-              className="text-xs text-gray-500 hover:text-gray-700"
             >
               全部折叠
-            </button>
+            </Button>
           </div>
         </div>
       </div>

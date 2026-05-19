@@ -21,20 +21,20 @@ export function StatCards({ cards }: StatCardsProps) {
       {cards.map((card, index) => (
         <div
           key={index}
-          className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${card.onClick || card.navigateTo ? 'cursor-pointer' : ''}`}
+          className={`bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${card.onClick || card.navigateTo ? 'cursor-pointer' : ''}`}
           onClick={() => {
             if (card.onClick) card.onClick();
             if (card.navigateTo) navigate(card.navigateTo);
           }}
         >
-          <div className="flex items-center justify-between">
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${card.iconBgColor || 'from-emerald-500 to-emerald-600'} flex items-center justify-center shadow-sm`}>
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${card.iconBgColor || 'from-emerald-500 to-emerald-600'} flex items-center justify-center`}>
               {card.icon}
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{card.label}</p>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{card.value}</p>
+              <p className="text-xs text-gray-500">{card.label}</p>
+            </div>
           </div>
         </div>
       ))}

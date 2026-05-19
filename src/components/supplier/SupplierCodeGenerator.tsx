@@ -1,5 +1,6 @@
 // 供应商编码生成器组件 - 参照物料入库 WarehouseInboundCodeGen 样式
 import React from 'react';
+import { Button } from '../../components/ui/button';
 import { useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierCodeGenState {
@@ -99,30 +100,32 @@ export default function SupplierCodeGenerator({
             />
 
             {/* 生成按钮 */}
-            <button
+            <Button
+              size="sm"
               onClick={onGenerate}
               disabled={!codeGen.midCategory}
-              className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
             >
               生成
-            </button>
+            </Button>
 
             {/* 复制按钮 */}
-            <button
+            <Button
+              size="sm"
+              variant="blue"
               onClick={onCopy}
               disabled={!codeGen.generatedCode}
-              className="px-4 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
             >
               {copySuccess ? '已复制!' : '复制'}
-            </button>
+            </Button>
 
             {/* 重置按钮 */}
-            <button
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={onReset}
-              className="px-4 h-10 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 whitespace-nowrap flex items-center gap-1"
             >
               重置
-            </button>
+            </Button>
           </div>
         </div>
       </div>

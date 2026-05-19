@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { Button } from '../../ui/button';
 import {
   Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
   X, Pencil, Trash2, Sprout, Droplets, AlertTriangle
@@ -439,16 +440,17 @@ export default function AgricultureRecordPage() {
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {record.children && record.children.length > 0 && (
-                            <button
+                            <Button
                               onClick={() => toggleChildren(record.id)}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              variant="ghost"
+                              size="icon"
                             >
                               {expandedIds.has(record.id) ? (
                                 <ChevronDown className="w-4 h-4 text-gray-400" />
                               ) : (
                                 <ChevronRight className="w-4 h-4 text-gray-400" />
                               )}
-                            </button>
+                            </Button>
                           )}
                           <span className="font-medium text-gray-900 text-sm">{record.recordCode}</span>
                         </div>
@@ -490,20 +492,24 @@ export default function AgricultureRecordPage() {
                       <td className="px-4 py-3 text-center">
                         {record.status === 'waiting_acceptance' && (
                           <div className="flex items-center justify-center gap-1">
-                            <button
+                            <Button
                               onClick={() => handleAcceptRecord(record)}
-                              className="px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded transition-colors"
+                              variant="link"
+                              size="sm"
+                              className="text-green-600 hover:bg-green-50"
                               title="审核通过"
                             >
                               通过
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => handleRejectRecord(record)}
-                              className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors"
+                              variant="link"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
                               title="审核驳回"
                             >
                               驳回
-                            </button>
+                            </Button>
                           </div>
                         )}
                       </td>

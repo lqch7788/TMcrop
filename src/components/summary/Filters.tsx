@@ -16,6 +16,8 @@ interface FiltersProps {
   onConfirmExport: () => void;
   onCancelExport: () => void;
   onSearch?: () => void;
+  /** 隐藏正常模式下的导出按钮（导出模式下的确认/取消仍显示） */
+  hideExportButton?: boolean;
 }
 
 export function Filters({
@@ -26,6 +28,7 @@ export function Filters({
   onConfirmExport,
   onCancelExport,
   onSearch,
+  hideExportButton = false,
 }: FiltersProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
@@ -92,7 +95,7 @@ export function Filters({
                 取消
               </button>
             </>
-          ) : (
+          ) : !hideExportButton ? (
             <button
               onClick={onExportClick}
               className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
@@ -100,7 +103,7 @@ export function Filters({
               <Download className="w-4 h-4" />
               导出
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

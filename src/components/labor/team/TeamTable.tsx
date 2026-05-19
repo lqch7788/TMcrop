@@ -108,18 +108,15 @@ export function TeamTable({
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack || (() => navigate(-1))}>
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </Button>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">班组分配</h1>
-              <p className="text-xs text-gray-500">管理临时工班组分配</p>
+              <h1 className="text-2xl font-bold text-gray-900">班组分配</h1>
+              <p className="text-gray-500">管理临时工班组分配</p>
             </div>
           </div>
           {canCreate && (

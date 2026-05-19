@@ -5,6 +5,7 @@
 import React from 'react';
 import { CropVariety } from '../../../types/cropVariety';
 import { Edit2, Leaf } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CropVarietyDetailProps {
   variety: CropVariety | null;
@@ -44,13 +45,14 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               </p>
             </div>
           </div>
-          <button
+          <Button
+            variant="blue"
+            size="sm"
             onClick={() => onEdit(variety)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1"
           >
             <Edit2 className="w-4 h-4" />
             编辑
-          </button>
+          </Button>
         </div>
       </div>
 

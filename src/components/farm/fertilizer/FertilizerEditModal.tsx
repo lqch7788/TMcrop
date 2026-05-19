@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
+import { Button } from '../../ui/button';
 import { DictSelect } from '../../common/settings/DictSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, FertilizerData } from '@/stores';
@@ -326,20 +327,22 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           取消
-        </button>
+        </Button>
         {!isIot && (
-          <button
+          <Button
+            variant="warning"
+            size="sm"
             onClick={handleSubmit}
             disabled={submitting || !form.fertilizerName.trim()}
-            className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? '保存中...' : '保存修改'}
-          </button>
+          </Button>
         )}
       </div>
     </UnifiedModal>

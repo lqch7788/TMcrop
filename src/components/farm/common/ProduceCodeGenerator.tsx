@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Button } from '../../ui/button';
 import {
   produceCategories,
   getProduceTypesByCategory,
@@ -153,26 +154,29 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
               className="w-40 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
               readOnly
             />
-            <button
+            <Button
+              variant="default"
               onClick={handleCodeGen}
               disabled={!codeGen.subCategory}
-              className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
+              className="whitespace-nowrap gap-1"
             >
               生成
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="blue"
               onClick={handleCopy}
               disabled={!codeGen.generatedCode}
-              className="px-4 h-10 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1"
+              className="whitespace-nowrap gap-1"
             >
               {copySuccess ? '已复制!' : '复制'}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleReset}
-              className="px-4 h-10 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 whitespace-nowrap flex items-center gap-1"
+              className="whitespace-nowrap gap-1"
             >
               重置
-            </button>
+            </Button>
           </div>
         </div>
       </div>
