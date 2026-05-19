@@ -4,6 +4,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import { X, Search, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Modal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Badge, Tabs, TabsList, TabsTrigger, TabsContent,
@@ -107,12 +108,14 @@ export default function PlantingLabelDetailModal({
         {/* 标题栏 */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">标签管理详情</h3>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors"
+            className="text-white hover:bg-emerald-700"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 搜索框 */}
@@ -276,12 +279,13 @@ export default function PlantingLabelDetailModal({
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
           >
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </div>

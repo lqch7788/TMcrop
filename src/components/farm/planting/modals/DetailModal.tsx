@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
@@ -215,21 +216,25 @@ export function DetailModal({
       {selectedImageIndex !== null && images.length > 0 && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center">
           {/* 关闭按钮 */}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={closeImageViewer}
-            className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+            className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-10"
           >
             <X className="w-8 h-8" />
-          </button>
+          </Button>
 
           {/* 上一张 */}
           {selectedImageIndex > 0 && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={goToPreviousImage}
-              className="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+              className="absolute left-4 text-white hover:bg-white/20 rounded-full z-10"
             >
               <ChevronLeft className="w-8 h-8" />
-            </button>
+            </Button>
           )}
 
           {/* 图片 */}
@@ -241,12 +246,14 @@ export function DetailModal({
 
           {/* 下一张 */}
           {selectedImageIndex < images.length - 1 && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={goToNextImage}
-              className="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full z-10"
+              className="absolute right-4 text-white hover:bg-white/20 rounded-full z-10"
             >
               <ChevronRight className="w-8 h-8" />
-            </button>
+            </Button>
           )}
 
           {/* 图片计数 */}

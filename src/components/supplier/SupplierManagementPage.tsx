@@ -398,16 +398,17 @@ export default function SupplierManagementPage() {
       {/* 编码规则按钮 + 编码生成器（参照物料入库样式） */}
       <div className="flex items-center gap-4">
         <div className="h-6 w-px bg-gray-500"></div>
-        <button
+        <Button
+          size="sm"
           onClick={() => navigate('/supplier-code-rule')}
-          className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
         >
           编码规则 &gt;&gt;
-        </button>
+        </Button>
         <span className="text-base font-bold text-blue-600">供应商编码生成</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setCodeGenExpanded(!codeGenExpanded)}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
           title={codeGenExpanded ? '收起' : '展开'}
         >
           {codeGenExpanded ? (
@@ -415,7 +416,7 @@ export default function SupplierManagementPage() {
           ) : (
             <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* 编码规则生成器 */}
@@ -450,12 +451,13 @@ export default function SupplierManagementPage() {
             <h3 className="text-lg font-semibold text-gray-900">供应商列表</h3>
             {hasActiveMode && (
               <div className="flex items-center gap-2 ml-4">
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                 >
                   {isAllSelected ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             )}

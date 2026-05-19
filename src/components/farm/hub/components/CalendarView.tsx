@@ -24,6 +24,7 @@ import {
 } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type CalendarViewType = 'day' | 'week' | 'month';
 
@@ -365,43 +366,49 @@ export function CalendarView({ tasks, onSelectTask, onSelectDate }: CalendarView
       {/* 日历头部导航 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={goToPrevious}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={goToNext}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-gray-600" />
-          </button>
+          </Button>
           <h2 className="text-xl font-semibold text-gray-900">
             {getTitle()}
           </h2>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={goToToday}
-            className="px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+            className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
           >
             今天
-          </button>
+          </Button>
         </div>
 
         {/* 视图切换 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           {(['day', 'week', 'month'] as CalendarViewType[]).map((type) => (
-            <button
+            <Button
               key={type}
+              variant="ghost"
+              size="sm"
               onClick={() => setViewType(type)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`${
                 viewType === type
                   ? 'bg-white text-emerald-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {type === 'day' ? '日' : type === 'week' ? '周' : '月'}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

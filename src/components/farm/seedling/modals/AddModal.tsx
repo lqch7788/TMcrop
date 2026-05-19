@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/seedlingService';
@@ -535,14 +536,16 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   placeholder="点击生成获取批次号"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="default"
+                  size="sm"
                   onClick={handleGenerateSeedlingCode}
-                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-1"
+                  className="gap-1"
                 >
                   <RefreshCw className="w-4 h-4" />
                   生成
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -596,8 +599,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 />
                 {/* 清除按钮 */}
                 {formData.sourceId && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' }));
                       setSourceSearch('');
@@ -605,7 +610,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     ×
-                  </button>
+                  </Button>
                 )}
                 {/* 下拉表格 Popover */}
                 {sourcePopoverOpen && (
@@ -1072,13 +1077,15 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                           alt={`预览${index + 1}`}
                           className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setPictures(pictures.filter((_, i) => i !== index))}
-                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="w-3 h-3" />
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>

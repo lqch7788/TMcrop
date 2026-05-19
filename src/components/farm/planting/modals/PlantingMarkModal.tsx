@@ -161,12 +161,14 @@ export default function PlantingMarkModal({
             <Tag className="w-5 h-5" />
             标记管理
           </h3>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-white hover:bg-purple-700 p-1.5 rounded transition-colors"
+            className="text-white hover:bg-purple-700"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容区域 */}
@@ -210,12 +212,13 @@ export default function PlantingMarkModal({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">选择标签</h4>
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={toggleAllLabels}
-                  className="text-xs text-emerald-600 hover:text-emerald-700"
                 >
                   {checkedLabelIds.size === labels.length ? '取消全选' : '全选'}
-                </button>
+                </Button>
               </div>
               <div className="border border-gray-200 rounded-lg p-2 max-h-80 overflow-y-auto space-y-1">
                 {labels.length === 0 ? (

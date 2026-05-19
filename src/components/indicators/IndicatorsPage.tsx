@@ -216,8 +216,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-              <Button variant="default" onClick={handleSubmit}>确定</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowModal(false)}>取消</Button>
+              <Button variant="default" size="sm" onClick={handleSubmit}>确定</Button>
             </div>
           </div>
         </div>
@@ -271,8 +271,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <Button variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
-              <Button variant="blue" onClick={handleEditSubmit}>提交审核</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowEditModal(false)}>取消</Button>
+              <Button variant="blue" size="sm" onClick={handleEditSubmit}>提交审核</Button>
             </div>
           </div>
         </div>
@@ -346,9 +346,9 @@ export function IndicatorsPage() {
             <input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
           <div className="flex gap-2">
-            <Button variant="default" onClick={resetFilters} className="flex items-center gap-2">重置</Button>
-            <Button variant="default" className="flex items-center gap-2"><Search className="w-4 h-4" />搜索</Button>
-            <Button variant="default" onClick={handleOpenModal} className="flex items-center gap-1"><Plus className="w-4 h-4" />新增</Button>
+            <Button variant="secondary" size="sm" onClick={resetFilters}>重置</Button>
+            <Button variant="default" size="sm"><Search className="w-4 h-4" />搜索</Button>
+            <Button variant="default" size="sm" onClick={handleOpenModal}><Plus className="w-4 h-4" />新增</Button>
           </div>
         </div>
       </div>

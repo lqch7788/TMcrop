@@ -197,8 +197,9 @@ export function SelectExecutorModal({
 
         {/* 分派模式切换 */}
         <div className="flex gap-2 mb-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => handleModeChange('ai_assisted')}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
               dispatchMode === 'ai_assisted'
@@ -208,9 +209,10 @@ export function SelectExecutorModal({
           >
             <Sparkles className="w-4 h-4" />
             AI智能推荐（默认）
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => handleModeChange('manual')}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
               dispatchMode === 'manual'
@@ -220,7 +222,7 @@ export function SelectExecutorModal({
           >
             <UserPlus className="w-4 h-4" />
             手动选择
-          </button>
+          </Button>
         </div>
 
         {/* AI辅助模式 - 显示AI推荐面板 */}
@@ -235,13 +237,14 @@ export function SelectExecutorModal({
               <>
                 {/* AI推荐触发按钮 */}
                 {aiRecommendations.length === 0 && (
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={fetchAIRecommendations}
-                    className="w-full py-4 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 hover:border-purple-500 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-4 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 hover:border-purple-500 hover:bg-purple-50"
                   >
                     <Sparkles className="w-5 h-5" />
                     点击获取AI智能推荐
-                  </button>
+                  </Button>
                 )}
 
                 {/* AI推荐面板 */}
@@ -342,24 +345,22 @@ export function SelectExecutorModal({
 
         {/* 操作按钮 */}
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={handleSubmit}
             disabled={!selectedAssignee}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              selectedAssignee
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
           >
             <UserPlus className="w-4 h-4" />
             确认派发
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

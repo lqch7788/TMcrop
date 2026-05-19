@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
 
 interface ImageLightboxModalProps {
   isOpen: boolean;
@@ -28,21 +29,25 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
   return (
     <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center">
       {/* 关闭按钮 */}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+        className="absolute top-4 right-4 text-white hover:bg-white/20"
       >
         <X className="w-6 h-6" />
-      </button>
+      </Button>
 
       {/* 上一张 */}
       {images.length > 1 && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handlePrev}
-          className="absolute left-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+          className="absolute left-4 text-white hover:bg-white/20"
         >
           <ChevronLeft className="w-8 h-8" />
-        </button>
+        </Button>
       )}
 
       {/* 图片 */}
@@ -56,12 +61,14 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
 
       {/* 下一张 */}
       {images.length > 1 && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleNext}
-          className="absolute right-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+          className="absolute right-4 text-white hover:bg-white/20"
         >
           <ChevronRight className="w-8 h-8" />
-        </button>
+        </Button>
       )}
 
       {/* 图片计数 */}

@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Clock, User, MapPin, Camera, Mic, FileText } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 
@@ -231,20 +232,23 @@ export function TaskAcceptanceModal({
         <div className="border-t border-gray-200 pt-4">
           {!showRejectForm ? (
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => setShowRejectForm(true)}
-                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 flex items-center gap-2"
+                className="bg-red-50 text-red-600 hover:bg-red-100"
               >
                 <XCircle className="w-4 h-4" />
                 驳回
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
                 onClick={handleAccept}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
                 通过验收
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="bg-red-50 rounded-lg p-4">
@@ -257,22 +261,24 @@ export function TaskAcceptanceModal({
                 rows={3}
               />
               <div className="flex gap-3 justify-end">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     setShowRejectForm(false);
                     setRejectReason('');
                   }}
-                  className="px-4 py-2 bg-white text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100"
                 >
                   取消
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={handleReject}
                   disabled={!rejectReason.trim()}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   确认驳回
-                </button>
+                </Button>
               </div>
             </div>
           )}

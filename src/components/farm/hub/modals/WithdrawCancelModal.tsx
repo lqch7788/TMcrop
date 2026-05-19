@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { RotateCcw, XCircle, AlertTriangle } from 'lucide-react';
 import { Task } from '../../../../types/task';
 
@@ -118,22 +119,24 @@ export function WithdrawCancelModal({
 
         {/* 操作按钮 */}
         <div className="flex gap-3 justify-end pt-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => {
               setReason('');
               onClose();
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={isWithdraw ? 'blue' : 'destructive'}
+            size="sm"
             onClick={handleSubmit}
             disabled={!reason.trim()}
-            className={`px-4 py-2 ${buttonClass} text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             确认{title}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

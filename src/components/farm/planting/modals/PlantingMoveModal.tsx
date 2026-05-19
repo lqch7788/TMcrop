@@ -87,12 +87,14 @@ export default function PlantingMoveModal({
         {/* 标题栏 */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">移入/移出操作</h3>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-white hover:bg-orange-700 p-1.5 rounded transition-colors"
+            className="text-white hover:bg-orange-700"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 业务规则提示 - 已采收植株不能移动 */}

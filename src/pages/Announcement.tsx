@@ -338,12 +338,12 @@ export default function Announcement() {
                     <FileText className="w-3.5 h-3.5" /><span>使用次数：{template.usageCount || 0} 次</span>
                   </div>
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                    <button onClick={() => handleTemplateEdit(template)} className="flex-1 px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
+                    <Button variant="outline" size="sm" className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleTemplateEdit(template)}>
                       <Edit className="w-3.5 h-3.5" />编辑
-                    </button>
-                    <button onClick={() => handleTemplateDelete(template)} className="flex-1 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-1">
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleTemplateDelete(template)}>
                       <Trash2 className="w-3.5 h-3.5" />删除
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}

@@ -50,17 +50,19 @@ function renderPagination(currentPage: number, totalPages: number, onPageChange:
 
   for (let i = startPage; i <= endPage; i++) {
     pages.push(
-      <button
+      <Button
         key={i}
+        size="sm"
+        variant={i === currentPage ? "default" : "outline"}
         onClick={() => onPageChange(i)}
-        className={`px-3 py-1.5 text-sm rounded-lg transition-all duration-300 ${
+        className={
           i === currentPage
-            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium'
-            : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300'
-        }`}
+            ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 font-medium'
+            : 'text-gray-700 hover:bg-blue-50 border-gray-300'
+        }
       >
         {i}
-      </button>
+      </Button>
     );
   }
   return pages;

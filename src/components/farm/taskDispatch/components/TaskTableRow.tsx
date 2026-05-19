@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { FileText, Bell } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
 import { OvertimeBadge } from './OvertimeBadge';
 
@@ -81,13 +82,14 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
 
       {/* 任务ID */}
       <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-        <button
+        <Button
+          variant="link"
+          size="sm"
           onClick={onViewDetail}
-          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
           title="点击查看详情"
         >
           {task.id}
-        </button>
+        </Button>
       </td>
 
       {/* 任务类型 */}
@@ -169,77 +171,86 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         <div className="flex items-center gap-1 flex-wrap">
           {/* 待验收 - 验收按钮 */}
           {task.status === 'waiting_acceptance' && onAccept && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onAccept}
-              className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
             >
               验收
-            </button>
+            </Button>
           )}
 
           {/* pending - 撤回按钮 */}
           {task.status === 'pending' && onWithdraw && (
-            <button
+            <Button
+              variant="warning"
+              size="sm"
               onClick={onWithdraw}
-              className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
             >
               撤回
-            </button>
+            </Button>
           )}
 
           {/* accepted/in_progress - 取消按钮 */}
           {(task.status === 'accepted' || task.status === 'in_progress') && onCancel && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={onCancel}
-              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
             >
               取消
-            </button>
+            </Button>
           )}
 
           {/* 超时严重 - 超时处理按钮 */}
           {(task as any).timeout?.severity === 'critical' && onOvertime && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onOvertime}
-              className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
             >
               超时处理
-            </button>
+            </Button>
           )}
 
           {/* rejected - 重新派发按钮（执行人拒绝后需要重新派发给其他人） */}
           {task.status === 'rejected' && onReassign && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onReassign}
-              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
             >
               重新派发
-            </button>
+            </Button>
           )}
 
           {/* pending 但没有执行人（被清空） - 重新派发按钮（需要重新选择执行人） */}
           {task.status === 'pending' && !task.assigneeId && onReassign && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={onReassign}
-              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
             >
               选择执行人
-            </button>
+            </Button>
           )}
 
           {/* failed/abandoned - 重新派发按钮 */}
           {(task.status === 'failed' || task.status === 'abandoned') && onReassign && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onReassign}
-              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
             >
               重新派发
-            </button>
+            </Button>
           )}
 
           {/* 催办按钮 - 已发布状态且非终态显示 */}
           {!['draft', 'completed', 'cancelled', 'abandoned'].includes(task.status) && onRemind && (
-            <button
+            <Button
+              variant={remindProps?.allowed ? 'destructive' : 'secondary'}
+              size="sm"
               onClick={() => {
                 const remindCheck = canRemind(task.id);
                 if (remindCheck.allowed) {
@@ -256,16 +267,11 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                 }
               }}
               disabled={!remindProps?.allowed}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                remindProps?.allowed
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
               title={remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}分钟后可催办` : `今日已催办${remindProps?.todayCount || 0}次`}
             >
-              <Bell className="w-3 h-3 inline mr-1" />
+              <Bell className="w-3 h-3 mr-1" />
               {remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}m` : '催办'}
-            </button>
+            </Button>
           )}
         </div>
       </td>
@@ -278,13 +284,15 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
       {/* 作业标准 */}
       <td className="px-3 py-3 whitespace-nowrap">
         {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
-          <button
+          <Button
+            variant="link"
+            size="sm"
             onClick={onViewSop}
-            className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
+            className="text-xs"
           >
             <FileText className="w-3 h-3" />
             SOP文件
-          </button>
+          </Button>
         ) : (
           <span className="text-gray-400 text-xs">-</span>
         )}

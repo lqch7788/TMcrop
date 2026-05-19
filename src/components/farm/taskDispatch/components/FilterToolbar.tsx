@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 
 interface FilterToolbarProps {
@@ -131,43 +132,51 @@ export function FilterToolbar({
 
         {/* 操作按钮 */}
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={onResetFilters}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
           >
             重置
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
           >
             <Upload className="w-4 h-4" />
             批量导入
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onSmartRecommend}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white text-sm rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 transition-all duration-300 animate-pulse-subtle"
+            className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 transition-all duration-300"
           >
             <Sparkles className="w-4 h-4" />
             智能推荐
-          </button>
+          </Button>
 
           {/* 视图切换 */}
           <div className="flex border border-gray-200 rounded-lg overflow-hidden ml-2">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onViewModeChange('list')}
-              className={`px-3 py-2 flex items-center gap-1 text-sm ${viewMode === 'list' ? 'bg-emerald-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`rounded-none ${viewMode === 'list' ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               <List className="w-4 h-4" />
               列表
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onViewModeChange('calendar')}
-              className={`px-3 py-2 flex items-center gap-1 text-sm ${viewMode === 'calendar' ? 'bg-emerald-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`rounded-none ${viewMode === 'calendar' ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               <CalendarIcon className="w-4 h-4" />
               日历
-            </button>
+            </Button>
           </div>
         </div>
       </div>

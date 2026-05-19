@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CropOrderFilters } from '@/types/crop';
 
 interface OrderFilterProps {
@@ -107,20 +108,24 @@ export function OrderFilter({
 
         {/* 按钮 */}
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onReset}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             <RotateCcw className="w-4 h-4" />
             重置
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onSearch}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

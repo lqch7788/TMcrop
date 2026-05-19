@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Leaf } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVariety } from '@/types/cropVariety';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
@@ -183,13 +184,15 @@ export function AddModal({
               errors.orderCode ? 'border-red-500' : 'border-gray-200'
             }`}
           />
-          <button
+          <Button
             type="button"
+            variant="default"
+            size="sm"
             onClick={() => setFormData(prev => ({ ...prev, orderCode: generateOrderCode() }))}
-            className="px-4 h-10 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             生成
-          </button>
+          </Button>
         </div>
         {errors.orderCode && <p className="text-xs text-red-500 mt-1">{errors.orderCode}</p>}
       </div>
@@ -365,18 +368,20 @@ export function AddModal({
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={onClose}
-        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
       >
         取消
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="default"
+        size="sm"
         onClick={handleSubmit}
-        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
       >
         确认创建
-      </button>
+      </Button>
     </div>
   );
 

@@ -88,17 +88,19 @@ export function ProblemFilterToolbar({
               { value: 'year', label: '本年' },
               { value: 'custom', label: '时间段' },
             ].map(opt => (
-              <button
+              <Button
                 key={opt.value}
+                variant="ghost"
+                size="sm"
                 onClick={() => onTimeFilterChange(opt.value as typeof timeFilter)}
-                className={`px-3 py-1.5 text-sm ${
+                className={`rounded-none ${
                   timeFilter === opt.value
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

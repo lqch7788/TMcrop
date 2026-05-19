@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
 
 interface ConfigFieldRendererProps {
@@ -299,29 +300,31 @@ export function ConfigFieldRenderer({
             </div>
 
             {/* 删除按钮 */}
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => handleRemoveEntry(entry.id)}
               disabled={disabled || entries.length <= 1}
-              className="flex-shrink-0 mt-6 p-1.5 text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed rounded"
+              className="flex-shrink-0 mt-6 text-gray-400 hover:text-red-500"
               title="删除此条"
             >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         ))}
 
         {/* 添加按钮 */}
         {entries.length < maxEntries && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleAddEntry}
             disabled={disabled}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg border border-dashed border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-dashed border-emerald-300"
           >
             <Plus className="w-4 h-4" />
             添加{field.multiEntryDef?.entryLabel || '条目'}
-          </button>
+          </Button>
         )}
 
         {/* 提示 */}

@@ -243,14 +243,15 @@ export function ParkArchivePage() {
             '<p style="margin: 5px 0; font-size: 13px;"><strong>负责人：</strong>' + base.manager + '</p>' +
             '<button onclick="window.dispatchEvent(new CustomEvent(\'showBaseDetail\', {detail: ' + base.id + '}))" style="' +
               'margin-top: 10px;' +
-              'padding: 6px 16px;' +
-              'background: #22c55e;' +
+              'padding: 8px 16px;' +
+              'background: #059669;' +
               'color: white;' +
               'border: none;' +
-              'border-radius: 4px;' +
+              'border-radius: 8px;' +
               'cursor: pointer;' +
               'width: 100%;' +
-              'font-size: 13px;' +
+              'font-size: 14px;' +
+              'font-weight: 500;' +
             '">查看详情</' + 'button>' +
           '</' + 'div>';
 

@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
@@ -417,13 +418,15 @@ export function AddModal({
                       alt={`预览${index + 1}`}
                       className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setPictures(pictures.filter((_, i) => i !== index))}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="w-3 h-3" />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

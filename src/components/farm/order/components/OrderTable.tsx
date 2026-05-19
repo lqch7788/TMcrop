@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface OrderTableProps {
@@ -140,13 +141,14 @@ export function OrderTable({
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm">
-                    <button
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() => onDetail(record)}
-                      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
                       title="点击查看详情"
                     >
                       {record.orderCode}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {record.orderName}
@@ -174,24 +176,26 @@ export function OrderTable({
                     <div className="flex items-center gap-2">
                       {record.status !== CropOrderStatus.COMPLETED && (
                         <>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onEdit(record)}
-                            className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
                             title="编辑"
                           >
                             <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               if (confirm(`确定要删除订单 ${record.orderCode} 吗？`)) {
                                 onDelete([record.id]);
                               }
                             }}
-                            className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
                             title="删除"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                       {record.status === CropOrderStatus.COMPLETED && (
@@ -223,23 +227,25 @@ export function OrderTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">
             {pagination.current} / {Math.ceil(data.length / pagination.pageSize) || 1}
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.min(Math.ceil(data.length / pagination.pageSize), pagination.current + 1) })}
             disabled={pagination.current >= Math.ceil(data.length / pagination.pageSize)}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { Button } from '../../../ui/button';
 import { SourceCell } from './SourceCell';
 
 // 状态映射：后端英文 → 前端中文
@@ -157,13 +158,15 @@ export function ProblemTable({
 
                   {/* 编号 */}
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    <button
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() => onViewDetail(problem)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
+                      className="font-mono"
                       title="点击查看详情"
                     >
                       {problem.problemCode}
-                    </button>
+                    </Button>
                   </td>
 
                   {/* 来源 */}
@@ -198,20 +201,22 @@ export function ProblemTable({
                   {/* 操作 */}
                   <td className="px-4 py-3">
                     {getStatusCN(problem.status) === '待处理' && !problem.sourceTaskId && (
-                      <button
+                      <Button
+                        variant="warning"
+                        size="sm"
                         onClick={() => onSingleDispatch?.(problem)}
-                        className="px-2 py-1 bg-orange-500 text-white font-bold rounded text-xs hover:bg-orange-600 transition-colors"
                       >
                         分派
-                      </button>
+                      </Button>
                     )}
                     {getStatusCN(problem.status) === '处理中' && (
-                      <button
+                      <Button
+                        variant="blue"
+                        size="sm"
                         onClick={() => onViewDetail(problem)}
-                        className="px-2 py-1 bg-blue-500 text-white font-bold rounded text-xs hover:bg-blue-600 transition-colors"
                       >
                         详情
-                      </button>
+                      </Button>
                     )}
                     {getStatusCN(problem.status) === '待验收' && (
                       <Button

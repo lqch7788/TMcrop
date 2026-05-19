@@ -136,9 +136,11 @@ export default function SupplierBatchEditModal({
         >
           <h3 className="text-lg font-semibold text-white select-none">批量编辑供应商</h3>
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleMaximize}
-              className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors"
+              className="text-white hover:bg-emerald-700"
               title={isMaximized ? '还原' : '最大化'}
             >
               {isMaximized ? (
@@ -150,7 +152,7 @@ export default function SupplierBatchEditModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
               )}
-            </button>
+            </Button>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-5 h-5 text-white" />
             </Button>

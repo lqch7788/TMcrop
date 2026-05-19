@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -404,87 +405,97 @@ export function PlantingTable({
         width: 250,
         render: (_: unknown, record: Planting) => (
           <div className="flex gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onEdit(record)}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
               title="编辑"
             >
               <Edit2 className="w-4 h-4" />
-            </button>
+            </Button>
             {!record.isHarvest && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onHarvest(record)}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
                 title="采收登记"
               >
                 <CheckCircle className="w-4 h-4" />
-              </button>
+              </Button>
             )}
             {record.pictures && record.pictures.length > 0 && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onImageClick(record.pictures)}
-                className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
                 title="查看图片"
               >
                 <Image className="w-4 h-4" />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onDelete([record.id])}
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
               title="删除"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onEnd(record, 'normal')}
-              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
               title="正常结束"
             >
               <CheckCircle className="w-4 h-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onEnd(record, 'abnormal')}
-              className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
               title="异常结束"
             >
               <XCircle className="w-4 h-4" />
-            </button>
+            </Button>
             {onLabelDetail && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onLabelDetail(record)}
-                className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
                 title="标签详情"
               >
                 <Tag className="w-4 h-4" />
-              </button>
+              </Button>
             )}
             {onMove && !record.isHarvest && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onMove(record)}
-                className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded"
                 title="移入/移出"
               >
                 <MoveRight className="w-4 h-4" />
-              </button>
+              </Button>
             )}
             {onMark && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onMark(record)}
-                className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
                 title="标记管理"
               >
                 <Bookmark className="w-4 h-4" />
-              </button>
+              </Button>
             )}
             {onSeedSaving && record.status === 'harvested' && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => onSeedSaving(record)}
-                className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                 title="留种"
               >
                 <Sprout className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -594,84 +605,93 @@ export function PlantingTable({
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
               {onExportSelectAll && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={onExportSelectAll}
-                  className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                 >
                   {selectedRows.length === data.length ? '全不选' : '全选'}
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={onConfirmExport}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onExportCancel}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : printMode ? (
             /* 打印模式 */
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
               {onExportSelectAll && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={onExportSelectAll}
-                  className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                 >
                   {selectedRows.length === data.length ? '全不选' : '全选'}
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                size="sm"
+                className="bg-purple-600 text-white hover:bg-purple-700"
                 onClick={confirmPrint}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Printer className="w-4 h-4" />
                 确认打印
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={cancelPrintMode}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : (
             /* 正常模式 */
             <>
               {canCreate && onAdd && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onAdd}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {canExport && onExportClick && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onExportClick}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
               {canPrint && (
-                <button
+                <Button
+                  size="sm"
+                  className="bg-purple-600 text-white hover:bg-purple-700"
                   onClick={() => { if (onPrintModeChange) onPrintModeChange(true); }}
-                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
                 >
                   <Printer className="w-4 h-4" />
                   标签打印
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -723,12 +743,13 @@ export function PlantingTable({
         {(exportMode || printMode) && (
           <div className="flex items-center gap-4">
             {onExportSelectAll && (
-              <button
+              <Button
+                variant="link"
+                size="sm"
                 onClick={onExportSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
               >
                 {selectedRows.length === data.length ? '全不选' : '全选'}
-              </button>
+              </Button>
             )}
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
@@ -752,21 +773,23 @@ export function PlantingTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
             disabled={pagination.current >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
