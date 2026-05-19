@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Search, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { useAnnouncementTemplateStore } from '../../../../stores/useAnnouncementTemplateStore';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 
@@ -89,15 +90,19 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
-          <select
+          <Select
             value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            onValueChange={val => setTypeFilter(val)}
           >
-            {allTypes.map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {allTypes.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 模板卡片列表 */}

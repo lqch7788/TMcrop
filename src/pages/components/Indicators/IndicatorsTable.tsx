@@ -4,6 +4,8 @@
  */
 import { BarChart3, Eye, Edit, Trash2, Target, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { Checkbox } from '../../../components/ui/checkbox';
 import type { Indicator } from '../../types/indicators.types';
 import { getProgressColor, getAchievementColor, calcAchievementRate } from '../../hooks/useIndicators';
 
@@ -85,6 +87,7 @@ export default function IndicatorsTable({
   onEdit,
   onDelete,
 }: IndicatorsTableProps) {
+  const pageSizeOptions = [5, 10, 20, 50];
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -93,11 +96,9 @@ export default function IndicatorsTable({
             <tr>
               {exportMode && (
                 <th className="px-3 py-3 text-left text-sm font-semibold w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedIds.length === indicators.length && indicators.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -120,11 +121,9 @@ export default function IndicatorsTable({
               >
                 {exportMode && (
                   <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedIds.includes(ind.id)}
-                      onChange={() => onToggleSelect(ind.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      onCheckedChange={() => onToggleSelect(ind.id)}
                     />
                   </td>
                 )}
@@ -203,16 +202,12 @@ export default function IndicatorsTable({
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+              <Select value={String(pageSize)} onValueChange={(val) => onPageSizeChange(Number(val))}>
+                <SelectTrigger className="w-20 h-8 px-2"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {pageSizeOptions.map(opt => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
               <span className="text-sm text-gray-600">条</span>
             </div>
           </div>

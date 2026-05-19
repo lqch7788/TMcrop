@@ -10,6 +10,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { TextArea } from '../../../../components/ui/TextArea';
 import { Label } from '../../../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import type { AnnouncementTemplate } from '../../../../stores/useAnnouncementTemplateStore';
 
@@ -187,37 +188,44 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700">公告分类 <span className="text-red-500">*</span></Label>
-                <select
+                <Select
                   value={formData.category}
-                  onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                  onValueChange={val => setFormData(prev => ({ ...prev, category: val }))}
                 >
-                  <option value="">请选择分类</option>
-                  {categoryOptions.length > 0 ? (
-                    categoryOptions.map(opt => (
-                      <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
-                    ))
-                  ) : (
-                    <>
-                      <option value="生产计划">生产计划</option>
-                      <option value="技术标准">技术标准</option>
-                      <option value="行政通知">行政通知</option>
-                      <option value="安全规范">安全规范</option>
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="请选择分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.length > 0 ? (
+                      categoryOptions.map(opt => (
+                        <SelectItem key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="生产计划">生产计划</SelectItem>
+                        <SelectItem value="技术标准">技术标准</SelectItem>
+                        <SelectItem value="行政通知">行政通知</SelectItem>
+                        <SelectItem value="安全规范">安全规范</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-gray-700">默认优先级</Label>
-                <select
+                <Select
                   value={formData.priority}
-                  onChange={e => setFormData(prev => ({ ...prev, priority: e.target.value }))}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                  onValueChange={val => setFormData(prev => ({ ...prev, priority: val }))}
                 >
-                  <option value="高">高</option>
-                  <option value="中">中</option>
-                  <option value="低">低</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="高">高</SelectItem>
+                    <SelectItem value="中">中</SelectItem>
+                    <SelectItem value="低">低</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -4,6 +4,8 @@ import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin,
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
 
 // localStorage key - 与 BaseSettings 保持一致
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -139,6 +141,7 @@ export function ParkArchivePage() {
     }
   };
 
+  const [jumpToBaseId, setJumpToBaseId] = useState<string>(''); // 跳转基地选择器受控值
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
@@ -347,21 +350,27 @@ export function ParkArchivePage() {
                 <span className="flex items-center gap-1 text-xs"><span className="w-3 h-3 rounded bg-green-500"></span>种植中</span>
                 <span className="flex items-center gap-1 text-xs"><span className="w-3 h-3 rounded bg-yellow-500"></span>休耕</span>
               </div>
-              <select
-                onChange={(e) => {
-                  const base = parkData.find(b => b.id === Number(e.target.value));
+              <Select
+                value={jumpToBaseId}
+                onValueChange={(val) => {
+                  setJumpToBaseId(val);
+                  const base = parkData.find(b => b.id === Number(val));
                   if (base && mapInstanceRef.current) {
                     mapInstanceRef.current.flyTo([base.lat, base.lng], 10);
                   }
-                  e.target.value = '';
+                  // 重置选择器，保持"跳转到基地"的占位效果
+                  setTimeout(() => setJumpToBaseId(''), 0);
                 }}
-                className="px-2 py-1 text-sm border border-gray-200 rounded"
               >
-                <option value="">跳转到基地...</option>
-                {parkData.map(base => (
-                  <option key={base.id} value={base.id}>{base.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="跳转到基地..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {parkData.map(base => (
+                    <SelectItem key={base.id} value={String(base.id)}>{base.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="ghost"
                 size="icon"
@@ -438,7 +447,7 @@ export function ParkArchivePage() {
                 <tr>
                   {exportMode && (
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                      <input type="checkbox" checked={selectedRows.length === filteredData.length && filteredData.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-blue-300 text-blue-600" />
+                      <Checkbox checked={selectedRows.length === filteredData.length && filteredData.length > 0} onCheckedChange={() => handleSelectAll()} />
                     </th>
                   )}
                 </tr>
@@ -449,17 +458,14 @@ export function ParkArchivePage() {
                     <tr className="bg-blue-50/50">
                       {exportMode && (
                         <td className="px-4 py-3 align-top">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={company.bases.every(b => selectedRows.includes(b.id))}
-                            onChange={(e) => {
-                              e.stopPropagation();
+                            onCheckedChange={(checked: boolean) => {
                               company.bases.forEach(b => {
-                                if (e.target.checked && !selectedRows.includes(b.id)) handleSelectRow(b.id);
-                                else if (!e.target.checked && selectedRows.includes(b.id)) handleSelectRow(b.id);
+                                if (checked && !selectedRows.includes(b.id)) handleSelectRow(b.id);
+                                else if (!checked && selectedRows.includes(b.id)) handleSelectRow(b.id);
                               });
                             }}
-                            className="w-4 h-4 rounded border-blue-300 text-blue-600"
                           />
                         </td>
                       )}

@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, Building2, MapPin } from 'lucide-react';
 import { Button, Input, TextArea, Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBaseStore } from '../../stores';
 import type { Base } from '../../services/apiBasicDataService';
 
@@ -332,12 +333,16 @@ function BaseFormModal({
             <FormField label="面积">
               <div className="flex gap-1">
                 <Input type="number" className="flex-1" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })} />
-                <select value={formData.unit || '亩'} onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  className="px-2 py-1.5 text-sm border border-gray-300 rounded">
-                  <option value="亩">亩</option>
-                  <option value="公顷">公顷</option>
-                  <option value="平方米">平方米</option>
-                </select>
+                <Select value={formData.unit || '亩'} onValueChange={(val) => setFormData({ ...formData, unit: val })}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="亩">亩</SelectItem>
+                    <SelectItem value="公顷">公顷</SelectItem>
+                    <SelectItem value="平方米">平方米</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </FormField>
             <FormField label="省份">
@@ -363,11 +368,15 @@ function BaseFormModal({
             <TextArea value={formData.intro || ''} onChange={(e) => setFormData({ ...formData, intro: e.target.value })} minRows={2} />
           </FormField>
           <FormField label="状态">
-            <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-              <option value="active">活跃</option>
-              <option value="inactive">停用</option>
-            </select>
+            <Select value={formData.status || 'active'} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">活跃</SelectItem>
+                <SelectItem value="inactive">停用</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
 

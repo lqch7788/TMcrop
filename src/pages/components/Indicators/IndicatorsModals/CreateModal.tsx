@@ -7,6 +7,7 @@ import { Plus, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import type { Indicator } from '../../../types/indicators.types';
 import { getIndicatorCategories } from '../../../hooks/useIndicators';
 
@@ -79,6 +80,9 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
     onSave(formData);
   };
 
+  // 采集方式选项
+  const sourceOptions = ['自动采集', '人工录入'];
+
   if (!isOpen) return null;
 
   return (
@@ -124,15 +128,14 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700">类别</Label>
-                <select
-                  value={formData.category}
-                  onChange={e => handleChange('category', e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <Select value={formData.category} onValueChange={(val) => handleChange('category', val)}>
+                  <SelectTrigger><SelectValue placeholder="请选择类别" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-gray-700">单位</Label>
@@ -165,14 +168,14 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700">数据采集方式</Label>
-                <select
-                  value={formData.source}
-                  onChange={e => handleChange('source', e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-                >
-                  <option value="自动采集">自动采集</option>
-                  <option value="人工录入">人工录入</option>
-                </select>
+                <Select value={formData.source} onValueChange={(val) => handleChange('source', val)}>
+                  <SelectTrigger><SelectValue placeholder="请选择采集方式" /></SelectTrigger>
+                  <SelectContent>
+                    {sourceOptions.map(opt => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-gray-700">权重</Label>
