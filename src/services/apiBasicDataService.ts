@@ -1040,3 +1040,66 @@ export async function updateMaterialType(id: number, item: Partial<MaterialType>
 export async function deleteMaterialType(id: number): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/material-types/${id}`, { offlineQueue: true });
 }
+
+// ============================================
+// 基地管理 API（基地空间架构 V1.0）
+// ============================================
+
+/** 基地 */
+export interface Base {
+  id: number;
+  oid: string;
+  code: string;
+  name: string;
+  companyOid: string;
+  companyName: string;
+  area: number;
+  unit: string;
+  province: string;
+  city: string;
+  lng: number;
+  lat: number;
+  manager: string;
+  phone: string;
+  soilType: string;
+  ph: number;
+  status: string;
+  intro: string;
+  greenhouseCount: number;
+  fieldArea: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** 获取基地列表 */
+export async function getBases(companyOid?: string): Promise<Base[]> {
+  let url = '/basic-data/bases';
+  if (companyOid) url += `?company_oid=${companyOid}`;
+  const data = await enhancedApiClient.get<Base[]>(url, {
+    useCache: true,
+    cacheStrategy: 'network-first',
+  });
+  return data || [];
+}
+
+/** 创建基地 */
+export async function createBase(base: Partial<Base>): Promise<Base> {
+  const result = await enhancedApiClient.post<Base>('/basic-data/bases', base, {
+    offlineQueue: true,
+  });
+  return result;
+}
+
+/** 更新基地 */
+export async function updateBase(oid: string, base: Partial<Base>): Promise<void> {
+  await enhancedApiClient.put(`/basic-data/bases/${oid}`, base, {
+    offlineQueue: true,
+  });
+}
+
+/** 删除基地 */
+export async function deleteBase(oid: string): Promise<void> {
+  await enhancedApiClient.delete(`/basic-data/bases/${oid}`, {
+    offlineQueue: true,
+  });
+}

@@ -55,6 +55,8 @@ import fertilizerRouter from './fertilizer';
 import regionRouter from './region';
 import plantLabelRouter from './plantLabel';
 import materialCodeCategoriesRouter from './materialCodeCategories';
+import backupRouter from './backup';
+import plantingRecordRouter from './plantingRecord';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -210,6 +212,9 @@ router.use('/materials', requireAuth, materialsRouter);
 // 物料编码分类路由 - V12.0
 router.use('/material-code-categories', requireAuth, materialCodeCategoriesRouter);
 
+// 种植季记录路由 - 基地空间架构 V1.0
+router.use('/planting-records', requireAuth, plantingRecordRouter);
+
 // 离职管理路由 - 需要认证
 router.use('/resignation', requireAuth, resignationRouter);
 
@@ -230,6 +235,9 @@ router.use('/region', requireAuth, regionRouter);
 
 // 种植标签管理路由 - V10.0 (plant_labels + plant_marks)
 router.use('/plant-labels', requireAuth, plantLabelRouter);
+
+// 数据备份恢复路由 - 需要认证
+router.use('/backup', requireAuth, backupRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

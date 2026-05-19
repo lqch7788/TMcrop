@@ -279,3 +279,10 @@ export { useNotificationSettingsStore } from './useNotificationSettingsStore';
 
 // V11.0: 物料类型管理
 export { useMaterialTypeStore } from './useMaterialTypeStore';
+
+// 基地空间架构 V1.0
+export { useBaseStore, getBaseByOid, getBasesByCompany, getActiveBases } from './useBaseStore';
+export type { Base } from '../services/apiBasicDataService';
+
+export { usePlantingRecordStore, getRecordByOid, getRecordsByFacility, getRecordsByStatus, getActivePlantingRecords } from './usePlantingRecordStore';
+export type { PlantingRecord } from '../services/apiPlantingRecordService';

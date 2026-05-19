@@ -482,6 +482,339 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 20. 创建 bases 表（基地主数据 — 基地空间架构 V1.0）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS bases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        code TEXT,
+        name TEXT NOT NULL,
+        company_oid TEXT NOT NULL,
+        company_name TEXT,
+        area REAL DEFAULT 0,
+        unit TEXT DEFAULT '亩',
+        province TEXT,
+        city TEXT,
+        lng REAL DEFAULT 0,
+        lat REAL DEFAULT 0,
+        manager TEXT,
+        phone TEXT,
+        soil_type TEXT,
+        ph REAL DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        intro TEXT,
+        greenhouse_count INTEGER DEFAULT 0,
+        field_area REAL DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime')),
+        deleted_at TEXT
+      )
+    `);
+    console.log('✓ bases 表创建成功');
+  } catch (e: any) {
+    console.log('• bases:', e.message);
+  }
+
+  // 21. ALTER greenhouses 表添加设施管理新字段（基地空间架构 V1.0）
+  const ghColumnsToAdd = [
+    { name: 'planting_method', sql: 'ALTER TABLE greenhouses ADD COLUMN planting_method TEXT' },
+    { name: 'purpose', sql: 'ALTER TABLE greenhouses ADD COLUMN purpose TEXT' },
+    { name: 'current_crop', sql: 'ALTER TABLE greenhouses ADD COLUMN current_crop TEXT' },
+    { name: 'current_variety', sql: 'ALTER TABLE greenhouses ADD COLUMN current_variety TEXT' },
+    { name: 'current_season_code', sql: 'ALTER TABLE greenhouses ADD COLUMN current_season_code TEXT' },
+  ];
+  for (const col of ghColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ greenhouses 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        console.log(`• greenhouses.${col.name}:`, e.message);
+      }
+    }
+  }
+  // 同时扩展 zones 表（如果缺少字段）
+  const zoneColumnsToAdd = [
+    { name: 'description', sql: 'ALTER TABLE zones ADD COLUMN description TEXT' },
+    { name: 'greenhouse_name', sql: 'ALTER TABLE zones ADD COLUMN greenhouse_name TEXT' },
+  ];
+  for (const col of zoneColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ zones 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        // 可能已存在
+      }
+    }
+  }
+
+  // 22. 创建 planting_records 表（种植季记录 — 基地空间架构 V1.0）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS planting_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        facility_oid TEXT NOT NULL,
+        block_oid TEXT,
+        season_code TEXT NOT NULL,
+        crop_variety_oid TEXT,
+        crop_name TEXT,
+        variety_name TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        status TEXT DEFAULT 'planting',
+        yield_amount REAL,
+        yield_unit TEXT DEFAULT 'kg',
+        quality_grade TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime')),
+        deleted_at TEXT
+      )
+    `);
+    console.log('✓ planting_records 表创建成功');
+    // 创建索引
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_facility ON planting_records(facility_oid)'); } catch {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_season ON planting_records(season_code)'); } catch {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_status ON planting_records(status)'); } catch {}
+  } catch (e: any) {
+    console.log('• planting_records:', e.message);
+  }
+
+  // ========== Phase 0: iAGS 系统设置集成 — 新增数据库表 ==========
+
+  // 23. 创建 farm_partitions 表（分区管理 — iAGS GreenHouseArea）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS farm_partitions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        parent_oid TEXT,
+        name TEXT NOT NULL,
+        area_type TEXT NOT NULL DEFAULT 'greenhouse',
+        greenhouse_type TEXT,
+        area REAL DEFAULT 0,
+        area_unit TEXT DEFAULT '亩',
+        manager_oid TEXT,
+        manager_name TEXT,
+        hmi_device_oid TEXT,
+        sensor_config TEXT,
+        camera_config TEXT,
+        water_fertilizer_config TEXT,
+        address TEXT,
+        description TEXT,
+        sort_order INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ farm_partitions 表创建成功（分区管理）');
+  } catch (e: any) {
+    console.log('• farm_partitions:', e.message);
+  }
+
+  // 24. 创建 device_systems 表（系统管理 — iAGS deviceSystem）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS device_systems (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        system_code TEXT NOT NULL,
+        system_name TEXT NOT NULL,
+        system_type TEXT,
+        idc_oid TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ device_systems 表创建成功（系统管理）');
+  } catch (e: any) {
+    console.log('• device_systems:', e.message);
+  }
+
+  // 25. 创建 area_system_mappings 表（区域系统 — iAGS AreaSystem）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS area_system_mappings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        partition_oid TEXT NOT NULL,
+        system_oid TEXT NOT NULL,
+        device_oid TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        UNIQUE(partition_oid, system_oid)
+      )
+    `);
+    console.log('✓ area_system_mappings 表创建成功（区域系统）');
+  } catch (e: any) {
+    console.log('• area_system_mappings:', e.message);
+  }
+
+  // 26. 创建 camera_devices 表（视频管理 — iAGS Camera）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS camera_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        camera_name TEXT NOT NULL,
+        camera_code TEXT,
+        rtsp_url TEXT,
+        http_url TEXT,
+        partition_oid TEXT,
+        greenhouse_oid TEXT,
+        brand TEXT,
+        model TEXT,
+        username TEXT,
+        password TEXT,
+        channel_count INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ camera_devices 表创建成功（视频管理）');
+  } catch (e: any) {
+    console.log('• camera_devices:', e.message);
+  }
+
+  // 27. 创建 energy_configs 表（能耗管理 — iAGS AreaEnery）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS energy_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        partition_oid TEXT NOT NULL,
+        energy_type TEXT NOT NULL,
+        device_oid TEXT,
+        device_name TEXT,
+        meter_code TEXT,
+        unit TEXT DEFAULT 'kWh',
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ energy_configs 表创建成功（能耗管理）');
+  } catch (e: any) {
+    console.log('• energy_configs:', e.message);
+  }
+
+  // 28. 创建 alarm_level_configs 表（警报级别配置 — iAGS Warning）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS alarm_level_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level INTEGER NOT NULL UNIQUE,
+        level_name TEXT NOT NULL,
+        notify_email INTEGER DEFAULT 0,
+        notify_sms INTEGER DEFAULT 0,
+        notify_phone INTEGER DEFAULT 0,
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ alarm_level_configs 表创建成功（警报级别）');
+  } catch (e: any) {
+    console.log('• alarm_level_configs:', e.message);
+  }
+
+  // 29. 创建 alarm_contacts 表（警报联系人 — iAGS Warning）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS alarm_contacts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        level INTEGER NOT NULL,
+        contact_name TEXT NOT NULL,
+        contact_info TEXT NOT NULL,
+        contact_type TEXT NOT NULL DEFAULT 'email',
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ alarm_contacts 表创建成功（警报联系人）');
+  } catch (e: any) {
+    console.log('• alarm_contacts:', e.message);
+  }
+
+  // 30. 创建 water_fertilizer_configs 表（水肥一体机 — iAGS WaterFertilizer）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS water_fertilizer_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        partition_oid TEXT NOT NULL,
+        device_oid TEXT,
+        device_code TEXT,
+        machine_addr TEXT,
+        mac_addr TEXT,
+        start_time TEXT,
+        end_time TEXT,
+        interval_value INTEGER DEFAULT 1,
+        interval_unit TEXT DEFAULT 'day',
+        mix_ratio_a REAL DEFAULT 0,
+        mix_ratio_b REAL DEFAULT 0,
+        mix_ratio_c REAL DEFAULT 0,
+        total_water REAL DEFAULT 0,
+        water_unit TEXT DEFAULT 'L',
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ water_fertilizer_configs 表创建成功（水肥一体机）');
+  } catch (e: any) {
+    console.log('• water_fertilizer_configs:', e.message);
+  }
+
+  // 31. 创建 debug_logs 表（工程调试 — iAGS ProjectDebug）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS debug_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        debug_type TEXT NOT NULL,
+        test_target TEXT,
+        test_result TEXT,
+        error_message TEXT,
+        duration_ms INTEGER,
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ debug_logs 表创建成功（工程调试）');
+  } catch (e: any) {
+    console.log('• debug_logs:', e.message);
+  }
+
+  // 32. 创建 plant_settings 表（种植设置 — iAGS Plantset）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS plant_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        setting_key TEXT NOT NULL,
+        setting_value TEXT,
+        crop_variety_oid TEXT,
+        icon_url TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ plant_settings 表创建成功（种植设置）');
+  } catch (e: any) {
+    console.log('• plant_settings:', e.message);
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

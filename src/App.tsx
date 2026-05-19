@@ -53,6 +53,16 @@ import AuditLog from './pages/AuditLog';
 import BlockManagement from './pages/BlockManagement';
 import BackupRecovery from './pages/system/BackupRecovery';
 import SystemMonitorPage from './pages/system/SystemMonitor';
+// iAGS 集成新增页面（Phase 0 占位）
+import FarmPartitionManagement from './pages/system/FarmPartitionManagement';
+import AreaSystemManagement from './pages/system/AreaSystemManagement';
+import DeviceSystemManagement from './pages/system/DeviceSystemManagement';
+import CameraManagement from './pages/system/CameraManagement';
+import EnergyConfigManagement from './pages/system/EnergyConfigManagement';
+import AlarmConfigManagement from './pages/system/AlarmConfigManagement';
+import WaterFertilizerManagement from './pages/system/WaterFertilizerManagement';
+import ProjectDebugManagement from './pages/system/ProjectDebugManagement';
+import PlantSettingManagement from './pages/system/PlantSettingManagement';
 
 import BaseSettings from './pages/BaseSettings';
 import Traceability from './pages/Traceability';
@@ -82,6 +92,7 @@ import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
 import PlantAreaManagement from './pages/PlantAreaManagement';
+import FarmStructureManagement from './pages/farm/FarmStructureManagement';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
 
@@ -250,8 +261,19 @@ function AppContent() {
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<BaseSettings />} />
             <Route path="block" element={<BlockManagement />} />
+            <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="monitor" element={<SystemMonitorPage />} />
             <Route path="backup" element={<BackupRecovery />} />
+            {/* iAGS 集成新增路由（Phase 0 占位） */}
+            <Route path="partitions" element={<FarmPartitionManagement />} />
+            <Route path="area-systems" element={<AreaSystemManagement />} />
+            <Route path="device-systems" element={<DeviceSystemManagement />} />
+            <Route path="cameras" element={<CameraManagement />} />
+            <Route path="energy-configs" element={<EnergyConfigManagement />} />
+            <Route path="alarm-configs" element={<AlarmConfigManagement />} />
+            <Route path="water-fertilizer" element={<WaterFertilizerManagement />} />
+            <Route path="project-debug" element={<ProjectDebugManagement />} />
+            <Route path="plant-settings" element={<PlantSettingManagement />} />
 
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
