@@ -127,10 +127,12 @@ router.post('/templates', (req: Request, res: Response) => {
       status
     } = req.body;
 
-    if (!name || !type) {
-      return res.status(400).json({ success: false, error: '模板名称和类型不能为空' });
+    if (!name) {
+      return res.status(400).json({ success: false, error: '模板名称不能为空' });
     }
 
+    // type 从 category 推断（公告分类已替代公告类型）
+    const templateType = type || category || '';
     const now = new Date().toISOString();
     const id = generateId('ATPL');
 
@@ -145,7 +147,7 @@ router.post('/templates', (req: Request, res: Response) => {
       id,
       templateCode,
       name,
-      type,
+      templateType,
       category || '',
       title_template || '',
       content || '',

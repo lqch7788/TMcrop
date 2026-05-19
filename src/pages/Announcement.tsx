@@ -202,7 +202,9 @@ export default function Announcement() {
       if (templateEditMode === 'add') { await createTemplate(data); toast.success('模板创建成功'); }
       else if (selectedTemplate) { await updateTemplate(selectedTemplate.id, data); toast.success('模板更新成功'); }
       setShowTemplateEdit(false);
-    } catch { toast.error('保存失败'); }
+    } catch (err) {
+      toast.error((err as Error)?.message || '保存失败');
+    }
   };
 
   return (
@@ -257,11 +259,6 @@ export default function Announcement() {
           <AnnouncementFilters searchKeyword={searchKeyword} typeFilter={typeFilter} onSearchChange={setSearchKeyword} onTypeChange={v => { setTypeFilter(v); setCurrentPage(1); }}>
             {exportMode ? (
               <>
-                {selectedIds.length > 0 && (
-                  <Button size="sm" variant="outline" onClick={handleBatchDelete} className="text-red-600 border-red-300 hover:bg-red-50">
-                    <Trash2 className="w-4 h-4" />删除 ({selectedIds.length})
-                  </Button>
-                )}
                 <Button size="sm" onClick={handleExportConfirm}><Download className="w-4 h-4" />确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}</Button>
                 <Button size="sm" variant="outline" onClick={() => { setExportMode(false); setSelectedIds([]); }}>取消</Button>
               </>

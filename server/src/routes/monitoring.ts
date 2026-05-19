@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import * as os from 'os';
 import { performanceMonitor } from '../../services/performanceMonitor';
 import { circuitBreakerManager } from '../../middleware/circuitBreaker';
 
@@ -126,6 +127,40 @@ router.get('/db', (req, res) => {
     res.json({
       success: true,
       data: report.dbStats,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+/**
+ * GET /api/monitoring/system
+ * 获取系统资源信息（CPU、内存、运行时间等）
+ */
+router.get('/system', (req, res) => {
+  try {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memUsagePercent = ((totalMem - freeMem) / totalMem) * 100;
+
+    res.json({
+      success: true,
+      data: {
+        hostname: os.hostname(),
+        platform: os.platform(),
+        arch: os.arch(),
+        cpus: os.cpus().length,
+        totalMemory: totalMem,
+        freeMemory: freeMem,
+        memoryUsagePercent: Math.round(memUsagePercent * 10) / 10,
+        osUptime: os.uptime(),
+        processUptime: process.uptime(),
+        loadAvg: os.loadavg(),
+        nodeVersion: process.version,
+      },
     });
   } catch (error) {
     res.status(500).json({

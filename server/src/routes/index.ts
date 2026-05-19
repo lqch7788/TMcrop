@@ -57,6 +57,8 @@ import plantLabelRouter from './plantLabel';
 import materialCodeCategoriesRouter from './materialCodeCategories';
 import backupRouter from './backup';
 import plantingRecordRouter from './plantingRecord';
+import farmPartitionsRouter from './farmPartitions';
+import areaSystemsRouter from './areaSystems';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -238,6 +240,12 @@ router.use('/plant-labels', requireAuth, plantLabelRouter);
 
 // 数据备份恢复路由 - 需要认证
 router.use('/backup', requireAuth, backupRouter);
+
+// 分区管理路由 — iAGS GreenHouseArea 集成
+router.use('/farm-partitions', requireAuth, farmPartitionsRouter);
+
+// 区域系统路由 — iAGS AreaSystem 集成
+router.use('/area-systems', requireAuth, areaSystemsRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {
