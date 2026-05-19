@@ -42,7 +42,9 @@ export const useWarehouseStore = create<WarehouseStore>()(
         set({ loading: true, error: null });
         try {
           const data = await getWarehouses();
-          set({ warehouses: data, loading: false, lastFetch: now });
+          // 防御：确保 API 返回的是数组（可能返回包装对象 {success, data}）
+          const safeData = Array.isArray(data) ? data : [];
+          set({ warehouses: safeData, loading: false, lastFetch: now });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载仓库失败', loading: false });
         }
@@ -74,6 +76,13 @@ export const useWarehouseStore = create<WarehouseStore>()(
     {
       name: 'warehouse_store',
       partialize: (state) => ({ warehouses: state.warehouses }),
+      merge: (persisted: unknown, current) => {
+        const p = persisted as Partial<WarehouseStore> | null;
+        return {
+          ...current,
+          warehouses: Array.isArray(p?.warehouses) ? p!.warehouses : current.warehouses,
+        };
+      },
     }
   )
 );

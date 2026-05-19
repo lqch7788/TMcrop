@@ -39,7 +39,8 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         set({ isLoading: true, error: null });
         try {
           const data = await planService.getProductionPlans();
-          set({ plans: data as unknown as CropBatch[], isLoading: false });
+          const safeData = Array.isArray(data) ? data : [];
+          set({ plans: safeData as unknown as CropBatch[], isLoading: false });
         } catch (error) {
           console.error('[useProductionPlanStore] 获取生产计划失败:', error);
           set({ error: (error as Error).message, isLoading: false });
@@ -82,6 +83,13 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
     {
       name: 'production-plan-storage',
       partialize: (state) => ({ plans: state.plans }),
+      merge: (persisted: unknown, current) => {
+        const p = persisted as Record<string, unknown> | null;
+        return {
+          ...current,
+          plans: Array.isArray(p?.plans) ? p!.plans : current.plans,
+        };
+      },
     }
   )
 );

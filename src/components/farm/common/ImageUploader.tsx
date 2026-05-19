@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { X, Upload, Camera } from 'lucide-react';
+import { Button } from '../../ui/button';
 
 // 图片上传组件属性接口
 export interface ImageUploaderProps {
@@ -104,13 +105,15 @@ export function ImageUploader({
                 className="w-full h-full object-cover"
               />
               {!disabled && (
-                <button
+                <Button
+                  variant="destructive"
+                  size="icon"
                   type="button"
                   onClick={() => handleRemove(idx)}
-                  className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-bl-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-0 right-0 w-5 h-5 rounded-bl-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               )}
             </div>
           ))}
@@ -197,13 +200,15 @@ export function SingleImageUploader({
           style={{ width: imageSize, height: imageSize }}
         >
           <img src={image} alt="预览" className="w-full h-full object-cover" />
-          <button
+          <Button
+            variant="destructive"
+            size="icon"
             type="button"
             onClick={() => onChange(undefined)}
-            className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-bl-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-0 right-0 w-5 h-5 rounded-bl-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X className="w-3 h-3" />
-          </button>
+          </Button>
         </div>
       )}
       {!image && (

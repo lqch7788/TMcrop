@@ -188,11 +188,16 @@ router.post('/organizations', authenticate, (req, res) => {
       for (const org of inserted) {
         const oid = org.oid || `ORG_${Date.now()}`;
         const id = `ORG_ID_${Date.now()}`;
+        const orgType = org.orgType || 'department';
+        // 部门类型自动生成 departmentId（如未提供），确保双向同步
+        const departmentId = org.departmentId || (orgType === 'department' ? `DEPT_${Date.now()}` : null);
+        const departmentName = org.departmentName || org.name || null;
+
         db.run(
           `INSERT INTO organizations (id, oid, parent_oid, aid, name, description, address,
             contact_person, contact_phone,
-            org_type, sort_order, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            org_type, sort_order, status, department_id, department_name, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             oid,
@@ -203,13 +208,37 @@ router.post('/organizations', authenticate, (req, res) => {
             org.address || null,
             org.contactor || org.contactPerson || null,
             org.contactorPhone || org.contactPhone || null,
-            org.orgType || 'department',
+            orgType,
             org.sortNumber || 0,
             'active',
+            departmentId,
+            departmentName,
             now,
             now
           ]
         );
+
+        // 双向同步：部门类型组织自动创建对应的部门记录
+        if (orgType === 'department' && departmentId) {
+          const deptNow = new Date().toISOString();
+          db.run(`
+            INSERT OR IGNORE INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+          `, [
+            departmentId,
+            departmentId,
+            org.name,
+            departmentId,
+            org.oidParent || '',
+            '',
+            org.contactor || org.contactPerson || '',
+            0,
+            org.description || '',
+            deptNow,
+            deptNow
+          ]);
+        }
+
         results.inserted.push({ oid, ...org });
       }
     }
@@ -221,7 +250,9 @@ router.post('/organizations', authenticate, (req, res) => {
           `UPDATE organizations SET
             parent_oid = ?, aid = ?, name = ?, description = ?, address = ?,
             contact_person = ?, contact_phone = ?,
-            org_type = ?, sort_order = ?, updated_at = ?
+            org_type = ?, sort_order = ?, department_id = COALESCE(?, department_id),
+            department_name = COALESCE(?, department_name),
+            updated_at = ?
            WHERE oid = ?`,
           [
             org.oidParent || null,
@@ -233,18 +264,93 @@ router.post('/organizations', authenticate, (req, res) => {
             org.contactorPhone || org.contactPhone || null,
             org.orgType || 'department',
             org.sortNumber || 0,
+            org.departmentId || null,
+            org.departmentName || null,
             now,
             org.oid
           ]
         );
+
+        // 双向同步：部门类型组织同步更新部门表
+        const orgType = org.orgType || 'department';
+        if (orgType === 'department') {
+          // 查询当前 department_id（可能已被上方 UPDATE 设置或原本就存在）
+          const checkStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ?');
+          checkStmt.bind([org.oid]);
+          let currentDeptId: string | null = null;
+          if (checkStmt.step()) {
+            currentDeptId = (checkStmt.getAsObject()).department_id as string | null;
+          }
+          checkStmt.free();
+
+          // 如果还没有 department_id，自动生成并回填
+          if (!currentDeptId) {
+            currentDeptId = `DEPT_${Date.now()}`;
+            db.run(`UPDATE organizations SET department_id = ?, department_name = ? WHERE oid = ?`, [currentDeptId, org.name, org.oid]);
+            // 创建对应部门记录
+            db.run(`
+              INSERT OR IGNORE INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+            `, [currentDeptId, currentDeptId, org.name, currentDeptId, org.oidParent || '', '', org.contactor || org.contactPerson || '', 0, org.description || '', now, now]);
+          } else {
+            // 已有 department_id，检查部门是否存在
+            const deptCheck = db.prepare('SELECT 1 FROM departments WHERE id = ?');
+            deptCheck.bind([currentDeptId]);
+            const deptExists = deptCheck.step();
+            deptCheck.free();
+
+            if (deptExists) {
+              // 部门存在，同步更新
+              db.run(`
+                UPDATE departments
+                SET name = COALESCE(?, name),
+                    manager_name = COALESCE(?, manager_name),
+                    updated_at = ?
+                WHERE id = ? AND status = 'active'
+              `, [
+                org.name || null,
+                org.contactor || org.contactPerson || null,
+                now,
+                currentDeptId
+              ]);
+            } else {
+              // 部门不存在，创建新部门记录
+              db.run(`
+                INSERT INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+              `, [currentDeptId, currentDeptId, org.name, currentDeptId, org.oidParent || '', '', org.contactor || org.contactPerson || '', 0, org.description || '', now, now]);
+            }
+          }
+        }
+
         results.updated.push(org);
       }
     }
 
     // 处理删除
     if (deleted && deleted.length > 0) {
-      for (const oid of deleted) {
+      for (const item of deleted) {
+        // 兼容两种格式：纯字符串 oid 或 { oid: string } 对象
+        const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
+        if (!oid) continue;
+
+        // 删除前查询关联的部门ID，用于双向同步
+        const orgStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ?');
+        orgStmt.bind([oid]);
+        let linkedDeptId: string | null = null;
+        if (orgStmt.step()) {
+          const row = orgStmt.getAsObject();
+          linkedDeptId = row.department_id as string | null;
+        }
+        orgStmt.free();
+
         db.run('DELETE FROM organizations WHERE oid = ?', [oid]);
+
+        // 双向同步：同步软删除关联的部门
+        if (linkedDeptId) {
+          db.run(`UPDATE departments SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, linkedDeptId]);
+        }
+
         results.deleted.push(oid);
       }
     }
@@ -355,7 +461,9 @@ router.post('/roles', authenticate, (req, res) => {
     }
 
     if (deleted && deleted.length > 0) {
-      for (const oid of deleted) {
+      for (const item of deleted) {
+        const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
+        if (!oid) continue;
         db.run('DELETE FROM roles WHERE oid = ?', [oid]);
         results.deleted.push(oid);
       }
@@ -530,9 +638,21 @@ router.post('/users', authenticate, (req, res) => {
         const orgOid = user.org_oid || user.orgOid || null;
         const passwordHash = user.passwordHash || user.password_hash || null;
 
+        // 双向同步：根据组织自动填充部门OID
+        let departmentOid = user.department_oid || user.departmentOid || null;
+        if (!departmentOid && orgOid) {
+          const orgStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ? AND status = ?');
+          orgStmt.bind([orgOid, 'active']);
+          if (orgStmt.step()) {
+            const orgRow = orgStmt.getAsObject();
+            departmentOid = (orgRow.department_id as string) || null;
+          }
+          orgStmt.free();
+        }
+
         db.run(
-          `INSERT INTO users (id, oid, username, real_name, password_hash, org_oid, email, phone, avatar, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO users (id, oid, username, real_name, password_hash, org_oid, department_oid, email, phone, avatar, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             oid,
@@ -540,6 +660,7 @@ router.post('/users', authenticate, (req, res) => {
             realName,
             passwordHash,
             orgOid,
+            departmentOid,
             user.email || null,
             user.phone || null,
             user.avatar || null,
@@ -555,9 +676,29 @@ router.post('/users', authenticate, (req, res) => {
     if (updated && updated.length > 0) {
       for (const user of updated) {
         const updates: string[] = [];
-        const bindings: (string | number)[] = [];
+        const bindings: (string | number | null)[] = [];
 
-        if (user.org_oid || user.orgOid) { updates.push('org_oid = ?'); bindings.push(user.org_oid || user.orgOid); }
+        const newOrgOid = user.org_oid || user.orgOid || null;
+        if (newOrgOid) {
+          updates.push('org_oid = ?');
+          bindings.push(newOrgOid);
+
+          // 双向同步：根据组织自动填充部门OID
+          if (!user.department_oid && !user.departmentOid) {
+            const orgStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ? AND status = ?');
+            orgStmt.bind([newOrgOid, 'active']);
+            if (orgStmt.step()) {
+              const orgRow = orgStmt.getAsObject();
+              const deptId = (orgRow.department_id as string) || null;
+              if (deptId) {
+                updates.push('department_oid = ?');
+                bindings.push(deptId);
+              }
+            }
+            orgStmt.free();
+          }
+        }
+        if (user.department_oid || user.departmentOid) { updates.push('department_oid = ?'); bindings.push(user.department_oid || user.departmentOid); }
         if (user.username || user.aid) { updates.push('username = ?'); bindings.push(user.username || user.aid); }
         if (user.real_name || user.realName || user.name) { updates.push('real_name = ?'); bindings.push(user.real_name || user.realName || user.name); }
         if (user.passwordHash || user.password_hash) { updates.push('password_hash = ?'); bindings.push(user.passwordHash || user.password_hash); }
@@ -575,7 +716,9 @@ router.post('/users', authenticate, (req, res) => {
     }
 
     if (deleted && deleted.length > 0) {
-      for (const oid of deleted) {
+      for (const item of deleted) {
+        const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
+        if (!oid) continue;
         db.run('DELETE FROM users WHERE oid = ?', [oid]);
         results.deleted.push(oid);
       }
@@ -780,7 +923,9 @@ router.post('/processes', authenticate, (req, res) => {
     }
 
     if (deleted && deleted.length > 0) {
-      for (const oid of deleted) {
+      for (const item of deleted) {
+        const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
+        if (!oid) continue;
         db.run('DELETE FROM processes WHERE oid = ?', [oid]);
         results.deleted.push(oid);
       }

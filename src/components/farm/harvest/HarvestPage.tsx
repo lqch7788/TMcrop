@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
+import { Button } from '../../ui/button';
 import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
@@ -89,7 +90,9 @@ export default function HarvestPage() {
     instanceId: p.instanceId,
   }));
 
-  const warehouseOptions = warehouses
+  // 防崩溃：API 或持久化数据可能返回非数组
+  const safeWarehouses = Array.isArray(warehouses) ? warehouses : [];
+  const warehouseOptions = safeWarehouses
     .filter(w => w.status === 'active')
     .map(w => ({ value: w.id, label: w.name, name: w.name }));
 
@@ -766,12 +769,13 @@ export default function HarvestPage() {
           {(exportMode || batchEditMode || batchDeleteMode) && selectedRows.length > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                 >
                   {selectedRows.length === filteredRecords.length ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             </div>

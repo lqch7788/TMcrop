@@ -1,5 +1,6 @@
 // 供应商筛选组件 - 含四级区域级联筛选（方案6.1）
 import { useMemo, useEffect, useState, useCallback } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
 import { useDictionaryStore, useRegionStore } from '../../stores';
@@ -11,6 +12,9 @@ interface SupplierFiltersProps {
 }
 
 export default function SupplierFilters({ filters, onFilterChange, onReset }: SupplierFiltersProps) {
+  // 更多筛选展开/折叠
+  const [showMore, setShowMore] = useState(false);
+
   // 字典数据
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
@@ -86,6 +90,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
+      {/* 第一行：默认可见的筛选字段 */}
       <div className="flex items-end gap-4">
         <div className="flex-1 grid grid-cols-5 gap-4">
           {/* 供应商名称 */}
@@ -159,88 +164,102 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           </div>
         </div>
 
-        {/* 重置按钮 */}
-        <button
-          onClick={onReset}
-          className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 whitespace-nowrap"
-        >
-          重置筛选
-        </button>
+        {/* 操作按钮组 */}
+        <div className="flex items-end gap-2">
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className="h-8 px-3 bg-white border border-gray-200 text-gray-600 rounded-md text-xs hover:bg-gray-50 whitespace-nowrap flex items-center gap-1 transition-colors"
+          >
+            {showMore ? (
+              <>收起<ChevronUp className="w-3.5 h-3.5" /></>
+            ) : (
+              <>更多<ChevronDown className="w-3.5 h-3.5" /></>
+            )}
+          </button>
+          <button
+            onClick={onReset}
+            className="h-8 px-3 bg-emerald-600 text-white rounded-md text-xs hover:bg-emerald-700 whitespace-nowrap transition-colors"
+          >
+            重置
+          </button>
+        </div>
       </div>
 
-      {/* 四级区域级联筛选（方案6.1） */}
-      <div className="mt-3 grid grid-cols-5 gap-4">
-        {/* 联系人 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">联系人</label>
-          <input
-            type="text"
-            value={filters.contact || ''}
-            onChange={(e) => onFilterChange('contact', e.target.value)}
-            placeholder="输入联系人搜索"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
+      {/* 更多筛选：默认折叠，点击"更多"展开 */}
+      {showMore && (
+        <div className="mt-3 grid grid-cols-5 gap-4">
+          {/* 联系人 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">联系人</label>
+            <input
+              type="text"
+              value={filters.contact || ''}
+              onChange={(e) => onFilterChange('contact', e.target.value)}
+              placeholder="输入联系人搜索"
+              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            />
+          </div>
 
-        {/* 区域级联：省 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">省份</label>
-          <select
-            value={(filters as any).province || ''}
-            onChange={(e) => handleProvinceChange(e.target.value)}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">全部</option>
-            {provinces.map(p => (
-              <option key={p.id} value={p.name}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+          {/* 区域级联：省 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">省份</label>
+            <select
+              value={(filters as any).province || ''}
+              onChange={(e) => handleProvinceChange(e.target.value)}
+              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value="">全部</option>
+              {provinces.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* 区域级联：市 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">城市</label>
-          <select
-            value={(filters as any).city || ''}
-            onChange={(e) => handleCityChange(e.target.value)}
-            disabled={!(filters as any).province}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
-          >
-            <option value="">全部</option>
-            {cityOptions.filter(c => c.value !== '').map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
+          {/* 区域级联：市 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">城市</label>
+            <select
+              value={(filters as any).city || ''}
+              onChange={(e) => handleCityChange(e.target.value)}
+              disabled={!(filters as any).province}
+              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
+            >
+              <option value="">全部</option>
+              {cityOptions.filter(c => c.value !== '').map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* 区域级联：区 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">区县</label>
-          <select
-            value={(filters as any).district || ''}
-            onChange={(e) => onFilterChange('district' as any, e.target.value)}
-            disabled={!(filters as any).city}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
-          >
-            <option value="">全部</option>
-            {districtOptions.filter(d => d.value !== '').map(d => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-        </div>
+          {/* 区域级联：区 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">区县</label>
+            <select
+              value={(filters as any).district || ''}
+              onChange={(e) => onFilterChange('district' as any, e.target.value)}
+              disabled={!(filters as any).city}
+              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
+            >
+              <option value="">全部</option>
+              {districtOptions.filter(d => d.value !== '').map(d => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* 供应商编号 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</label>
-          <input
-            type="text"
-            value={filters.code || ''}
-            onChange={(e) => onFilterChange('code', e.target.value)}
-            placeholder="输入编号搜索"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
+          {/* 供应商编号 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</label>
+            <input
+              type="text"
+              value={filters.code || ''}
+              onChange={(e) => onFilterChange('code', e.target.value)}
+              placeholder="输入编号搜索"
+              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Copy, Check } from 'lucide-react';
 import { enhancedApiClient } from '@/lib/apiClient';
+import { Button } from '../../ui/button';
 
 interface FertilizerCodeGeneratorProps {
   value: string;
@@ -56,24 +57,28 @@ export default function FertilizerCodeGenerator({ value, onChange, disabled = fa
         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
         placeholder="SF20260517-0001"
       />
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         onClick={generateCode}
         disabled={disabled}
-        className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+        className="text-gray-500 hover:text-emerald-600"
         title="重新生成编码"
       >
         <RefreshCw className="w-4 h-4" />
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         onClick={handleCopy}
         disabled={disabled || !value}
-        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+        className="text-gray-500 hover:text-blue-600"
         title="复制编码"
       >
         {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-      </button>
+      </Button>
     </div>
   );
 }

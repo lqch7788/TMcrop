@@ -50,6 +50,7 @@ router.get('/departments', (req, res) => {
 /**
  * 创建部门
  * POST /api/basic-data/departments
+ * 同步：自动创建关联的组织节点（org_type='department'）
  */
 router.post('/departments', (req, res) => {
   try {
@@ -68,7 +69,14 @@ router.post('/departments', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [oid, oid, name, code, parentOid || '', managerId || '', managerName || '', sortNumber || 0, description || '', now, now]);
 
-    res.status(201).json({ success: true, message: '部门创建成功', data: { id: oid, oid, name, code } });
+    // 同步：自动创建关联的组织节点
+    const orgOid = `ORG_${Date.now()}`;
+    db.run(`
+      INSERT INTO organizations (id, oid, parent_oid, aid, name, org_type, contact_person, sort_order, status, department_id, department_name, created_at, updated_at)
+      VALUES (?, ?, NULL, ?, ?, 'department', ?, 0, 'active', ?, ?, ?, ?)
+    `, [`ORG_ID_${Date.now()}`, orgOid, orgOid, name, managerName || '', oid, name, now, now]);
+
+    res.status(201).json({ success: true, message: '部门创建成功', data: { id: oid, oid, name, code, orgOid } });
   } catch (error) {
     console.error('创建部门失败:', error);
     res.status(500).json({ success: false, error: '创建部门失败' });
@@ -101,6 +109,18 @@ router.put('/departments/:id', (req, res) => {
       WHERE id = ?
     `, [name, code, parentOid, managerId, managerName, sortNumber, description, status, now, id]);
 
+    // 双向同步：更新关联的组织节点
+    if (name || managerName) {
+      db.run(`
+        UPDATE organizations
+        SET name = COALESCE(?, name),
+            contact_person = COALESCE(?, contact_person),
+            department_name = COALESCE(?, department_name),
+            updated_at = ?
+        WHERE department_id = ? AND status = 'active'
+      `, [name || null, managerName || null, name || null, now, id]);
+    }
+
     res.json({ success: true, message: '部门更新成功' });
   } catch (error) {
     console.error('更新部门失败:', error);
@@ -119,6 +139,9 @@ router.delete('/departments/:id', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`UPDATE departments SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    // 双向同步：同步禁用关联的组织节点
+    db.run(`UPDATE organizations SET status = 'inactive', updated_at = ? WHERE department_id = ?`, [now, id]);
 
     res.json({ success: true, message: '部门删除成功' });
   } catch (error) {

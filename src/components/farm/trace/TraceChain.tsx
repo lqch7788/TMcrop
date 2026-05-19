@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ChevronRight, ChevronDown, Package, Leaf, Sprout, Grid3X3, History, ExternalLink } from 'lucide-react';
+import { Button } from '../../ui/button';
 import {
   traceSeedSource,
   traceSeedling,
@@ -150,16 +151,17 @@ export const TraceChain: React.FC<TraceChainProps> = ({ type, businessId, onNavi
         >
           {/* 展开/折叠按钮 */}
           {hasChildren ? (
-            <button
+            <Button
               onClick={() => toggleNode(node.instanceId)}
-              className="p-1 hover:bg-gray-200 rounded"
+              variant="ghost"
+              size="icon"
             >
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               ) : (
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               )}
-            </button>
+            </Button>
           ) : (
             <div className="w-6" />
           )}
@@ -194,13 +196,15 @@ export const TraceChain: React.FC<TraceChainProps> = ({ type, businessId, onNavi
 
           {/* 操作 */}
           {onNavigate && (
-            <button
+            <Button
               onClick={() => onNavigate(node.businessType, node.businessId)}
-              className="p-1.5 hover:bg-gray-200 rounded text-gray-500"
+              variant="ghost"
+              size="icon"
+              className="text-gray-500"
               title="查看详情"
             >
               <ExternalLink className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
 

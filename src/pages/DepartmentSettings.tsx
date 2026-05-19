@@ -53,10 +53,12 @@ function DepartmentModal({
   }, [editItem, open]);
 
   const handleSubmit = async () => {
-    if (!form.code.trim() || !form.name.trim()) return;
+    if (!form.name.trim()) return;
+    // 编码为空时自动生成
+    const payload = { ...form, code: form.code.trim() || `DEPT_${Date.now()}` };
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave(payload);
       onClose();
     } finally {
       setSaving(false);
@@ -344,7 +346,7 @@ export default function DepartmentSettings() {
               ) : (
                 paginated.map((dept) => (
                   <tr key={dept.id || dept.oid} className="hover:bg-blue-100 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{dept.code}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{dept.code || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{dept.name}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       {(dept as any).parentName || '—'}

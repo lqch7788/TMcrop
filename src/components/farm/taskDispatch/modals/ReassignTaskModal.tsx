@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '../../../ui/button';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';
@@ -141,24 +142,18 @@ export function ReassignTaskModal({
 
         {/* 操作按钮 */}
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button onClick={onClose} variant="secondary" size="sm">
             取消
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={!selectedAssignee}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              selectedAssignee
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+            variant="default"
+            size="sm"
           >
             <UserPlus className="w-4 h-4" />
             确认派发
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

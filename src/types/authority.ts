@@ -33,6 +33,8 @@ export interface Organization {
   contactorMobile?: string;       // 联系人手机
   contactorEmail?: string;        // 联系人邮箱
   orgType?: OrgType;             // 组织类型
+  departmentId?: string;          // 关联部门ID（双向同步桥接字段）
+  departmentName?: string;        // 关联部门名称
   viLogo?: string;               // VI Logo
   viName?: string;               // VI名称
   viDescription?: string;         // VI描述
@@ -77,9 +79,14 @@ export interface RoleListItem {
 export interface User {
   id?: string;
   oid: string;                    // 用户OID
-  orgOid: string;                 // 所属组织OID
-  aid: string;                    // 用户账号（UserAID）
-  name: string;                   // 用户姓名
+  orgOid?: string;                // 所属组织OID（前端字段）
+  org_oid?: string;               // 所属组织OID（后端字段）
+  department_oid?: string;        // 所属部门OID（自动从组织关联填充）
+  departmentOid?: string;         // 所属部门OID（前端字段）
+  aid?: string;                   // 用户账号（UserAID）
+  username?: string;              // 用户名（后端字段）
+  name?: string;                  // 用户姓名
+  real_name?: string;             // 用户姓名（后端字段）
   passwordHash?: string;           // 密码哈希
   email?: string;
   phone?: string;

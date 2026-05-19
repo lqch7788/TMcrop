@@ -14,6 +14,7 @@ export interface DepartmentSeed {
   id: string;
   oid: string;
   name: string;
+  code: string;
   managerId: string;
   managerName: string;
   parentOid: string | null;
@@ -152,6 +153,7 @@ const defaultDepartments: DepartmentSeed[] = [
     id: 'D001',
     oid: 'DEPT001',
     name: '生产部',
+    code: 'DEPT_PROD',
     managerId: 'U002',
     managerName: '李明辉',
     parentOid: null,
@@ -163,6 +165,7 @@ const defaultDepartments: DepartmentSeed[] = [
     id: 'D002',
     oid: 'DEPT002',
     name: '技术部',
+    code: 'DEPT_TECH',
     managerId: 'U004',
     managerName: '赵文静',
     parentOid: null,
@@ -174,6 +177,7 @@ const defaultDepartments: DepartmentSeed[] = [
     id: 'D003',
     oid: 'DEPT003',
     name: '仓储部',
+    code: 'DEPT_WH',
     managerId: 'U010',
     managerName: '孙丽娜',
     parentOid: null,
@@ -185,6 +189,7 @@ const defaultDepartments: DepartmentSeed[] = [
     id: 'D004',
     oid: 'DEPT004',
     name: '财务部',
+    code: 'DEPT_FIN',
     managerId: 'U013',
     managerName: '陆启闯',
     parentOid: null,
@@ -196,6 +201,7 @@ const defaultDepartments: DepartmentSeed[] = [
     id: 'D005',
     oid: 'DEPT005',
     name: '综合办',
+    code: 'DEPT_ADMIN',
     managerId: 'U014',
     managerName: '王建国',
     parentOid: null,
@@ -1091,11 +1097,12 @@ export function seedDepartments() {
   for (const dept of defaultDepartments) {
     db.run(`
       INSERT OR REPLACE INTO departments
-      (id, oid, name, manager_id, manager_name, parent_oid, sort_number, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, oid, code, name, manager_id, manager_name, parent_oid, sort_number, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       dept.id,
       dept.oid,
+      dept.code,
       dept.name,
       dept.managerId,
       dept.managerName,

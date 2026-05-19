@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useWarehouseStore } from '../../stores';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
+import { Button } from '../ui/button';
 import { Select, Modal } from '../ui/Modal';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
 import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
@@ -980,12 +981,15 @@ export default function ProduceInventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between">
+      {/* 页面标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Package className="w-6 h-6 text-white" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">作物库存</h1>
-            <p className="text-sm text-gray-500 mt-1">管理采收入库产品的库存状态和预警设置</p>
+            <p className="text-gray-500">管理采收入库产品的库存状态和预警设置</p>
           </div>
         </div>
       </div>
@@ -1012,26 +1016,26 @@ export default function ProduceInventoryPage() {
 
           {/* 搜索和重置按钮 */}
           <div className="flex gap-2">
-            <button
+            <Button
+              size="sm"
               onClick={() => {
                 setSearchText('');
                 setFilters({ ...filters, warehouseId: '', cropName: '', grade: '', status: '' });
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <RefreshCw className="w-4 h-4" />
               重置
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               onClick={() => {
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
             >
               <Search className="w-4 h-4" />
               搜索
-            </button>
+            </Button>
           </div>
 
           {/* 仓库筛选 */}
@@ -1118,12 +1122,13 @@ export default function ProduceInventoryPage() {
         {(exportMode || batchEditMode || deleteMode) && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                variant="link"
+                size="sm"
                 onClick={handleSelectAll}
-                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
               >
                 {isAllSelected ? '全不选' : '全选'}
-              </button>
+              </Button>
               <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
@@ -1240,21 +1245,23 @@ export default function ProduceInventoryPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-sm">{currentPage} / {totalPages}</span>
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

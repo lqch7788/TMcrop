@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { Button } from '../ui/button';
 import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
 import { useWarehouseStore } from '../../stores';
@@ -300,20 +301,21 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             <label className="block text-sm font-medium text-gray-700 mb-1">品质等级</label>
             <div className="flex gap-2">
               {(['A', 'B', 'C'] as const).map((g) => (
-                <button
+                <Button
                   key={g}
-                  type="button"
-                  onClick={() => setGrade(g)}
-                  className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                  size="sm"
+                  variant={grade === g ? 'default' : 'outline'}
+                  className={`flex-1 ${
                     grade === g
-                      ? g === 'A' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' :
-                        g === 'B' ? 'border-blue-500 bg-blue-50 text-blue-700' :
-                        'border-amber-500 bg-amber-50 text-amber-700'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      ? g === 'A' ? 'bg-emerald-50 !text-emerald-700 border-emerald-500 hover:bg-emerald-100 hover:!text-emerald-700' :
+                        g === 'B' ? 'bg-blue-50 !text-blue-700 border-blue-500 hover:bg-blue-100 hover:!text-blue-700' :
+                        'bg-amber-50 !text-amber-700 border-amber-500 hover:bg-amber-100 hover:!text-amber-700'
+                      : ''
                   }`}
+                  onClick={() => setGrade(g)}
                 >
                   {g}级
-                </button>
+                </Button>
               ))}
             </div>
           </div>

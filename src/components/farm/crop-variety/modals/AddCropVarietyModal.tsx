@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -567,24 +568,21 @@ export function AddCropVarietyModal({
               placeholder="点击生成按钮获取编码"
               className="flex-1 px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm font-mono text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50"
             />
-            <button
-              type="button"
+            <Button
               onClick={handleGenerateCode}
               disabled={!formData.categoryCode || !formData.typeCode || !formData.varietyCode}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <RefreshCw className="w-4 h-4" />
               生成
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="blue"
               onClick={handleCheckDuplicate}
               disabled={!cropCode}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <Search className="w-4 h-4" />
               查重
-            </button>
+            </Button>
           </div>
           {duplicateCheckResult && (
             <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${
@@ -667,13 +665,13 @@ export function AddCropVarietyModal({
               />
             </label>
             {formData.image && (
-              <button
-                type="button"
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => setFormData({ ...formData, image: '' })}
-                className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm border border-red-200"
               >
                 删除
-              </button>
+              </Button>
             )}
           </div>
         </div>

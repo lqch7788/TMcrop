@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { Button } from '../../../ui/button';
 
 interface AgricultureRecordPaginationProps {
   currentPage: number;
@@ -39,21 +40,23 @@ export function AgricultureRecordPagination({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">共 {totalCount} 条</span>
-        <button
+        <Button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          variant="ghost"
+          size="icon"
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
-        </button>
+        </Button>
         <span className="text-sm">{currentPage} / {totalPages}</span>
-        <button
+        <Button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+          variant="ghost"
+          size="icon"
         >
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

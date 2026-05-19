@@ -48,14 +48,14 @@ export function OrderStats({ data }: OrderStatsProps) {
       {stats.map((stat, index) => {
         const IconComponent = stat.icon;
         return (
-          <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
-                <IconComponent className="w-6 h-6 text-white" />
+          <div key={index} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center`}>
+                <IconComponent className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-xs text-gray-500">{stat.label}</p>
               </div>
             </div>
           </div>

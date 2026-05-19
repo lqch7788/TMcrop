@@ -42,7 +42,8 @@ export const useGreenhouseStore = create<GreenhouseStore>()(
         set({ loading: true, error: null });
         try {
           const data = await getGreenhouses();
-          set({ greenhouses: data, loading: false, lastFetch: now });
+          const safeData = Array.isArray(data) ? data : [];
+          set({ greenhouses: safeData, loading: false, lastFetch: now });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载温室失败', loading: false });
         }
@@ -74,6 +75,13 @@ export const useGreenhouseStore = create<GreenhouseStore>()(
     {
       name: 'greenhouse_store',
       partialize: (state) => ({ greenhouses: state.greenhouses }),
+      merge: (persisted: unknown, current) => {
+        const p = persisted as Partial<GreenhouseStore> | null;
+        return {
+          ...current,
+          greenhouses: Array.isArray(p?.greenhouses) ? p!.greenhouses : current.greenhouses,
+        };
+      },
     }
   )
 );

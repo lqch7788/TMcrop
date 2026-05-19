@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { Button } from '../ui/button';
 import { ProduceInventory } from '../../types/inventory';
 import { getAllVarieties } from '../../services/cropVarietyService';
 
@@ -90,18 +91,12 @@ export function ProduceInventoryBatchEditModal({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <button
-            onClick={onNext}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-          >
+          <Button size="sm" variant="outline" onClick={onNext}>
             确认 {currentEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
-          </button>
-          <button
-            onClick={onSaveAll}
-            className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-          >
+          </Button>
+          <Button size="sm" onClick={onSaveAll}>
             保存全部 ({editedCount} 个)
-          </button>
+          </Button>
         </div>
       }
     >

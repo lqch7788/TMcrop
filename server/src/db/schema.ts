@@ -1325,6 +1325,8 @@ export function initializeDatabase() {
       address TEXT,
       contact_person TEXT,
       contact_phone TEXT,
+      department_id TEXT,
+      department_name TEXT,
       sort_order INTEGER DEFAULT 0,
       status TEXT DEFAULT 'active',
       created_at TEXT,

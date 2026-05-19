@@ -6,6 +6,7 @@
 import React from 'react';
 import { HubStats } from '../../../hooks/useFarmHub';
 import { Send, CheckCircle, Clock, AlertTriangle, ClipboardList, Activity, AlertCircle, CheckCheck, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FarmHubHeaderProps {
   stats: HubStats;
@@ -66,24 +67,30 @@ export function FarmHubHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={onOpenSmartDispatch}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
+            className="shadow-sm"
           >
             智能派工
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onOpenDailyPlan}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
+            className="shadow-sm"
           >
             每日规划
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onOpenMonthlyPlan}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
+            className="shadow-sm"
           >
             月度规划
-          </button>
+          </Button>
         </div>
       </div>
 

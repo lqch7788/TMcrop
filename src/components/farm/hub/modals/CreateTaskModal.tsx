@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
@@ -412,35 +413,40 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       bottomContent={
         <div className="flex justify-between">
           {createStep > 1 && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setCreateStep(createStep - 1)}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600"
             >
               上一步
-            </button>
+            </Button>
           )}
           {createStep === 2 ? (
             <div className="flex gap-2 ml-auto">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleSaveDraft}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 flex items-center gap-2"
               >
                 保存草稿
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
                 onClick={handleFinalCreate}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2"
               >
                 发布任务
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={handleNextStep}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 flex items-center gap-2 ml-auto"
+              className="ml-auto"
             >
               下一步 <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       }
@@ -486,13 +492,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="点击下方生成按钮"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="default"
+                    size="sm"
                     onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode(tasksHook.tasks) })}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
                   >
                     生成
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div>
@@ -563,16 +570,18 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm"
                         >
                           {field?.name || fieldValue}
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
                               setNewTask({ ...newTask, fields: (newTask.fields || []).filter((v: string) => v !== fieldValue) });
                             }}
-                            className="hover:text-red-500"
+                            className="hover:text-red-500 h-4 w-4"
                           >
                             ×
-                          </button>
+                          </Button>
                         </span>
                       );
                     })}
@@ -641,16 +650,18 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
                       >
                         {cropValue}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
                             setNewTask({ ...newTask, crops: (newTask.crops || []).filter((v: string) => v !== cropValue) });
                           }}
-                          className="hover:text-red-500"
+                          className="hover:text-red-500 h-4 w-4"
                         >
                           ×
-                        </button>
+                        </Button>
                       </span>
                     ))}
                   </div>
@@ -734,16 +745,18 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm"
                       >
                         {type?.label || typeValue}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
                             setNewTask({ ...newTask, types: newTask.types.filter(v => v !== typeValue) });
                           }}
-                          className="hover:text-red-500"
+                          className="hover:text-red-500 h-4 w-4"
                         >
                           ×
-                        </button>
+                        </Button>
                       </span>
                     );
                   })}
@@ -808,8 +821,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 placeholder="请输入作业标准...（简单任务可在此直接输入，复杂任务可点击导入文件）"
               />
               <div className="mt-2 flex items-center gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="blue"
+                  size="sm"
                   onClick={() => {
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -827,10 +842,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     };
                     input.click();
                   }}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
                 >
                   导入文件
-                </button>
+                </Button>
                 <span className="text-xs text-gray-500">支持 .txt, .doc, .docx, .pdf 格式</span>
               </div>
             </div>
@@ -898,24 +912,27 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         <option value="袋">袋</option>
                         <option value="箱">箱</option>
                       </select>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => {
                           const newMaterials = (newTask.materials || []).filter((_, idx) => idx !== i);
                           setNewTask({ ...newTask, materials: newMaterials });
                         }}
-                        className="text-red-500 hover:text-red-700 font-bold"
+                        className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
                       >
                         ×
-                      </button>
+                      </Button>
                     </div>
                   ))
                 )}
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => setNewTask({ ...newTask, materials: [...(newTask.materials || []), { name: '', qty: 1, unit: '个' }] })}
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
                 >
                   + 物资
-                </button>
+                </Button>
               </div>
             </div>
             <div>
@@ -973,24 +990,27 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         <option value="套">套</option>
                         <option value="件">件</option>
                       </select>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => {
                           const newTools = (newTask.tools || []).filter((_, idx) => idx !== i);
                           setNewTask({ ...newTask, tools: newTools });
                         }}
-                        className="text-red-500 hover:text-red-700 font-bold"
+                        className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
                       >
                         ×
-                      </button>
+                      </Button>
                     </div>
                   ))
                 )}
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => setNewTask({ ...newTask, tools: [...(newTask.tools || []), { name: '', qty: 1, unit: '把' }] })}
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
                 >
                   + 工具
-                </button>
+                </Button>
               </div>
             </div>
             {/* 资源备注 */}

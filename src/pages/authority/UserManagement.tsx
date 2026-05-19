@@ -8,7 +8,7 @@ import { useDragResize } from './useDragResize';
 import {
   Users, Plus, Pencil, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
 } from 'lucide-react';
-import { useOrganizationStore } from '@/stores';
+import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
@@ -27,6 +27,10 @@ export default function UserManagement() {
 
   const roles = useOrganizationStore((s) => s.roles);
   const loadRoles = useOrganizationStore((s) => s.loadRoles);
+
+  // 部门列表（用于显示自动关联的部门信息）
+  const departments = useDepartmentStore((s) => s.departments);
+  const loadDepartments = useDepartmentStore((s) => s.loadDepartments);
 
   // UI 状态
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,6 +68,7 @@ export default function UserManagement() {
   useEffect(() => {
     loadUsers();
     loadOrganizations();
+    loadDepartments();
     loadRoles();
   }, []);
 
@@ -71,6 +76,23 @@ export default function UserManagement() {
   const getOrgName = (orgOid: string) => {
     const org = organizations.find((o) => o.oid === orgOid);
     return org?.name || orgOid;
+  };
+
+  // 获取组织关联的部门信息
+  const getOrgLinkedDept = (orgOid: string) => {
+    const org = organizations.find((o) => o.oid === orgOid);
+    if (org?.departmentId) {
+      const dept = departments.find((d) => (d.id || d.oid) === org.departmentId);
+      return dept?.name || org.departmentName || org.departmentId;
+    }
+    return null;
+  };
+
+  // 通过部门OID获取部门名称
+  const getDeptName = (deptOid: string | undefined) => {
+    if (!deptOid) return null;
+    const dept = departments.find((d) => (d.id || d.oid) === deptOid);
+    return dept?.name || deptOid;
   };
 
   // 筛选
@@ -238,6 +260,7 @@ export default function UserManagement() {
               <th className="text-left py-2.5 px-4 font-medium text-white">用户名</th>
               <th className="text-left py-2.5 px-4 font-medium text-white">姓名</th>
               <th className="text-left py-2.5 px-4 font-medium text-white">所属组织</th>
+              <th className="text-left py-2.5 px-4 font-medium text-white">部门</th>
               <th className="text-left py-2.5 px-4 font-medium text-white">邮箱/电话</th>
               <th className="text-center py-2.5 px-4 font-medium text-white w-20">状态</th>
               <th className="text-right py-2.5 px-4 font-medium text-white w-36">操作</th>
@@ -249,6 +272,30 @@ export default function UserManagement() {
                 <td className="py-2 px-4 text-gray-700 font-medium">{user.username || user.aid}</td>
                 <td className="py-2 px-4 text-gray-700">{user.real_name || user.name}</td>
                 <td className="py-2 px-4 text-gray-500">{getOrgName(user.org_oid || user.orgOid || '')}</td>
+                <td className="py-2 px-4">
+                  {(() => {
+                    const deptOid = user.department_oid || user.departmentOid;
+                    if (deptOid) {
+                      const deptName = getDeptName(deptOid);
+                      return (
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded">
+                          {deptName || deptOid}
+                        </span>
+                      );
+                    }
+                    // 尝试从组织获取关联部门
+                    const orgOid = user.org_oid || user.orgOid;
+                    const linkedDept = orgOid ? getOrgLinkedDept(orgOid) : null;
+                    if (linkedDept) {
+                      return (
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded" title="保存后自动关联">
+                          {linkedDept}
+                        </span>
+                      );
+                    }
+                    return <span className="text-xs text-gray-400">-</span>;
+                  })()}
+                </td>
                 <td className="py-2 px-4 text-xs text-gray-400">
                   {user.email && <span>{user.email}</span>}
                   {user.phone && <span className="ml-2">{user.phone}</span>}
@@ -280,7 +327,7 @@ export default function UserManagement() {
             ))}
             {pagedUsers.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-gray-400">暂无用户数据</td>
+                <td colSpan={7} className="py-12 text-center text-gray-400">暂无用户数据</td>
               </tr>
             )}
           </tbody>
@@ -347,6 +394,11 @@ export default function UserManagement() {
                     <option key={org.oid} value={org.oid}>{org.name}</option>
                   ))}
                 </select>
+                {userForm.orgOid && getOrgLinkedDept(userForm.orgOid) && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    自动关联部门：{getOrgLinkedDept(userForm.orgOid)}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -6,6 +6,7 @@
 
 import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import {
   getProduceCategoryInfo,
@@ -172,14 +173,16 @@ export const AddModal: React.FC<AddModalProps> = ({
               placeholder="点击生成获取单号"
               className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50 font-mono"
             />
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onGenerateCode}
-              className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 shrink-0"
+              className="shrink-0 gap-1 text-sm"
               title="生成采收单号"
             >
               <RefreshCw className="w-4 h-4" />
               生成
-            </button>
+            </Button>
           </div>
           {errors.harvestCode && <p className="text-red-500 text-xs mt-1">{errors.harvestCode}</p>}
         </div>
@@ -408,13 +411,15 @@ export const AddModal: React.FC<AddModalProps> = ({
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-bold text-gray-700">产品明细</label>
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={onAddProduct}
-            className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            className="gap-1"
           >
             <Plus className="w-4 h-4" />
             添加产品
-          </button>
+          </Button>
         </div>
 
         {addForm.products.length > 0 ? (
@@ -517,12 +522,14 @@ export const AddModal: React.FC<AddModalProps> = ({
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onRemoveProduct(idx)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                          className="text-red-500 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -551,18 +558,20 @@ export const AddModal: React.FC<AddModalProps> = ({
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           取消
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="default"
+          size="sm"
           onClick={onSave}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
         >
           保存
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

@@ -18,6 +18,7 @@ import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructu
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 
@@ -1020,18 +1021,20 @@ export function InspectionTab({
               ))}
             </div>
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowExportModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
                 onClick={handleDoExport}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
               >
                 导出
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1230,25 +1233,29 @@ export function InspectionTab({
                   {/* 验收操作 */}
                   <div className="border-t pt-4">
                     <div className="flex gap-3 mb-4">
-                      <button
+                      <Button
+                        variant="default"
+                        size="sm"
                         onClick={() => handleApproveAcceptance()}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                        className="flex-1"
                       >
                         <ThumbsUp className="w-4 h-4" />
                         验收通过
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => {
                           const reason = prompt('请输入返工原因：');
                           if (reason) {
                             handleRejectToDispatch(reason);
                           }
                         }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        className="flex-1"
                       >
                         <ThumbsDown className="w-4 h-4" />
                         返工
-                      </button>
+                      </Button>
                     </div>
                     <div className="text-xs text-gray-500 text-center">
                       通过：问题关闭，流转结束 | 返工：第1次给原执行人，第2次退分派重分

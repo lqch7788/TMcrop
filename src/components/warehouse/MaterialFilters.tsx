@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useNavigate } from 'react-router-dom';
+import { Button } from '../ui/button';
 
 export interface Material {
   id: number;
@@ -184,7 +183,8 @@ export function MaterialFilters({
           </select>
         </div>
         <div className="flex items-end gap-2">
-          <button
+          <Button
+            size="sm"
             onClick={() => onFiltersChange({
               code: '',
               name: '',
@@ -196,10 +196,9 @@ export function MaterialFilters({
               searchSubCategory: '',
               showLowStock: false,
             })}
-            className="h-9 px-4 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600 whitespace-nowrap"
           >
             重置
-          </button>
+          </Button>
         </div>
       </div>
     </div>

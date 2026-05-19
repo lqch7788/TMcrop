@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '@/components/ui/button';
 import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
 import { useWorkerStore } from '../../../../stores';

@@ -5,6 +5,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Tag, Download } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { LabelResumeTimeline } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 import { usePlantLabelStore } from '../../../../stores';
@@ -113,9 +114,9 @@ export default function SeedlingLabelManageModal({
           <h3 className="text-lg font-semibold text-white">
             育苗标签管理 - {seedlingCode}
           </h3>
-          <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors">
+          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-emerald-700">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 工具栏: 搜索 + 导出 */}
@@ -132,14 +133,16 @@ export default function SeedlingLabelManageModal({
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">导出:</span>
             {EXPORT_SIZES.map((size) => (
-              <button
+              <Button
                 key={size}
                 onClick={() => handleExport(size)}
-                className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-emerald-50 hover:border-emerald-300 flex items-center gap-1"
+                variant="outline"
+                size="sm"
+                className="text-xs hover:bg-emerald-50 hover:border-emerald-300"
               >
                 <Download className="w-3 h-3" />
                 {size === 0 ? '全部' : `${size}条`}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -186,21 +189,25 @@ export default function SeedlingLabelManageModal({
                 {/* 分页 */}
                 {labelTotalPages > 1 && (
                   <div className="flex justify-center items-center gap-2 p-3 border-t">
-                    <button
+                    <Button
                       onClick={() => setLabelPage((p) => Math.max(1, p - 1))}
                       disabled={labelPage === 1}
-                      className="px-2 py-1 text-xs border rounded disabled:opacity-30"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
                     >
                       上一页
-                    </button>
+                    </Button>
                     <span className="text-xs text-gray-500">{labelPage}/{labelTotalPages}</span>
-                    <button
+                    <Button
                       onClick={() => setLabelPage((p) => Math.min(labelTotalPages, p + 1))}
                       disabled={labelPage === labelTotalPages}
-                      className="px-2 py-1 text-xs border rounded disabled:opacity-30"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
                     >
                       下一页
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>
@@ -242,12 +249,9 @@ export default function SeedlingLabelManageModal({
           <span className="text-xs text-gray-400">
             共 {filteredLabels.length} 个标签
           </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-          >
+          <Button onClick={onClose} variant="secondary" size="sm">
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </div>

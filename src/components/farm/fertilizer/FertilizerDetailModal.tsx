@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
+import { Button } from '../../ui/button';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 
@@ -120,12 +121,13 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
 
       {/* 底部关闭按钮 */}
       <div className="mt-6 flex justify-end">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           关闭
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

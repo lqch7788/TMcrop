@@ -19,7 +19,7 @@ import {
   X,
   Save,
 } from 'lucide-react';
-import { useOrganizationStore } from '@/stores';
+import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { Organization } from '@/types/authority';
 
 export default function OrganizationManagement() {
@@ -30,6 +30,10 @@ export default function OrganizationManagement() {
   const loading = useOrganizationStore((s) => s.loading);
   const error = useOrganizationStore((s) => s.error);
 
+  // 部门列表（用于关联部门下拉选择）
+  const departments = useDepartmentStore((s) => s.departments);
+  const loadDepartments = useDepartmentStore((s) => s.loadDepartments);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOids, setExpandedOids] = useState<Set<string>>(new Set());
   const [showModal, setShowModal] = useState(false);
@@ -39,7 +43,8 @@ export default function OrganizationManagement() {
 
   useEffect(() => {
     loadOrganizations();
-  }, [loadOrganizations]);
+    loadDepartments();
+  }, [loadOrganizations, loadDepartments]);
 
   // 弹窗拖拽/缩放
   const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 500, initialHeight: 480 });
@@ -144,6 +149,12 @@ export default function OrganizationManagement() {
             {org.orgType && (
               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
                 {org.orgType}
+              </span>
+            )}
+            {org.departmentId && (
+              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded flex items-center gap-1" title="已关联部门，双向同步">
+                <Building2 className="w-3 h-3" />
+                {org.departmentName || org.departmentId}
               </span>
             )}
           </div>
@@ -350,9 +361,15 @@ export default function OrganizationManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">组织类型</label>
                 <select
                   value={editingOrg.orgType || 'department'}
-                  onChange={(e) =>
-                    setEditingOrg({ ...editingOrg, orgType: editingOrg.orgType as any })
-                  }
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setEditingOrg({
+                      ...editingOrg,
+                      orgType: newType as Organization['orgType'],
+                      // 切换非部门类型时清除部门关联
+                      ...(newType !== 'department' ? { departmentId: undefined, departmentName: undefined } : {}),
+                    });
+                  }}
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="company">公司</option>
@@ -362,6 +379,40 @@ export default function OrganizationManagement() {
                   <option value="workshop">车间</option>
                 </select>
               </div>
+
+              {/* 关联部门（仅部门类型显示） */}
+              {(editingOrg.orgType === 'department' || editingOrg.orgType === undefined) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    关联部门 <span className="text-xs text-gray-400">（双向同步）</span>
+                  </label>
+                  <select
+                    value={editingOrg.departmentId || ''}
+                    onChange={(e) => {
+                      const deptId = e.target.value;
+                      const dept = departments.find((d) => d.id === deptId || d.oid === deptId);
+                      setEditingOrg({
+                        ...editingOrg,
+                        departmentId: deptId || undefined,
+                        departmentName: dept?.name || undefined,
+                      });
+                    }}
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">不关联（独立组织）</option>
+                    {departments.filter((d) => d.status !== 'inactive').map((dept) => (
+                      <option key={dept.id || dept.oid} value={dept.id || dept.oid}>
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                  </select>
+                  {editingOrg.departmentId && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      已关联部门，修改名称/负责人将双向同步
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>

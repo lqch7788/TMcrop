@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { Button } from '../../../ui/button';
 import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
@@ -118,9 +119,11 @@ export function OvertimeHandleModal({
             选择处理方式
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <Button
               onClick={() => setHandleType('continue')}
-              className={`p-4 rounded-lg border-2 transition-colors ${
+              variant="outline"
+              size="lg"
+              className={`p-4 flex-col h-auto ${
                 handleType === 'continue'
                   ? 'border-emerald-500 bg-emerald-50'
                   : 'border-gray-200 hover:border-gray-300'
@@ -137,11 +140,13 @@ export function OvertimeHandleModal({
               <p className="text-xs text-gray-500 mt-1">
                 填写原因并延期
               </p>
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => setHandleType('abandon')}
-              className={`p-4 rounded-lg border-2 transition-colors ${
+              variant="outline"
+              size="lg"
+              className={`p-4 flex-col h-auto ${
                 handleType === 'abandon'
                   ? 'border-red-500 bg-red-50'
                   : 'border-gray-200 hover:border-gray-300'
@@ -158,7 +163,7 @@ export function OvertimeHandleModal({
               <p className="text-xs text-gray-500 mt-1">
                 需重新派发
               </p>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -223,16 +228,17 @@ export function OvertimeHandleModal({
 
         {/* 操作按钮 */}
         <div className="flex gap-3 justify-end pt-2">
-          <button
+          <Button
             onClick={() => {
               resetForm();
               onClose();
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+            variant="secondary"
+            size="sm"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={
               !handleType ||
@@ -240,14 +246,11 @@ export function OvertimeHandleModal({
               (handleType === 'continue' && !newDeadline) ||
               (handleType === 'continue' && !canExtend)
             }
-            className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-              handleType === 'abandon'
-                ? 'bg-red-500 text-white hover:bg-red-600'
-                : 'bg-emerald-500 text-white hover:bg-emerald-600'
-            }`}
+            variant={handleType === 'abandon' ? "destructive" : "default"}
+            size="sm"
           >
             确认{handleType === 'continue' ? '继续执行' : '放弃执行'}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

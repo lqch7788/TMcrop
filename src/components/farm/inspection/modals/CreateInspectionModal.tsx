@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, FormField } from '../../../ui/Modal';
 import { NumberInput } from '../../../ui/NumberInput';
+import { Button } from '../../../ui/button';
 import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
@@ -147,25 +148,28 @@ export function CreateInspectionModal({
                   placeholder="点击生成或手动输入"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => updateField('recordCode', generateRecordCode())}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 whitespace-nowrap"
+                  variant="default"
+                  size="sm"
+                  className="whitespace-nowrap"
                 >
                   生成
-                </button>
+                </Button>
               </div>
             </FormField>
           </div>
           <div className="pt-6">
-            <button
+            <Button
               type="button"
               onClick={onOpenQRScanner}
-              className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+              variant="blue"
+              size="sm"
             >
               <Scan className="w-4 h-4" />
               扫码定位
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -524,18 +528,20 @@ export function CreateInspectionModal({
               <FormField label="快速勾选问题">
                 <div className="flex flex-wrap gap-2">
                   {currentPresets.map(preset => (
-                    <button
+                    <Button
                       key={preset}
                       type="button"
                       onClick={() => togglePreset(preset)}
-                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      variant="outline"
+                      size="sm"
+                      className={`rounded-full ${
                         newRecord.issuePresets?.includes(preset)
                           ? 'bg-red-100 border-red-300 text-red-700'
                           : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-red-300'
                       }`}
                     >
                       {preset}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </FormField>
@@ -599,17 +605,19 @@ export function CreateInspectionModal({
                   {(newRecord.issuePhotos || []).map((img, idx) => (
                     <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300">
                       <img src={img} alt={`问题照片${idx + 1}`} className="w-full h-full object-cover" />
-                      <button
+                      <Button
                         type="button"
                         onClick={() => {
                           const newPhotos = [...(newRecord.issuePhotos || [])];
                           newPhotos.splice(idx, 1);
                           updateField('issuePhotos', newPhotos);
                         }}
-                        className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-bl-lg flex items-center justify-center"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-0 right-0 w-5 h-5 rounded-bl-lg"
                       >
                         <X className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </div>
                   ))}
                   {(newRecord.issuePhotos || []).length < 6 && (
@@ -655,13 +663,15 @@ export function CreateInspectionModal({
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-full"
                     >
                       {user?.name || userId}
-                      <button
+                      <Button
                         type="button"
                         onClick={() => toggleFeedbackUser(userId)}
+                        variant="ghost"
+                        size="icon"
                         className="ml-1 hover:text-red-900"
                       >
                         <X className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </span>
                   );
                 })}

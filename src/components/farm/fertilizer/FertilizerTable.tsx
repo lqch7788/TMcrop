@@ -10,6 +10,7 @@ import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Download, BarChart
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
+import { Button } from '../../ui/button';
 
 interface FertilizerTableProps {
   data: FertilizerData[];
@@ -129,42 +130,40 @@ export function FertilizerTable({
           <h3 className="text-lg font-semibold text-gray-900">施肥记录列表</h3>
           <IotDataIndicator devices={iotDevices} loading={iotLoading} />
           {onToggleStats && (
-            <button
+            <Button
+              size="sm"
               onClick={onToggleStats}
-              className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
             >
               <BarChart3 className="w-4 h-4" />
               统计分析
               {showStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="sm"
             onClick={onAdd}
-            className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             新增
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={onBatchDeleteMode}
-            className={`h-8 px-3 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${
-              operationMode === 'delete'
-                ? 'bg-red-700 text-white'
-                : 'bg-red-600 text-white hover:bg-red-700'
-            }`}
+            className={operationMode === 'delete' ? 'bg-red-700' : ''}
           >
             <Trash2 className="w-4 h-4" />
             批量删除
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={onExportMode}
-            className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
           >
             <Download className="w-4 h-4" />
             导出
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -226,13 +225,15 @@ export function FertilizerTable({
                     )}
                     {/* 施肥编号 - 蓝色链接 */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => onDetail(record)}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-sm"
+                        className="font-mono p-0 h-auto"
                         title="查看详情"
                       >
                         {record.fertilizerCode}
-                      </button>
+                      </Button>
                     </td>
                     {/* 肥料名称 - 加粗 */}
                     <td className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
@@ -279,29 +280,35 @@ export function FertilizerTable({
                     {/* 操作区 */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onDetail(record)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="text-gray-500 hover:text-blue-600"
                           title="查看详情"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </Button>
                         {!isIot && (
                           <>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => onEdit(record)}
-                              className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                              className="text-gray-500 hover:text-amber-600"
                               title="编辑"
                             >
                               <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => onDelete(record.id)}
-                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                              className="text-gray-500 hover:text-red-600"
                               title="删除"
                             >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>
@@ -318,21 +325,23 @@ export function FertilizerTable({
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <span className="text-sm text-gray-500">共 {data.length} 条记录</span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

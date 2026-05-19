@@ -688,8 +688,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
           {/* 分派模式切换 */}
           <div className="flex gap-2 mb-3">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setDispatchMode('ai_assisted')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
                 dispatchMode === 'ai_assisted'
@@ -699,9 +700,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             >
               <Sparkles className="w-4 h-4" />
               AI推荐（默认）
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setDispatchMode('manual')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
                 dispatchMode === 'manual'
@@ -711,7 +713,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             >
               <UserPlus className="w-4 h-4" />
               手动选择
-            </button>
+            </Button>
           </div>
 
           {/* AI辅助模式 */}
@@ -799,8 +801,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               { value: 'medium', label: '中', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', desc: '按时处理' },
               { value: 'low', label: '低', bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', desc: '可稍后处理' },
             ].map(opt => (
-              <button
+              <Button
                 key={opt.value}
+                variant="ghost"
                 onClick={() => setSelectedPriority(opt.value as typeof selectedPriority)}
                 className={`px-4 py-3 rounded-lg border-2 font-medium transition-all flex flex-col items-start min-w-[100px] ${
                   selectedPriority === opt.value
@@ -810,7 +813,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               >
                 <span className="font-semibold">{opt.label}</span>
                 <span className="text-xs opacity-80">{opt.desc}</span>
-              </button>
+              </Button>
             ))}
           </div>
           {dispatchModal.problem && (
@@ -839,8 +842,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               { value: '3days', label: '3天内', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
               { value: 'week', label: '本周', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
             ].map(opt => (
-              <button
+              <Button
                 key={opt.value}
+                variant="ghost"
                 onClick={() => {
                   setExpectedCompletion(opt.value as typeof expectedCompletion);
                   setCustomDueDate('');
@@ -852,9 +856,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 }`}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setExpectedCompletion('custom')}
               className={`px-4 py-2 rounded-lg border-2 font-medium transition-colors ${
                 expectedCompletion === 'custom'
@@ -863,7 +868,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               }`}
             >
               自定义
-            </button>
+            </Button>
             {expectedCompletion === 'custom' && (
               <input
                 type="date"
@@ -944,12 +949,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 <p className="text-sm text-white/80 font-mono">{problem.problemCode}</p>
               </div>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setDetailModal({ isOpen: false, problem: null })}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="hover:bg-white/20 rounded-full"
             >
               <X className="w-5 h-5 text-white" />
-            </button>
+            </Button>
           </div>
 
           {/* 弹窗内容 - 优化视觉设计 */}
@@ -1098,7 +1105,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       {/* 标签页切换 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="flex border-b border-gray-200 px-4">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('problems')}
             className={`px-4 py-3 text-sm font-medium flex items-center gap-3 border-b-2 transition-colors ${
               activeTab === 'problems'
@@ -1111,8 +1119,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
               {totalCount}
             </span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('tasks')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
               activeTab === 'tasks'
@@ -1125,7 +1134,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
               {linkedTasks.length}
             </span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1183,34 +1192,37 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="blue"
+                size="sm"
                 onClick={() => setShowCreateModal(true)}
-                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 新建
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="warning"
+                size="sm"
                 onClick={() => {
                   setBatchDispatchMode(true);
                   setSelectedProblems([]);
                   setStatusFilter('pending');
                 }}
-                className="h-8 px-3 flex items-center gap-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
               >
                 <Send className="w-4 h-4" />
                 批量分派
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
                 onClick={() => {
                   setExportMode(true);
                   setSelectedRows([]);
                 }}
-                className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             </div>
           </div>
 

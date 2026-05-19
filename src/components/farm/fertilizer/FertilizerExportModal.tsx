@@ -4,6 +4,7 @@
  */
 import React, { useState } from 'react';
 import { X, FileText, FileSpreadsheet, File } from 'lucide-react';
+import { Button } from '../../ui/button';
 
 interface FertilizerExportModalProps {
   isOpen: boolean;
@@ -28,9 +29,9 @@ export default function FertilizerExportModal({ isOpen, onClose, onConfirm, sele
       <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">导出格式选择</h3>
-          <button onClick={onClose} className="text-white hover:bg-emerald-700 p-1.5 rounded transition-colors">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-emerald-700">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-4">
@@ -54,12 +55,12 @@ export default function FertilizerExportModal({ isOpen, onClose, onConfirm, sele
         </div>
 
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+          <Button variant="secondary" size="sm" onClick={onClose}>
             取消
-          </button>
-          <button onClick={() => onConfirm(format)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm">
+          </Button>
+          <Button variant="default" size="sm" onClick={() => onConfirm(format)}>
             确认导出
-          </button>
+          </Button>
         </div>
       </div>
     </div>
