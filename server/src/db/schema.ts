@@ -2076,6 +2076,22 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== 指标评估表（基地综合评分）==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS indicator_evaluations (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      production_score REAL DEFAULT 0,
+      quality_score REAL DEFAULT 0,
+      cost_score REAL DEFAULT 0,
+      efficiency_score REAL DEFAULT 0,
+      total_score REAL DEFAULT 0,
+      rank INTEGER DEFAULT 0,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // ========== 员工表（人工管理模块核心表）==========
   db.run(`
     CREATE TABLE IF NOT EXISTS employees (

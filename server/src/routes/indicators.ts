@@ -185,7 +185,16 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
 
-    res.status(201).json({ success: true, message: '指标创建成功', id, code: indicatorCode });
+    // 查询完整记录返回（供前端乐观更新使用）
+    const stmt2 = db.prepare('SELECT * FROM indicators WHERE id = ?');
+    stmt2.bind([id]);
+    let created: Record<string, unknown> | null = null;
+    if (stmt2.step()) {
+      created = stmt2.getAsObject();
+    }
+    stmt2.free();
+
+    res.status(201).json({ success: true, message: '指标创建成功', data: created });
   } catch (error) {
     console.error('创建指标失败:', error);
     res.status(500).json({ success: false, error: '创建指标失败' });
@@ -253,7 +262,16 @@ router.put('/:id', (req: Request, res: Response) => {
     db.run(`UPDATE indicators SET ${updateFields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
-    res.json({ success: true, message: '指标更新成功' });
+    // 查询更新后的完整记录返回（供前端乐观更新使用）
+    const stmt2 = db.prepare('SELECT * FROM indicators WHERE id = ?');
+    stmt2.bind([id]);
+    let updated: Record<string, unknown> | null = null;
+    if (stmt2.step()) {
+      updated = stmt2.getAsObject();
+    }
+    stmt2.free();
+
+    res.json({ success: true, message: '指标更新成功', data: updated });
   } catch (error) {
     console.error('更新指标失败:', error);
     res.status(500).json({ success: false, error: '更新指标失败' });

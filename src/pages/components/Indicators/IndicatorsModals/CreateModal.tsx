@@ -2,11 +2,11 @@
  * 指标创建/编辑弹窗组件
  * 用于新增指标或编辑已有指标
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import type { Indicator } from '../../../types/indicators.types';
-import { CATEGORIES } from '../../../hooks/useIndicators';
+import { getIndicatorCategories } from '../../../hooks/useIndicators';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -17,7 +17,7 @@ interface CreateModalProps {
 
 export default function CreateModal({ isOpen, indicator, onClose, onSave }: CreateModalProps) {
   const isEdit = !!indicator;
-  const categories = CATEGORIES.filter(c => c !== '全部');
+  const categories = useMemo(() => getIndicatorCategories().filter(c => c !== '全部'), []);
 
   // 表单状态
   const [formData, setFormData] = useState({

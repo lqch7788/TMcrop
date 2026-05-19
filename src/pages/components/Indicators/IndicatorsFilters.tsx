@@ -2,10 +2,11 @@
  * 指标筛选器组件
  * 提供类别筛选和关键词搜索功能
  */
+import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { IndicatorCategory } from '../../types/indicators.types';
-import { CATEGORIES } from '../../hooks/useIndicators';
+import { getIndicatorCategories } from '../../hooks/useIndicators';
 
 interface IndicatorsFiltersProps {
   searchKeyword: string;
@@ -20,6 +21,7 @@ export default function IndicatorsFilters({
   onSearchChange,
   onCategoryChange,
 }: IndicatorsFiltersProps) {
+  const categories = useMemo(() => getIndicatorCategories(), []);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
@@ -28,7 +30,7 @@ export default function IndicatorsFilters({
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">类别：</span>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <Button
                 key={cat}
                 variant={categoryFilter === cat ? 'blue' : 'ghost'}
