@@ -269,8 +269,5 @@ export { useProcessDefinitionStore } from './useProcessDefinitionStore';
 export { useApprovalLevelStore } from './useApprovalLevelStore';
 export { useNotificationSettingsStore } from './useNotificationSettingsStore';
 
-// V11.0: 农事活动管理
-export { useFarmActivityStore } from './useFarmActivityStore';
-
 // V11.0: 物料类型管理
 export { useMaterialTypeStore } from './useMaterialTypeStore';

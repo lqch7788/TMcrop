@@ -68,7 +68,8 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
       'planting_source_type', 'production_plan_type', 'calculate_mode',
       // 生产汇总表配置（V8.0新增）
       'problem_config', 'yield_config', 'cost_config', 'labor_config',
-      'batch_summary_config', 'alert_threshold', 'report_display_config'
+      'batch_summary_config', 'alert_threshold', 'report_display_config',
+      'farm_activity_type'
     ]
   },
   {
@@ -259,6 +260,7 @@ export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   batch_summary_config: '批次汇总配置',
   alert_threshold: '预警阈值配置',
   report_display_config: '报表显示配置',
+  farm_activity_type: '农事任务类型',
   // 新增分类
   calculate_mode: '计算模式',
   energy_type: '能源类型',

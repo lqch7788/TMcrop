@@ -489,6 +489,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC047', code: 'harvest_greenhouse', name: '采收区域', module: 'crop', description: '采收区域分类', sortOrder: 47, status: 'active' },
   { id: 'DC048', code: 'source_type', name: '种源类型', module: 'crop', description: '种源类型(繁殖方式)', sortOrder: 48, status: 'active' },
   { id: 'DC049', code: 'feedback_personnel', name: '反馈人员', module: 'inspection', description: '巡查记录反馈人员列表（金庸武侠人物）', sortOrder: 49, status: 'active' },
+  { id: 'DC050', code: 'farm_activity_type', name: '农事任务类型', module: 'production', description: '农事任务类型分类（灌溉/施肥/病虫害防治/采收/除草/修剪/巡田/播种/整地/定植/育苗/中耕培土/覆膜/搭架引蔓/整枝打杈/授粉/疏花疏果/清园/土壤改良/测产验收）', sortOrder: 50, status: 'active' },
 ];
 
 // ============================================
@@ -816,6 +817,27 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'AN004', categoryCode: 'announcement_category', dictCode: 'activity_notice', dictLabel: '活动通知', dictValue: '活动通知', color: 'purple', sortOrder: 4, isDefault: 1, status: 'active' },
   { id: 'AN005', categoryCode: 'announcement_category', dictCode: 'policy_revision', dictLabel: '制度修订', dictValue: '制度修订', color: 'red', sortOrder: 5, isDefault: 1, status: 'active' },
   { id: 'AN006', categoryCode: 'announcement_category', dictCode: 'production_notice', dictLabel: '生产公告', dictValue: '生产公告', color: 'cyan', sortOrder: 6, isDefault: 1, status: 'active' },
+  // 农事任务类型 (20种) — dictCode使用中文名称
+  { id: 'FAT001', categoryCode: 'farm_activity_type', dictCode: '巡田', dictLabel: '巡田', dictValue: '巡田', color: 'cyan', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'FAT002', categoryCode: 'farm_activity_type', dictCode: '灌溉', dictLabel: '灌溉', dictValue: '灌溉', color: 'blue', sortOrder: 2, isDefault: 1, status: 'active' },
+  { id: 'FAT003', categoryCode: 'farm_activity_type', dictCode: '施肥', dictLabel: '施肥', dictValue: '施肥', color: 'amber', sortOrder: 3, isDefault: 1, status: 'active' },
+  { id: 'FAT004', categoryCode: 'farm_activity_type', dictCode: '病虫害防治', dictLabel: '病虫害防治', dictValue: '病虫害防治', color: 'red', sortOrder: 4, isDefault: 1, status: 'active' },
+  { id: 'FAT005', categoryCode: 'farm_activity_type', dictCode: '采收', dictLabel: '采收', dictValue: '采收', color: 'purple', sortOrder: 5, isDefault: 1, status: 'active' },
+  { id: 'FAT006', categoryCode: 'farm_activity_type', dictCode: '除草', dictLabel: '除草', dictValue: '除草', color: 'green', sortOrder: 6, isDefault: 1, status: 'active' },
+  { id: 'FAT007', categoryCode: 'farm_activity_type', dictCode: '修剪', dictLabel: '修剪', dictValue: '修剪', color: 'orange', sortOrder: 7, isDefault: 1, status: 'active' },
+  { id: 'FAT008', categoryCode: 'farm_activity_type', dictCode: '播种', dictLabel: '播种', dictValue: '播种', color: 'emerald', sortOrder: 8, isDefault: 1, status: 'active' },
+  { id: 'FAT009', categoryCode: 'farm_activity_type', dictCode: '整地/耕地', dictLabel: '整地/耕地', dictValue: '整地/耕地', color: 'brown', sortOrder: 9, isDefault: 1, status: 'active' },
+  { id: 'FAT010', categoryCode: 'farm_activity_type', dictCode: '定植/移栽', dictLabel: '定植/移栽', dictValue: '定植/移栽', color: 'teal', sortOrder: 10, isDefault: 1, status: 'active' },
+  { id: 'FAT011', categoryCode: 'farm_activity_type', dictCode: '育苗', dictLabel: '育苗', dictValue: '育苗', color: 'lime', sortOrder: 11, isDefault: 1, status: 'active' },
+  { id: 'FAT012', categoryCode: 'farm_activity_type', dictCode: '中耕培土', dictLabel: '中耕培土', dictValue: '中耕培土', color: 'stone', sortOrder: 12, isDefault: 1, status: 'active' },
+  { id: 'FAT013', categoryCode: 'farm_activity_type', dictCode: '覆膜', dictLabel: '覆膜', dictValue: '覆膜', color: 'zinc', sortOrder: 13, isDefault: 1, status: 'active' },
+  { id: 'FAT014', categoryCode: 'farm_activity_type', dictCode: '搭架引蔓', dictLabel: '搭架引蔓', dictValue: '搭架引蔓', color: 'yellow', sortOrder: 14, isDefault: 1, status: 'active' },
+  { id: 'FAT015', categoryCode: 'farm_activity_type', dictCode: '整枝打杈', dictLabel: '整枝打杈', dictValue: '整枝打杈', color: 'violet', sortOrder: 15, isDefault: 1, status: 'active' },
+  { id: 'FAT016', categoryCode: 'farm_activity_type', dictCode: '授粉', dictLabel: '授粉', dictValue: '授粉', color: 'pink', sortOrder: 16, isDefault: 1, status: 'active' },
+  { id: 'FAT017', categoryCode: 'farm_activity_type', dictCode: '疏花疏果', dictLabel: '疏花疏果', dictValue: '疏花疏果', color: 'rose', sortOrder: 17, isDefault: 1, status: 'active' },
+  { id: 'FAT018', categoryCode: 'farm_activity_type', dictCode: '清园', dictLabel: '清园', dictValue: '清园', color: 'slate', sortOrder: 18, isDefault: 1, status: 'active' },
+  { id: 'FAT019', categoryCode: 'farm_activity_type', dictCode: '土壤改良', dictLabel: '土壤改良', dictValue: '土壤改良', color: 'neutral', sortOrder: 19, isDefault: 1, status: 'active' },
+  { id: 'FAT020', categoryCode: 'farm_activity_type', dictCode: '测产验收', dictLabel: '测产验收', dictValue: '测产验收', color: 'sky', sortOrder: 20, isDefault: 1, status: 'active' },
 ];
 
 // ============================================
